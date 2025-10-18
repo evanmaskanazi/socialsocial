@@ -36,16 +36,17 @@ def initialize_database():
                 db.session.commit()
             except Exception as e:
                 print(f"Note: Index might already exist - {str(e)}")
+                db.session.rollback()
         
         print("✓ Database indexes created")
         
-        # Create system user for notifications
+        # Create system user for notifications (only if doesn't exist)
         try:
+            from security import encrypt_field
+            from auth import AuthManager
+            
             system_user = User.query.filter_by(anonymous_id='SYSTEM').first()
             if not system_user:
-                from security import encrypt_field
-                from auth import AuthManager
-                
                 auth_manager = AuthManager(app, db, None)
                 
                 system_user = User(
@@ -59,8 +60,11 @@ def initialize_database():
                 db.session.add(system_user)
                 db.session.commit()
                 print("✓ System user created")
+            else:
+                print("✓ System user already exists")
         except Exception as e:
             print(f"System user creation skipped: {str(e)}")
+            db.session.rollback()
         
         print("✓ Database initialization complete!")
 
