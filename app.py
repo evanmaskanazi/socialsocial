@@ -81,14 +81,15 @@ def after_request(response):
     if hasattr(g, 'request_start_time'):
         duration = (datetime.utcnow() - g.request_start_time).total_seconds()
         logger.info('request_completed', extra={
-            'request_id': g.request_id,
+            'request_id': getattr(g, 'request_id', 'unknown'),
             'duration': duration,
             'status': response.status_code
         })
     
     # Security headers
     response.headers.update(security_manager.get_security_headers())
-    response.headers['X-Request-ID'] = g.request_id
+    if hasattr(g, 'request_id'):
+        response.headers['X-Request-ID'] = g.request_id
     
     return response
 
