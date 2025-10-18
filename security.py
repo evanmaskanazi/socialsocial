@@ -76,8 +76,11 @@ class SecurityManager:
         
         data_to_check = []
         
-        if request.json:
-            data_to_check.extend(self._flatten_dict(request.json))
+        try:
+            if request.is_json and request.json:
+                data_to_check.extend(self._flatten_dict(request.json))
+        except:
+            pass 
         
         if request.form:
             data_to_check.extend(request.form.values())
