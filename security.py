@@ -29,28 +29,39 @@ class SecurityManager:
         """Initialize encryption cipher"""
         encryption_key = os.environ.get('ENCRYPTION_KEY')
         
-        if not encryption_key:
-            # Generate a key from password
-            password = os.environ.get('ENCRYPTION_PASSWORD', 'default-password').encode()
-            salt = os.environ.get('ENCRYPTION_SALT', 'default-salt').encode()
-            
-            kdf = PBKDF2HMAC(
-                algorithm=hashes.SHA256(),
-                length=32,
-                salt=salt,
-                iterations=100000,
-                backend=default_backend()
-            )
-            
-            key = base64.urlsafe_b64encode(kdf.derive(password))
-        else:
-            key = encryption_key.encode() if isinstance(encryption_key, str) else encryption_key
+        if encryption_key and len(encryption_key) == 44:
+            # Valid Fernet key provided
+            try:
+                if isinstance(encryption_key, str):
+                    key = encryption_key.encode()
+                else:
+                    key = encryption_key
+                return Fernet(key)
+            except Exception:
+                pass
         
+        # Fall back to deriving a key
+        password = encryption_key or os.environ.get('ENCRYPTION_PASSWORD', 'default-password')
+        if isinstance(password, str):
+            password = password.encode()
+        
+        salt = os.environ.get('ENCRYPTION_SALT', 'default-salt')
+        if isinstance(salt, str):
+            salt = salt.encode()
+        
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+            backend=default_backend()
+        )
+        
+        key = base64.urlsafe_b64encode(kdf.derive(password))
         return Fernet(key)
     
     def validate_request(self, request):
         """Validate incoming request for security threats"""
-        # Check for suspicious patterns
         suspicious_patterns = [
             r'<script',
             r'javascript:',
@@ -63,7 +74,6 @@ class SecurityManager:
             r'window\.location'
         ]
         
-        # Check all request data
         data_to_check = []
         
         if request.json:
@@ -85,7 +95,6 @@ class SecurityManager:
                         })
                         return False
         
-        # Check request size
         if request.content_length and request.content_length > 10 * 1024 * 1024:  # 10MB
             return False
         
@@ -128,47 +137,40 @@ class SecurityManager:
         if not user or not report:
             return
         
-        # Create penalty
         penalty = Penalty(
             user_id=user_id,
             report_id=report_id,
             penalty_type='privacy_violation',
             reason='Violation of user anonymity and privacy',
-            amount=10000,  # Default fine
+            amount=10000,
             start_date=datetime.utcnow(),
-            end_date=datetime.utcnow() + timedelta(days=30),  # 30 day suspension
+            end_date=datetime.utcnow() + timedelta(days=30),
             is_active=True
         )
         
         db.session.add(penalty)
-        
-        # Deactivate user
         user.is_active = False
         
-        # Update report
         report.status = 'resolved'
         report.resolution = 'User penalized for privacy violation'
         report.resolved_at = datetime.utcnow()
         
         db.session.commit()
         
-        # Log event
         self._log_security_event('privacy_violation_penalty', {
             'user_id': user_id,
             'report_id': report_id,
             'penalty_amount': 10000
         })
         
-        # Invalidate all user sessions
         from app import auth_manager
         auth_manager.invalidate_session(user_id)
     
     def _log_security_event(self, event_type, details):
         """Log security event"""
         event_key = f"security_event:{event_type}:{datetime.utcnow().isoformat()}"
-        self.redis.setex(event_key, 2592000, str(details))  # 30 days
+        self.redis.setex(event_key, 2592000, str(details))
         
-        # Also log to application logger
         if hasattr(self.app, 'logger'):
             self.app.logger.warning(f"Security Event: {event_type}", extra=details)
     
@@ -184,14 +186,12 @@ class SecurityManager:
     
     def detect_anomaly(self, user_id, action, metadata=None):
         """Detect anomalous user behavior"""
-        # Track user actions
         action_key = f"user_actions:{user_id}:{action}"
         count = self.redis.incr(action_key)
         
         if count == 1:
-            self.redis.expire(action_key, 3600)  # 1 hour window
+            self.redis.expire(action_key, 3600)
         
-        # Define thresholds for different actions
         thresholds = {
             'login_attempt': 10,
             'password_reset': 3,
@@ -225,15 +225,9 @@ class SecurityManager:
     
     def generate_secure_filename(self, original_filename):
         """Generate secure filename for uploads"""
-        # Remove path components
         filename = os.path.basename(original_filename)
-        
-        # Remove non-alphanumeric characters except dots and hyphens
         filename = re.sub(r'[^a-zA-Z0-9.\-_]', '', filename)
-        
-        # Add random prefix
         prefix = secrets.token_hex(8)
-        
         return f"{prefix}_{filename}"
     
     def scan_for_malware_patterns(self, content):
@@ -263,9 +257,7 @@ class SecurityManager:
         """Generate CSRF token for session"""
         token = secrets.token_urlsafe(32)
         csrf_key = f"csrf:{session_id}"
-        
-        self.redis.setex(csrf_key, 3600, token)  # 1 hour expiry
-        
+        self.redis.setex(csrf_key, 3600, token)
         return token
     
     def validate_csrf_token(self, session_id, token):
@@ -280,24 +272,68 @@ class SecurityManager:
 
 
 # Standalone encryption functions
+def get_fernet_cipher():
+    """Get a Fernet cipher using the configured key"""
+    encryption_key = os.environ.get('ENCRYPTION_KEY')
+    
+    # Check if it's a valid 44-char Fernet key
+    if encryption_key and len(encryption_key) == 44:
+        try:
+            if isinstance(encryption_key, str):
+                key = encryption_key.encode()
+            else:
+                key = encryption_key
+            return Fernet(key)
+        except Exception:
+            pass
+    
+    # Fall back to deriving a key from password
+    password = encryption_key or os.environ.get('ENCRYPTION_PASSWORD', 'default-encryption-key')
+    if isinstance(password, str):
+        password = password.encode()
+    
+    salt = os.environ.get('ENCRYPTION_SALT', 'default-salt')
+    if isinstance(salt, str):
+        salt = salt.encode()
+    
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    
+    key = base64.urlsafe_b64encode(kdf.derive(password))
+    return Fernet(key)
+
+
 def encrypt_field(data):
     """Encrypt sensitive field data"""
     if not data:
         return None
     
-    key = os.environ.get('ENCRYPTION_KEY', 'default-encryption-key')
-    
-    # Create cipher
-    if len(key) < 32:
-        key = hashlib.sha256(key.encode()).digest()
-    
-    key_b64 = base64.urlsafe_b64encode(key)
-    cipher = Fernet(key_b64)
-    
-    # Encrypt data
-    encrypted = cipher.encrypt(data.encode() if isinstance(data, str) else data)
-    
-    return encrypted.decode() if isinstance(encrypted, bytes) else encrypted
+    try:
+        cipher = get_fernet_cipher()
+        
+        # Ensure data is bytes
+        if isinstance(data, str):
+            data_bytes = data.encode('utf-8')
+        else:
+            data_bytes = data
+        
+        # Encrypt
+        encrypted = cipher.encrypt(data_bytes)
+        
+        # Return as string for database storage
+        if isinstance(encrypted, bytes):
+            return encrypted.decode('utf-8')
+        return encrypted
+        
+    except Exception as e:
+        # Log error but don't crash
+        print(f"Encryption error: {e}")
+        return None
 
 
 def decrypt_field(encrypted_data):
@@ -305,20 +341,26 @@ def decrypt_field(encrypted_data):
     if not encrypted_data:
         return None
     
-    key = os.environ.get('ENCRYPTION_KEY', 'default-encryption-key')
-    
-    # Create cipher
-    if len(key) < 32:
-        key = hashlib.sha256(key.encode()).digest()
-    
-    key_b64 = base64.urlsafe_b64encode(key)
-    cipher = Fernet(key_b64)
-    
-    # Decrypt data
     try:
-        decrypted = cipher.decrypt(encrypted_data.encode() if isinstance(encrypted_data, str) else encrypted_data)
-        return decrypted.decode() if isinstance(decrypted, bytes) else decrypted
-    except Exception:
+        cipher = get_fernet_cipher()
+        
+        # Ensure encrypted_data is bytes
+        if isinstance(encrypted_data, str):
+            encrypted_bytes = encrypted_data.encode('utf-8')
+        else:
+            encrypted_bytes = encrypted_data
+        
+        # Decrypt
+        decrypted = cipher.decrypt(encrypted_bytes)
+        
+        # Return as string
+        if isinstance(decrypted, bytes):
+            return decrypted.decode('utf-8')
+        return decrypted
+        
+    except Exception as e:
+        # Log error but don't crash
+        print(f"Decryption error: {e}")
         return None
 
 
@@ -327,22 +369,13 @@ def sanitize_input(text):
     if not text:
         return text
     
-    # Remove any HTML tags except allowed ones
+    # Use bleach for proper sanitization
     cleaned = bleach.clean(
         text,
         tags=['b', 'i', 'u', 'br', 'p', 'strong', 'em'],
         attributes={},
         strip=True
     )
-    
-    # Additional sanitization
-    cleaned = html.escape(cleaned)
-    
-    # Unescape allowed tags
-    allowed_tags = ['b', 'i', 'u', 'br', 'p', 'strong', 'em']
-    for tag in allowed_tags:
-        cleaned = cleaned.replace(f'&lt;{tag}&gt;', f'<{tag}>')
-        cleaned = cleaned.replace(f'&lt;/{tag}&gt;', f'</{tag}>')
     
     return cleaned
 
@@ -352,17 +385,14 @@ def validate_email(email):
     if not email:
         return False
     
-    # Basic email regex
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     
     if not re.match(pattern, email):
         return False
     
-    # Additional checks
-    if len(email) > 254:  # Max email length
+    if len(email) > 254:
         return False
     
-    # Check for suspicious patterns
     suspicious = [
         'script',
         'javascript',
@@ -385,13 +415,11 @@ def validate_url(url):
     if not url:
         return False
     
-    # URL regex
     pattern = r'^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/.*)?$'
     
     if not re.match(pattern, url):
         return False
     
-    # Check for dangerous URLs
     dangerous_patterns = [
         'javascript:',
         'data:',
@@ -453,13 +481,11 @@ class ContentModerator:
         text_lower = text.lower()
         concerns = []
         
-        # Check for harmful patterns
         for pattern in self.harmful_patterns:
             if re.search(pattern, text_lower, re.IGNORECASE):
                 concerns.append('harmful_content')
                 break
         
-        # Check if seeking help
         seeking_help = any(keyword in text_lower for keyword in self.support_keywords)
         
         if concerns and not seeking_help:
@@ -505,9 +531,8 @@ class IPSecurityManager:
         count = self.redis.incr(key)
         
         if count == 1:
-            self.redis.expire(key, 3600)  # 1 hour window
+            self.redis.expire(key, 3600)
         
-        # Auto-block if too many suspicious actions
         if count > 100:
             self.block_ip(ip_address, 86400, 'excessive_activity')
             return False
@@ -516,14 +541,13 @@ class IPSecurityManager:
     
     def get_ip_reputation(self, ip_address):
         """Get IP reputation score"""
-        # Check various factors
         factors = {
             'failed_logins': f"failed_login:{ip_address}",
             'reports': f"ip_reports:{ip_address}",
             'violations': f"ip_violations:{ip_address}"
         }
         
-        score = 100  # Start with perfect score
+        score = 100
         
         for factor, key in factors.items():
             count = self.redis.get(key)
