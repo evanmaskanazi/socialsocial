@@ -33,6 +33,3 @@ Flask-Mail==0.9.1
 python-dateutil==2.8.2
 
 
-## **runtime.txt** (Place in root directory)
-```
-python-3.11.0
