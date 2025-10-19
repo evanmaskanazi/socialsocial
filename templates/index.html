@@ -1029,43 +1029,41 @@
 
             <!-- Main Content Area -->
             <main class="main-content">
-                <!-- Feed View - Enhanced with Calendar -->
-                <div id="feedView" class="view">
-                    <h2 style="margin-bottom: 20px;">Your Feed</h2>
+              <!-- Feed View - Date-Based Journal -->
+<div id="feedView" class="view">
+    <h2 style="margin-bottom: 20px;">Your Feed Journal</h2>
+    <p style="color: var(--gray); margin-bottom: 20px;">Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.</p>
 
-                    <!-- Feed Calendar -->
-                    <div class="feed-calendar-section">
-                        <div class="feed-calendar-header">
-                            <button class="btn btn-secondary" onclick="feedPreviousMonth()">←</button>
-                            <span id="feedCurrentMonth" style="font-weight: 600;">January 2025</span>
-                            <button class="btn btn-secondary" onclick="feedNextMonth()">→</button>
-                        </div>
-                        <div class="feed-calendar-grid" id="feedCalendarGrid"></div>
-                        <div style="text-align: center; margin-top: 15px;">
-                            <p>Selected Date: <strong id="feedSelectedDateDisplay">Today</strong></p>
-                        </div>
-                    </div>
+    <!-- Feed Calendar -->
+    <div class="feed-calendar-section">
+        <div class="feed-calendar-header">
+            <button class="btn btn-secondary" onclick="feedPreviousMonth()">←</button>
+            <span id="feedCurrentMonth" style="font-weight: 600;">January 2025</span>
+            <button class="btn btn-secondary" onclick="feedNextMonth()">→</button>
+        </div>
+        <div class="feed-calendar-grid" id="feedCalendarGrid"></div>
+        <div style="text-align: center; margin-top: 15px;">
+            <p>Selected Date: <strong id="feedSelectedDateDisplay">Today</strong></p>
+        </div>
+    </div>
 
-                    <!-- Post Form -->
-                    <div class="post-form">
-                        <textarea class="post-input" placeholder="How are you feeling today?" id="postInput"></textarea>
-                        <div class="post-actions">
-                            <select class="visibility-select" id="visibilitySelect">
-                                <option value="general">General</option>
-                                <option value="close_friends">Close Friends</option>
-                                <option value="family">Family</option>
-                                <option value="private">Private</option>
-                            </select>
-                            <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-secondary" style="width: auto;" onclick="loadFeedForDate()">Load Date</button>
-                                <button class="btn btn-primary" style="width: auto;" id="postBtn">Share</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Feed Posts -->
-                    <div id="feedPosts"></div>
-                </div>
+    <!-- Post Form -->
+    <div class="post-form">
+        <textarea class="post-input" placeholder="How are you feeling today?" id="postInput"></textarea>
+        <div class="post-actions">
+            <select class="visibility-select" id="visibilitySelect">
+                <option value="general">General</option>
+                <option value="close_friends">Close Friends</option>
+                <option value="family">Family</option>
+                <option value="private">Private</option>
+            </select>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" style="width: auto;" onclick="loadFeedForDate()">Load Update</button>
+                <button class="btn btn-primary" style="width: auto;" id="postBtn">Save Update</button>
+            </div>
+        </div>
+    </div>
+</div>
 
                 <!-- Profile View (Enhanced with 5 fields) -->
                 <div id="profileView" class="view hidden">
@@ -1409,7 +1407,7 @@
             }
 
             initFeedCalendar();
-            loadFeed();
+
             loadAlerts();
         }
 
@@ -1457,15 +1455,15 @@
         }
 
         async function loadFeedSavedDates() {
-            try {
-                const response = await apiCall('/activity/dates');
-                if (response) {
-                    feedSavedDates = response.dates || [];
-                }
-            } catch (error) {
-                console.error('Failed to load feed dates:', error);
-            }
+    try {
+        const response = await apiCall('/feed/dates');
+        if (response) {
+            feedSavedDates = Object.keys(response.dates || {});
         }
+    } catch (error) {
+        console.error('Failed to load feed dates:', error);
+    }
+}
 
         function renderFeedCalendar() {
             const year = feedCurrentMonth.getFullYear();
@@ -1613,7 +1611,7 @@
             return div;
         }
 
-       document.getElementById('postBtn').addEventListener('click', async () => {
+    document.getElementById('postBtn').addEventListener('click', async () => {
     const content = document.getElementById('postInput').value.trim();
     const visibility = document.getElementById('visibilitySelect').value;
 
@@ -1622,15 +1620,13 @@
     try {
         const dateStr = feedSelectedDate.toISOString().split('T')[0];
 
-        // Use the new save endpoint that overwrites
         await apiCall('/posts', 'POST', {
             content: content,
             visibility: visibility,
-            date: dateStr  // Send the selected date
+            date: dateStr
         });
 
-        document.getElementById('postInput').value = '';
-        alert('Feed saved! Click "Load Date" to see it.');
+        alert('Feed saved successfully!');
         loadFeedSavedDates();
         renderFeedCalendar();
     } catch (error) {
