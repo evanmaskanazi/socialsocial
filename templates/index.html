@@ -963,7 +963,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;">How do I track my wellness parameters?</h4>
-                    <p style="color: var(--gray);">Navigate to the Tracking tab in your dashboard. You can input daily values for mood, sleep, exercise, anxiety, and energy levels. Use the calendar to save and load parameters for different dates.</p>
+                    <p style="color: var(--gray);">Navigate to the Parameters tab in your dashboard. You can input daily values for mood, sleep, exercise, anxiety, and energy levels. Use the calendar to save and load parameters for different dates.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -1099,7 +1099,7 @@
 
                             <div class="form-group">
                                 <label class="form-label">Favorite Hobbies</label>
-                                <textarea class="profile-textarea" id="profileHobbies" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
+                                <textarea class="profile-textarea" id="profileFavoriteHobbies" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
                             </div>
                         </div>
 
@@ -1642,7 +1642,7 @@
             }
         });
 
-        // Profile Functions (Enhanced)
+        // Profile Functions (Enhanced) - CORRECTED field name
         async function loadProfile() {
             try {
                 const response = await apiCall('/profile');
@@ -1652,7 +1652,7 @@
                 document.getElementById('profileInterests').value = response.interests || '';
                 document.getElementById('profileOccupation').value = response.occupation || '';
                 document.getElementById('profileGoals').value = response.goals || '';
-                document.getElementById('profileHobbies').value = response.favorite_hobbies || '';
+                document.getElementById('profileFavoriteHobbies').value = response.favorite_hobbies || '';
             } catch (error) {
                 console.error('Failed to load profile:', error);
             }
@@ -1664,7 +1664,7 @@
                 interests: document.getElementById('profileInterests').value,
                 occupation: document.getElementById('profileOccupation').value,
                 goals: document.getElementById('profileGoals').value,
-                favorite_hobbies: document.getElementById('profileHobbies').value
+                favorite_hobbies: document.getElementById('profileFavoriteHobbies').value
             };
 
             try {
