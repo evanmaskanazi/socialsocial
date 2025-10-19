@@ -21,9 +21,9 @@ with app.app_context():
     db.create_all()
     logger.info('✓ Ensured all tables exist')
 
-    # Use begin() instead of connect() for proper transaction handling
+    # Use begin() for proper transaction handling
     with db.engine.begin() as conn:
-        # CRITICAL FIX: Make anonymous_id nullable
+        # CRITICAL FIX 1: Make anonymous_id nullable
         try:
             result = conn.execute(text(
                 \"\"\"SELECT column_name, is_nullable
@@ -34,16 +34,39 @@ with app.app_context():
             if row:
                 col_name, is_nullable = row[0], row[1]
                 if is_nullable == 'NO':
-                    logger.info('Found anonymous_id column with NOT NULL constraint, fixing...')
+                    logger.info('Fixing anonymous_id NOT NULL constraint...')
                     conn.execute(text('ALTER TABLE users ALTER COLUMN anonymous_id DROP NOT NULL'))
                     logger.info('✓ Fixed anonymous_id to be nullable')
-                else:
-                    logger.info('✓ anonymous_id column already nullable')
             else:
-                logger.info('✓ No anonymous_id column found (good!)')
+                logger.info('✓ No anonymous_id column')
         except Exception as e:
-            logger.error(f'Anonymous_id fix FAILED: {e}')
-            raise  # Don't continue if this fails
+            logger.warning(f'Anonymous_id check: {e}')
+
+        # CRITICAL FIX 2: Make ALL encrypted columns nullable
+        try:
+            # Get all encrypted columns in users table
+            result = conn.execute(text(
+                \"\"\"SELECT column_name, is_nullable
+                FROM information_schema.columns
+                WHERE table_name='users'
+                AND (column_name LIKE '%_encrypted' OR column_name LIKE 'encrypted_%')\"\"\"
+            ))
+            encrypted_cols = result.fetchall()
+
+            for col_name, is_nullable in encrypted_cols:
+                if is_nullable == 'NO':
+                    logger.info(f'Making {col_name} nullable...')
+                    conn.execute(text(f'ALTER TABLE users ALTER COLUMN {col_name} DROP NOT NULL'))
+                    logger.info(f'✓ Fixed {col_name} to be nullable')
+
+            if not encrypted_cols:
+                logger.info('✓ No encrypted columns found')
+            else:
+                logger.info(f'✓ Checked {len(encrypted_cols)} encrypted columns')
+
+        except Exception as e:
+            logger.error(f'Encrypted columns fix FAILED: {e}')
+            raise
 
         # Fix alerts table
         try:
@@ -109,15 +132,12 @@ with app.app_context():
     logger.info('✓ All schema fixes committed!')
 
     # NOW initialize database and create test users
-    # This runs AFTER the schema is fixed and committed
     try:
         from app import init_database
         init_database()
         logger.info('✓ Database initialized with test users')
     except Exception as e:
         logger.error(f'Test user creation error: {e}')
-        # Don't fail build if test users can't be created
-        # They'll be created when app starts
 "
 
 echo "=== Build completed successfully! ==="
