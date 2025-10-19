@@ -1,6 +1,7 @@
 """
 Security module for Thera Social
 Handles encryption, sanitization, and security measures
+Complete version with all features and fixes
 """
 import os
 import re
@@ -14,17 +15,47 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 import base64
 import bleach
+import jwt
+from functools import wraps
+from flask import session, jsonify, request
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SecurityManager:
-    """Manages security features and encryption"""
+    """Enhanced security manager for the application"""
     
-    def __init__(self, app, redis_client):
+    def __init__(self, app=None, redis_client=None):
         self.app = app
         self.redis = redis_client
-        self.cipher_suite = self._init_cipher()
+        self.secret_key = None
+        self.encryption_key = None
+        self.cipher_suite = None
         self.allowed_tags = ['b', 'i', 'u', 'br', 'p', 'strong', 'em']
         self.allowed_attributes = {}
         
+        if app:
+            self.init_app(app, redis_client)
+    
+    def init_app(self, app, redis_client=None):
+        """Initialize security with Flask app"""
+        self.app = app
+        self.redis = redis_client
+        self.secret_key = app.config.get('SECRET_KEY', 'dev-key-change-in-production')
+        self.cipher_suite = self._init_cipher()
+        
+        # Generate encryption key from secret
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=b'stable_salt',  # In production, use a proper salt management
+            iterations=100000,
+            backend=default_backend()
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(self.secret_key.encode()))
+        self.encryption_key = key
+        self.fernet = Fernet(key)
+    
     def _init_cipher(self):
         """Initialize encryption cipher"""
         encryption_key = os.environ.get('ENCRYPTION_KEY')
@@ -171,14 +202,20 @@ class SecurityManager:
     
     def _log_security_event(self, event_type, details):
         """Log security event"""
-        event_key = f"security_event:{event_type}:{datetime.utcnow().isoformat()}"
-        self.redis.setex(event_key, 2592000, str(details))
+        if self.redis:
+            event_key = f"security_event:{event_type}:{datetime.utcnow().isoformat()}"
+            self.redis.setex(event_key, 2592000, str(details))
         
         if hasattr(self.app, 'logger'):
             self.app.logger.warning(f"Security Event: {event_type}", extra=details)
+        else:
+            logger.warning(f"Security Event: {event_type}", extra=details)
     
     def check_rate_limit(self, identifier, action, limit=60, window=60):
         """Check rate limit for action"""
+        if not self.redis:
+            return True
+            
         key = f"rate_limit:{action}:{identifier}"
         current = self.redis.incr(key)
         
@@ -189,6 +226,9 @@ class SecurityManager:
     
     def detect_anomaly(self, user_id, action, metadata=None):
         """Detect anomalous user behavior"""
+        if not self.redis:
+            return False
+            
         action_key = f"user_actions:{user_id}:{action}"
         count = self.redis.incr(action_key)
         
@@ -256,23 +296,40 @@ class SecurityManager:
         
         return False
     
-    def generate_csrf_token(self, session_id):
+    def generate_csrf_token(self, session_id=None):
         """Generate CSRF token for session"""
-        token = secrets.token_urlsafe(32)
-        csrf_key = f"csrf:{session_id}"
-        self.redis.setex(csrf_key, 3600, token)
-        return token
+        if session_id and self.redis:
+            token = secrets.token_urlsafe(32)
+            csrf_key = f"csrf:{session_id}"
+            self.redis.setex(csrf_key, 3600, token)
+            return token
+        else:
+            # Fallback to session-based CSRF
+            if 'csrf_token' not in session:
+                session['csrf_token'] = secrets.token_hex(32)
+            return session['csrf_token']
     
     def validate_csrf_token(self, session_id, token):
         """Validate CSRF token"""
-        csrf_key = f"csrf:{session_id}"
-        stored_token = self.redis.get(csrf_key)
-        
-        if stored_token and stored_token.decode('utf-8') == token:
-            return True
+        if session_id and self.redis:
+            csrf_key = f"csrf:{session_id}"
+            stored_token = self.redis.get(csrf_key)
+            
+            if stored_token and stored_token.decode('utf-8') == token:
+                return True
+        else:
+            # Fallback to session-based CSRF
+            return token == session.get('csrf_token')
         
         return False
 
+# Initialize global instance
+security_manager = SecurityManager()
+
+def init_security(app, redis_client=None):
+    """Initialize security with Flask app"""
+    security_manager.init_app(app, redis_client)
+    return security_manager
 
 # Standalone encryption functions
 def get_fernet_cipher():
@@ -310,7 +367,6 @@ def get_fernet_cipher():
     key = base64.urlsafe_b64encode(kdf.derive(password))
     return Fernet(key)
 
-
 def encrypt_field(data):
     """Encrypt sensitive field data"""
     if not data:
@@ -334,10 +390,8 @@ def encrypt_field(data):
         return encrypted
         
     except Exception as e:
-        # Log error but don't crash
-        print(f"Encryption error: {e}")
+        logger.error(f"Encryption error: {e}")
         return None
-
 
 def decrypt_field(encrypted_data):
     """Decrypt sensitive field data"""
@@ -362,17 +416,19 @@ def decrypt_field(encrypted_data):
         return decrypted
         
     except Exception as e:
-        # Log error but don't crash
-        print(f"Decryption error: {e}")
+        logger.error(f"Decryption error: {e}")
         return None
 
-
 def sanitize_input(text):
-    """Sanitize user input to prevent XSS"""
+    """
+    Sanitize user input to prevent XSS attacks.
+    FIXED: Removed double-escaping issue that was breaking HTML sanitization.
+    """
     if not text:
         return text
     
-    # Use bleach for proper sanitization
+    # Use bleach to clean and allow only safe tags
+    # This is sufficient for XSS protection
     cleaned = bleach.clean(
         text,
         tags=['b', 'i', 'u', 'br', 'p', 'strong', 'em'],
@@ -381,7 +437,6 @@ def sanitize_input(text):
     )
     
     return cleaned
-
 
 def validate_email(email):
     """Validate email format"""
@@ -412,6 +467,27 @@ def validate_email(email):
     
     return True
 
+def validate_username(username):
+    """Validate username format"""
+    # Username should be 3-20 characters, alphanumeric with underscores
+    username_regex = r'^[a-zA-Z0-9_]{3,20}$'
+    return re.match(username_regex, username) is not None
+
+def validate_password_strength(password):
+    """Check password strength"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    
+    return True, "Password is strong"
 
 def validate_url(url):
     """Validate URL format and safety"""
@@ -441,6 +517,43 @@ def validate_url(url):
     
     return True
 
+def generate_token(length=32):
+    """Generate a secure random token"""
+    return secrets.token_hex(length)
+
+def hash_password(password):
+    """Hash password using PBKDF2"""
+    salt = secrets.token_bytes(32)
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    key = kdf.derive(password.encode())
+    return base64.b64encode(salt + key).decode('utf-8')
+
+def verify_password(password, password_hash):
+    """Verify password against hash"""
+    try:
+        decoded = base64.b64decode(password_hash.encode())
+        salt = decoded[:32]
+        stored_key = decoded[32:]
+        
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+            backend=default_backend()
+        )
+        new_key = kdf.derive(password.encode())
+        
+        return new_key == stored_key
+    except Exception as e:
+        logger.error(f"Password verification error: {e}")
+        return False
 
 def hash_data(data):
     """Hash data using SHA-256"""
@@ -449,7 +562,6 @@ def hash_data(data):
     
     return hashlib.sha256(data).hexdigest()
 
-
 def generate_anonymous_id(prefix='USER'):
     """Generate anonymous identifier"""
     random_part = secrets.token_hex(6).upper()
@@ -457,11 +569,142 @@ def generate_anonymous_id(prefix='USER'):
     
     return f"{prefix}_{timestamp_part}_{random_part}"
 
+def generate_jwt_token(user_id, expiry_hours=24):
+    """Generate JWT token for user authentication"""
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.utcnow() + timedelta(hours=expiry_hours),
+        'iat': datetime.utcnow()
+    }
+    
+    secret_key = security_manager.secret_key or os.environ.get('SECRET_KEY', 'default-key')
+    
+    token = jwt.encode(
+        payload,
+        secret_key,
+        algorithm='HS256'
+    )
+    
+    return token
 
-class ContentModerator:
-    """Content moderation for safety"""
+def verify_jwt_token(token):
+    """Verify and decode JWT token"""
+    try:
+        secret_key = security_manager.secret_key or os.environ.get('SECRET_KEY', 'default-key')
+        
+        payload = jwt.decode(
+            token,
+            secret_key,
+            algorithms=['HS256']
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def login_required(f):
+    """Decorator to require login for routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    """Decorator to require admin privileges"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        if not session.get('is_admin', False):
+            return jsonify({'error': 'Admin privileges required'}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def secure_filename(filename):
+    """Sanitize filename for safe storage"""
+    # Remove any path components
+    filename = filename.replace('/', '').replace('\\', '')
+    
+    # Remove special characters except dots and underscores
+    filename = re.sub(r'[^a-zA-Z0-9._-]', '', filename)
+    
+    # Limit length
+    name, ext = filename.rsplit('.', 1) if '.' in filename else (filename, '')
+    if ext:
+        return f"{name[:50]}.{ext[:10]}"
+    return filename[:60]
+
+class RateLimiter:
+    """Simple rate limiter for API endpoints"""
     
     def __init__(self):
+        self.attempts = {}
+    
+    def check_rate_limit(self, identifier, max_attempts=5, window_minutes=15):
+        """Check if rate limit is exceeded"""
+        now = datetime.utcnow()
+        window_start = now - timedelta(minutes=window_minutes)
+        
+        # Clean old attempts
+        if identifier in self.attempts:
+            self.attempts[identifier] = [
+                attempt for attempt in self.attempts[identifier]
+                if attempt > window_start
+            ]
+        else:
+            self.attempts[identifier] = []
+        
+        # Check limit
+        if len(self.attempts[identifier]) >= max_attempts:
+            return False
+        
+        # Add current attempt
+        self.attempts[identifier].append(now)
+        return True
+    
+    def reset(self, identifier):
+        """Reset rate limit for identifier"""
+        if identifier in self.attempts:
+            del self.attempts[identifier]
+
+# Global rate limiter instance
+rate_limiter = RateLimiter()
+
+def rate_limit(max_attempts=5, window_minutes=15):
+    """Decorator for rate limiting routes"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            identifier = request.remote_addr
+            
+            if not rate_limiter.check_rate_limit(identifier, max_attempts, window_minutes):
+                return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+class ContentModerator:
+    """Content moderation for user-generated content"""
+    
+    def __init__(self):
+        # List of prohibited words/patterns
+        self.prohibited_patterns = [
+            r'\b(?:hate|violence|abuse)\b',
+            # Add more patterns as needed
+        ]
+        
+        # Patterns that might indicate self-harm or crisis
+        self.crisis_patterns = [
+            r'\b(?:suicide|self.?harm|kill.?myself)\b',
+            r'\b(?:end.?it.?all|no.?point.?living)\b',
+        ]
+        
         self.harmful_patterns = [
             r'\bsuicid[e|al]\b',
             r'\bself[- ]?harm\b',
@@ -484,10 +727,29 @@ class ContentModerator:
         text_lower = text.lower()
         concerns = []
         
+        # Check for crisis content
+        for pattern in self.crisis_patterns:
+            if re.search(pattern, text_lower, re.IGNORECASE):
+                return {
+                    'safe': False,
+                    'type': 'crisis',
+                    'message': 'If you are in crisis, please reach out for help. Crisis hotline: 988'
+                }
+        
+        # Check for harmful content
         for pattern in self.harmful_patterns:
             if re.search(pattern, text_lower, re.IGNORECASE):
                 concerns.append('harmful_content')
                 break
+        
+        # Check for prohibited content
+        for pattern in self.prohibited_patterns:
+            if re.search(pattern, text_lower, re.IGNORECASE):
+                return {
+                    'safe': False,
+                    'type': 'prohibited',
+                    'message': 'Content contains prohibited terms'
+                }
         
         seeking_help = any(keyword in text_lower for keyword in self.support_keywords)
         
@@ -511,6 +773,8 @@ class ContentModerator:
             'message': 'If you are in crisis, please reach out for help. You are not alone.'
         }
 
+# Global content moderator instance
+content_moderator = ContentModerator()
 
 class IPSecurityManager:
     """Manage IP-based security"""
@@ -520,16 +784,23 @@ class IPSecurityManager:
     
     def is_ip_blocked(self, ip_address):
         """Check if IP is blocked"""
+        if not self.redis:
+            return False
         block_key = f"blocked_ip:{ip_address}"
         return self.redis.exists(block_key)
     
     def block_ip(self, ip_address, duration=3600, reason='suspicious_activity'):
         """Block IP address"""
+        if not self.redis:
+            return
         block_key = f"blocked_ip:{ip_address}"
         self.redis.setex(block_key, duration, reason)
     
     def track_ip_activity(self, ip_address, action):
         """Track IP activity"""
+        if not self.redis:
+            return True
+            
         key = f"ip_activity:{ip_address}:{action}"
         count = self.redis.incr(key)
         
@@ -544,6 +815,9 @@ class IPSecurityManager:
     
     def get_ip_reputation(self, ip_address):
         """Get IP reputation score"""
+        if not self.redis:
+            return 100
+            
         factors = {
             'failed_logins': f"failed_login:{ip_address}",
             'reports': f"ip_reports:{ip_address}",
@@ -558,3 +832,34 @@ class IPSecurityManager:
                 score -= int(count) * 10
         
         return max(0, score)
+
+# Export all functions and classes
+__all__ = [
+    'SecurityManager',
+    'security_manager',
+    'init_security',
+    'get_fernet_cipher',
+    'encrypt_field',
+    'decrypt_field',
+    'sanitize_input',
+    'validate_email',
+    'validate_username',
+    'validate_password_strength',
+    'validate_url',
+    'generate_token',
+    'hash_password',
+    'verify_password',
+    'hash_data',
+    'generate_anonymous_id',
+    'generate_jwt_token',
+    'verify_jwt_token',
+    'login_required',
+    'admin_required',
+    'secure_filename',
+    'RateLimiter',
+    'rate_limiter',
+    'rate_limit',
+    'ContentModerator',
+    'content_moderator',
+    'IPSecurityManager'
+]
