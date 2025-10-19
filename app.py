@@ -1257,30 +1257,41 @@ def profile():
 @app.route('/api/users/search')
 @login_required
 def search_users():
-    """Search for users"""
-    query = request.args.get('q', '')
-    if len(query) < 2:
-        return jsonify([])
+    """Search for users by username or email"""
+    try:
+        query = request.args.get('q', '').strip().lower()
 
-    # SQLAlchemy 2.0 style
-    stmt = select(User).filter(
-        or_(
-            User.username.ilike(f'%{query}%'),
-            User.email.ilike(f'%{query}%')
-        ),
-        User.id != session.get('user_id'),
-        User.is_active == True
-    ).limit(20)
+        if not query or len(query) < 2:
+            return jsonify({'users': []})
 
-    users = db.session.execute(stmt).scalars().all()
+        # Get current user to exclude from results
+        current_user_id = session['user_id']
 
-    results = [{
-        'id': u.id,
-        'username': u.username,
-        'email': u.email
-    } for u in users]
+        # Search for users by username (case-insensitive)
+        users = User.query.filter(
+            User.id != current_user_id,
+            User.username.ilike(f'%{query}%')
+        ).limit(10).all()
 
-    return jsonify(results)
+        # Format results
+        results = []
+        for user in users:
+            # Get user's profile if it exists
+            profile = Profile.query.filter_by(user_id=user.id).first()
+
+            results.append({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'bio': profile.bio if profile else None,
+                'avatar_url': profile.avatar_url if profile else None
+            })
+
+        return jsonify({'users': results})
+
+    except Exception as e:
+        logger.error(f"User search error: {e}")
+        return jsonify({'users': []})
 
 
 # =====================
@@ -1681,51 +1692,151 @@ def get_feed():
         return jsonify({'posts': []})
 
 
-@app.route('/api/posts', methods=['POST'])
+@app.route('/api/feed/dates')
 @login_required
-def create_post():
-    """Create a new post"""
+def get_feed_saved_dates():
+    """Get all dates that have feed entries with visibility info"""
     try:
-        data = request.json
-        content = sanitize_input(data.get('content', ''))
+        user_id = session['user_id']
 
-        if not content:
-            return jsonify({'error': 'Content required'}), 400
+        # Get all posts grouped by date and circle
+        posts = db.session.query(
+            db.func.date(Post.created_at).label('date'),
+            Post.circle_id
+        ).filter_by(
+            user_id=user_id
+        ).group_by(
+            db.func.date(Post.created_at),
+            Post.circle_id
+        ).all()
 
-        # Check content moderation
-        moderation = content_moderator.check_content(content)
-        if not moderation['safe']:
-            return jsonify({'error': moderation.get('message', 'Content not allowed')}), 400
+        # Organize by date with visibility info
+        dates_with_visibility = {}
+        circle_to_visibility = {
+            1: 'general',
+            2: 'close_friends',
+            3: 'family',
+            None: 'private'
+        }
 
-        post = Post(
-            user_id=session['user_id'],
-            content=content
-        )
-        db.session.add(post)
+        for post in posts:
+            date_str = post.date.strftime('%Y-%m-%d')
+            if date_str not in dates_with_visibility:
+                dates_with_visibility[date_str] = []
 
-        # Update activity
-        today = datetime.utcnow().date()
-        activity_stmt = select(Activity).filter_by(
-            user_id=session['user_id'],
-            activity_date=today
-        )
-        activity = db.session.execute(activity_stmt).scalar_one_or_none()
+            visibility = circle_to_visibility.get(post.circle_id, 'general')
+            dates_with_visibility[date_str].append(visibility)
 
-        if not activity:
-            activity = Activity(user_id=session['user_id'], activity_date=today)
-            db.session.add(activity)
-
-        activity.post_count = (activity.post_count or 0) + 1
-
-        db.session.commit()
-
-        return jsonify({'success': True, 'post_id': post.id})
+        return jsonify({'dates': dates_with_visibility})
 
     except Exception as e:
-        logger.error(f"Post creation error: {str(e)}")
-        db.session.rollback()
-        return jsonify({'error': 'Failed to create post'}), 500
+        logger.error(f"Get feed dates error: {e}")
+        return jsonify({'dates': {}})
 
+
+@app.route('/api/posts', methods=['POST'])
+@login_required
+def save_feed_entry():
+    """Save/update feed entry for a specific date and visibility"""
+    try:
+        data = request.get_json()
+        user_id = session['user_id']
+
+        # Get the date and visibility from request
+        post_date = data.get('date', datetime.utcnow().strftime('%Y-%m-%d'))
+        content = data.get('content', '').strip()
+        visibility = data.get('visibility', 'general')  # general, close_friends, family, private
+
+        if not content:
+            return jsonify({'error': 'Content is required'}), 400
+
+        # Map visibility to circle_id (you may need to adjust based on your circles table)
+        circle_map = {
+            'general': 1,
+            'close_friends': 2,
+            'family': 3,
+            'private': None
+        }
+        circle_id = circle_map.get(visibility)
+
+        # Check if there's already a post for this date and visibility
+        existing_post = Post.query.filter_by(
+            user_id=user_id,
+            circle_id=circle_id
+        ).filter(
+            db.func.date(Post.created_at) == post_date
+        ).first()
+
+        if existing_post:
+            # Update existing post
+            existing_post.content = content
+            existing_post.updated_at = datetime.utcnow()
+            message = f'Feed updated for {visibility.replace("_", " ")} on {post_date}'
+        else:
+            # Create new post
+            new_post = Post(
+                user_id=user_id,
+                content=content,
+                circle_id=circle_id,
+                created_at=datetime.strptime(post_date, '%Y-%m-%d'),
+                updated_at=datetime.utcnow(),
+                is_published=True
+            )
+            db.session.add(new_post)
+            message = f'Feed saved for {visibility.replace("_", " ")} on {post_date}'
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': message})
+
+    except Exception as e:
+        logger.error(f"Feed save error: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to save feed'}), 500
+
+
+@app.route('/api/feed/<date_str>')
+@login_required
+def load_feed_by_date(date_str):
+    """Load feed entry for a specific date and visibility"""
+    try:
+        user_id = session['user_id']
+        visibility = request.args.get('visibility', 'general')
+
+        # Map visibility to circle_id
+        circle_map = {
+            'general': 1,
+            'close_friends': 2,
+            'family': 3,
+            'private': None
+        }
+        circle_id = circle_map.get(visibility)
+
+        # Get the post for this date and visibility
+        post = Post.query.filter_by(
+            user_id=user_id,
+            circle_id=circle_id
+        ).filter(
+            db.func.date(Post.created_at) == date_str
+        ).first()
+
+        if post:
+            return jsonify({
+                'content': post.content,
+                'date': date_str,
+                'visibility': visibility,
+                'updated_at': post.updated_at.isoformat() if post.updated_at else None
+            })
+        else:
+            return jsonify({
+                'content': '',
+                'date': date_str,
+                'visibility': visibility,
+                'message': f'No {visibility.replace("_", " ")} feed entry for this date'
+            })
+
+    except Exception as e:
+        logger.error(f"Load feed error: {e}")
+        return jsonify({'error': 'Failed to load feed'}), 500
 
 # =====================
 # PARAMETERS ROUTES (Therapy Companion)
