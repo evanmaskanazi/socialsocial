@@ -1546,30 +1546,28 @@
             renderFeedCalendar();
         }
 
-        async function loadFeedForDate() {
-            const dateStr = feedSelectedDate.toISOString().split('T')[0];
+      async function loadFeedForDate() {
+    const dateStr = feedSelectedDate.toISOString().split('T')[0];
+    const visibility = document.getElementById('visibilitySelect').value;
 
-            try {
-                const response = await apiCall(`/activity/${dateStr}`);
+    try {
+        // Use the new load endpoint with visibility parameter
+        const response = await apiCall(`/feed/${dateStr}?visibility=${visibility}`);
 
-                if (response && response.posts) {
-                    const feedContainer = document.getElementById('feedPosts');
-                    feedContainer.innerHTML = '';
+        if (response) {
+            // Load the content into the textarea
+            document.getElementById('postInput').value = response.content || '';
 
-                    if (response.posts.length > 0) {
-                        response.posts.forEach(post => {
-                            const postCard = createPostCard(post);
-                            feedContainer.appendChild(postCard);
-                        });
-                        document.getElementById('postInput').value = response.notes || '';
-                    } else {
-                        feedContainer.innerHTML = '<p style="text-align: center; color: var(--gray);">No posts for this date</p>';
-                    }
-                }
-            } catch (error) {
-                alert('Failed to load activity: ' + error.message);
+            if (response.content) {
+                alert(`Loaded ${visibility.replace('_', ' ')} feed from ${dateStr}`);
+            } else {
+                alert(`No ${visibility.replace('_', ' ')} feed for this date`);
             }
         }
+    } catch (error) {
+        alert('Failed to load feed: ' + error.message);
+    }
+}
 
         // Feed Functions
         async function loadFeed() {
@@ -1615,32 +1613,30 @@
             return div;
         }
 
-        document.getElementById('postBtn').addEventListener('click', async () => {
-            const content = document.getElementById('postInput').value.trim();
-            const visibility = document.getElementById('visibilitySelect').value;
+       document.getElementById('postBtn').addEventListener('click', async () => {
+    const content = document.getElementById('postInput').value.trim();
+    const visibility = document.getElementById('visibilitySelect').value;
 
-            if (!content) return;
+    if (!content) return;
 
-            try {
-                // Save to selected date
-                const dateStr = feedSelectedDate.toISOString().split('T')[0];
-                await apiCall(`/activity/${dateStr}`, 'POST', {
-                    content: content,
-                    visibility: visibility,
-                    notes: content
-                });
+    try {
+        const dateStr = feedSelectedDate.toISOString().split('T')[0];
 
-                // Also create regular post
-                await apiCall('/posts', 'POST', { content, visibility });
-
-                document.getElementById('postInput').value = '';
-                loadFeed();
-                loadFeedSavedDates();
-                renderFeedCalendar();
-            } catch (error) {
-                alert('Failed to create post: ' + error.message);
-            }
+        // Use the new save endpoint that overwrites
+        await apiCall('/posts', 'POST', {
+            content: content,
+            visibility: visibility,
+            date: dateStr  // Send the selected date
         });
+
+        document.getElementById('postInput').value = '';
+        alert('Feed saved! Click "Load Date" to see it.');
+        loadFeedSavedDates();
+        renderFeedCalendar();
+    } catch (error) {
+        alert('Failed to save feed: ' + error.message);
+    }
+});
 
         // Profile Functions (Enhanced) - CORRECTED field name
         async function loadProfile() {
@@ -1721,43 +1717,48 @@
             }
         }
 
-        async function searchUsers() {
-            const query = document.getElementById('userSearchInput').value;
+      async function searchUsers() {
+    const query = document.getElementById('userSearchInput').value;
 
-            if (query.length < 2) {
-                document.getElementById('searchResults').classList.remove('active');
-                return;
-            }
+    if (query.length < 2) {
+        document.getElementById('searchResults').classList.remove('active');
+        return;
+    }
 
-            try {
-                const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
-                if (!response) return;
+    try {
+        const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
+        if (!response) return;
 
-                const container = document.getElementById('searchResults');
+        const container = document.getElementById('searchResults');
 
-                if (response.users.length === 0) {
-                    container.innerHTML = '<div class="search-result-item">No users found</div>';
-                } else {
-                    container.innerHTML = response.users.map(user => `
-                        <div class="search-result-item">
-                            <div>
-                                <strong>${user.username}</strong>
-                            </div>
-                            <select onchange="addToCircle(${user.id}, this.value, '${user.username}')">
-                                <option value="">Add to...</option>
-                                <option value="general">General</option>
-                                <option value="close_friends">Close Friends</option>
-                                <option value="family">Family</option>
-                            </select>
+        if (response.users.length === 0) {
+            container.innerHTML = '<div class="search-result-item">No users found</div>';
+        } else {
+            container.innerHTML = response.users.map(user => `
+                <div class="search-result-item" style="display: block; padding: 12px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <div class="member-avatar" style="margin-right: 10px;">${user.username[0].toUpperCase()}</div>
+                        <div style="flex: 1;">
+                            <strong>${user.username}</strong><br>
+                            <small style="color: var(--gray);">${user.email}</small>
+                            ${user.bio ? `<br><small style="color: var(--gray); font-style: italic;">${user.bio.substring(0, 60)}${user.bio.length > 60 ? '...' : ''}</small>` : ''}
                         </div>
-                    `).join('');
-                }
-
-                container.classList.add('active');
-            } catch (error) {
-                console.error('Failed to search users:', error);
-            }
+                    </div>
+                    <select onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
+                        <option value="">Add to circle...</option>
+                        <option value="general">General</option>
+                        <option value="close_friends">Close Friends</option>
+                        <option value="family">Family</option>
+                    </select>
+                </div>
+            `).join('');
         }
+
+        container.classList.add('active');
+    } catch (error) {
+        console.error('Failed to search users:', error);
+    }
+}
 
         async function addToCircle(userId, circleType, username) {
             if (!circleType) return;
