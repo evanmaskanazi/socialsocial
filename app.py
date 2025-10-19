@@ -643,7 +643,7 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not create reactions table: {e}")
 
-            # 7. Fix posts table - ensure BOTH content AND image_url columns exist
+            # 7. Fix posts table - ensure ALL required columns exist
             try:
                 if is_postgres:
                     result = conn.execute(text(
@@ -654,37 +654,45 @@ def fix_all_schema_issues():
                     existing_columns = [row[0] for row in result]
 
                     if existing_columns:
-                        # Check and add content column
-                        if 'content' not in existing_columns:
-                            logger.info("Adding missing content column to posts table...")
-                            conn.execute(text("ALTER TABLE posts ADD COLUMN content TEXT"))
-                            conn.commit()
-                            logger.info("✓ Added content column to posts table")
+                        # Define all required columns with their types
+                        required_columns = [
+                            ('content', 'TEXT'),
+                            ('image_url', 'VARCHAR(500)'),
+                            ('likes', 'INTEGER DEFAULT 0'),
+                            ('circle_id', 'INTEGER'),
+                            ('is_published', 'BOOLEAN DEFAULT TRUE'),
+                            ('updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+                        ]
 
-                        # Check and add image_url column
-                        if 'image_url' not in existing_columns:
-                            logger.info("Adding missing image_url column to posts table...")
-                            conn.execute(text("ALTER TABLE posts ADD COLUMN image_url VARCHAR(500)"))
-                            conn.commit()
-                            logger.info("✓ Added image_url column to posts table")
+                        for col_name, col_type in required_columns:
+                            if col_name not in existing_columns:
+                                logger.info(f"Adding missing {col_name} column to posts table...")
+                                conn.execute(text(f"ALTER TABLE posts ADD COLUMN {col_name} {col_type}"))
+                                conn.commit()
+                                logger.info(f"✓ Added {col_name} column to posts table")
                 else:
                     # SQLite
                     result = conn.execute(text("PRAGMA table_info(posts)"))
                     existing_columns = [row[1] for row in result]
 
                     if existing_columns:
-                        columns_to_add = []
-                        if 'content' not in existing_columns:
-                            columns_to_add.append(('content', 'TEXT'))
-                        if 'image_url' not in existing_columns:
-                            columns_to_add.append(('image_url', 'VARCHAR(500)'))
+                        # Define all required columns with their types for SQLite
+                        required_columns = [
+                            ('content', 'TEXT'),
+                            ('image_url', 'VARCHAR(500)'),
+                            ('likes', 'INTEGER DEFAULT 0'),
+                            ('circle_id', 'INTEGER'),
+                            ('is_published', 'BOOLEAN DEFAULT 1'),
+                            ('updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+                        ]
 
                         # Add missing columns one by one for SQLite
-                        for col_name, col_type in columns_to_add:
-                            logger.info(f"Adding {col_name} column to posts table...")
-                            conn.execute(text(f"ALTER TABLE posts ADD COLUMN {col_name} {col_type}"))
-                            conn.commit()
-                            logger.info(f"✓ Added {col_name} column to posts table")
+                        for col_name, col_type in required_columns:
+                            if col_name not in existing_columns:
+                                logger.info(f"Adding {col_name} column to posts table...")
+                                conn.execute(text(f"ALTER TABLE posts ADD COLUMN {col_name} {col_type}"))
+                                conn.commit()
+                                logger.info(f"✓ Added {col_name} column to posts table")
 
             except Exception as e:
                 logger.warning(f"Could not fix posts table: {e}")
