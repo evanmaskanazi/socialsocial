@@ -309,8 +309,8 @@ def init_database():
             else:
                 logger.info(f"Found {len(tables)} existing tables")
 
-                # Fix the alerts table schema issue
-                fix_alerts_table()
+                # Fix all schema issues
+                fix_all_schema_issues()
 
                 # Only try migrations if migrations folder exists
                 if os.path.exists('migrations'):
@@ -343,68 +343,258 @@ def init_database():
                     raise
 
 
-def fix_alerts_table():
-    """Fix the alerts table schema - rename 'message' to 'content' if needed"""
+def fix_all_schema_issues():
+    """Fix all known database schema issues"""
     try:
         with db.engine.connect() as conn:
             # Check if we're using PostgreSQL or SQLite
             is_postgres = 'postgresql' in str(db.engine.url)
 
-            if is_postgres:
-                # PostgreSQL: Check column existence
-                result = conn.execute(text(
-                    """SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='alerts' 
-                    AND column_name IN ('message', 'content')"""
-                ))
-                columns = [row[0] for row in result]
+            # 1. Fix alerts table (message -> content)
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='alerts' 
+                        AND column_name IN ('message', 'content')"""
+                    ))
+                    columns = [row[0] for row in result]
 
-                # If 'message' exists but not 'content', rename it
-                if 'message' in columns and 'content' not in columns:
-                    logger.info("Renaming alerts.message to alerts.content...")
-                    conn.execute(text("ALTER TABLE alerts RENAME COLUMN message TO content"))
-                    conn.commit()
-                    logger.info("✓ Fixed alerts.message column")
-                elif 'content' not in columns and 'message' not in columns:
-                    logger.info("Adding missing content column...")
-                    conn.execute(text("ALTER TABLE alerts ADD COLUMN content TEXT"))
-                    conn.commit()
-                    logger.info("✓ Added alerts.content column")
+                    if 'message' in columns and 'content' not in columns:
+                        logger.info("Renaming alerts.message to alerts.content...")
+                        conn.execute(text("ALTER TABLE alerts RENAME COLUMN message TO content"))
+                        conn.commit()
+                        logger.info("✓ Fixed alerts.message column")
+                    elif 'content' not in columns and 'message' not in columns:
+                        logger.info("Adding missing content column...")
+                        conn.execute(text("ALTER TABLE alerts ADD COLUMN content TEXT"))
+                        conn.commit()
+                        logger.info("✓ Added alerts.content column")
+                    else:
+                        logger.info("✓ Alerts table schema is correct")
                 else:
-                    logger.info("✓ Alerts table schema is correct")
-            else:
-                # SQLite: Different approach
-                result = conn.execute(text("PRAGMA table_info(alerts)"))
-                columns = [row[1] for row in result]
+                    # SQLite handling
+                    result = conn.execute(text("PRAGMA table_info(alerts)"))
+                    columns = [row[1] for row in result]
 
-                if 'message' in columns and 'content' not in columns:
-                    # SQLite doesn't support RENAME COLUMN in older versions
-                    # We need to recreate the table
-                    logger.info("Migrating alerts table for SQLite...")
-                    conn.execute(text("""
-                        CREATE TABLE alerts_new (
-                            id INTEGER PRIMARY KEY,
-                            user_id INTEGER,
-                            title VARCHAR(200),
-                            content TEXT,
-                            type VARCHAR(50),
-                            is_read BOOLEAN DEFAULT 0,
-                            created_at DATETIME,
-                            FOREIGN KEY(user_id) REFERENCES users(id)
-                        )
-                    """))
-                    conn.execute(text("""
-                        INSERT INTO alerts_new (id, user_id, title, content, type, is_read, created_at)
-                        SELECT id, user_id, title, message, type, is_read, created_at FROM alerts
-                    """))
-                    conn.execute(text("DROP TABLE alerts"))
-                    conn.execute(text("ALTER TABLE alerts_new RENAME TO alerts"))
+                    if 'message' in columns and 'content' not in columns:
+                        logger.info("Migrating alerts table for SQLite...")
+                        # SQLite doesn't support RENAME COLUMN in older versions
+                        conn.execute(text("""
+                            CREATE TABLE alerts_new (
+                                id INTEGER PRIMARY KEY,
+                                user_id INTEGER,
+                                title VARCHAR(200),
+                                content TEXT,
+                                type VARCHAR(50),
+                                is_read BOOLEAN DEFAULT 0,
+                                created_at DATETIME,
+                                FOREIGN KEY(user_id) REFERENCES users(id)
+                            )
+                        """))
+                        conn.execute(text("""
+                            INSERT INTO alerts_new (id, user_id, title, content, type, is_read, created_at)
+                            SELECT id, user_id, title, message, type, is_read, created_at FROM alerts
+                        """))
+                        conn.execute(text("DROP TABLE alerts"))
+                        conn.execute(text("ALTER TABLE alerts_new RENAME TO alerts"))
+                        conn.commit()
+                        logger.info("✓ Migrated alerts table schema")
+            except Exception as e:
+                logger.warning(f"Could not fix alerts table: {e}")
+
+            # 2. Fix profiles table - add missing columns
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='profiles'"""
+                    ))
+                    existing_columns = [row[0] for row in result]
+                else:
+                    # SQLite
+                    result = conn.execute(text("PRAGMA table_info(profiles)"))
+                    existing_columns = [row[1] for row in result]
+
+                # Define all columns that should exist in profiles table
+                required_columns = [
+                    ('mood_status', 'VARCHAR(50)'),
+                    ('avatar_url', 'VARCHAR(500)'),
+                    ('interests', 'TEXT'),
+                    ('occupation', 'VARCHAR(200)'),
+                    ('goals', 'TEXT'),
+                    ('favorite_hobbies', 'TEXT')
+                ]
+
+                for col_name, col_type in required_columns:
+                    if col_name not in existing_columns:
+                        logger.info(f"Adding profiles.{col_name} column...")
+                        conn.execute(text(f"ALTER TABLE profiles ADD COLUMN {col_name} {col_type}"))
+                        conn.commit()
+                        logger.info(f"✓ Added profiles.{col_name} column")
+
+            except Exception as e:
+                logger.warning(f"Could not fix profiles table: {e}")
+
+            # 3. Ensure activities table exists
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_name='activities'"""
+                    ))
+                    table_exists = result.fetchone() is not None
+                else:
+                    # SQLite
+                    result = conn.execute(text(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='activities'"
+                    ))
+                    table_exists = result.fetchone() is not None
+
+                if not table_exists:
+                    logger.info("Creating activities table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE activities (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL REFERENCES users(id),
+                                activity_date DATE NOT NULL,
+                                post_count INTEGER DEFAULT 0,
+                                comment_count INTEGER DEFAULT 0,
+                                message_count INTEGER DEFAULT 0,
+                                mood_entries JSON,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(user_id, activity_date)
+                            )
+                        """))
+                    else:
+                        # SQLite version
+                        conn.execute(text("""
+                            CREATE TABLE activities (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL,
+                                activity_date DATE NOT NULL,
+                                post_count INTEGER DEFAULT 0,
+                                comment_count INTEGER DEFAULT 0,
+                                message_count INTEGER DEFAULT 0,
+                                mood_entries TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(user_id, activity_date),
+                                FOREIGN KEY(user_id) REFERENCES users(id)
+                            )
+                        """))
                     conn.commit()
-                    logger.info("✓ Migrated alerts table schema")
+                    logger.info("✓ Created activities table")
+                else:
+                    logger.info("✓ Activities table already exists")
+
+            except Exception as e:
+                logger.warning(f"Could not create activities table: {e}")
+
+            # 4. Ensure comments table exists
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_name='comments'"""
+                    ))
+                    table_exists = result.fetchone() is not None
+                else:
+                    result = conn.execute(text(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='comments'"
+                    ))
+                    table_exists = result.fetchone() is not None
+
+                if not table_exists:
+                    logger.info("Creating comments table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE comments (
+                                id SERIAL PRIMARY KEY,
+                                post_id INTEGER NOT NULL REFERENCES posts(id),
+                                user_id INTEGER NOT NULL REFERENCES users(id),
+                                content TEXT NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE comments (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                post_id INTEGER NOT NULL,
+                                user_id INTEGER NOT NULL,
+                                content TEXT NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(post_id) REFERENCES posts(id),
+                                FOREIGN KEY(user_id) REFERENCES users(id)
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ Created comments table")
+
+            except Exception as e:
+                logger.warning(f"Could not create comments table: {e}")
+
+            # 5. Ensure reactions table exists
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_name='reactions'"""
+                    ))
+                    table_exists = result.fetchone() is not None
+                else:
+                    result = conn.execute(text(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='reactions'"
+                    ))
+                    table_exists = result.fetchone() is not None
+
+                if not table_exists:
+                    logger.info("Creating reactions table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE reactions (
+                                id SERIAL PRIMARY KEY,
+                                post_id INTEGER NOT NULL REFERENCES posts(id),
+                                user_id INTEGER NOT NULL REFERENCES users(id),
+                                type VARCHAR(20) NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(post_id, user_id)
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE reactions (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                post_id INTEGER NOT NULL,
+                                user_id INTEGER NOT NULL,
+                                type VARCHAR(20) NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(post_id, user_id),
+                                FOREIGN KEY(post_id) REFERENCES posts(id),
+                                FOREIGN KEY(user_id) REFERENCES users(id)
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ Created reactions table")
+
+            except Exception as e:
+                logger.warning(f"Could not create reactions table: {e}")
+
+            logger.info("✓ All schema fixes complete")
 
     except Exception as e:
-        logger.warning(f"Could not fix alerts table (may already be fixed): {e}")
+        logger.error(f"Error in fix_all_schema_issues: {e}")
+        # Don't fail the entire initialization for schema fixes
+        pass
+
 
 
 def create_admin_user():

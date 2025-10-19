@@ -1,84 +1,105 @@
 #!/usr/bin/env bash
 # Build script for Render deployment
-# This replaces your existing build.sh
+# Handles database migrations and schema fixes automatically
 
 set -o errexit
 
-echo "Starting build process..."
+echo "=== Starting Render build process ==="
 
 # Upgrade pip and install dependencies
 echo "Installing Python dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Run database migrations and fixes
-echo "Setting up database..."
+# Fix all database schema issues
+echo "Fixing database schema..."
 python -c "
 from app import app, db
-from flask_migrate import upgrade, init
-import os
 from sqlalchemy import text
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('build_script')
 
 with app.app_context():
-    print('Creating database tables...')
-    # Create all tables if they don't exist
+    # Create all tables first
     db.create_all()
-    print('✓ Database tables created')
+    logger.info('✓ Ensured all tables exist')
 
-    # Initialize migration repository if needed
-    if not os.path.exists('migrations'):
-        try:
-            init()
-            print('✓ Migration repository initialized')
-        except Exception as e:
-            print(f'Migration init skipped: {e}')
-
-    # Run any pending migrations
-    try:
-        upgrade()
-        print('✓ Migrations completed')
-    except Exception as e:
-        print(f'Migration skipped (may already be applied): {e}')
-
-    # Fix the alerts table schema issue
-    print('Checking alerts table schema...')
     with db.engine.connect() as conn:
+        # Fix alerts table
         try:
-            # Check what columns exist
             result = conn.execute(text(
-                \"\"\"SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name='alerts'
-                AND column_name IN ('message', 'content')\"\"\"
+                \"\"\"SELECT column_name FROM information_schema.columns
+                WHERE table_name='alerts' AND column_name IN ('message', 'content')\"\"\"
             ))
             columns = [row[0] for row in result]
 
-            # Fix the column name if needed
             if 'message' in columns and 'content' not in columns:
-                print('Renaming alerts.message to alerts.content...')
                 conn.execute(text('ALTER TABLE alerts RENAME COLUMN message TO content'))
                 conn.commit()
-                print('✓ Fixed alerts.message column')
-            elif 'content' not in columns and 'message' not in columns:
-                print('Adding missing content column...')
+                logger.info('✓ Fixed alerts.message column')
+            elif 'content' not in columns:
                 conn.execute(text('ALTER TABLE alerts ADD COLUMN content TEXT'))
                 conn.commit()
-                print('✓ Added alerts.content column')
-            else:
-                print('✓ Alerts table schema is correct')
-
+                logger.info('✓ Added alerts.content column')
         except Exception as e:
-            print(f'Schema check completed with warning: {e}')
+            logger.warning(f'Alerts fix skipped: {e}')
 
-    # Verify the fix
-    with db.engine.connect() as conn:
+        # Fix profiles table - add missing columns
         try:
-            result = conn.execute(text('SELECT content FROM alerts LIMIT 1'))
-            print('✓ Verified: alerts.content column exists and is accessible')
-        except Exception as e:
-            print(f'Warning: Could not verify alerts table: {e}')
+            result = conn.execute(text(
+                \"\"\"SELECT column_name FROM information_schema.columns WHERE table_name='profiles'\"\"\"
+            ))
+            existing = [row[0] for row in result]
 
-    print('✓ Database setup completed successfully!')
+            columns_to_add = [
+                ('mood_status', 'VARCHAR(50)'),
+                ('avatar_url', 'VARCHAR(500)')
+            ]
+
+            for col_name, col_type in columns_to_add:
+                if col_name not in existing:
+                    conn.execute(text(f'ALTER TABLE profiles ADD COLUMN {col_name} {col_type}'))
+                    conn.commit()
+                    logger.info(f'✓ Added profiles.{col_name} column')
+        except Exception as e:
+            logger.warning(f'Profiles fix skipped: {e}')
+
+        # Ensure activities table exists
+        try:
+            result = conn.execute(text(
+                \"\"\"SELECT table_name FROM information_schema.tables WHERE table_name='activities'\"\"\"
+            ))
+            if not result.fetchone():
+                conn.execute(text('''
+                    CREATE TABLE activities (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER REFERENCES users(id),
+                        activity_date DATE NOT NULL,
+                        post_count INTEGER DEFAULT 0,
+                        comment_count INTEGER DEFAULT 0,
+                        message_count INTEGER DEFAULT 0,
+                        mood_entries JSON,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(user_id, activity_date)
+                    )
+                '''))
+                conn.commit()
+                logger.info('✓ Created activities table')
+        except Exception as e:
+            logger.warning(f'Activities table skipped: {e}')
+
+    # Initialize database
+    try:
+        from app import init_database
+        init_database()
+        logger.info('✓ Database initialized')
+    except Exception as e:
+        logger.warning(f'Init skipped: {e}')
+
+    logger.info('✓ Schema fixes complete!')
 "
 
-echo "✓ Build completed successfully!"
+echo "=== Build completed successfully! ==="
