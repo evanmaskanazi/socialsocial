@@ -311,6 +311,7 @@ def init_database():
 
                 # Fix all schema issues
                 fix_all_schema_issues()
+                create_test_users()
 
                 # Only try migrations if migrations folder exists
                 if os.path.exists('migrations'):
