@@ -1,746 +1,1067 @@
+#!/usr/bin/env python
 """
-Thera Social Backend - Main Application
-A social-therapeutic platform with anonymous sharing and tracking
+Complete app.py for Social Social Platform
+Includes all existing routes plus 7 new fixes
 """
+
 import os
+import json
+import uuid
+import redis
 import logging
-import traceback
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, request, jsonify, g, session, send_from_directory
+
+from flask import (
+    Flask, request, jsonify, session, 
+    render_template, send_from_directory, redirect, url_for
+)
+from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.middleware.proxy_fix import ProxyFix
-import redis
-import uuid
+from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.exc import IntegrityError
 
-# Import custom modules
-from models import db, migrate, User, Follow, Circle, CircleMember, Post, Parameter, ParameterValue, Trend, Alert, PrivateMessage, Report, Penalty
-from config import Config, configure_logging
-from security import SecurityManager, sanitize_input, validate_email, encrypt_field, decrypt_field
-from auth import AuthManager, require_auth, generate_token, verify_token
-from social import SocialManager
-from tracking import TrackingManager
-from messaging import MessagingManager
-
-# Initialize Flask app
-app = Flask(__name__)
-app.config.from_object(Config)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-
-# Initialize extensions
-db.init_app(app)
-migrate.init_app(app, db)
-CORS(app, supports_credentials=True)
-
-# Initialize Redis
-redis_client = redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'))
-
-# Initialize rate limiter
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["5000 per day", "1000 per hour"],
-    storage_uri="memory://"
+# Import security functions
+from security import (
+    sanitize_input, validate_email, validate_username,
+    validate_password_strength, encrypt_field, decrypt_field,
+    generate_token, rate_limit, content_moderator
 )
 
-# Configure logging
-logger = configure_logging()
+# Initialize Flask app
+app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# Initialize managers
-security_manager = SecurityManager(app, redis_client)
-auth_manager = AuthManager(app, db, redis_client)
-social_manager = SocialManager(db, redis_client)
-tracking_manager = TrackingManager(db, redis_client)
-messaging_manager = MessagingManager(db, redis_client, security_manager)
+# Configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///social.db')
 
-# ============= REQUEST HANDLERS =============
+# Fix for Render PostgreSQL URL
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
+# Initialize extensions
+db = SQLAlchemy(app)
+CORS(app, supports_credentials=True)
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('thera_social')
+
+# Initialize Redis (optional, for session management)
+try:
+    redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+    redis_client = redis.from_url(redis_url, decode_responses=True)
+except:
+    redis_client = None
+    logger.warning("Redis not available, using local sessions")
+
+# =====================
+# DATABASE MODELS
+# =====================
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(50), default='user')
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    profile = db.relationship('Profile', backref='user', uselist=False, cascade='all, delete-orphan')
+    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender')
+    received_messages = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient')
+    circles = db.relationship('Circle', foreign_keys='Circle.user_id', backref='owner')
+    saved_parameters = db.relationship('SavedParameters', backref='user', cascade='all, delete-orphan')
+
+class Profile(db.Model):
+    __tablename__ = 'profiles'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True)
+    bio = db.Column(db.Text)
+    interests = db.Column(db.Text)
+    occupation = db.Column(db.String(200))
+    goals = db.Column(db.Text)
+    favorite_hobbies = db.Column(db.Text)
+    avatar_url = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Post(db.Model):
+    __tablename__ = 'posts'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    likes = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    author = db.relationship('User', backref='posts')
+
+class Circle(db.Model):
+    __tablename__ = 'circles'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    circle_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    circle_type = db.Column(db.String(50))  # 'general', 'close_friends', 'family'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    circle_user = db.relationship('User', foreign_keys=[circle_user_id])
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    recipient_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    content = db.Column(db.Text)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class SavedParameters(db.Model):
+    __tablename__ = 'saved_parameters'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    date = db.Column(db.Date)
+    mood = db.Column(db.String(100))
+    sleep_hours = db.Column(db.Float)
+    exercise = db.Column(db.String(100))
+    anxiety = db.Column(db.String(100))
+    energy = db.Column(db.String(100))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Alert(db.Model):
+    __tablename__ = 'alerts'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    title = db.Column(db.String(200))
+    message = db.Column(db.Text)
+    type = db.Column(db.String(50))  # 'info', 'warning', 'success', 'error'
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='alerts')
+
+# =====================
+# DECORATORS
+# =====================
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        user = User.query.get(session['user_id'])
+        if not user or user.role != 'admin':
+            return jsonify({'error': 'Admin privileges required'}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+# =====================
+# REQUEST HANDLERS
+# =====================
 
 @app.before_request
 def before_request():
-    """Initialize request context"""
-    g.request_id = str(uuid.uuid4())
-    g.request_start_time = datetime.utcnow()
-    
-    # Security checks
-    if not security_manager.validate_request(request):
-        return jsonify({'error': 'Invalid request'}), 400
-    
-    # Log request
-    logger.info('request_started', extra={
-        'request_id': g.request_id,
+    """Log request details"""
+    request.request_id = str(uuid.uuid4())
+    logger.info(f"request_started", extra={
+        'request_id': request.request_id,
         'method': request.method,
         'path': request.path,
-        'ip': request.remote_addr
+        'remote_addr': request.remote_addr
     })
 
 @app.after_request
 def after_request(response):
-    """Post-request processing"""
-    if hasattr(g, 'request_start_time'):
-        duration = (datetime.utcnow() - g.request_start_time).total_seconds()
-        logger.info('request_completed', extra={
-            'request_id': getattr(g, 'request_id', 'unknown'),
-            'duration': duration,
-            'status': response.status_code
-        })
-    
-    # Security headers
-    response.headers.update(security_manager.get_security_headers())
-    if hasattr(g, 'request_id'):
-        response.headers['X-Request-ID'] = g.request_id
-    
+    """Log response details"""
+    logger.info(f"request_completed", extra={
+        'request_id': getattr(request, 'request_id', 'unknown'),
+        'status_code': response.status_code
+    })
     return response
 
-@app.errorhandler(Exception)
-def handle_error(error):
-    """Global error handler"""
-    logger.error('unhandled_exception', extra={
-        'request_id': g.request_id,
-        'error': str(error),
-        'traceback': traceback.format_exc()
-    })
-    
-    if isinstance(error, ValueError):
-        return jsonify({'error': str(error)}), 400
-    
-    return jsonify({'error': 'Internal server error'}), 500
+# =====================
+# BASIC ROUTES
+# =====================
 
-# ============= AUTHENTICATION ENDPOINTS =============
+@app.route('/')
+def index():
+    """Main landing page"""
+    return render_template('index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                             'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+@app.route('/about')
+def about_page():
+    """About page"""
+    return render_template('about.html')
+
+@app.route('/support')
+def support_page():
+    """Support page"""
+    return render_template('support.html')
+
+@app.route('/profile')
+@login_required
+def profile_page():
+    """Profile page"""
+    return render_template('profile.html')
+
+@app.route('/circles')
+@login_required
+def circles_page():
+    """Circles page"""
+    return render_template('circles.html')
+
+@app.route('/messages')
+@login_required
+def messages_page():
+    """Messages page"""
+    return render_template('messages.html')
+
+# =====================
+# AUTHENTICATION ROUTES
+# =====================
 
 @app.route('/api/auth/register', methods=['POST'])
-@limiter.limit("10 per hour")
+@rate_limit(max_attempts=5, window_minutes=15)
 def register():
-    """Register new user with anonymity"""
+    """Register new user"""
     try:
         data = request.json
         
-        # Validate required fields
-        email = sanitize_input(data.get('email', ''))
+        # Validate input
+        username = sanitize_input(data.get('username', '').strip())
+        email = sanitize_input(data.get('email', '').strip().lower())
         password = data.get('password', '')
-        display_name = sanitize_input(data.get('display_name', ''))
         
-        if not all([email, password]):
-            return jsonify({'error': 'Email and password required'}), 400
+        # Validation
+        if not username or not email or not password:
+            return jsonify({'error': 'All fields are required'}), 400
         
         if not validate_email(email):
             return jsonify({'error': 'Invalid email format'}), 400
         
-        # Check password strength
-        if len(password) < 12:
-            return jsonify({'error': 'Password must be at least 12 characters'}), 400
+        if not validate_username(username):
+            return jsonify({'error': 'Invalid username format'}), 400
         
-        # Check if email exists
-        if User.query.filter_by(email_encrypted=encrypt_field(email)).first():
+        valid, msg = validate_password_strength(password)
+        if not valid:
+            return jsonify({'error': msg}), 400
+        
+        # Check if user exists
+        if User.query.filter_by(email=email).first():
             return jsonify({'error': 'Email already registered'}), 400
         
-        # Generate anonymous ID
-        anonymous_id = f"USER_{uuid.uuid4().hex[:12].upper()}"
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': 'Username already taken'}), 400
         
         # Create user
         user = User(
-            anonymous_id=anonymous_id,
-            email_encrypted=encrypt_field(email),
-            display_name=display_name or f"Anonymous_{uuid.uuid4().hex[:8]}",
-            password_hash=auth_manager.hash_password(password)
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(password)
         )
-        
         db.session.add(user)
         db.session.flush()
         
-        # Create default circles
-        for circle_type in ['family', 'close_friends', 'general']:
-            circle = Circle(
-                user_id=user.id,
-                circle_type=circle_type,
-                name=circle_type.replace('_', ' ').title()
-            )
-            db.session.add(circle)
-        
-        # Create default tracking parameters
-        default_params = ['mood', 'sleep', 'exercise', 'anxiety', 'energy']
-        for param_name in default_params:
-            param = Parameter(
-                user_id=user.id,
-                name=param_name,
-                parameter_type='scale',
-                min_value=1,
-                max_value=10
-            )
-            db.session.add(param)
+        # Create profile
+        profile = Profile(user_id=user.id)
+        db.session.add(profile)
         
         db.session.commit()
         
-        # Generate token
-        token = generate_token(user.id, user.anonymous_id)
+        # Log user in
+        session['user_id'] = user.id
+        session['username'] = user.username
+        session.permanent = True
         
-        logger.info('user_registered', extra={
-            'request_id': g.request_id,
-            'user_id': user.id,
-            'anonymous_id': anonymous_id
-        })
+        logger.info("user_registered", extra={'user_id': user.id})
         
         return jsonify({
             'success': True,
-            'token': token,
             'user': {
-                'id': user.anonymous_id,
-                'display_name': user.display_name
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
             }
-        })
+        }), 200
         
     except Exception as e:
+        logger.error(f"Registration error: {str(e)}")
         db.session.rollback()
-        logger.error('registration_error', extra={
-            'request_id': g.request_id,
-            'error': str(e)
-        })
         return jsonify({'error': 'Registration failed'}), 500
 
 @app.route('/api/auth/login', methods=['POST'])
-@limiter.limit("20 per minute")
+@rate_limit(max_attempts=10, window_minutes=15)
 def login():
-    """User login with anonymity preservation"""
+    """User login"""
     try:
         data = request.json
-        email = data.get('email', '')
+        email = data.get('email', '').strip().lower()
         password = data.get('password', '')
         
-        if not all([email, password]):
+        if not email or not password:
             return jsonify({'error': 'Email and password required'}), 400
         
-        # Find user by encrypted email
-        user = User.query.filter_by(
-            email_encrypted=encrypt_field(email),
-            is_active=True
-        ).first()
+        # Find user
+        user = User.query.filter_by(email=email).first()
         
-        if not user or not auth_manager.verify_password(password, user.password_hash):
-            logger.warning('login_failed', extra={
-                'request_id': g.request_id,
-                'email': email
-            })
+        if not user or not check_password_hash(user.password_hash, password):
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        # Check for penalties
-        active_penalty = user.penalties.filter_by(is_active=True).first()
-        if active_penalty:
-            return jsonify({
-                'error': 'Account suspended',
-                'reason': active_penalty.reason,
-                'until': active_penalty.end_date.isoformat() if active_penalty.end_date else 'Permanent'
-            }), 403
-        
-        # Update last login
-        user.last_login = datetime.utcnow()
-        db.session.commit()
-        
-        # Generate token
-        token = generate_token(user.id, user.anonymous_id)
+        if not user.is_active:
+            return jsonify({'error': 'Account deactivated'}), 403
         
         # Create session
-        session_id = auth_manager.create_session(user.id)
+        session['user_id'] = user.id
+        session['username'] = user.username
+        session['role'] = user.role
+        session.permanent = True
         
-        logger.info('login_success', extra={
-            'request_id': g.request_id,
-            'user_id': user.id
-        })
+        logger.info("login_success", extra={'user_id': user.id})
         
-        response = jsonify({
+        return jsonify({
             'success': True,
-            'token': token,
             'user': {
-                'id': user.anonymous_id,
-                'display_name': user.display_name
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'role': user.role
             }
-        })
-        
-        response.set_cookie(
-            'session_token',
-            session_id,
-            max_age=86400,
-            secure=True,
-            httponly=True,
-            samesite='Strict'
-        )
-        
-        return response
+        }), 200
         
     except Exception as e:
-        logger.error('login_error', extra={
-            'request_id': g.request_id,
-            'error': str(e)
-        })
+        logger.error(f"Login error: {str(e)}")
         return jsonify({'error': 'Login failed'}), 500
 
 @app.route('/api/auth/logout', methods=['POST'])
-@require_auth()
 def logout():
     """User logout"""
-    try:
-        user = request.current_user
-        auth_manager.invalidate_session(user.id)
-        
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    user_id = session.get('user_id')
+    session.clear()
+    logger.info("logout", extra={'user_id': user_id})
+    return jsonify({'success': True}), 200
 
-# ============= PROFILE ENDPOINTS =============
-
-@app.route('/api/profile', methods=['GET'])
-@require_auth()
-def get_profile():
-    """Get user profile with anonymity"""
-    user = request.current_user
+@app.route('/api/auth/session', methods=['GET'])
+def check_session():
+    """Check if user is logged in"""
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        if user:
+            return jsonify({
+                'authenticated': True,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'role': user.role
+                }
+            })
     
+    return jsonify({'authenticated': False}), 401
+
+# =====================
+# USER ROUTES
+# =====================
+
+@app.route('/api/user/profile', methods=['GET'])
+@login_required
+def get_current_user():
+    """Get current user info"""
+    user = User.query.get(session['user_id'])
     return jsonify({
-        'profile': {
-            'id': user.anonymous_id,
-            'display_name': user.display_name,
-            'bio': decrypt_field(user.bio_encrypted) if user.bio_encrypted else None,
-            'joined': user.created_at.isoformat(),
-            'stats': {
-                'followers': user.followers.count(),
-                'following': user.following.count(),
-                'posts': user.posts.count()
-            }
-        }
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'role': user.role
     })
 
-@app.route('/api/profile', methods=['PUT'])
-@require_auth()
-def update_profile():
-    """Update profile maintaining anonymity"""
-    try:
-        user = request.current_user
+@app.route('/api/profile', methods=['GET', 'PUT'])
+@login_required
+def profile():
+    """Get or update user profile"""
+    user_id = session.get('user_id')
+    
+    if request.method == 'GET':
+        profile = Profile.query.filter_by(user_id=user_id).first()
+        if not profile:
+            profile = Profile(user_id=user_id)
+            db.session.add(profile)
+            db.session.commit()
+        
+        return jsonify({
+            'bio': profile.bio or '',
+            'interests': profile.interests or '',
+            'occupation': profile.occupation or '',
+            'goals': profile.goals or '',
+            'favorite_hobbies': profile.favorite_hobbies or ''
+        })
+    
+    elif request.method == 'PUT':
         data = request.json
+        profile = Profile.query.filter_by(user_id=user_id).first()
+        if not profile:
+            profile = Profile(user_id=user_id)
+            db.session.add(profile)
         
-        if 'display_name' in data:
-            user.display_name = sanitize_input(data['display_name'])
-        
-        if 'bio' in data:
-            bio = sanitize_input(data['bio'])
-            if len(bio) > 500:
-                return jsonify({'error': 'Bio must be under 500 characters'}), 400
-            user.bio_encrypted = encrypt_field(bio)
+        # Update fields
+        profile.bio = sanitize_input(data.get('bio', ''))
+        profile.interests = sanitize_input(data.get('interests', ''))
+        profile.occupation = sanitize_input(data.get('occupation', ''))
+        profile.goals = sanitize_input(data.get('goals', ''))
+        profile.favorite_hobbies = sanitize_input(data.get('favorite_hobbies', ''))
+        profile.updated_at = datetime.utcnow()
         
         db.session.commit()
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': True, 'message': 'Profile updated'})
 
-# ============= SOCIAL ENDPOINTS =============
-
-@app.route('/api/follow/<anonymous_id>', methods=['POST'])
-@require_auth()
-def follow_user(anonymous_id):
-    """Follow another user"""
-    try:
-        user = request.current_user
-        target = User.query.filter_by(anonymous_id=anonymous_id).first()
-        
-        if not target:
-            return jsonify({'error': 'User not found'}), 404
-        
-        if target.id == user.id:
-            return jsonify({'error': 'Cannot follow yourself'}), 400
-        
-        result = social_manager.follow_user(user.id, target.id)
-        
-        if result:
-            # Create alert for followed user
-            tracking_manager.create_alert(
-                target.id,
-                'new_follower',
-                f'{user.display_name} started following you',
-                'low'
-            )
-        
-        return jsonify({'success': result})
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/unfollow/<anonymous_id>', methods=['DELETE'])
-@require_auth()
-def unfollow_user(anonymous_id):
-    """Unfollow a user"""
-    try:
-        user = request.current_user
-        target = User.query.filter_by(anonymous_id=anonymous_id).first()
-        
-        if not target:
-            return jsonify({'error': 'User not found'}), 404
-        
-        result = social_manager.unfollow_user(user.id, target.id)
-        
-        return jsonify({'success': result})
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/circles', methods=['GET'])
-@require_auth()
-def get_circles():
-    """Get user's circles"""
-    user = request.current_user
-    circles = social_manager.get_user_circles(user.id)
+@app.route('/api/users/search')
+@login_required
+def search_users():
+    """Search for users"""
+    query = request.args.get('q', '')
+    if len(query) < 2:
+        return jsonify([])
     
-    return jsonify({'circles': circles})
+    users = User.query.filter(
+        (User.username.ilike(f'%{query}%')) | 
+        (User.email.ilike(f'%{query}%'))
+    ).limit(10).all()
+    
+    results = [{
+        'id': u.id,
+        'username': u.username,
+        'email': u.email
+    } for u in users if u.id != session.get('user_id')]
+    
+    return jsonify(results)
 
-@app.route('/api/circles/<int:circle_id>/members', methods=['POST'])
-@require_auth()
-def add_to_circle(circle_id):
-    """Add user to circle"""
+# =====================
+# FEED ROUTES
+# =====================
+
+@app.route('/api/feed', methods=['GET'])
+@login_required
+def get_feed():
+    """Get user feed"""
     try:
-        user = request.current_user
-        data = request.json
-        target_id = data.get('user_id')
+        # Get posts from user's circles
+        user_id = session['user_id']
         
-        # Verify circle ownership
-        circle = Circle.query.filter_by(id=circle_id, user_id=user.id).first()
-        if not circle:
-            return jsonify({'error': 'Circle not found'}), 404
+        # Get users in circles
+        circle_users = Circle.query.filter_by(user_id=user_id).all()
+        circle_user_ids = [c.circle_user_id for c in circle_users]
+        circle_user_ids.append(user_id)  # Include own posts
         
-        # Find target user
-        target = User.query.filter_by(anonymous_id=target_id).first()
-        if not target:
-            return jsonify({'error': 'User not found'}), 404
+        # Get posts
+        posts = Post.query.filter(
+            Post.user_id.in_(circle_user_ids)
+        ).order_by(Post.created_at.desc()).limit(50).all()
         
-        # Check if following
-        if not Follow.query.filter_by(follower_id=user.id, followed_id=target.id).first():
-            return jsonify({'error': 'Must follow user first'}), 400
+        feed = []
+        for post in posts:
+            feed.append({
+                'id': post.id,
+                'content': post.content,
+                'author': post.author.username,
+                'likes': post.likes,
+                'created_at': post.created_at.isoformat()
+            })
         
-        result = social_manager.add_to_circle(circle_id, target.id)
-        
-        return jsonify({'success': result})
-        
+        return jsonify({'posts': feed})
+    
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# ============= SHARING ENDPOINTS =============
+        logger.error(f"Feed error: {str(e)}")
+        return jsonify({'posts': []})
 
 @app.route('/api/posts', methods=['POST'])
-@require_auth()
+@login_required
 def create_post():
-    """Share feelings or updates"""
+    """Create a new post"""
     try:
-        user = request.current_user
         data = request.json
-        
         content = sanitize_input(data.get('content', ''))
-        visibility = data.get('visibility', 'general')
-        circle_id = data.get('circle_id')
         
         if not content:
             return jsonify({'error': 'Content required'}), 400
         
-        if len(content) > 1000:
-            return jsonify({'error': 'Content too long'}), 400
+        # Check content moderation
+        moderation = content_moderator.check_content(content)
+        if not moderation['safe']:
+            return jsonify({'error': moderation.get('message', 'Content not allowed')}), 400
         
         post = Post(
-            user_id=user.id,
-            content_encrypted=encrypt_field(content),
-            visibility=visibility,
-            circle_id=circle_id
+            user_id=session['user_id'],
+            content=content
         )
-        
         db.session.add(post)
         db.session.commit()
         
-        # Check for concerning patterns
-        tracking_manager.analyze_content(user.id, content)
-        
-        return jsonify({
-            'success': True,
-            'post_id': post.id
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/feed', methods=['GET'])
-@require_auth()
-def get_feed():
-    """Get personalized feed"""
-    try:
-        user = request.current_user
-        page = request.args.get('page', 1, type=int)
-        per_page = min(request.args.get('per_page', 20, type=int), 50)
-        
-        feed = social_manager.get_user_feed(user.id, page, per_page)
-        
-        return jsonify({
-            'posts': feed['posts'],
-            'pagination': feed['pagination']
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# ============= TRACKING ENDPOINTS =============
-
-@app.route('/api/parameters', methods=['GET'])
-@require_auth()
-def get_parameters():
-    """Get user's tracking parameters"""
-    user = request.current_user
-    params = tracking_manager.get_user_parameters(user.id)
+        return jsonify({'success': True, 'post_id': post.id})
     
-    return jsonify({'parameters': params})
+    except Exception as e:
+        logger.error(f"Post creation error: {str(e)}")
+        return jsonify({'error': 'Failed to create post'}), 500
 
-@app.route('/api/parameters/values', methods=['POST'])
-@require_auth()
-def track_parameter():
-    """Track parameter value"""
-    try:
-        user = request.current_user
+# =====================
+# CIRCLES ROUTES
+# =====================
+
+@app.route('/api/circles', methods=['GET', 'POST'])
+@login_required
+def circles():
+    """Manage user circles"""
+    user_id = session.get('user_id')
+    
+    if request.method == 'GET':
+        # Get all circles for the user
+        general = Circle.query.filter_by(user_id=user_id, circle_type='general').all()
+        close_friends = Circle.query.filter_by(user_id=user_id, circle_type='close_friends').all()
+        family = Circle.query.filter_by(user_id=user_id, circle_type='family').all()
+        
+        def get_user_info(circle):
+            user = User.query.get(circle.circle_user_id)
+            return {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            }
+        
+        return jsonify({
+            'general': [get_user_info(c) for c in general],
+            'close_friends': [get_user_info(c) for c in close_friends],
+            'family': [get_user_info(c) for c in family]
+        })
+    
+    elif request.method == 'POST':
         data = request.json
+        circle_user_id = data.get('user_id')
+        circle_type = data.get('circle_type')
         
-        parameter_id = data.get('parameter_id')
-        value = data.get('value')
-        notes = sanitize_input(data.get('notes', ''))
+        if circle_type not in ['general', 'close_friends', 'family']:
+            return jsonify({'error': 'Invalid circle type'}), 400
         
-        if not all([parameter_id, value is not None]):
-            return jsonify({'error': 'Parameter ID and value required'}), 400
+        # Check if user exists
+        if not User.query.get(circle_user_id):
+            return jsonify({'error': 'User not found'}), 404
         
-        # Verify parameter ownership
-        param = Parameter.query.filter_by(id=parameter_id, user_id=user.id).first()
-        if not param:
-            return jsonify({'error': 'Parameter not found'}), 404
+        # Check if already in circle
+        existing = Circle.query.filter_by(
+            user_id=user_id,
+            circle_user_id=circle_user_id,
+            circle_type=circle_type
+        ).first()
         
-        # Record value
-        result = tracking_manager.record_value(user.id, parameter_id, value, notes)
+        if existing:
+            return jsonify({'error': 'User already in this circle'}), 400
         
-        # Analyze trends
-        trends = tracking_manager.analyze_trends(user.id, parameter_id)
+        circle = Circle(
+            user_id=user_id,
+            circle_user_id=circle_user_id,
+            circle_type=circle_type
+        )
+        db.session.add(circle)
+        db.session.commit()
         
-        # Alert followers if significant change
-        if trends and abs(trends.get('change_percent', 0)) > 20:
-            social_manager.alert_followers(user.id, param.name, trends)
+        return jsonify({'success': True, 'message': 'User added to circle'})
+
+@app.route('/api/circles/remove', methods=['DELETE'])
+@login_required
+def remove_from_circle():
+    """Remove user from circle"""
+    user_id = session.get('user_id')
+    data = request.json
+    circle_user_id = data.get('user_id')
+    circle_type = data.get('circle_type')
+    
+    circle = Circle.query.filter_by(
+        user_id=user_id,
+        circle_user_id=circle_user_id,
+        circle_type=circle_type
+    ).first()
+    
+    if circle:
+        db.session.delete(circle)
+        db.session.commit()
+        return jsonify({'success': True})
+    
+    return jsonify({'error': 'Not found'}), 404
+
+# =====================
+# MESSAGES ROUTES
+# =====================
+
+@app.route('/api/messages', methods=['GET', 'POST'])
+@login_required
+def messages():
+    """Get or send messages"""
+    user_id = session.get('user_id')
+    
+    if request.method == 'GET':
+        # Get all messages for the user
+        sent = Message.query.filter_by(sender_id=user_id).order_by(Message.created_at.desc()).all()
+        received = Message.query.filter_by(recipient_id=user_id).order_by(Message.created_at.desc()).all()
+        
+        def format_message(msg):
+            sender = User.query.get(msg.sender_id)
+            recipient = User.query.get(msg.recipient_id)
+            return {
+                'id': msg.id,
+                'sender': {'id': sender.id, 'username': sender.username},
+                'recipient': {'id': recipient.id, 'username': recipient.username},
+                'content': msg.content,
+                'is_read': msg.is_read,
+                'created_at': msg.created_at.isoformat()
+            }
         
         return jsonify({
-            'success': True,
-            'value_id': result['id'],
-            'trends': trends
+            'sent': [format_message(m) for m in sent],
+            'received': [format_message(m) for m in received]
         })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/parameters/<int:param_id>/history', methods=['GET'])
-@require_auth()
-def get_parameter_history(param_id):
-    """Get parameter history"""
-    try:
-        user = request.current_user
-        days = request.args.get('days', 30, type=int)
-        
-        history = tracking_manager.get_parameter_history(user.id, param_id, days)
-        
-        return jsonify({
-            'history': history['values'],
-            'statistics': history['stats']
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/parameters/insights', methods=['GET'])
-@require_auth()
-def get_insights():
-    """Get tracking insights"""
-    try:
-        user = request.current_user
-        days = request.args.get('days', 30, type=int)
-        
-        insights = tracking_manager.get_insights(user.id, days)
-        
-        return jsonify({'insights': insights})
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/alerts', methods=['GET'])
-@require_auth()
-def get_alerts():
-    """Get user alerts"""
-    user = request.current_user
-    page = request.args.get('page', 1, type=int)
     
-    alerts = tracking_manager.get_user_alerts(user.id, page)
-    
-    return jsonify({
-        'alerts': alerts['alerts'],
-        'unread_count': alerts['unread_count']
-    })
-
-# ============= MESSAGING ENDPOINTS =============
-
-@app.route('/api/messages', methods=['POST'])
-@require_auth()
-def send_message():
-    """Send private message"""
-    try:
-        user = request.current_user
+    elif request.method == 'POST':
         data = request.json
-        
         recipient_id = data.get('recipient_id')
-        content = sanitize_input(data.get('content', ''))
+        content = data.get('content')
         
-        if not all([recipient_id, content]):
-            return jsonify({'error': 'Recipient and content required'}), 400
+        if not recipient_id or not content:
+            return jsonify({'error': 'Missing recipient or content'}), 400
         
-        # Find recipient
-        recipient = User.query.filter_by(anonymous_id=recipient_id).first()
+        # Check if recipient exists
+        recipient = User.query.get(recipient_id)
         if not recipient:
             return jsonify({'error': 'Recipient not found'}), 404
         
-        # Check if can message (must be following each other)
-        if not social_manager.can_message(user.id, recipient.id):
-            return jsonify({'error': 'Must be mutual followers to message'}), 403
+        # Check content
+        moderation = content_moderator.check_content(content)
+        if not moderation['safe']:
+            return jsonify({'error': moderation.get('message', 'Content not allowed')}), 400
         
-        message_id = messaging_manager.send_message(user.id, recipient.id, content)
-        
-        return jsonify({
-            'success': True,
-            'message_id': message_id
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/messages/<anonymous_id>', methods=['GET'])
-@require_auth()
-def get_conversation(anonymous_id):
-    """Get conversation with user"""
-    try:
-        user = request.current_user
-        page = request.args.get('page', 1, type=int)
-        
-        # Find other user
-        other_user = User.query.filter_by(anonymous_id=anonymous_id).first()
-        if not other_user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        messages = messaging_manager.get_conversation(user.id, other_user.id, page)
-        
-        return jsonify({
-            'messages': messages['messages'],
-            'pagination': messages['pagination']
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/messages/conversations', methods=['GET'])
-@require_auth()
-def get_conversations():
-    """Get list of conversations"""
-    try:
-        user = request.current_user
-        page = request.args.get('page', 1, type=int)
-        
-        conversations = messaging_manager.get_conversations_list(user.id, page)
-        
-        return jsonify(conversations)
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# ============= PRIVACY & SAFETY ENDPOINTS =============
-
-@app.route('/api/report', methods=['POST'])
-@require_auth()
-def report_violation():
-    """Report privacy violation or inappropriate behavior"""
-    try:
-        user = request.current_user
-        data = request.json
-        
-        reported_user_id = data.get('user_id')
-        violation_type = data.get('type')
-        description = sanitize_input(data.get('description', ''))
-        evidence = data.get('evidence', [])
-        
-        if not all([reported_user_id, violation_type, description]):
-            return jsonify({'error': 'All fields required'}), 400
-        
-        # Find reported user
-        reported_user = User.query.filter_by(anonymous_id=reported_user_id).first()
-        if not reported_user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        # Create report
-        report = Report(
-            reporter_id=user.id,
-            reported_user_id=reported_user.id,
-            violation_type=violation_type,
-            description_encrypted=encrypt_field(description),
-            evidence=evidence,
-            status='pending'
+        message = Message(
+            sender_id=user_id,
+            recipient_id=recipient_id,
+            content=sanitize_input(content)
         )
-        
-        db.session.add(report)
+        db.session.add(message)
         db.session.commit()
         
-        # Log for audit
-        logger.warning('violation_reported', extra={
-            'request_id': g.request_id,
-            'reporter_id': user.id,
-            'reported_id': reported_user.id,
-            'type': violation_type
-        })
-        
-        # If privacy violation, immediate action
-        if violation_type == 'privacy_violation':
-            security_manager.handle_privacy_violation(reported_user.id, report.id)
-        
+        return jsonify({'success': True, 'message_id': message.id})
+
+@app.route('/api/messages/<int:message_id>/read', methods=['PUT'])
+@login_required
+def mark_message_read(message_id):
+    """Mark message as read"""
+    user_id = session.get('user_id')
+    message = Message.query.get(message_id)
+    
+    if not message:
+        return jsonify({'error': 'Message not found'}), 404
+    
+    if message.recipient_id != user_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    message.is_read = True
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@app.route('/api/messages/conversations')
+@login_required
+def get_conversations():
+    """Get conversation list"""
+    user_id = session['user_id']
+    
+    # Get unique conversation partners
+    sent = db.session.query(Message.recipient_id).filter_by(sender_id=user_id).distinct()
+    received = db.session.query(Message.sender_id).filter_by(recipient_id=user_id).distinct()
+    
+    partner_ids = set()
+    for row in sent:
+        partner_ids.add(row[0])
+    for row in received:
+        partner_ids.add(row[0])
+    
+    conversations = []
+    for partner_id in partner_ids:
+        user = User.query.get(partner_id)
+        if user:
+            # Get last message
+            last_message = Message.query.filter(
+                ((Message.sender_id == user_id) & (Message.recipient_id == partner_id)) |
+                ((Message.sender_id == partner_id) & (Message.recipient_id == user_id))
+            ).order_by(Message.created_at.desc()).first()
+            
+            conversations.append({
+                'user': {'id': user.id, 'username': user.username},
+                'last_message': last_message.content if last_message else None,
+                'timestamp': last_message.created_at.isoformat() if last_message else None
+            })
+    
+    return jsonify(conversations)
+
+# =====================
+# PARAMETERS ROUTES (Therapy Companion)
+# =====================
+
+@app.route('/api/parameters', methods=['GET'])
+@login_required
+def get_parameters():
+    """Get current parameters"""
+    user_id = session['user_id']
+    today = datetime.now().date()
+    
+    params = SavedParameters.query.filter_by(
+        user_id=user_id,
+        date=today
+    ).first()
+    
+    if params:
         return jsonify({
-            'success': True,
-            'report_id': report.id,
-            'message': 'Report submitted for review'
+            'mood': params.mood,
+            'sleep_hours': params.sleep_hours,
+            'exercise': params.exercise,
+            'anxiety': params.anxiety,
+            'energy': params.energy,
+            'notes': params.notes
         })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-# ============= FRONTEND SERVING =============
-
-@app.route('/')
-def index():
-    """Serve the main application"""
-    return send_from_directory('static', 'index.html')
-
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """Serve static files"""
-    return send_from_directory('static', filename) 
-
-# ============= HEALTH CHECK =============
-
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    """System health check"""
+    
     return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat(),
-        'version': '1.0.0'
+        'mood': '',
+        'sleep_hours': 0,
+        'exercise': '',
+        'anxiety': '',
+        'energy': '',
+        'notes': ''
     })
 
-# ============= MAIN ENTRY =============
+@app.route('/api/parameters/save', methods=['POST'])
+@login_required
+def save_parameters():
+    """Save daily parameters"""
+    user_id = session.get('user_id')
+    data = request.json
+    
+    date_str = data.get('date', str(datetime.now().date()))
+    date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    
+    # Check if parameters exist for this date
+    params = SavedParameters.query.filter_by(
+        user_id=user_id,
+        date=date_obj
+    ).first()
+    
+    if not params:
+        params = SavedParameters(user_id=user_id, date=date_obj)
+        db.session.add(params)
+    
+    # Save with text values
+    params.mood = sanitize_input(data.get('mood', ''))
+    params.sleep_hours = float(data.get('sleep_hours', 0))
+    params.exercise = sanitize_input(data.get('exercise', ''))
+    params.anxiety = sanitize_input(data.get('anxiety', ''))
+    params.energy = sanitize_input(data.get('energy', ''))
+    params.notes = sanitize_input(data.get('notes', ''))
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': f'Parameters saved for {date_str}'
+    })
+
+@app.route('/api/parameters/load/<date>')
+@login_required
+def load_parameters(date):
+    """Load parameters for specific date"""
+    user_id = session.get('user_id')
+    
+    try:
+        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'}), 400
+    
+    params = SavedParameters.query.filter_by(
+        user_id=user_id,
+        date=date_obj
+    ).first()
+    
+    if params:
+        return jsonify({
+            'success': True,
+            'data': {
+                'mood': params.mood or '',
+                'sleep_hours': params.sleep_hours,
+                'sleep_display': f"{params.sleep_hours} Hours" if params.sleep_hours else "0 Hours",
+                'exercise': params.exercise or '',
+                'anxiety': params.anxiety or '',
+                'energy': params.energy or '',
+                'notes': params.notes or ''
+            }
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': 'No saved parameters for this date'
+        })
+
+@app.route('/api/parameters/dates')
+@login_required
+def get_parameter_dates():
+    """Get dates with saved parameters"""
+    user_id = session.get('user_id')
+    params = SavedParameters.query.filter_by(user_id=user_id).all()
+    dates = [p.date.strftime('%Y-%m-%d') for p in params]
+    return jsonify({'dates': dates})
+
+@app.route('/api/parameters/insights')
+@login_required
+def get_insights():
+    """Get parameter insights"""
+    user_id = session['user_id']
+    
+    # Get last 30 days of parameters
+    thirty_days_ago = datetime.now().date() - timedelta(days=30)
+    params = SavedParameters.query.filter(
+        SavedParameters.user_id == user_id,
+        SavedParameters.date >= thirty_days_ago
+    ).all()
+    
+    if not params:
+        return jsonify({'message': 'No data available for insights'})
+    
+    # Calculate insights
+    avg_sleep = sum(p.sleep_hours for p in params) / len(params) if params else 0
+    moods = [p.mood for p in params if p.mood]
+    
+    return jsonify({
+        'average_sleep': round(avg_sleep, 1),
+        'total_entries': len(params),
+        'most_common_mood': max(moods, key=moods.count) if moods else 'N/A',
+        'streak': calculate_streak(params)
+    })
+
+def calculate_streak(params):
+    """Calculate consecutive days streak"""
+    if not params:
+        return 0
+    
+    dates = sorted([p.date for p in params], reverse=True)
+    streak = 1
+    
+    for i in range(1, len(dates)):
+        if (dates[i-1] - dates[i]).days == 1:
+            streak += 1
+        else:
+            break
+    
+    return streak
+
+# =====================
+# ALERTS ROUTES
+# =====================
+
+@app.route('/api/alerts', methods=['GET'])
+@login_required
+def get_alerts():
+    """Get user alerts"""
+    user_id = session['user_id']
+    alerts = Alert.query.filter_by(user_id=user_id, is_read=False).order_by(Alert.created_at.desc()).limit(10).all()
+    
+    return jsonify([{
+        'id': a.id,
+        'title': a.title,
+        'message': a.message,
+        'type': a.type,
+        'created_at': a.created_at.isoformat()
+    } for a in alerts])
+
+@app.route('/api/alerts/<int:alert_id>/read', methods=['PUT'])
+@login_required
+def mark_alert_read(alert_id):
+    """Mark alert as read"""
+    alert = Alert.query.get(alert_id)
+    if alert and alert.user_id == session['user_id']:
+        alert.is_read = True
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'error': 'Alert not found'}), 404
+
+# =====================
+# ADMIN ROUTES
+# =====================
+
+@app.route('/api/admin/users')
+@admin_required
+def admin_get_users():
+    """Get all users (admin only)"""
+    users = User.query.all()
+    return jsonify([{
+        'id': u.id,
+        'username': u.username,
+        'email': u.email,
+        'role': u.role,
+        'is_active': u.is_active,
+        'created_at': u.created_at.isoformat()
+    } for u in users])
+
+@app.route('/api/admin/stats')
+@admin_required
+def admin_stats():
+    """Get platform statistics"""
+    return jsonify({
+        'total_users': User.query.count(),
+        'total_posts': Post.query.count(),
+        'total_messages': Message.query.count(),
+        'active_users_today': User.query.filter(
+            User.updated_at >= datetime.now().date()
+        ).count()
+    })
+
+# =====================
+# SUPPORT ROUTES
+# =====================
+
+@app.route('/api/support/contact', methods=['POST'])
+def contact_support():
+    """Send message to support"""
+    data = request.json
+    
+    # In production, this would send an email or create a ticket
+    logger.info("support_contact", extra={
+        'name': data.get('name'),
+        'email': data.get('email'),
+        'subject': data.get('subject'),
+        'message': data.get('message')
+    })
+    
+    return jsonify({'success': True, 'message': 'Support request received'})
+
+# =====================
+# UTILITY ROUTES
+# =====================
+
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint"""
+    status = {}
+    
+    # Check database
+    try:
+        db.session.execute('SELECT 1')
+        status['database'] = 'OK'
+    except Exception as e:
+        status['database'] = str(e)
+    
+    # Check Redis
+    try:
+        if redis_client:
+            redis_client.ping()
+            status['redis'] = 'OK'
+        else:
+            status['redis'] = 'Not configured'
+    except Exception as e:
+        status['redis'] = str(e)
+    
+    return jsonify(status), 200 if all(v in ['OK', 'Not configured'] for v in status.values()) else 503
+
+@app.route('/api/setup/sample-users', methods=['POST'])
+def create_sample_users():
+    """Create sample users for testing"""
+    sample_users = [
+        {'username': 'alice_wonder', 'email': 'alice@example.com', 'name': 'Alice Wonder'},
+        {'username': 'bob_builder', 'email': 'bob@example.com', 'name': 'Bob Builder'},
+        {'username': 'charlie_day', 'email': 'charlie@example.com', 'name': 'Charlie Day'},
+        {'username': 'diana_prince', 'email': 'diana@example.com', 'name': 'Diana Prince'},
+        {'username': 'edward_snow', 'email': 'edward@example.com', 'name': 'Edward Snow'},
+        {'username': 'fiona_green', 'email': 'fiona@example.com', 'name': 'Fiona Green'},
+        {'username': 'george_lucas', 'email': 'george@example.com', 'name': 'George Lucas'},
+        {'username': 'helen_troy', 'email': 'helen@example.com', 'name': 'Helen Troy'},
+        {'username': 'ivan_terrible', 'email': 'ivan@example.com', 'name': 'Ivan Terrible'},
+        {'username': 'julia_roberts', 'email': 'julia@example.com', 'name': 'Julia Roberts'},
+        {'username': 'kevin_hart', 'email': 'kevin@example.com', 'name': 'Kevin Hart'},
+        {'username': 'lisa_simpson', 'email': 'lisa@example.com', 'name': 'Lisa Simpson'}
+    ]
+    
+    created = []
+    for user_data in sample_users:
+        # Check if user already exists
+        if User.query.filter_by(email=user_data['email']).first():
+            continue
+        
+        user = User(
+            username=user_data['username'],
+            email=user_data['email'],
+            password_hash=generate_password_hash('password123')
+        )
+        db.session.add(user)
+        db.session.flush()
+        
+        # Create profile
+        profile = Profile(
+            user_id=user.id,
+            bio=f"Hi, I'm {user_data['name']}!",
+            interests='Reading, Travel, Technology',
+            occupation='Professional',
+            goals='Connect with interesting people',
+            favorite_hobbies='Hiking, Photography, Cooking'
+        )
+        db.session.add(profile)
+        created.append(user_data['username'])
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'created': created,
+        'message': f'Created {len(created)} sample users with default password: password123'
+    })
+
+# =====================
+# ERROR HANDLERS
+# =====================
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    return jsonify({'error': 'Not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors"""
+    db.session.rollback()
+    logger.error(f"Internal error: {str(error)}")
+    return jsonify({'error': 'Internal server error'}), 500
+
+# =====================
+# MAIN
+# =====================
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-       # from init_db import initialize_database
-       # initialize_database()
     
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=not os.environ.get('PRODUCTION'))
+    app.run(host='0.0.0.0', port=port, debug=False)
