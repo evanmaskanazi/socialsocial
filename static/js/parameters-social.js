@@ -1,5 +1,5 @@
-// Therapy Companion Parameters Save/Load System
-// For https://therapy-companion.onrender.com
+// Social Parameters Save/Load System
+
 
 const parametersEnhancedHTML = `
 <div class="parameters-container">
