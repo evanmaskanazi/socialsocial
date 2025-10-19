@@ -404,7 +404,62 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not fix alerts table: {e}")
 
-            # 2. Fix profiles table - add missing columns
+            # 2. Fix circles table - ensure circle_user_id exists
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='circles'"""
+                    ))
+                    existing_columns = [row[0] for row in result]
+
+                    if existing_columns:  # Table exists
+                        if 'circle_user_id' not in existing_columns:
+                            logger.info("Adding missing circle_user_id column to circles table...")
+                            conn.execute(text("""
+                                ALTER TABLE circles 
+                                ADD COLUMN circle_user_id INTEGER 
+                                REFERENCES users(id) ON DELETE CASCADE
+                            """))
+                            conn.commit()
+                            logger.info("✓ Added circle_user_id column to circles table")
+                        else:
+                            logger.info("✓ Circles table has circle_user_id column")
+                else:
+                    # SQLite
+                    result = conn.execute(text("PRAGMA table_info(circles)"))
+                    existing_columns = [row[1] for row in result]
+
+                    if existing_columns and 'circle_user_id' not in existing_columns:
+                        logger.info("Recreating circles table for SQLite with circle_user_id...")
+                        # SQLite requires table recreation to add foreign key
+                        conn.execute(text("""
+                            CREATE TABLE circles_new (
+                                id INTEGER PRIMARY KEY,
+                                user_id INTEGER NOT NULL,
+                                circle_user_id INTEGER NOT NULL,
+                                circle_type VARCHAR(50),
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(user_id, circle_user_id, circle_type),
+                                FOREIGN KEY(user_id) REFERENCES users(id),
+                                FOREIGN KEY(circle_user_id) REFERENCES users(id)
+                            )
+                        """))
+                        # Copy existing data if any
+                        conn.execute(text("""
+                            INSERT INTO circles_new (id, user_id, circle_type, created_at)
+                            SELECT id, user_id, circle_type, created_at FROM circles
+                        """))
+                        conn.execute(text("DROP TABLE circles"))
+                        conn.execute(text("ALTER TABLE circles_new RENAME TO circles"))
+                        conn.commit()
+                        logger.info("✓ Recreated circles table with circle_user_id")
+
+            except Exception as e:
+                logger.warning(f"Could not fix circles table: {e}")
+
+            # 3. Fix profiles table - add missing columns
             try:
                 if is_postgres:
                     result = conn.execute(text(
@@ -438,7 +493,7 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not fix profiles table: {e}")
 
-            # 3. Ensure activities table exists
+            # 4. Ensure activities table exists
             try:
                 if is_postgres:
                     result = conn.execute(text(
@@ -496,7 +551,7 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not create activities table: {e}")
 
-            # 4. Ensure comments table exists
+            # 5. Ensure comments table exists
             try:
                 if is_postgres:
                     result = conn.execute(text(
@@ -541,7 +596,7 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not create comments table: {e}")
 
-            # 5. Ensure reactions table exists
+            # 6. Ensure reactions table exists
             try:
                 if is_postgres:
                     result = conn.execute(text(
