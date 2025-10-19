@@ -21,22 +21,29 @@ with app.app_context():
     db.create_all()
     logger.info('✓ Ensured all tables exist')
 
-    with db.engine.connect() as conn:
+    # Use begin() instead of connect() for proper transaction handling
+    with db.engine.begin() as conn:
         # CRITICAL FIX: Make anonymous_id nullable
         try:
             result = conn.execute(text(
-                \"\"\"SELECT column_name FROM information_schema.columns
+                \"\"\"SELECT column_name, is_nullable
+                FROM information_schema.columns
                 WHERE table_name='users' AND column_name='anonymous_id'\"\"\"
             ))
-            if result.fetchone():
-                logger.info('Found anonymous_id column, making it nullable...')
-                conn.execute(text('ALTER TABLE users ALTER COLUMN anonymous_id DROP NOT NULL'))
-                conn.commit()
-                logger.info('✓ Fixed anonymous_id to be nullable')
+            row = result.fetchone()
+            if row:
+                col_name, is_nullable = row[0], row[1]
+                if is_nullable == 'NO':
+                    logger.info('Found anonymous_id column with NOT NULL constraint, fixing...')
+                    conn.execute(text('ALTER TABLE users ALTER COLUMN anonymous_id DROP NOT NULL'))
+                    logger.info('✓ Fixed anonymous_id to be nullable')
+                else:
+                    logger.info('✓ anonymous_id column already nullable')
             else:
                 logger.info('✓ No anonymous_id column found (good!)')
         except Exception as e:
-            logger.warning(f'Anonymous_id check: {e}')
+            logger.error(f'Anonymous_id fix FAILED: {e}')
+            raise  # Don't continue if this fails
 
         # Fix alerts table
         try:
@@ -47,11 +54,9 @@ with app.app_context():
             columns = [row[0] for row in result]
             if 'message' in columns and 'content' not in columns:
                 conn.execute(text('ALTER TABLE alerts RENAME COLUMN message TO content'))
-                conn.commit()
                 logger.info('✓ Fixed alerts.message column')
-            elif 'content' not in columns:
+            elif 'content' not in columns and 'message' not in columns:
                 conn.execute(text('ALTER TABLE alerts ADD COLUMN content TEXT'))
-                conn.commit()
                 logger.info('✓ Added alerts.content column')
         except Exception as e:
             logger.warning(f'Alerts fix: {e}')
@@ -64,12 +69,15 @@ with app.app_context():
             existing = [row[0] for row in result]
             columns_to_add = [
                 ('mood_status', 'VARCHAR(50)'),
-                ('avatar_url', 'VARCHAR(500)')
+                ('avatar_url', 'VARCHAR(500)'),
+                ('interests', 'TEXT'),
+                ('occupation', 'VARCHAR(200)'),
+                ('goals', 'TEXT'),
+                ('favorite_hobbies', 'TEXT')
             ]
             for col_name, col_type in columns_to_add:
                 if col_name not in existing:
                     conn.execute(text(f'ALTER TABLE profiles ADD COLUMN {col_name} {col_type}'))
-                    conn.commit()
                     logger.info(f'✓ Added profiles.{col_name} column')
         except Exception as e:
             logger.warning(f'Profiles fix: {e}')
@@ -94,20 +102,22 @@ with app.app_context():
                         UNIQUE(user_id, activity_date)
                     )
                 '''))
-                conn.commit()
                 logger.info('✓ Created activities table')
         except Exception as e:
             logger.warning(f'Activities: {e}')
 
-    # Initialize database
+    logger.info('✓ All schema fixes committed!')
+
+    # NOW initialize database and create test users
+    # This runs AFTER the schema is fixed and committed
     try:
         from app import init_database
         init_database()
-        logger.info('✓ Database initialized')
+        logger.info('✓ Database initialized with test users')
     except Exception as e:
-        logger.warning(f'Init: {e}')
-
-    logger.info('✓ Schema fixes complete!')
+        logger.error(f'Test user creation error: {e}')
+        # Don't fail build if test users can't be created
+        # They'll be created when app starts
 "
 
 echo "=== Build completed successfully! ==="
