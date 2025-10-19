@@ -643,6 +643,64 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not create reactions table: {e}")
 
+            # 7. Fix posts table - ensure content column exists
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='posts'"""
+                    ))
+                    existing_columns = [row[0] for row in result]
+
+                    if existing_columns and 'content' not in existing_columns:
+                        logger.info("Adding missing content column to posts table...")
+                        conn.execute(text("ALTER TABLE posts ADD COLUMN content TEXT"))
+                        conn.commit()
+                        logger.info("✓ Added content column to posts table")
+                else:
+                    # SQLite
+                    result = conn.execute(text("PRAGMA table_info(posts)"))
+                    existing_columns = [row[1] for row in result]
+
+                    if existing_columns and 'content' not in existing_columns:
+                        logger.info("Adding content column to posts table...")
+                        conn.execute(text("ALTER TABLE posts ADD COLUMN content TEXT"))
+                        conn.commit()
+                        logger.info("✓ Added content column to posts table")
+
+            except Exception as e:
+                logger.warning(f"Could not fix posts table: {e}")
+
+            # 8. Fix alerts table - ensure type column exists
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='alerts'"""
+                    ))
+                    existing_columns = [row[0] for row in result]
+
+                    if existing_columns and 'type' not in existing_columns:
+                        logger.info("Adding missing type column to alerts table...")
+                        conn.execute(text("ALTER TABLE alerts ADD COLUMN type VARCHAR(50) DEFAULT 'info'"))
+                        conn.commit()
+                        logger.info("✓ Added type column to alerts table")
+                else:
+                    # SQLite
+                    result = conn.execute(text("PRAGMA table_info(alerts)"))
+                    existing_columns = [row[1] for row in result]
+
+                    if existing_columns and 'type' not in existing_columns:
+                        logger.info("Adding type column to alerts table...")
+                        conn.execute(text("ALTER TABLE alerts ADD COLUMN type VARCHAR(50) DEFAULT 'info'"))
+                        conn.commit()
+                        logger.info("✓ Added type column to alerts table")
+
+            except Exception as e:
+                logger.warning(f"Could not add type column to alerts table: {e}")
+
             logger.info("✓ All schema fixes complete")
 
     except Exception as e:
@@ -1843,6 +1901,24 @@ def update_activity(date_str):
         logger.error(f"Update activity error: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to update activity'}), 500
+
+
+
+@app.route('/api/activity/dates')
+@login_required
+def get_activity_dates():
+    """Get dates with activity data"""
+    try:
+        user_id = session['user_id']
+        # SQLAlchemy 2.0 style
+        activities_stmt = select(Activity).filter_by(user_id=user_id)
+        activities = db.session.execute(activities_stmt).scalars().all()
+        dates = [a.activity_date.strftime('%Y-%m-%d') for a in activities]
+        return jsonify({'dates': dates})
+    except Exception as e:
+        logger.error(f"Get activity dates error: {str(e)}")
+        return jsonify({'dates': []})
+
 
 
 # =====================
