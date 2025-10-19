@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circles - Social Social</title>
+</head>
+<body>
+    <div id="circlesContainer"></div>
+    <script src="/static/js/circles-messages.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('circlesContainer').innerHTML = circlesHTML;
+            loadCircles();
+        });
+    </script>
+</body>
+</html>
