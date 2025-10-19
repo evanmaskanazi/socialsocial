@@ -206,7 +206,58 @@
             padding: 25px;
         }
 
-        /* Feed */
+        /* Feed - Enhanced with Calendar */
+        .feed-calendar-section {
+            background: var(--light);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .feed-calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .feed-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .feed-calendar-day {
+            aspect-ratio: 1;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            background: var(--white);
+        }
+
+        .feed-calendar-day:hover {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .feed-calendar-day.selected {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .feed-calendar-day.has-posts::after {
+            content: '•';
+            position: absolute;
+            bottom: 2px;
+            color: var(--success);
+            font-size: 20px;
+        }
+
         .post-form {
             background: var(--light);
             border-radius: 15px;
@@ -559,7 +610,7 @@
             background: var(--light);
         }
 
-        /* Messages */
+        /* Messages - Enhanced */
         .messages-container {
             display: flex;
             height: 600px;
@@ -576,6 +627,7 @@
             border-bottom: 1px solid #E5E7EB;
             cursor: pointer;
             transition: background 0.3s;
+            position: relative;
         }
 
         .conversation-item:hover {
@@ -587,13 +639,46 @@
             color: var(--white);
         }
 
+        .conversation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .conversation-username {
+            font-weight: 600;
+        }
+
+        .conversation-time {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        .conversation-preview {
+            font-size: 14px;
+            color: var(--gray);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .conversation-item.active .conversation-preview,
+        .conversation-item.active .conversation-time {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
         .unread-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
             background: var(--danger);
             color: var(--white);
             padding: 2px 8px;
             border-radius: 10px;
             font-size: 12px;
-            float: right;
+            min-width: 20px;
+            text-align: center;
         }
 
         .chat-area {
@@ -944,9 +1029,24 @@
 
             <!-- Main Content Area -->
             <main class="main-content">
-                <!-- Feed View -->
+                <!-- Feed View - Enhanced with Calendar -->
                 <div id="feedView" class="view">
                     <h2 style="margin-bottom: 20px;">Your Feed</h2>
+
+                    <!-- Feed Calendar -->
+                    <div class="feed-calendar-section">
+                        <div class="feed-calendar-header">
+                            <button class="btn btn-secondary" onclick="feedPreviousMonth()">←</button>
+                            <span id="feedCurrentMonth" style="font-weight: 600;">January 2025</span>
+                            <button class="btn btn-secondary" onclick="feedNextMonth()">→</button>
+                        </div>
+                        <div class="feed-calendar-grid" id="feedCalendarGrid"></div>
+                        <div style="text-align: center; margin-top: 15px;">
+                            <p>Selected Date: <strong id="feedSelectedDateDisplay">Today</strong></p>
+                        </div>
+                    </div>
+
+                    <!-- Post Form -->
                     <div class="post-form">
                         <textarea class="post-input" placeholder="How are you feeling today?" id="postInput"></textarea>
                         <div class="post-actions">
@@ -956,9 +1056,14 @@
                                 <option value="family">Family</option>
                                 <option value="private">Private</option>
                             </select>
-                            <button class="btn btn-primary" style="width: auto;" id="postBtn">Share</button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-secondary" style="width: auto;" onclick="loadFeedForDate()">Load Date</button>
+                                <button class="btn btn-primary" style="width: auto;" id="postBtn">Share</button>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Feed Posts -->
                     <div id="feedPosts"></div>
                 </div>
 
@@ -1046,9 +1151,14 @@
                     </div>
                 </div>
 
-                <!-- Messages View (Enhanced) -->
+                <!-- Messages View - Enhanced -->
                 <div id="messagesView" class="view hidden">
                     <h2 style="margin-bottom: 20px;">Messages</h2>
+                    <div class="user-search" style="margin-bottom: 20px;">
+                        <input type="text" class="search-input" id="messageUserSearch" placeholder="Search users to message..." onkeyup="searchUsersForMessage()">
+                        <div class="search-results" id="messageSearchResults"></div>
+                    </div>
+
                     <div class="messages-container">
                         <div class="conversations-list" id="conversationsList">
                             <div style="padding: 20px; text-align: center; color: var(--gray);">
@@ -1149,6 +1259,11 @@
         let currentMonth = new Date();
         let savedDates = [];
         let currentRecipient = null;
+
+        // Feed Calendar Variables
+        let feedSelectedDate = new Date();
+        let feedCurrentMonth = new Date();
+        let feedSavedDates = [];
 
         // API Helper
         async function apiCall(endpoint, method = 'GET', body = null) {
@@ -1293,6 +1408,7 @@
                 document.getElementById('profileUsername').textContent = currentUser.username;
             }
 
+            initFeedCalendar();
             loadFeed();
             loadAlerts();
         }
@@ -1314,6 +1430,7 @@
                 // Load view data
                 switch(view) {
                     case 'feed':
+                        initFeedCalendar();
                         loadFeed();
                         break;
                     case 'profile':
@@ -1331,6 +1448,128 @@
                 }
             });
         });
+
+        // Feed Calendar Functions
+        function initFeedCalendar() {
+            loadFeedSavedDates();
+            renderFeedCalendar();
+            updateFeedSelectedDateDisplay();
+        }
+
+        async function loadFeedSavedDates() {
+            try {
+                const response = await apiCall('/activity/dates');
+                if (response) {
+                    feedSavedDates = response.dates || [];
+                }
+            } catch (error) {
+                console.error('Failed to load feed dates:', error);
+            }
+        }
+
+        function renderFeedCalendar() {
+            const year = feedCurrentMonth.getFullYear();
+            const month = feedCurrentMonth.getMonth();
+
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                              'July', 'August', 'September', 'October', 'November', 'December'];
+            document.getElementById('feedCurrentMonth').textContent = `${monthNames[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const grid = document.getElementById('feedCalendarGrid');
+            grid.innerHTML = '';
+
+            // Add day headers
+            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayHeaders.forEach(day => {
+                const header = document.createElement('div');
+                header.style.fontWeight = '600';
+                header.style.textAlign = 'center';
+                header.style.padding = '8px';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+
+            // Add empty cells
+            for (let i = 0; i < firstDay; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            // Add days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'feed-calendar-day';
+                dayCell.textContent = day;
+
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+                if (feedSavedDates.includes(dateStr)) {
+                    dayCell.classList.add('has-posts');
+                }
+
+                if (feedSelectedDate.getDate() === day &&
+                    feedSelectedDate.getMonth() === month &&
+                    feedSelectedDate.getFullYear() === year) {
+                    dayCell.classList.add('selected');
+                }
+
+                dayCell.onclick = () => selectFeedDate(year, month, day);
+                grid.appendChild(dayCell);
+            }
+        }
+
+        function selectFeedDate(year, month, day) {
+            feedSelectedDate = new Date(year, month, day);
+            renderFeedCalendar();
+            updateFeedSelectedDateDisplay();
+        }
+
+        function updateFeedSelectedDateDisplay() {
+            const dateStr = feedSelectedDate.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById('feedSelectedDateDisplay').textContent = dateStr;
+        }
+
+        function feedPreviousMonth() {
+            feedCurrentMonth.setMonth(feedCurrentMonth.getMonth() - 1);
+            renderFeedCalendar();
+        }
+
+        function feedNextMonth() {
+            feedCurrentMonth.setMonth(feedCurrentMonth.getMonth() + 1);
+            renderFeedCalendar();
+        }
+
+        async function loadFeedForDate() {
+            const dateStr = feedSelectedDate.toISOString().split('T')[0];
+
+            try {
+                const response = await apiCall(`/activity/${dateStr}`);
+
+                if (response && response.posts) {
+                    const feedContainer = document.getElementById('feedPosts');
+                    feedContainer.innerHTML = '';
+
+                    if (response.posts.length > 0) {
+                        response.posts.forEach(post => {
+                            const postCard = createPostCard(post);
+                            feedContainer.appendChild(postCard);
+                        });
+                        document.getElementById('postInput').value = response.notes || '';
+                    } else {
+                        feedContainer.innerHTML = '<p style="text-align: center; color: var(--gray);">No posts for this date</p>';
+                    }
+                }
+            } catch (error) {
+                alert('Failed to load activity: ' + error.message);
+            }
+        }
 
         // Feed Functions
         async function loadFeed() {
@@ -1383,9 +1622,21 @@
             if (!content) return;
 
             try {
+                // Save to selected date
+                const dateStr = feedSelectedDate.toISOString().split('T')[0];
+                await apiCall(`/activity/${dateStr}`, 'POST', {
+                    content: content,
+                    visibility: visibility,
+                    notes: content
+                });
+
+                // Also create regular post
                 await apiCall('/posts', 'POST', { content, visibility });
+
                 document.getElementById('postInput').value = '';
                 loadFeed();
+                loadFeedSavedDates();
+                renderFeedCalendar();
             } catch (error) {
                 alert('Failed to create post: ' + error.message);
             }
@@ -1484,14 +1735,13 @@
 
                 const container = document.getElementById('searchResults');
 
-                if (response.length === 0) {
+                if (response.users.length === 0) {
                     container.innerHTML = '<div class="search-result-item">No users found</div>';
                 } else {
-                    container.innerHTML = response.map(user => `
+                    container.innerHTML = response.users.map(user => `
                         <div class="search-result-item">
                             <div>
-                                <strong>${user.username}</strong><br>
-                                <small>${user.email}</small>
+                                <strong>${user.username}</strong>
                             </div>
                             <select onchange="addToCircle(${user.id}, this.value, '${user.username}')">
                                 <option value="">Add to...</option>
@@ -1542,7 +1792,54 @@
             }
         }
 
-        // Messages Functions (Enhanced)
+        // Messages Functions - Enhanced
+        async function searchUsersForMessage() {
+            const query = document.getElementById('messageUserSearch').value;
+
+            if (query.length < 2) {
+                document.getElementById('messageSearchResults').classList.remove('active');
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
+                if (!response) return;
+
+                const container = document.getElementById('messageSearchResults');
+
+                if (response.users.length === 0) {
+                    container.innerHTML = '<div class="search-result-item">No users found</div>';
+                } else {
+                    container.innerHTML = response.users.map(user => `
+                        <div class="search-result-item" onclick="startConversation(${user.id}, '${user.username}')">
+                            <strong>${user.username}</strong>
+                        </div>
+                    `).join('');
+                }
+
+                container.classList.add('active');
+            } catch (error) {
+                console.error('Failed to search users:', error);
+            }
+        }
+
+        async function startConversation(userId, username) {
+            currentRecipient = { id: userId, username: username };
+            document.getElementById('messageUserSearch').value = '';
+            document.getElementById('messageSearchResults').classList.remove('active');
+            loadMessages(userId, username);
+
+            // If conversation doesn't exist, add it to the list
+            const convList = document.getElementById('conversationsList');
+            const existingConv = Array.from(convList.children).find(
+                child => child.dataset.userId == userId
+            );
+
+            if (!existingConv) {
+                loadConversations();
+            }
+        }
+
         async function loadConversations() {
             try {
                 const response = await apiCall('/messages/conversations');
@@ -1550,17 +1847,37 @@
 
                 const container = document.getElementById('conversationsList');
 
-                if (response.length === 0) {
+                if (response.conversations && response.conversations.length === 0) {
                     container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--gray);">No conversations yet</div>';
-                } else {
-                    container.innerHTML = response.map(conv => `
-                        <div class="conversation-item" onclick="loadMessages(${conv.user.id}, '${conv.user.username}')">
-                            <div style="font-weight: 600;">${conv.user.username}</div>
-                            <div style="font-size: 14px; color: var(--gray);">
-                                ${conv.last_message ? conv.last_message.substring(0, 50) + '...' : 'No messages yet'}
+                } else if (response.conversations) {
+                    container.innerHTML = response.conversations.map(conv => {
+                        const lastMessageTime = conv.last_message && conv.last_message.created_at ?
+                            getTimeAgo(new Date(conv.last_message.created_at)) : '';
+                        const lastMessageContent = conv.last_message && conv.last_message.content ?
+                            conv.last_message.content : 'No messages yet';
+                        const isOwn = conv.last_message && conv.last_message.is_own;
+
+                        return `
+                            <div class="conversation-item" data-user-id="${conv.user.id}" onclick="loadMessages(${conv.user.id}, '${conv.user.username}')">
+                                <div class="conversation-header">
+                                    <span class="conversation-username">${conv.user.username}</span>
+                                    <span class="conversation-time">${lastMessageTime}</span>
+                                </div>
+                                <div class="conversation-preview">
+                                    ${isOwn ? 'You: ' : ''}${lastMessageContent.substring(0, 50)}${lastMessageContent.length > 50 ? '...' : ''}
+                                </div>
+                                ${conv.unread_count > 0 ? `<span class="unread-badge">${conv.unread_count}</span>` : ''}
                             </div>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
+
+                    // Update active state
+                    if (currentRecipient) {
+                        const activeItem = container.querySelector(`[data-user-id="${currentRecipient.id}"]`);
+                        if (activeItem) {
+                            activeItem.classList.add('active');
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Failed to load conversations:', error);
@@ -1570,9 +1887,18 @@
         async function loadMessages(userId, username) {
             currentRecipient = { id: userId, username: username };
 
+            // Update UI
             document.getElementById('chatHeader').textContent = username;
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendMessageBtn').disabled = false;
+
+            // Update active conversation
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.userId == userId) {
+                    item.classList.add('active');
+                }
+            });
 
             try {
                 const response = await apiCall(`/messages?recipient_id=${userId}`);
@@ -1593,6 +1919,12 @@
                 }
 
                 container.scrollTop = container.scrollHeight;
+
+                // Mark messages as read
+                await apiCall(`/messages/read/${userId}`, 'POST');
+
+                // Refresh conversation list to update unread badges
+                loadConversations();
             } catch (error) {
                 console.error('Failed to load messages:', error);
             }
@@ -1612,8 +1944,17 @@
 
                 document.getElementById('messageInput').value = '';
                 loadMessages(currentRecipient.id, currentRecipient.username);
+                loadConversations();
             } catch (error) {
                 alert('Failed to send message: ' + error.message);
+            }
+        });
+
+        // Handle Enter key for sending messages
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('sendMessageBtn').click();
             }
         });
 
@@ -1787,11 +2128,12 @@
                     container.innerHTML = response.alerts.map(alert => `
                         <div class="alert-item ${alert.type}">
                             <strong>${alert.title}</strong><br>
-                            <small>${alert.message}</small>
+                            <small>${alert.content || alert.message || ''}</small>
                         </div>
                     `).join('');
                 }
             } catch (error) {
+                // Silently fail for alerts to avoid disrupting user experience
                 console.error('Failed to load alerts:', error);
             }
         }
@@ -1851,19 +2193,25 @@
         // Close search results when clicking outside
         document.addEventListener('click', (e) => {
             const searchResults = document.getElementById('searchResults');
+            const messageSearchResults = document.getElementById('messageSearchResults');
+
             if (searchResults && !searchResults.contains(e.target) && e.target.id !== 'userSearchInput') {
                 searchResults.classList.remove('active');
             }
+
+            if (messageSearchResults && !messageSearchResults.contains(e.target) && e.target.id !== 'messageUserSearch') {
+                messageSearchResults.classList.remove('active');
+            }
         });
 
-        // Auto-refresh alerts
+        // Auto-refresh alerts (but with error handling)
         setInterval(() => {
             if (currentUser) {
-                loadAlerts();
+                loadAlerts().catch(() => {
+                    // Silently catch errors to avoid console spam
+                });
             }
         }, 30000);
     </script>
-
-<script src="/static/js/feed-calendar.js"></script>
 </body>
 </html>
