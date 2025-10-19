@@ -23,56 +23,32 @@ with app.app_context():
 
     # Use begin() for proper transaction handling
     with db.engine.begin() as conn:
-        # CRITICAL FIX 1: Make anonymous_id nullable
-        try:
-            result = conn.execute(text(
-                \"\"\"SELECT column_name, is_nullable
-                FROM information_schema.columns
-                WHERE table_name='users' AND column_name='anonymous_id'\"\"\"
-            ))
-            row = result.fetchone()
-            if row:
-                col_name, is_nullable = row[0], row[1]
-                if is_nullable == 'NO':
-                    logger.info('Fixing anonymous_id NOT NULL constraint...')
-                    conn.execute(text('ALTER TABLE users ALTER COLUMN anonymous_id DROP NOT NULL'))
-                    logger.info('✓ Fixed anonymous_id to be nullable')
-            else:
-                logger.info('✓ No anonymous_id column')
-        except Exception as e:
-            logger.warning(f'Anonymous_id check: {e}')
+        # CRITICAL FIX: Make ALL problematic columns nullable
+        problematic_columns = [
+            'anonymous_id', 'email_encrypted', 'username_encrypted',
+            'display_name', 'encrypted_username', 'encrypted_email'
+        ]
 
-        # CRITICAL FIX 2: Make ALL encrypted columns nullable
-        try:
-            # Get all encrypted columns in users table
-            result = conn.execute(text(
-                \"\"\"SELECT column_name, is_nullable
-                FROM information_schema.columns
-                WHERE table_name='users'
-                AND (column_name LIKE '%_encrypted' OR column_name LIKE 'encrypted_%')\"\"\"
-            ))
-            encrypted_cols = result.fetchall()
-
-            for col_name, is_nullable in encrypted_cols:
-                if is_nullable == 'NO':
-                    logger.info(f'Making {col_name} nullable...')
-                    conn.execute(text(f'ALTER TABLE users ALTER COLUMN {col_name} DROP NOT NULL'))
-                    logger.info(f'✓ Fixed {col_name} to be nullable')
-
-            if not encrypted_cols:
-                logger.info('✓ No encrypted columns found')
-            else:
-                logger.info(f'✓ Checked {len(encrypted_cols)} encrypted columns')
-
-        except Exception as e:
-            logger.error(f'Encrypted columns fix FAILED: {e}')
-            raise
+        for col in problematic_columns:
+            try:
+                result = conn.execute(text(f'''
+                    SELECT column_name, is_nullable
+                    FROM information_schema.columns
+                    WHERE table_name=\\'users\\' AND column_name=\\'{col}\\'
+                '''))
+                row = result.fetchone()
+                if row and row[1] == 'NO':
+                    logger.info(f'Making {col} nullable...')
+                    conn.execute(text(f'ALTER TABLE users ALTER COLUMN {col} DROP NOT NULL'))
+                    logger.info(f'✓ Fixed {col} to be nullable')
+            except Exception as e:
+                pass  # Column doesn't exist, that's fine
 
         # Fix alerts table
         try:
             result = conn.execute(text(
-                \"\"\"SELECT column_name FROM information_schema.columns
-                WHERE table_name='alerts' AND column_name IN ('message', 'content')\"\"\"
+                '''SELECT column_name FROM information_schema.columns
+                WHERE table_name=\\'alerts\\' AND column_name IN (\\'message\\', \\'content\\')'''
             ))
             columns = [row[0] for row in result]
             if 'message' in columns and 'content' not in columns:
@@ -87,7 +63,7 @@ with app.app_context():
         # Fix profiles table
         try:
             result = conn.execute(text(
-                \"\"\"SELECT column_name FROM information_schema.columns WHERE table_name='profiles'\"\"\"
+                '''SELECT column_name FROM information_schema.columns WHERE table_name=\\'profiles\\''''
             ))
             existing = [row[0] for row in result]
             columns_to_add = [
@@ -108,7 +84,7 @@ with app.app_context():
         # Ensure activities table exists
         try:
             result = conn.execute(text(
-                \"\"\"SELECT table_name FROM information_schema.tables WHERE table_name='activities'\"\"\"
+                '''SELECT table_name FROM information_schema.tables WHERE table_name=\\'activities\\''''
             ))
             if not result.fetchone():
                 conn.execute(text('''
