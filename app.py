@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 """
 Complete app.py for Social Social Platform
-Updated with SQLAlchemy 2.0 style queries
+With Flask-Migrate and SQLAlchemy 2.0 style queries
+Auto-migrates on startup for seamless deployment
 """
 
 import os
+import sys
 import json
 import uuid
 import redis
@@ -17,10 +19,11 @@ from flask import (
     render_template, send_from_directory, redirect, url_for
 )
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, and_, or_, desc
+from sqlalchemy import select, and_, or_, desc, inspect
 
 # Import security functions
 from security import (
@@ -32,34 +35,64 @@ from security import (
 # Initialize Flask app
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# Configuration
+# =====================
+# CONFIGURATION
+# =====================
+
+# Environment detection - using modern Flask approach
+is_production = os.environ.get('FLASK_DEBUG', 'False').lower() == 'false'
+app.config['DEBUG'] = not is_production
+
+# Secret key configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+if is_production and app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
+    print("WARNING: Using default SECRET_KEY in production!")
+
+# Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///social.db')
 
 # Fix for Render PostgreSQL URL
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://',
-                                                                                          'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace(
+        'postgres://', 'postgresql://', 1
+    )
 
+# SQLAlchemy configuration
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'pool_recycle': 3600,
+    'pool_pre_ping': True,
+}
+
+# Session configuration
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_COOKIE_SECURE'] = is_production
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Initialize extensions
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 CORS(app, supports_credentials=True)
 
 # Setup logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO if is_production else logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger('thera_social')
 
 # Initialize Redis (optional, for session management)
 try:
     redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
     redis_client = redis.from_url(redis_url, decode_responses=True)
-except:
+    redis_client.ping()
+    logger.info("Redis connected successfully")
+except Exception as e:
     redis_client = None
-    logger.warning("Redis not available, using local sessions")
+    logger.warning(f"Redis not available: {e}")
 
 
 # =====================
@@ -69,8 +102,8 @@ except:
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), default='user')
     is_active = db.Column(db.Boolean, default=True)
@@ -83,6 +116,8 @@ class User(db.Model):
     received_messages = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient')
     circles = db.relationship('Circle', foreign_keys='Circle.user_id', backref='owner')
     saved_parameters = db.relationship('SavedParameters', backref='user', cascade='all, delete-orphan')
+    posts = db.relationship('Post', backref='author', cascade='all, delete-orphan')
+    alerts = db.relationship('Alert', backref='user', cascade='all, delete-orphan')
 
 
 class Profile(db.Model):
@@ -102,41 +137,43 @@ class Profile(db.Model):
 class Post(db.Model):
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     content = db.Column(db.Text, nullable=False)
     likes = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    author = db.relationship('User', backref='posts')
 
 
 class Circle(db.Model):
     __tablename__ = 'circles'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    circle_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    circle_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     circle_type = db.Column(db.String(50))  # 'general', 'close_friends', 'family'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     circle_user = db.relationship('User', foreign_keys=[circle_user_id])
 
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'circle_user_id', 'circle_type', name='_user_circle_uc'),
+    )
+
 
 class Message(db.Model):
     __tablename__ = 'messages'
     id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    recipient_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     content = db.Column(db.Text)
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
 
 class SavedParameters(db.Model):
     __tablename__ = 'saved_parameters'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    date = db.Column(db.Date)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    date = db.Column(db.Date, index=True)
     mood = db.Column(db.String(100))
     sleep_hours = db.Column(db.Float)
     exercise = db.Column(db.String(100))
@@ -145,18 +182,96 @@ class SavedParameters(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),
+    )
+
 
 class Alert(db.Model):
     __tablename__ = 'alerts'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     title = db.Column(db.String(200))
     message = db.Column(db.Text)
     type = db.Column(db.String(50))  # 'info', 'warning', 'success', 'error'
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
-    user = db.relationship('User', backref='alerts')
+
+# =====================
+# DATABASE INITIALIZATION
+# =====================
+
+def init_database():
+    """Initialize database with migrations"""
+    with app.app_context():
+        try:
+            # Check if database exists and has tables
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+
+            if not tables:
+                logger.info("No tables found, creating database schema...")
+                db.create_all()
+                logger.info("Database schema created successfully")
+
+                # Create admin user if it doesn't exist
+                create_admin_user()
+            else:
+                logger.info(f"Found {len(tables)} existing tables")
+
+                # Check for pending migrations
+                try:
+                    from flask_migrate import upgrade
+                    logger.info("Checking for pending migrations...")
+                    upgrade()
+                    logger.info("Database migrations applied successfully")
+                except Exception as e:
+                    logger.warning(f"Migration check skipped: {e}")
+
+            # Verify database connection
+            db.session.execute(select(1))
+            db.session.commit()
+            logger.info("Database connection verified")
+
+        except Exception as e:
+            logger.error(f"Database initialization error: {e}")
+            if not is_production:
+                raise
+
+
+def create_admin_user():
+    """Create default admin user if it doesn't exist"""
+    try:
+        admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+
+        # Check if admin exists
+        stmt = select(User).filter_by(email=admin_email)
+        admin = db.session.execute(stmt).scalar_one_or_none()
+
+        if not admin:
+            admin = User(
+                username='admin',
+                email=admin_email,
+                password_hash=generate_password_hash(admin_password),
+                role='admin',
+                is_active=True
+            )
+            db.session.add(admin)
+
+            # Create admin profile
+            profile = Profile(user_id=admin.id)
+            db.session.add(profile)
+
+            db.session.commit()
+            logger.info(f"Admin user created: {admin_email}")
+        else:
+            logger.info("Admin user already exists")
+
+    except Exception as e:
+        logger.error(f"Error creating admin user: {e}")
+        db.session.rollback()
 
 
 # =====================
@@ -196,21 +311,28 @@ def admin_required(f):
 def before_request():
     """Log request details"""
     request.request_id = str(uuid.uuid4())
-    logger.info(f"request_started", extra={
-        'request_id': request.request_id,
-        'method': request.method,
-        'path': request.path,
-        'remote_addr': request.remote_addr
-    })
+    if not request.path.startswith('/static'):
+        logger.info(f"Request started: {request.method} {request.path}", extra={
+            'request_id': request.request_id,
+            'remote_addr': request.remote_addr
+        })
 
 
 @app.after_request
 def after_request(response):
-    """Log response details"""
-    logger.info(f"request_completed", extra={
-        'request_id': getattr(request, 'request_id', 'unknown'),
-        'status_code': response.status_code
-    })
+    """Log response details and set security headers"""
+    if not request.path.startswith('/static'):
+        logger.info(f"Request completed: {response.status_code}", extra={
+            'request_id': getattr(request, 'request_id', 'unknown')
+        })
+
+    # Security headers
+    if is_production:
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+
     return response
 
 
@@ -298,14 +420,14 @@ def register():
         existing_email = db.session.execute(
             select(User).filter_by(email=email)
         ).scalar_one_or_none()
-        
+
         if existing_email:
             return jsonify({'error': 'Email already registered'}), 400
 
         existing_username = db.session.execute(
             select(User).filter_by(username=username)
         ).scalar_one_or_none()
-        
+
         if existing_username:
             return jsonify({'error': 'Username already taken'}), 400
 
@@ -329,7 +451,7 @@ def register():
         session['username'] = user.username
         session.permanent = True
 
-        logger.info("user_registered", extra={'user_id': user.id})
+        logger.info(f"User registered: {username}")
 
         return jsonify({
             'success': True,
@@ -340,6 +462,10 @@ def register():
             }
         }), 200
 
+    except IntegrityError as e:
+        logger.error(f"Registration integrity error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Username or email already exists'}), 400
     except Exception as e:
         logger.error(f"Registration error: {str(e)}")
         db.session.rollback()
@@ -375,7 +501,7 @@ def login():
         session['role'] = user.role
         session.permanent = True
 
-        logger.info("login_success", extra={'user_id': user.id})
+        logger.info(f"Login successful: {user.username}")
 
         return jsonify({
             'success': True,
@@ -397,7 +523,7 @@ def logout():
     """User logout"""
     user_id = session.get('user_id')
     session.clear()
-    logger.info("logout", extra={'user_id': user_id})
+    logger.info(f"User logged out: {user_id}")
     return jsonify({'success': True}), 200
 
 
@@ -429,6 +555,9 @@ def check_session():
 def get_current_user():
     """Get current user info"""
     user = db.session.get(User, session['user_id'])
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
     return jsonify({
         'id': user.id,
         'username': user.username,
@@ -447,7 +576,7 @@ def profile():
         profile = db.session.execute(
             select(Profile).filter_by(user_id=user_id)
         ).scalar_one_or_none()
-        
+
         if not profile:
             profile = Profile(user_id=user_id)
             db.session.add(profile)
@@ -466,7 +595,7 @@ def profile():
         profile = db.session.execute(
             select(Profile).filter_by(user_id=user_id)
         ).scalar_one_or_none()
-        
+
         if not profile:
             profile = Profile(user_id=user_id)
             db.session.add(profile)
@@ -498,7 +627,7 @@ def search_users():
             User.email.ilike(f'%{query}%')
         )
     ).limit(10)
-    
+
     users = db.session.execute(stmt).scalars().all()
 
     results = [{
@@ -532,7 +661,7 @@ def get_feed():
         posts_stmt = select(Post).filter(
             Post.user_id.in_(circle_user_ids)
         ).order_by(desc(Post.created_at)).limit(50)
-        
+
         posts = db.session.execute(posts_stmt).scalars().all()
 
         feed = []
@@ -596,25 +725,27 @@ def circles():
         # Get all circles for the user - SQLAlchemy 2.0 style
         general_stmt = select(Circle).filter_by(user_id=user_id, circle_type='general')
         general = db.session.execute(general_stmt).scalars().all()
-        
+
         close_friends_stmt = select(Circle).filter_by(user_id=user_id, circle_type='close_friends')
         close_friends = db.session.execute(close_friends_stmt).scalars().all()
-        
+
         family_stmt = select(Circle).filter_by(user_id=user_id, circle_type='family')
         family = db.session.execute(family_stmt).scalars().all()
 
         def get_user_info(circle):
             user = db.session.get(User, circle.circle_user_id)
-            return {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email
-            }
+            if user:
+                return {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email
+                }
+            return None
 
         return jsonify({
-            'general': [get_user_info(c) for c in general],
-            'close_friends': [get_user_info(c) for c in close_friends],
-            'family': [get_user_info(c) for c in family]
+            'general': [info for c in general if (info := get_user_info(c))],
+            'close_friends': [info for c in close_friends if (info := get_user_info(c))],
+            'family': [info for c in family if (info := get_user_info(c))]
         })
 
     elif request.method == 'POST':
@@ -690,25 +821,27 @@ def messages():
         # Get all messages for the user - SQLAlchemy 2.0 style
         sent_stmt = select(Message).filter_by(sender_id=user_id).order_by(desc(Message.created_at))
         sent = db.session.execute(sent_stmt).scalars().all()
-        
+
         received_stmt = select(Message).filter_by(recipient_id=user_id).order_by(desc(Message.created_at))
         received = db.session.execute(received_stmt).scalars().all()
 
         def format_message(msg):
             sender = db.session.get(User, msg.sender_id)
             recipient = db.session.get(User, msg.recipient_id)
-            return {
-                'id': msg.id,
-                'sender': {'id': sender.id, 'username': sender.username},
-                'recipient': {'id': recipient.id, 'username': recipient.username},
-                'content': msg.content,
-                'is_read': msg.is_read,
-                'created_at': msg.created_at.isoformat()
-            }
+            if sender and recipient:
+                return {
+                    'id': msg.id,
+                    'sender': {'id': sender.id, 'username': sender.username},
+                    'recipient': {'id': recipient.id, 'username': recipient.username},
+                    'content': msg.content,
+                    'is_read': msg.is_read,
+                    'created_at': msg.created_at.isoformat()
+                }
+            return None
 
         return jsonify({
-            'sent': [format_message(m) for m in sent],
-            'received': [format_message(m) for m in received]
+            'sent': [m for msg in sent if (m := format_message(msg))],
+            'received': [m for msg in received if (m := format_message(msg))]
         })
 
     elif request.method == 'POST':
@@ -768,7 +901,7 @@ def get_conversations():
     # Get unique conversation partners - SQLAlchemy 2.0 style
     sent_stmt = select(Message.recipient_id).filter_by(sender_id=user_id).distinct()
     sent = db.session.execute(sent_stmt).scalars().all()
-    
+
     received_stmt = select(Message.sender_id).filter_by(recipient_id=user_id).distinct()
     received = db.session.execute(received_stmt).scalars().all()
 
@@ -789,7 +922,7 @@ def get_conversations():
                     and_(Message.sender_id == partner_id, Message.recipient_id == user_id)
                 )
             ).order_by(desc(Message.created_at))
-            
+
             last_message = db.session.execute(last_msg_stmt).scalar_one_or_none()
 
             conversations.append({
@@ -868,12 +1001,15 @@ def save_parameters():
     params.energy = sanitize_input(data.get('energy', ''))
     params.notes = sanitize_input(data.get('notes', ''))
 
-    db.session.commit()
-
-    return jsonify({
-        'success': True,
-        'message': f'Parameters saved for {date_str}'
-    })
+    try:
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': f'Parameters saved for {date_str}'
+        })
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to save parameters'}), 500
 
 
 @app.route('/api/parameters/load/<date>')
@@ -962,6 +1098,11 @@ def calculate_streak(params):
 
     dates = sorted([p.date for p in params], reverse=True)
     streak = 1
+    today = datetime.now().date()
+
+    # Check if the most recent date is today or yesterday
+    if dates[0] < today - timedelta(days=1):
+        return 0
 
     for i in range(1, len(dates)):
         if (dates[i - 1] - dates[i]).days == 1:
@@ -983,10 +1124,10 @@ def get_alerts():
     user_id = session['user_id']
     # SQLAlchemy 2.0 style
     alerts_stmt = select(Alert).filter_by(
-        user_id=user_id, 
+        user_id=user_id,
         is_read=False
     ).order_by(desc(Alert.created_at)).limit(10)
-    
+
     alerts = db.session.execute(alerts_stmt).scalars().all()
 
     return jsonify([{
@@ -1019,9 +1160,9 @@ def mark_alert_read(alert_id):
 def admin_get_users():
     """Get all users (admin only)"""
     # SQLAlchemy 2.0 style
-    users_stmt = select(User)
+    users_stmt = select(User).order_by(desc(User.created_at))
     users = db.session.execute(users_stmt).scalars().all()
-    
+
     return jsonify([{
         'id': u.id,
         'username': u.username,
@@ -1040,12 +1181,12 @@ def admin_stats():
     total_users = db.session.execute(select(db.func.count(User.id))).scalar()
     total_posts = db.session.execute(select(db.func.count(Post.id))).scalar()
     total_messages = db.session.execute(select(db.func.count(Message.id))).scalar()
-    
+
     active_users_stmt = select(db.func.count(User.id)).filter(
         User.updated_at >= datetime.now().date()
     )
     active_users_today = db.session.execute(active_users_stmt).scalar()
-    
+
     return jsonify({
         'total_users': total_users,
         'total_posts': total_posts,
@@ -1064,11 +1205,10 @@ def contact_support():
     data = request.json
 
     # In production, this would send an email or create a ticket
-    logger.info("support_contact", extra={
+    logger.info("Support contact received", extra={
         'name': data.get('name'),
         'email': data.get('email'),
-        'subject': data.get('subject'),
-        'message': data.get('message')
+        'subject': data.get('subject')
     })
 
     return jsonify({'success': True, 'message': 'Support request received'})
@@ -1081,14 +1221,15 @@ def contact_support():
 @app.route('/api/health')
 def health_check():
     """Health check endpoint"""
-    status = {}
+    status = {'status': 'healthy'}
 
     # Check database
     try:
         db.session.execute(select(1))
         status['database'] = 'OK'
     except Exception as e:
-        status['database'] = str(e)
+        status['database'] = f'Error: {str(e)}'
+        status['status'] = 'unhealthy'
 
     # Check Redis
     try:
@@ -1098,27 +1239,24 @@ def health_check():
         else:
             status['redis'] = 'Not configured'
     except Exception as e:
-        status['redis'] = str(e)
+        status['redis'] = f'Error: {str(e)}'
 
-    return jsonify(status), 200 if all(v in ['OK', 'Not configured'] for v in status.values()) else 503
+    return jsonify(status), 200 if status['status'] == 'healthy' else 503
 
 
 @app.route('/api/setup/sample-users', methods=['POST'])
 def create_sample_users():
     """Create sample users for testing"""
+    if is_production:
+        return jsonify({'error': 'Not available in production'}), 403
+
     sample_users = [
         {'username': 'alice_wonder', 'email': 'alice@example.com', 'name': 'Alice Wonder'},
         {'username': 'bob_builder', 'email': 'bob@example.com', 'name': 'Bob Builder'},
         {'username': 'charlie_day', 'email': 'charlie@example.com', 'name': 'Charlie Day'},
         {'username': 'diana_prince', 'email': 'diana@example.com', 'name': 'Diana Prince'},
         {'username': 'edward_snow', 'email': 'edward@example.com', 'name': 'Edward Snow'},
-        {'username': 'fiona_green', 'email': 'fiona@example.com', 'name': 'Fiona Green'},
-        {'username': 'george_lucas', 'email': 'george@example.com', 'name': 'George Lucas'},
-        {'username': 'helen_troy', 'email': 'helen@example.com', 'name': 'Helen Troy'},
-        {'username': 'ivan_terrible', 'email': 'ivan@example.com', 'name': 'Ivan Terrible'},
-        {'username': 'julia_roberts', 'email': 'julia@example.com', 'name': 'Julia Roberts'},
-        {'username': 'kevin_hart', 'email': 'kevin@example.com', 'name': 'Kevin Hart'},
-        {'username': 'lisa_simpson', 'email': 'lisa@example.com', 'name': 'Lisa Simpson'}
+        {'username': 'fiona_green', 'email': 'fiona@example.com', 'name': 'Fiona Green'}
     ]
 
     created = []
@@ -1164,7 +1302,9 @@ def create_sample_users():
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors"""
-    return jsonify({'error': 'Not found'}), 404
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Not found'}), 404
+    return render_template('404.html'), 404
 
 
 @app.errorhandler(500)
@@ -1172,16 +1312,32 @@ def internal_error(error):
     """Handle 500 errors"""
     db.session.rollback()
     logger.error(f"Internal error: {str(error)}")
-    return jsonify({'error': 'Internal server error'}), 500
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Internal server error'}), 500
+    return render_template('500.html'), 500
 
 
 # =====================
-# MAIN
+# MAIN INITIALIZATION
 # =====================
 
+# Initialize database on startup
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
+    # Initialize database
+    init_database()
 
+    # Get port from environment
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+
+    # Run application
+    logger.info(f"Starting Social Social Platform on port {port}")
+    logger.info(f"Production mode: {is_production}")
+
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=not is_production
+    )
+else:
+    # For production servers (gunicorn, etc.)
+    init_database()
