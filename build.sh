@@ -81,6 +81,21 @@ with app.app_context():
         except Exception as e:
             logger.warning(f'Profiles fix: {e}')
 
+        # Fix circles table - make name column nullable
+        try:
+            result = conn.execute(text(
+                '''SELECT column_name, is_nullable
+                FROM information_schema.columns
+                WHERE table_name=\\'circles\\' AND column_name=\\'name\\''''
+            ))
+            row = result.fetchone()
+            if row and row[1] == 'NO':
+                logger.info('Making circles.name nullable...')
+                conn.execute(text('ALTER TABLE circles ALTER COLUMN name DROP NOT NULL'))
+                logger.info('✓ Fixed circles.name to be nullable')
+        except Exception as e:
+            logger.warning(f'Circles name fix: {e}')
+
         # Ensure activities table exists
         try:
             result = conn.execute(text(
