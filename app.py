@@ -360,9 +360,13 @@ def index():
 
 @app.route('/favicon.ico')
 def favicon():
-    """Serve favicon"""
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    """Serve favicon - handle missing file gracefully"""
+    try:
+        return send_from_directory(os.path.join(app.root_path, 'static'),
+                                   'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    except:
+        # Return empty response if favicon doesn't exist
+        return '', 204
 
 
 @app.route('/about')
@@ -1316,7 +1320,8 @@ def not_found(error):
     """Handle 404 errors"""
     if request.path.startswith('/api/'):
         return jsonify({'error': 'Not found'}), 404
-    return render_template('404.html'), 404
+    # Don't try to render a template that doesn't exist
+    return jsonify({'error': 'Page not found'}), 404
 
 
 @app.errorhandler(500)
@@ -1326,7 +1331,8 @@ def internal_error(error):
     logger.error(f"Internal error: {str(error)}")
     if request.path.startswith('/api/'):
         return jsonify({'error': 'Internal server error'}), 500
-    return render_template('500.html'), 500
+    # Don't try to render a template that doesn't exist
+    return jsonify({'error': 'Internal server error'}), 500
 
 
 # =====================
