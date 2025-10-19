@@ -380,7 +380,6 @@ def fix_all_schema_issues():
 
                     if 'message' in columns and 'content' not in columns:
                         logger.info("Migrating alerts table for SQLite...")
-                        # SQLite doesn't support RENAME COLUMN in older versions
                         conn.execute(text("""
                             CREATE TABLE alerts_new (
                                 id INTEGER PRIMARY KEY,
@@ -433,7 +432,6 @@ def fix_all_schema_issues():
 
                     if existing_columns and 'circle_user_id' not in existing_columns:
                         logger.info("Recreating circles table for SQLite with circle_user_id...")
-                        # SQLite requires table recreation to add foreign key
                         conn.execute(text("""
                             CREATE TABLE circles_new (
                                 id INTEGER PRIMARY KEY,
@@ -446,7 +444,6 @@ def fix_all_schema_issues():
                                 FOREIGN KEY(circle_user_id) REFERENCES users(id)
                             )
                         """))
-                        # Copy existing data if any
                         conn.execute(text("""
                             INSERT INTO circles_new (id, user_id, circle_type, created_at)
                             SELECT id, user_id, circle_type, created_at FROM circles
@@ -643,56 +640,62 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not create reactions table: {e}")
 
-            # 7. Fix posts table - ensure ALL required columns exist
+            # 7. CRITICAL FIX: Handle posts table with encrypted columns
             try:
                 if is_postgres:
+                    # Check what columns exist
                     result = conn.execute(text(
-                        """SELECT column_name 
+                        """SELECT column_name, is_nullable
                         FROM information_schema.columns 
                         WHERE table_name='posts'"""
                     ))
-                    existing_columns = [row[0] for row in result]
+                    column_info = {row[0]: row[1] for row in result}
 
-                    if existing_columns:
-                        # Define all required columns with their types
-                        required_columns = [
-                            ('content', 'TEXT'),
-                            ('image_url', 'VARCHAR(500)'),
-                            ('likes', 'INTEGER DEFAULT 0'),
-                            ('circle_id', 'INTEGER'),
-                            ('is_published', 'BOOLEAN DEFAULT TRUE'),
-                            ('updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
-                        ]
+                    # If encrypted columns exist and are NOT NULL, make them nullable
+                    encrypted_cols = ['content_encrypted', 'image_url_encrypted']
+                    for col in encrypted_cols:
+                        if col in column_info and column_info[col] == 'NO':
+                            logger.info(f"Making {col} nullable...")
+                            conn.execute(text(f"ALTER TABLE posts ALTER COLUMN {col} DROP NOT NULL"))
+                            conn.commit()
+                            logger.info(f"✓ Made {col} nullable")
 
-                        for col_name, col_type in required_columns:
-                            if col_name not in existing_columns:
-                                logger.info(f"Adding missing {col_name} column to posts table...")
-                                conn.execute(text(f"ALTER TABLE posts ADD COLUMN {col_name} {col_type}"))
-                                conn.commit()
-                                logger.info(f"✓ Added {col_name} column to posts table")
+                    # Add missing plain columns
+                    required_columns = [
+                        ('content', 'TEXT'),
+                        ('image_url', 'VARCHAR(500)'),
+                        ('likes', 'INTEGER DEFAULT 0'),
+                        ('circle_id', 'INTEGER'),
+                        ('is_published', 'BOOLEAN DEFAULT TRUE'),
+                        ('updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+                    ]
+
+                    for col_name, col_type in required_columns:
+                        if col_name not in column_info:
+                            logger.info(f"Adding {col_name} column to posts...")
+                            conn.execute(text(f"ALTER TABLE posts ADD COLUMN {col_name} {col_type}"))
+                            conn.commit()
+                            logger.info(f"✓ Added {col_name} column")
                 else:
-                    # SQLite
+                    # SQLite - check and add columns
                     result = conn.execute(text("PRAGMA table_info(posts)"))
                     existing_columns = [row[1] for row in result]
 
-                    if existing_columns:
-                        # Define all required columns with their types for SQLite
-                        required_columns = [
-                            ('content', 'TEXT'),
-                            ('image_url', 'VARCHAR(500)'),
-                            ('likes', 'INTEGER DEFAULT 0'),
-                            ('circle_id', 'INTEGER'),
-                            ('is_published', 'BOOLEAN DEFAULT 1'),
-                            ('updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
-                        ]
+                    required_columns = [
+                        ('content', 'TEXT'),
+                        ('image_url', 'VARCHAR(500)'),
+                        ('likes', 'INTEGER DEFAULT 0'),
+                        ('circle_id', 'INTEGER'),
+                        ('is_published', 'BOOLEAN DEFAULT 1'),
+                        ('updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+                    ]
 
-                        # Add missing columns one by one for SQLite
-                        for col_name, col_type in required_columns:
-                            if col_name not in existing_columns:
-                                logger.info(f"Adding {col_name} column to posts table...")
-                                conn.execute(text(f"ALTER TABLE posts ADD COLUMN {col_name} {col_type}"))
-                                conn.commit()
-                                logger.info(f"✓ Added {col_name} column to posts table")
+                    for col_name, col_type in required_columns:
+                        if col_name not in existing_columns:
+                            logger.info(f"Adding {col_name} column to posts...")
+                            conn.execute(text(f"ALTER TABLE posts ADD COLUMN {col_name} {col_type}"))
+                            conn.commit()
+                            logger.info(f"✓ Added {col_name} column")
 
             except Exception as e:
                 logger.warning(f"Could not fix posts table: {e}")
@@ -732,6 +735,102 @@ def fix_all_schema_issues():
         logger.error(f"Error in fix_all_schema_issues: {e}")
         # Don't fail the entire initialization for schema fixes
         pass
+
+
+def create_test_users():
+    """Create 12 test users for the social app"""
+    try:
+        logger.info("Checking for test users...")
+
+        test_users = [
+            {'username': 'alice', 'email': 'alice@example.com', 'password': 'password123',
+             'bio': 'Love hiking and photography', 'interests': 'Photography, Hiking, Travel',
+             'occupation': 'Photographer', 'goals': 'Travel to 50 countries', 'hobbies': 'Reading, Yoga'},
+
+            {'username': 'bob', 'email': 'bob@example.com', 'password': 'password123',
+             'bio': 'Software developer and gamer', 'interests': 'Gaming, Programming, Tech',
+             'occupation': 'Software Engineer', 'goals': 'Build a successful startup', 'hobbies': 'Gaming, Coding'},
+
+            {'username': 'charlie', 'email': 'charlie@example.com', 'password': 'password123',
+             'bio': 'Chef and food enthusiast', 'interests': 'Cooking, Food, Wine',
+             'occupation': 'Chef', 'goals': 'Open my own restaurant', 'hobbies': 'Cooking, Wine tasting'},
+
+            {'username': 'diana', 'email': 'diana@example.com', 'password': 'password123',
+             'bio': 'Artist and creative soul', 'interests': 'Art, Music, Dance',
+             'occupation': 'Graphic Designer', 'goals': 'Have an art exhibition', 'hobbies': 'Painting, Dancing'},
+
+            {'username': 'edward', 'email': 'edward@example.com', 'password': 'password123',
+             'bio': 'Fitness coach and athlete', 'interests': 'Fitness, Sports, Nutrition',
+             'occupation': 'Personal Trainer', 'goals': 'Complete an Ironman', 'hobbies': 'Running, Swimming'},
+
+            {'username': 'fiona', 'email': 'fiona@example.com', 'password': 'password123',
+             'bio': 'Teacher and bookworm', 'interests': 'Education, Literature, History',
+             'occupation': 'High School Teacher', 'goals': 'Write a novel', 'hobbies': 'Reading, Writing'},
+
+            {'username': 'george', 'email': 'george@example.com', 'password': 'password123',
+             'bio': 'Musician and composer', 'interests': 'Music, Guitar, Jazz',
+             'occupation': 'Music Teacher', 'goals': 'Record an album', 'hobbies': 'Guitar, Piano'},
+
+            {'username': 'helen', 'email': 'helen@example.com', 'password': 'password123',
+             'bio': 'Entrepreneur and innovator', 'interests': 'Business, Marketing, Innovation',
+             'occupation': 'Marketing Manager', 'goals': 'Launch a successful product',
+             'hobbies': 'Networking, Reading'},
+
+            {'username': 'ivan', 'email': 'ivan@example.com', 'password': 'password123',
+             'bio': 'Doctor and health advocate', 'interests': 'Medicine, Health, Research',
+             'occupation': 'Physician', 'goals': 'Contribute to medical research', 'hobbies': 'Tennis, Chess'},
+
+            {'username': 'julia', 'email': 'julia@example.com', 'password': 'password123',
+             'bio': 'Environmental scientist', 'interests': 'Environment, Science, Sustainability',
+             'occupation': 'Environmental Consultant', 'goals': 'Make a positive environmental impact',
+             'hobbies': 'Gardening, Hiking'},
+
+            {'username': 'kevin', 'email': 'kevin@example.com', 'password': 'password123',
+             'bio': 'Film director and storyteller', 'interests': 'Film, Cinema, Storytelling',
+             'occupation': 'Video Producer', 'goals': 'Direct a feature film', 'hobbies': 'Photography, Film'},
+
+            {'username': 'laura', 'email': 'laura@example.com', 'password': 'password123',
+             'bio': 'Psychologist and mindfulness coach', 'interests': 'Psychology, Mindfulness, Wellness',
+             'occupation': 'Clinical Psychologist', 'goals': 'Help 1000 people improve their mental health',
+             'hobbies': 'Meditation, Yoga'}
+        ]
+
+        created_count = 0
+        for user_data in test_users:
+            # Check if user exists
+            existing_user = User.query.filter_by(email=user_data['email']).first()
+            if not existing_user:
+                # Create user
+                user = User(
+                    username=user_data['username'],
+                    email=user_data['email']
+                )
+                user.set_password(user_data['password'])
+                db.session.add(user)
+                db.session.flush()  # Get the user ID
+
+                # Create profile
+                profile = Profile(
+                    user_id=user.id,
+                    bio=user_data['bio'],
+                    interests=user_data['interests'],
+                    occupation=user_data['occupation'],
+                    goals=user_data['goals'],
+                    favorite_hobbies=user_data['hobbies']
+                )
+                db.session.add(profile)
+                created_count += 1
+                logger.info(f"Created test user: {user_data['username']}")
+
+        if created_count > 0:
+            db.session.commit()
+            logger.info(f"✓ Created {created_count} test users")
+        else:
+            logger.info("✓ Test users already exist")
+
+    except Exception as e:
+        logger.error(f"Error creating test users: {e}")
+        db.session.rollback()
 
 
 
