@@ -17,4 +17,8 @@ pip install -r requirements.txt
 echo "Fixing database schema..."
 python fix_database.py
 
+# Create sample users if needed
+echo "Creating sample users..."
+python create_sample_users.py || echo "Sample users script not found or failed"
+
 echo "Build complete!"
