@@ -220,14 +220,19 @@ def init_database():
             else:
                 logger.info(f"Found {len(tables)} existing tables")
 
-                # Check for pending migrations
-                try:
-                    from flask_migrate import upgrade
-                    logger.info("Checking for pending migrations...")
-                    upgrade()
-                    logger.info("Database migrations applied successfully")
-                except Exception as e:
-                    logger.warning(f"Migration check skipped: {e}")
+                # Only try migrations if migrations folder exists
+                import os
+                if os.path.exists('migrations'):
+                    try:
+                        from flask_migrate import upgrade
+                        logger.info("Checking for pending migrations...")
+                        upgrade()
+                        logger.info("Database migrations applied successfully")
+                    except Exception as e:
+                        logger.warning(f"Migration error: {e}")
+                        logger.info("Using existing database schema")
+                else:
+                    logger.info("No migrations folder found, using existing schema")
 
             # Verify database connection
             db.session.execute(select(1))
@@ -236,8 +241,15 @@ def init_database():
 
         except Exception as e:
             logger.error(f"Database initialization error: {e}")
-            if not is_production:
-                raise
+            # Try to create tables as fallback
+            try:
+                db.create_all()
+                logger.info("Created database tables as fallback")
+                create_admin_user()
+            except Exception as e2:
+                logger.error(f"Failed to create tables: {e2}")
+                if not is_production:
+                    raise
 
 
 def create_admin_user():
