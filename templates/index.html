@@ -820,45 +820,45 @@
             <p style="text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 30px;">
                 Your safe space for wellness, connection, and personal growth
             </p>
-            
+
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
                     <h3>Privacy First</h3>
                     <p>Your wellness journey is private and secure. Share only what you're comfortable with.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
                     <h3>Track Progress</h3>
                     <p>Monitor your wellness parameters and see your growth over time with insights.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">👥</div>
                     <h3>Supportive Community</h3>
                     <p>Connect with others on similar journeys in a judgment-free environment.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">💬</div>
                     <h3>Safe Communication</h3>
                     <p>Private messaging and circles let you control who sees your content.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
                     <h3>Goal Setting</h3>
                     <p>Set and track personal goals with community support and accountability.</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">🌟</div>
                     <h3>Daily Check-ins</h3>
                     <p>Regular parameter tracking helps you understand patterns and triggers.</p>
                 </div>
             </div>
-            
+
             <div style="text-align: center; margin-top: 30px;">
                 <button class="btn btn-primary" style="width: 200px;" onclick="goHome()">Get Started</button>
             </div>
@@ -872,31 +872,31 @@
             <p style="text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 30px;">
                 We're here to help you on your wellness journey
             </p>
-            
+
             <div style="background: var(--light); padding: 25px; border-radius: 15px; margin-bottom: 30px;">
                 <h3 style="color: var(--primary); margin-bottom: 15px;">Frequently Asked Questions</h3>
-                
+
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;">How do I track my wellness parameters?</h4>
                     <p style="color: var(--gray);">Navigate to the Tracking tab in your dashboard. You can input daily values for mood, sleep, exercise, anxiety, and energy levels. Use the calendar to save and load parameters for different dates.</p>
                 </div>
-                
+
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;">What are Circles?</h4>
                     <p style="color: var(--gray);">Circles allow you to organize your connections into groups: General, Close Friends, and Family. You can control who sees your posts based on these circles.</p>
                 </div>
-                
+
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;">How do I update my profile?</h4>
                     <p style="color: var(--gray);">Go to the Profile tab to update your bio, interests, occupation, goals, and favorite hobbies. These help others understand you better.</p>
                 </div>
-                
+
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;">Is my data private?</h4>
                     <p style="color: var(--gray);">Yes! We take privacy seriously. Your wellness data is encrypted and only visible to you unless you choose to share it.</p>
                 </div>
             </div>
-            
+
             <div style="background: var(--light); padding: 25px; border-radius: 15px;">
                 <h3 style="color: var(--primary); margin-bottom: 15px;">Contact Support</h3>
                 <form id="supportForm">
@@ -911,7 +911,7 @@
                     <button type="submit" class="btn btn-primary">Send Message</button>
                 </form>
             </div>
-            
+
             <div style="text-align: center; margin-top: 30px;">
                 <button class="btn btn-secondary" style="width: 200px;" onclick="goHome()">Back to Home</button>
             </div>
@@ -970,34 +970,34 @@
                             <div class="profile-avatar" id="profileAvatar">U</div>
                             <h3 id="profileUsername">Username</h3>
                         </div>
-                        
+
                         <div class="profile-fields">
                             <div class="form-group">
                                 <label class="form-label">Bio</label>
                                 <textarea class="profile-textarea" id="profileBio" placeholder="Tell us about yourself..." maxlength="500"></textarea>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Interests</label>
                                 <textarea class="profile-textarea" id="profileInterests" placeholder="What are you interested in?" maxlength="300"></textarea>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Occupation</label>
                                 <input type="text" class="form-input" id="profileOccupation" placeholder="What do you do?">
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Goals</label>
                                 <textarea class="profile-textarea" id="profileGoals" placeholder="What are your personal or professional goals?" maxlength="300"></textarea>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Favorite Hobbies</label>
                                 <textarea class="profile-textarea" id="profileHobbies" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
                             </div>
                         </div>
-                        
+
                         <div style="text-align: center; margin-top: 30px;">
                             <button class="btn btn-primary" style="width: 200px;" id="updateProfileBtn">Save Profile</button>
                         </div>
@@ -1007,12 +1007,12 @@
                 <!-- Circles View (Enhanced) -->
                 <div id="circlesView" class="view hidden">
                     <h2 style="margin-bottom: 20px;">Your Circles</h2>
-                    
+
                     <div class="user-search">
                         <input type="text" class="search-input" id="userSearchInput" placeholder="Search users to add to circles..." onkeyup="searchUsers()">
                         <div class="search-results" id="searchResults"></div>
                     </div>
-                    
+
                     <div class="circles-container">
                         <div class="circle-card">
                             <div class="circle-header">
@@ -1023,7 +1023,7 @@
                                 <p style="text-align: center; color: var(--gray);">No members yet</p>
                             </div>
                         </div>
-                        
+
                         <div class="circle-card">
                             <div class="circle-header">
                                 <span class="circle-title">❤️ Close Friends</span>
@@ -1033,7 +1033,7 @@
                                 <p style="text-align: center; color: var(--gray);">No close friends yet</p>
                             </div>
                         </div>
-                        
+
                         <div class="circle-card">
                             <div class="circle-header">
                                 <span class="circle-title">👨‍👩‍👧‍👦 Family</span>
@@ -1073,7 +1073,7 @@
                 <!-- Tracking/Parameters View (Enhanced with save/load) -->
                 <div id="trackingView" class="view hidden">
                     <h2 style="margin-bottom: 20px;">Wellness Parameters</h2>
-                    
+
                     <div class="calendar-section">
                         <div class="calendar-header">
                             <button class="btn btn-secondary" onclick="previousMonth()">←</button>
@@ -1085,13 +1085,13 @@
                             <p>Selected Date: <strong id="selectedDateDisplay">Today</strong></p>
                         </div>
                     </div>
-                    
+
                     <div class="parameter-grid">
                         <div class="parameter-card">
                             <div class="parameter-name">Mood</div>
                             <input type="text" class="parameter-input" id="moodInput" placeholder="e.g., Happy, Calm, Anxious">
                         </div>
-                        
+
                         <div class="parameter-card">
                             <div class="parameter-name">Sleep</div>
                             <div style="display: flex; align-items: center; gap: 10px;">
@@ -1099,33 +1099,33 @@
                                 <span style="color: white; font-weight: 600;" id="sleepDisplay">0 Hours</span>
                             </div>
                         </div>
-                        
+
                         <div class="parameter-card">
                             <div class="parameter-name">Exercise</div>
                             <input type="text" class="parameter-input" id="exerciseInput" placeholder="e.g., Running, Yoga, Gym">
                         </div>
-                        
+
                         <div class="parameter-card">
                             <div class="parameter-name">Anxiety</div>
                             <input type="text" class="parameter-input" id="anxietyInput" placeholder="e.g., None, Mild, Moderate">
                         </div>
-                        
+
                         <div class="parameter-card">
                             <div class="parameter-name">Energy</div>
                             <input type="text" class="parameter-input" id="energyInput" placeholder="e.g., Low, Normal, High">
                         </div>
-                        
+
                         <div class="parameter-card" style="grid-column: span 2;">
                             <div class="parameter-name">Notes</div>
                             <textarea class="parameter-input" id="notesInput" placeholder="Additional notes..." style="min-height: 80px;"></textarea>
                         </div>
                     </div>
-                    
+
                     <div style="text-align: center; margin-top: 20px; display: flex; gap: 15px; justify-content: center;">
                         <button class="btn btn-primary" style="width: 200px;" onclick="saveParameters()">Save Parameters</button>
                         <button class="btn btn-secondary" style="width: 200px;" onclick="loadParameters()">Load Parameters</button>
                     </div>
-                    
+
                     <h3 style="margin-top: 30px; margin-bottom: 15px;">Insights</h3>
                     <div id="insights"></div>
                 </div>
@@ -1166,13 +1166,13 @@
 
             try {
                 const response = await fetch(`${API_URL}${endpoint}`, options);
-                
+
                 if (response.status === 401) {
                     // Not authenticated
                     showAuthContainer();
                     return null;
                 }
-                
+
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -1224,7 +1224,7 @@
         document.getElementById('toggleAuth').addEventListener('click', (e) => {
             e.preventDefault();
             isLoginMode = !isLoginMode;
-            
+
             if (isLoginMode) {
                 document.getElementById('authTitle').textContent = 'Welcome Back';
                 document.getElementById('authSubmit').textContent = 'Sign In';
@@ -1240,7 +1240,7 @@
 
         document.getElementById('authForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const email = document.getElementById('emailInput').value;
             const password = document.getElementById('passwordInput').value;
             const username = document.getElementById('usernameInput').value;
@@ -1248,13 +1248,13 @@
             try {
                 const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
                 const body = { email, password };
-                
+
                 if (!isLoginMode) {
                     body.username = username || email.split('@')[0];
                 }
 
                 const response = await apiCall(endpoint, 'POST', body);
-                
+
                 if (response && response.success) {
                     currentUser = response.user;
                     showDashboard();
@@ -1270,7 +1270,7 @@
             } catch (error) {
                 // Ignore logout errors
             }
-            
+
             currentUser = null;
             showAuthContainer();
         });
@@ -1286,13 +1286,13 @@
             hideAllViews();
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('logoutBtn').style.display = 'block';
-            
+
             // Update profile avatar
             if (currentUser && currentUser.username) {
                 document.getElementById('profileAvatar').textContent = currentUser.username[0].toUpperCase();
                 document.getElementById('profileUsername').textContent = currentUser.username;
             }
-            
+
             loadFeed();
             loadAlerts();
         }
@@ -1303,14 +1303,14 @@
                 // Update active state
                 document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
-                
+
                 // Hide all views
                 document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-                
+
                 // Show selected view
                 const view = item.dataset.view;
                 document.getElementById(`${view}View`).classList.remove('hidden');
-                
+
                 // Load view data
                 switch(view) {
                     case 'feed':
@@ -1337,10 +1337,10 @@
             try {
                 const response = await apiCall('/feed');
                 if (!response) return;
-                
+
                 const feedContainer = document.getElementById('feedPosts');
                 feedContainer.innerHTML = '';
-                
+
                 if (response.posts && response.posts.length > 0) {
                     response.posts.forEach(post => {
                         const postCard = createPostCard(post);
@@ -1357,11 +1357,11 @@
         function createPostCard(post) {
             const div = document.createElement('div');
             div.className = 'post-card fade-in';
-            
+
             const author = post.author || 'Anonymous';
             const initial = author.charAt(0).toUpperCase();
             const timeAgo = getTimeAgo(new Date(post.created_at));
-            
+
             div.innerHTML = `
                 <div class="post-header">
                     <div class="avatar">${initial}</div>
@@ -1372,16 +1372,16 @@
                 </div>
                 <div class="post-content">${escapeHtml(post.content)}</div>
             `;
-            
+
             return div;
         }
 
         document.getElementById('postBtn').addEventListener('click', async () => {
             const content = document.getElementById('postInput').value.trim();
             const visibility = document.getElementById('visibilitySelect').value;
-            
+
             if (!content) return;
-            
+
             try {
                 await apiCall('/posts', 'POST', { content, visibility });
                 document.getElementById('postInput').value = '';
@@ -1396,7 +1396,7 @@
             try {
                 const response = await apiCall('/profile');
                 if (!response) return;
-                
+
                 document.getElementById('profileBio').value = response.bio || '';
                 document.getElementById('profileInterests').value = response.interests || '';
                 document.getElementById('profileOccupation').value = response.occupation || '';
@@ -1415,7 +1415,7 @@
                 goals: document.getElementById('profileGoals').value,
                 favorite_hobbies: document.getElementById('profileHobbies').value
             };
-            
+
             try {
                 await apiCall('/profile', 'PUT', profileData);
                 alert('Profile updated successfully!');
@@ -1429,7 +1429,7 @@
             try {
                 const response = await apiCall('/circles');
                 if (!response) return;
-                
+
                 updateCircleDisplay('general', response.general || []);
                 updateCircleDisplay('close_friends', response.close_friends || []);
                 updateCircleDisplay('family', response.family || []);
@@ -1440,7 +1440,7 @@
 
         function updateCircleDisplay(type, members) {
             let containerId, countId;
-            
+
             if (type === 'general') {
                 containerId = 'generalMembers';
                 countId = 'generalCount';
@@ -1451,12 +1451,12 @@
                 containerId = 'familyMembers';
                 countId = 'familyCount';
             }
-            
+
             const container = document.getElementById(containerId);
             const count = document.getElementById(countId);
-            
+
             count.textContent = members.length;
-            
+
             if (members.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: var(--gray);">No members yet</p>';
             } else {
@@ -1472,18 +1472,18 @@
 
         async function searchUsers() {
             const query = document.getElementById('userSearchInput').value;
-            
+
             if (query.length < 2) {
                 document.getElementById('searchResults').classList.remove('active');
                 return;
             }
-            
+
             try {
                 const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
                 if (!response) return;
-                
+
                 const container = document.getElementById('searchResults');
-                
+
                 if (response.length === 0) {
                     container.innerHTML = '<div class="search-result-item">No users found</div>';
                 } else {
@@ -1502,7 +1502,7 @@
                         </div>
                     `).join('');
                 }
-                
+
                 container.classList.add('active');
             } catch (error) {
                 console.error('Failed to search users:', error);
@@ -1511,13 +1511,13 @@
 
         async function addToCircle(userId, circleType, username) {
             if (!circleType) return;
-            
+
             try {
                 await apiCall('/circles', 'POST', {
                     user_id: userId,
                     circle_type: circleType
                 });
-                
+
                 alert(`${username} added to ${circleType.replace('_', ' ')} circle!`);
                 loadCircles();
                 document.getElementById('userSearchInput').value = '';
@@ -1529,13 +1529,13 @@
 
         async function removeFromCircle(userId, circleType) {
             if (!confirm('Remove this user from the circle?')) return;
-            
+
             try {
                 await apiCall('/circles/remove', 'DELETE', {
                     user_id: userId,
                     circle_type: circleType
                 });
-                
+
                 loadCircles();
             } catch (error) {
                 alert('Failed to remove from circle: ' + error.message);
@@ -1547,9 +1547,9 @@
             try {
                 const response = await apiCall('/messages/conversations');
                 if (!response) return;
-                
+
                 const container = document.getElementById('conversationsList');
-                
+
                 if (response.length === 0) {
                     container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--gray);">No conversations yet</div>';
                 } else {
@@ -1569,17 +1569,17 @@
 
         async function loadMessages(userId, username) {
             currentRecipient = { id: userId, username: username };
-            
+
             document.getElementById('chatHeader').textContent = username;
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendMessageBtn').disabled = false;
-            
+
             try {
                 const response = await apiCall(`/messages?recipient_id=${userId}`);
                 if (!response) return;
-                
+
                 const container = document.getElementById('messagesList');
-                
+
                 if (response.messages && response.messages.length > 0) {
                     container.innerHTML = response.messages.map(msg => `
                         <div class="message ${msg.sender.id === currentUser.id ? 'own' : ''}">
@@ -1591,7 +1591,7 @@
                 } else {
                     container.innerHTML = '<div style="text-align: center; padding: 50px; color: var(--gray);">No messages yet. Start the conversation!</div>';
                 }
-                
+
                 container.scrollTop = container.scrollHeight;
             } catch (error) {
                 console.error('Failed to load messages:', error);
@@ -1600,16 +1600,16 @@
 
         document.getElementById('sendMessageBtn').addEventListener('click', async () => {
             if (!currentRecipient) return;
-            
+
             const content = document.getElementById('messageInput').value.trim();
             if (!content) return;
-            
+
             try {
                 await apiCall('/messages', 'POST', {
                     recipient_id: currentRecipient.id,
                     content: content
                 });
-                
+
                 document.getElementById('messageInput').value = '';
                 loadMessages(currentRecipient.id, currentRecipient.username);
             } catch (error) {
@@ -1638,17 +1638,17 @@
         function renderCalendar() {
             const year = currentMonth.getFullYear();
             const month = currentMonth.getMonth();
-            
+
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                               'July', 'August', 'September', 'October', 'November', 'December'];
             document.getElementById('currentMonth').textContent = `${monthNames[month]} ${year}`;
-            
+
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
+
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
-            
+
             // Add day headers
             const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             dayHeaders.forEach(day => {
@@ -1659,30 +1659,30 @@
                 header.textContent = day;
                 grid.appendChild(header);
             });
-            
+
             // Add empty cells
             for (let i = 0; i < firstDay; i++) {
                 grid.appendChild(document.createElement('div'));
             }
-            
+
             // Add days
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayCell = document.createElement('div');
                 dayCell.className = 'calendar-day';
                 dayCell.textContent = day;
-                
+
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                
+
                 if (savedDates.includes(dateStr)) {
                     dayCell.classList.add('has-data');
                 }
-                
-                if (selectedDate.getDate() === day && 
-                    selectedDate.getMonth() === month && 
+
+                if (selectedDate.getDate() === day &&
+                    selectedDate.getMonth() === month &&
                     selectedDate.getFullYear() === year) {
                     dayCell.classList.add('selected');
                 }
-                
+
                 dayCell.onclick = () => selectDate(year, month, day);
                 grid.appendChild(dayCell);
             }
@@ -1723,7 +1723,7 @@
 
         async function saveParameters() {
             const dateStr = selectedDate.toISOString().split('T')[0];
-            
+
             const parameters = {
                 date: dateStr,
                 mood: document.getElementById('moodInput').value,
@@ -1733,7 +1733,7 @@
                 energy: document.getElementById('energyInput').value,
                 notes: document.getElementById('notesInput').value
             };
-            
+
             try {
                 await apiCall('/parameters/save', 'POST', parameters);
                 alert(`Parameters saved for ${dateStr}`);
@@ -1746,10 +1746,10 @@
 
         async function loadParameters() {
             const dateStr = selectedDate.toISOString().split('T')[0];
-            
+
             try {
                 const response = await apiCall(`/parameters/load/${dateStr}`);
-                
+
                 if (response && response.success) {
                     const data = response.data;
                     document.getElementById('moodInput').value = data.mood || '';
@@ -1758,12 +1758,12 @@
                     document.getElementById('anxietyInput').value = data.anxiety || '';
                     document.getElementById('energyInput').value = data.energy || '';
                     document.getElementById('notesInput').value = data.notes || '';
-                    
+
                     // Update sleep display
                     const hours = data.sleep_hours || 0;
                     const text = hours == 1 ? 'Hour' : 'Hours';
                     document.getElementById('sleepDisplay').textContent = `${hours} ${text}`;
-                    
+
                     alert(`Loaded parameters from ${dateStr}`);
                 } else {
                     alert('No saved parameters for this date');
@@ -1778,9 +1778,9 @@
             try {
                 const response = await apiCall('/alerts');
                 if (!response) return;
-                
+
                 const container = document.getElementById('alertsList');
-                
+
                 if (!response.alerts || response.alerts.length === 0) {
                     container.innerHTML = '<p style="color: var(--gray);">No new alerts</p>';
                 } else {
@@ -1799,16 +1799,16 @@
         // Support Form
         document.getElementById('supportForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const subject = document.getElementById('supportSubject').value;
             const message = document.getElementById('supportMessage').value;
-            
+
             try {
                 await apiCall('/support/contact', 'POST', {
                     subject: subject,
                     message: message
                 });
-                
+
                 alert('Support message sent successfully!');
                 document.getElementById('supportForm').reset();
             } catch (error) {
@@ -1825,7 +1825,7 @@
 
         function getTimeAgo(date) {
             const seconds = Math.floor((new Date() - date) / 1000);
-            
+
             if (seconds < 60) return 'just now';
             if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
             if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
@@ -1863,5 +1863,7 @@
             }
         }, 30000);
     </script>
+
+<script src="/static/js/feed-calendar.js"></script>
 </body>
 </html>
