@@ -140,6 +140,9 @@ const translations = {
         'circles.circle': 'circle!',
         'circles.remove_confirm': 'Remove this user from the circle?',
         'circles.user_removed': 'User removed from circle',
+        'circles.add_to': 'Add to circle...',
+'circles.remove': 'Remove',
+'circles.no_users': 'No users found',
 
         // Messages page
         'messages.title': 'Messages',
@@ -403,6 +406,10 @@ const translations = {
         'circles.circle': 'מעגל!',
         'circles.remove_confirm': 'להסיר משתמש זה מהמעגל?',
         'circles.user_removed': 'המשתמש הוסר מהמעגל',
+        'circles.add_to': 'הוסף למעגל...',
+'circles.remove': 'הסר',
+'circles.no_users': 'לא נמצאו משתמשים',
+
 
         // Messages page
         'messages.title': 'הודעות',
@@ -666,6 +673,9 @@ const translations = {
         'circles.circle': 'دائرة!',
         'circles.remove_confirm': 'إزالة هذا المستخدم من الدائرة؟',
         'circles.user_removed': 'تمت إزالة المستخدم من الدائرة',
+        'circles.add_to': 'أضف إلى الدائرة...',
+'circles.remove': 'إزالة',
+'circles.no_users': 'لم يتم العثور على مستخدمين',
 
         // Messages page
         'messages.title': 'الرسائل',
@@ -929,6 +939,9 @@ const translations = {
         'circles.circle': 'круг!',
         'circles.remove_confirm': 'Удалить этого пользователя из круга?',
         'circles.user_removed': 'Пользователь удалён из круга',
+        'circles.add_to': 'Добавить в круг...',
+'circles.remove': 'Удалить',
+'circles.no_users': 'Пользователи не найдены',
 
         // Messages page
         'messages.title': 'Сообщения',
