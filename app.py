@@ -1119,8 +1119,8 @@ def register():
         # Create welcome alert
         alert = Alert(
             user_id=user.id,
-            title='Welcome to Social Social!',
-            content='Your account has been created successfully. Start by updating your profile.',
+            title='alerts.welcome_title',
+            content='alerts.welcome_message',
             alert_type='success'
         )
         db.session.add(alert)
