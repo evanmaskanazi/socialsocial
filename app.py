@@ -1452,20 +1452,34 @@ def messages():
                 messages = db.session.execute(messages_stmt).scalars().all()
 
                 def format_message(msg):
-                    sender = db.session.get(User, msg.sender_id)
-                    recipient = db.session.get(User, msg.recipient_id)
-                    if sender and recipient:
+                    try:
+                        sender = db.session.get(User, msg.sender_id)
+                        recipient = db.session.get(User, msg.recipient_id)
+
+                        # Ensure both users exist and have usernames
+                        if not sender or not recipient:
+                            logger.warning(f"Missing user data for message {msg.id}")
+                            return None
+
                         return {
                             'id': msg.id,
-                            'sender': {'id': sender.id, 'username': sender.username},
-                            'recipient': {'id': recipient.id, 'username': recipient.username},
-                            'content': msg.content,
+                            'sender': {
+                                'id': sender.id if sender else msg.sender_id,
+                                'username': sender.username if sender else 'Unknown User'
+                            },
+                            'recipient': {
+                                'id': recipient.id if recipient else msg.recipient_id,
+                                'username': recipient.username if recipient else 'Unknown User'
+                            },
+                            'content': msg.content or '',
                             'is_read': msg.is_read,
-                            'created_at': msg.created_at.isoformat()
+                            'created_at': msg.created_at.isoformat() if msg.created_at else datetime.utcnow().isoformat()
                         }
-                    return None
+                    except Exception as e:
+                        logger.error(f"Error formatting message {msg.id}: {str(e)}")
+                        return None
 
-                formatted_messages = [m for msg in messages if (m := format_message(msg))]
+                formatted_messages = [m for msg in messages if (m := format_message(msg)) is not None]
                 return jsonify({'messages': formatted_messages})
 
             else:
@@ -1478,22 +1492,35 @@ def messages():
                 received = db.session.execute(received_stmt).scalars().all()
 
                 def format_message(msg):
-                    sender = db.session.get(User, msg.sender_id)
-                    recipient = db.session.get(User, msg.recipient_id)
-                    if sender and recipient:
+                    try:
+                        sender = db.session.get(User, msg.sender_id)
+                        recipient = db.session.get(User, msg.recipient_id)
+
+                        if not sender or not recipient:
+                            logger.warning(f"Missing user data for message {msg.id}")
+                            return None
+
                         return {
                             'id': msg.id,
-                            'sender': {'id': sender.id, 'username': sender.username},
-                            'recipient': {'id': recipient.id, 'username': recipient.username},
-                            'content': msg.content,
+                            'sender': {
+                                'id': sender.id if sender else msg.sender_id,
+                                'username': sender.username if sender else 'Unknown User'
+                            },
+                            'recipient': {
+                                'id': recipient.id if recipient else msg.recipient_id,
+                                'username': recipient.username if recipient else 'Unknown User'
+                            },
+                            'content': msg.content or '',
                             'is_read': msg.is_read,
-                            'created_at': msg.created_at.isoformat()
+                            'created_at': msg.created_at.isoformat() if msg.created_at else datetime.utcnow().isoformat()
                         }
-                    return None
+                    except Exception as e:
+                        logger.error(f"Error formatting message {msg.id}: {str(e)}")
+                        return None
 
                 return jsonify({
-                    'sent': [m for msg in sent if (m := format_message(msg))],
-                    'received': [m for msg in received if (m := format_message(msg))]
+                    'sent': [m for msg in sent if (m := format_message(msg)) is not None],
+                    'received': [m for msg in received if (m := format_message(msg)) is not None]
                 })
 
         except Exception as e:
@@ -1527,11 +1554,17 @@ def messages():
             )
             db.session.add(message)
 
-            # Create alert for recipient
-            sender = db.session.get(User, user_id)
+            # Create alert for recipient - FIX 7: Safe sender name retrieval
+            try:
+                sender = db.session.get(User, user_id)
+                sender_name = sender.username if sender and sender.username else 'Someone'
+            except Exception as e:
+                logger.error(f"Error getting sender username: {str(e)}")
+                sender_name = 'Someone'
+
             alert = Alert(
                 user_id=recipient_id,
-                title=f'New message from {sender.username}',
+                title=f'New message from {sender_name}',
                 content=content[:100] + '...' if len(content) > 100 else content,
                 alert_type='info'
             )
@@ -1583,6 +1616,7 @@ def mark_messages_read(recipient_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to mark messages'}), 500
 
+
 @app.route('/api/messages/conversations')
 @login_required
 def get_conversations():
@@ -1602,8 +1636,14 @@ def get_conversations():
 
         conversations = []
         for partner_id in partner_ids:
-            partner = db.session.get(User, partner_id)
-            if partner:
+            try:
+                partner = db.session.get(User, partner_id)
+
+                # Skip if partner doesn't exist or has no username
+                if not partner or not partner.username:
+                    logger.warning(f"Skipping conversation with invalid partner {partner_id}")
+                    continue
+
                 # Get last message - SQLAlchemy 2.0 style
                 last_msg_stmt = select(Message).filter(
                     or_(
@@ -1622,16 +1662,23 @@ def get_conversations():
                 )
                 unread_count = db.session.execute(unread_stmt).scalar() or 0
 
+                # Ensure all fields have safe fallback values
                 conversations.append({
-                    'user': {'id': partner.id, 'username': partner.username},
+                    'user': {
+                        'id': partner.id,
+                        'username': partner.username or 'Unknown User'
+                    },
                     'last_message': {
-                        'content': last_message.content if last_message else None,
-                        'created_at': last_message.created_at.isoformat() if last_message else None,
+                        'content': last_message.content if last_message and last_message.content else '',
+                        'created_at': last_message.created_at.isoformat() if last_message and last_message.created_at else None,
                         'is_own': last_message.sender_id == user_id if last_message else False
                     },
                     'unread_count': unread_count,
-                    'timestamp': last_message.created_at.isoformat() if last_message else None
+                    'timestamp': last_message.created_at.isoformat() if last_message and last_message.created_at else None
                 })
+            except Exception as e:
+                logger.error(f"Error processing conversation with partner {partner_id}: {str(e)}")
+                continue
 
         # Sort by last message time
         conversations.sort(
@@ -1644,7 +1691,7 @@ def get_conversations():
 
     except Exception as e:
         logger.error(f"Get conversations error: {str(e)}")
-        return jsonify({'error': 'Failed to get conversations'}), 500
+        return jsonify({'conversations': []})  # Return empty array on error instead of error object
 
 
 # =====================
