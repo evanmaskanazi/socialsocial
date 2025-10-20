@@ -1,42 +1,95 @@
 // Circles and Messages Management System with i18n support
-// Add this to your main dashboard or create separate pages
+// Complete Fixed Version with null safety and proper error handling
 
-// Use translation function helper
-const t = (key) => window.i18n ? window.i18n.translate(key) : key;
+// Safe translation function with fallbacks
+const t = (key, fallback = key) => {
+    try {
+        if (window.i18n && typeof window.i18n.translate === 'function') {
+            const translation = window.i18n.translate(key);
+            return translation || fallback;
+        }
+    } catch (error) {
+        console.warn('Translation error:', error);
+    }
+    return fallback;
+};
+
+// Wait for i18n to be ready
+function waitForI18n() {
+    return new Promise((resolve) => {
+        if (window.i18n && window.i18n.t) {
+            resolve();
+        } else {
+            const checkInterval = setInterval(() => {
+                if (window.i18n && window.i18n.t) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 50);
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                resolve();
+            }, 5000);
+        }
+    });
+}
 
 // ============================================================
-// FIX 1: Time formatting function with "just now" support
+// Time formatting function with null safety
 // ============================================================
 function formatMessageTime(timestamp) {
-    const now = new Date();
-    const msgTime = new Date(timestamp);
-    const diffSeconds = Math.floor((now - msgTime) / 1000);
+    try {
+        if (!timestamp) return t('messages.unknown_time', 'Unknown time');
 
-    // Just now (less than 60 seconds)
-    if (diffSeconds < 60) {
-        return t('messages.just_now');
+        const now = new Date();
+        const msgTime = new Date(timestamp);
+
+        if (isNaN(msgTime.getTime())) {
+            return t('messages.unknown_time', 'Unknown time');
+        }
+
+        const diffSeconds = Math.floor((now - msgTime) / 1000);
+
+        // Just now (less than 60 seconds)
+        if (diffSeconds < 60) {
+            return t('messages.just_now', 'Just now');
+        }
+
+        // Minutes ago
+        if (diffSeconds < 3600) {
+            const minutes = Math.floor(diffSeconds / 60);
+            return `${minutes} ${t('messages.minutes_ago', 'min ago')}`;
+        }
+
+        // Hours ago (same day)
+        if (msgTime.toDateString() === now.toDateString()) {
+            return msgTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Yesterday
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (msgTime.toDateString() === yesterday.toDateString()) {
+            return t('messages.yesterday', 'Yesterday');
+        }
+
+        // Older messages
+        return msgTime.toLocaleDateString();
+    } catch (error) {
+        console.error('Error formatting time:', error);
+        return t('messages.unknown_time', 'Unknown time');
     }
+}
 
-    // Minutes ago
-    if (diffSeconds < 3600) {
-        const minutes = Math.floor(diffSeconds / 60);
-        return `${minutes} ${t('messages.minutes_ago')}`;
-    }
-
-    // Hours ago (same day)
-    if (msgTime.toDateString() === now.toDateString()) {
-        return msgTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    // Yesterday
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (msgTime.toDateString() === yesterday.toDateString()) {
-        return t('messages.yesterday');
-    }
-
-    // Older messages
-    return msgTime.toLocaleDateString();
+// ============================================================
+// Safe HTML escape function
+// ============================================================
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // ===================
@@ -265,12 +318,12 @@ const circlesHTML = `
     </style>
 
     <div class="circles-header">
-        <h1 id="circlesPageTitle">${t('circles.title')}</h1>
-        <p style="color: #8898aa;" id="circlesSubtitle">${t('circles.subtitle')}</p>
+        <h1 data-i18n="circles.title">Your Circles</h1>
+        <p style="color: #8898aa;" data-i18n="circles.subtitle">Organize your connections</p>
     </div>
 
     <div class="user-search">
-        <input type="text" class="search-input" id="userSearchInput" placeholder="${t('circles.search_placeholder')}">
+        <input type="text" class="search-input" id="userSearchInput" data-i18n="circles.search_placeholder" placeholder="Search users...">
         <button class="search-btn" onclick="searchUsers()">🔍</button>
         <div class="search-results" id="searchResults"></div>
     </div>
@@ -279,13 +332,13 @@ const circlesHTML = `
         <div class="circle-card">
             <div class="circle-header">
                 <span class="circle-icon">👥</span>
-                <span class="circle-title" id="generalTitle">${t('circles.general')}</span>
+                <span class="circle-title" data-i18n="circles.general">General</span>
                 <span class="circle-count" id="generalCount">0</span>
             </div>
             <div class="circle-members" id="generalMembers">
                 <div class="empty-state">
                     <div class="empty-state-icon">👥</div>
-                    <p id="generalEmpty">${t('circles.no_members')}</p>
+                    <p data-i18n="circles.no_members">No members yet</p>
                 </div>
             </div>
         </div>
@@ -293,13 +346,13 @@ const circlesHTML = `
         <div class="circle-card">
             <div class="circle-header">
                 <span class="circle-icon">❤️</span>
-                <span class="circle-title" id="closeFriendsTitle">${t('circles.close_friends')}</span>
+                <span class="circle-title" data-i18n="circles.close_friends">Close Friends</span>
                 <span class="circle-count" id="closeFriendsCount">0</span>
             </div>
             <div class="circle-members" id="closeFriendsMembers">
                 <div class="empty-state">
                     <div class="empty-state-icon">❤️</div>
-                    <p id="closeFriendsEmpty">${t('circles.no_members')}</p>
+                    <p data-i18n="circles.no_members">No members yet</p>
                 </div>
             </div>
         </div>
@@ -307,13 +360,13 @@ const circlesHTML = `
         <div class="circle-card">
             <div class="circle-header">
                 <span class="circle-icon">👨‍👩‍👧‍👦</span>
-                <span class="circle-title" id="familyTitle">${t('circles.family')}</span>
+                <span class="circle-title" data-i18n="circles.family">Family</span>
                 <span class="circle-count" id="familyCount">0</span>
             </div>
             <div class="circle-members" id="familyMembers">
                 <div class="empty-state">
                     <div class="empty-state-icon">👨‍👩‍👧‍👦</div>
-                    <p id="familyEmpty">${t('circles.no_members')}</p>
+                    <p data-i18n="circles.no_members">No members yet</p>
                 </div>
             </div>
         </div>
@@ -330,24 +383,31 @@ let circlesData = {
 
 async function loadCircles() {
     try {
-        const response = await fetch('/api/circles');
-        if (response.ok) {
-            circlesData = await response.json();
-            updateCirclesDisplay();
+        const response = await fetch('/api/circles', {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
+
+        const data = await response.json();
+        circlesData = {
+            general: data.general || [],
+            close_friends: data.close_friends || [],
+            family: data.family || []
+        };
+
+        updateCirclesDisplay();
     } catch (error) {
         console.error('Error loading circles:', error);
+        showNotification(t('error.loading_circles', 'Error loading circles'), 'error');
     }
 }
 
 function updateCirclesDisplay() {
-    // Update General circle
     updateCircleDisplay('general', circlesData.general, 'generalMembers', 'generalCount');
-
-    // Update Close Friends circle
     updateCircleDisplay('close_friends', circlesData.close_friends, 'closeFriendsMembers', 'closeFriendsCount');
-
-    // Update Family circle
     updateCircleDisplay('family', circlesData.family, 'familyMembers', 'familyCount');
 }
 
@@ -355,73 +415,95 @@ function updateCircleDisplay(circleType, members, containerId, countId) {
     const container = document.getElementById(containerId);
     const count = document.getElementById(countId);
 
-    count.textContent = members.length;
+    if (!container || !count) return;
 
-    if (members.length === 0) {
+    count.textContent = members ? members.length : 0;
+
+    if (!members || members.length === 0) {
         const icon = circleType === 'general' ? '👥' :
                     circleType === 'close_friends' ? '❤️' : '👨‍👩‍👧‍👦';
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">${icon}</div>
-                <p>${t('circles.no_members')}</p>
+                <p data-i18n="circles.no_members">${t('circles.no_members', 'No members yet')}</p>
             </div>
         `;
     } else {
-        container.innerHTML = members.map(member => `
-            <div class="member-item">
-                <div class="user-avatar">${member.username[0].toUpperCase()}</div>
-                <div class="member-name">${member.username}</div>
-                <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${circleType}')">${t('btn.remove')}</button>
-            </div>
-        `).join('');
+        container.innerHTML = members.map(member => {
+            if (!member || !member.username || !member.id) return '';
+            return `
+                <div class="member-item">
+                    <div class="user-avatar">${member.username[0].toUpperCase()}</div>
+                    <div class="member-name">${escapeHtml(member.username)}</div>
+                    <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${circleType}')" data-i18n="btn.remove">${t('btn.remove', 'Remove')}</button>
+                </div>
+            `;
+        }).filter(html => html).join('');
     }
 }
 
 async function searchUsers() {
-    const query = document.getElementById('userSearchInput').value;
-    if (query.length < 2) return;
+    const input = document.getElementById('userSearchInput');
+    if (!input) return;
+
+    const query = input.value;
+    if (query.length < 2) {
+        const results = document.getElementById('searchResults');
+        if (results) results.classList.remove('active');
+        return;
+    }
 
     try {
-        const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
-        if (response.ok) {
-            const users = await response.json();
-            displaySearchResults(users);
+        const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
+
+        const data = await response.json();
+        displaySearchResults(data.users || []);
     } catch (error) {
         console.error('Error searching users:', error);
+        showNotification(t('error.searching', 'Error searching users'), 'error');
     }
 }
 
 function displaySearchResults(users) {
     const resultsContainer = document.getElementById('searchResults');
+    if (!resultsContainer) return;
 
-    if (users.length === 0) {
-        resultsContainer.innerHTML = `<div class="search-result-item">${t('circles.no_users_found')}</div>`;
+    if (!users || users.length === 0) {
+        resultsContainer.innerHTML = `<div class="search-result-item">${t('circles.no_users_found', 'No users found')}</div>`;
     } else {
-        resultsContainer.innerHTML = users.map(user => `
-            <div class="search-result-item">
-                <div class="user-info">
-                    <div class="user-avatar">${user.username[0].toUpperCase()}</div>
-                    <div>
-                        <div style="font-weight: 600;">${user.username}</div>
-                        <div style="font-size: 14px; color: #8898aa;">${user.email}</div>
+        resultsContainer.innerHTML = users.map(user => {
+            if (!user || !user.username || !user.id) return '';
+            return `
+                <div class="search-result-item">
+                    <div class="user-info">
+                        <div class="user-avatar">${user.username[0].toUpperCase()}</div>
+                        <div>
+                            <div style="font-weight: 600;">${escapeHtml(user.username)}</div>
+                            <div style="font-size: 14px; color: #8898aa;">${escapeHtml(user.email || '')}</div>
+                        </div>
                     </div>
+                    <select class="add-to-circle-btn" onchange="addToCircle(${user.id}, this.value, '${escapeHtml(user.username).replace(/'/g, "\\'")}')">
+                        <option value="">${t('circles.add_to_circle', 'Add to circle...')}</option>
+                        <option value="general">${t('circles.general', 'General')}</option>
+                        <option value="close_friends">${t('circles.close_friends', 'Close Friends')}</option>
+                        <option value="family">${t('circles.family', 'Family')}</option>
+                    </select>
                 </div>
-                <select class="add-to-circle-btn" onchange="addToCircle(${user.id}, this.value, '${user.username}')">
-                    <option value="">${t('circles.add_to_circle')}</option>
-                    <option value="general">${t('circles.general')}</option>
-                    <option value="close_friends">${t('circles.close_friends')}</option>
-                    <option value="family">${t('circles.family')}</option>
-                </select>
-            </div>
-        `).join('');
+            `;
+        }).filter(html => html).join('');
     }
 
     resultsContainer.classList.add('active');
 }
 
 async function addToCircle(userId, circleType, username) {
-    if (!circleType) return;
+    if (!circleType || !userId) return;
 
     try {
         const response = await fetch('/api/circles', {
@@ -429,33 +511,43 @@ async function addToCircle(userId, circleType, username) {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({
                 user_id: userId,
                 circle_type: circleType
             })
         });
 
-        if (response.ok) {
-            const circleNames = {
-                'general': t('circles.general'),
-                'close_friends': t('circles.close_friends'),
-                'family': t('circles.family')
-            };
-            showNotification(`${username} ${t('circles.user_added')} ${circleNames[circleType]} ${t('circles.circle')}`, 'success');
-            loadCircles();
-            document.getElementById('searchResults').classList.remove('active');
-            document.getElementById('userSearchInput').value = '';
-        } else {
+        if (!response.ok) {
             const error = await response.json();
-            showNotification(error.error || t('error.saving'), 'error');
+            throw new Error(error.error || 'Failed to add to circle');
         }
+
+        const circleNames = {
+            'general': t('circles.general', 'General'),
+            'close_friends': t('circles.close_friends', 'Close Friends'),
+            'family': t('circles.family', 'Family')
+        };
+
+        showNotification(
+            `${username} ${t('circles.user_added', 'added to')} ${circleNames[circleType]} ${t('circles.circle', 'circle')}`,
+            'success'
+        );
+
+        loadCircles();
+
+        const searchResults = document.getElementById('searchResults');
+        const searchInput = document.getElementById('userSearchInput');
+        if (searchResults) searchResults.classList.remove('active');
+        if (searchInput) searchInput.value = '';
     } catch (error) {
         console.error('Error adding to circle:', error);
+        showNotification(error.message || t('error.saving', 'Error saving'), 'error');
     }
 }
 
 async function removeFromCircle(userId, circleType) {
-    if (!confirm(t('circles.remove_confirm'))) return;
+    if (!confirm(t('circles.remove_confirm', 'Remove this member from the circle?'))) return;
 
     try {
         const response = await fetch('/api/circles/remove', {
@@ -463,18 +555,22 @@ async function removeFromCircle(userId, circleType) {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({
                 user_id: userId,
                 circle_type: circleType
             })
         });
 
-        if (response.ok) {
-            showNotification(t('circles.user_removed'), 'success');
-            loadCircles();
+        if (!response.ok) {
+            throw new Error('Failed to remove from circle');
         }
+
+        showNotification(t('circles.user_removed', 'User removed'), 'success');
+        loadCircles();
     } catch (error) {
         console.error('Error removing from circle:', error);
+        showNotification(t('error.removing', 'Error removing user'), 'error');
     }
 }
 
@@ -493,6 +589,13 @@ const messagesHTML = `
             grid-template-columns: 350px 1fr;
             gap: 30px;
             height: 80vh;
+        }
+
+        @media (max-width: 768px) {
+            .messages-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
         }
 
         .conversations-sidebar {
@@ -562,6 +665,7 @@ const messagesHTML = `
 
         .conversation-info {
             flex-grow: 1;
+            min-width: 0;
         }
 
         .conversation-name {
@@ -680,91 +784,36 @@ const messagesHTML = `
             transform: scale(1.05);
         }
 
-        .new-message-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .new-message-modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            width: 500px;
-            max-width: 90%;
-        }
-
-        .modal-header {
-            font-size: 1.5em;
-            font-weight: 600;
-            color: #2d3436;
-            margin-bottom: 20px;
-        }
-
-        .recipient-select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e8ed;
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 20px;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 15px;
-            justify-content: flex-end;
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     </style>
 
     <div class="conversations-sidebar">
         <div class="sidebar-header">
-            <div class="sidebar-title" id="messagesSidebarTitle">${t('messages.title')}</div>
-            <button class="new-message-btn" onclick="showNewMessageModal()" id="newMessageBtn">${t('messages.new')}</button>
+            <div class="sidebar-title" data-i18n="messages.title">Messages</div>
         </div>
-        <div id="conversationsList"></div>
+        <div id="conversationsList">
+            <div style="text-align: center; padding: 20px; color: #8898aa;" data-i18n="messages.loading">Loading...</div>
+        </div>
     </div>
 
     <div class="message-area">
         <div class="message-header">
             <div class="conversation-avatar" id="currentRecipientAvatar">?</div>
-            <div class="message-recipient" id="currentRecipient">${t('messages.select_conversation')}</div>
+            <div class="message-recipient" id="currentRecipient" data-i18n="messages.select_conversation">Select a conversation</div>
         </div>
 
         <div class="messages-display" id="messagesDisplay">
-            <div style="text-align: center; padding: 50px; color: #8898aa;" id="messagesPlaceholder">
-                ${t('messages.select_conversation')}
+            <div style="text-align: center; padding: 50px; color: #8898aa;" data-i18n="messages.select_conversation">
+                Select a conversation to start messaging
             </div>
         </div>
 
         <div class="message-input-area">
-            <input type="text" class="message-input" id="messageInput" placeholder="${t('messages.type_message')}" disabled>
-            <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>${t('messages.send')}</button>
-        </div>
-    </div>
-
-    <div class="new-message-modal" id="newMessageModal">
-        <div class="modal-content">
-            <div class="modal-header" id="newMessageModalTitle">${t('messages.new_message')}</div>
-            <select class="recipient-select" id="recipientSelect">
-                <option value="">${t('messages.select_recipient')}</option>
-            </select>
-            <textarea class="message-input" id="newMessageText" placeholder="${t('messages.type_message')}" style="width: 100%; min-height: 100px; border-radius: 10px;"></textarea>
-            <div class="modal-actions">
-                <button class="btn-cancel" onclick="hideNewMessageModal()">${t('btn.cancel')}</button>
-                <button class="btn-save" onclick="startNewConversation()">${t('btn.send')}</button>
-            </div>
+            <input type="text" class="message-input" id="messageInput" data-i18n="messages.type_message" placeholder="Type a message..." disabled>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled data-i18n="messages.send">Send</button>
         </div>
     </div>
 </div>
@@ -776,90 +825,146 @@ let messagesData = {
     received: []
 };
 let currentRecipient = null;
+let currentUserId = null;
 
-async function loadMessages() {
+async function getCurrentUser() {
     try {
-        const response = await fetch('/api/messages');
-        if (response.ok) {
-            messagesData = await response.json();
-            updateConversationsList();
+        const response = await fetch('/api/user/profile', {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
+
+        const user = await response.json();
+        currentUserId = user.id;
+        return user;
     } catch (error) {
-        console.error('Error loading messages:', error);
+        console.error('Error getting current user:', error);
+        return null;
     }
 }
 
-// ============================================================
-// FIX 2: Updated updateConversationsList with translations
-// ============================================================
-function updateConversationsList() {
-    // Group messages by conversation partner
-    const conversations = {};
+async function loadMessages() {
+    try {
+        const response = await fetch('/api/messages', {
+            credentials: 'include'
+        });
 
-    [...messagesData.sent, ...messagesData.received].forEach(msg => {
-        const partnerId = msg.sender.id === currentUserId ? msg.recipient.id : msg.sender.id;
-        const partnerName = msg.sender.id === currentUserId ? msg.recipient.username : msg.sender.username;
-
-        if (!conversations[partnerId]) {
-            conversations[partnerId] = {
-                id: partnerId,
-                name: partnerName,
-                lastMessage: msg,
-                unread: 0
-            };
-        } else {
-            // Update last message if newer
-            if (new Date(msg.created_at) > new Date(conversations[partnerId].lastMessage.created_at)) {
-                conversations[partnerId].lastMessage = msg;
-            }
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
 
-        // Count unread messages
-        if (msg.recipient.id === currentUserId && !msg.is_read) {
-            conversations[partnerId].unread++;
+        const data = await response.json();
+        messagesData = {
+            sent: data.sent || [],
+            received: data.received || []
+        };
+
+        updateConversationsList();
+    } catch (error) {
+        console.error('Error loading messages:', error);
+        const container = document.getElementById('conversationsList');
+        if (container) {
+            container.innerHTML = `<div style="text-align: center; padding: 20px; color: #ff6b6b;">${t('error.loading_messages', 'Error loading messages')}</div>`;
+        }
+    }
+}
+
+function updateConversationsList() {
+    const conversations = {};
+
+    // Safely process messages
+    [...(messagesData.sent || []), ...(messagesData.received || [])].forEach(msg => {
+        try {
+            if (!msg || !msg.sender || !msg.recipient) return;
+
+            const partnerId = msg.sender.id === currentUserId ? msg.recipient.id : msg.sender.id;
+            const partnerName = msg.sender.id === currentUserId ?
+                (msg.recipient.username || 'Unknown') :
+                (msg.sender.username || 'Unknown');
+
+            if (!conversations[partnerId]) {
+                conversations[partnerId] = {
+                    id: partnerId,
+                    name: partnerName,
+                    lastMessage: msg,
+                    unread: 0
+                };
+            } else {
+                // Update last message if newer
+                if (new Date(msg.created_at) > new Date(conversations[partnerId].lastMessage.created_at)) {
+                    conversations[partnerId].lastMessage = msg;
+                }
+            }
+
+            // Count unread messages
+            if (msg.recipient && msg.recipient.id === currentUserId && !msg.is_read) {
+                conversations[partnerId].unread++;
+            }
+        } catch (error) {
+            console.error('Error processing message:', error);
         }
     });
 
     // Display conversations
     const container = document.getElementById('conversationsList');
+    if (!container) return;
+
     const conversationArray = Object.values(conversations).sort((a, b) =>
         new Date(b.lastMessage.created_at) - new Date(a.lastMessage.created_at)
     );
 
     if (conversationArray.length === 0) {
-        container.innerHTML = `<div style="text-align: center; padding: 20px; color: #8898aa;">${t('messages.no_conversations')}</div>`;
+        container.innerHTML = `<div style="text-align: center; padding: 20px; color: #8898aa;" data-i18n="messages.no_conversations">${t('messages.no_conversations', 'No conversations yet')}</div>`;
     } else {
         container.innerHTML = conversationArray.map(conv => {
-            // Determine if last message was sent or received
-            const lastMsgSent = conv.lastMessage.sender.id === currentUserId;
-            const messagePreview = lastMsgSent
-                ? `${t('messages.you')}: ${conv.lastMessage.content}`
-                : `${t('messages.newMessageFrom')} ${conv.name}: ${conv.lastMessage.content}`;
+            try {
+                const lastMsgSent = conv.lastMessage.sender && conv.lastMessage.sender.id === currentUserId;
+                const youText = t('messages.you', 'You');
+                const messagePreview = lastMsgSent
+                    ? `${youText}: ${conv.lastMessage.content || ''}`
+                    : conv.lastMessage.content || '';
 
-            return `
-                <div class="conversation-item ${currentRecipient?.id === conv.id ? 'active' : ''}" onclick="selectConversation(${conv.id}, '${conv.name}')">
-                    <div class="conversation-avatar">${conv.name[0].toUpperCase()}</div>
-                    <div class="conversation-info">
-                        <div class="conversation-name">${conv.name}</div>
-                        <div class="conversation-preview">${messagePreview}</div>
+                return `
+                    <div class="conversation-item ${currentRecipient?.id === conv.id ? 'active' : ''}"
+                         onclick="selectConversation(${conv.id}, '${escapeHtml(conv.name).replace(/'/g, "\\'")}')">
+                        <div class="conversation-avatar">${conv.name[0].toUpperCase()}</div>
+                        <div class="conversation-info">
+                            <div class="conversation-name">${escapeHtml(conv.name)}</div>
+                            <div class="conversation-preview">${escapeHtml(messagePreview.substring(0, 50))}${messagePreview.length > 50 ? '...' : ''}</div>
+                        </div>
+                        ${conv.unread > 0 ? `<div class="unread-badge">${conv.unread}</div>` : ''}
                     </div>
-                    ${conv.unread > 0 ? `<div class="unread-badge">${conv.unread}</div>` : ''}
-                </div>
-            `;
-        }).join('');
+                `;
+            } catch (error) {
+                console.error('Error rendering conversation:', error);
+                return '';
+            }
+        }).filter(html => html).join('');
     }
 }
 
 function selectConversation(recipientId, recipientName) {
+    if (!recipientId || !recipientName) {
+        console.error('Invalid recipient:', recipientId, recipientName);
+        return;
+    }
+
     currentRecipient = { id: recipientId, username: recipientName };
 
     // Update header
-    document.getElementById('currentRecipient').textContent = recipientName;
-    document.getElementById('currentRecipientAvatar').textContent = recipientName[0].toUpperCase();
+    const headerEl = document.getElementById('currentRecipient');
+    const avatarEl = document.getElementById('currentRecipientAvatar');
+    if (headerEl) headerEl.textContent = recipientName;
+    if (avatarEl) avatarEl.textContent = recipientName[0].toUpperCase();
 
     // Enable input
-    document.getElementById('messageInput').disabled = false;
-    document.getElementById('sendBtn').disabled = false;
+    const inputEl = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    if (inputEl) inputEl.disabled = false;
+    if (sendBtn) sendBtn.disabled = false;
 
     // Display messages
     displayConversationMessages(recipientId);
@@ -871,129 +976,59 @@ function selectConversation(recipientId, recipientName) {
     updateConversationsList();
 }
 
-// ============================================================
-// FIX 3: Updated displayConversationMessages with sender prefix and time
-// ============================================================
 function displayConversationMessages(recipientId) {
     const container = document.getElementById('messagesDisplay');
-    const messages = [...messagesData.sent, ...messagesData.received]
-        .filter(msg =>
-            (msg.sender.id === currentUserId && msg.recipient.id === recipientId) ||
-            (msg.sender.id === recipientId && msg.recipient.id === currentUserId)
-        )
+    if (!container) return;
+
+    const messages = [...(messagesData.sent || []), ...(messagesData.received || [])]
+        .filter(msg => {
+            try {
+                return msg && msg.sender && msg.recipient &&
+                    ((msg.sender.id === currentUserId && msg.recipient.id === recipientId) ||
+                     (msg.sender.id === recipientId && msg.recipient.id === currentUserId));
+            } catch (error) {
+                return false;
+            }
+        })
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     if (messages.length === 0) {
-        container.innerHTML = `<div style="text-align: center; padding: 50px; color: #8898aa;">${t('messages.start_conversation')}</div>`;
+        container.innerHTML = `<div style="text-align: center; padding: 50px; color: #8898aa;" data-i18n="messages.start_conversation">${t('messages.start_conversation', 'Start the conversation!')}</div>`;
     } else {
         container.innerHTML = messages.map(msg => {
-            const isSent = msg.sender.id === currentUserId;
-            const time = formatMessageTime(msg.created_at);
-            const senderPrefix = isSent ? t('messages.you') : msg.sender.username;
+            try {
+                const isSent = msg.sender && msg.sender.id === currentUserId;
+                const time = formatMessageTime(msg.created_at);
+                const senderPrefix = isSent ? t('messages.you', 'You') : (msg.sender.username || 'Unknown');
 
-            return `
-                <div class="message-bubble ${isSent ? 'message-sent' : 'message-received'}">
-                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; opacity: 0.8;">${senderPrefix}</div>
-                    <div>${msg.content}</div>
-                    <div class="message-time">${time}</div>
-                </div>
-            `;
-        }).join('');
+                return `
+                    <div class="message-bubble ${isSent ? 'message-sent' : 'message-received'}">
+                        <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; opacity: 0.8;">${escapeHtml(senderPrefix)}</div>
+                        <div>${escapeHtml(msg.content || '')}</div>
+                        <div class="message-time">${time}</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error rendering message:', error);
+                return '';
+            }
+        }).filter(html => html).join('');
 
         // Scroll to bottom
-        container.scrollTop = container.scrollHeight;
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 0);
     }
 }
 
-// ============================================================
-// FIX 4: Updated sendMessage with "You" and "Just now"
-// ============================================================
 async function sendMessage() {
     const input = document.getElementById('messageInput');
+    if (!input) return;
+
     const content = input.value.trim();
 
-    if (!content || !currentRecipient) return;
-
-    try {
-        const response = await fetch('/api/messages', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                recipient_id: currentRecipient.id,
-                content: content
-            })
-        });
-
-        if (response.ok) {
-            input.value = '';
-            loadMessages();
-
-            // Add message to display immediately with translations
-            const container = document.getElementById('messagesDisplay');
-            const messageHtml = `
-                <div class="message-bubble message-sent">
-                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; opacity: 0.8;">${t('messages.you')}</div>
-                    <div>${content}</div>
-                    <div class="message-time">${t('messages.just_now')}</div>
-                </div>
-            `;
-            container.innerHTML += messageHtml;
-            container.scrollTop = container.scrollHeight;
-        }
-    } catch (error) {
-        console.error('Error sending message:', error);
-    }
-}
-
-async function markMessagesAsRead(recipientId) {
-    const unreadMessages = messagesData.received.filter(msg =>
-        msg.sender.id === recipientId && !msg.is_read
-    );
-
-    for (const msg of unreadMessages) {
-        try {
-            await fetch(`/api/messages/${msg.id}/read`, {
-                method: 'PUT'
-            });
-        } catch (error) {
-            console.error('Error marking message as read:', error);
-        }
-    }
-}
-
-async function showNewMessageModal() {
-    const modal = document.getElementById('newMessageModal');
-    const select = document.getElementById('recipientSelect');
-
-    // Load users for recipient selection
-    try {
-        const response = await fetch('/api/users/search?q=');
-        if (response.ok) {
-            const users = await response.json();
-            select.innerHTML = `<option value="">${t('messages.select_recipient')}</option>` +
-                users.map(user => `<option value="${user.id}">${user.username}</option>`).join('');
-        }
-    } catch (error) {
-        console.error('Error loading users:', error);
-    }
-
-    modal.classList.add('active');
-}
-
-function hideNewMessageModal() {
-    document.getElementById('newMessageModal').classList.remove('active');
-    document.getElementById('recipientSelect').value = '';
-    document.getElementById('newMessageText').value = '';
-}
-
-async function startNewConversation() {
-    const recipientId = document.getElementById('recipientSelect').value;
-    const content = document.getElementById('newMessageText').value.trim();
-
-    if (!recipientId || !content) {
-        alert(t('messages.select_and_type'));
+    if (!content || !currentRecipient) {
+        console.error('No content or recipient');
         return;
     }
 
@@ -1003,68 +1038,44 @@ async function startNewConversation() {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({
-                recipient_id: parseInt(recipientId),
+                recipient_id: currentRecipient.id,
                 content: content
             })
         });
 
-        if (response.ok) {
-            hideNewMessageModal();
-            loadMessages();
-            showNotification(t('messages.message_sent'), 'success');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        input.value = '';
+
+        // Reload messages
+        await loadMessages();
+
+        // Reselect conversation to show new message
+        if (currentRecipient) {
+            displayConversationMessages(currentRecipient.id);
         }
     } catch (error) {
-        console.error('Error starting conversation:', error);
+        console.error('Error sending message:', error);
+        showNotification(t('error.sending_message', 'Error sending message'), 'error');
     }
 }
 
-// Initialize
-let currentUserId = null;
-
-async function getCurrentUser() {
+async function markMessagesAsRead(recipientId) {
     try {
-        const response = await fetch('/api/user/profile');
-        if (response.ok) {
-            const user = await response.json();
-            currentUserId = user.id;
-        }
+        await fetch(`/api/messages/read/${recipientId}`, {
+            method: 'POST',
+            credentials: 'include'
+        });
     } catch (error) {
-        console.error('Error getting current user:', error);
+        console.error('Error marking messages as read:', error);
     }
 }
 
-// Add event listener for Enter key in message input
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('messageInput')) {
-        document.getElementById('messageInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-    }
-
-    // Close search results when clicking outside
-    document.addEventListener('click', (e) => {
-        const searchResults = document.getElementById('searchResults');
-        const searchInput = document.getElementById('userSearchInput');
-        if (searchResults && !searchResults.contains(e.target) && e.target !== searchInput) {
-            searchResults.classList.remove('active');
-        }
-    });
-
-    // Initialize
-    getCurrentUser().then(() => {
-        if (window.location.pathname.includes('circles')) {
-            loadCircles();
-        }
-        if (window.location.pathname.includes('messages')) {
-            loadMessages();
-        }
-    });
-});
-
+// Notification function
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.style.cssText = `
@@ -1084,3 +1095,53 @@ function showNotification(message, type = 'info') {
 
     setTimeout(() => notification.remove(), 3000);
 }
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', async () => {
+    // Wait for i18n
+    await waitForI18n();
+
+    // Apply initial translations
+    if (window.i18n && window.i18n.applyLanguage) {
+        window.i18n.applyLanguage();
+    }
+
+    // Get current user
+    await getCurrentUser();
+
+    // Load data based on page
+    if (document.getElementById('conversationsList')) {
+        loadMessages();
+    }
+
+    if (document.getElementById('generalMembers')) {
+        loadCircles();
+    }
+
+    // Add event listener for Enter key in message input
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
+    // Close search results when clicking outside
+    document.addEventListener('click', (e) => {
+        const searchResults = document.getElementById('searchResults');
+        const searchInput = document.getElementById('userSearchInput');
+        if (searchResults && !searchResults.contains(e.target) && e.target !== searchInput) {
+            searchResults.classList.remove('active');
+        }
+    });
+
+    // Re-apply translations when language changes
+    window.addEventListener('languageChanged', () => {
+        if (window.i18n && window.i18n.applyLanguage) {
+            window.i18n.applyLanguage();
+        }
+    });
+});
