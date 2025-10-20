@@ -1,17 +1,17 @@
 // Language detection and translation system with backend sync
 const translations = {
     en: {
-        // Navigation
+        // Navigation & Menu
         'nav.logo': 'TheraSocial',
         'nav.home': 'Home',
-        'nav.feed': 'Feed',
-        'nav.circles': 'Circles',
-        'nav.messages': 'Messages',
-        'nav.profile': 'Profile',
-        'nav.parameters': 'Parameters',
         'nav.about': 'About',
         'nav.support': 'Support',
-        'nav.logout': 'Logout',
+        'menu.feed': 'Feed',
+        'menu.profile': 'Profile',
+        'menu.circles': 'Circles',
+        'menu.messages': 'Messages',
+        'menu.parameters': 'Parameters',
+        'menu.logout': 'Logout',
         
         // Authentication
         'auth.welcome': 'Welcome to TheraSocial',
@@ -50,6 +50,43 @@ const translations = {
         'btn.clear': 'Clear',
         'btn.today': 'Today',
         
+        // Feed page
+        'feed.title': 'My Feed',
+        'feed.subtitle': 'Share your thoughts and connect with others',
+        'feed.calendar_title': 'Daily Activity Tracker',
+        'feed.load_day': 'Load Day',
+        'feed.save_day': 'Save Day',
+        'feed.load_update': 'Load Update',
+        'feed.save_update': 'Save Update',
+        'feed.today': 'Today',
+        'feed.selected_date': 'Selected Date',
+        'feed.mood_notes': 'Daily Mood & Notes',
+        'feed.how_feeling': 'How are you feeling today?',
+        'feed.select_mood': 'Select mood...',
+        'feed.daily_reflection': 'Daily reflection:',
+        'feed.reflection_placeholder': 'How was your day? Any thoughts or feelings to record?',
+        'feed.posts_today': 'Posts Today',
+        'feed.messages_sent': 'Messages Sent',
+        'feed.comments_made': 'Comments Made',
+        'feed.activity_history': 'Your Activity History',
+        'feed.loaded_activity': 'Loaded activity for',
+        'feed.no_activity': 'No activity found for this date',
+        'feed.activity_saved': 'Activity saved for',
+        'feed.select_date': 'Please select a date',
+        'feed.no_saved_activity': 'No saved activity yet. Start tracking today!',
+        'feed.more_dates': 'more dates',
+        
+        // Calendar
+        'calendar.prev': 'Previous',
+        'calendar.next': 'Next',
+        'calendar.today': 'Today',
+        
+        // Visibility settings
+        'visibility.general': 'General',
+        'visibility.close_friends': 'Close Friends',
+        'visibility.family': 'Family',
+        'visibility.private': 'Private',
+        
         // Circles page
         'circles.title': 'My Circles',
         'circles.subtitle': 'Organize your connections into meaningful groups',
@@ -79,27 +116,6 @@ const translations = {
         'messages.select_recipient': 'Select recipient...',
         'messages.select_and_type': 'Please select a recipient and enter a message',
         'messages.message_sent': 'Message sent!',
-        
-        // Feed/Calendar
-        'feed.calendar_title': 'Daily Activity Tracker',
-        'feed.load_day': 'Load Day',
-        'feed.save_day': 'Save Day',
-        'feed.today': 'Today',
-        'feed.mood_notes': 'Daily Mood & Notes',
-        'feed.how_feeling': 'How are you feeling today?',
-        'feed.select_mood': 'Select mood...',
-        'feed.daily_reflection': 'Daily reflection:',
-        'feed.reflection_placeholder': 'How was your day? Any thoughts or feelings to record?',
-        'feed.posts_today': 'Posts Today',
-        'feed.messages_sent': 'Messages Sent',
-        'feed.comments_made': 'Comments Made',
-        'feed.activity_history': 'Your Activity History',
-        'feed.loaded_activity': 'Loaded activity for',
-        'feed.no_activity': 'No activity found for this date',
-        'feed.activity_saved': 'Activity saved for',
-        'feed.select_date': 'Please select a date',
-        'feed.no_saved_activity': 'No saved activity yet. Start tracking today!',
-        'feed.more_dates': 'more dates',
         
         // Moods
         'mood.great': '😊 Great',
@@ -151,11 +167,13 @@ const translations = {
         'profile.occupation': 'Occupation',
         'profile.occupation_placeholder': 'What do you do?',
         'profile.goals_aspirations': 'Goals & Aspirations',
+        'profile.goals': 'My Goals',
         'profile.my_goals': 'My Goals',
         'profile.goals_placeholder': 'What are your personal or professional goals?',
         'profile.interests_hobbies': 'Interests & Hobbies',
         'profile.interests': 'Interests',
         'profile.interests_placeholder': 'What are you interested in?',
+        'profile.hobbies': 'Favorite Hobbies',
         'profile.favorite_hobbies': 'Favorite Hobbies',
         'profile.hobbies_placeholder': 'What do you love to do in your free time?',
         'profile.save_changes': 'Save Changes',
@@ -198,17 +216,17 @@ const translations = {
     },
     
     he: {
-        // Navigation
+        // Navigation & Menu
         'nav.logo': 'TheraSocial',
         'nav.home': 'בית',
-        'nav.feed': 'פיד',
-        'nav.circles': 'מעגלים',
-        'nav.messages': 'הודעות',
-        'nav.profile': 'פרופיל',
-        'nav.parameters': 'פרמטרים',
         'nav.about': 'אודות',
         'nav.support': 'תמיכה',
-        'nav.logout': 'התנתקות',
+        'menu.feed': 'פיד',
+        'menu.profile': 'פרופיל',
+        'menu.circles': 'מעגלים',
+        'menu.messages': 'הודעות',
+        'menu.parameters': 'פרמטרים',
+        'menu.logout': 'התנתקות',
         
         // Authentication
         'auth.welcome': 'ברוכים הבאים ל-TheraSocial',
@@ -247,6 +265,43 @@ const translations = {
         'btn.clear': 'נקה',
         'btn.today': 'היום',
         
+        // Feed page
+        'feed.title': 'הפיד שלי',
+        'feed.subtitle': 'שתף את המחשבות שלך והתחבר לאחרים',
+        'feed.calendar_title': 'מעקב פעילות יומית',
+        'feed.load_day': 'טען יום',
+        'feed.save_day': 'שמור יום',
+        'feed.load_update': 'טען עדכון',
+        'feed.save_update': 'שמור עדכון',
+        'feed.today': 'היום',
+        'feed.selected_date': 'תאריך נבחר',
+        'feed.mood_notes': 'מצב רוח והערות יומיות',
+        'feed.how_feeling': 'איך אתה מרגיש היום?',
+        'feed.select_mood': 'בחר מצב רוח...',
+        'feed.daily_reflection': 'הרהור יומי:',
+        'feed.reflection_placeholder': 'איך היה היום שלך? מחשבות או רגשות לרשום?',
+        'feed.posts_today': 'פוסטים היום',
+        'feed.messages_sent': 'הודעות שנשלחו',
+        'feed.comments_made': 'תגובות שנעשו',
+        'feed.activity_history': 'היסטוריית הפעילות שלך',
+        'feed.loaded_activity': 'נטענה פעילות עבור',
+        'feed.no_activity': 'לא נמצאה פעילות לתאריך זה',
+        'feed.activity_saved': 'הפעילות נשמרה עבור',
+        'feed.select_date': 'אנא בחר תאריך',
+        'feed.no_saved_activity': 'אין פעילות שמורה עדיין. התחל לעקוב היום!',
+        'feed.more_dates': 'תאריכים נוספים',
+        
+        // Calendar
+        'calendar.prev': 'קודם',
+        'calendar.next': 'הבא',
+        'calendar.today': 'היום',
+        
+        // Visibility settings
+        'visibility.general': 'כללי',
+        'visibility.close_friends': 'חברים קרובים',
+        'visibility.family': 'משפחה',
+        'visibility.private': 'פרטי',
+        
         // Circles page
         'circles.title': 'המעגלים שלי',
         'circles.subtitle': 'ארגן את הקשרים שלך לקבוצות משמעותיות',
@@ -276,27 +331,6 @@ const translations = {
         'messages.select_recipient': 'בחר נמען...',
         'messages.select_and_type': 'אנא בחר נמען והזן הודעה',
         'messages.message_sent': 'ההודעה נשלחה!',
-        
-        // Feed/Calendar
-        'feed.calendar_title': 'מעקב פעילות יומית',
-        'feed.load_day': 'טען יום',
-        'feed.save_day': 'שמור יום',
-        'feed.today': 'היום',
-        'feed.mood_notes': 'מצב רוח והערות יומיות',
-        'feed.how_feeling': 'איך אתה מרגיש היום?',
-        'feed.select_mood': 'בחר מצב רוח...',
-        'feed.daily_reflection': 'הרהור יומי:',
-        'feed.reflection_placeholder': 'איך היה היום שלך? מחשבות או רגשות לרשום?',
-        'feed.posts_today': 'פוסטים היום',
-        'feed.messages_sent': 'הודעות שנשלחו',
-        'feed.comments_made': 'תגובות שנעשו',
-        'feed.activity_history': 'היסטוריית הפעילות שלך',
-        'feed.loaded_activity': 'נטענה פעילות עבור',
-        'feed.no_activity': 'לא נמצאה פעילות לתאריך זה',
-        'feed.activity_saved': 'הפעילות נשמרה עבור',
-        'feed.select_date': 'אנא בחר תאריך',
-        'feed.no_saved_activity': 'אין פעילות שמורה עדיין. התחל לעקוב היום!',
-        'feed.more_dates': 'תאריכים נוספים',
         
         // Moods
         'mood.great': '😊 מצוין',
@@ -348,11 +382,13 @@ const translations = {
         'profile.occupation': 'עיסוק',
         'profile.occupation_placeholder': 'מה אתה עושה?',
         'profile.goals_aspirations': 'מטרות ושאיפות',
+        'profile.goals': 'המטרות שלי',
         'profile.my_goals': 'המטרות שלי',
         'profile.goals_placeholder': 'מהן המטרות האישיות או המקצועיות שלך?',
         'profile.interests_hobbies': 'תחומי עניין ותחביבים',
         'profile.interests': 'תחומי עניין',
         'profile.interests_placeholder': 'במה אתה מתעניין?',
+        'profile.hobbies': 'תחביבים מועדפים',
         'profile.favorite_hobbies': 'תחביבים מועדפים',
         'profile.hobbies_placeholder': 'מה אתה אוהב לעשות בזמן הפנוי שלך?',
         'profile.save_changes': 'שמור שינויים',
@@ -395,17 +431,17 @@ const translations = {
     },
     
     ar: {
-        // Navigation
+        // Navigation & Menu
         'nav.logo': 'TheraSocial',
         'nav.home': 'الرئيسية',
-        'nav.feed': 'التغذية',
-        'nav.circles': 'الدوائر',
-        'nav.messages': 'الرسائل',
-        'nav.profile': 'الملف الشخصي',
-        'nav.parameters': 'المعاملات',
         'nav.about': 'حول',
         'nav.support': 'الدعم',
-        'nav.logout': 'تسجيل الخروج',
+        'menu.feed': 'التغذية',
+        'menu.profile': 'الملف الشخصي',
+        'menu.circles': 'الدوائر',
+        'menu.messages': 'الرسائل',
+        'menu.parameters': 'المعاملات',
+        'menu.logout': 'تسجيل الخروج',
         
         // Authentication
         'auth.welcome': 'مرحبًا بك في TheraSocial',
@@ -444,6 +480,43 @@ const translations = {
         'btn.clear': 'مسح',
         'btn.today': 'اليوم',
         
+        // Feed page
+        'feed.title': 'موجزي',
+        'feed.subtitle': 'شارك أفكارك وتواصل مع الآخرين',
+        'feed.calendar_title': 'متتبع النشاط اليومي',
+        'feed.load_day': 'تحميل اليوم',
+        'feed.save_day': 'حفظ اليوم',
+        'feed.load_update': 'تحميل التحديث',
+        'feed.save_update': 'حفظ التحديث',
+        'feed.today': 'اليوم',
+        'feed.selected_date': 'التاريخ المحدد',
+        'feed.mood_notes': 'المزاج والملاحظات اليومية',
+        'feed.how_feeling': 'كيف تشعر اليوم؟',
+        'feed.select_mood': 'اختر المزاج...',
+        'feed.daily_reflection': 'تأمل يومي:',
+        'feed.reflection_placeholder': 'كيف كان يومك؟ أي أفكار أو مشاعر للتسجيل؟',
+        'feed.posts_today': 'المنشورات اليوم',
+        'feed.messages_sent': 'الرسائل المرسلة',
+        'feed.comments_made': 'التعليقات المقدمة',
+        'feed.activity_history': 'سجل نشاطك',
+        'feed.loaded_activity': 'تم تحميل النشاط لـ',
+        'feed.no_activity': 'لم يتم العثور على نشاط لهذا التاريخ',
+        'feed.activity_saved': 'تم حفظ النشاط لـ',
+        'feed.select_date': 'يرجى تحديد تاريخ',
+        'feed.no_saved_activity': 'لا يوجد نشاط محفوظ بعد. ابدأ التتبع اليوم!',
+        'feed.more_dates': 'تواريخ أخرى',
+        
+        // Calendar
+        'calendar.prev': 'السابق',
+        'calendar.next': 'التالي',
+        'calendar.today': 'اليوم',
+        
+        // Visibility settings
+        'visibility.general': 'عام',
+        'visibility.close_friends': 'الأصدقاء المقربون',
+        'visibility.family': 'العائلة',
+        'visibility.private': 'خاص',
+        
         // Circles page
         'circles.title': 'دوائري',
         'circles.subtitle': 'نظم اتصالاتك في مجموعات ذات مغزى',
@@ -473,27 +546,6 @@ const translations = {
         'messages.select_recipient': 'حدد المستلم...',
         'messages.select_and_type': 'يرجى تحديد مستلم وإدخال رسالة',
         'messages.message_sent': 'تم إرسال الرسالة!',
-        
-        // Feed/Calendar
-        'feed.calendar_title': 'متتبع النشاط اليومي',
-        'feed.load_day': 'تحميل اليوم',
-        'feed.save_day': 'حفظ اليوم',
-        'feed.today': 'اليوم',
-        'feed.mood_notes': 'المزاج والملاحظات اليومية',
-        'feed.how_feeling': 'كيف تشعر اليوم؟',
-        'feed.select_mood': 'اختر المزاج...',
-        'feed.daily_reflection': 'تأمل يومي:',
-        'feed.reflection_placeholder': 'كيف كان يومك؟ أي أفكار أو مشاعر للتسجيل؟',
-        'feed.posts_today': 'المنشورات اليوم',
-        'feed.messages_sent': 'الرسائل المرسلة',
-        'feed.comments_made': 'التعليقات المقدمة',
-        'feed.activity_history': 'سجل نشاطك',
-        'feed.loaded_activity': 'تم تحميل النشاط لـ',
-        'feed.no_activity': 'لم يتم العثور على نشاط لهذا التاريخ',
-        'feed.activity_saved': 'تم حفظ النشاط لـ',
-        'feed.select_date': 'يرجى تحديد تاريخ',
-        'feed.no_saved_activity': 'لا يوجد نشاط محفوظ بعد. ابدأ التتبع اليوم!',
-        'feed.more_dates': 'تواريخ أخرى',
         
         // Moods
         'mood.great': '😊 رائع',
@@ -545,11 +597,13 @@ const translations = {
         'profile.occupation': 'المهنة',
         'profile.occupation_placeholder': 'ماذا تعمل؟',
         'profile.goals_aspirations': 'الأهداف والطموحات',
+        'profile.goals': 'أهدافي',
         'profile.my_goals': 'أهدافي',
         'profile.goals_placeholder': 'ما هي أهدافك الشخصية أو المهنية؟',
         'profile.interests_hobbies': 'الاهتمامات والهوايات',
         'profile.interests': 'الاهتمامات',
         'profile.interests_placeholder': 'ما الذي تهتم به؟',
+        'profile.hobbies': 'الهوايات المفضلة',
         'profile.favorite_hobbies': 'الهوايات المفضلة',
         'profile.hobbies_placeholder': 'ماذا تحب أن تفعل في وقت فراغك؟',
         'profile.save_changes': 'حفظ التغييرات',
@@ -592,17 +646,17 @@ const translations = {
     },
     
     ru: {
-        // Navigation
+        // Navigation & Menu
         'nav.logo': 'TheraSocial',
         'nav.home': 'Главная',
-        'nav.feed': 'Лента',
-        'nav.circles': 'Круги',
-        'nav.messages': 'Сообщения',
-        'nav.profile': 'Профиль',
-        'nav.parameters': 'Параметры',
         'nav.about': 'О нас',
         'nav.support': 'Поддержка',
-        'nav.logout': 'Выход',
+        'menu.feed': 'Лента',
+        'menu.profile': 'Профиль',
+        'menu.circles': 'Круги',
+        'menu.messages': 'Сообщения',
+        'menu.parameters': 'Параметры',
+        'menu.logout': 'Выход',
         
         // Authentication
         'auth.welcome': 'Добро пожаловать в TheraSocial',
@@ -641,6 +695,43 @@ const translations = {
         'btn.clear': 'Очистить',
         'btn.today': 'Сегодня',
         
+        // Feed page
+        'feed.title': 'Моя лента',
+        'feed.subtitle': 'Делитесь мыслями и общайтесь с другими',
+        'feed.calendar_title': 'Трекер ежедневной активности',
+        'feed.load_day': 'Загрузить день',
+        'feed.save_day': 'Сохранить день',
+        'feed.load_update': 'Загрузить обновление',
+        'feed.save_update': 'Сохранить обновление',
+        'feed.today': 'Сегодня',
+        'feed.selected_date': 'Выбранная дата',
+        'feed.mood_notes': 'Настроение и заметки',
+        'feed.how_feeling': 'Как вы себя чувствуете сегодня?',
+        'feed.select_mood': 'Выберите настроение...',
+        'feed.daily_reflection': 'Ежедневное размышление:',
+        'feed.reflection_placeholder': 'Как прошёл ваш день? Какие мысли или чувства записать?',
+        'feed.posts_today': 'Записей сегодня',
+        'feed.messages_sent': 'Отправлено сообщений',
+        'feed.comments_made': 'Оставлено комментариев',
+        'feed.activity_history': 'История вашей активности',
+        'feed.loaded_activity': 'Загружена активность за',
+        'feed.no_activity': 'Нет активности за эту дату',
+        'feed.activity_saved': 'Активность сохранена за',
+        'feed.select_date': 'Пожалуйста, выберите дату',
+        'feed.no_saved_activity': 'Пока нет сохранённой активности. Начните отслеживание сегодня!',
+        'feed.more_dates': 'больше дат',
+        
+        // Calendar
+        'calendar.prev': 'Предыдущий',
+        'calendar.next': 'Следующий',
+        'calendar.today': 'Сегодня',
+        
+        // Visibility settings
+        'visibility.general': 'Общий',
+        'visibility.close_friends': 'Близкие друзья',
+        'visibility.family': 'Семья',
+        'visibility.private': 'Личное',
+        
         // Circles page
         'circles.title': 'Мои круги',
         'circles.subtitle': 'Организуйте свои связи в значимые группы',
@@ -670,27 +761,6 @@ const translations = {
         'messages.select_recipient': 'Выберите получателя...',
         'messages.select_and_type': 'Пожалуйста, выберите получателя и введите сообщение',
         'messages.message_sent': 'Сообщение отправлено!',
-        
-        // Feed/Calendar
-        'feed.calendar_title': 'Трекер ежедневной активности',
-        'feed.load_day': 'Загрузить день',
-        'feed.save_day': 'Сохранить день',
-        'feed.today': 'Сегодня',
-        'feed.mood_notes': 'Настроение и заметки',
-        'feed.how_feeling': 'Как вы себя чувствуете сегодня?',
-        'feed.select_mood': 'Выберите настроение...',
-        'feed.daily_reflection': 'Ежедневное размышление:',
-        'feed.reflection_placeholder': 'Как прошёл ваш день? Какие мысли или чувства записать?',
-        'feed.posts_today': 'Записей сегодня',
-        'feed.messages_sent': 'Отправлено сообщений',
-        'feed.comments_made': 'Оставлено комментариев',
-        'feed.activity_history': 'История вашей активности',
-        'feed.loaded_activity': 'Загружена активность за',
-        'feed.no_activity': 'Нет активности за эту дату',
-        'feed.activity_saved': 'Активность сохранена за',
-        'feed.select_date': 'Пожалуйста, выберите дату',
-        'feed.no_saved_activity': 'Пока нет сохранённой активности. Начните отслеживание сегодня!',
-        'feed.more_dates': 'больше дат',
         
         // Moods
         'mood.great': '😊 Отлично',
@@ -742,11 +812,13 @@ const translations = {
         'profile.occupation': 'Род занятий',
         'profile.occupation_placeholder': 'Чем вы занимаетесь?',
         'profile.goals_aspirations': 'Цели и стремления',
+        'profile.goals': 'Мои цели',
         'profile.my_goals': 'Мои цели',
         'profile.goals_placeholder': 'Каковы ваши личные или профессиональные цели?',
         'profile.interests_hobbies': 'Интересы и хобби',
         'profile.interests': 'Интересы',
         'profile.interests_placeholder': 'Чем вы интересуетесь?',
+        'profile.hobbies': 'Любимые хобби',
         'profile.favorite_hobbies': 'Любимые хобби',
         'profile.hobbies_placeholder': 'Чем вы любите заниматься в свободное время?',
         'profile.save_changes': 'Сохранить изменения',
@@ -823,7 +895,7 @@ function setLanguage(lang) {
 
 async function syncLanguageWithBackend(lang) {
     try {
-        await fetch('/api/user/language', {
+        const response = await fetch('/api/user/language', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -832,6 +904,10 @@ async function syncLanguageWithBackend(lang) {
                 preferred_language: lang
             })
         });
+        // Don't throw on 401 - user just not logged in yet
+        if (response.ok) {
+            console.log('Language preference synced with backend');
+        }
     } catch (error) {
         // Silently fail - language is still saved in localStorage
         console.log('Could not sync language preference with server');
@@ -842,6 +918,9 @@ function translate(key, lang = null) {
     const currentLang = lang || getCurrentLanguage();
     return translations[currentLang]?.[key] || translations['en'][key] || key;
 }
+
+// Alias 't' for translate to support window.i18n.t() calls
+const t = translate;
 
 function applyLanguage(lang) {
     // Translate all elements with data-i18n attribute
@@ -888,10 +967,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Export for use in other scripts
+// Export for use in other scripts - includes both 'translate' and 't' as alias
 if (typeof window !== 'undefined') {
     window.i18n = {
         translate,
+        t,  // ADD THIS - alias for translate
         getCurrentLanguage,
         setLanguage,
         detectBrowserLanguage,
