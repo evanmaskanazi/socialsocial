@@ -1588,14 +1588,19 @@
         }
 
         function updateFeedSelectedDateDisplay() {
-            const dateStr = feedSelectedDate.toLocaleDateString(window.i18n.getCurrentLanguage(), {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            document.getElementById('feedSelectedDateDisplay').textContent = dateStr;
-        }
+    const date = feedSelectedDate;
+    const monthIndex = date.getMonth();
+    const dayIndex = date.getDay();
+    const dayOfMonth = date.getDate();
+    const year = date.getFullYear();
+
+    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const translatedDay = window.i18n.translate('day.' + dayNames[dayIndex]);
+    const translatedMonth = window.i18n.translate('calendar.' + monthIndex);
+
+    document.getElementById('feedSelectedDateDisplay').textContent =
+        `${translatedDay}, ${translatedMonth} ${dayOfMonth}, ${year}`;
+}
 
         function feedPreviousMonth() {
             feedCurrentMonth.setMonth(feedCurrentMonth.getMonth() - 1);
@@ -2095,14 +2100,19 @@
         }
 
         function updateSelectedDateDisplay() {
-            const dateStr = selectedDate.toLocaleDateString(window.i18n.getCurrentLanguage(), {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            document.getElementById('selectedDateDisplay').textContent = dateStr;
-        }
+    const date = selectedDate;
+    const monthIndex = date.getMonth();
+    const dayIndex = date.getDay();
+    const dayOfMonth = date.getDate();
+    const year = date.getFullYear();
+
+    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const translatedDay = window.i18n.translate('day.' + dayNames[dayIndex]);
+    const translatedMonth = window.i18n.translate('calendar.' + monthIndex);
+
+    document.getElementById('selectedDateDisplay').textContent =
+        `${translatedDay}, ${translatedMonth} ${dayOfMonth}, ${year}`;
+}
 
         function previousMonth() {
             currentMonth.setMonth(currentMonth.getMonth() - 1);
