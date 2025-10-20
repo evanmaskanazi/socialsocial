@@ -1321,52 +1321,52 @@
         let currentRecipient = null;
 
         // Helper function to format message time with translation
-        function formatMessageTime(timestamp) {
-            try {
-                if (!timestamp) {
-                    return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time', 'Unknown time') : 'Unknown time';
-                }
-
-                const now = new Date();
-                const msgTime = new Date(timestamp);
-
-                if (isNaN(msgTime.getTime())) {
-                    return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time', 'Unknown time') : 'Unknown time';
-                }
-
-                const diffSeconds = Math.floor((now - msgTime) / 1000);
-
-                // Just now (less than 60 seconds)
-                if (diffSeconds < 60) {
-                    return window.i18n && window.i18n.t ? window.i18n.t('messages.just_now', 'Just now') : 'Just now';
-                }
-
-                // Minutes ago
-                if (diffSeconds < 3600) {
-                    const minutes = Math.floor(diffSeconds / 60);
-                    const minText = window.i18n && window.i18n.t ? window.i18n.t('messages.minutes_ago', 'min ago') : 'min ago';
-                    return `${minutes} ${minText}`;
-                }
-
-                // Hours ago (same day)
-                if (msgTime.toDateString() === now.toDateString()) {
-                    return msgTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
-
-                // Yesterday
-                const yesterday = new Date(now);
-                yesterday.setDate(yesterday.getDate() - 1);
-                if (msgTime.toDateString() === yesterday.toDateString()) {
-                    return window.i18n && window.i18n.t ? window.i18n.t('messages.yesterday', 'Yesterday') : 'Yesterday';
-                }
-
-                // Older messages
-                return msgTime.toLocaleDateString();
-            } catch (error) {
-                console.error('Error formatting time:', error);
-                return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time', 'Unknown time') : 'Unknown time';
-            }
+      function formatMessageTime(timestamp) {
+    try {
+        if (!timestamp) {
+            return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time') : 'Unknown time';
         }
+
+        const now = new Date();
+        const msgTime = new Date(timestamp);
+
+        if (isNaN(msgTime.getTime())) {
+            return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time') : 'Unknown time';
+        }
+
+        const diffSeconds = Math.floor((now - msgTime) / 1000);
+
+        // Just now (less than 60 seconds)
+        if (diffSeconds < 60) {
+            return window.i18n && window.i18n.t ? window.i18n.t('messages.just_now') : 'Just now';
+        }
+
+        // Minutes ago
+        if (diffSeconds < 3600) {
+            const minutes = Math.floor(diffSeconds / 60);
+            const minText = window.i18n && window.i18n.t ? window.i18n.t('messages.minutes_ago') : 'min ago';
+            return `${minutes} ${minText}`;
+        }
+
+        // Hours ago (same day)
+        if (msgTime.toDateString() === now.toDateString()) {
+            return msgTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Yesterday
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (msgTime.toDateString() === yesterday.toDateString()) {
+            return window.i18n && window.i18n.t ? window.i18n.t('messages.yesterday') : 'Yesterday';
+        }
+
+        // Older messages
+        return msgTime.toLocaleDateString();
+    } catch (error) {
+        console.error('Error formatting time:', error);
+        return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time') : 'Unknown time';
+    }
+}
 
         // Feed Calendar Variables
         let feedSelectedDate = new Date();
@@ -1960,9 +1960,9 @@
         const container = document.getElementById('conversationsList');
 
         // Cache translation strings
-        const noConversationsText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_conversations') : 'No conversations yet';
-        const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet';
-        const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You';
+       const noConversationsText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_conversations') : 'No conversations yet';
+const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet';
+const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You';
 
         // FIX: response is already parsed JSON from apiCall, don't parse again
         const data = response;
@@ -2045,8 +2045,8 @@
         if (!response) return;
 
         const container = document.getElementById('messagesList');
-        const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet. Start the conversation!';
-        const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You';
+       const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet. Start the conversation!';
+const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You';
 
      if (response.messages && response.messages.length > 0) {
             container.innerHTML = response.messages.map(msg => {
@@ -2086,7 +2086,7 @@
     document.getElementById('sendMessageBtn').addEventListener('click', async () => {
     // Check if recipient is selected
     if (!currentRecipient || !currentRecipient.id) {
-        const errorText = window.i18n && window.i18n.t ? window.i18n.t('messages.select_conversation') : 'Please select a conversation first';
+       const errorText = window.i18n && window.i18n.t ? window.i18n.t('messages.select_conversation') : 'Please select a conversation first';
         alert(errorText);
         return;
     }
@@ -2305,8 +2305,7 @@
                         // Handle "New message from X" pattern
                         if (title && title.startsWith('New message from ')) {
                             const username = title.replace('New message from ', '');
-                            const newMessageText = window.i18n && window.i18n.t ?
-                                window.i18n.t('alerts.new_message_from') : 'New message from';
+                            const newMessageText = window.i18n && window.i18n.t ? window.i18n.t('alerts.new_message_from') : 'New message from';
                             title = `${newMessageText} ${username}`;
                         }
 
