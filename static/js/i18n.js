@@ -1168,9 +1168,10 @@ document.addEventListener('DOMContentLoaded', function() {
 if (typeof window !== 'undefined') {
     window.i18n = {
         translate,
-        t,  // Alias for translate
+        t,
         getCurrentLanguage,
         setLanguage,
+        applyLanguage,
         detectBrowserLanguage,
         translations
     };
