@@ -14,7 +14,7 @@ const translations = {
         'menu.messages': 'Messages',
         'menu.parameters': 'Parameters',
         'menu.logout': 'Logout',
-        
+
         // Authentication
         'auth.welcome': 'Welcome to TheraSocial',
         'auth.subtitle': 'Connect, share, and grow together',
@@ -35,7 +35,7 @@ const translations = {
         'auth.name_placeholder': 'Enter your full name',
         'auth.confirm_password': 'Confirm Password',
         'auth.confirm_password_placeholder': 'Re-enter your password',
-        
+
         // Common buttons
         'btn.signin': 'Sign In',
         'btn.signup': 'Sign Up',
@@ -52,7 +52,7 @@ const translations = {
         'btn.clear': 'Clear',
         'btn.today': 'Today',
         'btn.logout': 'Logout',
-        
+
         // Feed page
         'feed.title': 'My Feed',
         'feed.subtitle': 'Share your thoughts and connect with others',
@@ -79,7 +79,7 @@ const translations = {
         'feed.select_date': 'Please select a date',
         'feed.no_saved_activity': 'No saved activity yet. Start tracking today!',
         'feed.more_dates': 'more dates',
-        
+
         // Calendar
         'calendar.prev': 'Previous',
         'calendar.next': 'Next',
@@ -113,19 +113,19 @@ const translations = {
         'calendar.9': 'October',
         'calendar.10': 'November',
         'calendar.11': 'December',
-        
+
         // Visibility settings
         'visibility.general': 'General',
         'visibility.close_friends': 'Close Friends',
         'visibility.family': 'Family',
         'visibility.private': 'Private',
-        
+
         // Alerts
         'alerts.title': 'Notifications',
         'alerts.no_alerts': 'No notifications yet',
         'alerts.mark_read': 'Mark as read',
         'alerts.clear_all': 'Clear all',
-        
+
         // Circles page
         'circles.title': 'My Circles',
         'circles.subtitle': 'Organize your connections into meaningful groups',
@@ -140,7 +140,7 @@ const translations = {
         'circles.circle': 'circle!',
         'circles.remove_confirm': 'Remove this user from the circle?',
         'circles.user_removed': 'User removed from circle',
-        
+
         // Messages page
         'messages.title': 'Messages',
         'messages.new': '+ New',
@@ -156,7 +156,7 @@ const translations = {
         'messages.select_recipient': 'Select recipient...',
         'messages.select_and_type': 'Please select a recipient and enter a message',
         'messages.message_sent': 'Message sent!',
-        
+
         // Moods
         'mood.great': '😊 Great',
         'mood.good': '🙂 Good',
@@ -170,7 +170,7 @@ const translations = {
         'mood.calm': '😌 Calm',
         'mood.sad': '😢 Sad',
         'mood.energetic': '🔥 Energetic',
-        
+
         // Parameters page
         'parameters.title': 'Daily Parameters',
         'parameters.subtitle': 'Track your daily metrics',
@@ -198,7 +198,7 @@ const translations = {
         'parameters.no_saved': 'No saved parameters for this date',
         'parameters.cleared': 'Parameters cleared',
         'parameters.today_label': 'Today',
-        
+
         // Profile page
         'profile.title': 'My Profile',
         'profile.loading': 'Loading...',
@@ -222,7 +222,7 @@ const translations = {
         'profile.save_changes': 'Save Changes',
         'profile.cancel': 'Cancel',
         'profile.updated': 'Profile updated successfully!',
-        
+
         // Days of week
         'day.sun': 'Sun',
         'day.mon': 'Mon',
@@ -231,7 +231,7 @@ const translations = {
         'day.thu': 'Thu',
         'day.fri': 'Fri',
         'day.sat': 'Sat',
-        
+
         // Months
         'month.january': 'January',
         'month.february': 'February',
@@ -245,24 +245,24 @@ const translations = {
         'month.october': 'October',
         'month.november': 'November',
         'month.december': 'December',
-        
+
         // Error messages
         'error.loading': 'Error loading data',
         'error.saving': 'Error saving data',
         'error.required': 'This field is required',
         'error.server': 'Server error. Please try again.',
-        
+
         // Success messages
         'success.saved': 'Saved successfully',
         'success.updated': 'Updated successfully',
         'success.deleted': 'Deleted successfully',
-        
+
         // Message notifications
         'msg.loaded': 'Parameters loaded successfully',
         'msg.saved': 'Parameters saved successfully',
         'msg.error': 'An error occurred'
     },
-    
+
     he: {
         // Navigation & Menu
         'nav.logo': 'TheraSocial',
@@ -277,7 +277,7 @@ const translations = {
         'menu.messages': 'הודעות',
         'menu.parameters': 'פרמטרים',
         'menu.logout': 'התנתקות',
-        
+
         // Authentication
         'auth.welcome': 'ברוכים הבאים ל-TheraSocial',
         'auth.subtitle': 'התחברו, שתפו וצמחו ביחד',
@@ -298,7 +298,7 @@ const translations = {
         'auth.name_placeholder': 'הזן את שמך המלא',
         'auth.confirm_password': 'אימות סיסמה',
         'auth.confirm_password_placeholder': 'הזן שוב את הסיסמה',
-        
+
         // Common buttons
         'btn.signin': 'התחברות',
         'btn.signup': 'הרשמה',
@@ -315,7 +315,7 @@ const translations = {
         'btn.clear': 'נקה',
         'btn.today': 'היום',
         'btn.logout': 'התנתקות',
-        
+
         // Feed page
         'feed.title': 'הפיד שלי',
         'feed.subtitle': 'שתף את המחשבות שלך והתחבר לאחרים',
@@ -342,7 +342,7 @@ const translations = {
         'feed.select_date': 'אנא בחר תאריך',
         'feed.no_saved_activity': 'אין פעילות שמורה עדיין. התחל לעקוב היום!',
         'feed.more_dates': 'תאריכים נוספים',
-        
+
         // Calendar
         'calendar.prev': 'קודם',
         'calendar.next': 'הבא',
@@ -376,19 +376,19 @@ const translations = {
         'calendar.9': 'אוקטובר',
         'calendar.10': 'נובמבר',
         'calendar.11': 'דצמבר',
-        
+
         // Visibility settings
         'visibility.general': 'כללי',
         'visibility.close_friends': 'חברים קרובים',
         'visibility.family': 'משפחה',
         'visibility.private': 'פרטי',
-        
+
         // Alerts
         'alerts.title': 'התראות',
         'alerts.no_alerts': 'אין התראות עדיין',
         'alerts.mark_read': 'סמן כנקרא',
         'alerts.clear_all': 'נקה הכל',
-        
+
         // Circles page
         'circles.title': 'המעגלים שלי',
         'circles.subtitle': 'ארגן את הקשרים שלך לקבוצות משמעותיות',
@@ -403,7 +403,7 @@ const translations = {
         'circles.circle': 'מעגל!',
         'circles.remove_confirm': 'להסיר משתמש זה מהמעגל?',
         'circles.user_removed': 'המשתמש הוסר מהמעגל',
-        
+
         // Messages page
         'messages.title': 'הודעות',
         'messages.new': '+ חדש',
@@ -419,7 +419,7 @@ const translations = {
         'messages.select_recipient': 'בחר נמען...',
         'messages.select_and_type': 'אנא בחר נמען והזן הודעה',
         'messages.message_sent': 'ההודעה נשלחה!',
-        
+
         // Moods
         'mood.great': '😊 מצוין',
         'mood.good': '🙂 טוב',
@@ -433,7 +433,7 @@ const translations = {
         'mood.calm': '😌 רגוע',
         'mood.sad': '😢 עצוב',
         'mood.energetic': '🔥 אנרגטי',
-        
+
         // Parameters page
         'parameters.title': 'פרמטרים יומיים',
         'parameters.subtitle': 'עקוב אחר המדדים היומיים שלך',
@@ -461,7 +461,7 @@ const translations = {
         'parameters.no_saved': 'אין פרמטרים שמורים לתאריך זה',
         'parameters.cleared': 'הפרמטרים נוקו',
         'parameters.today_label': 'היום',
-        
+
         // Profile page
         'profile.title': 'הפרופיל שלי',
         'profile.loading': 'טוען...',
@@ -485,7 +485,7 @@ const translations = {
         'profile.save_changes': 'שמור שינויים',
         'profile.cancel': 'ביטול',
         'profile.updated': 'הפרופיל עודכן בהצלחה!',
-        
+
         // Days of week
         'day.sun': 'א\'',
         'day.mon': 'ב\'',
@@ -494,7 +494,7 @@ const translations = {
         'day.thu': 'ה\'',
         'day.fri': 'ו\'',
         'day.sat': 'ש\'',
-        
+
         // Months
         'month.january': 'ינואר',
         'month.february': 'פברואר',
@@ -508,24 +508,24 @@ const translations = {
         'month.october': 'אוקטובר',
         'month.november': 'נובמבר',
         'month.december': 'דצמבר',
-        
+
         // Error messages
         'error.loading': 'שגיאה בטעינת נתונים',
         'error.saving': 'שגיאה בשמירת נתונים',
         'error.required': 'שדה חובה',
         'error.server': 'שגיאת שרת. נסה שוב.',
-        
+
         // Success messages
         'success.saved': 'נשמר בהצלחה',
         'success.updated': 'עודכן בהצלחה',
         'success.deleted': 'נמחק בהצלחה',
-        
+
         // Message notifications
         'msg.loaded': 'הפרמטרים נטענו בהצלחה',
         'msg.saved': 'הפרמטרים נשמרו בהצלחה',
         'msg.error': 'אירעה שגיאה'
     },
-    
+
     ar: {
         // Navigation & Menu
         'nav.logo': 'TheraSocial',
@@ -540,7 +540,7 @@ const translations = {
         'menu.messages': 'الرسائل',
         'menu.parameters': 'المعاملات',
         'menu.logout': 'تسجيل الخروج',
-        
+
         // Authentication
         'auth.welcome': 'مرحبًا بك في TheraSocial',
         'auth.subtitle': 'تواصل، شارك، واكبر معًا',
@@ -561,7 +561,7 @@ const translations = {
         'auth.name_placeholder': 'أدخل اسمك الكامل',
         'auth.confirm_password': 'تأكيد كلمة المرور',
         'auth.confirm_password_placeholder': 'أعد إدخال كلمة المرور',
-        
+
         // Common buttons
         'btn.signin': 'تسجيل الدخول',
         'btn.signup': 'إنشاء حساب',
@@ -578,7 +578,7 @@ const translations = {
         'btn.clear': 'مسح',
         'btn.today': 'اليوم',
         'btn.logout': 'تسجيل الخروج',
-        
+
         // Feed page
         'feed.title': 'موجزي',
         'feed.subtitle': 'شارك أفكارك وتواصل مع الآخرين',
@@ -605,7 +605,7 @@ const translations = {
         'feed.select_date': 'يرجى تحديد تاريخ',
         'feed.no_saved_activity': 'لا يوجد نشاط محفوظ بعد. ابدأ التتبع اليوم!',
         'feed.more_dates': 'تواريخ أخرى',
-        
+
         // Calendar
         'calendar.prev': 'السابق',
         'calendar.next': 'التالي',
@@ -639,19 +639,19 @@ const translations = {
         'calendar.9': 'أكتوبر',
         'calendar.10': 'نوفمبر',
         'calendar.11': 'ديسمبر',
-        
+
         // Visibility settings
         'visibility.general': 'عام',
         'visibility.close_friends': 'الأصدقاء المقربون',
         'visibility.family': 'العائلة',
         'visibility.private': 'خاص',
-        
+
         // Alerts
         'alerts.title': 'الإشعارات',
         'alerts.no_alerts': 'لا توجد إشعارات بعد',
         'alerts.mark_read': 'وضع علامة كمقروء',
         'alerts.clear_all': 'مسح الكل',
-        
+
         // Circles page
         'circles.title': 'دوائري',
         'circles.subtitle': 'نظم اتصالاتك في مجموعات ذات مغزى',
@@ -666,7 +666,7 @@ const translations = {
         'circles.circle': 'دائرة!',
         'circles.remove_confirm': 'إزالة هذا المستخدم من الدائرة؟',
         'circles.user_removed': 'تمت إزالة المستخدم من الدائرة',
-        
+
         // Messages page
         'messages.title': 'الرسائل',
         'messages.new': '+ جديد',
@@ -682,7 +682,7 @@ const translations = {
         'messages.select_recipient': 'حدد المستلم...',
         'messages.select_and_type': 'يرجى تحديد مستلم وإدخال رسالة',
         'messages.message_sent': 'تم إرسال الرسالة!',
-        
+
         // Moods
         'mood.great': '😊 رائع',
         'mood.good': '🙂 جيد',
@@ -696,7 +696,7 @@ const translations = {
         'mood.calm': '😌 هادئ',
         'mood.sad': '😢 حزين',
         'mood.energetic': '🔥 نشيط',
-        
+
         // Parameters page
         'parameters.title': 'المعاملات اليومية',
         'parameters.subtitle': 'تتبع المقاييس اليومية الخاصة بك',
@@ -724,7 +724,7 @@ const translations = {
         'parameters.no_saved': 'لا توجد معاملات محفوظة لهذا التاريخ',
         'parameters.cleared': 'تم مسح المعاملات',
         'parameters.today_label': 'اليوم',
-        
+
         // Profile page
         'profile.title': 'ملفي الشخصي',
         'profile.loading': 'جارٍ التحميل...',
@@ -748,7 +748,7 @@ const translations = {
         'profile.save_changes': 'حفظ التغييرات',
         'profile.cancel': 'إلغاء',
         'profile.updated': 'تم تحديث الملف الشخصي بنجاح!',
-        
+
         // Days of week
         'day.sun': 'الأحد',
         'day.mon': 'الاثنين',
@@ -757,7 +757,7 @@ const translations = {
         'day.thu': 'الخميس',
         'day.fri': 'الجمعة',
         'day.sat': 'السبت',
-        
+
         // Months
         'month.january': 'يناير',
         'month.february': 'فبراير',
@@ -771,24 +771,24 @@ const translations = {
         'month.october': 'أكتوبر',
         'month.november': 'نوفمبر',
         'month.december': 'ديسمبر',
-        
+
         // Error messages
         'error.loading': 'خطأ في تحميل البيانات',
         'error.saving': 'خطأ في حفظ البيانات',
         'error.required': 'هذا الحقل مطلوب',
         'error.server': 'خطأ في الخادم. يرجى المحاولة مرة أخرى.',
-        
+
         // Success messages
         'success.saved': 'تم الحفظ بنجاح',
         'success.updated': 'تم التحديث بنجاح',
         'success.deleted': 'تم الحذف بنجاح',
-        
+
         // Message notifications
         'msg.loaded': 'تم تحميل المعاملات بنجاح',
         'msg.saved': 'تم حفظ المعاملات بنجاح',
         'msg.error': 'حدث خطأ'
     },
-    
+
     ru: {
         // Navigation & Menu
         'nav.logo': 'TheraSocial',
@@ -803,7 +803,7 @@ const translations = {
         'menu.messages': 'Сообщения',
         'menu.parameters': 'Параметры',
         'menu.logout': 'Выход',
-        
+
         // Authentication
         'auth.welcome': 'Добро пожаловать в TheraSocial',
         'auth.subtitle': 'Общайтесь, делитесь и развивайтесь вместе',
@@ -824,7 +824,7 @@ const translations = {
         'auth.name_placeholder': 'Введите ваше полное имя',
         'auth.confirm_password': 'Подтвердите пароль',
         'auth.confirm_password_placeholder': 'Введите пароль ещё раз',
-        
+
         // Common buttons
         'btn.signin': 'Войти',
         'btn.signup': 'Регистрация',
@@ -841,7 +841,7 @@ const translations = {
         'btn.clear': 'Очистить',
         'btn.today': 'Сегодня',
         'btn.logout': 'Выход',
-        
+
         // Feed page
         'feed.title': 'Моя лента',
         'feed.subtitle': 'Делитесь мыслями и общайтесь с другими',
@@ -868,7 +868,7 @@ const translations = {
         'feed.select_date': 'Пожалуйста, выберите дату',
         'feed.no_saved_activity': 'Пока нет сохранённой активности. Начните отслеживание сегодня!',
         'feed.more_dates': 'больше дат',
-        
+
         // Calendar
         'calendar.prev': 'Предыдущий',
         'calendar.next': 'Следующий',
@@ -902,19 +902,19 @@ const translations = {
         'calendar.9': 'Октябрь',
         'calendar.10': 'Ноябрь',
         'calendar.11': 'Декабрь',
-        
+
         // Visibility settings
         'visibility.general': 'Общий',
         'visibility.close_friends': 'Близкие друзья',
         'visibility.family': 'Семья',
         'visibility.private': 'Личное',
-        
+
         // Alerts
         'alerts.title': 'Уведомления',
         'alerts.no_alerts': 'Пока нет уведомлений',
         'alerts.mark_read': 'Отметить как прочитанное',
         'alerts.clear_all': 'Очистить всё',
-        
+
         // Circles page
         'circles.title': 'Мои круги',
         'circles.subtitle': 'Организуйте свои связи в значимые группы',
@@ -929,7 +929,7 @@ const translations = {
         'circles.circle': 'круг!',
         'circles.remove_confirm': 'Удалить этого пользователя из круга?',
         'circles.user_removed': 'Пользователь удалён из круга',
-        
+
         // Messages page
         'messages.title': 'Сообщения',
         'messages.new': '+ Новое',
@@ -945,7 +945,7 @@ const translations = {
         'messages.select_recipient': 'Выберите получателя...',
         'messages.select_and_type': 'Пожалуйста, выберите получателя и введите сообщение',
         'messages.message_sent': 'Сообщение отправлено!',
-        
+
         // Moods
         'mood.great': '😊 Отлично',
         'mood.good': '🙂 Хорошо',
@@ -959,7 +959,7 @@ const translations = {
         'mood.calm': '😌 Спокойный',
         'mood.sad': '😢 Грустный',
         'mood.energetic': '🔥 Энергичный',
-        
+
         // Parameters page
         'parameters.title': 'Ежедневные параметры',
         'parameters.subtitle': 'Отслеживайте свои ежедневные показатели',
@@ -987,7 +987,7 @@ const translations = {
         'parameters.no_saved': 'Нет сохранённых параметров для этой даты',
         'parameters.cleared': 'Параметры очищены',
         'parameters.today_label': 'Сегодня',
-        
+
         // Profile page
         'profile.title': 'Мой профиль',
         'profile.loading': 'Загрузка...',
@@ -1011,7 +1011,7 @@ const translations = {
         'profile.save_changes': 'Сохранить изменения',
         'profile.cancel': 'Отмена',
         'profile.updated': 'Профиль успешно обновлён!',
-        
+
         // Days of week
         'day.sun': 'Вс',
         'day.mon': 'Пн',
@@ -1020,7 +1020,7 @@ const translations = {
         'day.thu': 'Чт',
         'day.fri': 'Пт',
         'day.sat': 'Сб',
-        
+
         // Months
         'month.january': 'Январь',
         'month.february': 'Февраль',
@@ -1034,18 +1034,18 @@ const translations = {
         'month.october': 'Октябрь',
         'month.november': 'Ноябрь',
         'month.december': 'Декабрь',
-        
+
         // Error messages
         'error.loading': 'Ошибка загрузки данных',
         'error.saving': 'Ошибка сохранения данных',
         'error.required': 'Это поле обязательно',
         'error.server': 'Ошибка сервера. Попробуйте ещё раз.',
-        
+
         // Success messages
         'success.saved': 'Успешно сохранено',
         'success.updated': 'Успешно обновлено',
         'success.deleted': 'Успешно удалено',
-        
+
         // Message notifications
         'msg.loaded': 'Параметры успешно загружены',
         'msg.saved': 'Параметры успешно сохранены',
@@ -1057,7 +1057,7 @@ const translations = {
 function detectBrowserLanguage() {
     const browserLang = navigator.language || navigator.userLanguage;
     const langCode = browserLang.split('-')[0]; // Get 'en' from 'en-US'
-    
+
     // Check if we support this language
     const supportedLanguages = ['en', 'he', 'ar', 'ru'];
     return supportedLanguages.includes(langCode) ? langCode : 'en';
@@ -1071,7 +1071,7 @@ function getCurrentLanguage() {
 function setLanguage(lang) {
     localStorage.setItem('selectedLanguage', lang);
     applyLanguage(lang);
-    
+
     // Update HTML dir and lang attributes for RTL languages
     if (lang === 'he' || lang === 'ar') {
         document.documentElement.setAttribute('dir', 'rtl');
@@ -1080,7 +1080,7 @@ function setLanguage(lang) {
         document.documentElement.setAttribute('dir', 'ltr');
         document.documentElement.setAttribute('lang', lang);
     }
-    
+
     // Sync with backend if user is logged in
     syncLanguageWithBackend(lang);
 }
@@ -1111,28 +1111,27 @@ function translate(key, lang = null) {
     return translations[currentLang]?.[key] || translations['en'][key] || key;
 }
 
-// Alias 't' for translate to support window.i18n.t() calls
-const t = translate;
+
 
 function applyLanguage(lang) {
     // Translate all elements with data-i18n attribute
     document.querySelectorAll('[data-i18n]').forEach(element => {
         const key = element.getAttribute('data-i18n');
         const translatedText = translate(key, lang);
-        
+
         if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
             element.placeholder = translatedText;
         } else {
             element.textContent = translatedText;
         }
     });
-    
+
     // Translate all elements with data-i18n-placeholder attribute
     document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
         const key = element.getAttribute('data-i18n-placeholder');
         element.placeholder = translate(key, lang);
     });
-    
+
     // Update language selector if it exists
     const langSelector = document.getElementById('languageSelector');
     if (langSelector) {
@@ -1144,7 +1143,7 @@ function applyLanguage(lang) {
 document.addEventListener('DOMContentLoaded', function() {
     const currentLang = getCurrentLanguage();
     setLanguage(currentLang);
-    
+
     // Set up language selector if it exists
     const langSelector = document.getElementById('languageSelector');
     if (langSelector) {
