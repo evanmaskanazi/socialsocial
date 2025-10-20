@@ -35,6 +35,9 @@ const translations = {
         'auth.name_placeholder': 'Enter your full name',
         'auth.confirm_password': 'Confirm Password',
         'auth.confirm_password_placeholder': 'Re-enter your password',
+        'auth.create': 'Create Account',
+'auth.username': 'Username',
+'auth.username_placeholder': 'Choose a username',
 
         // Common buttons
         'btn.signin': 'Sign In',
@@ -311,6 +314,9 @@ const translations = {
         'auth.name_placeholder': 'הזן את שמך המלא',
         'auth.confirm_password': 'אימות סיסמה',
         'auth.confirm_password_placeholder': 'הזן שוב את הסיסמה',
+        'auth.create': 'יצירת חשבון',
+'auth.username': 'שם משתמש',
+'auth.username_placeholder': 'בחר שם משתמש',
 
         // Common buttons
         'btn.signin': 'התחברות',
@@ -587,6 +593,9 @@ const translations = {
         'auth.name_placeholder': 'أدخل اسمك الكامل',
         'auth.confirm_password': 'تأكيد كلمة المرور',
         'auth.confirm_password_placeholder': 'أعد إدخال كلمة المرور',
+        'auth.create': 'إنشاء حساب',
+'auth.username': 'اسم المستخدم',
+'auth.username_placeholder': 'اختر اسم مستخدم',
 
         // Common buttons
         'btn.signin': 'تسجيل الدخول',
@@ -863,6 +872,9 @@ const translations = {
         'auth.name_placeholder': 'Введите ваше полное имя',
         'auth.confirm_password': 'Подтвердите пароль',
         'auth.confirm_password_placeholder': 'Введите пароль ещё раз',
+        'auth.create': 'Создать аккаунт',
+'auth.username': 'Имя пользователя',
+'auth.username_placeholder': 'Выберите имя пользователя',
 
         // Common buttons
         'btn.signin': 'Войти',
