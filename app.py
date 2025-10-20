@@ -117,6 +117,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), default='user')
     is_active = db.Column(db.Boolean, default=True)
+    preferred_language = db.Column(db.String(5), default='en')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
@@ -146,6 +147,7 @@ class User(db.Model):
             'email': self.email,
             'role': self.role,
             'is_active': self.is_active,
+            'preferred_language': self.preferred_language or 'en',
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None
         }
@@ -730,6 +732,39 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not add type column to alerts table: {e}")
 
+            # 9. Add preferred_language column to users table
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='users'"""
+                    ))
+                    existing_columns = [row[0] for row in result]
+
+                    if existing_columns and 'preferred_language' not in existing_columns:
+                        logger.info("Adding missing preferred_language column to users table...")
+                        conn.execute(text("ALTER TABLE users ADD COLUMN preferred_language VARCHAR(5) DEFAULT 'en'"))
+                        conn.commit()
+                        logger.info("✓ Added preferred_language column to users table")
+                    elif 'preferred_language' in existing_columns:
+                        logger.info("✓ Users table already has preferred_language column")
+                else:
+                    # SQLite
+                    result = conn.execute(text("PRAGMA table_info(users)"))
+                    existing_columns = [row[1] for row in result]
+
+                    if existing_columns and 'preferred_language' not in existing_columns:
+                        logger.info("Adding preferred_language column to users table...")
+                        conn.execute(text("ALTER TABLE users ADD COLUMN preferred_language VARCHAR(5) DEFAULT 'en'"))
+                        conn.commit()
+                        logger.info("✓ Added preferred_language column to users table")
+                    elif 'preferred_language' in existing_columns:
+                        logger.info("✓ Users table already has preferred_language column")
+
+            except Exception as e:
+                logger.warning(f"Could not add preferred_language column to users table: {e}")
+
             logger.info("✓ All schema fixes complete")
 
     except Exception as e:
@@ -1070,7 +1105,8 @@ def register():
         # Create user
         user = User(
             username=username,
-            email=email
+            email=email,
+            preferred_language='en'
         )
         user.set_password(password)
         db.session.add(user)
@@ -1148,9 +1184,13 @@ def login():
 
         logger.info(f"Login successful: {user.username}")
 
+        # Prepare user data with language preference
+        user_data = user.to_dict()
+        user_data['preferred_language'] = user.preferred_language or 'en'
+
         return jsonify({
             'success': True,
-            'user': user.to_dict()
+            'user': user_data
         }), 200
 
     except Exception as e:
@@ -1194,6 +1234,47 @@ def get_current_user():
         return jsonify({'error': 'User not found'}), 404
 
     return jsonify(user.to_dict())
+
+
+@app.route('/api/user/language', methods=['GET', 'POST'])
+@login_required
+def user_language():
+    """Get or update user's preferred language"""
+    user_id = session.get('user_id')
+    user = db.session.get(User, user_id)
+
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if request.method == 'GET':
+        return jsonify({
+            'preferred_language': user.preferred_language or 'en'
+        })
+
+    elif request.method == 'POST':
+        try:
+            data = request.json
+            language = data.get('preferred_language', 'en')
+
+            # Validate language
+            if language not in ['en', 'he', 'ar', 'ru']:
+                return jsonify({'error': 'Unsupported language'}), 400
+
+            user.preferred_language = language
+            user.updated_at = datetime.utcnow()
+            db.session.commit()
+
+            logger.info(f"User {user.username} changed language to {language}")
+
+            return jsonify({
+                'success': True,
+                'preferred_language': user.preferred_language
+            })
+        except Exception as e:
+            logger.error(f"Language update error: {str(e)}")
+            db.session.rollback()
+            return jsonify({'error': 'Failed to update language'}), 500
+
 
 
 @app.route('/api/profile', methods=['GET', 'PUT'])
@@ -1249,6 +1330,12 @@ def profile():
             profile.avatar_url = data.get('avatar_url', '')[:500]
 
         profile.updated_at = datetime.utcnow()
+
+        # Update user's preferred language if provided
+        if 'preferred_language' in data:
+            user = db.session.get(User, user_id)
+            if user and data['preferred_language'] in ['en', 'he', 'ar', 'ru']:
+                user.preferred_language = data['preferred_language']
 
         db.session.commit()
         return jsonify({'success': True, 'message': 'Profile updated'})
