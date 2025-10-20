@@ -1136,6 +1136,10 @@ function setLanguage(lang) {
 
     // Sync with backend if user is logged in
     syncLanguageWithBackend(lang);
+
+    // Dispatch language changed event so other modules can update
+    console.log('Dispatching languageChanged event for:', lang);
+    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
 }
 
 async function syncLanguageWithBackend(lang) {
