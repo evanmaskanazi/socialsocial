@@ -1438,31 +1438,63 @@ def messages():
 
     if request.method == 'GET':
         try:
-            # Get all messages - SQLAlchemy 2.0 style
-            sent_stmt = select(Message).filter_by(sender_id=user_id).order_by(desc(Message.created_at)).limit(50)
-            sent = db.session.execute(sent_stmt).scalars().all()
+            recipient_id = request.args.get('recipient_id', type=int)
 
-            received_stmt = select(Message).filter_by(recipient_id=user_id).order_by(desc(Message.created_at)).limit(50)
-            received = db.session.execute(received_stmt).scalars().all()
+            if recipient_id:
+                # Get messages for specific conversation
+                messages_stmt = select(Message).filter(
+                    or_(
+                        and_(Message.sender_id == user_id, Message.recipient_id == recipient_id),
+                        and_(Message.sender_id == recipient_id, Message.recipient_id == user_id)
+                    )
+                ).order_by(Message.created_at)  # Chronological order for conversation view
 
-            def format_message(msg):
-                sender = db.session.get(User, msg.sender_id)
-                recipient = db.session.get(User, msg.recipient_id)
-                if sender and recipient:
-                    return {
-                        'id': msg.id,
-                        'sender': {'id': sender.id, 'username': sender.username},
-                        'recipient': {'id': recipient.id, 'username': recipient.username},
-                        'content': msg.content,
-                        'is_read': msg.is_read,
-                        'created_at': msg.created_at.isoformat()
-                    }
-                return None
+                messages = db.session.execute(messages_stmt).scalars().all()
 
-            return jsonify({
-                'sent': [m for msg in sent if (m := format_message(msg))],
-                'received': [m for msg in received if (m := format_message(msg))]
-            })
+                def format_message(msg):
+                    sender = db.session.get(User, msg.sender_id)
+                    recipient = db.session.get(User, msg.recipient_id)
+                    if sender and recipient:
+                        return {
+                            'id': msg.id,
+                            'sender': {'id': sender.id, 'username': sender.username},
+                            'recipient': {'id': recipient.id, 'username': recipient.username},
+                            'content': msg.content,
+                            'is_read': msg.is_read,
+                            'created_at': msg.created_at.isoformat()
+                        }
+                    return None
+
+                formatted_messages = [m for msg in messages if (m := format_message(msg))]
+                return jsonify({'messages': formatted_messages})
+
+            else:
+                # Get all messages for overview
+                sent_stmt = select(Message).filter_by(sender_id=user_id).order_by(desc(Message.created_at)).limit(50)
+                sent = db.session.execute(sent_stmt).scalars().all()
+
+                received_stmt = select(Message).filter_by(recipient_id=user_id).order_by(
+                    desc(Message.created_at)).limit(50)
+                received = db.session.execute(received_stmt).scalars().all()
+
+                def format_message(msg):
+                    sender = db.session.get(User, msg.sender_id)
+                    recipient = db.session.get(User, msg.recipient_id)
+                    if sender and recipient:
+                        return {
+                            'id': msg.id,
+                            'sender': {'id': sender.id, 'username': sender.username},
+                            'recipient': {'id': recipient.id, 'username': recipient.username},
+                            'content': msg.content,
+                            'is_read': msg.is_read,
+                            'created_at': msg.created_at.isoformat()
+                        }
+                    return None
+
+                return jsonify({
+                    'sent': [m for msg in sent if (m := format_message(msg))],
+                    'received': [m for msg in received if (m := format_message(msg))]
+                })
 
         except Exception as e:
             logger.error(f"Get messages error: {str(e)}")
@@ -1551,7 +1583,6 @@ def mark_messages_read(recipient_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to mark messages'}), 500
 
-
 @app.route('/api/messages/conversations')
 @login_required
 def get_conversations():
@@ -1608,7 +1639,8 @@ def get_conversations():
             reverse=True
         )
 
-        return jsonify(conversations)
+        # ✅ FIXED: Wrap in object for frontend consistency
+        return jsonify({'conversations': conversations})
 
     except Exception as e:
         logger.error(f"Get conversations error: {str(e)}")
