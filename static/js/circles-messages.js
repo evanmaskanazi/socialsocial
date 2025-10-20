@@ -1,5 +1,8 @@
-// Circles and Messages Management System
+// Circles and Messages Management System with i18n support
 // Add this to your main dashboard or create separate pages
+
+// Use translation function helper
+const t = (key) => window.i18n ? window.i18n.translate(key) : key;
 
 // ===================
 // CIRCLES MANAGEMENT
@@ -13,24 +16,24 @@ const circlesHTML = `
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         .circles-header {
             text-align: center;
             margin-bottom: 30px;
         }
-        
+
         .circles-header h1 {
             color: #667eea;
             font-size: 2.5em;
             margin-bottom: 10px;
         }
-        
+
         .user-search {
             max-width: 600px;
             margin: 0 auto 40px;
             position: relative;
         }
-        
+
         .search-input {
             width: 100%;
             padding: 15px 50px 15px 20px;
@@ -39,13 +42,13 @@ const circlesHTML = `
             font-size: 16px;
             transition: all 0.3s;
         }
-        
+
         .search-input:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
-        
+
         .search-btn {
             position: absolute;
             right: 5px;
@@ -60,7 +63,7 @@ const circlesHTML = `
             cursor: pointer;
             transition: all 0.3s;
         }
-        
+
         .search-results {
             position: absolute;
             top: 100%;
@@ -75,11 +78,11 @@ const circlesHTML = `
             display: none;
             z-index: 10;
         }
-        
+
         .search-results.active {
             display: block;
         }
-        
+
         .search-result-item {
             padding: 15px 20px;
             border-bottom: 1px solid #f0f0f0;
@@ -89,17 +92,17 @@ const circlesHTML = `
             align-items: center;
             transition: background 0.2s;
         }
-        
+
         .search-result-item:hover {
             background: #f8f9fa;
         }
-        
+
         .user-info {
             display: flex;
             align-items: center;
             gap: 15px;
         }
-        
+
         .user-avatar {
             width: 40px;
             height: 40px;
@@ -111,7 +114,7 @@ const circlesHTML = `
             justify-content: center;
             font-weight: bold;
         }
-        
+
         .add-to-circle-btn {
             background: #667eea;
             color: white;
@@ -122,17 +125,17 @@ const circlesHTML = `
             font-size: 14px;
             transition: all 0.3s;
         }
-        
+
         .add-to-circle-btn:hover {
             background: #764ba2;
         }
-        
+
         .circles-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 30px;
         }
-        
+
         .circle-card {
             background: white;
             border-radius: 20px;
@@ -140,12 +143,12 @@ const circlesHTML = `
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             transition: all 0.3s;
         }
-        
+
         .circle-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
         }
-        
+
         .circle-header {
             display: flex;
             align-items: center;
@@ -154,17 +157,17 @@ const circlesHTML = `
             padding-bottom: 15px;
             border-bottom: 2px solid #f0f0f0;
         }
-        
+
         .circle-icon {
             font-size: 2em;
         }
-        
+
         .circle-title {
             font-size: 1.5em;
             color: #2d3436;
             font-weight: 600;
         }
-        
+
         .circle-count {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -173,12 +176,12 @@ const circlesHTML = `
             font-size: 14px;
             margin-left: auto;
         }
-        
+
         .circle-members {
             max-height: 300px;
             overflow-y: auto;
         }
-        
+
         .member-item {
             display: flex;
             align-items: center;
@@ -187,16 +190,16 @@ const circlesHTML = `
             border-radius: 10px;
             transition: background 0.2s;
         }
-        
+
         .member-item:hover {
             background: #f8f9fa;
         }
-        
+
         .member-name {
             flex-grow: 1;
             color: #2d3436;
         }
-        
+
         .remove-btn {
             background: #ff6b6b;
             color: white;
@@ -208,74 +211,74 @@ const circlesHTML = `
             opacity: 0;
             transition: all 0.3s;
         }
-        
+
         .member-item:hover .remove-btn {
             opacity: 1;
         }
-        
+
         .empty-state {
             text-align: center;
             padding: 40px;
             color: #8898aa;
         }
-        
+
         .empty-state-icon {
             font-size: 3em;
             margin-bottom: 15px;
             opacity: 0.5;
         }
     </style>
-    
+
     <div class="circles-header">
-        <h1>My Circles</h1>
-        <p style="color: #8898aa;">Organize your connections into meaningful groups</p>
+        <h1 id="circlesPageTitle">${t('circles.title')}</h1>
+        <p style="color: #8898aa;" id="circlesSubtitle">${t('circles.subtitle')}</p>
     </div>
-    
+
     <div class="user-search">
-        <input type="text" class="search-input" id="userSearchInput" placeholder="Search users by name or email...">
+        <input type="text" class="search-input" id="userSearchInput" placeholder="${t('circles.search_placeholder')}">
         <button class="search-btn" onclick="searchUsers()">🔍</button>
         <div class="search-results" id="searchResults"></div>
     </div>
-    
+
     <div class="circles-grid">
         <div class="circle-card">
             <div class="circle-header">
                 <span class="circle-icon">👥</span>
-                <span class="circle-title">General</span>
+                <span class="circle-title" id="generalTitle">${t('circles.general')}</span>
                 <span class="circle-count" id="generalCount">0</span>
             </div>
             <div class="circle-members" id="generalMembers">
                 <div class="empty-state">
                     <div class="empty-state-icon">👥</div>
-                    <p>No members yet</p>
+                    <p id="generalEmpty">${t('circles.no_members')}</p>
                 </div>
             </div>
         </div>
-        
+
         <div class="circle-card">
             <div class="circle-header">
                 <span class="circle-icon">❤️</span>
-                <span class="circle-title">Close Friends</span>
+                <span class="circle-title" id="closeFriendsTitle">${t('circles.close_friends')}</span>
                 <span class="circle-count" id="closeFriendsCount">0</span>
             </div>
             <div class="circle-members" id="closeFriendsMembers">
                 <div class="empty-state">
                     <div class="empty-state-icon">❤️</div>
-                    <p>No close friends yet</p>
+                    <p id="closeFriendsEmpty">${t('circles.no_members')}</p>
                 </div>
             </div>
         </div>
-        
+
         <div class="circle-card">
             <div class="circle-header">
                 <span class="circle-icon">👨‍👩‍👧‍👦</span>
-                <span class="circle-title">Family</span>
+                <span class="circle-title" id="familyTitle">${t('circles.family')}</span>
                 <span class="circle-count" id="familyCount">0</span>
             </div>
             <div class="circle-members" id="familyMembers">
                 <div class="empty-state">
                     <div class="empty-state-icon">👨‍👩‍👧‍👦</div>
-                    <p>No family members yet</p>
+                    <p id="familyEmpty">${t('circles.no_members')}</p>
                 </div>
             </div>
         </div>
@@ -305,10 +308,10 @@ async function loadCircles() {
 function updateCirclesDisplay() {
     // Update General circle
     updateCircleDisplay('general', circlesData.general, 'generalMembers', 'generalCount');
-    
+
     // Update Close Friends circle
     updateCircleDisplay('close_friends', circlesData.close_friends, 'closeFriendsMembers', 'closeFriendsCount');
-    
+
     // Update Family circle
     updateCircleDisplay('family', circlesData.family, 'familyMembers', 'familyCount');
 }
@@ -316,16 +319,16 @@ function updateCirclesDisplay() {
 function updateCircleDisplay(circleType, members, containerId, countId) {
     const container = document.getElementById(containerId);
     const count = document.getElementById(countId);
-    
+
     count.textContent = members.length;
-    
+
     if (members.length === 0) {
-        const icon = circleType === 'general' ? '👥' : 
+        const icon = circleType === 'general' ? '👥' :
                     circleType === 'close_friends' ? '❤️' : '👨‍👩‍👧‍👦';
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">${icon}</div>
-                <p>No members yet</p>
+                <p>${t('circles.no_members')}</p>
             </div>
         `;
     } else {
@@ -333,7 +336,7 @@ function updateCircleDisplay(circleType, members, containerId, countId) {
             <div class="member-item">
                 <div class="user-avatar">${member.username[0].toUpperCase()}</div>
                 <div class="member-name">${member.username}</div>
-                <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${circleType}')">Remove</button>
+                <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${circleType}')">${t('btn.remove')}</button>
             </div>
         `).join('');
     }
@@ -342,7 +345,7 @@ function updateCircleDisplay(circleType, members, containerId, countId) {
 async function searchUsers() {
     const query = document.getElementById('userSearchInput').value;
     if (query.length < 2) return;
-    
+
     try {
         const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
         if (response.ok) {
@@ -356,9 +359,9 @@ async function searchUsers() {
 
 function displaySearchResults(users) {
     const resultsContainer = document.getElementById('searchResults');
-    
+
     if (users.length === 0) {
-        resultsContainer.innerHTML = '<div class="search-result-item">No users found</div>';
+        resultsContainer.innerHTML = `<div class="search-result-item">${t('circles.no_users_found')}</div>`;
     } else {
         resultsContainer.innerHTML = users.map(user => `
             <div class="search-result-item">
@@ -370,21 +373,21 @@ function displaySearchResults(users) {
                     </div>
                 </div>
                 <select class="add-to-circle-btn" onchange="addToCircle(${user.id}, this.value, '${user.username}')">
-                    <option value="">Add to Circle</option>
-                    <option value="general">General</option>
-                    <option value="close_friends">Close Friends</option>
-                    <option value="family">Family</option>
+                    <option value="">${t('circles.add_to_circle')}</option>
+                    <option value="general">${t('circles.general')}</option>
+                    <option value="close_friends">${t('circles.close_friends')}</option>
+                    <option value="family">${t('circles.family')}</option>
                 </select>
             </div>
         `).join('');
     }
-    
+
     resultsContainer.classList.add('active');
 }
 
 async function addToCircle(userId, circleType, username) {
     if (!circleType) return;
-    
+
     try {
         const response = await fetch('/api/circles', {
             method: 'POST',
@@ -396,15 +399,20 @@ async function addToCircle(userId, circleType, username) {
                 circle_type: circleType
             })
         });
-        
+
         if (response.ok) {
-            showNotification(`${username} added to ${circleType.replace('_', ' ')} circle!`, 'success');
+            const circleNames = {
+                'general': t('circles.general'),
+                'close_friends': t('circles.close_friends'),
+                'family': t('circles.family')
+            };
+            showNotification(`${username} ${t('circles.user_added')} ${circleNames[circleType]} ${t('circles.circle')}`, 'success');
             loadCircles();
             document.getElementById('searchResults').classList.remove('active');
             document.getElementById('userSearchInput').value = '';
         } else {
             const error = await response.json();
-            showNotification(error.error || 'Error adding user to circle', 'error');
+            showNotification(error.error || t('error.saving'), 'error');
         }
     } catch (error) {
         console.error('Error adding to circle:', error);
@@ -412,8 +420,8 @@ async function addToCircle(userId, circleType, username) {
 }
 
 async function removeFromCircle(userId, circleType) {
-    if (!confirm('Remove this user from the circle?')) return;
-    
+    if (!confirm(t('circles.remove_confirm'))) return;
+
     try {
         const response = await fetch('/api/circles/remove', {
             method: 'DELETE',
@@ -425,9 +433,9 @@ async function removeFromCircle(userId, circleType) {
                 circle_type: circleType
             })
         });
-        
+
         if (response.ok) {
-            showNotification('User removed from circle', 'success');
+            showNotification(t('circles.user_removed'), 'success');
             loadCircles();
         }
     } catch (error) {
@@ -451,7 +459,7 @@ const messagesHTML = `
             gap: 30px;
             height: 80vh;
         }
-        
+
         .conversations-sidebar {
             background: white;
             border-radius: 20px;
@@ -459,7 +467,7 @@ const messagesHTML = `
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             overflow-y: auto;
         }
-        
+
         .sidebar-header {
             display: flex;
             justify-content: space-between;
@@ -468,13 +476,13 @@ const messagesHTML = `
             padding-bottom: 15px;
             border-bottom: 2px solid #f0f0f0;
         }
-        
+
         .sidebar-title {
             font-size: 1.5em;
             color: #2d3436;
             font-weight: 600;
         }
-        
+
         .new-message-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -484,7 +492,7 @@ const messagesHTML = `
             cursor: pointer;
             transition: all 0.3s;
         }
-        
+
         .conversation-item {
             display: flex;
             align-items: center;
@@ -495,15 +503,15 @@ const messagesHTML = `
             transition: all 0.2s;
             margin-bottom: 10px;
         }
-        
+
         .conversation-item:hover {
             background: #f8f9fa;
         }
-        
+
         .conversation-item.active {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
         }
-        
+
         .conversation-avatar {
             width: 50px;
             height: 50px;
@@ -516,17 +524,17 @@ const messagesHTML = `
             font-weight: bold;
             flex-shrink: 0;
         }
-        
+
         .conversation-info {
             flex-grow: 1;
         }
-        
+
         .conversation-name {
             font-weight: 600;
             color: #2d3436;
             margin-bottom: 5px;
         }
-        
+
         .conversation-preview {
             font-size: 14px;
             color: #8898aa;
@@ -534,7 +542,7 @@ const messagesHTML = `
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        
+
         .unread-badge {
             background: #ff6b6b;
             color: white;
@@ -542,7 +550,7 @@ const messagesHTML = `
             border-radius: 10px;
             font-size: 12px;
         }
-        
+
         .message-area {
             background: white;
             border-radius: 20px;
@@ -550,7 +558,7 @@ const messagesHTML = `
             display: flex;
             flex-direction: column;
         }
-        
+
         .message-header {
             padding: 20px;
             border-bottom: 2px solid #f0f0f0;
@@ -558,21 +566,21 @@ const messagesHTML = `
             align-items: center;
             gap: 15px;
         }
-        
+
         .message-recipient {
             flex-grow: 1;
             font-size: 1.2em;
             font-weight: 600;
             color: #2d3436;
         }
-        
+
         .messages-display {
             flex-grow: 1;
             padding: 20px;
             overflow-y: auto;
             background: #f8f9fa;
         }
-        
+
         .message-bubble {
             max-width: 70%;
             margin: 10px 0;
@@ -581,33 +589,33 @@ const messagesHTML = `
             position: relative;
             word-wrap: break-word;
         }
-        
+
         .message-sent {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             margin-left: auto;
             border-bottom-right-radius: 5px;
         }
-        
+
         .message-received {
             background: white;
             border: 1px solid #e1e8ed;
             border-bottom-left-radius: 5px;
         }
-        
+
         .message-time {
             font-size: 12px;
             opacity: 0.7;
             margin-top: 5px;
         }
-        
+
         .message-input-area {
             padding: 20px;
             border-top: 2px solid #f0f0f0;
             display: flex;
             gap: 15px;
         }
-        
+
         .message-input {
             flex-grow: 1;
             padding: 12px 20px;
@@ -616,12 +624,12 @@ const messagesHTML = `
             font-size: 16px;
             transition: all 0.3s;
         }
-        
+
         .message-input:focus {
             outline: none;
             border-color: #667eea;
         }
-        
+
         .send-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -632,11 +640,11 @@ const messagesHTML = `
             transition: all 0.3s;
             font-size: 16px;
         }
-        
+
         .send-btn:hover {
             transform: scale(1.05);
         }
-        
+
         .new-message-modal {
             display: none;
             position: fixed;
@@ -649,11 +657,11 @@ const messagesHTML = `
             align-items: center;
             justify-content: center;
         }
-        
+
         .new-message-modal.active {
             display: flex;
         }
-        
+
         .modal-content {
             background: white;
             border-radius: 20px;
@@ -661,14 +669,14 @@ const messagesHTML = `
             width: 500px;
             max-width: 90%;
         }
-        
+
         .modal-header {
             font-size: 1.5em;
             font-weight: 600;
             color: #2d3436;
             margin-bottom: 20px;
         }
-        
+
         .recipient-select {
             width: 100%;
             padding: 12px;
@@ -677,50 +685,50 @@ const messagesHTML = `
             font-size: 16px;
             margin-bottom: 20px;
         }
-        
+
         .modal-actions {
             display: flex;
             gap: 15px;
             justify-content: flex-end;
         }
     </style>
-    
+
     <div class="conversations-sidebar">
         <div class="sidebar-header">
-            <div class="sidebar-title">Messages</div>
-            <button class="new-message-btn" onclick="showNewMessageModal()">+ New</button>
+            <div class="sidebar-title" id="messagesSidebarTitle">${t('messages.title')}</div>
+            <button class="new-message-btn" onclick="showNewMessageModal()" id="newMessageBtn">${t('messages.new')}</button>
         </div>
         <div id="conversationsList"></div>
     </div>
-    
+
     <div class="message-area">
         <div class="message-header">
             <div class="conversation-avatar" id="currentRecipientAvatar">?</div>
-            <div class="message-recipient" id="currentRecipient">Select a conversation</div>
+            <div class="message-recipient" id="currentRecipient">${t('messages.select_conversation')}</div>
         </div>
-        
+
         <div class="messages-display" id="messagesDisplay">
-            <div style="text-align: center; padding: 50px; color: #8898aa;">
-                Select a conversation or start a new one
+            <div style="text-align: center; padding: 50px; color: #8898aa;" id="messagesPlaceholder">
+                ${t('messages.select_conversation')}
             </div>
         </div>
-        
+
         <div class="message-input-area">
-            <input type="text" class="message-input" id="messageInput" placeholder="Type a message..." disabled>
-            <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+            <input type="text" class="message-input" id="messageInput" placeholder="${t('messages.type_message')}" disabled>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>${t('messages.send')}</button>
         </div>
     </div>
-    
+
     <div class="new-message-modal" id="newMessageModal">
         <div class="modal-content">
-            <div class="modal-header">New Message</div>
+            <div class="modal-header" id="newMessageModalTitle">${t('messages.new_message')}</div>
             <select class="recipient-select" id="recipientSelect">
-                <option value="">Select recipient...</option>
+                <option value="">${t('messages.select_recipient')}</option>
             </select>
-            <textarea class="message-input" id="newMessageText" placeholder="Type your message..." style="width: 100%; min-height: 100px; border-radius: 10px;"></textarea>
+            <textarea class="message-input" id="newMessageText" placeholder="${t('messages.type_message')}" style="width: 100%; min-height: 100px; border-radius: 10px;"></textarea>
             <div class="modal-actions">
-                <button class="btn-cancel" onclick="hideNewMessageModal()">Cancel</button>
-                <button class="btn-save" onclick="startNewConversation()">Send</button>
+                <button class="btn-cancel" onclick="hideNewMessageModal()">${t('btn.cancel')}</button>
+                <button class="btn-save" onclick="startNewConversation()">${t('btn.send')}</button>
             </div>
         </div>
     </div>
@@ -749,11 +757,11 @@ async function loadMessages() {
 function updateConversationsList() {
     // Group messages by conversation partner
     const conversations = {};
-    
+
     [...messagesData.sent, ...messagesData.received].forEach(msg => {
         const partnerId = msg.sender.id === currentUserId ? msg.recipient.id : msg.sender.id;
         const partnerName = msg.sender.id === currentUserId ? msg.recipient.username : msg.sender.username;
-        
+
         if (!conversations[partnerId]) {
             conversations[partnerId] = {
                 id: partnerId,
@@ -767,21 +775,21 @@ function updateConversationsList() {
                 conversations[partnerId].lastMessage = msg;
             }
         }
-        
+
         // Count unread messages
         if (msg.recipient.id === currentUserId && !msg.is_read) {
             conversations[partnerId].unread++;
         }
     });
-    
+
     // Display conversations
     const container = document.getElementById('conversationsList');
-    const conversationArray = Object.values(conversations).sort((a, b) => 
+    const conversationArray = Object.values(conversations).sort((a, b) =>
         new Date(b.lastMessage.created_at) - new Date(a.lastMessage.created_at)
     );
-    
+
     if (conversationArray.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 20px; color: #8898aa;">No conversations yet</div>';
+        container.innerHTML = `<div style="text-align: center; padding: 20px; color: #8898aa;">${t('messages.no_conversations')}</div>`;
     } else {
         container.innerHTML = conversationArray.map(conv => `
             <div class="conversation-item ${currentRecipient?.id === conv.id ? 'active' : ''}" onclick="selectConversation(${conv.id}, '${conv.name}')">
@@ -798,21 +806,21 @@ function updateConversationsList() {
 
 function selectConversation(recipientId, recipientName) {
     currentRecipient = { id: recipientId, username: recipientName };
-    
+
     // Update header
     document.getElementById('currentRecipient').textContent = recipientName;
     document.getElementById('currentRecipientAvatar').textContent = recipientName[0].toUpperCase();
-    
+
     // Enable input
     document.getElementById('messageInput').disabled = false;
     document.getElementById('sendBtn').disabled = false;
-    
+
     // Display messages
     displayConversationMessages(recipientId);
-    
+
     // Mark messages as read
     markMessagesAsRead(recipientId);
-    
+
     // Update active state
     updateConversationsList();
 }
@@ -820,14 +828,14 @@ function selectConversation(recipientId, recipientName) {
 function displayConversationMessages(recipientId) {
     const container = document.getElementById('messagesDisplay');
     const messages = [...messagesData.sent, ...messagesData.received]
-        .filter(msg => 
+        .filter(msg =>
             (msg.sender.id === currentUserId && msg.recipient.id === recipientId) ||
             (msg.sender.id === recipientId && msg.recipient.id === currentUserId)
         )
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    
+
     if (messages.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 50px; color: #8898aa;">No messages yet. Start the conversation!</div>';
+        container.innerHTML = `<div style="text-align: center; padding: 50px; color: #8898aa;">${t('messages.start_conversation')}</div>`;
     } else {
         container.innerHTML = messages.map(msg => {
             const isSent = msg.sender.id === currentUserId;
@@ -839,7 +847,7 @@ function displayConversationMessages(recipientId) {
                 </div>
             `;
         }).join('');
-        
+
         // Scroll to bottom
         container.scrollTop = container.scrollHeight;
     }
@@ -848,9 +856,9 @@ function displayConversationMessages(recipientId) {
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const content = input.value.trim();
-    
+
     if (!content || !currentRecipient) return;
-    
+
     try {
         const response = await fetch('/api/messages', {
             method: 'POST',
@@ -862,11 +870,11 @@ async function sendMessage() {
                 content: content
             })
         });
-        
+
         if (response.ok) {
             input.value = '';
             loadMessages();
-            
+
             // Add message to display immediately
             const container = document.getElementById('messagesDisplay');
             const messageHtml = `
@@ -884,10 +892,10 @@ async function sendMessage() {
 }
 
 async function markMessagesAsRead(recipientId) {
-    const unreadMessages = messagesData.received.filter(msg => 
+    const unreadMessages = messagesData.received.filter(msg =>
         msg.sender.id === recipientId && !msg.is_read
     );
-    
+
     for (const msg of unreadMessages) {
         try {
             await fetch(`/api/messages/${msg.id}/read`, {
@@ -902,19 +910,19 @@ async function markMessagesAsRead(recipientId) {
 async function showNewMessageModal() {
     const modal = document.getElementById('newMessageModal');
     const select = document.getElementById('recipientSelect');
-    
+
     // Load users for recipient selection
     try {
         const response = await fetch('/api/users/search?q=');
         if (response.ok) {
             const users = await response.json();
-            select.innerHTML = '<option value="">Select recipient...</option>' + 
+            select.innerHTML = `<option value="">${t('messages.select_recipient')}</option>` +
                 users.map(user => `<option value="${user.id}">${user.username}</option>`).join('');
         }
     } catch (error) {
         console.error('Error loading users:', error);
     }
-    
+
     modal.classList.add('active');
 }
 
@@ -927,12 +935,12 @@ function hideNewMessageModal() {
 async function startNewConversation() {
     const recipientId = document.getElementById('recipientSelect').value;
     const content = document.getElementById('newMessageText').value.trim();
-    
+
     if (!recipientId || !content) {
-        alert('Please select a recipient and enter a message');
+        alert(t('messages.select_and_type'));
         return;
     }
-    
+
     try {
         const response = await fetch('/api/messages', {
             method: 'POST',
@@ -944,11 +952,11 @@ async function startNewConversation() {
                 content: content
             })
         });
-        
+
         if (response.ok) {
             hideNewMessageModal();
             loadMessages();
-            showNotification('Message sent!', 'success');
+            showNotification(t('messages.message_sent'), 'success');
         }
     } catch (error) {
         console.error('Error starting conversation:', error);
@@ -980,7 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // Close search results when clicking outside
     document.addEventListener('click', (e) => {
         const searchResults = document.getElementById('searchResults');
@@ -989,7 +997,7 @@ document.addEventListener('DOMContentLoaded', () => {
             searchResults.classList.remove('active');
         }
     });
-    
+
     // Initialize
     getCurrentUser().then(() => {
         if (window.location.pathname.includes('circles')) {
@@ -1017,6 +1025,6 @@ function showNotification(message, type = 'info') {
     `;
     notification.textContent = message;
     document.body.appendChild(notification);
-    
+
     setTimeout(() => notification.remove(), 3000);
 }
