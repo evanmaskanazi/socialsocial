@@ -145,7 +145,7 @@ const translations = {
 'circles.no_users': 'No users found',
 
         // Messages page
-        'messages.title': 'Messages',
+           'messages.title': 'Messages',
         'messages.new': '+ New',
         'messages.select_conversation': 'Select a conversation',
         'messages.no_conversations': 'No conversations yet',
@@ -159,12 +159,11 @@ const translations = {
         'messages.select_recipient': 'Select recipient...',
         'messages.select_and_type': 'Please select a recipient and enter a message',
         'messages.message_sent': 'Message sent!',
-        'messages.message_sent': 'Message sent!',
         'messages.you': 'You',
         'messages.newMessageFrom': 'New message from',
         'messages.just_now': 'Just now',
-'messages.minutes_ago': 'minutes ago',
-'messages.yesterday': 'Yesterday',
+        'messages.minutes_ago': 'minutes ago',
+        'messages.yesterday': 'Yesterday',
 
         // Moods
         'mood.great': '😊 Great',
@@ -209,7 +208,7 @@ const translations = {
         'parameters.today_label': 'Today',
 
         // Profile page
-        'profile.title': 'My Profile',
+          'profile.title': 'My Profile',
         'profile.loading': 'Loading...',
         'profile.completion': 'Profile Completion:',
         'profile.about_me': 'About Me',
@@ -228,12 +227,10 @@ const translations = {
         'profile.hobbies': 'Favorite Hobbies',
         'profile.favorite_hobbies': 'Favorite Hobbies',
         'profile.hobbies_placeholder': 'What do you love to do in your free time?',
+        'profile.save': 'Save',
         'profile.save_changes': 'Save Changes',
         'profile.cancel': 'Cancel',
         'profile.updated': 'Profile updated successfully!',
-        'profile.hobbies_placeholder': 'What do you love to do in your free time?',
-        'profile.save': 'Save',
-        'profile.save_changes': 'Save Changes',
 
         // Days of week
         'day.sun': 'Sun',
@@ -421,7 +418,7 @@ const translations = {
 
 
         // Messages page
-        'messages.title': 'הודעות',
+          'messages.title': 'הודעות',
         'messages.new': '+ חדש',
         'messages.select_conversation': 'בחר שיחה',
         'messages.no_conversations': 'אין שיחות עדיין',
@@ -435,12 +432,11 @@ const translations = {
         'messages.select_recipient': 'בחר נמען...',
         'messages.select_and_type': 'אנא בחר נמען והזן הודעה',
         'messages.message_sent': 'ההודעה נשלחה!',
-         'messages.message_sent': 'ההודעה נשלחה!',
         'messages.you': 'אתה',
         'messages.newMessageFrom': 'הודעה חדשה מ',
         'messages.just_now': 'ממש עכשיו',
-'messages.minutes_ago': 'דקות',
-'messages.yesterday': 'אתמול',
+        'messages.minutes_ago': 'דקות',
+        'messages.yesterday': 'אתמול',
 
         // Moods
         'mood.great': '😊 מצוין',
@@ -485,7 +481,7 @@ const translations = {
         'parameters.today_label': 'היום',
 
         // Profile page
-        'profile.title': 'הפרופיל שלי',
+       'profile.title': 'הפרופיל שלי',
         'profile.loading': 'טוען...',
         'profile.completion': 'השלמת פרופיל:',
         'profile.about_me': 'אודותיי',
@@ -504,13 +500,10 @@ const translations = {
         'profile.hobbies': 'תחביבים מועדפים',
         'profile.favorite_hobbies': 'תחביבים מועדפים',
         'profile.hobbies_placeholder': 'מה אתה אוהב לעשות בזמן הפנוי שלך?',
+        'profile.save': 'שמור',
         'profile.save_changes': 'שמור שינויים',
         'profile.cancel': 'ביטול',
         'profile.updated': 'הפרופיל עודכן בהצלחה!',
-         'profile.hobbies_placeholder': 'מה אתה אוהב לעשות בזמן הפנוי שלך?',
-        'profile.save': 'שמור',
-        'profile.save_changes': 'שמור שינויים',
-
         // Days of week
         'day.sun': 'א\'',
         'day.mon': 'ב\'',
@@ -696,7 +689,7 @@ const translations = {
 'circles.no_users': 'لم يتم العثور على مستخدمين',
 
         // Messages page
-        'messages.title': 'الرسائل',
+         'messages.title': 'الرسائل',
         'messages.new': '+ جديد',
         'messages.select_conversation': 'حدد محادثة',
         'messages.no_conversations': 'لا توجد محادثات بعد',
@@ -710,12 +703,11 @@ const translations = {
         'messages.select_recipient': 'حدد المستلم...',
         'messages.select_and_type': 'يرجى تحديد مستلم وإدخال رسالة',
         'messages.message_sent': 'تم إرسال الرسالة!',
-        'messages.message_sent': 'تم إرسال الرسالة!',
         'messages.you': 'أنت',
         'messages.newMessageFrom': 'رسالة جديدة من',
         'messages.just_now': 'الآن',
-'messages.minutes_ago': 'دقائق مضت',
-'messages.yesterday': 'أمس',
+        'messages.minutes_ago': 'دقائق مضت',
+        'messages.yesterday': 'أمس',
 
         // Moods
         'mood.great': '😊 رائع',
@@ -760,7 +752,7 @@ const translations = {
         'parameters.today_label': 'اليوم',
 
         // Profile page
-        'profile.title': 'ملفي الشخصي',
+           'profile.title': 'ملفي الشخصي',
         'profile.loading': 'جارٍ التحميل...',
         'profile.completion': 'اكتمال الملف الشخصي:',
         'profile.about_me': 'عني',
@@ -779,12 +771,10 @@ const translations = {
         'profile.hobbies': 'الهوايات المفضلة',
         'profile.favorite_hobbies': 'الهوايات المفضلة',
         'profile.hobbies_placeholder': 'ماذا تحب أن تفعل في وقت فراغك؟',
+        'profile.save': 'حفظ',
         'profile.save_changes': 'حفظ التغييرات',
         'profile.cancel': 'إلغاء',
         'profile.updated': 'تم تحديث الملف الشخصي بنجاح!',
-         'profile.hobbies_placeholder': 'ماذا تحب أن تفعل في وقت فراغك؟',
-        'profile.save': 'حفظ',
-        'profile.save_changes': 'حفظ التغييرات',
 
         // Days of week
         'day.sun': 'الأحد',
@@ -971,7 +961,7 @@ const translations = {
 'circles.no_users': 'Пользователи не найдены',
 
         // Messages page
-        'messages.title': 'Сообщения',
+         'messages.title': 'Сообщения',
         'messages.new': '+ Новое',
         'messages.select_conversation': 'Выберите разговор',
         'messages.no_conversations': 'Пока нет разговоров',
@@ -985,12 +975,11 @@ const translations = {
         'messages.select_recipient': 'Выберите получателя...',
         'messages.select_and_type': 'Пожалуйста, выберите получателя и введите сообщение',
         'messages.message_sent': 'Сообщение отправлено!',
-        'messages.message_sent': 'Сообщение отправлено!',
         'messages.you': 'Вы',
         'messages.newMessageFrom': 'Новое сообщение от',
         'messages.just_now': 'Только что',
-'messages.minutes_ago': 'минут назад',
-'messages.yesterday': 'Вчера',
+        'messages.minutes_ago': 'минут назад',
+        'messages.yesterday': 'Вчера',
 
         // Moods
         'mood.great': '😊 Отлично',
@@ -1035,7 +1024,7 @@ const translations = {
         'parameters.today_label': 'Сегодня',
 
         // Profile page
-        'profile.title': 'Мой профиль',
+       'profile.title': 'Мой профиль',
         'profile.loading': 'Загрузка...',
         'profile.completion': 'Заполнение профиля:',
         'profile.about_me': 'О себе',
@@ -1054,12 +1043,10 @@ const translations = {
         'profile.hobbies': 'Любимые хобби',
         'profile.favorite_hobbies': 'Любимые хобби',
         'profile.hobbies_placeholder': 'Чем вы любите заниматься в свободное время?',
+        'profile.save': 'Сохранить',
         'profile.save_changes': 'Сохранить изменения',
         'profile.cancel': 'Отмена',
         'profile.updated': 'Профиль успешно обновлён!',
-        'profile.hobbies_placeholder': 'Чем вы любите заниматься в свободное время?',
-        'profile.save': 'Сохранить',
-        'profile.save_changes': 'Сохранить изменения',
 
 
         // Days of week
