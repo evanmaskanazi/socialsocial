@@ -258,7 +258,7 @@ class Alert(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     title = db.Column(db.String(200))
     content = db.Column(db.Text)  # FIXED: Changed from 'message' to 'content'
-    type = db.Column(db.String(50))  # 'info', 'warning', 'success', 'error'
+    alert_type = db.Column(db.String(50))  # 'info', 'warning', 'success', 'error'
     is_read = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
@@ -267,7 +267,7 @@ class Alert(db.Model):
             'id': self.id,
             'title': self.title,
             'message': self.content,  # Return as 'message' for backward compatibility
-            'type': self.type,
+            'type': self.alert_type,  # Map alert_type to type for API compatibility
             'is_read': self.is_read,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
@@ -900,7 +900,7 @@ def create_admin_user():
                 user_id=admin.id,
                 title='Welcome Admin!',
                 content='Your admin account has been created.',
-                type='success'
+                alert_type='success'
             )
             db.session.add(alert)
 
@@ -1121,7 +1121,7 @@ def register():
             user_id=user.id,
             title='Welcome to Social Social!',
             content='Your account has been created successfully. Start by updating your profile.',
-            type='success'
+            alert_type='success'
         )
         db.session.add(alert)
 
@@ -1501,7 +1501,7 @@ def messages():
                 user_id=recipient_id,
                 title=f'New message from {sender.username}',
                 content=content[:100] + '...' if len(content) > 100 else content,
-                type='info'
+                alert_type='info'
             )
             db.session.add(alert)
 
