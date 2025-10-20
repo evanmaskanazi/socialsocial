@@ -919,25 +919,29 @@ function updateConversationsList() {
     if (conversationArray.length === 0) {
         container.innerHTML = `<div style="text-align: center; padding: 20px; color: #8898aa;" data-i18n="messages.no_conversations">${t('messages.no_conversations', 'No conversations yet')}</div>`;
     } else {
-        container.innerHTML = conversationArray.map(conv => {
-            try {
-                const lastMsgSent = conv.lastMessage.sender && conv.lastMessage.sender.id === currentUserId;
-                const youText = t('messages.you', 'You');
-                const messagePreview = lastMsgSent
-                    ? `${youText}: ${conv.lastMessage.content || ''}`
-                    : conv.lastMessage.content || '';
+     container.innerHTML = conversationArray.map(conv => {
+    try {
+        const lastMsgSent = conv.lastMessage.sender && conv.lastMessage.sender.id === currentUserId;
+        const youText = t('messages.you', 'You');
+        const messagePreview = lastMsgSent
+            ? `${youText}: ${conv.lastMessage.content || ''}`
+            : conv.lastMessage.content || '';
+        const timeDisplay = formatMessageTime(conv.lastMessage.created_at);
 
-                return `
-                    <div class="conversation-item ${currentRecipient?.id === conv.id ? 'active' : ''}"
-                         onclick="selectConversation(${conv.id}, '${escapeHtml(conv.name).replace(/'/g, "\\'")}')">
-                        <div class="conversation-avatar">${conv.name[0].toUpperCase()}</div>
-                        <div class="conversation-info">
-                            <div class="conversation-name">${escapeHtml(conv.name)}</div>
-                            <div class="conversation-preview">${escapeHtml(messagePreview.substring(0, 50))}${messagePreview.length > 50 ? '...' : ''}</div>
-                        </div>
-                        ${conv.unread > 0 ? `<div class="unread-badge">${conv.unread}</div>` : ''}
+        return `
+            <div class="conversation-item ${currentRecipient?.id === conv.id ? 'active' : ''}"
+                 onclick="selectConversation(${conv.id}, '${escapeHtml(conv.name).replace(/'/g, "\\'")}')">
+                <div class="conversation-avatar">${conv.name[0].toUpperCase()}</div>
+                <div class="conversation-info">
+                    <div class="conversation-name">
+                        ${escapeHtml(conv.name)}
+                        <span style="font-size: 12px; color: #8898aa; margin-left: 10px;">${timeDisplay}</span>
                     </div>
-                `;
+                    <div class="conversation-preview">${escapeHtml(messagePreview.substring(0, 50))}${messagePreview.length > 50 ? '...' : ''}</div>
+                </div>
+                ${conv.unread > 0 ? `<div class="unread-badge">${conv.unread}</div>` : ''}
+            </div>
+        `;
             } catch (error) {
                 console.error('Error rendering conversation:', error);
                 return '';
