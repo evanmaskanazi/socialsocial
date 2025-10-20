@@ -1111,7 +1111,10 @@ function translate(key, lang = null) {
     return translations[currentLang]?.[key] || translations['en'][key] || key;
 }
 
-
+// Alias for translate - shorter syntax
+function t(key, lang = null) {
+    return translate(key, lang);
+}
 
 function applyLanguage(lang) {
     // Translate all elements with data-i18n attribute
@@ -1137,6 +1140,9 @@ function applyLanguage(lang) {
     if (langSelector) {
         langSelector.value = lang;
     }
+
+    // Dispatch custom event for other components to listen to
+    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
 }
 
 // Initialize on page load
