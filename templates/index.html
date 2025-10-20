@@ -2417,20 +2417,27 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         // Listen for language changes
   // Listen for language changes
-     window.addEventListener('languageChanged', () => {
-            if (document.getElementById('feedView').classList.contains('hidden') === false) {
-                renderFeedCalendar();
-                updateFeedSelectedDateDisplay();
-            }
-            if (document.getElementById('trackingView').classList.contains('hidden') === false) {
-                renderCalendar();
-                updateSelectedDateDisplay();
-            }
-            // Reload alerts to apply new translations
-            if (currentUser) {
-                loadAlerts().catch(() => {});
-            }
-        });
+   window.addEventListener('languageChanged', () => {
+    if (document.getElementById('feedView').classList.contains('hidden') === false) {
+        renderFeedCalendar();
+        updateFeedSelectedDateDisplay();
+    }
+    if (document.getElementById('trackingView').classList.contains('hidden') === false) {
+        renderCalendar();
+        updateSelectedDateDisplay();
+    }
+    // Reload alerts to apply new translations
+    if (currentUser) {
+        loadAlerts().catch(() => {});
+    }
+    // Reload conversations to apply new translations
+    if (document.getElementById('messagesView') && !document.getElementById('messagesView').classList.contains('hidden')) {
+        loadConversations();
+        if (currentRecipient && currentRecipient.id) {
+            loadMessages(currentRecipient.id, currentRecipient.username);
+        }
+    }
+});
     </script>
 </body>
 </html>
