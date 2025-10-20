@@ -1320,6 +1320,54 @@
         let savedDates = [];
         let currentRecipient = null;
 
+        // Helper function to format message time with translation
+        function formatMessageTime(timestamp) {
+            try {
+                if (!timestamp) {
+                    return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time', 'Unknown time') : 'Unknown time';
+                }
+
+                const now = new Date();
+                const msgTime = new Date(timestamp);
+
+                if (isNaN(msgTime.getTime())) {
+                    return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time', 'Unknown time') : 'Unknown time';
+                }
+
+                const diffSeconds = Math.floor((now - msgTime) / 1000);
+
+                // Just now (less than 60 seconds)
+                if (diffSeconds < 60) {
+                    return window.i18n && window.i18n.t ? window.i18n.t('messages.just_now', 'Just now') : 'Just now';
+                }
+
+                // Minutes ago
+                if (diffSeconds < 3600) {
+                    const minutes = Math.floor(diffSeconds / 60);
+                    const minText = window.i18n && window.i18n.t ? window.i18n.t('messages.minutes_ago', 'min ago') : 'min ago';
+                    return `${minutes} ${minText}`;
+                }
+
+                // Hours ago (same day)
+                if (msgTime.toDateString() === now.toDateString()) {
+                    return msgTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+
+                // Yesterday
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                if (msgTime.toDateString() === yesterday.toDateString()) {
+                    return window.i18n && window.i18n.t ? window.i18n.t('messages.yesterday', 'Yesterday') : 'Yesterday';
+                }
+
+                // Older messages
+                return msgTime.toLocaleDateString();
+            } catch (error) {
+                console.error('Error formatting time:', error);
+                return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time', 'Unknown time') : 'Unknown time';
+            }
+        }
+
         // Feed Calendar Variables
         let feedSelectedDate = new Date();
         let feedCurrentMonth = new Date();
@@ -1916,15 +1964,17 @@
         const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet';
         const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You';
 
-        if (response.conversations && response.conversations.length === 0) {
+       const data = await response.json();
+
+        if (!data.conversations || data.conversations.length === 0) {
             container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--gray);" data-i18n="messages.no_conversations">${noConversationsText}</div>`;
-        } else if (response.conversations) {
-            container.innerHTML = response.conversations.map(conv => {
+          } else {
+            container.innerHTML = data.conversations.map(conv => {
                 // Safely access nested properties with fallbacks
                 const userId = conv.user && conv.user.id ? conv.user.id : 0;
                 const username = conv.user && conv.user.username ? conv.user.username : 'Unknown User';
                 const lastMessageCreatedAt = conv.last_message && conv.last_message.created_at ? conv.last_message.created_at : null;
-                const lastMessageTime = lastMessageCreatedAt ? getTimeAgo(new Date(lastMessageCreatedAt)) : '';
+              const lastMessageTime = lastMessageCreatedAt ? formatMessageTime(lastMessageCreatedAt) : '';
                 const lastMessageContent = conv.last_message && conv.last_message.content ? conv.last_message.content : noMessagesText;
                 const isOwn = conv.last_message && conv.last_message.is_own === true;
                 const unreadCount = conv.unread_count || 0;
@@ -1995,19 +2045,23 @@
 
         const container = document.getElementById('messagesList');
         const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet. Start the conversation!';
+        const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You';
 
-        if (response.messages && response.messages.length > 0) {
+     if (response.messages && response.messages.length > 0) {
             container.innerHTML = response.messages.map(msg => {
                 // Safely check if sender exists and get ID
                 const senderId = msg.sender && msg.sender.id ? msg.sender.id : null;
                 const currentUserId = currentUser && currentUser.id ? currentUser.id : null;
                 const isOwn = senderId === currentUserId;
                 const content = msg.content || '';
+                const senderPrefix = isOwn ? youText : (msg.sender && msg.sender.username ? msg.sender.username : 'Unknown');
 
                 return `
                     <div class="message ${isOwn ? 'own' : ''}">
                         <div class="message-bubble">
-                            ${escapeHtml(content)}
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; opacity: 0.8;">${escapeHtml(senderPrefix)}</div>
+                            <div>${escapeHtml(content)}</div>
+                            <div class="message-time">${formatMessageTime(msg.created_at)}</div>
                         </div>
                     </div>
                 `;
@@ -2282,15 +2336,7 @@
             return div.innerHTML;
         }
 
-        function getTimeAgo(date) {
-            const seconds = Math.floor((new Date() - date) / 1000);
-
-            if (seconds < 60) return 'just now';
-            if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
-            if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
-            if (seconds < 604800) return Math.floor(seconds / 86400) + ' days ago';
-            return date.toLocaleDateString();
-        }
+     
 
         // Check authentication on load
     // Check authentication on load
