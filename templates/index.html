@@ -2417,7 +2417,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         // Listen for language changes
   // Listen for language changes
-        window.addEventListener('languageChanged', () => {
+   window.addEventListener('languageChanged', () => {
             if (document.getElementById('feedView').classList.contains('hidden') === false) {
                 renderFeedCalendar();
                 updateFeedSelectedDateDisplay();
@@ -2429,6 +2429,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             // Reload alerts to apply new translations
             if (currentUser) {
                 loadAlerts().catch(() => {});
+            }
+            // Reload messages if on messages view
+            if (document.getElementById('messagesView').classList.contains('hidden') === false) {
+                loadConversations();
+                if (currentRecipient && currentRecipient.id) {
+                    loadMessages(currentRecipient.id, currentRecipient.username);
+                }
             }
         });
     </script>
