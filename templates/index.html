@@ -2299,23 +2299,32 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
                     container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${(window.i18n && window.i18n.t ? window.i18n.t('alerts.no_alerts') : 'No new alerts')}</p>`;
                 } else {
                     container.innerHTML = response.alerts.map(alert => {
-                        // Translate alert titles
-                        let title = alert.title;
+    // Translate alert titles and content
+    let title = alert.title;
+    let content = alert.content || alert.message || '';
 
-                        // Handle "New message from X" pattern
-                        if (title && title.startsWith('New message from ')) {
-                            const username = title.replace('New message from ', '');
-                            const newMessageText = window.i18n && window.i18n.t ? window.i18n.t('alerts.new_message_from') : 'New message from';
-                            title = `${newMessageText} ${username}`;
-                        }
+    // Handle translation keys
+    if (title && title.startsWith('alerts.')) {
+        title = window.i18n && window.i18n.t ? window.i18n.t(title) : title;
+    }
+    if (content && content.startsWith('alerts.')) {
+        content = window.i18n && window.i18n.t ? window.i18n.t(content) : content;
+    }
 
-                        return `
-                            <div class="alert-item ${alert.type}">
-                                <strong>${escapeHtml(title)}</strong><br>
-                                <small>${escapeHtml(alert.content || alert.message || '')}</small>
-                            </div>
-                        `;
-                    }).join('');
+    // Handle "New message from X" pattern
+    if (title && title.startsWith('New message from ')) {
+        const username = title.replace('New message from ', '');
+        const newMessageText = window.i18n && window.i18n.t ? window.i18n.t('alerts.new_message_from') : 'New message from';
+        title = `${newMessageText} ${username}`;
+    }
+
+    return `
+        <div class="alert-item ${alert.type}">
+            <strong>${escapeHtml(title)}</strong><br>
+            <small>${escapeHtml(content)}</small>
+        </div>
+    `;
+}).join('');
                 }
             } catch (error) {
                 console.error('Failed to load alerts:', error);
