@@ -920,7 +920,7 @@
         <div class="nav-content">
             <div class="logo" data-i18n="nav.logo">🧠 Thera Social</div>
             <div class="nav-menu">
-                <select id="languageSelector" class="language-selector" onchange="window.i18n.setLanguage(this.value)">
+                <select id="languageSelector" class="language-selector">
                     <option value="en">English</option>
                     <option value="he">עברית</option>
                     <option value="ar">العربية</option>
@@ -2240,19 +2240,29 @@
         }
 
         // Check authentication on load
-        window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const response = await apiCall('/auth/session');
-                if (response && response.authenticated) {
-                    currentUser = response.user;
-                    showDashboard();
-                } else {
-                    showAuthContainer();
-                }
-            } catch (error) {
-                showAuthContainer();
+     window.addEventListener('DOMContentLoaded', async () => {
+    // Set up language selector event listener
+    const langSelector = document.getElementById('languageSelector');
+    if (langSelector) {
+        langSelector.addEventListener('change', function() {
+            if (window.i18n && window.i18n.setLanguage) {
+                window.i18n.setLanguage(this.value);
             }
         });
+    }
+
+    try {
+        const response = await apiCall('/api/auth/session');
+        if (response && response.authenticated) {
+            currentUser = response.user;
+            showDashboard();
+        } else {
+            showAuthContainer();
+        }
+    } catch (error) {
+        showAuthContainer();
+    }
+});
 
         // Close search results when clicking outside
         document.addEventListener('click', (e) => {
