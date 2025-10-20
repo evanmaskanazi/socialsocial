@@ -1310,8 +1310,6 @@
 
     <script src="/static/js/i18n.js"></script>
     <script>
-        const t = (key) => window.i18n ? window.i18n.translate(key) : key;  
-
         // API Configuration
         const API_URL = window.location.origin + '/api';
         let authToken = localStorage.getItem('authToken');
@@ -1345,7 +1343,6 @@
                 const response = await fetch(`${API_URL}${endpoint}`, options);
 
                 if (response.status === 401) {
-                    // Not authenticated
                     showAuthContainer();
                     return null;
                 }
@@ -1414,7 +1411,9 @@
                 document.getElementById('toggleAuth').setAttribute('data-i18n', 'auth.toggle_signin');
             }
 
-            window.i18n.applyLanguage();
+            if (window.i18n && window.i18n.applyLanguage) {
+                window.i18n.applyLanguage();
+            }
         });
 
         document.getElementById('authForm').addEventListener('submit', async (e) => {
@@ -1466,36 +1465,29 @@
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('logoutBtn').style.display = 'block';
 
-            // Update profile avatar
             if (currentUser && currentUser.username) {
                 document.getElementById('profileAvatar').textContent = currentUser.username[0].toUpperCase();
                 document.getElementById('profileUsername').textContent = currentUser.username;
             }
 
             initFeedCalendar();
-
             loadAlerts();
         }
 
         // Sidebar Navigation
         document.querySelectorAll('.sidebar-item').forEach(item => {
             item.addEventListener('click', () => {
-                // Update active state
                 document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
 
-                // Hide all views
                 document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
 
-                // Show selected view
                 const view = item.dataset.view;
                 document.getElementById(`${view}View`).classList.remove('hidden');
 
-                // Load view data
                 switch(view) {
                     case 'feed':
                         initFeedCalendar();
-
                         break;
                     case 'profile':
                         loadProfile();
@@ -1521,22 +1513,26 @@
         }
 
         async function loadFeedSavedDates() {
-    try {
-        const response = await apiCall('/feed/dates');
-        if (response) {
-            feedSavedDates = Object.keys(response.dates || {});
+            try {
+                const response = await apiCall('/feed/dates');
+                if (response) {
+                    feedSavedDates = Object.keys(response.dates || {});
+                }
+            } catch (error) {
+                console.error('Failed to load feed dates:', error);
+            }
         }
-    } catch (error) {
-        console.error('Failed to load feed dates:', error);
-    }
-}
 
         function renderFeedCalendar() {
             const year = feedCurrentMonth.getFullYear();
             const month = feedCurrentMonth.getMonth();
 
-            const monthNames = window.i18n.t('calendar.months') ? window.i18n.t('calendar.months').split(',') : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-            document.getElementById('feedCurrentMonth').textContent = `${monthNames[month]} ${year}`;
+            // FIX: Use numeric month index directly
+            const translatedMonth = window.i18n && window.i18n.translate ?
+                window.i18n.translate('calendar.' + month) :
+                ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month];
+
+            document.getElementById('feedCurrentMonth').textContent = `${translatedMonth} ${year}`;
 
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -1544,23 +1540,23 @@
             const grid = document.getElementById('feedCalendarGrid');
             grid.innerHTML = '';
 
-            // Add day headers
-            const dayHeaders = window.i18n.t('calendar.days') ? window.i18n.t('calendar.days').split(',') : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            dayHeaders.forEach(day => {
+            // FIX: Get day headers using individual day keys
+            const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+            dayNames.forEach(dayKey => {
                 const header = document.createElement('div');
                 header.style.fontWeight = '600';
                 header.style.textAlign = 'center';
                 header.style.padding = '8px';
-                header.textContent = day;
+                header.textContent = window.i18n && window.i18n.translate ?
+                    window.i18n.translate('day.' + dayKey) :
+                    dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
                 grid.appendChild(header);
             });
 
-            // Add empty cells
             for (let i = 0; i < firstDay; i++) {
                 grid.appendChild(document.createElement('div'));
             }
 
-            // Add days
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayCell = document.createElement('div');
                 dayCell.className = 'feed-calendar-day';
@@ -1590,19 +1586,22 @@
         }
 
         function updateFeedSelectedDateDisplay() {
-    const date = feedSelectedDate;
-    const monthIndex = date.getMonth();
-    const dayIndex = date.getDay();
-    const dayOfMonth = date.getDate();
-    const year = date.getFullYear();
+            const date = feedSelectedDate;
+            const monthIndex = date.getMonth();
+            const dayIndex = date.getDay();
+            const dayOfMonth = date.getDate();
+            const year = date.getFullYear();
 
-    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    const translatedDay = window.i18n.translate('day.' + dayNames[dayIndex]);
-    const translatedMonth = window.i18n.translate('calendar.' + monthIndex);
+            const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+            const translatedDay = window.i18n && window.i18n.translate ?
+                window.i18n.translate('day.' + dayNames[dayIndex]) : dayNames[dayIndex];
+            const translatedMonth = window.i18n && window.i18n.translate ?
+                window.i18n.translate('calendar.' + monthIndex) :
+                ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][monthIndex];
 
-    document.getElementById('feedSelectedDateDisplay').textContent =
-        `${translatedDay}, ${translatedMonth} ${dayOfMonth}, ${year}`;
-}
+            document.getElementById('feedSelectedDateDisplay').textContent =
+                `${translatedDay}, ${translatedMonth} ${dayOfMonth}, ${year}`;
+        }
 
         function feedPreviousMonth() {
             feedCurrentMonth.setMonth(feedCurrentMonth.getMonth() - 1);
@@ -1614,28 +1613,26 @@
             renderFeedCalendar();
         }
 
-      async function loadFeedForDate() {
-    const dateStr = feedSelectedDate.toISOString().split('T')[0];
-    const visibility = document.getElementById('visibilitySelect').value;
+        async function loadFeedForDate() {
+            const dateStr = feedSelectedDate.toISOString().split('T')[0];
+            const visibility = document.getElementById('visibilitySelect').value;
 
-    try {
-        // Use the new load endpoint with visibility parameter
-        const response = await apiCall(`/feed/${dateStr}?visibility=${visibility}`);
+            try {
+                const response = await apiCall(`/feed/${dateStr}?visibility=${visibility}`);
 
-        if (response) {
-            // Load the content into the textarea
-            document.getElementById('postInput').value = response.content || '';
+                if (response) {
+                    document.getElementById('postInput').value = response.content || '';
 
-            if (response.content) {
-                alert(window.i18n.t('msg.loaded') || `Loaded ${visibility.replace('_', ' ')} feed from ${dateStr}`);
-            } else {
-                alert(window.i18n.t('feed.no_activity') || `No ${visibility.replace('_', ' ')} feed for this date`);
+                    if (response.content) {
+                        alert((window.i18n && window.i18n.t ? window.i18n.t('msg.loaded') : 'Loaded') + ` ${visibility.replace('_', ' ')} feed from ${dateStr}`);
+                    } else {
+                        alert((window.i18n && window.i18n.t ? window.i18n.t('feed.no_activity') : 'No activity') + ` for ${visibility.replace('_', ' ')} feed on this date`);
+                    }
+                }
+            } catch (error) {
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         }
-    } catch (error) {
-        alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
-    }
-}
 
         // Feed Functions
         async function loadFeed() {
@@ -1681,30 +1678,30 @@
             return div;
         }
 
-    document.getElementById('postBtn').addEventListener('click', async () => {
-    const content = document.getElementById('postInput').value.trim();
-    const visibility = document.getElementById('visibilitySelect').value;
+        document.getElementById('postBtn').addEventListener('click', async () => {
+            const content = document.getElementById('postInput').value.trim();
+            const visibility = document.getElementById('visibilitySelect').value;
 
-    if (!content) return;
+            if (!content) return;
 
-    try {
-        const dateStr = feedSelectedDate.toISOString().split('T')[0];
+            try {
+                const dateStr = feedSelectedDate.toISOString().split('T')[0];
 
-        await apiCall('/posts', 'POST', {
-            content: content,
-            visibility: visibility,
-            date: dateStr
+                await apiCall('/posts', 'POST', {
+                    content: content,
+                    visibility: visibility,
+                    date: dateStr
+                });
+
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ' successfully!');
+                loadFeedSavedDates();
+                renderFeedCalendar();
+            } catch (error) {
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+            }
         });
 
-        alert(window.i18n.t('msg.saved') || 'Feed saved successfully!');
-        loadFeedSavedDates();
-        renderFeedCalendar();
-    } catch (error) {
-        alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
-    }
-});
-
-        // Profile Functions (Enhanced) - CORRECTED field name
+        // Profile Functions
         async function loadProfile() {
             try {
                 const response = await apiCall('/profile');
@@ -1731,13 +1728,13 @@
 
             try {
                 await apiCall('/profile', 'PUT', profileData);
-                alert(window.i18n.t('msg.saved') || 'Profile updated successfully!');
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ' successfully!');
             } catch (error) {
-                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         });
 
-        // Circles Functions (Enhanced)
+        // Circles Functions
         async function loadCircles() {
             try {
                 const response = await apiCall('/circles');
@@ -1771,60 +1768,60 @@
             count.textContent = members.length;
 
             if (members.length === 0) {
-                container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${window.i18n.t('circles.no_members') || 'No members yet'}</p>`;
+                container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${(window.i18n && window.i18n.t ? window.i18n.t('circles.no_members') : 'No members yet')}</p>`;
             } else {
                 container.innerHTML = members.map(member => `
                     <div class="member-item">
                         <div class="member-avatar">${member.username[0].toUpperCase()}</div>
                         <span class="member-name">${member.username}</span>
-                        <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${window.i18n.t('circles.remove') || 'Remove'}</button>
+                        <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${(window.i18n && window.i18n.t ? window.i18n.t('circles.remove') : 'Remove')}</button>
                     </div>
                 `).join('');
             }
         }
 
-      async function searchUsers() {
-    const query = document.getElementById('userSearchInput').value;
+        async function searchUsers() {
+            const query = document.getElementById('userSearchInput').value;
 
-    if (query.length < 2) {
-        document.getElementById('searchResults').classList.remove('active');
-        return;
-    }
+            if (query.length < 2) {
+                document.getElementById('searchResults').classList.remove('active');
+                return;
+            }
 
-    try {
-        const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
-        if (!response) return;
+            try {
+                const response = await apiCall(`/users/search?q=${encodeURIComponent(query)}`);
+                if (!response) return;
 
-        const container = document.getElementById('searchResults');
+                const container = document.getElementById('searchResults');
 
-        if (response.users.length === 0) {
-            container.innerHTML = `<div class="search-result-item">${window.i18n.t('circles.no_users') || 'No users found'}</div>`;
-        } else {
-            container.innerHTML = response.users.map(user => `
-                <div class="search-result-item" style="display: block; padding: 12px;">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <div class="member-avatar" style="margin-right: 10px;">${user.username[0].toUpperCase()}</div>
-                        <div style="flex: 1;">
-                            <strong>${user.username}</strong><br>
-                            <small style="color: var(--gray);">${user.email}</small>
-                            ${user.bio ? `<br><small style="color: var(--gray); font-style: italic;">${user.bio.substring(0, 60)}${user.bio.length > 60 ? '...' : ''}</small>` : ''}
+                if (response.users.length === 0) {
+                    container.innerHTML = `<div class="search-result-item">${(window.i18n && window.i18n.t ? window.i18n.t('circles.no_users') : 'No users found')}</div>`;
+                } else {
+                    container.innerHTML = response.users.map(user => `
+                        <div class="search-result-item" style="display: block; padding: 12px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <div class="member-avatar" style="margin-right: 10px;">${user.username[0].toUpperCase()}</div>
+                                <div style="flex: 1;">
+                                    <strong>${user.username}</strong><br>
+                                    <small style="color: var(--gray);">${user.email}</small>
+                                    ${user.bio ? `<br><small style="color: var(--gray); font-style: italic;">${user.bio.substring(0, 60)}${user.bio.length > 60 ? '...' : ''}</small>` : ''}
+                                </div>
+                            </div>
+                            <select onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
+                                <option value="">${(window.i18n && window.i18n.t ? window.i18n.t('circles.add_to') : 'Add to circle...')}</option>
+                                <option value="general">${(window.i18n && window.i18n.t ? window.i18n.t('visibility.general') : 'General')}</option>
+                                <option value="close_friends">${(window.i18n && window.i18n.t ? window.i18n.t('visibility.close_friends') : 'Close Friends')}</option>
+                                <option value="family">${(window.i18n && window.i18n.t ? window.i18n.t('visibility.family') : 'Family')}</option>
+                            </select>
                         </div>
-                    </div>
-                    <select onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
-                        <option value="">${window.i18n.t('circles.add_to') || 'Add to circle...'}</option>
-                        <option value="general">${window.i18n.t('visibility.general') || 'General'}</option>
-                        <option value="close_friends">${window.i18n.t('visibility.close_friends') || 'Close Friends'}</option>
-                        <option value="family">${window.i18n.t('visibility.family') || 'Family'}</option>
-                    </select>
-                </div>
-            `).join('');
-        }
+                    `).join('');
+                }
 
-        container.classList.add('active');
-    } catch (error) {
-        console.error('Failed to search users:', error);
-    }
-}
+                container.classList.add('active');
+            } catch (error) {
+                console.error('Failed to search users:', error);
+            }
+        }
 
         async function addToCircle(userId, circleType, username) {
             if (!circleType) return;
@@ -1835,17 +1832,17 @@
                     circle_type: circleType
                 });
 
-                alert(window.i18n.t('msg.saved') || `${username} added to ${circleType.replace('_', ' ')} circle!`);
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + `! ${username} added to ${circleType.replace('_', ' ')} circle`);
                 loadCircles();
                 document.getElementById('userSearchInput').value = '';
                 document.getElementById('searchResults').classList.remove('active');
             } catch (error) {
-                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         }
 
         async function removeFromCircle(userId, circleType) {
-            if (!confirm((window.i18n.t('circles.remove') || 'Remove') + '?')) return;
+            if (!confirm((window.i18n && window.i18n.t ? window.i18n.t('circles.remove') : 'Remove') + '?')) return;
 
             try {
                 await apiCall('/circles/remove', 'DELETE', {
@@ -1855,11 +1852,11 @@
 
                 loadCircles();
             } catch (error) {
-                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         }
 
-        // Messages Functions - Enhanced
+        // Messages Functions
         async function searchUsersForMessage() {
             const query = document.getElementById('messageUserSearch').value;
 
@@ -1875,7 +1872,7 @@
                 const container = document.getElementById('messageSearchResults');
 
                 if (response.users.length === 0) {
-                    container.innerHTML = `<div class="search-result-item">${window.i18n.t('circles.no_users') || 'No users found'}</div>`;
+                    container.innerHTML = `<div class="search-result-item">${(window.i18n && window.i18n.t ? window.i18n.t('circles.no_users') : 'No users found')}</div>`;
                 } else {
                     container.innerHTML = response.users.map(user => `
                         <div class="search-result-item" onclick="startConversation(${user.id}, '${user.username}')">
@@ -1896,7 +1893,6 @@
             document.getElementById('messageSearchResults').classList.remove('active');
             loadMessages(userId, username);
 
-            // If conversation doesn't exist, add it to the list
             const convList = document.getElementById('conversationsList');
             const existingConv = Array.from(convList.children).find(
                 child => child.dataset.userId == userId
@@ -1915,13 +1911,13 @@
                 const container = document.getElementById('conversationsList');
 
                 if (response.conversations && response.conversations.length === 0) {
-                    container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--gray);" data-i18n="messages.no_conversations">${window.i18n.t('messages.no_conversations') || 'No conversations yet'}</div>`;
+                    container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--gray);" data-i18n="messages.no_conversations">${(window.i18n && window.i18n.t ? window.i18n.t('messages.no_conversations') : 'No conversations yet')}</div>`;
                 } else if (response.conversations) {
                     container.innerHTML = response.conversations.map(conv => {
                         const lastMessageTime = conv.last_message && conv.last_message.created_at ?
                             getTimeAgo(new Date(conv.last_message.created_at)) : '';
                         const lastMessageContent = conv.last_message && conv.last_message.content ?
-                            conv.last_message.content : (window.i18n.t('messages.no_messages') || 'No messages yet');
+                            conv.last_message.content : (window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet');
                         const isOwn = conv.last_message && conv.last_message.is_own;
 
                         return `
@@ -1931,14 +1927,13 @@
                                     <span class="conversation-time">${lastMessageTime}</span>
                                 </div>
                                 <div class="conversation-preview">
-                                    ${isOwn ? (window.i18n.t('messages.you') || 'You: ') : ''}${lastMessageContent.substring(0, 50)}${lastMessageContent.length > 50 ? '...' : ''}
+                                    ${isOwn ? ((window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You') + ': ') : ''}${lastMessageContent.substring(0, 50)}${lastMessageContent.length > 50 ? '...' : ''}
                                 </div>
                                 ${conv.unread_count > 0 ? `<span class="unread-badge">${conv.unread_count}</span>` : ''}
                             </div>
                         `;
                     }).join('');
 
-                    // Update active state
                     if (currentRecipient) {
                         const activeItem = container.querySelector(`[data-user-id="${currentRecipient.id}"]`);
                         if (activeItem) {
@@ -1954,12 +1949,10 @@
         async function loadMessages(userId, username) {
             currentRecipient = { id: userId, username: username };
 
-            // Update UI
             document.getElementById('chatHeader').textContent = username;
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendMessageBtn').disabled = false;
 
-            // Update active conversation
             document.querySelectorAll('.conversation-item').forEach(item => {
                 item.classList.remove('active');
                 if (item.dataset.userId == userId) {
@@ -1982,15 +1975,12 @@
                         </div>
                     `).join('');
                 } else {
-                    container.innerHTML = `<div style="text-align: center; padding: 50px; color: var(--gray);" data-i18n="messages.no_messages">${window.i18n.t('messages.no_messages') || 'No messages yet. Start the conversation!'}</div>`;
+                    container.innerHTML = `<div style="text-align: center; padding: 50px; color: var(--gray);" data-i18n="messages.no_messages">${(window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet. Start the conversation!')}</div>`;
                 }
 
                 container.scrollTop = container.scrollHeight;
 
-                // Mark messages as read
                 await apiCall(`/messages/read/${userId}`, 'POST');
-
-                // Refresh conversation list to update unread badges
                 loadConversations();
             } catch (error) {
                 console.error('Failed to load messages:', error);
@@ -2013,11 +2003,10 @@
                 loadMessages(currentRecipient.id, currentRecipient.username);
                 loadConversations();
             } catch (error) {
-                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         });
 
-        // Handle Enter key for sending messages
         document.getElementById('messageInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -2025,7 +2014,7 @@
             }
         });
 
-        // Parameters/Tracking Functions (Enhanced with save/load)
+        // Parameters/Tracking Functions
         function initCalendar() {
             loadSavedDates();
             renderCalendar();
@@ -2047,8 +2036,12 @@
             const year = currentMonth.getFullYear();
             const month = currentMonth.getMonth();
 
-            const monthNames = window.i18n.t('calendar.months') ? window.i18n.t('calendar.months').split(',') : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-            document.getElementById('currentMonth').textContent = `${monthNames[month]} ${year}`;
+            // FIX: Use numeric month index directly
+            const translatedMonth = window.i18n && window.i18n.translate ?
+                window.i18n.translate('calendar.' + month) :
+                ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month];
+
+            document.getElementById('currentMonth').textContent = `${translatedMonth} ${year}`;
 
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -2056,23 +2049,23 @@
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
 
-            // Add day headers
-            const dayHeaders = window.i18n.t('calendar.days') ? window.i18n.t('calendar.days').split(',') : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            dayHeaders.forEach(day => {
+            // FIX: Get day headers using individual day keys
+            const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+            dayNames.forEach(dayKey => {
                 const header = document.createElement('div');
                 header.style.fontWeight = '600';
                 header.style.textAlign = 'center';
                 header.style.padding = '8px';
-                header.textContent = day;
+                header.textContent = window.i18n && window.i18n.translate ?
+                    window.i18n.translate('day.' + dayKey) :
+                    dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
                 grid.appendChild(header);
             });
 
-            // Add empty cells
             for (let i = 0; i < firstDay; i++) {
                 grid.appendChild(document.createElement('div'));
             }
 
-            // Add days
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayCell = document.createElement('div');
                 dayCell.className = 'calendar-day';
@@ -2102,19 +2095,22 @@
         }
 
         function updateSelectedDateDisplay() {
-    const date = selectedDate;
-    const monthIndex = date.getMonth();
-    const dayIndex = date.getDay();
-    const dayOfMonth = date.getDate();
-    const year = date.getFullYear();
+            const date = selectedDate;
+            const monthIndex = date.getMonth();
+            const dayIndex = date.getDay();
+            const dayOfMonth = date.getDate();
+            const year = date.getFullYear();
 
-    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    const translatedDay = window.i18n.translate('day.' + dayNames[dayIndex]);
-    const translatedMonth = window.i18n.translate('calendar.' + monthIndex);
+            const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+            const translatedDay = window.i18n && window.i18n.translate ?
+                window.i18n.translate('day.' + dayNames[dayIndex]) : dayNames[dayIndex];
+            const translatedMonth = window.i18n && window.i18n.translate ?
+                window.i18n.translate('calendar.' + monthIndex) :
+                ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][monthIndex];
 
-    document.getElementById('selectedDateDisplay').textContent =
-        `${translatedDay}, ${translatedMonth} ${dayOfMonth}, ${year}`;
-}
+            document.getElementById('selectedDateDisplay').textContent =
+                `${translatedDay}, ${translatedMonth} ${dayOfMonth}, ${year}`;
+        }
 
         function previousMonth() {
             currentMonth.setMonth(currentMonth.getMonth() - 1);
@@ -2126,10 +2122,9 @@
             renderCalendar();
         }
 
-        // Update sleep display
         document.getElementById('sleepInput').addEventListener('input', (e) => {
             const hours = e.target.value || 0;
-            const hoursText = window.i18n.t('parameters.sleep_hours') || 'Hours';
+            const hoursText = window.i18n && window.i18n.t ? window.i18n.t('parameters.sleep_hours') : 'Hours';
             document.getElementById('sleepDisplay').innerHTML = `<span>${hours}</span> <span data-i18n="parameters.sleep_hours">${hoursText}</span>`;
         });
 
@@ -2148,11 +2143,11 @@
 
             try {
                 await apiCall('/parameters/save', 'POST', parameters);
-                alert(window.i18n.t('msg.saved') || `Parameters saved for ${dateStr}`);
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ` for ${dateStr}`);
                 loadSavedDates();
                 renderCalendar();
             } catch (error) {
-                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         }
 
@@ -2171,17 +2166,16 @@
                     document.getElementById('energyInput').value = data.energy || '';
                     document.getElementById('notesInput').value = data.notes || '';
 
-                    // Update sleep display
                     const hours = data.sleep_hours || 0;
-                    const hoursText = window.i18n.t('parameters.sleep_hours') || 'Hours';
+                    const hoursText = window.i18n && window.i18n.t ? window.i18n.t('parameters.sleep_hours') : 'Hours';
                     document.getElementById('sleepDisplay').innerHTML = `<span>${hours}</span> <span data-i18n="parameters.sleep_hours">${hoursText}</span>`;
 
-                    alert(window.i18n.t('msg.loaded') || `Loaded parameters from ${dateStr}`);
+                    alert((window.i18n && window.i18n.t ? window.i18n.t('msg.loaded') : 'Loaded') + ` from ${dateStr}`);
                 } else {
-                    alert(window.i18n.t('feed.no_posts') || 'No saved parameters for this date');
+                    alert((window.i18n && window.i18n.t ? window.i18n.t('feed.no_posts') : 'No data') + ' for this date');
                 }
             } catch (error) {
-                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         }
 
@@ -2194,7 +2188,7 @@
                 const container = document.getElementById('alertsList');
 
                 if (!response.alerts || response.alerts.length === 0) {
-                    container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${window.i18n.t('alerts.no_alerts') || 'No new alerts'}</p>`;
+                    container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${(window.i18n && window.i18n.t ? window.i18n.t('alerts.no_alerts') : 'No new alerts')}</p>`;
                 } else {
                     container.innerHTML = response.alerts.map(alert => `
                         <div class="alert-item ${alert.type}">
@@ -2204,7 +2198,6 @@
                     `).join('');
                 }
             } catch (error) {
-                // Silently fail for alerts to avoid disrupting user experience
                 console.error('Failed to load alerts:', error);
             }
         }
@@ -2222,10 +2215,10 @@
                     message: message
                 });
 
-                alert(window.i18n.t('msg.sent') || 'Support message sent successfully!');
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.sent') : 'Message sent') + ' successfully!');
                 document.getElementById('supportForm').reset();
             } catch (error) {
-                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
+                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         });
 
@@ -2275,18 +2268,15 @@
             }
         });
 
-        // Auto-refresh alerts (but with error handling)
+        // Auto-refresh alerts
         setInterval(() => {
             if (currentUser) {
-                loadAlerts().catch(() => {
-                    // Silently catch errors to avoid console spam
-                });
+                loadAlerts().catch(() => {});
             }
         }, 30000);
 
         // Listen for language changes
         window.addEventListener('languageChanged', () => {
-            // Rerender calendars with new language
             if (document.getElementById('feedView').classList.contains('hidden') === false) {
                 renderFeedCalendar();
                 updateFeedSelectedDateDisplay();
