@@ -4,6 +4,41 @@
 // Use translation function helper
 const t = (key) => window.i18n ? window.i18n.translate(key) : key;
 
+// ============================================================
+// FIX 1: Time formatting function with "just now" support
+// ============================================================
+function formatMessageTime(timestamp) {
+    const now = new Date();
+    const msgTime = new Date(timestamp);
+    const diffSeconds = Math.floor((now - msgTime) / 1000);
+
+    // Just now (less than 60 seconds)
+    if (diffSeconds < 60) {
+        return t('messages.just_now');
+    }
+
+    // Minutes ago
+    if (diffSeconds < 3600) {
+        const minutes = Math.floor(diffSeconds / 60);
+        return `${minutes} ${t('messages.minutes_ago')}`;
+    }
+
+    // Hours ago (same day)
+    if (msgTime.toDateString() === now.toDateString()) {
+        return msgTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Yesterday
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (msgTime.toDateString() === yesterday.toDateString()) {
+        return t('messages.yesterday');
+    }
+
+    // Older messages
+    return msgTime.toLocaleDateString();
+}
+
 // ===================
 // CIRCLES MANAGEMENT
 // ===================
@@ -754,6 +789,9 @@ async function loadMessages() {
     }
 }
 
+// ============================================================
+// FIX 2: Updated updateConversationsList with translations
+// ============================================================
 function updateConversationsList() {
     // Group messages by conversation partner
     const conversations = {};
@@ -791,16 +829,24 @@ function updateConversationsList() {
     if (conversationArray.length === 0) {
         container.innerHTML = `<div style="text-align: center; padding: 20px; color: #8898aa;">${t('messages.no_conversations')}</div>`;
     } else {
-        container.innerHTML = conversationArray.map(conv => `
-            <div class="conversation-item ${currentRecipient?.id === conv.id ? 'active' : ''}" onclick="selectConversation(${conv.id}, '${conv.name}')">
-                <div class="conversation-avatar">${conv.name[0].toUpperCase()}</div>
-                <div class="conversation-info">
-                    <div class="conversation-name">${conv.name}</div>
-                    <div class="conversation-preview">${conv.lastMessage.content}</div>
+        container.innerHTML = conversationArray.map(conv => {
+            // Determine if last message was sent or received
+            const lastMsgSent = conv.lastMessage.sender.id === currentUserId;
+            const messagePreview = lastMsgSent
+                ? `${t('messages.you')}: ${conv.lastMessage.content}`
+                : `${t('messages.newMessageFrom')} ${conv.name}: ${conv.lastMessage.content}`;
+
+            return `
+                <div class="conversation-item ${currentRecipient?.id === conv.id ? 'active' : ''}" onclick="selectConversation(${conv.id}, '${conv.name}')">
+                    <div class="conversation-avatar">${conv.name[0].toUpperCase()}</div>
+                    <div class="conversation-info">
+                        <div class="conversation-name">${conv.name}</div>
+                        <div class="conversation-preview">${messagePreview}</div>
+                    </div>
+                    ${conv.unread > 0 ? `<div class="unread-badge">${conv.unread}</div>` : ''}
                 </div>
-                ${conv.unread > 0 ? `<div class="unread-badge">${conv.unread}</div>` : ''}
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 }
 
@@ -825,6 +871,9 @@ function selectConversation(recipientId, recipientName) {
     updateConversationsList();
 }
 
+// ============================================================
+// FIX 3: Updated displayConversationMessages with sender prefix and time
+// ============================================================
 function displayConversationMessages(recipientId) {
     const container = document.getElementById('messagesDisplay');
     const messages = [...messagesData.sent, ...messagesData.received]
@@ -839,9 +888,12 @@ function displayConversationMessages(recipientId) {
     } else {
         container.innerHTML = messages.map(msg => {
             const isSent = msg.sender.id === currentUserId;
-            const time = new Date(msg.created_at).toLocaleString();
+            const time = formatMessageTime(msg.created_at);
+            const senderPrefix = isSent ? t('messages.you') : msg.sender.username;
+
             return `
                 <div class="message-bubble ${isSent ? 'message-sent' : 'message-received'}">
+                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; opacity: 0.8;">${senderPrefix}</div>
                     <div>${msg.content}</div>
                     <div class="message-time">${time}</div>
                 </div>
@@ -853,6 +905,9 @@ function displayConversationMessages(recipientId) {
     }
 }
 
+// ============================================================
+// FIX 4: Updated sendMessage with "You" and "Just now"
+// ============================================================
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const content = input.value.trim();
@@ -875,12 +930,13 @@ async function sendMessage() {
             input.value = '';
             loadMessages();
 
-            // Add message to display immediately
+            // Add message to display immediately with translations
             const container = document.getElementById('messagesDisplay');
             const messageHtml = `
                 <div class="message-bubble message-sent">
+                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 5px; opacity: 0.8;">${t('messages.you')}</div>
                     <div>${content}</div>
-                    <div class="message-time">${new Date().toLocaleString()}</div>
+                    <div class="message-time">${t('messages.just_now')}</div>
                 </div>
             `;
             container.innerHTML += messageHtml;

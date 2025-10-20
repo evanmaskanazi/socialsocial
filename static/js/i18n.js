@@ -162,6 +162,9 @@ const translations = {
         'messages.message_sent': 'Message sent!',
         'messages.you': 'You',
         'messages.newMessageFrom': 'New message from',
+        'messages.just_now': 'Just now',
+'messages.minutes_ago': 'minutes ago',
+'messages.yesterday': 'Yesterday',
 
         // Moods
         'mood.great': '😊 Great',
@@ -435,6 +438,9 @@ const translations = {
          'messages.message_sent': 'ההודעה נשלחה!',
         'messages.you': 'אתה',
         'messages.newMessageFrom': 'הודעה חדשה מ',
+        'messages.just_now': 'ממש עכשיו',
+'messages.minutes_ago': 'דקות',
+'messages.yesterday': 'אתמול',
 
         // Moods
         'mood.great': '😊 מצוין',
@@ -707,6 +713,9 @@ const translations = {
         'messages.message_sent': 'تم إرسال الرسالة!',
         'messages.you': 'أنت',
         'messages.newMessageFrom': 'رسالة جديدة من',
+        'messages.just_now': 'الآن',
+'messages.minutes_ago': 'دقائق مضت',
+'messages.yesterday': 'أمس',
 
         // Moods
         'mood.great': '😊 رائع',
@@ -979,6 +988,9 @@ const translations = {
         'messages.message_sent': 'Сообщение отправлено!',
         'messages.you': 'Вы',
         'messages.newMessageFrom': 'Новое сообщение от',
+        'messages.just_now': 'Только что',
+'messages.minutes_ago': 'минут назад',
+'messages.yesterday': 'Вчера',
 
         // Moods
         'mood.great': '😊 Отлично',
