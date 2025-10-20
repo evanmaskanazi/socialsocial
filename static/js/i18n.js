@@ -1216,6 +1216,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+ if (typeof window !== 'undefined')
+
+ const t = translate;
 
 // Export for use in other scripts - includes both 'translate' and 't' as alias
 if (typeof window !== 'undefined') {
