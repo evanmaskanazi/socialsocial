@@ -4,25 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Messages - Social Social</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+    </style>
 </head>
 <body>
-    <div id="messagesContainer"></div>
+    <div id="messagesContainer">Loading...</div>
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/circles-messages.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Apply translations after i18n is loaded
-            document.getElementById('messagesContainer').innerHTML = messagesHTML;
-
-            // Apply translations to the dynamically loaded content
-            window.i18n.applyLanguage();
-
-            getCurrentUser().then(() => loadMessages());
-
-            // Re-apply translations when language changes
-            window.addEventListener('languageChanged', () => {
-                window.i18n.applyLanguage();
+        // Wait for i18n to be fully loaded
+        function waitForI18n() {
+            return new Promise((resolve) => {
+                if (window.i18n && window.i18n.t) {
+                    resolve();
+                } else {
+                    setTimeout(() => waitForI18n().then(resolve), 50);
+                }
             });
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Wait for i18n to load
+                await waitForI18n();
+
+                // Check authentication first
+                const sessionResponse = await fetch('/api/auth/session', {
+                    credentials: 'include'
+                });
+
+                if (!sessionResponse.ok) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                // Load content
+                document.getElementById('messagesContainer').innerHTML = messagesHTML;
+
+                // Apply translations
+                window.i18n.applyLanguage();
+
+                // Load user data and messages
+                await getCurrentUser();
+                await loadMessages();
+
+                // Re-apply translations when language changes
+                window.addEventListener('languageChanged', () => {
+                    window.i18n.applyLanguage();
+                });
+            } catch (error) {
+                console.error('Initialization error:', error);
+                document.getElementById('messagesContainer').innerHTML =
+                    '<p style="color: white; text-align: center;">Error loading messages. Please try again.</p>';
+            }
         });
     </script>
 </body>

@@ -1903,111 +1903,162 @@
             }
         }
 
-        async function loadConversations() {
-            try {
-                const response = await apiCall('/messages/conversations');
-                console.log('Conversations response:', response);
-                if (!response) return;
+      async function loadConversations() {
+    try {
+        const response = await apiCall('/messages/conversations');
+        console.log('Conversations response:', response);
+        if (!response) return;
 
-                const container = document.getElementById('conversationsList');
+        const container = document.getElementById('conversationsList');
 
-                if (response.conversations && response.conversations.length === 0) {
-                    container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--gray);" data-i18n="messages.no_conversations">${(window.i18n && window.i18n.t ? window.i18n.t('messages.no_conversations') : 'No conversations yet')}</div>`;
-                } else if (response.conversations) {
-                    container.innerHTML = response.conversations.map(conv => {
-                        const lastMessageTime = conv.last_message && conv.last_message.created_at ?
-                            getTimeAgo(new Date(conv.last_message.created_at)) : '';
-                        const lastMessageContent = conv.last_message && conv.last_message.content ?
-                            conv.last_message.content : (window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet');
-                        const isOwn = conv.last_message && conv.last_message.is_own;
+        // Cache translation strings
+        const noConversationsText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_conversations') : 'No conversations yet';
+        const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet';
+        const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You';
 
-                        return `
-                            <div class="conversation-item" data-user-id="${conv.user.id}" onclick="loadMessages(${conv.user.id}, '${conv.user.username}')">
-                                <div class="conversation-header">
-                                    <span class="conversation-username">${conv.user.username}</span>
-                                    <span class="conversation-time">${lastMessageTime}</span>
-                                </div>
-                                <div class="conversation-preview">
-                                    ${isOwn ? ((window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You') + ': ') : ''}${lastMessageContent.substring(0, 50)}${lastMessageContent.length > 50 ? '...' : ''}
-                                </div>
-                                ${conv.unread_count > 0 ? `<span class="unread-badge">${conv.unread_count}</span>` : ''}
-                            </div>
-                        `;
-                    }).join('');
+        if (response.conversations && response.conversations.length === 0) {
+            container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--gray);" data-i18n="messages.no_conversations">${noConversationsText}</div>`;
+        } else if (response.conversations) {
+            container.innerHTML = response.conversations.map(conv => {
+                // Safely access nested properties with fallbacks
+                const userId = conv.user && conv.user.id ? conv.user.id : 0;
+                const username = conv.user && conv.user.username ? conv.user.username : 'Unknown User';
+                const lastMessageCreatedAt = conv.last_message && conv.last_message.created_at ? conv.last_message.created_at : null;
+                const lastMessageTime = lastMessageCreatedAt ? getTimeAgo(new Date(lastMessageCreatedAt)) : '';
+                const lastMessageContent = conv.last_message && conv.last_message.content ? conv.last_message.content : noMessagesText;
+                const isOwn = conv.last_message && conv.last_message.is_own === true;
+                const unreadCount = conv.unread_count || 0;
 
-                    if (currentRecipient) {
-                        const activeItem = container.querySelector(`[data-user-id="${currentRecipient.id}"]`);
-                        if (activeItem) {
-                            activeItem.classList.add('active');
-                        }
-                    }
+                // Prevent errors if userId or username is invalid
+                if (!userId || !username) {
+                    console.warn('Invalid conversation data:', conv);
+                    return '';
                 }
-            } catch (error) {
-                console.error('Failed to load conversations:', error);
-            }
-        }
 
-        async function loadMessages(userId, username) {
-            currentRecipient = { id: userId, username: username };
+                // Escape HTML in username to prevent XSS
+                const safeUsername = escapeHtml(username);
 
-            document.getElementById('chatHeader').textContent = username;
-            document.getElementById('messageInput').disabled = false;
-            document.getElementById('sendMessageBtn').disabled = false;
-
-            document.querySelectorAll('.conversation-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.dataset.userId == userId) {
-                    item.classList.add('active');
-                }
-            });
-
-            try {
-                const response = await apiCall(`/messages?recipient_id=${userId}`);
-                console.log('Messages response:', response); // ✅ Debug log
-                if (!response) return;
-
-                const container = document.getElementById('messagesList');
-
-                if (response.messages && response.messages.length > 0) {
-                    container.innerHTML = response.messages.map(msg => `
-                        <div class="message ${msg.sender.id === currentUser.id ? 'own' : ''}">
-                            <div class="message-bubble">
-                                ${escapeHtml(msg.content)}
-                            </div>
+                return `
+                    <div class="conversation-item" data-user-id="${userId}" onclick="loadMessages(${userId}, '${safeUsername}')">
+                        <div class="conversation-header">
+                            <span class="conversation-username">${safeUsername}</span>
+                            <span class="conversation-time">${lastMessageTime}</span>
                         </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = `<div style="text-align: center; padding: 50px; color: var(--gray);" data-i18n="messages.no_messages">${(window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet. Start the conversation!')}</div>`;
+                        <div class="conversation-preview">
+                            ${isOwn ? (youText + ': ') : ''}${escapeHtml(lastMessageContent.substring(0, 50))}${lastMessageContent.length > 50 ? '...' : ''}
+                        </div>
+                        ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}
+                    </div>
+                `;
+            }).filter(html => html !== '').join('');
+
+            if (currentRecipient && currentRecipient.id) {
+                const activeItem = container.querySelector(`[data-user-id="${currentRecipient.id}"]`);
+                if (activeItem) {
+                    activeItem.classList.add('active');
                 }
-
-                container.scrollTop = container.scrollHeight;
-
-                await apiCall(`/messages/read/${userId}`, 'POST');
-                loadConversations();
-            } catch (error) {
-                console.error('Failed to load messages:', error);
             }
         }
+    } catch (error) {
+        console.error('Failed to load conversations:', error);
+        const container = document.getElementById('conversationsList');
+        const errorText = window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error loading conversations';
+        container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--danger);">${errorText}</div>`;
+    }
+}
 
-        document.getElementById('sendMessageBtn').addEventListener('click', async () => {
-            if (!currentRecipient) return;
+      async function loadMessages(userId, username) {
+    // Validate inputs
+    if (!userId || !username) {
+        console.error('Invalid userId or username:', { userId, username });
+        alert(window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error: Invalid user data');
+        return;
+    }
 
-            const content = document.getElementById('messageInput').value.trim();
-            if (!content) return;
+    currentRecipient = { id: userId, username: username };
 
-            try {
-                await apiCall('/messages', 'POST', {
-                    recipient_id: currentRecipient.id,
-                    content: content
-                });
+    document.getElementById('chatHeader').textContent = username;
+    document.getElementById('messageInput').disabled = false;
+    document.getElementById('sendMessageBtn').disabled = false;
 
-                document.getElementById('messageInput').value = '';
-                 await loadMessages(currentRecipient.id, currentRecipient.username);
-                 await loadConversations();
-            } catch (error) {
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
-            }
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.userId == userId) {
+            item.classList.add('active');
+        }
+    });
+
+    try {
+        const response = await apiCall(`/messages?recipient_id=${userId}`);
+        console.log('Messages response:', response);
+        if (!response) return;
+
+        const container = document.getElementById('messagesList');
+        const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet. Start the conversation!';
+
+        if (response.messages && response.messages.length > 0) {
+            container.innerHTML = response.messages.map(msg => {
+                // Safely check if sender exists and get ID
+                const senderId = msg.sender && msg.sender.id ? msg.sender.id : null;
+                const currentUserId = currentUser && currentUser.id ? currentUser.id : null;
+                const isOwn = senderId === currentUserId;
+                const content = msg.content || '';
+
+                return `
+                    <div class="message ${isOwn ? 'own' : ''}">
+                        <div class="message-bubble">
+                            ${escapeHtml(content)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            container.innerHTML = `<div style="text-align: center; padding: 50px; color: var(--gray);" data-i18n="messages.no_messages">${noMessagesText}</div>`;
+        }
+
+        container.scrollTop = container.scrollHeight;
+
+        await apiCall(`/messages/read/${userId}`, 'POST');
+        loadConversations();
+    } catch (error) {
+        console.error('Failed to load messages:', error);
+        const container = document.getElementById('messagesList');
+        const errorText = window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error loading messages';
+        container.innerHTML = `<div style="text-align: center; padding: 50px; color: var(--danger);">${errorText}</div>`;
+    }
+}
+
+    document.getElementById('sendMessageBtn').addEventListener('click', async () => {
+    // Check if recipient is selected
+    if (!currentRecipient || !currentRecipient.id) {
+        const errorText = window.i18n && window.i18n.t ? window.i18n.t('messages.select_conversation') : 'Please select a conversation first';
+        alert(errorText);
+        return;
+    }
+
+    const content = document.getElementById('messageInput').value.trim();
+    if (!content) return;
+
+    try {
+        const response = await apiCall('/messages', 'POST', {
+            recipient_id: currentRecipient.id,
+            content: content
         });
+
+        // Validate response before proceeding
+        if (response && response.success) {
+            document.getElementById('messageInput').value = '';
+            await loadMessages(currentRecipient.id, currentRecipient.username);
+            await loadConversations();
+        } else {
+            throw new Error(response && response.error ? response.error : 'Failed to send message');
+        }
+    } catch (error) {
+        console.error('Send message error:', error);
+        const errorText = window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error';
+        alert(errorText + ': ' + (error.message || 'Failed to send message'));
+    }
+});
 
         document.getElementById('messageInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -2243,6 +2294,7 @@
 
         // Check authentication on load
     // Check authentication on load
+// Check authentication on load
 window.addEventListener('DOMContentLoaded', async () => {
     // Set up language selector event listener
     const langSelector = document.getElementById('languageSelector');
@@ -2255,15 +2307,29 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        // ✅ FIXED: Removed /api prefix - apiCall adds it automatically
-        const response = await apiCall('/auth/session');
-        if (response && response.authenticated) {
-            currentUser = response.user;
-            showDashboard();
+        // FIX 8: Direct fetch call to avoid recursion with apiCall
+        const response = await fetch(`${API_URL}/auth/session`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.authenticated) {
+                currentUser = data.user;
+                showDashboard();
+            } else {
+                showAuthContainer();
+            }
+        } else if (response.status === 401) {
+            showAuthContainer();
         } else {
+            console.error('Session check failed:', response.status);
             showAuthContainer();
         }
     } catch (error) {
+        console.error('Session check error:', error);
         showAuthContainer();
     }
 });
