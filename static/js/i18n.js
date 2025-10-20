@@ -159,6 +159,9 @@ const translations = {
         'messages.select_recipient': 'Select recipient...',
         'messages.select_and_type': 'Please select a recipient and enter a message',
         'messages.message_sent': 'Message sent!',
+        'messages.message_sent': 'Message sent!',
+        'messages.you': 'You',
+        'messages.newMessageFrom': 'New message from',
 
         // Moods
         'mood.great': '😊 Great',
@@ -225,6 +228,9 @@ const translations = {
         'profile.save_changes': 'Save Changes',
         'profile.cancel': 'Cancel',
         'profile.updated': 'Profile updated successfully!',
+        'profile.hobbies_placeholder': 'What do you love to do in your free time?',
+        'profile.save': 'Save',
+        'profile.save_changes': 'Save Changes',
 
         // Days of week
         'day.sun': 'Sun',
@@ -426,6 +432,9 @@ const translations = {
         'messages.select_recipient': 'בחר נמען...',
         'messages.select_and_type': 'אנא בחר נמען והזן הודעה',
         'messages.message_sent': 'ההודעה נשלחה!',
+         'messages.message_sent': 'ההודעה נשלחה!',
+        'messages.you': 'אתה',
+        'messages.newMessageFrom': 'הודעה חדשה מ',
 
         // Moods
         'mood.great': '😊 מצוין',
@@ -492,6 +501,9 @@ const translations = {
         'profile.save_changes': 'שמור שינויים',
         'profile.cancel': 'ביטול',
         'profile.updated': 'הפרופיל עודכן בהצלחה!',
+         'profile.hobbies_placeholder': 'מה אתה אוהב לעשות בזמן הפנוי שלך?',
+        'profile.save': 'שמור',
+        'profile.save_changes': 'שמור שינויים',
 
         // Days of week
         'day.sun': 'א\'',
@@ -692,6 +704,9 @@ const translations = {
         'messages.select_recipient': 'حدد المستلم...',
         'messages.select_and_type': 'يرجى تحديد مستلم وإدخال رسالة',
         'messages.message_sent': 'تم إرسال الرسالة!',
+        'messages.message_sent': 'تم إرسال الرسالة!',
+        'messages.you': 'أنت',
+        'messages.newMessageFrom': 'رسالة جديدة من',
 
         // Moods
         'mood.great': '😊 رائع',
@@ -758,6 +773,9 @@ const translations = {
         'profile.save_changes': 'حفظ التغييرات',
         'profile.cancel': 'إلغاء',
         'profile.updated': 'تم تحديث الملف الشخصي بنجاح!',
+         'profile.hobbies_placeholder': 'ماذا تحب أن تفعل في وقت فراغك؟',
+        'profile.save': 'حفظ',
+        'profile.save_changes': 'حفظ التغييرات',
 
         // Days of week
         'day.sun': 'الأحد',
@@ -958,6 +976,9 @@ const translations = {
         'messages.select_recipient': 'Выберите получателя...',
         'messages.select_and_type': 'Пожалуйста, выберите получателя и введите сообщение',
         'messages.message_sent': 'Сообщение отправлено!',
+        'messages.message_sent': 'Сообщение отправлено!',
+        'messages.you': 'Вы',
+        'messages.newMessageFrom': 'Новое сообщение от',
 
         // Moods
         'mood.great': '😊 Отлично',
@@ -1024,6 +1045,10 @@ const translations = {
         'profile.save_changes': 'Сохранить изменения',
         'profile.cancel': 'Отмена',
         'profile.updated': 'Профиль успешно обновлён!',
+        'profile.hobbies_placeholder': 'Чем вы любите заниматься в свободное время?',
+        'profile.save': 'Сохранить',
+        'profile.save_changes': 'Сохранить изменения',
+
 
         // Days of week
         'day.sun': 'Вс',
