@@ -1906,6 +1906,7 @@
         async function loadConversations() {
             try {
                 const response = await apiCall('/messages/conversations');
+                console.log('Conversations response:', response);
                 if (!response) return;
 
                 const container = document.getElementById('conversationsList');
@@ -1962,6 +1963,7 @@
 
             try {
                 const response = await apiCall(`/messages?recipient_id=${userId}`);
+                console.log('Messages response:', response); // ✅ Debug log
                 if (!response) return;
 
                 const container = document.getElementById('messagesList');
@@ -2000,8 +2002,8 @@
                 });
 
                 document.getElementById('messageInput').value = '';
-                loadMessages(currentRecipient.id, currentRecipient.username);
-                loadConversations();
+                 await loadMessages(currentRecipient.id, currentRecipient.username);
+                 await loadConversations();
             } catch (error) {
                 alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
@@ -2240,7 +2242,8 @@
         }
 
         // Check authentication on load
-     window.addEventListener('DOMContentLoaded', async () => {
+    // Check authentication on load
+window.addEventListener('DOMContentLoaded', async () => {
     // Set up language selector event listener
     const langSelector = document.getElementById('languageSelector');
     if (langSelector) {
@@ -2252,7 +2255,8 @@
     }
 
     try {
-        const response = await apiCall('/api/auth/session');
+        // ✅ FIXED: Removed /api prefix - apiCall adds it automatically
+        const response = await apiCall('/auth/session');
         if (response && response.authenticated) {
             currentUser = response.user;
             showDashboard();
