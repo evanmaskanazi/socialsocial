@@ -6,6 +6,7 @@ const translations = {
         'nav.home': 'Home',
         'nav.about': 'About',
         'nav.support': 'Support',
+        'nav.logout': 'Logout',
         'menu.feed': 'Feed',
         'menu.profile': 'Profile',
         'menu.circles': 'Circles',
@@ -763,12 +764,20 @@ const translations = {
         'calendar.prev': 'Предыдущий',
         'calendar.next': 'Следующий',
         'calendar.today': 'Сегодня',
+        'calendar.days': 'Дни',
+        'calendar.month_year': '{month} {year}',
         
         // Visibility settings
         'visibility.general': 'Общий',
         'visibility.close_friends': 'Близкие друзья',
         'visibility.family': 'Семья',
         'visibility.private': 'Личное',
+        
+        // Alerts
+        'alerts.title': 'Уведомления',
+        'alerts.no_alerts': 'Пока нет уведомлений',
+        'alerts.mark_read': 'Отметить как прочитанное',
+        'alerts.clear_all': 'Очистить всё',
         
         // Circles page
         'circles.title': 'Мои круги',
@@ -793,6 +802,7 @@ const translations = {
         'messages.type_message': 'Введите сообщение...',
         'messages.send': 'Отправить',
         'messages.search': 'Поиск по разговорам',
+        'messages.search_placeholder': 'Поиск сообщений...',
         'messages.no_messages': 'Пока нет сообщений',
         'messages.start_conversation': 'Пока нет сообщений. Начните разговор!',
         'messages.new_message': 'Новое сообщение',
@@ -818,6 +828,7 @@ const translations = {
         'parameters.title': 'Ежедневные параметры',
         'parameters.select_date': 'Выберите дату',
         'parameters.current_date': 'Текущая дата:',
+        'parameters.insights': 'Аналитика',
         'parameters.mood': 'Настроение',
         'parameters.mood_placeholder': 'Как вы себя чувствуете? (например, Счастливый, Спокойный, Встревоженный и т.д.)',
         'parameters.sleep': 'Сон',
