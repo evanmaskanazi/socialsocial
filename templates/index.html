@@ -1951,7 +1951,7 @@
             }
         }
 
-      async function loadConversations() {
+   async function loadConversations() {
     try {
         const response = await apiCall('/messages/conversations');
         console.log('Conversations response:', response);
@@ -1964,7 +1964,8 @@
         const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet';
         const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : 'You';
 
-       const data = await response.json();
+        // FIX: response is already parsed JSON from apiCall, don't parse again
+        const data = response;
 
         if (!data.conversations || data.conversations.length === 0) {
             container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--gray);" data-i18n="messages.no_conversations">${noConversationsText}</div>`;
@@ -2287,7 +2288,7 @@
         }
 
         // Alerts Functions
-        async function loadAlerts() {
+   async function loadAlerts() {
             try {
                 const response = await apiCall('/alerts');
                 if (!response) return;
@@ -2297,12 +2298,25 @@
                 if (!response.alerts || response.alerts.length === 0) {
                     container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${(window.i18n && window.i18n.t ? window.i18n.t('alerts.no_alerts') : 'No new alerts')}</p>`;
                 } else {
-                    container.innerHTML = response.alerts.map(alert => `
-                        <div class="alert-item ${alert.type}">
-                            <strong>${alert.title}</strong><br>
-                            <small>${alert.content || alert.message || ''}</small>
-                        </div>
-                    `).join('');
+                    container.innerHTML = response.alerts.map(alert => {
+                        // Translate alert titles
+                        let title = alert.title;
+
+                        // Handle "New message from X" pattern
+                        if (title && title.startsWith('New message from ')) {
+                            const username = title.replace('New message from ', '');
+                            const newMessageText = window.i18n && window.i18n.t ?
+                                window.i18n.t('alerts.new_message_from') : 'New message from';
+                            title = `${newMessageText} ${username}`;
+                        }
+
+                        return `
+                            <div class="alert-item ${alert.type}">
+                                <strong>${escapeHtml(title)}</strong><br>
+                                <small>${escapeHtml(alert.content || alert.message || '')}</small>
+                            </div>
+                        `;
+                    }).join('');
                 }
             } catch (error) {
                 console.error('Failed to load alerts:', error);
@@ -2336,7 +2350,7 @@
             return div.innerHTML;
         }
 
-     
+
 
         // Check authentication on load
     // Check authentication on load
@@ -2402,6 +2416,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }, 30000);
 
         // Listen for language changes
+  // Listen for language changes
         window.addEventListener('languageChanged', () => {
             if (document.getElementById('feedView').classList.contains('hidden') === false) {
                 renderFeedCalendar();
@@ -2410,6 +2425,10 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (document.getElementById('trackingView').classList.contains('hidden') === false) {
                 renderCalendar();
                 updateSelectedDateDisplay();
+            }
+            // Reload alerts to apply new translations
+            if (currentUser) {
+                loadAlerts().catch(() => {});
             }
         });
     </script>
