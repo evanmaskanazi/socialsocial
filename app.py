@@ -1526,27 +1526,30 @@ def messages():
             return jsonify({'error': 'Failed to send message'}), 500
 
 
-@app.route('/api/messages/<int:message_id>/read', methods=['PUT'])
+@app.route('/api/messages/read/<int:recipient_id>', methods=['POST'])
 @login_required
-def mark_message_read(message_id):
-    """Mark message as read"""
+def mark_messages_read(recipient_id):
+    """Mark all messages from a recipient as read"""
     try:
         user_id = session.get('user_id')
-        message = db.session.get(Message, message_id)
 
-        if not message:
-            return jsonify({'error': 'Message not found'}), 404
+        # Mark all unread messages from this sender as read
+        unread_messages = Message.query.filter_by(
+            sender_id=recipient_id,
+            recipient_id=user_id,
+            is_read=False
+        ).all()
 
-        if message.recipient_id != user_id:
-            return jsonify({'error': 'Unauthorized'}), 403
+        for message in unread_messages:
+            message.is_read = True
 
-        message.is_read = True
         db.session.commit()
 
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'marked_count': len(unread_messages)})
     except Exception as e:
-        logger.error(f"Mark message error: {str(e)}")
-        return jsonify({'error': 'Failed to mark message'}), 500
+        logger.error(f"Mark messages error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to mark messages'}), 500
 
 
 @app.route('/api/messages/conversations')
@@ -1578,7 +1581,7 @@ def get_conversations():
                     )
                 ).order_by(desc(Message.created_at))
 
-                last_message = db.session.execute(last_msg_stmt).scalar_one_or_none()
+                last_message = db.session.execute(last_msg_stmt).scalars().first()
 
                 # Count unread messages from this partner
                 unread_stmt = select(func.count(Message.id)).filter_by(
