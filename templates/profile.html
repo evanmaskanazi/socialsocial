@@ -7,6 +7,18 @@
 </head>
 <body>
     <div id="profileContainer"></div>
+    <script src="/static/js/i18n.js"></script>
     <script src="/static/js/profile.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Apply translations after content is loaded
+            window.i18n.applyLanguage();
+
+            // Re-apply translations when language changes
+            window.addEventListener('languageChanged', () => {
+                window.i18n.applyLanguage();
+            });
+        });
+    </script>
 </body>
 </html>

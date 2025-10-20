@@ -10,14 +10,19 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        
+
+        /* RTL Support */
+        [dir="rtl"] {
+            direction: rtl;
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -26,7 +31,24 @@
             padding: 40px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
         }
-        
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .language-selector {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
         h1 {
             color: #667eea;
             font-size: 2.5em;
@@ -36,20 +58,20 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
+
         .content {
             color: #333;
             line-height: 1.8;
             font-size: 1.1em;
         }
-        
+
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 30px;
             margin: 40px 0;
         }
-        
+
         .feature-card {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             padding: 25px;
@@ -57,24 +79,24 @@
             text-align: center;
             transition: transform 0.3s;
         }
-        
+
         .feature-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
-        
+
         .feature-icon {
             font-size: 3em;
             margin-bottom: 15px;
         }
-        
+
         .feature-title {
             font-size: 1.3em;
             color: #667eea;
             margin-bottom: 10px;
             font-weight: bold;
         }
-        
+
         .back-link {
             display: inline-block;
             margin-top: 30px;
@@ -85,60 +107,72 @@
             border-radius: 25px;
             transition: transform 0.3s;
         }
-        
+
         .back-link:hover {
             transform: scale(1.05);
+        }
+
+        [dir="rtl"] .features {
+            direction: rtl;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>About Social Social</h1>
-        
+        <div class="header">
+            <h1 data-i18n="about.title">About Social Social</h1>
+            <select id="languageSelector" class="language-selector" onchange="window.i18n.changeLanguage(this.value)">
+                <option value="en">English</option>
+                <option value="he">עברית</option>
+                <option value="ar">العربية</option>
+                <option value="ru">Русский</option>
+            </select>
+        </div>
+
         <div class="content">
             <p>Welcome to Social Social - your premier platform for meaningful connections and authentic social interactions. Founded with the vision of bringing people closer together, we're redefining how people connect in the digital age.</p>
-            
+
             <h2 style="color: #667eea; margin: 30px 0 20px;">Our Mission</h2>
             <p>We believe in the power of genuine connections. Our mission is to create a safe, inclusive space where people can share their thoughts, build relationships, and support each other through life's journey.</p>
-            
+
             <div class="features">
                 <div class="feature-card">
-                    <div class="feature-icon">👥</div>
+                    <div class="feature-icon">💥</div>
                     <div class="feature-title">Connect</div>
                     <p>Build meaningful relationships with friends, family, and new connections</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">💬</div>
                     <div class="feature-title">Communicate</div>
                     <p>Share your thoughts through posts and private messages</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
                     <div class="feature-title">Circles</div>
                     <p>Organize your connections into circles for better interaction</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">🔒</div>
                     <div class="feature-title">Privacy</div>
                     <p>Your data is secure and your privacy is our priority</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">🌟</div>
                     <div class="feature-title">Growth</div>
                     <p>Track your personal goals and celebrate achievements</p>
                 </div>
-                
+
                 <div class="feature-card">
                     <div class="feature-icon">🤝</div>
                     <div class="feature-title">Support</div>
                     <p>Get help when you need it from our dedicated team</p>
                 </div>
             </div>
-            
+
             <h2 style="color: #667eea; margin: 30px 0 20px;">Our Values</h2>
             <ul style="margin-left: 30px; line-height: 2;">
                 <li><strong>Authenticity:</strong> Be yourself, always</li>
@@ -146,15 +180,31 @@
                 <li><strong>Innovation:</strong> Constantly improving your experience</li>
                 <li><strong>Community:</strong> Together we're stronger</li>
             </ul>
-            
+
             <p style="margin-top: 30px; text-align: center; color: #666;">
                 Join thousands of users who have already discovered the joy of meaningful connections on Social Social.
             </p>
         </div>
-        
+
         <center>
-            <a href="/" class="back-link">Back to Home</a>
+            <a href="/" class="back-link" data-i18n="btn.back">Back to Home</a>
         </center>
     </div>
+
+    <script src="/static/js/i18n.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Apply translations after page loads
+            window.i18n.applyLanguage();
+
+            // Set the language selector to current language
+            document.getElementById('languageSelector').value = window.i18n.getCurrentLanguage();
+
+            // Re-apply translations when language changes
+            window.addEventListener('languageChanged', () => {
+                window.i18n.applyLanguage();
+            });
+        });
+    </script>
 </body>
 </html>

@@ -7,11 +7,22 @@
 </head>
 <body>
     <div id="circlesContainer"></div>
+    <script src="/static/js/i18n.js"></script>
     <script src="/static/js/circles-messages.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Apply translations after i18n is loaded
             document.getElementById('circlesContainer').innerHTML = circlesHTML;
+
+            // Apply translations to the dynamically loaded content
+            window.i18n.applyLanguage();
+
             loadCircles();
+
+            // Re-apply translations when language changes
+            window.addEventListener('languageChanged', () => {
+                window.i18n.applyLanguage();
+            });
         });
     </script>
 </body>

@@ -31,6 +31,26 @@
             color: var(--dark);
         }
 
+        /* RTL Support */
+        [dir="rtl"] {
+            direction: rtl;
+        }
+
+        [dir="rtl"] .nav-menu {
+            flex-direction: row-reverse;
+        }
+
+        [dir="rtl"] .avatar,
+        [dir="rtl"] .member-avatar {
+            margin-right: 0;
+            margin-left: 12px;
+        }
+
+        [dir="rtl"] .post-header .avatar {
+            margin-right: 0;
+            margin-left: 12px;
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -75,6 +95,16 @@
 
         .nav-link:hover {
             color: var(--primary);
+        }
+
+        .language-selector {
+            padding: 8px 12px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            background: var(--white);
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
         }
 
         /* Auth Forms */
@@ -622,6 +652,11 @@
             overflow-y: auto;
         }
 
+        [dir="rtl"] .conversations-list {
+            border-right: none;
+            border-left: 1px solid #E5E7EB;
+        }
+
         .conversation-item {
             padding: 15px;
             border-bottom: 1px solid #E5E7EB;
@@ -679,6 +714,11 @@
             font-size: 12px;
             min-width: 20px;
             text-align: center;
+        }
+
+        [dir="rtl"] .unread-badge {
+            right: auto;
+            left: 15px;
         }
 
         .chat-area {
@@ -755,12 +795,27 @@
             border-left: 4px solid var(--warning);
         }
 
+        [dir="rtl"] .alert-item {
+            border-left: none;
+            border-right: 4px solid var(--warning);
+        }
+
         .alert-item.high {
             border-left-color: var(--danger);
         }
 
+        [dir="rtl"] .alert-item.high {
+            border-left-color: transparent;
+            border-right-color: var(--danger);
+        }
+
         .alert-item.low {
             border-left-color: var(--success);
+        }
+
+        [dir="rtl"] .alert-item.low {
+            border-left-color: transparent;
+            border-right-color: var(--success);
         }
 
         /* About and Support Pages */
@@ -863,12 +918,18 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-content">
-            <div class="logo">🧠 Thera Social</div>
+            <div class="logo" data-i18n="nav.logo">🧠 Thera Social</div>
             <div class="nav-menu">
-                <a href="#" class="nav-link" id="navHome">Home</a>
-                <a href="#" class="nav-link" id="navAbout">About</a>
-                <a href="#" class="nav-link" id="navSupport">Support</a>
-                <button class="btn btn-primary" id="logoutBtn" style="display: none; width: auto;">Logout</button>
+                <select id="languageSelector" class="language-selector" onchange="window.i18n.changeLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="he">עברית</option>
+                    <option value="ar">العربية</option>
+                    <option value="ru">Русский</option>
+                </select>
+                <a href="#" class="nav-link" id="navHome" data-i18n="nav.home">Home</a>
+                <a href="#" class="nav-link" id="navAbout" data-i18n="nav.about">About</a>
+                <a href="#" class="nav-link" id="navSupport" data-i18n="nav.support">Support</a>
+                <button class="btn btn-primary" id="logoutBtn" style="display: none; width: auto;" data-i18n="nav.logout">Logout</button>
             </div>
         </div>
     </nav>
@@ -876,24 +937,24 @@
     <!-- Auth Container -->
     <div id="authContainer" class="auth-container">
         <div class="auth-card fade-in">
-            <h2 class="auth-title" id="authTitle">Welcome Back</h2>
+            <h2 class="auth-title" id="authTitle" data-i18n="auth.welcome">Welcome Back</h2>
             <form id="authForm">
                 <div class="form-group">
-                    <label class="form-label">Email</label>
+                    <label class="form-label" data-i18n="auth.email">Email</label>
                     <input type="email" class="form-input" id="emailInput" autocomplete="email" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Password</label>
+                    <label class="form-label" data-i18n="auth.password">Password</label>
                     <input type="password" class="form-input" id="passwordInput" autocomplete="current-password" required>
                 </div>
                 <div class="form-group" id="usernameGroup" style="display: none;">
-                    <label class="form-label">Username</label>
-                    <input type="text" class="form-input" id="usernameInput" autocomplete="username" placeholder="Choose a username">
+                    <label class="form-label" data-i18n="auth.username">Username</label>
+                    <input type="text" class="form-input" id="usernameInput" autocomplete="username" data-i18n="auth.username_placeholder" placeholder="Choose a username">
                 </div>
-                <button type="submit" class="btn btn-primary" id="authSubmit">Sign In</button>
+                <button type="submit" class="btn btn-primary" id="authSubmit" data-i18n="btn.signin">Sign In</button>
             </form>
             <p style="text-align: center; margin-top: 20px;">
-                <a href="#" id="toggleAuth" style="color: var(--primary);">New here? Create an account</a>
+                <a href="#" id="toggleAuth" style="color: var(--primary);" data-i18n="auth.toggle_signup">New here? Create an account</a>
             </p>
         </div>
     </div>
@@ -901,51 +962,51 @@
     <!-- About Page -->
     <div id="aboutPage" class="container hidden">
         <div class="page-content">
-            <h1 class="page-title">About Thera Social</h1>
-            <p style="text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 30px;">
+            <h1 class="page-title" data-i18n="about.title">About Thera Social</h1>
+            <p style="text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 30px;" data-i18n="about.subtitle">
                 Your safe space for wellness, connection, and personal growth
             </p>
 
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
-                    <h3>Privacy First</h3>
-                    <p>Your wellness journey is private and secure. Share only what you're comfortable with.</p>
+                    <h3 data-i18n="about.privacy_title">Privacy First</h3>
+                    <p data-i18n="about.privacy_desc">Your wellness journey is private and secure. Share only what you're comfortable with.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
-                    <h3>Track Progress</h3>
-                    <p>Monitor your wellness parameters and see your growth over time with insights.</p>
+                    <h3 data-i18n="about.track_title">Track Progress</h3>
+                    <p data-i18n="about.track_desc">Monitor your wellness parameters and see your growth over time with insights.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">👥</div>
-                    <h3>Supportive Community</h3>
-                    <p>Connect with others on similar journeys in a judgment-free environment.</p>
+                    <div class="feature-icon">💥</div>
+                    <h3 data-i18n="about.community_title">Supportive Community</h3>
+                    <p data-i18n="about.community_desc">Connect with others on similar journeys in a judgment-free environment.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">💬</div>
-                    <h3>Safe Communication</h3>
-                    <p>Private messaging and circles let you control who sees your content.</p>
+                    <h3 data-i18n="about.communication_title">Safe Communication</h3>
+                    <p data-i18n="about.communication_desc">Private messaging and circles let you control who sees your content.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
-                    <h3>Goal Setting</h3>
-                    <p>Set and track personal goals with community support and accountability.</p>
+                    <h3 data-i18n="about.goals_title">Goal Setting</h3>
+                    <p data-i18n="about.goals_desc">Set and track personal goals with community support and accountability.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🌟</div>
-                    <h3>Daily Check-ins</h3>
-                    <p>Regular parameter tracking helps you understand patterns and triggers.</p>
+                    <h3 data-i18n="about.checkin_title">Daily Check-ins</h3>
+                    <p data-i18n="about.checkin_desc">Regular parameter tracking helps you understand patterns and triggers.</p>
                 </div>
             </div>
 
             <div style="text-align: center; margin-top: 30px;">
-                <button class="btn btn-primary" style="width: 200px;" onclick="goHome()">Get Started</button>
+                <button class="btn btn-primary" style="width: 200px;" onclick="goHome()" data-i18n="btn.getstarted">Get Started</button>
             </div>
         </div>
     </div>
@@ -953,52 +1014,52 @@
     <!-- Support Page -->
     <div id="supportPage" class="container hidden">
         <div class="page-content">
-            <h1 class="page-title">Support Center</h1>
-            <p style="text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 30px;">
+            <h1 class="page-title" data-i18n="support.title">Support Center</h1>
+            <p style="text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 30px;" data-i18n="support.subtitle">
                 We're here to help you on your wellness journey
             </p>
 
             <div style="background: var(--light); padding: 25px; border-radius: 15px; margin-bottom: 30px;">
-                <h3 style="color: var(--primary); margin-bottom: 15px;">Frequently Asked Questions</h3>
+                <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="support.faq_title">Frequently Asked Questions</h3>
 
                 <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 8px;">How do I track my wellness parameters?</h4>
-                    <p style="color: var(--gray);">Navigate to the Parameters tab in your dashboard. You can input daily values for mood, sleep, exercise, anxiety, and energy levels. Use the calendar to save and load parameters for different dates.</p>
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq1_q">How do I track my wellness parameters?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq1_a">Navigate to the Parameters tab in your dashboard. You can input daily values for mood, sleep, exercise, anxiety, and energy levels. Use the calendar to save and load parameters for different dates.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 8px;">What are Circles?</h4>
-                    <p style="color: var(--gray);">Circles allow you to organize your connections into groups: General, Close Friends, and Family. You can control who sees your posts based on these circles.</p>
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq2_q">What are Circles?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq2_a">Circles allow you to organize your connections into groups: General, Close Friends, and Family. You can control who sees your posts based on these circles.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 8px;">How do I update my profile?</h4>
-                    <p style="color: var(--gray);">Go to the Profile tab to update your bio, interests, occupation, goals, and favorite hobbies. These help others understand you better.</p>
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq3_q">How do I update my profile?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Go to the Profile tab to update your bio, interests, occupation, goals, and favorite hobbies. These help others understand you better.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 8px;">Is my data private?</h4>
-                    <p style="color: var(--gray);">Yes! We take privacy seriously. Your wellness data is encrypted and only visible to you unless you choose to share it.</p>
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq4_q">Is my data private?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq4_a">Yes! We take privacy seriously. Your wellness data is encrypted and only visible to you unless you choose to share it.</p>
                 </div>
             </div>
 
             <div style="background: var(--light); padding: 25px; border-radius: 15px;">
-                <h3 style="color: var(--primary); margin-bottom: 15px;">Contact Support</h3>
+                <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="support.contact_title">Contact Support</h3>
                 <form id="supportForm">
                     <div class="form-group">
-                        <label class="form-label">Subject</label>
+                        <label class="form-label" data-i18n="support.subject">Subject</label>
                         <input type="text" class="form-input" id="supportSubject" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Message</label>
+                        <label class="form-label" data-i18n="support.message">Message</label>
                         <textarea class="form-input" id="supportMessage" rows="5" required></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Send Message</button>
+                    <button type="submit" class="btn btn-primary" data-i18n="support.send">Send Message</button>
                 </form>
             </div>
 
             <div style="text-align: center; margin-top: 30px;">
-                <button class="btn btn-secondary" style="width: 200px;" onclick="goHome()">Back to Home</button>
+                <button class="btn btn-secondary" style="width: 200px;" onclick="goHome()" data-i18n="btn.back">Back to Home</button>
             </div>
         </div>
     </div>
@@ -1009,20 +1070,20 @@
             <!-- Left Sidebar -->
             <aside class="sidebar">
                 <ul class="sidebar-menu">
-                    <li class="sidebar-item active" data-view="feed">
-                        <i>📱</i> Feed
+                    <li class="sidebar-item active" data-view="feed" data-i18n="menu.feed">
+                        📱 Feed
                     </li>
-                    <li class="sidebar-item" data-view="profile">
-                        <i>👤</i> Profile
+                    <li class="sidebar-item" data-view="profile" data-i18n="menu.profile">
+                        👤 Profile
                     </li>
-                    <li class="sidebar-item" data-view="circles">
-                        <i>👥</i> Circles
+                    <li class="sidebar-item" data-view="circles" data-i18n="menu.circles">
+                        👥 Circles
                     </li>
-                    <li class="sidebar-item" data-view="messages">
-                        <i>💬</i> Messages
+                    <li class="sidebar-item" data-view="messages" data-i18n="menu.messages">
+                        💬 Messages
                     </li>
-                    <li class="sidebar-item" data-view="tracking">
-                        <i>📊</i> Parameters
+                    <li class="sidebar-item" data-view="tracking" data-i18n="menu.parameters">
+                        📊 Parameters
                     </li>
                 </ul>
             </aside>
@@ -1031,35 +1092,35 @@
             <main class="main-content">
               <!-- Feed View - Date-Based Journal -->
 <div id="feedView" class="view">
-    <h2 style="margin-bottom: 20px;">Your Feed Journal</h2>
-    <p style="color: var(--gray); margin-bottom: 20px;">Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.</p>
+    <h2 style="margin-bottom: 20px;" data-i18n="feed.title">Your Feed Journal</h2>
+    <p style="color: var(--gray); margin-bottom: 20px;" data-i18n="feed.subtitle">Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.</p>
 
     <!-- Feed Calendar -->
     <div class="feed-calendar-section">
         <div class="feed-calendar-header">
-            <button class="btn btn-secondary" onclick="feedPreviousMonth()">←</button>
+            <button class="btn btn-secondary" onclick="feedPreviousMonth()" data-i18n="calendar.prev">←</button>
             <span id="feedCurrentMonth" style="font-weight: 600;">January 2025</span>
-            <button class="btn btn-secondary" onclick="feedNextMonth()">→</button>
+            <button class="btn btn-secondary" onclick="feedNextMonth()" data-i18n="calendar.next">→</button>
         </div>
         <div class="feed-calendar-grid" id="feedCalendarGrid"></div>
         <div style="text-align: center; margin-top: 15px;">
-            <p>Selected Date: <strong id="feedSelectedDateDisplay">Today</strong></p>
+            <p><span data-i18n="feed.selected_date">Selected Date:</span> <strong id="feedSelectedDateDisplay" data-i18n="feed.today">Today</strong></p>
         </div>
     </div>
 
     <!-- Post Form -->
     <div class="post-form">
-        <textarea class="post-input" placeholder="How are you feeling today?" id="postInput"></textarea>
+        <textarea class="post-input" data-i18n="feed.placeholder" placeholder="How are you feeling today?" id="postInput"></textarea>
         <div class="post-actions">
             <select class="visibility-select" id="visibilitySelect">
-                <option value="general">General</option>
-                <option value="close_friends">Close Friends</option>
-                <option value="family">Family</option>
-                <option value="private">Private</option>
+                <option value="general" data-i18n="visibility.general">General</option>
+                <option value="close_friends" data-i18n="visibility.close_friends">Close Friends</option>
+                <option value="family" data-i18n="visibility.family">Family</option>
+                <option value="private" data-i18n="visibility.private">Private</option>
             </select>
             <div style="display: flex; gap: 10px;">
-                <button class="btn btn-secondary" style="width: auto;" onclick="loadFeedForDate()">Load Update</button>
-                <button class="btn btn-primary" style="width: auto;" id="postBtn">Save Update</button>
+                <button class="btn btn-secondary" style="width: auto;" onclick="loadFeedForDate()" data-i18n="feed.load_update">Load Update</button>
+                <button class="btn btn-primary" style="width: auto;" id="postBtn" data-i18n="feed.save_update">Save Update</button>
             </div>
         </div>
     </div>
@@ -1067,7 +1128,7 @@
 
                 <!-- Profile View (Enhanced with 5 fields) -->
                 <div id="profileView" class="view hidden">
-                    <h2 style="margin-bottom: 20px;">Your Profile</h2>
+                    <h2 style="margin-bottom: 20px;" data-i18n="profile.title">Your Profile</h2>
                     <div class="profile-section">
                         <div class="profile-header">
                             <div class="profile-avatar" id="profileAvatar">U</div>
@@ -1076,74 +1137,74 @@
 
                         <div class="profile-fields">
                             <div class="form-group">
-                                <label class="form-label">Bio</label>
-                                <textarea class="profile-textarea" id="profileBio" placeholder="Tell us about yourself..." maxlength="500"></textarea>
+                                <label class="form-label" data-i18n="profile.bio">Bio</label>
+                                <textarea class="profile-textarea" id="profileBio" data-i18n="profile.bio_placeholder" placeholder="Tell us about yourself..." maxlength="500"></textarea>
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label">Interests</label>
-                                <textarea class="profile-textarea" id="profileInterests" placeholder="What are you interested in?" maxlength="300"></textarea>
+                                <label class="form-label" data-i18n="profile.interests">Interests</label>
+                                <textarea class="profile-textarea" id="profileInterests" data-i18n="profile.interests_placeholder" placeholder="What are you interested in?" maxlength="300"></textarea>
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label">Occupation</label>
-                                <input type="text" class="form-input" id="profileOccupation" placeholder="What do you do?">
+                                <label class="form-label" data-i18n="profile.occupation">Occupation</label>
+                                <input type="text" class="form-input" id="profileOccupation" data-i18n="profile.occupation_placeholder" placeholder="What do you do?">
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label">Goals</label>
-                                <textarea class="profile-textarea" id="profileGoals" placeholder="What are your personal or professional goals?" maxlength="300"></textarea>
+                                <label class="form-label" data-i18n="profile.goals">Goals</label>
+                                <textarea class="profile-textarea" id="profileGoals" data-i18n="profile.goals_placeholder" placeholder="What are your personal or professional goals?" maxlength="300"></textarea>
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label">Favorite Hobbies</label>
-                                <textarea class="profile-textarea" id="profileFavoriteHobbies" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
+                                <label class="form-label" data-i18n="profile.hobbies">Favorite Hobbies</label>
+                                <textarea class="profile-textarea" id="profileFavoriteHobbies" data-i18n="profile.hobbies_placeholder" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
                             </div>
                         </div>
 
                         <div style="text-align: center; margin-top: 30px;">
-                            <button class="btn btn-primary" style="width: 200px;" id="updateProfileBtn">Save Profile</button>
+                            <button class="btn btn-primary" style="width: 200px;" id="updateProfileBtn" data-i18n="profile.save">Save Profile</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Circles View (Enhanced) -->
                 <div id="circlesView" class="view hidden">
-                    <h2 style="margin-bottom: 20px;">Your Circles</h2>
+                    <h2 style="margin-bottom: 20px;" data-i18n="circles.title">Your Circles</h2>
 
                     <div class="user-search">
-                        <input type="text" class="search-input" id="userSearchInput" placeholder="Search users to add to circles..." onkeyup="searchUsers()">
+                        <input type="text" class="search-input" id="userSearchInput" data-i18n="circles.search_placeholder" placeholder="Search users to add to circles..." onkeyup="searchUsers()">
                         <div class="search-results" id="searchResults"></div>
                     </div>
 
                     <div class="circles-container">
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title">👥 General</span>
+                                <span class="circle-title" data-i18n="circles.general">💥 General</span>
                                 <span class="circle-count" id="generalCount">0</span>
                             </div>
                             <div class="circle-members" id="generalMembers">
-                                <p style="text-align: center; color: var(--gray);">No members yet</p>
+                                <p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">No members yet</p>
                             </div>
                         </div>
 
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title">❤️ Close Friends</span>
+                                <span class="circle-title" data-i18n="circles.close_friends">❤️ Close Friends</span>
                                 <span class="circle-count" id="closeFriendsCount">0</span>
                             </div>
                             <div class="circle-members" id="closeFriendsMembers">
-                                <p style="text-align: center; color: var(--gray);">No close friends yet</p>
+                                <p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">No close friends yet</p>
                             </div>
                         </div>
 
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title">👨‍👩‍👧‍👦 Family</span>
+                                <span class="circle-title" data-i18n="circles.family">👨‍👩‍👧‍👦 Family</span>
                                 <span class="circle-count" id="familyCount">0</span>
                             </div>
                             <div class="circle-members" id="familyMembers">
-                                <p style="text-align: center; color: var(--gray);">No family members yet</p>
+                                <p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">No family members yet</p>
                             </div>
                         </div>
                     </div>
@@ -1151,28 +1212,28 @@
 
                 <!-- Messages View - Enhanced -->
                 <div id="messagesView" class="view hidden">
-                    <h2 style="margin-bottom: 20px;">Messages</h2>
+                    <h2 style="margin-bottom: 20px;" data-i18n="messages.title">Messages</h2>
                     <div class="user-search" style="margin-bottom: 20px;">
-                        <input type="text" class="search-input" id="messageUserSearch" placeholder="Search users to message..." onkeyup="searchUsersForMessage()">
+                        <input type="text" class="search-input" id="messageUserSearch" data-i18n="messages.search_placeholder" placeholder="Search users to message..." onkeyup="searchUsersForMessage()">
                         <div class="search-results" id="messageSearchResults"></div>
                     </div>
 
                     <div class="messages-container">
                         <div class="conversations-list" id="conversationsList">
-                            <div style="padding: 20px; text-align: center; color: var(--gray);">
+                            <div style="padding: 20px; text-align: center; color: var(--gray);" data-i18n="messages.no_conversations">
                                 No conversations yet
                             </div>
                         </div>
                         <div class="chat-area">
-                            <div class="chat-header" id="chatHeader">Select a conversation</div>
+                            <div class="chat-header" id="chatHeader" data-i18n="messages.select_conversation">Select a conversation</div>
                             <div class="messages-list" id="messagesList">
-                                <div style="text-align: center; padding: 50px; color: var(--gray);">
+                                <div style="text-align: center; padding: 50px; color: var(--gray);" data-i18n="messages.no_messages">
                                     Select a conversation to start messaging
                                 </div>
                             </div>
                             <div class="message-input-area">
-                                <input type="text" class="message-input" id="messageInput" placeholder="Type a message..." disabled>
-                                <button class="btn btn-primary" style="width: auto;" id="sendMessageBtn" disabled>Send</button>
+                                <input type="text" class="message-input" id="messageInput" data-i18n="messages.type_message" placeholder="Type a message..." disabled>
+                                <button class="btn btn-primary" style="width: auto;" id="sendMessageBtn" disabled data-i18n="btn.send">Send</button>
                             </div>
                         </div>
                     </div>
@@ -1180,73 +1241,74 @@
 
                 <!-- Tracking/Parameters View (Enhanced with save/load) -->
                 <div id="trackingView" class="view hidden">
-                    <h2 style="margin-bottom: 20px;">Wellness Parameters</h2>
+                    <h2 style="margin-bottom: 20px;" data-i18n="parameters.title">Wellness Parameters</h2>
 
                     <div class="calendar-section">
                         <div class="calendar-header">
-                            <button class="btn btn-secondary" onclick="previousMonth()">←</button>
+                            <button class="btn btn-secondary" onclick="previousMonth()" data-i18n="calendar.prev">←</button>
                             <span id="currentMonth" style="font-weight: 600;">January 2025</span>
-                            <button class="btn btn-secondary" onclick="nextMonth()">→</button>
+                            <button class="btn btn-secondary" onclick="nextMonth()" data-i18n="calendar.next">→</button>
                         </div>
                         <div class="calendar-grid" id="calendarGrid"></div>
                         <div style="text-align: center; margin-top: 15px;">
-                            <p>Selected Date: <strong id="selectedDateDisplay">Today</strong></p>
+                            <p><span data-i18n="parameters.selected_date">Selected Date:</span> <strong id="selectedDateDisplay" data-i18n="feed.today">Today</strong></p>
                         </div>
                     </div>
 
                     <div class="parameter-grid">
                         <div class="parameter-card">
-                            <div class="parameter-name">Mood</div>
-                            <input type="text" class="parameter-input" id="moodInput" placeholder="e.g., Happy, Calm, Anxious">
+                            <div class="parameter-name" data-i18n="parameters.mood">Mood</div>
+                            <input type="text" class="parameter-input" id="moodInput" data-i18n="parameters.mood_placeholder" placeholder="e.g., Happy, Calm, Anxious">
                         </div>
 
                         <div class="parameter-card">
-                            <div class="parameter-name">Sleep</div>
+                            <div class="parameter-name" data-i18n="parameters.sleep">Sleep</div>
                             <div style="display: flex; align-items: center; gap: 10px;">
-                                <input type="number" class="parameter-input" id="sleepInput" placeholder="Hours" min="0" max="24" step="0.5" style="width: 100px;">
-                                <span style="color: white; font-weight: 600;" id="sleepDisplay">0 Hours</span>
+                                <input type="number" class="parameter-input" id="sleepInput" data-i18n="parameters.sleep_placeholder" placeholder="Hours" min="0" max="24" step="0.5" style="width: 100px;">
+                                <span style="color: white; font-weight: 600;" id="sleepDisplay"><span>0</span> <span data-i18n="parameters.sleep_hours">Hours</span></span>
                             </div>
                         </div>
 
                         <div class="parameter-card">
-                            <div class="parameter-name">Exercise</div>
-                            <input type="text" class="parameter-input" id="exerciseInput" placeholder="e.g., Running, Yoga, Gym">
+                            <div class="parameter-name" data-i18n="parameters.exercise">Exercise</div>
+                            <input type="text" class="parameter-input" id="exerciseInput" data-i18n="parameters.exercise_placeholder" placeholder="e.g., Running, Yoga, Gym">
                         </div>
 
                         <div class="parameter-card">
-                            <div class="parameter-name">Anxiety</div>
-                            <input type="text" class="parameter-input" id="anxietyInput" placeholder="e.g., None, Mild, Moderate">
+                            <div class="parameter-name" data-i18n="parameters.anxiety">Anxiety</div>
+                            <input type="text" class="parameter-input" id="anxietyInput" data-i18n="parameters.anxiety_placeholder" placeholder="e.g., None, Mild, Moderate">
                         </div>
 
                         <div class="parameter-card">
-                            <div class="parameter-name">Energy</div>
-                            <input type="text" class="parameter-input" id="energyInput" placeholder="e.g., Low, Normal, High">
+                            <div class="parameter-name" data-i18n="parameters.energy">Energy</div>
+                            <input type="text" class="parameter-input" id="energyInput" data-i18n="parameters.energy_placeholder" placeholder="e.g., Low, Normal, High">
                         </div>
 
                         <div class="parameter-card" style="grid-column: span 2;">
-                            <div class="parameter-name">Notes</div>
-                            <textarea class="parameter-input" id="notesInput" placeholder="Additional notes..." style="min-height: 80px;"></textarea>
+                            <div class="parameter-name" data-i18n="parameters.notes">Notes</div>
+                            <textarea class="parameter-input" id="notesInput" data-i18n="parameters.notes_placeholder" placeholder="Additional notes..." style="min-height: 80px;"></textarea>
                         </div>
                     </div>
 
                     <div style="text-align: center; margin-top: 20px; display: flex; gap: 15px; justify-content: center;">
-                        <button class="btn btn-primary" style="width: 200px;" onclick="saveParameters()">Save Parameters</button>
-                        <button class="btn btn-secondary" style="width: 200px;" onclick="loadParameters()">Load Parameters</button>
+                        <button class="btn btn-primary" style="width: 200px;" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
+                        <button class="btn btn-secondary" style="width: 200px;" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
                     </div>
 
-                    <h3 style="margin-top: 30px; margin-bottom: 15px;">Insights</h3>
+                    <h3 style="margin-top: 30px; margin-bottom: 15px;" data-i18n="parameters.insights">Insights</h3>
                     <div id="insights"></div>
                 </div>
             </main>
 
             <!-- Right Sidebar -->
             <aside class="right-sidebar">
-                <h3 style="margin-bottom: 15px;">Alerts</h3>
+                <h3 style="margin-bottom: 15px;" data-i18n="alerts.title">Alerts</h3>
                 <div class="alerts-list" id="alertsList"></div>
             </aside>
         </div>
     </div>
 
+    <script src="/static/js/i18n.js"></script>
     <script>
         // API Configuration
         const API_URL = window.location.origin + '/api';
@@ -1339,16 +1401,18 @@
             isLoginMode = !isLoginMode;
 
             if (isLoginMode) {
-                document.getElementById('authTitle').textContent = 'Welcome Back';
-                document.getElementById('authSubmit').textContent = 'Sign In';
+                document.getElementById('authTitle').setAttribute('data-i18n', 'auth.welcome');
+                document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signin');
                 document.getElementById('usernameGroup').style.display = 'none';
-                document.getElementById('toggleAuth').textContent = 'New here? Create an account';
+                document.getElementById('toggleAuth').setAttribute('data-i18n', 'auth.toggle_signup');
             } else {
-                document.getElementById('authTitle').textContent = 'Create Account';
-                document.getElementById('authSubmit').textContent = 'Sign Up';
+                document.getElementById('authTitle').setAttribute('data-i18n', 'auth.create');
+                document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signup');
                 document.getElementById('usernameGroup').style.display = 'block';
-                document.getElementById('toggleAuth').textContent = 'Already have an account? Sign in';
+                document.getElementById('toggleAuth').setAttribute('data-i18n', 'auth.toggle_signin');
             }
+
+            window.i18n.applyLanguage();
         });
 
         document.getElementById('authForm').addEventListener('submit', async (e) => {
@@ -1429,7 +1493,7 @@
                 switch(view) {
                     case 'feed':
                         initFeedCalendar();
-                        
+
                         break;
                     case 'profile':
                         loadProfile();
@@ -1469,8 +1533,7 @@
             const year = feedCurrentMonth.getFullYear();
             const month = feedCurrentMonth.getMonth();
 
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                              'July', 'August', 'September', 'October', 'November', 'December'];
+            const monthNames = window.i18n.t('calendar.months') ? window.i18n.t('calendar.months').split(',') : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
             document.getElementById('feedCurrentMonth').textContent = `${monthNames[month]} ${year}`;
 
             const firstDay = new Date(year, month, 1).getDay();
@@ -1480,7 +1543,7 @@
             grid.innerHTML = '';
 
             // Add day headers
-            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const dayHeaders = window.i18n.t('calendar.days') ? window.i18n.t('calendar.days').split(',') : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             dayHeaders.forEach(day => {
                 const header = document.createElement('div');
                 header.style.fontWeight = '600';
@@ -1525,7 +1588,7 @@
         }
 
         function updateFeedSelectedDateDisplay() {
-            const dateStr = feedSelectedDate.toLocaleDateString('en-US', {
+            const dateStr = feedSelectedDate.toLocaleDateString(window.i18n.getCurrentLanguage(), {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
@@ -1557,13 +1620,13 @@
             document.getElementById('postInput').value = response.content || '';
 
             if (response.content) {
-                alert(`Loaded ${visibility.replace('_', ' ')} feed from ${dateStr}`);
+                alert(window.i18n.t('msg.loaded') || `Loaded ${visibility.replace('_', ' ')} feed from ${dateStr}`);
             } else {
-                alert(`No ${visibility.replace('_', ' ')} feed for this date`);
+                alert(window.i18n.t('feed.no_posts') || `No ${visibility.replace('_', ' ')} feed for this date`);
             }
         }
     } catch (error) {
-        alert('Failed to load feed: ' + error.message);
+        alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
     }
 }
 
@@ -1626,11 +1689,11 @@
             date: dateStr
         });
 
-        alert('Feed saved successfully!');
+        alert(window.i18n.t('msg.saved') || 'Feed saved successfully!');
         loadFeedSavedDates();
         renderFeedCalendar();
     } catch (error) {
-        alert('Failed to save feed: ' + error.message);
+        alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
     }
 });
 
@@ -1661,9 +1724,9 @@
 
             try {
                 await apiCall('/profile', 'PUT', profileData);
-                alert('Profile updated successfully!');
+                alert(window.i18n.t('msg.saved') || 'Profile updated successfully!');
             } catch (error) {
-                alert('Failed to update profile: ' + error.message);
+                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
             }
         });
 
@@ -1701,13 +1764,13 @@
             count.textContent = members.length;
 
             if (members.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--gray);">No members yet</p>';
+                container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${window.i18n.t('circles.no_members') || 'No members yet'}</p>`;
             } else {
                 container.innerHTML = members.map(member => `
                     <div class="member-item">
                         <div class="member-avatar">${member.username[0].toUpperCase()}</div>
                         <span class="member-name">${member.username}</span>
-                        <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')">Remove</button>
+                        <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${window.i18n.t('circles.remove') || 'Remove'}</button>
                     </div>
                 `).join('');
             }
@@ -1728,7 +1791,7 @@
         const container = document.getElementById('searchResults');
 
         if (response.users.length === 0) {
-            container.innerHTML = '<div class="search-result-item">No users found</div>';
+            container.innerHTML = `<div class="search-result-item">${window.i18n.t('circles.no_users') || 'No users found'}</div>`;
         } else {
             container.innerHTML = response.users.map(user => `
                 <div class="search-result-item" style="display: block; padding: 12px;">
@@ -1741,10 +1804,10 @@
                         </div>
                     </div>
                     <select onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
-                        <option value="">Add to circle...</option>
-                        <option value="general">General</option>
-                        <option value="close_friends">Close Friends</option>
-                        <option value="family">Family</option>
+                        <option value="">${window.i18n.t('circles.add_to') || 'Add to circle...'}</option>
+                        <option value="general">${window.i18n.t('visibility.general') || 'General'}</option>
+                        <option value="close_friends">${window.i18n.t('visibility.close_friends') || 'Close Friends'}</option>
+                        <option value="family">${window.i18n.t('visibility.family') || 'Family'}</option>
                     </select>
                 </div>
             `).join('');
@@ -1765,17 +1828,17 @@
                     circle_type: circleType
                 });
 
-                alert(`${username} added to ${circleType.replace('_', ' ')} circle!`);
+                alert(window.i18n.t('msg.saved') || `${username} added to ${circleType.replace('_', ' ')} circle!`);
                 loadCircles();
                 document.getElementById('userSearchInput').value = '';
                 document.getElementById('searchResults').classList.remove('active');
             } catch (error) {
-                alert('Failed to add to circle: ' + error.message);
+                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
             }
         }
 
         async function removeFromCircle(userId, circleType) {
-            if (!confirm('Remove this user from the circle?')) return;
+            if (!confirm((window.i18n.t('circles.remove') || 'Remove') + '?')) return;
 
             try {
                 await apiCall('/circles/remove', 'DELETE', {
@@ -1785,7 +1848,7 @@
 
                 loadCircles();
             } catch (error) {
-                alert('Failed to remove from circle: ' + error.message);
+                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
             }
         }
 
@@ -1805,7 +1868,7 @@
                 const container = document.getElementById('messageSearchResults');
 
                 if (response.users.length === 0) {
-                    container.innerHTML = '<div class="search-result-item">No users found</div>';
+                    container.innerHTML = `<div class="search-result-item">${window.i18n.t('circles.no_users') || 'No users found'}</div>`;
                 } else {
                     container.innerHTML = response.users.map(user => `
                         <div class="search-result-item" onclick="startConversation(${user.id}, '${user.username}')">
@@ -1845,13 +1908,13 @@
                 const container = document.getElementById('conversationsList');
 
                 if (response.conversations && response.conversations.length === 0) {
-                    container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--gray);">No conversations yet</div>';
+                    container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--gray);" data-i18n="messages.no_conversations">${window.i18n.t('messages.no_conversations') || 'No conversations yet'}</div>`;
                 } else if (response.conversations) {
                     container.innerHTML = response.conversations.map(conv => {
                         const lastMessageTime = conv.last_message && conv.last_message.created_at ?
                             getTimeAgo(new Date(conv.last_message.created_at)) : '';
                         const lastMessageContent = conv.last_message && conv.last_message.content ?
-                            conv.last_message.content : 'No messages yet';
+                            conv.last_message.content : (window.i18n.t('messages.no_messages') || 'No messages yet');
                         const isOwn = conv.last_message && conv.last_message.is_own;
 
                         return `
@@ -1861,7 +1924,7 @@
                                     <span class="conversation-time">${lastMessageTime}</span>
                                 </div>
                                 <div class="conversation-preview">
-                                    ${isOwn ? 'You: ' : ''}${lastMessageContent.substring(0, 50)}${lastMessageContent.length > 50 ? '...' : ''}
+                                    ${isOwn ? (window.i18n.t('messages.you') || 'You: ') : ''}${lastMessageContent.substring(0, 50)}${lastMessageContent.length > 50 ? '...' : ''}
                                 </div>
                                 ${conv.unread_count > 0 ? `<span class="unread-badge">${conv.unread_count}</span>` : ''}
                             </div>
@@ -1912,7 +1975,7 @@
                         </div>
                     `).join('');
                 } else {
-                    container.innerHTML = '<div style="text-align: center; padding: 50px; color: var(--gray);">No messages yet. Start the conversation!</div>';
+                    container.innerHTML = `<div style="text-align: center; padding: 50px; color: var(--gray);" data-i18n="messages.no_messages">${window.i18n.t('messages.no_messages') || 'No messages yet. Start the conversation!'}</div>`;
                 }
 
                 container.scrollTop = container.scrollHeight;
@@ -1943,7 +2006,7 @@
                 loadMessages(currentRecipient.id, currentRecipient.username);
                 loadConversations();
             } catch (error) {
-                alert('Failed to send message: ' + error.message);
+                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
             }
         });
 
@@ -1977,8 +2040,7 @@
             const year = currentMonth.getFullYear();
             const month = currentMonth.getMonth();
 
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                              'July', 'August', 'September', 'October', 'November', 'December'];
+            const monthNames = window.i18n.t('calendar.months') ? window.i18n.t('calendar.months').split(',') : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
             document.getElementById('currentMonth').textContent = `${monthNames[month]} ${year}`;
 
             const firstDay = new Date(year, month, 1).getDay();
@@ -1988,7 +2050,7 @@
             grid.innerHTML = '';
 
             // Add day headers
-            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const dayHeaders = window.i18n.t('calendar.days') ? window.i18n.t('calendar.days').split(',') : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             dayHeaders.forEach(day => {
                 const header = document.createElement('div');
                 header.style.fontWeight = '600';
@@ -2033,7 +2095,7 @@
         }
 
         function updateSelectedDateDisplay() {
-            const dateStr = selectedDate.toLocaleDateString('en-US', {
+            const dateStr = selectedDate.toLocaleDateString(window.i18n.getCurrentLanguage(), {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
@@ -2055,8 +2117,8 @@
         // Update sleep display
         document.getElementById('sleepInput').addEventListener('input', (e) => {
             const hours = e.target.value || 0;
-            const text = hours == 1 ? 'Hour' : 'Hours';
-            document.getElementById('sleepDisplay').textContent = `${hours} ${text}`;
+            const hoursText = window.i18n.t('parameters.sleep_hours') || 'Hours';
+            document.getElementById('sleepDisplay').innerHTML = `<span>${hours}</span> <span data-i18n="parameters.sleep_hours">${hoursText}</span>`;
         });
 
         async function saveParameters() {
@@ -2074,11 +2136,11 @@
 
             try {
                 await apiCall('/parameters/save', 'POST', parameters);
-                alert(`Parameters saved for ${dateStr}`);
+                alert(window.i18n.t('msg.saved') || `Parameters saved for ${dateStr}`);
                 loadSavedDates();
                 renderCalendar();
             } catch (error) {
-                alert('Failed to save parameters: ' + error.message);
+                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
             }
         }
 
@@ -2099,15 +2161,15 @@
 
                     // Update sleep display
                     const hours = data.sleep_hours || 0;
-                    const text = hours == 1 ? 'Hour' : 'Hours';
-                    document.getElementById('sleepDisplay').textContent = `${hours} ${text}`;
+                    const hoursText = window.i18n.t('parameters.sleep_hours') || 'Hours';
+                    document.getElementById('sleepDisplay').innerHTML = `<span>${hours}</span> <span data-i18n="parameters.sleep_hours">${hoursText}</span>`;
 
-                    alert(`Loaded parameters from ${dateStr}`);
+                    alert(window.i18n.t('msg.loaded') || `Loaded parameters from ${dateStr}`);
                 } else {
-                    alert('No saved parameters for this date');
+                    alert(window.i18n.t('feed.no_posts') || 'No saved parameters for this date');
                 }
             } catch (error) {
-                alert('Failed to load parameters: ' + error.message);
+                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
             }
         }
 
@@ -2120,7 +2182,7 @@
                 const container = document.getElementById('alertsList');
 
                 if (!response.alerts || response.alerts.length === 0) {
-                    container.innerHTML = '<p style="color: var(--gray);">No new alerts</p>';
+                    container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${window.i18n.t('alerts.no_alerts') || 'No new alerts'}</p>`;
                 } else {
                     container.innerHTML = response.alerts.map(alert => `
                         <div class="alert-item ${alert.type}">
@@ -2148,10 +2210,10 @@
                     message: message
                 });
 
-                alert('Support message sent successfully!');
+                alert(window.i18n.t('msg.sent') || 'Support message sent successfully!');
                 document.getElementById('supportForm').reset();
             } catch (error) {
-                alert('Failed to send support message: ' + error.message);
+                alert((window.i18n.t('msg.error') || 'Error') + ': ' + error.message);
             }
         });
 
@@ -2209,6 +2271,19 @@
                 });
             }
         }, 30000);
+
+        // Listen for language changes
+        window.addEventListener('languageChanged', () => {
+            // Rerender calendars with new language
+            if (document.getElementById('feedView').classList.contains('hidden') === false) {
+                renderFeedCalendar();
+                updateFeedSelectedDateDisplay();
+            }
+            if (document.getElementById('trackingView').classList.contains('hidden') === false) {
+                renderCalendar();
+                updateSelectedDateDisplay();
+            }
+        });
     </script>
 </body>
 </html>

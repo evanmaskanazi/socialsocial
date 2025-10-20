@@ -10,14 +10,28 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        
+
+        /* RTL Support */
+        [dir="rtl"] {
+            direction: rtl;
+        }
+
+        [dir="rtl"] .contact-info strong {
+            text-align: right;
+        }
+
+        [dir="rtl"] ul {
+            margin-right: 20px;
+            margin-left: 0;
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -26,7 +40,24 @@
             padding: 40px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
         }
-        
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .language-selector {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
         h1 {
             color: #667eea;
             font-size: 2.5em;
@@ -36,49 +67,56 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+
         .support-sections {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
             margin: 40px 0;
         }
-        
+
         .support-card {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             padding: 30px;
             border-radius: 15px;
             transition: transform 0.3s;
         }
-        
+
         .support-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
         }
-        
+
         .support-card h2 {
             color: #667eea;
             margin-bottom: 20px;
             font-size: 1.5em;
         }
-        
+
         .contact-info {
             margin: 15px 0;
             padding: 15px;
             background: white;
             border-radius: 10px;
         }
-        
+
         .contact-info strong {
             color: #667eea;
             display: block;
             margin-bottom: 5px;
         }
-        
+
         .faq-section {
             margin-top: 40px;
         }
-        
+
         .faq-item {
             background: white;
             margin: 15px 0;
@@ -86,37 +124,42 @@
             border-radius: 10px;
             border-left: 4px solid #667eea;
         }
-        
+
+        [dir="rtl"] .faq-item {
+            border-left: none;
+            border-right: 4px solid #667eea;
+        }
+
         .faq-question {
             font-weight: bold;
             color: #667eea;
             margin-bottom: 10px;
             cursor: pointer;
         }
-        
+
         .faq-answer {
             color: #666;
             line-height: 1.6;
         }
-        
+
         .contact-form {
             background: white;
             padding: 30px;
             border-radius: 15px;
             margin-top: 30px;
         }
-        
+
         .form-group {
             margin-bottom: 20px;
         }
-        
+
         .form-group label {
             display: block;
             color: #667eea;
             margin-bottom: 8px;
             font-weight: 500;
         }
-        
+
         .form-group input,
         .form-group textarea {
             width: 100%;
@@ -126,13 +169,13 @@
             font-size: 16px;
             transition: border-color 0.3s;
         }
-        
+
         .form-group input:focus,
         .form-group textarea:focus {
             outline: none;
             border-color: #667eea;
         }
-        
+
         .submit-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -143,11 +186,11 @@
             cursor: pointer;
             transition: transform 0.3s;
         }
-        
+
         .submit-btn:hover {
             transform: scale(1.05);
         }
-        
+
         .back-link {
             display: inline-block;
             margin-top: 30px;
@@ -158,7 +201,7 @@
             border-radius: 25px;
             transition: transform 0.3s;
         }
-        
+
         .back-link:hover {
             transform: scale(1.05);
         }
@@ -166,12 +209,22 @@
 </head>
 <body>
     <div class="container">
-        <h1>Support Center</h1>
-        
-        <p style="text-align: center; color: #666; font-size: 1.1em; margin-bottom: 30px;">
+        <div class="header">
+            <div style="flex: 1;"></div>
+            <select id="languageSelector" class="language-selector" onchange="window.i18n.changeLanguage(this.value)">
+                <option value="en">English</option>
+                <option value="he">עברית</option>
+                <option value="ar">العربية</option>
+                <option value="ru">Русский</option>
+            </select>
+        </div>
+
+        <h1 data-i18n="support.title">Support Center</h1>
+
+        <p class="subtitle" data-i18n="support.subtitle">
             We're here to help! Choose how you'd like to get in touch or find answers to your questions.
         </p>
-        
+
         <div class="support-sections">
             <div class="support-card">
                 <h2>📞 Contact Us</h2>
@@ -188,7 +241,7 @@
                     <span>Monday-Friday<br>9:00 AM - 5:00 PM EST</span>
                 </div>
             </div>
-            
+
             <div class="support-card">
                 <h2>🚀 Quick Help</h2>
                 <ul style="color: #666; line-height: 2; margin-left: 20px;">
@@ -199,7 +252,7 @@
                     <li><a href="/status" style="color: #764ba2;">System Status</a></li>
                 </ul>
             </div>
-            
+
             <div class="support-card">
                 <h2>💡 Resources</h2>
                 <ul style="color: #666; line-height: 2; margin-left: 20px;">
@@ -211,40 +264,40 @@
                 </ul>
             </div>
         </div>
-        
+
         <div class="faq-section" id="faq">
-            <h2 style="color: #667eea; text-align: center; margin-bottom: 30px; font-size: 2em;">
+            <h2 style="color: #667eea; text-align: center; margin-bottom: 30px; font-size: 2em;" data-i18n="support.faq_title">
                 Frequently Asked Questions
             </h2>
-            
+
             <div class="faq-item">
-                <div class="faq-question">How do I reset my password?</div>
+                <div class="faq-question" data-i18n="support.faq1_q">How do I reset my password?</div>
                 <div class="faq-answer">
                     Click on "Forgot Password" on the login page. Enter your email address, and we'll send you instructions to reset your password.
                 </div>
             </div>
-            
+
             <div class="faq-item">
-                <div class="faq-question">How do I add friends to my circles?</div>
-                <div class="faq-answer">
+                <div class="faq-question" data-i18n="support.faq2_q">How do I add friends to my circles?</div>
+                <div class="faq-answer" data-i18n="support.faq2_a">
                     Go to the Circles tab in your dashboard. Search for users by username or email, then click "Add to Circle" and select which circle (General, Close Friends, or Family) you want to add them to.
                 </div>
             </div>
-            
+
             <div class="faq-item">
-                <div class="faq-question">Is my data secure?</div>
-                <div class="faq-answer">
+                <div class="faq-question" data-i18n="support.faq4_q">Is my data secure?</div>
+                <div class="faq-answer" data-i18n="support.faq4_a">
                     Yes! We use industry-standard encryption to protect your data. All sensitive information is encrypted both in transit and at rest. We never share your personal information with third parties without your consent.
                 </div>
             </div>
-            
+
             <div class="faq-item">
                 <div class="faq-question">How do I delete my account?</div>
                 <div class="faq-answer">
                     Go to Settings > Account > Delete Account. Please note that this action is permanent and cannot be undone. We'll ask you to confirm before proceeding.
                 </div>
             </div>
-            
+
             <div class="faq-item">
                 <div class="faq-question">How do I report inappropriate content?</div>
                 <div class="faq-answer">
@@ -252,43 +305,57 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="contact-form">
-            <h2 style="color: #667eea; margin-bottom: 20px;">Send Us a Message</h2>
+            <h2 style="color: #667eea; margin-bottom: 20px;" data-i18n="support.contact_title">Send Us a Message</h2>
             <form id="supportForm">
                 <div class="form-group">
                     <label for="name">Name</label>
                     <input type="text" id="name" name="name" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" required>
                 </div>
-                
+
                 <div class="form-group">
-                    <label for="subject">Subject</label>
+                    <label for="subject" data-i18n="support.subject">Subject</label>
                     <input type="text" id="subject" name="subject" required>
                 </div>
-                
+
                 <div class="form-group">
-                    <label for="message">Message</label>
+                    <label for="message" data-i18n="support.message">Message</label>
                     <textarea id="message" name="message" rows="5" required></textarea>
                 </div>
-                
-                <button type="submit" class="submit-btn">Send Message</button>
+
+                <button type="submit" class="submit-btn" data-i18n="support.send">Send Message</button>
             </form>
         </div>
-        
+
         <center>
-            <a href="/" class="back-link">Back to Home</a>
+            <a href="/" class="back-link" data-i18n="btn.back">Back to Home</a>
         </center>
     </div>
-    
+
+    <script src="/static/js/i18n.js"></script>
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Apply translations after page loads
+            window.i18n.applyLanguage();
+
+            // Set the language selector to current language
+            document.getElementById('languageSelector').value = window.i18n.getCurrentLanguage();
+
+            // Re-apply translations when language changes
+            window.addEventListener('languageChanged', () => {
+                window.i18n.applyLanguage();
+            });
+        });
+
         document.getElementById('supportForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             // Collect form data
             const formData = {
                 name: document.getElementById('name').value,
@@ -296,7 +363,7 @@
                 subject: document.getElementById('subject').value,
                 message: document.getElementById('message').value
             };
-            
+
             // Send to backend
             fetch('/api/support/contact', {
                 method: 'POST',
@@ -307,12 +374,12 @@
             })
             .then(response => response.json())
             .then(data => {
-                alert('Thank you for contacting us! We will respond within 24 hours.');
+                alert(window.i18n.t('msg.sent') || 'Thank you for contacting us! We will respond within 24 hours.');
                 document.getElementById('supportForm').reset();
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('There was an error sending your message. Please try again later.');
+                alert(window.i18n.t('msg.error') || 'There was an error sending your message. Please try again later.');
             });
         });
     </script>
