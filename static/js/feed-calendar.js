@@ -334,9 +334,18 @@ function showStatus(message, type) {
 
 function formatDate(dateStr) {
     const date = new Date(dateStr);
-    const lang = window.i18n ? window.i18n.getCurrentLanguage() : 'en';
-    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'he' ? 'he-IL' : lang === 'ar' ? 'ar-SA' : 'ru-RU', options);
+    const monthIndex = date.getMonth(); // 0-11
+    const dayIndex = date.getDay(); // 0-6 (Sunday-Saturday)
+    const dayOfMonth = date.getDate();
+    const year = date.getFullYear();
+
+    // Get translated day and month names using i18n
+    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const translatedDay = t('day.' + dayNames[dayIndex]);
+    const translatedMonth = t('calendar.' + monthIndex);
+
+    // Format: "Mon, Oct 20, 2025" or "ב', אוק 20, 2025"
+    return `${translatedDay}, ${translatedMonth} ${dayOfMonth}, ${year}`;
 }
 
 // Track post and message counts in real-time
