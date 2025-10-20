@@ -100,6 +100,19 @@ const translations = {
         'calendar.october': 'October',
         'calendar.november': 'November',
         'calendar.december': 'December',
+        // Numeric month indices (0-11) for JavaScript Date compatibility
+        'calendar.0': 'January',
+        'calendar.1': 'February',
+        'calendar.2': 'March',
+        'calendar.3': 'April',
+        'calendar.4': 'May',
+        'calendar.5': 'June',
+        'calendar.6': 'July',
+        'calendar.7': 'August',
+        'calendar.8': 'September',
+        'calendar.9': 'October',
+        'calendar.10': 'November',
+        'calendar.11': 'December',
         
         // Visibility settings
         'visibility.general': 'General',
@@ -350,6 +363,19 @@ const translations = {
         'calendar.october': 'אוקטובר',
         'calendar.november': 'נובמבר',
         'calendar.december': 'דצמבר',
+        // Numeric month indices (0-11) for JavaScript Date compatibility
+        'calendar.0': 'ינואר',
+        'calendar.1': 'פברואר',
+        'calendar.2': 'מרץ',
+        'calendar.3': 'אפריל',
+        'calendar.4': 'מאי',
+        'calendar.5': 'יוני',
+        'calendar.6': 'יולי',
+        'calendar.7': 'אוגוסט',
+        'calendar.8': 'ספטמבר',
+        'calendar.9': 'אוקטובר',
+        'calendar.10': 'נובמבר',
+        'calendar.11': 'דצמבר',
         
         // Visibility settings
         'visibility.general': 'כללי',
@@ -600,6 +626,19 @@ const translations = {
         'calendar.october': 'أكتوبر',
         'calendar.november': 'نوفمبر',
         'calendar.december': 'ديسمبر',
+        // Numeric month indices (0-11) for JavaScript Date compatibility
+        'calendar.0': 'يناير',
+        'calendar.1': 'فبراير',
+        'calendar.2': 'مارس',
+        'calendar.3': 'أبريل',
+        'calendar.4': 'مايو',
+        'calendar.5': 'يونيو',
+        'calendar.6': 'يوليو',
+        'calendar.7': 'أغسطس',
+        'calendar.8': 'سبتمبر',
+        'calendar.9': 'أكتوبر',
+        'calendar.10': 'نوفمبر',
+        'calendar.11': 'ديسمبر',
         
         // Visibility settings
         'visibility.general': 'عام',
@@ -850,6 +889,19 @@ const translations = {
         'calendar.october': 'Октябрь',
         'calendar.november': 'Ноябрь',
         'calendar.december': 'Декабрь',
+        // Numeric month indices (0-11) for JavaScript Date compatibility
+        'calendar.0': 'Январь',
+        'calendar.1': 'Февраль',
+        'calendar.2': 'Март',
+        'calendar.3': 'Апрель',
+        'calendar.4': 'Май',
+        'calendar.5': 'Июнь',
+        'calendar.6': 'Июль',
+        'calendar.7': 'Август',
+        'calendar.8': 'Сентябрь',
+        'calendar.9': 'Октябрь',
+        'calendar.10': 'Ноябрь',
+        'calendar.11': 'Декабрь',
         
         // Visibility settings
         'visibility.general': 'Общий',
