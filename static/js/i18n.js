@@ -49,10 +49,12 @@ const translations = {
         'btn.load': 'Load',
         'btn.clear': 'Clear',
         'btn.today': 'Today',
+        'btn.logout': 'Logout',
         
         // Feed page
         'feed.title': 'My Feed',
         'feed.subtitle': 'Share your thoughts and connect with others',
+        'feed.placeholder': 'What\'s on your mind?',
         'feed.calendar_title': 'Daily Activity Tracker',
         'feed.load_day': 'Load Day',
         'feed.save_day': 'Save Day',
@@ -80,12 +82,20 @@ const translations = {
         'calendar.prev': 'Previous',
         'calendar.next': 'Next',
         'calendar.today': 'Today',
+        'calendar.days': 'Days',
+        'calendar.month_year': '{month} {year}',
         
         // Visibility settings
         'visibility.general': 'General',
         'visibility.close_friends': 'Close Friends',
         'visibility.family': 'Family',
         'visibility.private': 'Private',
+        
+        // Alerts
+        'alerts.title': 'Notifications',
+        'alerts.no_alerts': 'No notifications yet',
+        'alerts.mark_read': 'Mark as read',
+        'alerts.clear_all': 'Clear all',
         
         // Circles page
         'circles.title': 'My Circles',
@@ -110,6 +120,7 @@ const translations = {
         'messages.type_message': 'Type a message...',
         'messages.send': 'Send',
         'messages.search': 'Search conversations',
+        'messages.search_placeholder': 'Search messages...',
         'messages.no_messages': 'No messages yet',
         'messages.start_conversation': 'No messages yet. Start the conversation!',
         'messages.new_message': 'New Message',
@@ -135,6 +146,7 @@ const translations = {
         'parameters.title': 'Daily Parameters',
         'parameters.select_date': 'Select Date',
         'parameters.current_date': 'Current Date:',
+        'parameters.insights': 'Insights',
         'parameters.mood': 'Mood',
         'parameters.mood_placeholder': 'How are you feeling? (e.g., Happy, Calm, Anxious, etc.)',
         'parameters.sleep': 'Sleep',
@@ -264,10 +276,12 @@ const translations = {
         'btn.load': 'טען',
         'btn.clear': 'נקה',
         'btn.today': 'היום',
+        'btn.logout': 'התנתקות',
         
         // Feed page
         'feed.title': 'הפיד שלי',
         'feed.subtitle': 'שתף את המחשבות שלך והתחבר לאחרים',
+        'feed.placeholder': 'מה עובר לך בראש?',
         'feed.calendar_title': 'מעקב פעילות יומית',
         'feed.load_day': 'טען יום',
         'feed.save_day': 'שמור יום',
@@ -295,12 +309,20 @@ const translations = {
         'calendar.prev': 'קודם',
         'calendar.next': 'הבא',
         'calendar.today': 'היום',
+        'calendar.days': 'ימים',
+        'calendar.month_year': '{month} {year}',
         
         // Visibility settings
         'visibility.general': 'כללי',
         'visibility.close_friends': 'חברים קרובים',
         'visibility.family': 'משפחה',
         'visibility.private': 'פרטי',
+        
+        // Alerts
+        'alerts.title': 'התראות',
+        'alerts.no_alerts': 'אין התראות עדיין',
+        'alerts.mark_read': 'סמן כנקרא',
+        'alerts.clear_all': 'נקה הכל',
         
         // Circles page
         'circles.title': 'המעגלים שלי',
@@ -325,6 +347,7 @@ const translations = {
         'messages.type_message': 'הקלד הודעה...',
         'messages.send': 'שלח',
         'messages.search': 'חפש שיחות',
+        'messages.search_placeholder': 'חפש הודעות...',
         'messages.no_messages': 'אין הודעות עדיין',
         'messages.start_conversation': 'אין הודעות עדיין. התחל את השיחה!',
         'messages.new_message': 'הודעה חדשה',
@@ -350,6 +373,7 @@ const translations = {
         'parameters.title': 'פרמטרים יומיים',
         'parameters.select_date': 'בחר תאריך',
         'parameters.current_date': 'תאריך נוכחי:',
+        'parameters.insights': 'תובנות',
         'parameters.mood': 'מצב רוח',
         'parameters.mood_placeholder': 'איך אתה מרגיש? (למשל, שמח, רגוע, חרד וכו\')',
         'parameters.sleep': 'שינה',
@@ -479,10 +503,12 @@ const translations = {
         'btn.load': 'تحميل',
         'btn.clear': 'مسح',
         'btn.today': 'اليوم',
+        'btn.logout': 'تسجيل الخروج',
         
         // Feed page
         'feed.title': 'موجزي',
         'feed.subtitle': 'شارك أفكارك وتواصل مع الآخرين',
+        'feed.placeholder': 'ماذا يدور في ذهنك؟',
         'feed.calendar_title': 'متتبع النشاط اليومي',
         'feed.load_day': 'تحميل اليوم',
         'feed.save_day': 'حفظ اليوم',
@@ -510,12 +536,20 @@ const translations = {
         'calendar.prev': 'السابق',
         'calendar.next': 'التالي',
         'calendar.today': 'اليوم',
+        'calendar.days': 'أيام',
+        'calendar.month_year': '{month} {year}',
         
         // Visibility settings
         'visibility.general': 'عام',
         'visibility.close_friends': 'الأصدقاء المقربون',
         'visibility.family': 'العائلة',
         'visibility.private': 'خاص',
+        
+        // Alerts
+        'alerts.title': 'الإشعارات',
+        'alerts.no_alerts': 'لا توجد إشعارات بعد',
+        'alerts.mark_read': 'وضع علامة كمقروء',
+        'alerts.clear_all': 'مسح الكل',
         
         // Circles page
         'circles.title': 'دوائري',
@@ -540,6 +574,7 @@ const translations = {
         'messages.type_message': 'اكتب رسالة...',
         'messages.send': 'إرسال',
         'messages.search': 'البحث في المحادثات',
+        'messages.search_placeholder': 'البحث عن رسائل...',
         'messages.no_messages': 'لا توجد رسائل بعد',
         'messages.start_conversation': 'لا توجد رسائل بعد. ابدأ المحادثة!',
         'messages.new_message': 'رسالة جديدة',
@@ -565,6 +600,7 @@ const translations = {
         'parameters.title': 'المعاملات اليومية',
         'parameters.select_date': 'حدد التاريخ',
         'parameters.current_date': 'التاريخ الحالي:',
+        'parameters.insights': 'الرؤى',
         'parameters.mood': 'المزاج',
         'parameters.mood_placeholder': 'كيف تشعر؟ (مثل: سعيد، هادئ، قلق، إلخ)',
         'parameters.sleep': 'النوم',
@@ -694,10 +730,12 @@ const translations = {
         'btn.load': 'Загрузить',
         'btn.clear': 'Очистить',
         'btn.today': 'Сегодня',
+        'btn.logout': 'Выход',
         
         // Feed page
         'feed.title': 'Моя лента',
         'feed.subtitle': 'Делитесь мыслями и общайтесь с другими',
+        'feed.placeholder': 'О чём вы думаете?',
         'feed.calendar_title': 'Трекер ежедневной активности',
         'feed.load_day': 'Загрузить день',
         'feed.save_day': 'Сохранить день',
