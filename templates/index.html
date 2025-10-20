@@ -920,7 +920,7 @@
         <div class="nav-content">
             <div class="logo" data-i18n="nav.logo">🧠 Thera Social</div>
             <div class="nav-menu">
-                <select id="languageSelector" class="language-selector" onchange="window.i18n.changeLanguage(this.value)">
+                <select id="languageSelector" class="language-selector" onchange="window.i18n.setLanguage(this.value)">
                     <option value="en">English</option>
                     <option value="he">עברית</option>
                     <option value="ar">العربية</option>
@@ -1310,6 +1310,8 @@
 
     <script src="/static/js/i18n.js"></script>
     <script>
+        const t = (key) => window.i18n ? window.i18n.translate(key) : key;  
+
         // API Configuration
         const API_URL = window.location.origin + '/api';
         let authToken = localStorage.getItem('authToken');
@@ -1627,7 +1629,7 @@
             if (response.content) {
                 alert(window.i18n.t('msg.loaded') || `Loaded ${visibility.replace('_', ' ')} feed from ${dateStr}`);
             } else {
-                alert(window.i18n.t('feed.no_posts') || `No ${visibility.replace('_', ' ')} feed for this date`);
+                alert(window.i18n.t('feed.no_activity') || `No ${visibility.replace('_', ' ')} feed for this date`);
             }
         }
     } catch (error) {
