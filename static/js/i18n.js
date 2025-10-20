@@ -2,6 +2,8 @@
 const translations = {
     en: {
         // Navigation
+        'nav.logo': 'TheraSocial',
+        'nav.home': 'Home',
         'nav.feed': 'Feed',
         'nav.circles': 'Circles',
         'nav.messages': 'Messages',
@@ -11,7 +13,30 @@ const translations = {
         'nav.support': 'Support',
         'nav.logout': 'Logout',
         
+        // Authentication
+        'auth.welcome': 'Welcome to TheraSocial',
+        'auth.subtitle': 'Connect, share, and grow together',
+        'auth.email': 'Email',
+        'auth.email_placeholder': 'Enter your email',
+        'auth.password': 'Password',
+        'auth.password_placeholder': 'Enter your password',
+        'auth.signin': 'Sign In',
+        'auth.signup': 'Sign Up',
+        'auth.toggle_signup': 'Don\'t have an account? Sign up',
+        'auth.toggle_signin': 'Already have an account? Sign in',
+        'auth.forgot_password': 'Forgot password?',
+        'auth.remember_me': 'Remember me',
+        'auth.or': 'OR',
+        'auth.login_error': 'Invalid email or password',
+        'auth.signup_success': 'Account created successfully!',
+        'auth.name': 'Full Name',
+        'auth.name_placeholder': 'Enter your full name',
+        'auth.confirm_password': 'Confirm Password',
+        'auth.confirm_password_placeholder': 'Re-enter your password',
+        
         // Common buttons
+        'btn.signin': 'Sign In',
+        'btn.signup': 'Sign Up',
         'btn.save': 'Save',
         'btn.cancel': 'Cancel',
         'btn.submit': 'Submit',
@@ -174,6 +199,8 @@ const translations = {
     
     he: {
         // Navigation
+        'nav.logo': 'TheraSocial',
+        'nav.home': 'בית',
         'nav.feed': 'פיד',
         'nav.circles': 'מעגלים',
         'nav.messages': 'הודעות',
@@ -183,7 +210,30 @@ const translations = {
         'nav.support': 'תמיכה',
         'nav.logout': 'התנתקות',
         
+        // Authentication
+        'auth.welcome': 'ברוכים הבאים ל-TheraSocial',
+        'auth.subtitle': 'התחברו, שתפו וצמחו ביחד',
+        'auth.email': 'אימייל',
+        'auth.email_placeholder': 'הזן את האימייל שלך',
+        'auth.password': 'סיסמה',
+        'auth.password_placeholder': 'הזן את הסיסמה שלך',
+        'auth.signin': 'התחברות',
+        'auth.signup': 'הרשמה',
+        'auth.toggle_signup': 'אין לך חשבון? הירשם',
+        'auth.toggle_signin': 'כבר יש לך חשבון? התחבר',
+        'auth.forgot_password': 'שכחת סיסמה?',
+        'auth.remember_me': 'זכור אותי',
+        'auth.or': 'או',
+        'auth.login_error': 'אימייל או סיסמה שגויים',
+        'auth.signup_success': 'החשבון נוצר בהצלחה!',
+        'auth.name': 'שם מלא',
+        'auth.name_placeholder': 'הזן את שמך המלא',
+        'auth.confirm_password': 'אימות סיסמה',
+        'auth.confirm_password_placeholder': 'הזן שוב את הסיסמה',
+        
         // Common buttons
+        'btn.signin': 'התחברות',
+        'btn.signup': 'הרשמה',
         'btn.save': 'שמור',
         'btn.cancel': 'ביטול',
         'btn.submit': 'שלח',
@@ -346,6 +396,8 @@ const translations = {
     
     ar: {
         // Navigation
+        'nav.logo': 'TheraSocial',
+        'nav.home': 'الرئيسية',
         'nav.feed': 'التغذية',
         'nav.circles': 'الدوائر',
         'nav.messages': 'الرسائل',
@@ -355,7 +407,30 @@ const translations = {
         'nav.support': 'الدعم',
         'nav.logout': 'تسجيل الخروج',
         
+        // Authentication
+        'auth.welcome': 'مرحبًا بك في TheraSocial',
+        'auth.subtitle': 'تواصل، شارك، واكبر معًا',
+        'auth.email': 'البريد الإلكتروني',
+        'auth.email_placeholder': 'أدخل بريدك الإلكتروني',
+        'auth.password': 'كلمة المرور',
+        'auth.password_placeholder': 'أدخل كلمة المرور',
+        'auth.signin': 'تسجيل الدخول',
+        'auth.signup': 'إنشاء حساب',
+        'auth.toggle_signup': 'ليس لديك حساب؟ سجل الآن',
+        'auth.toggle_signin': 'لديك حساب بالفعل؟ سجل الدخول',
+        'auth.forgot_password': 'نسيت كلمة المرور؟',
+        'auth.remember_me': 'تذكرني',
+        'auth.or': 'أو',
+        'auth.login_error': 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+        'auth.signup_success': 'تم إنشاء الحساب بنجاح!',
+        'auth.name': 'الاسم الكامل',
+        'auth.name_placeholder': 'أدخل اسمك الكامل',
+        'auth.confirm_password': 'تأكيد كلمة المرور',
+        'auth.confirm_password_placeholder': 'أعد إدخال كلمة المرور',
+        
         // Common buttons
+        'btn.signin': 'تسجيل الدخول',
+        'btn.signup': 'إنشاء حساب',
         'btn.save': 'حفظ',
         'btn.cancel': 'إلغاء',
         'btn.submit': 'إرسال',
@@ -518,6 +593,8 @@ const translations = {
     
     ru: {
         // Navigation
+        'nav.logo': 'TheraSocial',
+        'nav.home': 'Главная',
         'nav.feed': 'Лента',
         'nav.circles': 'Круги',
         'nav.messages': 'Сообщения',
@@ -527,7 +604,30 @@ const translations = {
         'nav.support': 'Поддержка',
         'nav.logout': 'Выход',
         
+        // Authentication
+        'auth.welcome': 'Добро пожаловать в TheraSocial',
+        'auth.subtitle': 'Общайтесь, делитесь и развивайтесь вместе',
+        'auth.email': 'Электронная почта',
+        'auth.email_placeholder': 'Введите ваш email',
+        'auth.password': 'Пароль',
+        'auth.password_placeholder': 'Введите ваш пароль',
+        'auth.signin': 'Войти',
+        'auth.signup': 'Регистрация',
+        'auth.toggle_signup': 'Нет аккаунта? Зарегистрируйтесь',
+        'auth.toggle_signin': 'Уже есть аккаунт? Войдите',
+        'auth.forgot_password': 'Забыли пароль?',
+        'auth.remember_me': 'Запомнить меня',
+        'auth.or': 'ИЛИ',
+        'auth.login_error': 'Неверный email или пароль',
+        'auth.signup_success': 'Аккаунт успешно создан!',
+        'auth.name': 'Полное имя',
+        'auth.name_placeholder': 'Введите ваше полное имя',
+        'auth.confirm_password': 'Подтвердите пароль',
+        'auth.confirm_password_placeholder': 'Введите пароль ещё раз',
+        
         // Common buttons
+        'btn.signin': 'Войти',
+        'btn.signup': 'Регистрация',
         'btn.save': 'Сохранить',
         'btn.cancel': 'Отмена',
         'btn.submit': 'Отправить',
