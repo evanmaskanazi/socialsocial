@@ -128,6 +128,8 @@ const translations = {
         'alerts.no_alerts': 'No notifications yet',
         'alerts.mark_read': 'Mark as read',
         'alerts.clear_all': 'Clear all',
+        'alerts.welcome_title': 'Welcome to TheraSocial!',
+'alerts.welcome_message': 'Your account has been created successfully. Start by updating your profile.',
 
         // Circles page
         'circles.title': 'My Circles',
@@ -407,6 +409,8 @@ const translations = {
         'alerts.no_alerts': 'אין התראות עדיין',
         'alerts.mark_read': 'סמן כנקרא',
         'alerts.clear_all': 'נקה הכל',
+        'alerts.welcome_title': 'ברוכים הבאים ל-TheraSocial!',
+'alerts.welcome_message': 'חשבונך נוצר בהצלחה. התחל בעדכון הפרופיל שלך.',
 
         // Circles page
         'circles.title': 'המעגלים שלי',
@@ -686,6 +690,9 @@ const translations = {
         'alerts.no_alerts': 'لا توجد إشعارات بعد',
         'alerts.mark_read': 'وضع علامة كمقروء',
         'alerts.clear_all': 'مسح الكل',
+        'alerts.welcome_title': 'مرحبًا بك في TheraSocial!',
+'alerts.welcome_message': 'تم إنشاء حسابك بنجاح. ابدأ بتحديث ملفك الشخصي.',
+
 
         // Circles page
         'circles.title': 'دوائري',
@@ -965,6 +972,9 @@ const translations = {
         'alerts.no_alerts': 'Пока нет уведомлений',
         'alerts.mark_read': 'Отметить как прочитанное',
         'alerts.clear_all': 'Очистить всё',
+        'alerts.welcome_title': 'Добро пожаловать в TheraSocial!',
+'alerts.welcome_message': 'Ваш аккаунт успешно создан. Начните с обновления вашего профиля.',
+
 
         // Circles page
         'circles.title': 'Мои круги',
