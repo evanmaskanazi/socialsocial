@@ -7,6 +7,7 @@ const translations = {
         'nav.about': 'About',
         'nav.support': 'Support',
         'nav.logout': 'Logout',
+        'logout': 'Logout',
         'menu.feed': 'Feed',
         'menu.profile': 'Profile',
         'menu.circles': 'Circles',
@@ -85,6 +86,20 @@ const translations = {
         'calendar.today': 'Today',
         'calendar.days': 'Days',
         'calendar.month_year': '{month} {year}',
+        'calendar.month': 'Month',
+        'calendar.year': 'Year',
+        'calendar.january': 'January',
+        'calendar.february': 'February',
+        'calendar.march': 'March',
+        'calendar.april': 'April',
+        'calendar.may': 'May',
+        'calendar.june': 'June',
+        'calendar.july': 'July',
+        'calendar.august': 'August',
+        'calendar.september': 'September',
+        'calendar.october': 'October',
+        'calendar.november': 'November',
+        'calendar.december': 'December',
         
         // Visibility settings
         'visibility.general': 'General',
@@ -145,7 +160,9 @@ const translations = {
         
         // Parameters page
         'parameters.title': 'Daily Parameters',
+        'parameters.subtitle': 'Track your daily metrics',
         'parameters.select_date': 'Select Date',
+        'parameters.selected_date': 'Selected Date',
         'parameters.current_date': 'Current Date:',
         'parameters.insights': 'Insights',
         'parameters.mood': 'Mood',
@@ -225,7 +242,12 @@ const translations = {
         // Success messages
         'success.saved': 'Saved successfully',
         'success.updated': 'Updated successfully',
-        'success.deleted': 'Deleted successfully'
+        'success.deleted': 'Deleted successfully',
+        
+        // Message notifications
+        'msg.loaded': 'Parameters loaded successfully',
+        'msg.saved': 'Parameters saved successfully',
+        'msg.error': 'An error occurred'
     },
     
     he: {
@@ -234,6 +256,8 @@ const translations = {
         'nav.home': 'בית',
         'nav.about': 'אודות',
         'nav.support': 'תמיכה',
+        'nav.logout': 'התנתקות',
+        'logout': 'התנתקות',
         'menu.feed': 'פיד',
         'menu.profile': 'פרופיל',
         'menu.circles': 'מעגלים',
@@ -312,6 +336,20 @@ const translations = {
         'calendar.today': 'היום',
         'calendar.days': 'ימים',
         'calendar.month_year': '{month} {year}',
+        'calendar.month': 'חודש',
+        'calendar.year': 'שנה',
+        'calendar.january': 'ינואר',
+        'calendar.february': 'פברואר',
+        'calendar.march': 'מרץ',
+        'calendar.april': 'אפריל',
+        'calendar.may': 'מאי',
+        'calendar.june': 'יוני',
+        'calendar.july': 'יולי',
+        'calendar.august': 'אוגוסט',
+        'calendar.september': 'ספטמבר',
+        'calendar.october': 'אוקטובר',
+        'calendar.november': 'נובמבר',
+        'calendar.december': 'דצמבר',
         
         // Visibility settings
         'visibility.general': 'כללי',
@@ -372,7 +410,9 @@ const translations = {
         
         // Parameters page
         'parameters.title': 'פרמטרים יומיים',
+        'parameters.subtitle': 'עקוב אחר המדדים היומיים שלך',
         'parameters.select_date': 'בחר תאריך',
+        'parameters.selected_date': 'תאריך נבחר',
         'parameters.current_date': 'תאריך נוכחי:',
         'parameters.insights': 'תובנות',
         'parameters.mood': 'מצב רוח',
@@ -452,7 +492,12 @@ const translations = {
         // Success messages
         'success.saved': 'נשמר בהצלחה',
         'success.updated': 'עודכן בהצלחה',
-        'success.deleted': 'נמחק בהצלחה'
+        'success.deleted': 'נמחק בהצלחה',
+        
+        // Message notifications
+        'msg.loaded': 'הפרמטרים נטענו בהצלחה',
+        'msg.saved': 'הפרמטרים נשמרו בהצלחה',
+        'msg.error': 'אירעה שגיאה'
     },
     
     ar: {
@@ -461,6 +506,8 @@ const translations = {
         'nav.home': 'الرئيسية',
         'nav.about': 'حول',
         'nav.support': 'الدعم',
+        'nav.logout': 'تسجيل الخروج',
+        'logout': 'تسجيل الخروج',
         'menu.feed': 'التغذية',
         'menu.profile': 'الملف الشخصي',
         'menu.circles': 'الدوائر',
@@ -539,6 +586,20 @@ const translations = {
         'calendar.today': 'اليوم',
         'calendar.days': 'أيام',
         'calendar.month_year': '{month} {year}',
+        'calendar.month': 'الشهر',
+        'calendar.year': 'السنة',
+        'calendar.january': 'يناير',
+        'calendar.february': 'فبراير',
+        'calendar.march': 'مارس',
+        'calendar.april': 'أبريل',
+        'calendar.may': 'مايو',
+        'calendar.june': 'يونيو',
+        'calendar.july': 'يوليو',
+        'calendar.august': 'أغسطس',
+        'calendar.september': 'سبتمبر',
+        'calendar.october': 'أكتوبر',
+        'calendar.november': 'نوفمبر',
+        'calendar.december': 'ديسمبر',
         
         // Visibility settings
         'visibility.general': 'عام',
@@ -599,7 +660,9 @@ const translations = {
         
         // Parameters page
         'parameters.title': 'المعاملات اليومية',
+        'parameters.subtitle': 'تتبع المقاييس اليومية الخاصة بك',
         'parameters.select_date': 'حدد التاريخ',
+        'parameters.selected_date': 'التاريخ المحدد',
         'parameters.current_date': 'التاريخ الحالي:',
         'parameters.insights': 'الرؤى',
         'parameters.mood': 'المزاج',
@@ -679,7 +742,12 @@ const translations = {
         // Success messages
         'success.saved': 'تم الحفظ بنجاح',
         'success.updated': 'تم التحديث بنجاح',
-        'success.deleted': 'تم الحذف بنجاح'
+        'success.deleted': 'تم الحذف بنجاح',
+        
+        // Message notifications
+        'msg.loaded': 'تم تحميل المعاملات بنجاح',
+        'msg.saved': 'تم حفظ المعاملات بنجاح',
+        'msg.error': 'حدث خطأ'
     },
     
     ru: {
@@ -688,6 +756,8 @@ const translations = {
         'nav.home': 'Главная',
         'nav.about': 'О нас',
         'nav.support': 'Поддержка',
+        'nav.logout': 'Выход',
+        'logout': 'Выход',
         'menu.feed': 'Лента',
         'menu.profile': 'Профиль',
         'menu.circles': 'Круги',
@@ -766,6 +836,20 @@ const translations = {
         'calendar.today': 'Сегодня',
         'calendar.days': 'Дни',
         'calendar.month_year': '{month} {year}',
+        'calendar.month': 'Месяц',
+        'calendar.year': 'Год',
+        'calendar.january': 'Январь',
+        'calendar.february': 'Февраль',
+        'calendar.march': 'Март',
+        'calendar.april': 'Апрель',
+        'calendar.may': 'Май',
+        'calendar.june': 'Июнь',
+        'calendar.july': 'Июль',
+        'calendar.august': 'Август',
+        'calendar.september': 'Сентябрь',
+        'calendar.october': 'Октябрь',
+        'calendar.november': 'Ноябрь',
+        'calendar.december': 'Декабрь',
         
         // Visibility settings
         'visibility.general': 'Общий',
@@ -826,7 +910,9 @@ const translations = {
         
         // Parameters page
         'parameters.title': 'Ежедневные параметры',
+        'parameters.subtitle': 'Отслеживайте свои ежедневные показатели',
         'parameters.select_date': 'Выберите дату',
+        'parameters.selected_date': 'Выбранная дата',
         'parameters.current_date': 'Текущая дата:',
         'parameters.insights': 'Аналитика',
         'parameters.mood': 'Настроение',
@@ -906,7 +992,12 @@ const translations = {
         // Success messages
         'success.saved': 'Успешно сохранено',
         'success.updated': 'Успешно обновлено',
-        'success.deleted': 'Успешно удалено'
+        'success.deleted': 'Успешно удалено',
+        
+        // Message notifications
+        'msg.loaded': 'Параметры успешно загружены',
+        'msg.saved': 'Параметры успешно сохранены',
+        'msg.error': 'Произошла ошибка'
     }
 };
 
@@ -1020,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', function() {
 if (typeof window !== 'undefined') {
     window.i18n = {
         translate,
-        t,  // ADD THIS - alias for translate
+        t,  // Alias for translate
         getCurrentLanguage,
         setLanguage,
         detectBrowserLanguage,
