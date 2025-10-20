@@ -1,9 +1,12 @@
-// Language detection and translation system for Thera Social
+// Language detection and translation system with backend sync
 const translations = {
     en: {
         // Navigation
-        'nav.logo': '🧠 Thera Social',
-        'nav.home': 'Home',
+        'nav.feed': 'Feed',
+        'nav.circles': 'Circles',
+        'nav.messages': 'Messages',
+        'nav.profile': 'Profile',
+        'nav.parameters': 'Parameters',
         'nav.about': 'About',
         'nav.support': 'Support',
         'nav.logout': 'Logout',
@@ -16,319 +19,341 @@ const translations = {
         'btn.edit': 'Edit',
         'btn.close': 'Close',
         'btn.send': 'Send',
+        'btn.remove': 'Remove',
+        'btn.add': 'Add',
         'btn.load': 'Load',
-        'btn.back': 'Back to Home',
-        'btn.signin': 'Sign In',
-        'btn.signup': 'Sign Up',
-        'btn.getstarted': 'Get Started',
-        
-        // Auth page
-        'auth.welcome': 'Welcome Back',
-        'auth.create': 'Create Account',
-        'auth.email': 'Email',
-        'auth.password': 'Password',
-        'auth.username': 'Username',
-        'auth.username_placeholder': 'Choose a username',
-        'auth.toggle_signup': 'New here? Create an account',
-        'auth.toggle_signin': 'Already have an account? Sign in',
-        
-        // Feed page
-        'feed.title': 'Your Feed Journal',
-        'feed.subtitle': 'Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.',
-        'feed.placeholder': 'How are you feeling today?',
-        'feed.selected_date': 'Selected Date:',
-        'feed.today': 'Today',
-        'feed.load_update': 'Load Update',
-        'feed.save_update': 'Save Update',
-        'feed.no_posts': 'No posts yet',
-        
-        // Visibility options
-        'visibility.general': 'General',
-        'visibility.close_friends': 'Close Friends',
-        'visibility.family': 'Family',
-        'visibility.private': 'Private',
-        
-        // Profile page
-        'profile.title': 'Your Profile',
-        'profile.bio': 'Bio',
-        'profile.bio_placeholder': 'Tell us about yourself...',
-        'profile.interests': 'Interests',
-        'profile.interests_placeholder': 'What are you interested in?',
-        'profile.occupation': 'Occupation',
-        'profile.occupation_placeholder': 'What do you do?',
-        'profile.goals': 'Goals',
-        'profile.goals_placeholder': 'What are your personal or professional goals?',
-        'profile.hobbies': 'Favorite Hobbies',
-        'profile.hobbies_placeholder': 'What do you love to do in your free time?',
-        'profile.save': 'Save Profile',
+        'btn.clear': 'Clear',
+        'btn.today': 'Today',
         
         // Circles page
-        'circles.title': 'Your Circles',
-        'circles.search_placeholder': 'Search users to add to circles...',
-        'circles.general': '💥 General',
-        'circles.close_friends': '❤️ Close Friends',
-        'circles.family': '👨‍👩‍👧‍👦 Family',
+        'circles.title': 'My Circles',
+        'circles.subtitle': 'Organize your connections into meaningful groups',
+        'circles.search_placeholder': 'Search users by name or email...',
+        'circles.general': 'General',
+        'circles.close_friends': 'Close Friends',
+        'circles.family': 'Family',
         'circles.no_members': 'No members yet',
-        'circles.remove': 'Remove',
-        'circles.add_to': 'Add to circle...',
-        'circles.no_users': 'No users found',
+        'circles.add_to_circle': 'Add to Circle',
+        'circles.no_users_found': 'No users found',
+        'circles.user_added': 'added to',
+        'circles.circle': 'circle!',
+        'circles.remove_confirm': 'Remove this user from the circle?',
+        'circles.user_removed': 'User removed from circle',
         
         // Messages page
         'messages.title': 'Messages',
-        'messages.search_placeholder': 'Search users to message...',
+        'messages.new': '+ New',
         'messages.select_conversation': 'Select a conversation',
         'messages.no_conversations': 'No conversations yet',
-        'messages.no_messages': 'No messages yet. Start the conversation!',
         'messages.type_message': 'Type a message...',
-        'messages.you': 'You: ',
+        'messages.send': 'Send',
+        'messages.search': 'Search conversations',
+        'messages.no_messages': 'No messages yet',
+        'messages.start_conversation': 'No messages yet. Start the conversation!',
+        'messages.new_message': 'New Message',
+        'messages.select_recipient': 'Select recipient...',
+        'messages.select_and_type': 'Please select a recipient and enter a message',
+        'messages.message_sent': 'Message sent!',
+        
+        // Feed/Calendar
+        'feed.calendar_title': 'Daily Activity Tracker',
+        'feed.load_day': 'Load Day',
+        'feed.save_day': 'Save Day',
+        'feed.today': 'Today',
+        'feed.mood_notes': 'Daily Mood & Notes',
+        'feed.how_feeling': 'How are you feeling today?',
+        'feed.select_mood': 'Select mood...',
+        'feed.daily_reflection': 'Daily reflection:',
+        'feed.reflection_placeholder': 'How was your day? Any thoughts or feelings to record?',
+        'feed.posts_today': 'Posts Today',
+        'feed.messages_sent': 'Messages Sent',
+        'feed.comments_made': 'Comments Made',
+        'feed.activity_history': 'Your Activity History',
+        'feed.loaded_activity': 'Loaded activity for',
+        'feed.no_activity': 'No activity found for this date',
+        'feed.activity_saved': 'Activity saved for',
+        'feed.select_date': 'Please select a date',
+        'feed.no_saved_activity': 'No saved activity yet. Start tracking today!',
+        'feed.more_dates': 'more dates',
+        
+        // Moods
+        'mood.great': '😊 Great',
+        'mood.good': '🙂 Good',
+        'mood.okay': '😐 Okay',
+        'mood.down': '😔 Down',
+        'mood.anxious': '😰 Anxious',
+        'mood.tired': '😴 Tired',
+        'mood.frustrated': '😡 Frustrated',
+        'mood.hopeful': '🤗 Hopeful',
+        'mood.happy': '😊 Happy',
+        'mood.calm': '😌 Calm',
+        'mood.sad': '😢 Sad',
+        'mood.energetic': '🔥 Energetic',
         
         // Parameters page
-        'parameters.title': 'Wellness Parameters',
-        'parameters.selected_date': 'Selected Date:',
+        'parameters.title': 'Daily Parameters',
+        'parameters.select_date': 'Select Date',
+        'parameters.current_date': 'Current Date:',
         'parameters.mood': 'Mood',
-        'parameters.mood_placeholder': 'e.g., Happy, Calm, Anxious',
+        'parameters.mood_placeholder': 'How are you feeling? (e.g., Happy, Calm, Anxious, etc.)',
         'parameters.sleep': 'Sleep',
-        'parameters.sleep_placeholder': 'Hours',
         'parameters.sleep_hours': 'Hours',
         'parameters.exercise': 'Exercise',
-        'parameters.exercise_placeholder': 'e.g., Running, Yoga, Gym',
-        'parameters.anxiety': 'Anxiety',
-        'parameters.anxiety_placeholder': 'e.g., None, Mild, Moderate',
-        'parameters.energy': 'Energy',
-        'parameters.energy_placeholder': 'e.g., Low, Normal, High',
+        'parameters.exercise_placeholder': 'What exercise did you do? (e.g., Running, Yoga, Gym, Walking)',
+        'parameters.anxiety': 'Anxiety Level',
+        'parameters.anxiety_placeholder': 'Describe your anxiety level (e.g., None, Mild, Moderate, Severe)',
+        'parameters.energy': 'Energy Level',
+        'parameters.energy_placeholder': 'Describe your energy level (e.g., Very Low, Low, Normal, High, Very High)',
         'parameters.notes': 'Notes',
-        'parameters.notes_placeholder': 'Additional notes...',
+        'parameters.notes_placeholder': 'Any additional notes or thoughts for today...',
         'parameters.save': 'Save Parameters',
         'parameters.load': 'Load Parameters',
-        'parameters.insights': 'Insights',
+        'parameters.clear': 'Clear',
+        'parameters.saved': 'Parameters saved successfully',
+        'parameters.loaded': 'Loaded parameters from',
+        'parameters.no_saved': 'No saved parameters for this date',
+        'parameters.cleared': 'Parameters cleared',
+        'parameters.today_label': 'Today',
         
-        // Sidebar menu
-        'menu.feed': '📱 Feed',
-        'menu.profile': '👤 Profile',
-        'menu.circles': '👥 Circles',
-        'menu.messages': '💬 Messages',
-        'menu.parameters': '📊 Parameters',
+        // Profile page
+        'profile.title': 'My Profile',
+        'profile.loading': 'Loading...',
+        'profile.completion': 'Profile Completion:',
+        'profile.about_me': 'About Me',
+        'profile.bio': 'Bio',
+        'profile.bio_placeholder': 'Tell us about yourself...',
+        'profile.professional': 'Professional',
+        'profile.occupation': 'Occupation',
+        'profile.occupation_placeholder': 'What do you do?',
+        'profile.goals_aspirations': 'Goals & Aspirations',
+        'profile.my_goals': 'My Goals',
+        'profile.goals_placeholder': 'What are your personal or professional goals?',
+        'profile.interests_hobbies': 'Interests & Hobbies',
+        'profile.interests': 'Interests',
+        'profile.interests_placeholder': 'What are you interested in?',
+        'profile.favorite_hobbies': 'Favorite Hobbies',
+        'profile.hobbies_placeholder': 'What do you love to do in your free time?',
+        'profile.save_changes': 'Save Changes',
+        'profile.cancel': 'Cancel',
+        'profile.updated': 'Profile updated successfully!',
         
-        // Alerts
-        'alerts.title': 'Alerts',
-        'alerts.no_alerts': 'No new alerts',
+        // Days of week
+        'day.sun': 'Sun',
+        'day.mon': 'Mon',
+        'day.tue': 'Tue',
+        'day.wed': 'Wed',
+        'day.thu': 'Thu',
+        'day.fri': 'Fri',
+        'day.sat': 'Sat',
         
-        // About page
-        'about.title': 'About Thera Social',
-        'about.subtitle': 'Your safe space for wellness, connection, and personal growth',
-        'about.privacy_title': 'Privacy First',
-        'about.privacy_desc': 'Your wellness journey is private and secure. Share only what you\'re comfortable with.',
-        'about.track_title': 'Track Progress',
-        'about.track_desc': 'Monitor your wellness parameters and see your growth over time with insights.',
-        'about.community_title': 'Supportive Community',
-        'about.community_desc': 'Connect with others on similar journeys in a judgment-free environment.',
-        'about.communication_title': 'Safe Communication',
-        'about.communication_desc': 'Private messaging and circles let you control who sees your content.',
-        'about.goals_title': 'Goal Setting',
-        'about.goals_desc': 'Set and track personal goals with community support and accountability.',
-        'about.checkin_title': 'Daily Check-ins',
-        'about.checkin_desc': 'Regular parameter tracking helps you understand patterns and triggers.',
+        // Months
+        'month.january': 'January',
+        'month.february': 'February',
+        'month.march': 'March',
+        'month.april': 'April',
+        'month.may': 'May',
+        'month.june': 'June',
+        'month.july': 'July',
+        'month.august': 'August',
+        'month.september': 'September',
+        'month.october': 'October',
+        'month.november': 'November',
+        'month.december': 'December',
         
-        // Support page
-        'support.title': 'Support Center',
-        'support.subtitle': 'We\'re here to help you on your wellness journey',
-        'support.faq_title': 'Frequently Asked Questions',
-        'support.faq1_q': 'How do I track my wellness parameters?',
-        'support.faq1_a': 'Navigate to the Parameters tab in your dashboard. You can input daily values for mood, sleep, exercise, anxiety, and energy levels. Use the calendar to save and load parameters for different dates.',
-        'support.faq2_q': 'What are Circles?',
-        'support.faq2_a': 'Circles allow you to organize your connections into groups: General, Close Friends, and Family. You can control who sees your posts based on these circles.',
-        'support.faq3_q': 'How do I update my profile?',
-        'support.faq3_a': 'Go to the Profile tab to update your bio, interests, occupation, goals, and favorite hobbies. These help others understand you better.',
-        'support.faq4_q': 'Is my data private?',
-        'support.faq4_a': 'Yes! We take privacy seriously. Your wellness data is encrypted and only visible to you unless you choose to share it.',
-        'support.contact_title': 'Contact Support',
-        'support.subject': 'Subject',
-        'support.message': 'Message',
-        'support.send': 'Send Message',
+        // Error messages
+        'error.loading': 'Error loading data',
+        'error.saving': 'Error saving data',
+        'error.required': 'This field is required',
+        'error.server': 'Server error. Please try again.',
         
-        // Calendar
-        'calendar.prev': '←',
-        'calendar.next': '→',
-        'calendar.days': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-        'calendar.months': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-        
-        // Messages
-        'msg.success': 'Success!',
-        'msg.error': 'Error',
-        'msg.saved': 'Saved successfully!',
-        'msg.loaded': 'Loaded successfully!',
-        'msg.deleted': 'Deleted successfully!',
-        'msg.sent': 'Message sent!',
+        // Success messages
+        'success.saved': 'Saved successfully',
+        'success.updated': 'Updated successfully',
+        'success.deleted': 'Deleted successfully'
     },
     
     he: {
         // Navigation
-        'nav.logo': '🧠 תרה סושיאל',
-        'nav.home': 'בית',
+        'nav.feed': 'פיד',
+        'nav.circles': 'מעגלים',
+        'nav.messages': 'הודעות',
+        'nav.profile': 'פרופיל',
+        'nav.parameters': 'פרמטרים',
         'nav.about': 'אודות',
         'nav.support': 'תמיכה',
-        'nav.logout': 'יציאה',
+        'nav.logout': 'התנתקות',
         
         // Common buttons
-        'btn.save': 'שמירה',
+        'btn.save': 'שמור',
         'btn.cancel': 'ביטול',
-        'btn.submit': 'שליחה',
-        'btn.delete': 'מחיקה',
-        'btn.edit': 'עריכה',
-        'btn.close': 'סגירה',
+        'btn.submit': 'שלח',
+        'btn.delete': 'מחק',
+        'btn.edit': 'ערוך',
+        'btn.close': 'סגור',
         'btn.send': 'שלח',
-        'btn.load': 'טעינה',
-        'btn.back': 'חזרה לבית',
-        'btn.signin': 'כניסה',
-        'btn.signup': 'הרשמה',
-        'btn.getstarted': 'התחל',
-        
-        // Auth page
-        'auth.welcome': 'ברוכים השבים',
-        'auth.create': 'יצירת חשבון',
-        'auth.email': 'אימייל',
-        'auth.password': 'סיסמה',
-        'auth.username': 'שם משתמש',
-        'auth.username_placeholder': 'בחר שם משתמש',
-        'auth.toggle_signup': 'חדש כאן? צור חשבון',
-        'auth.toggle_signin': 'כבר יש לך חשבון? התחבר',
-        
-        // Feed page
-        'feed.title': 'יומן הפיד שלך',
-        'feed.subtitle': 'שמור את המחשבות שלך לכל יום. בחר תאריך מהלוח, כתוב את העדכון שלך ושמור אותו. נקודות ירוקות מציגות תאריכים עם רשומות שמורות.',
-        'feed.placeholder': 'איך אתה מרגיש היום?',
-        'feed.selected_date': 'תאריך נבחר:',
-        'feed.today': 'היום',
-        'feed.load_update': 'טען עדכון',
-        'feed.save_update': 'שמור עדכון',
-        'feed.no_posts': 'אין עדיין פוסטים',
-        
-        // Visibility options
-        'visibility.general': 'כללי',
-        'visibility.close_friends': 'חברים קרובים',
-        'visibility.family': 'משפחה',
-        'visibility.private': 'פרטי',
-        
-        // Profile page
-        'profile.title': 'הפרופיל שלך',
-        'profile.bio': 'ביוגרפיה',
-        'profile.bio_placeholder': 'ספר לנו על עצמך...',
-        'profile.interests': 'תחומי עניין',
-        'profile.interests_placeholder': 'במה אתה מתעניין?',
-        'profile.occupation': 'עיסוק',
-        'profile.occupation_placeholder': 'מה אתה עושה?',
-        'profile.goals': 'מטרות',
-        'profile.goals_placeholder': 'מהן המטרות האישיות או המקצועיות שלך?',
-        'profile.hobbies': 'תחביבים מועדפים',
-        'profile.hobbies_placeholder': 'מה אתה אוהב לעשות בזמן הפנוי?',
-        'profile.save': 'שמור פרופיל',
+        'btn.remove': 'הסר',
+        'btn.add': 'הוסף',
+        'btn.load': 'טען',
+        'btn.clear': 'נקה',
+        'btn.today': 'היום',
         
         // Circles page
-        'circles.title': 'המעגלים שלך',
-        'circles.search_placeholder': 'חפש משתמשים להוספה למעגלים...',
-        'circles.general': '💥 כללי',
-        'circles.close_friends': '❤️ חברים קרובים',
-        'circles.family': '👨‍👩‍👧‍👦 משפחה',
-        'circles.no_members': 'אין עדיין חברים',
-        'circles.remove': 'הסר',
-        'circles.add_to': 'הוסף למעגל...',
-        'circles.no_users': 'לא נמצאו משתמשים',
+        'circles.title': 'המעגלים שלי',
+        'circles.subtitle': 'ארגן את הקשרים שלך לקבוצות משמעותיות',
+        'circles.search_placeholder': 'חפש משתמשים לפי שם או אימייל...',
+        'circles.general': 'כללי',
+        'circles.close_friends': 'חברים קרובים',
+        'circles.family': 'משפחה',
+        'circles.no_members': 'אין חברים עדיין',
+        'circles.add_to_circle': 'הוסף למעגל',
+        'circles.no_users_found': 'לא נמצאו משתמשים',
+        'circles.user_added': 'נוסף ל',
+        'circles.circle': 'מעגל!',
+        'circles.remove_confirm': 'להסיר משתמש זה מהמעגל?',
+        'circles.user_removed': 'המשתמש הוסר מהמעגל',
         
         // Messages page
         'messages.title': 'הודעות',
-        'messages.search_placeholder': 'חפש משתמשים לשליחת הודעות...',
+        'messages.new': '+ חדש',
         'messages.select_conversation': 'בחר שיחה',
-        'messages.no_conversations': 'אין עדיין שיחות',
-        'messages.no_messages': 'אין עדיין הודעות. התחל את השיחה!',
+        'messages.no_conversations': 'אין שיחות עדיין',
         'messages.type_message': 'הקלד הודעה...',
-        'messages.you': 'אתה: ',
+        'messages.send': 'שלח',
+        'messages.search': 'חפש שיחות',
+        'messages.no_messages': 'אין הודעות עדיין',
+        'messages.start_conversation': 'אין הודעות עדיין. התחל את השיחה!',
+        'messages.new_message': 'הודעה חדשה',
+        'messages.select_recipient': 'בחר נמען...',
+        'messages.select_and_type': 'אנא בחר נמען והזן הודעה',
+        'messages.message_sent': 'ההודעה נשלחה!',
+        
+        // Feed/Calendar
+        'feed.calendar_title': 'מעקב פעילות יומית',
+        'feed.load_day': 'טען יום',
+        'feed.save_day': 'שמור יום',
+        'feed.today': 'היום',
+        'feed.mood_notes': 'מצב רוח והערות יומיות',
+        'feed.how_feeling': 'איך אתה מרגיש היום?',
+        'feed.select_mood': 'בחר מצב רוח...',
+        'feed.daily_reflection': 'הרהור יומי:',
+        'feed.reflection_placeholder': 'איך היה היום שלך? מחשבות או רגשות לרשום?',
+        'feed.posts_today': 'פוסטים היום',
+        'feed.messages_sent': 'הודעות שנשלחו',
+        'feed.comments_made': 'תגובות שנעשו',
+        'feed.activity_history': 'היסטוריית הפעילות שלך',
+        'feed.loaded_activity': 'נטענה פעילות עבור',
+        'feed.no_activity': 'לא נמצאה פעילות לתאריך זה',
+        'feed.activity_saved': 'הפעילות נשמרה עבור',
+        'feed.select_date': 'אנא בחר תאריך',
+        'feed.no_saved_activity': 'אין פעילות שמורה עדיין. התחל לעקוב היום!',
+        'feed.more_dates': 'תאריכים נוספים',
+        
+        // Moods
+        'mood.great': '😊 מצוין',
+        'mood.good': '🙂 טוב',
+        'mood.okay': '😐 בסדר',
+        'mood.down': '😔 מדוכא',
+        'mood.anxious': '😰 חרד',
+        'mood.tired': '😴 עייף',
+        'mood.frustrated': '😡 מתוסכל',
+        'mood.hopeful': '🤗 מלא תקווה',
+        'mood.happy': '😊 שמח',
+        'mood.calm': '😌 רגוע',
+        'mood.sad': '😢 עצוב',
+        'mood.energetic': '🔥 אנרגטי',
         
         // Parameters page
-        'parameters.title': 'פרמטרי בריאות',
-        'parameters.selected_date': 'תאריך נבחר:',
+        'parameters.title': 'פרמטרים יומיים',
+        'parameters.select_date': 'בחר תאריך',
+        'parameters.current_date': 'תאריך נוכחי:',
         'parameters.mood': 'מצב רוח',
-        'parameters.mood_placeholder': 'לדוגמה: שמח, רגוע, חרד',
+        'parameters.mood_placeholder': 'איך אתה מרגיש? (למשל, שמח, רגוע, חרד וכו\')',
         'parameters.sleep': 'שינה',
-        'parameters.sleep_placeholder': 'שעות',
         'parameters.sleep_hours': 'שעות',
         'parameters.exercise': 'פעילות גופנית',
-        'parameters.exercise_placeholder': 'לדוגמה: ריצה, יוגה, חדר כושר',
-        'parameters.anxiety': 'חרדה',
-        'parameters.anxiety_placeholder': 'לדוגמה: ללא, קלה, בינונית',
-        'parameters.energy': 'אנרגיה',
-        'parameters.energy_placeholder': 'לדוגמה: נמוכה, רגילה, גבוהה',
+        'parameters.exercise_placeholder': 'איזו פעילות גופנית עשית? (למשל, ריצה, יוגה, חדר כושר, הליכה)',
+        'parameters.anxiety': 'רמת חרדה',
+        'parameters.anxiety_placeholder': 'תאר את רמת החרדה שלך (למשל, ללא, קלה, בינונית, חמורה)',
+        'parameters.energy': 'רמת אנרגיה',
+        'parameters.energy_placeholder': 'תאר את רמת האנרגיה שלך (למשל, נמוכה מאוד, נמוכה, רגילה, גבוהה, גבוהה מאוד)',
         'parameters.notes': 'הערות',
-        'parameters.notes_placeholder': 'הערות נוספות...',
+        'parameters.notes_placeholder': 'הערות או מחשבות נוספות להיום...',
         'parameters.save': 'שמור פרמטרים',
         'parameters.load': 'טען פרמטרים',
-        'parameters.insights': 'תובנות',
+        'parameters.clear': 'נקה',
+        'parameters.saved': 'הפרמטרים נשמרו בהצלחה',
+        'parameters.loaded': 'נטענו פרמטרים מ',
+        'parameters.no_saved': 'אין פרמטרים שמורים לתאריך זה',
+        'parameters.cleared': 'הפרמטרים נוקו',
+        'parameters.today_label': 'היום',
         
-        // Sidebar menu
-        'menu.feed': '📱 פיד',
-        'menu.profile': '👤 פרופיל',
-        'menu.circles': '👥 מעגלים',
-        'menu.messages': '💬 הודעות',
-        'menu.parameters': '📊 פרמטרים',
+        // Profile page
+        'profile.title': 'הפרופיל שלי',
+        'profile.loading': 'טוען...',
+        'profile.completion': 'השלמת פרופיל:',
+        'profile.about_me': 'אודותיי',
+        'profile.bio': 'ביוגרפיה',
+        'profile.bio_placeholder': 'ספר לנו על עצמך...',
+        'profile.professional': 'מקצועי',
+        'profile.occupation': 'עיסוק',
+        'profile.occupation_placeholder': 'מה אתה עושה?',
+        'profile.goals_aspirations': 'מטרות ושאיפות',
+        'profile.my_goals': 'המטרות שלי',
+        'profile.goals_placeholder': 'מהן המטרות האישיות או המקצועיות שלך?',
+        'profile.interests_hobbies': 'תחומי עניין ותחביבים',
+        'profile.interests': 'תחומי עניין',
+        'profile.interests_placeholder': 'במה אתה מתעניין?',
+        'profile.favorite_hobbies': 'תחביבים מועדפים',
+        'profile.hobbies_placeholder': 'מה אתה אוהב לעשות בזמן הפנוי שלך?',
+        'profile.save_changes': 'שמור שינויים',
+        'profile.cancel': 'ביטול',
+        'profile.updated': 'הפרופיל עודכן בהצלחה!',
         
-        // Alerts
-        'alerts.title': 'התראות',
-        'alerts.no_alerts': 'אין התראות חדשות',
+        // Days of week
+        'day.sun': 'א\'',
+        'day.mon': 'ב\'',
+        'day.tue': 'ג\'',
+        'day.wed': 'ד\'',
+        'day.thu': 'ה\'',
+        'day.fri': 'ו\'',
+        'day.sat': 'ש\'',
         
-        // About page
-        'about.title': 'אודות תרה סושיאל',
-        'about.subtitle': 'המרחב הבטוח שלך לבריאות, חיבור וצמיחה אישית',
-        'about.privacy_title': 'פרטיות במקום הראשון',
-        'about.privacy_desc': 'מסע הבריאות שלך הוא פרטי ומאובטח. שתף רק את מה שנוח לך.',
-        'about.track_title': 'מעקב אחר התקדמות',
-        'about.track_desc': 'עקוב אחר פרמטרי הבריאות שלך וראה את הצמיחה שלך לאורך זמן עם תובנות.',
-        'about.community_title': 'קהילה תומכת',
-        'about.community_desc': 'התחבר לאחרים במסעות דומים בסביבה ללא שיפוטיות.',
-        'about.communication_title': 'תקשורת בטוחה',
-        'about.communication_desc': 'הודעות פרטיות ומעגלים מאפשרים לך לשלוט מי רואה את התוכן שלך.',
-        'about.goals_title': 'הגדרת מטרות',
-        'about.goals_desc': 'הגדר ועקוב אחר מטרות אישיות עם תמיכה ואחריות קהילתית.',
-        'about.checkin_title': 'צ\'ק-אין יומי',
-        'about.checkin_desc': 'מעקב קבוע אחר פרמטרים עוזר לך להבין דפוסים וטריגרים.',
+        // Months
+        'month.january': 'ינואר',
+        'month.february': 'פברואר',
+        'month.march': 'מרץ',
+        'month.april': 'אפריל',
+        'month.may': 'מאי',
+        'month.june': 'יוני',
+        'month.july': 'יולי',
+        'month.august': 'אוגוסט',
+        'month.september': 'ספטמבר',
+        'month.october': 'אוקטובר',
+        'month.november': 'נובמבר',
+        'month.december': 'דצמבר',
         
-        // Support page
-        'support.title': 'מרכז תמיכה',
-        'support.subtitle': 'אנחנו כאן לעזור לך במסע הבריאות שלך',
-        'support.faq_title': 'שאלות נפוצות',
-        'support.faq1_q': 'איך אני עוקב אחר פרמטרי הבריאות שלי?',
-        'support.faq1_a': 'נווט לכרטיסיית פרמטרים בלוח הבקרה שלך. אתה יכול להזין ערכים יומיים עבור מצב רוח, שינה, פעילות גופנית, חרדה ורמות אנרגיה. השתמש בלוח השנה לשמירה וטעינת פרמטרים לתאריכים שונים.',
-        'support.faq2_q': 'מה הם מעגלים?',
-        'support.faq2_a': 'מעגלים מאפשרים לך לארגן את החיבורים שלך לקבוצות: כללי, חברים קרובים ומשפחה. אתה יכול לשלוט מי רואה את הפוסטים שלך על בסיס מעגלים אלה.',
-        'support.faq3_q': 'איך אני מעדכן את הפרופיל שלי?',
-        'support.faq3_a': 'עבור לכרטיסיית פרופיל כדי לעדכן את הביוגרפיה, תחומי עניין, עיסוק, מטרות ותחביבים מועדפים שלך. אלה עוזרים לאחרים להבין אותך טוב יותר.',
-        'support.faq4_q': 'האם הנתונים שלי פרטיים?',
-        'support.faq4_a': 'כן! אנחנו לוקחים פרטיות ברצינות. נתוני הבריאות שלך מוצפנים ונראים רק לך אלא אם כן תבחר לשתף אותם.',
-        'support.contact_title': 'צור קשר עם תמיכה',
-        'support.subject': 'נושא',
-        'support.message': 'הודעה',
-        'support.send': 'שלח הודעה',
+        // Error messages
+        'error.loading': 'שגיאה בטעינת נתונים',
+        'error.saving': 'שגיאה בשמירת נתונים',
+        'error.required': 'שדה חובה',
+        'error.server': 'שגיאת שרת. נסה שוב.',
         
-        // Calendar
-        'calendar.prev': '→',
-        'calendar.next': '←',
-        'calendar.days': ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\''],
-        'calendar.months': ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
-        
-        // Messages
-        'msg.success': 'הצלחה!',
-        'msg.error': 'שגיאה',
-        'msg.saved': 'נשמר בהצלחה!',
-        'msg.loaded': 'נטען בהצלחה!',
-        'msg.deleted': 'נמחק בהצלחה!',
-        'msg.sent': 'ההודעה נשלחה!',
+        // Success messages
+        'success.saved': 'נשמר בהצלחה',
+        'success.updated': 'עודכן בהצלחה',
+        'success.deleted': 'נמחק בהצלחה'
     },
     
     ar: {
         // Navigation
-        'nav.logo': '🧠 تيرا سوشيال',
-        'nav.home': 'الرئيسية',
+        'nav.feed': 'التغذية',
+        'nav.circles': 'الدوائر',
+        'nav.messages': 'الرسائل',
+        'nav.profile': 'الملف الشخصي',
+        'nav.parameters': 'المعاملات',
         'nav.about': 'حول',
         'nav.support': 'الدعم',
-        'nav.logout': 'تسجيل خروج',
+        'nav.logout': 'تسجيل الخروج',
         
         // Common buttons
         'btn.save': 'حفظ',
@@ -338,155 +363,166 @@ const translations = {
         'btn.edit': 'تعديل',
         'btn.close': 'إغلاق',
         'btn.send': 'إرسال',
+        'btn.remove': 'إزالة',
+        'btn.add': 'إضافة',
         'btn.load': 'تحميل',
-        'btn.back': 'العودة للرئيسية',
-        'btn.signin': 'تسجيل دخول',
-        'btn.signup': 'إنشاء حساب',
-        'btn.getstarted': 'ابدأ',
-        
-        // Auth page
-        'auth.welcome': 'مرحباً بعودتك',
-        'auth.create': 'إنشاء حساب',
-        'auth.email': 'البريد الإلكتروني',
-        'auth.password': 'كلمة المرور',
-        'auth.username': 'اسم المستخدم',
-        'auth.username_placeholder': 'اختر اسم مستخدم',
-        'auth.toggle_signup': 'جديد هنا؟ إنشاء حساب',
-        'auth.toggle_signin': 'هل لديك حساب؟ تسجيل الدخول',
-        
-        // Feed page
-        'feed.title': 'مجلة الأخبار الخاصة بك',
-        'feed.subtitle': 'احفظ أفكارك لكل يوم. حدد تاريخاً من التقويم، اكتب تحديثك واحفظه. النقاط الخضراء تُظهر التواريخ ذات الإدخالات المحفوظة.',
-        'feed.placeholder': 'كيف تشعر اليوم؟',
-        'feed.selected_date': 'التاريخ المحدد:',
-        'feed.today': 'اليوم',
-        'feed.load_update': 'تحميل التحديث',
-        'feed.save_update': 'حفظ التحديث',
-        'feed.no_posts': 'لا توجد منشورات حتى الآن',
-        
-        // Visibility options
-        'visibility.general': 'عام',
-        'visibility.close_friends': 'الأصدقاء المقربين',
-        'visibility.family': 'العائلة',
-        'visibility.private': 'خاص',
-        
-        // Profile page
-        'profile.title': 'ملفك الشخصي',
-        'profile.bio': 'السيرة الذاتية',
-        'profile.bio_placeholder': 'أخبرنا عن نفسك...',
-        'profile.interests': 'الاهتمامات',
-        'profile.interests_placeholder': 'ما الذي تهتم به؟',
-        'profile.occupation': 'المهنة',
-        'profile.occupation_placeholder': 'ماذا تعمل؟',
-        'profile.goals': 'الأهداف',
-        'profile.goals_placeholder': 'ما هي أهدافك الشخصية أو المهنية؟',
-        'profile.hobbies': 'الهوايات المفضلة',
-        'profile.hobbies_placeholder': 'ماذا تحب أن تفعل في وقت فراغك؟',
-        'profile.save': 'حفظ الملف الشخصي',
+        'btn.clear': 'مسح',
+        'btn.today': 'اليوم',
         
         // Circles page
-        'circles.title': 'دوائرك',
-        'circles.search_placeholder': 'ابحث عن المستخدمين لإضافتهم إلى الدوائر...',
-        'circles.general': '💥 عام',
-        'circles.close_friends': '❤️ الأصدقاء المقربين',
-        'circles.family': '👨‍👩‍👧‍👦 العائلة',
+        'circles.title': 'دوائري',
+        'circles.subtitle': 'نظم اتصالاتك في مجموعات ذات مغزى',
+        'circles.search_placeholder': 'ابحث عن المستخدمين بالاسم أو البريد الإلكتروني...',
+        'circles.general': 'عام',
+        'circles.close_friends': 'الأصدقاء المقربون',
+        'circles.family': 'العائلة',
         'circles.no_members': 'لا يوجد أعضاء بعد',
-        'circles.remove': 'إزالة',
-        'circles.add_to': 'إضافة إلى الدائرة...',
-        'circles.no_users': 'لم يتم العثور على مستخدمين',
+        'circles.add_to_circle': 'أضف إلى الدائرة',
+        'circles.no_users_found': 'لم يتم العثور على مستخدمين',
+        'circles.user_added': 'تمت الإضافة إلى',
+        'circles.circle': 'دائرة!',
+        'circles.remove_confirm': 'إزالة هذا المستخدم من الدائرة؟',
+        'circles.user_removed': 'تمت إزالة المستخدم من الدائرة',
         
         // Messages page
         'messages.title': 'الرسائل',
-        'messages.search_placeholder': 'ابحث عن المستخدمين لإرسال رسائل...',
+        'messages.new': '+ جديد',
         'messages.select_conversation': 'حدد محادثة',
         'messages.no_conversations': 'لا توجد محادثات بعد',
-        'messages.no_messages': 'لا توجد رسائل بعد. ابدأ المحادثة!',
         'messages.type_message': 'اكتب رسالة...',
-        'messages.you': 'أنت: ',
+        'messages.send': 'إرسال',
+        'messages.search': 'البحث في المحادثات',
+        'messages.no_messages': 'لا توجد رسائل بعد',
+        'messages.start_conversation': 'لا توجد رسائل بعد. ابدأ المحادثة!',
+        'messages.new_message': 'رسالة جديدة',
+        'messages.select_recipient': 'حدد المستلم...',
+        'messages.select_and_type': 'يرجى تحديد مستلم وإدخال رسالة',
+        'messages.message_sent': 'تم إرسال الرسالة!',
+        
+        // Feed/Calendar
+        'feed.calendar_title': 'متتبع النشاط اليومي',
+        'feed.load_day': 'تحميل اليوم',
+        'feed.save_day': 'حفظ اليوم',
+        'feed.today': 'اليوم',
+        'feed.mood_notes': 'المزاج والملاحظات اليومية',
+        'feed.how_feeling': 'كيف تشعر اليوم؟',
+        'feed.select_mood': 'اختر المزاج...',
+        'feed.daily_reflection': 'تأمل يومي:',
+        'feed.reflection_placeholder': 'كيف كان يومك؟ أي أفكار أو مشاعر للتسجيل؟',
+        'feed.posts_today': 'المنشورات اليوم',
+        'feed.messages_sent': 'الرسائل المرسلة',
+        'feed.comments_made': 'التعليقات المقدمة',
+        'feed.activity_history': 'سجل نشاطك',
+        'feed.loaded_activity': 'تم تحميل النشاط لـ',
+        'feed.no_activity': 'لم يتم العثور على نشاط لهذا التاريخ',
+        'feed.activity_saved': 'تم حفظ النشاط لـ',
+        'feed.select_date': 'يرجى تحديد تاريخ',
+        'feed.no_saved_activity': 'لا يوجد نشاط محفوظ بعد. ابدأ التتبع اليوم!',
+        'feed.more_dates': 'تواريخ أخرى',
+        
+        // Moods
+        'mood.great': '😊 رائع',
+        'mood.good': '🙂 جيد',
+        'mood.okay': '😐 بخير',
+        'mood.down': '😔 حزين',
+        'mood.anxious': '😰 قلق',
+        'mood.tired': '😴 متعب',
+        'mood.frustrated': '😡 محبط',
+        'mood.hopeful': '🤗 متفائل',
+        'mood.happy': '😊 سعيد',
+        'mood.calm': '😌 هادئ',
+        'mood.sad': '😢 حزين',
+        'mood.energetic': '🔥 نشيط',
         
         // Parameters page
-        'parameters.title': 'معايير الصحة',
-        'parameters.selected_date': 'التاريخ المحدد:',
+        'parameters.title': 'المعاملات اليومية',
+        'parameters.select_date': 'حدد التاريخ',
+        'parameters.current_date': 'التاريخ الحالي:',
         'parameters.mood': 'المزاج',
-        'parameters.mood_placeholder': 'مثلاً: سعيد، هادئ، قلق',
+        'parameters.mood_placeholder': 'كيف تشعر؟ (مثل: سعيد، هادئ، قلق، إلخ)',
         'parameters.sleep': 'النوم',
-        'parameters.sleep_placeholder': 'ساعات',
         'parameters.sleep_hours': 'ساعات',
         'parameters.exercise': 'التمرين',
-        'parameters.exercise_placeholder': 'مثلاً: الجري، اليوغا، صالة الألعاب',
-        'parameters.anxiety': 'القلق',
-        'parameters.anxiety_placeholder': 'مثلاً: لا شيء، خفيف، متوسط',
-        'parameters.energy': 'الطاقة',
-        'parameters.energy_placeholder': 'مثلاً: منخفضة، عادية، عالية',
+        'parameters.exercise_placeholder': 'ما التمرين الذي قمت به؟ (مثل: الجري، اليوغا، الصالة الرياضية، المشي)',
+        'parameters.anxiety': 'مستوى القلق',
+        'parameters.anxiety_placeholder': 'صف مستوى قلقك (مثل: لا شيء، خفيف، متوسط، شديد)',
+        'parameters.energy': 'مستوى الطاقة',
+        'parameters.energy_placeholder': 'صف مستوى طاقتك (مثل: منخفض جدًا، منخفض، عادي، مرتفع، مرتفع جدًا)',
         'parameters.notes': 'ملاحظات',
-        'parameters.notes_placeholder': 'ملاحظات إضافية...',
-        'parameters.save': 'حفظ المعايير',
-        'parameters.load': 'تحميل المعايير',
-        'parameters.insights': 'رؤى',
+        'parameters.notes_placeholder': 'أي ملاحظات أو أفكار إضافية لليوم...',
+        'parameters.save': 'حفظ المعاملات',
+        'parameters.load': 'تحميل المعاملات',
+        'parameters.clear': 'مسح',
+        'parameters.saved': 'تم حفظ المعاملات بنجاح',
+        'parameters.loaded': 'تم تحميل المعاملات من',
+        'parameters.no_saved': 'لا توجد معاملات محفوظة لهذا التاريخ',
+        'parameters.cleared': 'تم مسح المعاملات',
+        'parameters.today_label': 'اليوم',
         
-        // Sidebar menu
-        'menu.feed': '📱 الأخبار',
-        'menu.profile': '👤 الملف الشخصي',
-        'menu.circles': '👥 الدوائر',
-        'menu.messages': '💬 الرسائل',
-        'menu.parameters': '📊 المعايير',
+        // Profile page
+        'profile.title': 'ملفي الشخصي',
+        'profile.loading': 'جارٍ التحميل...',
+        'profile.completion': 'اكتمال الملف الشخصي:',
+        'profile.about_me': 'عني',
+        'profile.bio': 'السيرة الذاتية',
+        'profile.bio_placeholder': 'أخبرنا عن نفسك...',
+        'profile.professional': 'مهني',
+        'profile.occupation': 'المهنة',
+        'profile.occupation_placeholder': 'ماذا تعمل؟',
+        'profile.goals_aspirations': 'الأهداف والطموحات',
+        'profile.my_goals': 'أهدافي',
+        'profile.goals_placeholder': 'ما هي أهدافك الشخصية أو المهنية؟',
+        'profile.interests_hobbies': 'الاهتمامات والهوايات',
+        'profile.interests': 'الاهتمامات',
+        'profile.interests_placeholder': 'ما الذي تهتم به؟',
+        'profile.favorite_hobbies': 'الهوايات المفضلة',
+        'profile.hobbies_placeholder': 'ماذا تحب أن تفعل في وقت فراغك؟',
+        'profile.save_changes': 'حفظ التغييرات',
+        'profile.cancel': 'إلغاء',
+        'profile.updated': 'تم تحديث الملف الشخصي بنجاح!',
         
-        // Alerts
-        'alerts.title': 'التنبيهات',
-        'alerts.no_alerts': 'لا توجد تنبيهات جديدة',
+        // Days of week
+        'day.sun': 'الأحد',
+        'day.mon': 'الاثنين',
+        'day.tue': 'الثلاثاء',
+        'day.wed': 'الأربعاء',
+        'day.thu': 'الخميس',
+        'day.fri': 'الجمعة',
+        'day.sat': 'السبت',
         
-        // About page
-        'about.title': 'حول تيرا سوشيال',
-        'about.subtitle': 'مساحتك الآمنة للصحة والتواصل والنمو الشخصي',
-        'about.privacy_title': 'الخصوصية أولاً',
-        'about.privacy_desc': 'رحلة الصحة الخاصة بك خاصة وآمنة. شارك فقط ما تشعر بالراحة تجاهه.',
-        'about.track_title': 'تتبع التقدم',
-        'about.track_desc': 'راقب معايير الصحة الخاصة بك وشاهد نموك مع مرور الوقت مع رؤى.',
-        'about.community_title': 'مجتمع داعم',
-        'about.community_desc': 'تواصل مع الآخرين في رحلات مماثلة في بيئة خالية من الأحكام.',
-        'about.communication_title': 'اتصال آمن',
-        'about.communication_desc': 'الرسائل الخاصة والدوائر تتيح لك التحكم في من يرى محتواك.',
-        'about.goals_title': 'تحديد الأهداف',
-        'about.goals_desc': 'حدد وتتبع الأهداف الشخصية مع دعم المجتمع والمساءلة.',
-        'about.checkin_title': 'تسجيلات يومية',
-        'about.checkin_desc': 'التتبع المنتظم للمعايير يساعدك على فهم الأنماط والمحفزات.',
+        // Months
+        'month.january': 'يناير',
+        'month.february': 'فبراير',
+        'month.march': 'مارس',
+        'month.april': 'أبريل',
+        'month.may': 'مايو',
+        'month.june': 'يونيو',
+        'month.july': 'يوليو',
+        'month.august': 'أغسطس',
+        'month.september': 'سبتمبر',
+        'month.october': 'أكتوبر',
+        'month.november': 'نوفمبر',
+        'month.december': 'ديسمبر',
         
-        // Support page
-        'support.title': 'مركز الدعم',
-        'support.subtitle': 'نحن هنا لمساعدتك في رحلة الصحة الخاصة بك',
-        'support.faq_title': 'الأسئلة الشائعة',
-        'support.faq1_q': 'كيف أتتبع معايير الصحة الخاصة بي؟',
-        'support.faq1_a': 'انتقل إلى علامة التبويب المعايير في لوحة التحكم الخاصة بك. يمكنك إدخال القيم اليومية للمزاج والنوم والتمرين والقلق ومستويات الطاقة. استخدم التقويم لحفظ وتحميل المعايير لتواريخ مختلفة.',
-        'support.faq2_q': 'ما هي الدوائر؟',
-        'support.faq2_a': 'تتيح لك الدوائر تنظيم اتصالاتك في مجموعات: عام، أصدقاء مقربين، وعائلة. يمكنك التحكم في من يرى منشوراتك بناءً على هذه الدوائر.',
-        'support.faq3_q': 'كيف أقوم بتحديث ملفي الشخصي؟',
-        'support.faq3_a': 'انتقل إلى علامة التبويب الملف الشخصي لتحديث سيرتك الذاتية والاهتمامات والمهنة والأهداف والهوايات المفضلة. هذه تساعد الآخرين على فهمك بشكل أفضل.',
-        'support.faq4_q': 'هل بياناتي خاصة؟',
-        'support.faq4_a': 'نعم! نحن نأخذ الخصوصية على محمل الجد. بيانات الصحة الخاصة بك مشفرة ومرئية فقط لك ما لم تختر مشاركتها.',
-        'support.contact_title': 'اتصل بالدعم',
-        'support.subject': 'الموضوع',
-        'support.message': 'الرسالة',
-        'support.send': 'إرسال رسالة',
+        // Error messages
+        'error.loading': 'خطأ في تحميل البيانات',
+        'error.saving': 'خطأ في حفظ البيانات',
+        'error.required': 'هذا الحقل مطلوب',
+        'error.server': 'خطأ في الخادم. يرجى المحاولة مرة أخرى.',
         
-        // Calendar
-        'calendar.prev': '→',
-        'calendar.next': '←',
-        'calendar.days': ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
-        'calendar.months': ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
-        
-        // Messages
-        'msg.success': 'نجاح!',
-        'msg.error': 'خطأ',
-        'msg.saved': 'تم الحفظ بنجاح!',
-        'msg.loaded': 'تم التحميل بنجاح!',
-        'msg.deleted': 'تم الحذف بنجاح!',
-        'msg.sent': 'تم إرسال الرسالة!',
+        // Success messages
+        'success.saved': 'تم الحفظ بنجاح',
+        'success.updated': 'تم التحديث بنجاح',
+        'success.deleted': 'تم الحذف بنجاح'
     },
     
     ru: {
         // Navigation
-        'nav.logo': '🧠 Тера Социал',
-        'nav.home': 'Главная',
+        'nav.feed': 'Лента',
+        'nav.circles': 'Круги',
+        'nav.messages': 'Сообщения',
+        'nav.profile': 'Профиль',
+        'nav.parameters': 'Параметры',
         'nav.about': 'О нас',
         'nav.support': 'Поддержка',
         'nav.logout': 'Выход',
@@ -499,245 +535,266 @@ const translations = {
         'btn.edit': 'Редактировать',
         'btn.close': 'Закрыть',
         'btn.send': 'Отправить',
+        'btn.remove': 'Удалить',
+        'btn.add': 'Добавить',
         'btn.load': 'Загрузить',
-        'btn.back': 'Вернуться на главную',
-        'btn.signin': 'Войти',
-        'btn.signup': 'Регистрация',
-        'btn.getstarted': 'Начать',
-        
-        // Auth page
-        'auth.welcome': 'С возвращением',
-        'auth.create': 'Создать аккаунт',
-        'auth.email': 'Электронная почта',
-        'auth.password': 'Пароль',
-        'auth.username': 'Имя пользователя',
-        'auth.username_placeholder': 'Выберите имя пользователя',
-        'auth.toggle_signup': 'Новый пользователь? Создайте аккаунт',
-        'auth.toggle_signin': 'Уже есть аккаунт? Войти',
-        
-        // Feed page
-        'feed.title': 'Ваш журнал новостей',
-        'feed.subtitle': 'Сохраняйте свои мысли за каждый день. Выберите дату в календаре, напишите обновление и сохраните его. Зеленые точки показывают даты с сохраненными записями.',
-        'feed.placeholder': 'Как вы себя чувствуете сегодня?',
-        'feed.selected_date': 'Выбранная дата:',
-        'feed.today': 'Сегодня',
-        'feed.load_update': 'Загрузить обновление',
-        'feed.save_update': 'Сохранить обновление',
-        'feed.no_posts': 'Пока нет постов',
-        
-        // Visibility options
-        'visibility.general': 'Общее',
-        'visibility.close_friends': 'Близкие друзья',
-        'visibility.family': 'Семья',
-        'visibility.private': 'Личное',
-        
-        // Profile page
-        'profile.title': 'Ваш профиль',
-        'profile.bio': 'Биография',
-        'profile.bio_placeholder': 'Расскажите о себе...',
-        'profile.interests': 'Интересы',
-        'profile.interests_placeholder': 'Чем вы интересуетесь?',
-        'profile.occupation': 'Род занятий',
-        'profile.occupation_placeholder': 'Чем вы занимаетесь?',
-        'profile.goals': 'Цели',
-        'profile.goals_placeholder': 'Каковы ваши личные или профессиональные цели?',
-        'profile.hobbies': 'Любимые хобби',
-        'profile.hobbies_placeholder': 'Что вы любите делать в свободное время?',
-        'profile.save': 'Сохранить профиль',
+        'btn.clear': 'Очистить',
+        'btn.today': 'Сегодня',
         
         // Circles page
-        'circles.title': 'Ваши круги',
-        'circles.search_placeholder': 'Поиск пользователей для добавления в круги...',
-        'circles.general': '💥 Общий',
-        'circles.close_friends': '❤️ Близкие друзья',
-        'circles.family': '👨‍👩‍👧‍👦 Семья',
+        'circles.title': 'Мои круги',
+        'circles.subtitle': 'Организуйте свои связи в значимые группы',
+        'circles.search_placeholder': 'Поиск пользователей по имени или email...',
+        'circles.general': 'Общий',
+        'circles.close_friends': 'Близкие друзья',
+        'circles.family': 'Семья',
         'circles.no_members': 'Пока нет участников',
-        'circles.remove': 'Удалить',
-        'circles.add_to': 'Добавить в круг...',
-        'circles.no_users': 'Пользователи не найдены',
+        'circles.add_to_circle': 'Добавить в круг',
+        'circles.no_users_found': 'Пользователи не найдены',
+        'circles.user_added': 'добавлен в',
+        'circles.circle': 'круг!',
+        'circles.remove_confirm': 'Удалить этого пользователя из круга?',
+        'circles.user_removed': 'Пользователь удалён из круга',
         
         // Messages page
         'messages.title': 'Сообщения',
-        'messages.search_placeholder': 'Поиск пользователей для отправки сообщений...',
-        'messages.select_conversation': 'Выберите беседу',
-        'messages.no_conversations': 'Пока нет бесед',
-        'messages.no_messages': 'Пока нет сообщений. Начните беседу!',
+        'messages.new': '+ Новое',
+        'messages.select_conversation': 'Выберите разговор',
+        'messages.no_conversations': 'Пока нет разговоров',
         'messages.type_message': 'Введите сообщение...',
-        'messages.you': 'Вы: ',
+        'messages.send': 'Отправить',
+        'messages.search': 'Поиск по разговорам',
+        'messages.no_messages': 'Пока нет сообщений',
+        'messages.start_conversation': 'Пока нет сообщений. Начните разговор!',
+        'messages.new_message': 'Новое сообщение',
+        'messages.select_recipient': 'Выберите получателя...',
+        'messages.select_and_type': 'Пожалуйста, выберите получателя и введите сообщение',
+        'messages.message_sent': 'Сообщение отправлено!',
+        
+        // Feed/Calendar
+        'feed.calendar_title': 'Трекер ежедневной активности',
+        'feed.load_day': 'Загрузить день',
+        'feed.save_day': 'Сохранить день',
+        'feed.today': 'Сегодня',
+        'feed.mood_notes': 'Настроение и заметки',
+        'feed.how_feeling': 'Как вы себя чувствуете сегодня?',
+        'feed.select_mood': 'Выберите настроение...',
+        'feed.daily_reflection': 'Ежедневное размышление:',
+        'feed.reflection_placeholder': 'Как прошёл ваш день? Какие мысли или чувства записать?',
+        'feed.posts_today': 'Записей сегодня',
+        'feed.messages_sent': 'Отправлено сообщений',
+        'feed.comments_made': 'Оставлено комментариев',
+        'feed.activity_history': 'История вашей активности',
+        'feed.loaded_activity': 'Загружена активность за',
+        'feed.no_activity': 'Нет активности за эту дату',
+        'feed.activity_saved': 'Активность сохранена за',
+        'feed.select_date': 'Пожалуйста, выберите дату',
+        'feed.no_saved_activity': 'Пока нет сохранённой активности. Начните отслеживание сегодня!',
+        'feed.more_dates': 'больше дат',
+        
+        // Moods
+        'mood.great': '😊 Отлично',
+        'mood.good': '🙂 Хорошо',
+        'mood.okay': '😐 Нормально',
+        'mood.down': '😔 Подавленный',
+        'mood.anxious': '😰 Встревоженный',
+        'mood.tired': '😴 Усталый',
+        'mood.frustrated': '😡 Расстроенный',
+        'mood.hopeful': '🤗 Полный надежд',
+        'mood.happy': '😊 Счастливый',
+        'mood.calm': '😌 Спокойный',
+        'mood.sad': '😢 Грустный',
+        'mood.energetic': '🔥 Энергичный',
         
         // Parameters page
-        'parameters.title': 'Параметры здоровья',
-        'parameters.selected_date': 'Выбранная дата:',
+        'parameters.title': 'Ежедневные параметры',
+        'parameters.select_date': 'Выберите дату',
+        'parameters.current_date': 'Текущая дата:',
         'parameters.mood': 'Настроение',
-        'parameters.mood_placeholder': 'напр.: Счастлив, Спокоен, Тревожен',
+        'parameters.mood_placeholder': 'Как вы себя чувствуете? (например, Счастливый, Спокойный, Встревоженный и т.д.)',
         'parameters.sleep': 'Сон',
-        'parameters.sleep_placeholder': 'Часы',
-        'parameters.sleep_hours': 'Часы',
+        'parameters.sleep_hours': 'Часов',
         'parameters.exercise': 'Упражнения',
-        'parameters.exercise_placeholder': 'напр.: Бег, Йога, Спортзал',
-        'parameters.anxiety': 'Тревожность',
-        'parameters.anxiety_placeholder': 'напр.: Нет, Легкая, Средняя',
-        'parameters.energy': 'Энергия',
-        'parameters.energy_placeholder': 'напр.: Низкая, Нормальная, Высокая',
+        'parameters.exercise_placeholder': 'Какие упражнения вы делали? (например, Бег, Йога, Зал, Ходьба)',
+        'parameters.anxiety': 'Уровень тревожности',
+        'parameters.anxiety_placeholder': 'Опишите уровень тревожности (например, Нет, Слабая, Умеренная, Сильная)',
+        'parameters.energy': 'Уровень энергии',
+        'parameters.energy_placeholder': 'Опишите уровень энергии (например, Очень низкий, Низкий, Нормальный, Высокий, Очень высокий)',
         'parameters.notes': 'Заметки',
-        'parameters.notes_placeholder': 'Дополнительные заметки...',
+        'parameters.notes_placeholder': 'Дополнительные заметки или мысли на сегодня...',
         'parameters.save': 'Сохранить параметры',
         'parameters.load': 'Загрузить параметры',
-        'parameters.insights': 'Аналитика',
+        'parameters.clear': 'Очистить',
+        'parameters.saved': 'Параметры успешно сохранены',
+        'parameters.loaded': 'Загружены параметры от',
+        'parameters.no_saved': 'Нет сохранённых параметров для этой даты',
+        'parameters.cleared': 'Параметры очищены',
+        'parameters.today_label': 'Сегодня',
         
-        // Sidebar menu
-        'menu.feed': '📱 Лента',
-        'menu.profile': '👤 Профиль',
-        'menu.circles': '👥 Круги',
-        'menu.messages': '💬 Сообщения',
-        'menu.parameters': '📊 Параметры',
+        // Profile page
+        'profile.title': 'Мой профиль',
+        'profile.loading': 'Загрузка...',
+        'profile.completion': 'Заполнение профиля:',
+        'profile.about_me': 'О себе',
+        'profile.bio': 'Биография',
+        'profile.bio_placeholder': 'Расскажите о себе...',
+        'profile.professional': 'Профессиональная информация',
+        'profile.occupation': 'Род занятий',
+        'profile.occupation_placeholder': 'Чем вы занимаетесь?',
+        'profile.goals_aspirations': 'Цели и стремления',
+        'profile.my_goals': 'Мои цели',
+        'profile.goals_placeholder': 'Каковы ваши личные или профессиональные цели?',
+        'profile.interests_hobbies': 'Интересы и хобби',
+        'profile.interests': 'Интересы',
+        'profile.interests_placeholder': 'Чем вы интересуетесь?',
+        'profile.favorite_hobbies': 'Любимые хобби',
+        'profile.hobbies_placeholder': 'Чем вы любите заниматься в свободное время?',
+        'profile.save_changes': 'Сохранить изменения',
+        'profile.cancel': 'Отмена',
+        'profile.updated': 'Профиль успешно обновлён!',
         
-        // Alerts
-        'alerts.title': 'Оповещения',
-        'alerts.no_alerts': 'Нет новых оповещений',
+        // Days of week
+        'day.sun': 'Вс',
+        'day.mon': 'Пн',
+        'day.tue': 'Вт',
+        'day.wed': 'Ср',
+        'day.thu': 'Чт',
+        'day.fri': 'Пт',
+        'day.sat': 'Сб',
         
-        // About page
-        'about.title': 'О Тера Социал',
-        'about.subtitle': 'Ваше безопасное пространство для здоровья, общения и личностного роста',
-        'about.privacy_title': 'Конфиденциальность прежде всего',
-        'about.privacy_desc': 'Ваш путь к здоровью приватен и безопасен. Делитесь только тем, что вам комфортно.',
-        'about.track_title': 'Отслеживание прогресса',
-        'about.track_desc': 'Отслеживайте свои параметры здоровья и наблюдайте свой рост с течением времени с аналитикой.',
-        'about.community_title': 'Поддерживающее сообщество',
-        'about.community_desc': 'Общайтесь с другими на похожих путях в среде без осуждения.',
-        'about.communication_title': 'Безопасное общение',
-        'about.communication_desc': 'Личные сообщения и круги позволяют контролировать, кто видит ваш контент.',
-        'about.goals_title': 'Постановка целей',
-        'about.goals_desc': 'Устанавливайте и отслеживайте личные цели с поддержкой и ответственностью сообщества.',
-        'about.checkin_title': 'Ежедневные проверки',
-        'about.checkin_desc': 'Регулярное отслеживание параметров помогает понять закономерности и триггеры.',
+        // Months
+        'month.january': 'Январь',
+        'month.february': 'Февраль',
+        'month.march': 'Март',
+        'month.april': 'Апрель',
+        'month.may': 'Май',
+        'month.june': 'Июнь',
+        'month.july': 'Июль',
+        'month.august': 'Август',
+        'month.september': 'Сентябрь',
+        'month.october': 'Октябрь',
+        'month.november': 'Ноябрь',
+        'month.december': 'Декабрь',
         
-        // Support page
-        'support.title': 'Центр поддержки',
-        'support.subtitle': 'Мы здесь, чтобы помочь вам на пути к здоровью',
-        'support.faq_title': 'Часто задаваемые вопросы',
-        'support.faq1_q': 'Как отслеживать мои параметры здоровья?',
-        'support.faq1_a': 'Перейдите на вкладку Параметры на вашей панели управления. Вы можете вводить ежедневные значения для настроения, сна, упражнений, тревожности и уровней энергии. Используйте календарь для сохранения и загрузки параметров для разных дат.',
-        'support.faq2_q': 'Что такое Круги?',
-        'support.faq2_a': 'Круги позволяют организовать ваши связи в группы: Общий, Близкие друзья и Семья. Вы можете контролировать, кто видит ваши посты на основе этих кругов.',
-        'support.faq3_q': 'Как обновить мой профиль?',
-        'support.faq3_a': 'Перейдите на вкладку Профиль, чтобы обновить вашу биографию, интересы, род занятий, цели и любимые хобби. Это помогает другим лучше понять вас.',
-        'support.faq4_q': 'Мои данные конфиденциальны?',
-        'support.faq4_a': 'Да! Мы серьезно относимся к конфиденциальности. Ваши данные о здоровье зашифрованы и видны только вам, если вы не решите ими поделиться.',
-        'support.contact_title': 'Связаться с поддержкой',
-        'support.subject': 'Тема',
-        'support.message': 'Сообщение',
-        'support.send': 'Отправить сообщение',
+        // Error messages
+        'error.loading': 'Ошибка загрузки данных',
+        'error.saving': 'Ошибка сохранения данных',
+        'error.required': 'Это поле обязательно',
+        'error.server': 'Ошибка сервера. Попробуйте ещё раз.',
         
-        // Calendar
-        'calendar.prev': '←',
-        'calendar.next': '→',
-        'calendar.days': ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-        'calendar.months': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
-        
-        // Messages
-        'msg.success': 'Успех!',
-        'msg.error': 'Ошибка',
-        'msg.saved': 'Успешно сохранено!',
-        'msg.loaded': 'Успешно загружено!',
-        'msg.deleted': 'Успешно удалено!',
-        'msg.sent': 'Сообщение отправлено!',
+        // Success messages
+        'success.saved': 'Успешно сохранено',
+        'success.updated': 'Успешно обновлено',
+        'success.deleted': 'Успешно удалено'
     }
 };
 
-// Current language state
-let currentLanguage = 'en';
-
-// Detect browser language on load
+// Language detection and initialization
 function detectBrowserLanguage() {
     const browserLang = navigator.language || navigator.userLanguage;
     const langCode = browserLang.split('-')[0]; // Get 'en' from 'en-US'
     
     // Check if we support this language
-    if (translations[langCode]) {
-        return langCode;
-    }
-    
-    // Default to English if unsupported
-    return 'en';
+    const supportedLanguages = ['en', 'he', 'ar', 'ru'];
+    return supportedLanguages.includes(langCode) ? langCode : 'en';
 }
 
-// Load saved language preference or detect
-function initLanguage() {
-    const savedLang = localStorage.getItem('userLanguage');
+function getCurrentLanguage() {
+    // Priority: 1. Stored preference, 2. Browser language, 3. Default English
+    return localStorage.getItem('selectedLanguage') || detectBrowserLanguage();
+}
+
+function setLanguage(lang) {
+    localStorage.setItem('selectedLanguage', lang);
+    applyLanguage(lang);
     
-    if (savedLang && translations[savedLang]) {
-        currentLanguage = savedLang;
+    // Update HTML dir and lang attributes for RTL languages
+    if (lang === 'he' || lang === 'ar') {
+        document.documentElement.setAttribute('dir', 'rtl');
+        document.documentElement.setAttribute('lang', lang);
     } else {
-        currentLanguage = detectBrowserLanguage();
-        localStorage.setItem('userLanguage', currentLanguage);
+        document.documentElement.setAttribute('dir', 'ltr');
+        document.documentElement.setAttribute('lang', lang);
     }
     
-    applyLanguage();
-    applyRTL();
+    // Sync with backend if user is logged in
+    syncLanguageWithBackend(lang);
 }
 
-// Translate a single key
-function t(key) {
-    return translations[currentLanguage][key] || translations['en'][key] || key;
+async function syncLanguageWithBackend(lang) {
+    try {
+        await fetch('/api/user/language', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                preferred_language: lang
+            })
+        });
+    } catch (error) {
+        // Silently fail - language is still saved in localStorage
+        console.log('Could not sync language preference with server');
+    }
 }
 
-// Apply translations to all elements with data-i18n
-function applyLanguage() {
+function translate(key, lang = null) {
+    const currentLang = lang || getCurrentLanguage();
+    return translations[currentLang]?.[key] || translations['en'][key] || key;
+}
+
+function applyLanguage(lang) {
+    // Translate all elements with data-i18n attribute
     document.querySelectorAll('[data-i18n]').forEach(element => {
         const key = element.getAttribute('data-i18n');
-        const translation = t(key);
+        const translatedText = translate(key, lang);
         
-        // Handle different element types
         if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-            if (element.getAttribute('placeholder') !== null) {
-                element.placeholder = translation;
-            } else {
-                element.value = translation;
-            }
+            element.placeholder = translatedText;
         } else {
-            element.textContent = translation;
+            element.textContent = translatedText;
         }
+    });
+    
+    // Translate all elements with data-i18n-placeholder attribute
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        element.placeholder = translate(key, lang);
     });
     
     // Update language selector if it exists
     const langSelector = document.getElementById('languageSelector');
     if (langSelector) {
-        langSelector.value = currentLanguage;
+        langSelector.value = lang;
     }
 }
 
-// Change language
-function changeLanguage(lang) {
-    if (translations[lang]) {
-        currentLanguage = lang;
-        localStorage.setItem('userLanguage', lang);
-        applyLanguage();
-        applyRTL();
-        
-        // Trigger custom event for dynamic content updates
-        window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const currentLang = getCurrentLanguage();
+    setLanguage(currentLang);
+    
+    // Set up language selector if it exists
+    const langSelector = document.getElementById('languageSelector');
+    if (langSelector) {
+        langSelector.value = currentLang;
+        langSelector.addEventListener('change', function() {
+            setLanguage(this.value);
+            // Reload dynamic content if needed
+            if (typeof loadDynamicContent === 'function') {
+                loadDynamicContent();
+            }
+        });
     }
-}
-
-// Apply RTL for Hebrew and Arabic
-function applyRTL() {
-    const isRTL = currentLanguage === 'he' || currentLanguage === 'ar';
-    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
-    document.documentElement.lang = currentLanguage;
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initLanguage);
-} else {
-    initLanguage();
-}
+});
 
 // Export for use in other scripts
-window.i18n = {
-    t,
-    changeLanguage,
-    getCurrentLanguage: () => currentLanguage,
-    getSupportedLanguages: () => Object.keys(translations)
-};
+if (typeof window !== 'undefined') {
+    window.i18n = {
+        translate,
+        getCurrentLanguage,
+        setLanguage,
+        detectBrowserLanguage,
+        translations
+    };
+}
