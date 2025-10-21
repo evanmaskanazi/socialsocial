@@ -1106,7 +1106,7 @@ def register():
         user = User(
             username=username,
             email=email,
-            preferred_language='en'
+            preferred_language=data.get('preferred_language', 'en')
         )
         user.set_password(password)
         db.session.add(user)
