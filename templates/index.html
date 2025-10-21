@@ -1508,7 +1508,7 @@
         }
 
         // Dashboard Functions
-        function showDashboard() {
+         function showDashboard() {
             hideAllViews();
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('logoutBtn').style.display = 'block';
@@ -1519,7 +1519,7 @@
             }
 
             initFeedCalendar();
-            loadAlerts();
+            // Note: loadAlerts() now called from DOMContentLoaded after i18n check
         }
 
         // Sidebar Navigation
@@ -2288,7 +2288,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
         }
 
         // Alerts Functions
-   async function loadAlerts() {
+  async function loadAlerts() {
             try {
                 const response = await apiCall('/alerts');
                 if (!response) return;
@@ -2296,39 +2296,57 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
                 const container = document.getElementById('alertsList');
 
                 if (!response.alerts || response.alerts.length === 0) {
-                    container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${(window.i18n && window.i18n.t ? window.i18n.t('alerts.no_alerts') : 'No new alerts')}</p>`;
+                    container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${t('alerts.no_alerts')}</p>`;
                 } else {
                     container.innerHTML = response.alerts.map(alert => {
-    // Translate alert titles and content
-    let title = alert.title;
-    let content = alert.content || alert.message || '';
+                        let title = alert.title || '';
+                        let content = alert.message || alert.content || '';
 
-    // Handle translation keys
-    if (title && title.startsWith('alerts.')) {
-        title = window.i18n && window.i18n.t ? window.i18n.t(title) : title;
-    }
-    if (content && content.startsWith('alerts.')) {
-        content = window.i18n && window.i18n.t ? window.i18n.t(content) : content;
-    }
+                        // Handle JSON-structured titles (new format from backend)
+                        try {
+                            const titleData = JSON.parse(title);
+                            if (titleData.key && titleData.params) {
+                                const translatedBase = t(titleData.key);
+                                if (titleData.params.username) {
+                                    title = `${translatedBase} ${titleData.params.username}`;
+                                } else {
+                                    title = translatedBase;
+                                }
+                            }
+                        } catch (e) {
+                            // Not JSON, handle as plain string
+                            if (title.startsWith('alerts.')) {
+                                title = t(title);
+                            }
+                            // Handle legacy "New message from" format (old alerts in DB)
+                            else if (title.startsWith('New message from ')) {
+                                const username = title.replace('New message from ', '');
+                                title = `${t('alerts.new_message_from')} ${username}`;
+                            }
+                        }
 
-    // Handle "New message from X" pattern
-    if (title && title.startsWith('New message from ')) {
-        const username = title.replace('New message from ', '');
-        const newMessageText = window.i18n && window.i18n.t ? window.i18n.t('alerts.new_message_from') : 'New message from';
-        title = `${newMessageText} ${username}`;
-    }
+                        // Translate content if it's a key
+                        if (content.startsWith('alerts.')) {
+                            content = t(content);
+                        }
 
-    return `
-        <div class="alert-item ${alert.type}">
-            <strong>${escapeHtml(title)}</strong><br>
-            <small>${escapeHtml(content)}</small>
-        </div>
-    `;
-}).join('');
+                        return `
+                            <div class="alert-item ${alert.type || 'info'}">
+                                <strong>${escapeHtml(title)}</strong><br>
+                                <small>${escapeHtml(content)}</small>
+                            </div>
+                        `;
+                    }).join('');
                 }
             } catch (error) {
                 console.error('Failed to load alerts:', error);
             }
+        }
+
+        // Helper function for translations
+        function t(key) {
+            return window.i18n && window.i18n.translate ?
+                   window.i18n.translate(key) : key;
         }
 
         // Support Form
@@ -2364,6 +2382,22 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
     // Check authentication on load
 // Check authentication on load
 window.addEventListener('DOMContentLoaded', async () => {
+    // Wait for i18n to be ready (max 1 second)
+    let i18nReady = false;
+    let attempts = 0;
+    while (!i18nReady && attempts < 20) {
+        if (window.i18n && window.i18n.translate) {
+            i18nReady = true;
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 50));
+            attempts++;
+        }
+    }
+
+    if (!i18nReady) {
+        console.warn('i18n not loaded in time, using fallback');
+    }
+
     // Set up language selector event listener
     const langSelector = document.getElementById('languageSelector');
     if (langSelector) {
@@ -2375,7 +2409,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        // FIX 8: Direct fetch call to avoid recursion with apiCall
         const response = await fetch(`${API_URL}/auth/session`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
@@ -2387,6 +2420,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (data && data.authenticated) {
                 currentUser = data.user;
                 showDashboard();
+                // Load alerts AFTER dashboard is shown and i18n is ready
+                await loadAlerts();
             } else {
                 showAuthContainer();
             }
