@@ -1477,8 +1477,10 @@
 
                 if (!isLoginMode) {
                     body.username = username || email.split('@')[0];
+                    // Send current language selection
+                    body.preferred_language = window.i18n && window.i18n.getCurrentLanguage ?
+                        window.i18n.getCurrentLanguage() : 'en';
                 }
-
                 const response = await apiCall(endpoint, 'POST', body);
 
                 if (response && response.success) {
