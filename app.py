@@ -1564,7 +1564,10 @@ def messages():
 
             alert = Alert(
                 user_id=recipient_id,
-                title=f'New message from {sender_name}',
+                title=json.dumps({
+                    'key': 'alerts.new_message_from',
+                    'params': {'username': sender_name}
+                }),
                 content=content[:100] + '...' if len(content) > 100 else content,
                 alert_type='info'
             )
