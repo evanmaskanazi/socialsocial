@@ -2298,7 +2298,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
                 const container = document.getElementById('alertsList');
 
                 if (!response.alerts || response.alerts.length === 0) {
-                    container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${t('alerts.no_alerts')}</p>`;
+                    container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${translateKey('alerts.no_alerts')}</p>`;
                 } else {
                     container.innerHTML = response.alerts.map(alert => {
                         let title = alert.title || '';
@@ -2308,7 +2308,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
                         try {
                             const titleData = JSON.parse(title);
                             if (titleData.key && titleData.params) {
-                                const translatedBase = t(titleData.key);
+                                const translatedBase = translateKey(titleData.key);
                                 if (titleData.params.username) {
                                     title = `${translatedBase} ${titleData.params.username}`;
                                 } else {
@@ -2318,18 +2318,18 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
                         } catch (e) {
                             // Not JSON, handle as plain string
                             if (title.startsWith('alerts.')) {
-                                title = t(title);
+                                title = translateKey(title);
                             }
                             // Handle legacy "New message from" format (old alerts in DB)
                             else if (title.startsWith('New message from ')) {
                                 const username = title.replace('New message from ', '');
-                                title = `${t('alerts.new_message_from')} ${username}`;
+                                title = `${translateKey('alerts.new_message_from')} ${username}`;
                             }
                         }
 
                         // Translate content if it's a key
                         if (content.startsWith('alerts.')) {
-                            content = t(content);
+                            content = translateKey(content);
                         }
 
                         return `
@@ -2345,10 +2345,12 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
             }
         }
 
-        // Helper function for translations
-        function t(key) {
-            return window.i18n && window.i18n.translate ?
-                   window.i18n.translate(key) : key;
+        // Helper function for translations - place this RIGHT AFTER loadAlerts()
+        function translateKey(key) {
+            if (window.i18n && window.i18n.translate) {
+                return window.i18n.translate(key);
+            }
+            return key;
         }
 
         // Support Form
