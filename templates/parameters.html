@@ -4,34 +4,139 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parameters - Social</title>
+    <style>
+        /* Base styles to ensure visibility */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        
+        #loadingMessage {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            color: #667eea;
+        }
+        
+        #errorMessage {
+            display: none;
+            background: #fee;
+            border: 1px solid #fcc;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 5px;
+            color: #c00;
+        }
+    </style>
 </head>
 <body>
+    <div id="loadingMessage">Loading parameters...</div>
+    <div id="errorMessage"></div>
     <div id="parametersContainer"></div>
+    
+    <!-- Load i18n first -->
     <script src="/static/js/i18n.js"></script>
+    
+    <!-- Load parameters-social.js -->
     <script src="/static/js/parameters-social.js"></script>
+    
+    <!-- Initialize with debugging -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize parameters system
-            if (typeof initializeParameters === 'function') {
-                initializeParameters();
+        // Debug logging
+        console.log('Parameters page loading...');
+        
+        // Function to show errors to user
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const loadingDiv = document.getElementById('loadingMessage');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerHTML += '<div>' + message + '</div>';
             }
-
-            // Apply translations after content is loaded
-            if (window.i18n) {
+            if (loadingDiv) {
+                loadingDiv.style.display = 'none';
+            }
+        }
+        
+        // Wait for DOM and scripts to fully load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, checking for required functions...');
+            
+            // Check if required functions exist
+            if (typeof initializeParameters !== 'function') {
+                showError('Error: initializeParameters function not found. Please check parameters-social.js is loaded correctly.');
+                console.error('initializeParameters function not found');
+                return;
+            }
+            
+            // Check if i18n is loaded
+            if (!window.i18n) {
+                console.warn('i18n not loaded yet, waiting...');
+                // Try to initialize anyway, the script has fallbacks
+            }
+            
+            // Check if container exists
+            const container = document.getElementById('parametersContainer');
+            if (!container) {
+                showError('Error: parametersContainer element not found in DOM.');
+                console.error('parametersContainer not found');
+                return;
+            }
+            
+            try {
+                // Hide loading message
+                const loadingDiv = document.getElementById('loadingMessage');
+                if (loadingDiv) {
+                    loadingDiv.style.display = 'none';
+                }
+                
+                console.log('Initializing parameters system...');
+                // Initialize parameters system
+                initializeParameters();
+                
+                // Apply translations after content is loaded
+                if (window.i18n && window.i18n.applyLanguage) {
+                    console.log('Applying i18n translations...');
+                    window.i18n.applyLanguage();
+                }
+                
+                console.log('Parameters system initialized successfully');
+            } catch (error) {
+                console.error('Error initializing parameters:', error);
+                showError('Error initializing parameters: ' + error.message);
+            }
+        });
+        
+        // Re-apply translations when language changes
+        window.addEventListener('languageChanged', () => {
+            console.log('Language changed, updating translations...');
+            if (window.i18n && window.i18n.applyLanguage) {
                 window.i18n.applyLanguage();
             }
-
-            // Re-apply translations when language changes
-            window.addEventListener('languageChanged', () => {
-                if (window.i18n) {
-                    window.i18n.applyLanguage();
-                    // Update dynamic content translations
-                    if (typeof updateTranslations === 'function') {
-                        updateTranslations();
+            // Update dynamic content translations
+            if (typeof updateTranslations === 'function') {
+                updateTranslations();
+            }
+        });
+        
+        // Backup initialization after a delay if nothing happens
+        setTimeout(() => {
+            const container = document.getElementById('parametersContainer');
+            if (container && container.innerHTML.trim() === '') {
+                console.warn('Container still empty after 3 seconds, attempting backup initialization...');
+                if (typeof initializeParameters === 'function') {
+                    try {
+                        initializeParameters();
+                    } catch (error) {
+                        console.error('Backup initialization failed:', error);
+                        showError('Failed to initialize parameters page after timeout: ' + error.message);
                     }
                 }
-            });
-        });
+            }
+        }, 3000);
     </script>
 </body>
 </html>
+
