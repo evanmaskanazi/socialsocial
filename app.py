@@ -2051,106 +2051,189 @@ def get_parameters():
 @app.route('/api/parameters/save', methods=['POST'])
 @login_required
 def save_parameters():
-    """Save daily parameters"""
     try:
-        user_id = session.get('user_id')
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+
         data = request.json
+        user_id = session['user_id']
 
-        date_str = data.get('date', str(datetime.now().date()))
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        # Validate date
+        if not data.get('date'):
+            return jsonify({'success': False, 'message': 'Date is required'}), 400
 
-        # Check if parameters exist - SQLAlchemy 2.0 style
-        params_stmt = select(SavedParameters).filter_by(
-            user_id=user_id,
-            date=date_obj
-        )
-        params = db.session.execute(params_stmt).scalar_one_or_none()
+        # Validate numeric parameters (1-4 range)
+        numeric_params = ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']
 
-        if not params:
-            params = SavedParameters(user_id=user_id, date=date_obj)
-            db.session.add(params)
+        validated_params = {}
+        for param in numeric_params:
+            if param in data and data[param] is not None:
+                try:
+                    value = int(data[param])
+                    if value < 1 or value > 4:
+                        return jsonify({
+                            'success': False,
+                            'message': f'{param} must be between 1 and 4'
+                        }), 400
+                    validated_params[param] = value
+                except (TypeError, ValueError):
+                    validated_params[param] = None
+            else:
+                validated_params[param] = None
 
-        # Save parameters
-        params.mood = sanitize_input(data.get('mood', ''))
-        params.sleep_hours = float(data.get('sleep_hours', 0))
-        params.exercise = sanitize_input(data.get('exercise', ''))
-        params.anxiety = sanitize_input(data.get('anxiety', ''))
-        params.energy = sanitize_input(data.get('energy', ''))
-        params.notes = sanitize_input(data.get('notes', ''))
+        db = get_db()
 
-        db.session.commit()
+        # Check if parameters exist for this date
+        existing = db.execute(
+            'SELECT id FROM parameters WHERE user_id = ? AND date = ?',
+            (user_id, data['date'])
+        ).fetchone()
+
+        if existing:
+            # Update existing parameters
+            db.execute('''
+                UPDATE parameters 
+                SET mood = ?, 
+                    energy = ?,
+                    sleep_quality = ?, 
+                    physical_activity = ?, 
+                    anxiety = ?, 
+                    notes = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND date = ?
+            ''', (
+                validated_params.get('mood'),
+                validated_params.get('energy'),
+                validated_params.get('sleep_quality'),
+                validated_params.get('physical_activity'),
+                validated_params.get('anxiety'),
+                data.get('notes', ''),
+                user_id,
+                data['date']
+            ))
+        else:
+            # Insert new parameters
+            db.execute('''
+                INSERT INTO parameters (
+                    user_id, date, mood, energy, sleep_quality,
+                    physical_activity, anxiety, notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id,
+                data['date'],
+                validated_params.get('mood'),
+                validated_params.get('energy'),
+                validated_params.get('sleep_quality'),
+                validated_params.get('physical_activity'),
+                validated_params.get('anxiety'),
+                data.get('notes', '')
+            ))
+
+        db.commit()
 
         return jsonify({
             'success': True,
-            'message': f'Parameters saved for {date_str}'
+            'message': 'Parameters saved successfully'
         })
 
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify({'error': 'Failed to save parameters'}), 500
     except Exception as e:
-        logger.error(f"Save parameters error: {str(e)}")
-        db.session.rollback()
-        return jsonify({'error': 'Failed to save parameters'}), 500
+        print(f"Error saving parameters: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Error saving parameters'
+        }), 500
 
 
 @app.route('/api/parameters/load/<date>')
 @login_required
 def load_parameters(date):
-    """Load parameters for specific date"""
     try:
-        user_id = session.get('user_id')
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
 
+        user_id = session['user_id']
+
+        # Validate date format
         try:
-            date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+            from datetime import datetime
+            datetime.strptime(date, '%Y-%m-%d')
         except ValueError:
-            return jsonify({'error': 'Invalid date format'}), 400
+            return jsonify({
+                'success': False,
+                'message': 'Invalid date format'
+            }), 400
 
-        # SQLAlchemy 2.0 style
-        params_stmt = select(SavedParameters).filter_by(
-            user_id=user_id,
-            date=date_obj
-        )
-        params = db.session.execute(params_stmt).scalar_one_or_none()
+        db = get_db()
+
+        # Load parameters - handle both old and new column names
+        params = db.execute('''
+            SELECT mood, energy, sleep_quality, physical_activity,
+                   anxiety, notes, exercise
+            FROM parameters
+            WHERE user_id = ? AND date = ?
+        ''', (user_id, date)).fetchone()
 
         if params:
+            # Handle migration from exercise to physical_activity
+            physical_activity_value = params['physical_activity'] if params['physical_activity'] else params.get(
+                'exercise')
+
+            result_data = {
+                'mood': params['mood'],
+                'energy': params['energy'],
+                'sleep_quality': params['sleep_quality'],
+                'physical_activity': physical_activity_value,
+                'anxiety': params['anxiety'],
+                'notes': params['notes'] if params['notes'] else ''
+            }
+
             return jsonify({
                 'success': True,
-                'data': {
-                    'mood': params.mood or '',
-                    'sleep_hours': params.sleep_hours or 0,
-                    'sleep_display': f"{params.sleep_hours} Hours" if params.sleep_hours else "0 Hours",
-                    'exercise': params.exercise or '',
-                    'anxiety': params.anxiety or '',
-                    'energy': params.energy or '',
-                    'notes': params.notes or ''
-                }
+                'data': result_data
             })
         else:
             return jsonify({
                 'success': False,
-                'message': 'No saved parameters for this date'
+                'message': 'No parameters found for this date'
             })
 
     except Exception as e:
-        logger.error(f"Load parameters error: {str(e)}")
-        return jsonify({'error': 'Failed to load parameters'}), 500
+        print(f"Error loading parameters: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Error loading parameters'
+        }), 500
 
 
 @app.route('/api/parameters/dates')
 @login_required
 def get_parameter_dates():
-    """Get dates with saved parameters"""
     try:
-        user_id = session.get('user_id')
-        # SQLAlchemy 2.0 style
-        params_stmt = select(SavedParameters).filter_by(user_id=user_id)
-        params = db.session.execute(params_stmt).scalars().all()
-        dates = [p.date.strftime('%Y-%m-%d') for p in params]
-        return jsonify({'dates': dates})
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+
+        user_id = session['user_id']
+        db = get_db()
+
+        dates = db.execute(
+            'SELECT DISTINCT date FROM parameters WHERE user_id = ? ORDER BY date DESC',
+            (user_id,)
+        ).fetchall()
+
+        date_list = [row['date'] for row in dates]
+
+        return jsonify({
+            'success': True,
+            'dates': date_list
+        })
+
     except Exception as e:
-        logger.error(f"Get parameter dates error: {str(e)}")
-        return jsonify({'dates': []})
+        print(f"Error getting parameter dates: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Error loading dates',
+            'dates': []
+        }), 500
 
 
 @app.route('/api/parameters/insights')
@@ -2473,7 +2556,28 @@ def internal_error(error):
 @app.cli.command()
 def init_db():
     """Initialize the database"""
-    db.create_all()
+    db.create_all()  # Let SQLAlchemy handle it from models.py
+
+    # Only add migration for existing data
+    with app.app_context():
+        try:
+            # Just migrate existing text data to numeric
+            from sqlalchemy import text
+            db.session.execute(text("""
+                UPDATE parameters 
+                SET mood = CASE 
+                    WHEN mood = 'very_bad' THEN 1
+                    WHEN mood = 'bad' THEN 2
+                    WHEN mood = 'ok' THEN 3
+                    WHEN mood = 'good' THEN 4
+                    ELSE mood
+                END
+                WHERE typeof(mood) = 'text'
+            """))
+            db.session.commit()
+        except:
+            pass  # New installation, no migration needed
+
     print("Database initialized.")
 
 
