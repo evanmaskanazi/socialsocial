@@ -1,7 +1,7 @@
 // Social Parameters Save/Load System with i18n support and numeric ratings
 
-// Translation function helper
-const t = (key) => window.i18n ? window.i18n.translate(key) : key;
+// Translation function helper - renamed from 't' to 'pt' to avoid conflicts
+const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
 
 // State management
 let currentDate = new Date();
@@ -185,18 +185,25 @@ const addParameterTranslations = () => {
 
         // Add day translations if missing
         const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-        const daysFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayTranslations = {
+            en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+            he: ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'],
+            ar: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+            ru: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+        };
 
-        days.forEach((day, index) => {
-            const key = `day.${day}`;
-            if (!window.i18n.translations.en[key]) {
-                window.i18n.translations.en[key] = daysFull[index].substring(0, 3);
-            }
+        Object.keys(dayTranslations).forEach(lang => {
+            days.forEach((day, index) => {
+                const key = `day.${day}`;
+                if (!window.i18n.translations[lang][key]) {
+                    window.i18n.translations[lang][key] = dayTranslations[lang][index];
+                }
+            });
         });
     }
 };
 
-// Initialize parameters system
+// Initialize parameters page
 function initializeParameters() {
     addParameterTranslations();
     const container = document.getElementById('parametersContainer');
@@ -449,50 +456,47 @@ function generateParametersHTML() {
                 }
 
                 .message {
-                    padding: 15px 20px;
-                    border-radius: 8px;
+                    padding: 15px 25px;
+                    border-radius: 10px;
                     margin-bottom: 10px;
-                    animation: slideDown 0.5s ease-out;
+                    animation: slideDown 0.5s ease;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
                 }
 
                 .message.success {
-                    background: #d4edda;
-                    color: #155724;
-                    border: 1px solid #c3e6cb;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
                 }
 
                 .message.error {
-                    background: #f8d7da;
-                    color: #721c24;
-                    border: 1px solid #f5c6cb;
+                    background: #f5576c;
+                    color: white;
                 }
 
-                /* Flashy message styles */
+                .message.info {
+                    background: #4facfe;
+                    color: white;
+                }
+
+                /* Flashy positive message style */
                 .message.flashy {
-                    background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #f9ca24, #f0932b);
-                    background-size: 300% 300%;
-                    animation: gradientShift 3s ease infinite, slideIn 0.5s ease-out;
-                    padding: 2rem;
+                    background: linear-gradient(270deg, #ff6b6b, #ffd93d, #6bcf7f, #4ecdc4, #667eea, #a561e8);
+                    background-size: 1200% 100%;
+                    animation: gradientShift 3s ease infinite, pulse 1s ease infinite;
+                    padding: 25px 40px;
+                    font-size: 1.3rem;
+                    font-weight: 700;
                     text-align: center;
-                    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-                    border: none;
-                    min-width: 400px;
+                    border-radius: 20px;
+                    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);
+                    min-width: 500px;
                 }
 
                 .flashy-content {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 1rem;
-                }
-
-                .flashy-text {
-                    font-size: 1.5rem;
-                    font-weight: bold;
-                    color: white;
-                    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-                    margin: 0;
-                    animation: pulse 1s ease-in-out infinite;
+                    gap: 15px;
                 }
 
                 .flashy-icon {
@@ -549,7 +553,7 @@ function generateParametersHTML() {
 
             <div class="calendar-section">
             <div class="calendar-header">
-                <div class="calendar-title" data-i18n="parameters.select_date">${t('parameters.select_date')}</div>
+                <div class="calendar-title" data-i18n="parameters.select_date">${pt('parameters.select_date')}</div>
                 <div class="calendar-navigation">
                     <button class="calendar-nav-btn" onclick="previousMonth()">←</button>
                     <span id="currentMonth">January 2025</span>
@@ -559,13 +563,13 @@ function generateParametersHTML() {
 
             <div class="calendar-grid" id="calendarGrid">
                 <!-- Days of week headers -->
-                <div class="day-label" data-i18n="day.sun">${t('day.sun')}</div>
-                <div class="day-label" data-i18n="day.mon">${t('day.mon')}</div>
-                <div class="day-label" data-i18n="day.tue">${t('day.tue')}</div>
-                <div class="day-label" data-i18n="day.wed">${t('day.wed')}</div>
-                <div class="day-label" data-i18n="day.thu">${t('day.thu')}</div>
-                <div class="day-label" data-i18n="day.fri">${t('day.fri')}</div>
-                <div class="day-label" data-i18n="day.sat">${t('day.sat')}</div>
+                <div class="day-label" data-i18n="day.sun">${pt('day.sun')}</div>
+                <div class="day-label" data-i18n="day.mon">${pt('day.mon')}</div>
+                <div class="day-label" data-i18n="day.tue">${pt('day.tue')}</div>
+                <div class="day-label" data-i18n="day.wed">${pt('day.wed')}</div>
+                <div class="day-label" data-i18n="day.thu">${pt('day.thu')}</div>
+                <div class="day-label" data-i18n="day.fri">${pt('day.fri')}</div>
+                <div class="day-label" data-i18n="day.sat">${pt('day.sat')}</div>
                 <!-- Calendar days will be inserted here -->
             </div>
         </div>
@@ -573,7 +577,7 @@ function generateParametersHTML() {
         <!-- Parameters Form -->
         <div class="parameters-form">
             <div id="selectedDateDisplay" class="selected-date-display">
-                ${t('parameters.today_label')}
+                ${pt('parameters.today_label')}
             </div>
 
             <!-- Rating Categories -->
@@ -583,11 +587,11 @@ function generateParametersHTML() {
 
             <!-- Notes Section -->
             <div class="notes-section">
-                <label class="notes-label" data-i18n="parameters.notes">${t('parameters.notes')}</label>
+                <label class="notes-label" data-i18n="parameters.notes">${pt('parameters.notes')}</label>
                 <textarea
                     id="notesInput"
                     class="notes-textarea"
-                    placeholder="${t('parameters.notes_placeholder')}"
+                    placeholder="${pt('parameters.notes_placeholder')}"
                     data-i18n-placeholder="parameters.notes_placeholder"
                 ></textarea>
             </div>
@@ -595,13 +599,13 @@ function generateParametersHTML() {
             <!-- Action Buttons -->
             <div class="parameter-actions">
                 <button class="btn-primary" onclick="saveParameters()" data-i18n="parameters.save">
-                    ${t('parameters.save')}
+                    ${pt('parameters.save')}
                 </button>
                 <button class="btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">
-                    ${t('parameters.load')}
+                    ${pt('parameters.load')}
                 </button>
                 <button class="btn-secondary" onclick="clearParameters()" data-i18n="parameters.clear">
-                    ${t('parameters.clear')}
+                    ${pt('parameters.clear')}
                 </button>
             </div>
         </div>
@@ -637,10 +641,10 @@ function renderCalendar() {
 
     // Update month display
     const monthNames = [
-        t('month.january'), t('month.february'), t('month.march'),
-        t('month.april'), t('month.may'), t('month.june'),
-        t('month.july'), t('month.august'), t('month.september'),
-        t('month.october'), t('month.november'), t('month.december')
+        pt('month.january'), pt('month.february'), pt('month.march'),
+        pt('month.april'), pt('month.may'), pt('month.june'),
+        pt('month.july'), pt('month.august'), pt('month.september'),
+        pt('month.october'), pt('month.november'), pt('month.december')
     ];
 
     const monthDisplay = document.getElementById('currentMonth');
@@ -715,7 +719,7 @@ function renderRatingCategories() {
         const nameSpan = document.createElement('span');
         nameSpan.className = 'category-name';
         nameSpan.setAttribute('data-i18n', category.nameKey);
-        nameSpan.textContent = t(category.nameKey);
+        nameSpan.textContent = pt(category.nameKey);
 
         headerDiv.appendChild(emojiSpan);
         headerDiv.appendChild(nameSpan);
@@ -724,7 +728,7 @@ function renderRatingCategories() {
         const descDiv = document.createElement('div');
         descDiv.className = 'category-description';
         descDiv.setAttribute('data-i18n', category.descriptionKey);
-        descDiv.textContent = t(category.descriptionKey);
+        descDiv.textContent = pt(category.descriptionKey);
 
         // Rating scale
         const scaleDiv = document.createElement('div');
@@ -758,11 +762,11 @@ function renderRatingCategories() {
 function selectRating(categoryId, value) {
     selectedRatings[categoryId] = value;
 
-    // Update visual selection
-    document.querySelectorAll(`.rating-button[data-category="${categoryId}"]`).forEach(button => {
-        button.classList.remove('selected');
-        if (parseInt(button.dataset.value) === value) {
-            button.classList.add('selected');
+    // Update button states
+    document.querySelectorAll(`.rating-button[data-category="${categoryId}"]`).forEach(btn => {
+        btn.classList.remove('selected');
+        if (parseInt(btn.dataset.value) === value) {
+            btn.classList.add('selected');
         }
     });
 }
@@ -773,10 +777,10 @@ function selectDate(year, month, day) {
     renderCalendar();
     updateSelectedDateDisplay();
 
-    // Clear form when selecting a new date
+    // Clear current selections
     clearParameters(false);
 
-    // Try to load parameters for the selected date
+    // Load parameters for this date
     loadParameters(false);
 }
 
@@ -785,20 +789,11 @@ function updateSelectedDateDisplay() {
     const display = document.getElementById('selectedDateDisplay');
     if (!display) return;
 
-    const lang = window.i18n ? window.i18n.getCurrentLanguage() : 'en';
-    const dateStr = selectedDate.toLocaleDateString(
-        lang === 'en' ? 'en-US' : lang === 'he' ? 'he-IL' : lang === 'ar' ? 'ar-SA' : 'ru-RU',
-        { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-    );
-
+    const dateStr = selectedDate.toLocaleDateString();
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selected = new Date(selectedDate);
-    selected.setHours(0, 0, 0, 0);
+    const isToday = selectedDate.toDateString() === today.toDateString();
 
-    const isToday = selected.getTime() === today.getTime();
-
-    display.textContent = isToday ? `${t('parameters.today_label')} (${dateStr})` : dateStr;
+    display.textContent = isToday ? `${pt('parameters.today_label')} (${dateStr})` : dateStr;
 }
 
 // Navigate months
@@ -845,11 +840,11 @@ async function saveParameters() {
             await loadSavedDates();
             renderCalendar();
         } else {
-            showMessage(t('error.saving'), 'error', 5000, false);
+            showMessage(pt('error.saving'), 'error', 5000, false);
         }
     } catch (error) {
         console.error('Error saving parameters:', error);
-        showMessage(t('error.saving'), 'error', 5000, false);
+        showMessage(pt('error.saving'), 'error', 5000, false);
     }
 }
 
@@ -881,15 +876,15 @@ async function loadParameters(showMsg = true) {
             }
 
             if (showMsg) {
-                showMessage(`${t('parameters.loaded')} ${dateStr}`, 'success', 5000, false);
+                showMessage(`${pt('parameters.loaded')} ${dateStr}`, 'success', 5000, false);
             }
         } else if (showMsg) {
-            showMessage(result.message || t('parameters.no_saved'), 'info', 5000, false);
+            showMessage(result.message || pt('parameters.no_saved'), 'info', 5000, false);
         }
     } catch (error) {
         console.error('Error loading parameters:', error);
         if (showMsg) {
-            showMessage(t('error.loading'), 'error', 5000, false);
+            showMessage(pt('error.loading'), 'error', 5000, false);
         }
     }
 }
@@ -910,7 +905,7 @@ function clearParameters(showMsg = true) {
     }
 
     if (showMsg) {
-        showMessage(t('parameters.cleared'), 'info', 3000, false);
+        showMessage(pt('parameters.cleared'), 'info', 3000, false);
     }
 }
 
