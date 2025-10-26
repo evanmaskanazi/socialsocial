@@ -888,8 +888,13 @@ function selectDate(year, month, day) {
     // Clear current selections
     clearParameters(false);
 
-    // Load parameters for this date
-    loadParameters(false);
+    // Check if this date has saved data and show hint
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (savedDates.includes(dateStr)) {
+        showMessage(`Data exists for ${dateStr}. Click "Load Parameters" to view.`, 'info', 3000, false);
+    }
+
+    // Don't auto-load - user must click Load Parameters button
 }
 
 // Update selected date display
