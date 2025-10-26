@@ -926,24 +926,44 @@ def create_parameters_table():
                 SELECT column_name 
                 FROM information_schema.columns 
                 WHERE table_name = 'parameters'
+                ORDER BY ordinal_position
             """)
             columns = [row['column_name'] for row in cursor.fetchall()]
 
-            # Check if we have the correct columns
-            required_columns = ['date', 'mood', 'energy', 'sleep_quality',
-                                'physical_activity', 'anxiety', 'user_id']
+            # Check if we have the mood/energy columns (our actual schema)
+            required_columns = ['date', 'mood', 'energy', 'sleep_quality', 'user_id']
 
-            if all(col in columns for col in required_columns):
+            if columns and all(col in columns for col in required_columns):
                 logger.info("✓ Parameters table exists with correct schema")
                 cursor.close()
                 conn.close()
-                return  # Table is fine, don't recreate
-            else:
-                logger.info("Parameters table has wrong schema, recreating...")
-                cursor.execute("DROP TABLE IF EXISTS parameters CASCADE")
+                return
+            elif columns:
+                # Table exists but has wrong schema
+                logger.info(f"Parameters table has wrong columns: {columns}")
+                logger.info("Attempting to drop and recreate parameters table...")
+
+                # Try to drop with timeout
+                cursor.execute("SET statement_timeout = '5s'")  # 5 second timeout
+                try:
+                    cursor.execute("DROP TABLE IF EXISTS parameters CASCADE")
+                    conn.commit()
+                    logger.info("Old parameters table dropped successfully")
+                except Exception as drop_error:
+                    logger.error(f"Failed to drop parameters table: {drop_error}")
+                    # Try to rename instead of drop
+                    try:
+                        cursor.execute("ALTER TABLE parameters RENAME TO parameters_old")
+                        conn.commit()
+                        logger.info("Renamed old parameters table to parameters_old")
+                    except:
+                        logger.error("Could not drop or rename old table, continuing anyway...")
+                        cursor.close()
+                        conn.close()
+                        return  # Give up, don't block startup
 
         except Exception as e:
-            logger.info(f"Parameters table doesn't exist or needs recreation: {e}")
+            logger.info(f"Parameters table check: {e}")
             # Table doesn't exist, continue to create it
 
         # Create the new parameters table with correct schema
@@ -957,7 +977,6 @@ def create_parameters_table():
                 sleep_quality INTEGER CHECK (sleep_quality >= 1 AND sleep_quality <= 4),
                 physical_activity INTEGER CHECK (physical_activity >= 1 AND physical_activity <= 4),
                 anxiety INTEGER CHECK (anxiety >= 1 AND anxiety <= 4),
-                exercise INTEGER CHECK (exercise >= 1 AND exercise <= 4),
                 notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -972,8 +991,15 @@ def create_parameters_table():
         conn.close()
 
     except Exception as e:
-        logger.error(f"Error creating parameters table: {e}")
-        # Don't raise - allow app to continue
+        logger.error(f"Error in create_parameters_table: {e}")
+        # Don't crash the app startup over this
+        try:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+        except:
+            pass
 
 def create_admin_user():
     """Create default admin user if it doesn't exist"""
