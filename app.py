@@ -26,6 +26,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, and_, or_, desc, func, inspect, text
 
+import mimetypes
+
+# Add MIME type for CSS files
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('text/javascript', '.js')
+
 # Import security functions
 from security import (
     sanitize_input, validate_email, validate_username,
@@ -108,40 +114,30 @@ except Exception as e:
 def get_db():
     """Get a direct database connection for raw SQL queries"""
     import sqlite3
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
 
     # Get the database path from SQLAlchemy config
-    db_path = app.config['SQLALCHEMY_DATABASE_URI']
+    db_uri = app.config['SQLALCHEMY_DATABASE_URI']
 
-    # Handle SQLite (for local dev and some deployments)
-    if db_path.startswith('sqlite:///'):
-        db_path = db_path.replace('sqlite:///', '')
+    # Handle SQLite (for local dev)
+    if db_uri.startswith('sqlite:///'):
+        db_path = db_uri.replace('sqlite:///', '')
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         return conn
+
+    # Handle PostgreSQL
+    elif db_uri.startswith('postgresql://'):
+        try:
+            conn = psycopg2.connect(db_uri, cursor_factory=RealDictCursor)
+            return conn
+        except Exception as e:
+            logger.error(f"Failed to connect to PostgreSQL: {e}")
+            raise
+
     else:
-        # For PostgreSQL, return a wrapper that uses SQLAlchemy
-        from sqlalchemy import text
-        class DBWrapper:
-            def execute(self, query, params=None):
-                if params:
-                    result = db.session.execute(text(query), dict(zip(range(len(params)), params)))
-                else:
-                    result = db.session.execute(text(query))
-                return result
-
-            def fetchone(self):
-                return self.execute.fetchone()
-
-            def fetchall(self):
-                return self.execute.fetchall()
-
-            def commit(self):
-                db.session.commit()
-
-            def close(self):
-                pass
-
-        return DBWrapper()
+        raise ValueError(f"Unsupported database type: {db_uri}")
 
 
 
@@ -2127,27 +2123,51 @@ def save_parameters():
             else:
                 validated_params[param] = None
 
-        conn = get_db()  # CHANGED from db to conn
+        conn = get_db()
+        cursor = conn.cursor()
 
-        # Check if parameters exist for this date
-        existing = conn.execute(  # Already using conn here
-            'SELECT id FROM parameters WHERE user_id = ? AND date = ?',
-            (user_id, data['date'])
-        ).fetchone()
+        # Determine if using SQLite or PostgreSQL
+        db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+
+        if db_uri.startswith('sqlite'):
+            # SQLite query with ? placeholders
+            check_query = 'SELECT id FROM parameters WHERE user_id = ? AND date = ?'
+            cursor.execute(check_query, (user_id, data['date']))
+        else:
+            # PostgreSQL query with %s placeholders
+            check_query = 'SELECT id FROM parameters WHERE user_id = %s AND date = %s'
+            cursor.execute(check_query, (user_id, data['date']))
+
+        existing = cursor.fetchone()
 
         if existing:
             # Update existing parameters
-            conn.execute('''  # CHANGED from db.execute to conn.execute
-                UPDATE parameters 
-                SET mood = ?, 
-                    energy = ?,
-                    sleep_quality = ?, 
-                    physical_activity = ?, 
-                    anxiety = ?, 
-                    notes = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = ? AND date = ?
-            ''', (
+            if db_uri.startswith('sqlite'):
+                update_query = '''
+                    UPDATE parameters 
+                    SET mood = ?, 
+                        energy = ?,
+                        sleep_quality = ?, 
+                        physical_activity = ?, 
+                        anxiety = ?, 
+                        notes = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND date = ?
+                '''
+            else:
+                update_query = '''
+                    UPDATE parameters 
+                    SET mood = %s, 
+                        energy = %s,
+                        sleep_quality = %s, 
+                        physical_activity = %s, 
+                        anxiety = %s, 
+                        notes = %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = %s AND date = %s
+                '''
+
+            cursor.execute(update_query, (
                 validated_params.get('mood'),
                 validated_params.get('energy'),
                 validated_params.get('sleep_quality'),
@@ -2159,12 +2179,22 @@ def save_parameters():
             ))
         else:
             # Insert new parameters
-            conn.execute('''  # CHANGED from db.execute to conn.execute
-                INSERT INTO parameters (
-                    user_id, date, mood, energy, sleep_quality,
-                    physical_activity, anxiety, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
+            if db_uri.startswith('sqlite'):
+                insert_query = '''
+                    INSERT INTO parameters (
+                        user_id, date, mood, energy, sleep_quality,
+                        physical_activity, anxiety, notes
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                '''
+            else:
+                insert_query = '''
+                    INSERT INTO parameters (
+                        user_id, date, mood, energy, sleep_quality,
+                        physical_activity, anxiety, notes
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                '''
+
+            cursor.execute(insert_query, (
                 user_id,
                 data['date'],
                 validated_params.get('mood'),
@@ -2175,8 +2205,9 @@ def save_parameters():
                 data.get('notes', '')
             ))
 
-        conn.commit()  # CHANGED from db.commit to conn.commit
-        conn.close()   # ADDED to close connection
+        conn.commit()
+        cursor.close()
+        conn.close()
 
         return jsonify({
             'success': True,
@@ -2210,17 +2241,34 @@ def load_parameters(date):
                 'message': 'Invalid date format'
             }), 400
 
-        conn = get_db()  # CHANGED from db to conn
+        conn = get_db()
+        cursor = conn.cursor()
 
-        # Load parameters - handle both old and new column names
-        params = conn.execute('''  # CHANGED from db.execute to conn.execute
-            SELECT mood, energy, sleep_quality, physical_activity,
-                   anxiety, notes, exercise
-            FROM parameters
-            WHERE user_id = ? AND date = ?
-        ''', (user_id, date)).fetchone()
+        # Determine database type
+        db_uri = app.config['SQLALCHEMY_DATABASE_URI']
 
-        conn.close()  # ADDED to close connection
+        # Query without the comment inside the SQL
+        if db_uri.startswith('sqlite'):
+            query = '''
+                SELECT mood, energy, sleep_quality, physical_activity,
+                       anxiety, notes, exercise
+                FROM parameters
+                WHERE user_id = ? AND date = ?
+            '''
+            cursor.execute(query, (user_id, date))
+        else:
+            query = '''
+                SELECT mood, energy, sleep_quality, physical_activity,
+                       anxiety, notes, exercise
+                FROM parameters
+                WHERE user_id = %s AND date = %s
+            '''
+            cursor.execute(query, (user_id, date))
+
+        params = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
 
         if params:
             # Handle migration from exercise to physical_activity
@@ -2262,16 +2310,31 @@ def get_parameter_dates():
             return jsonify({'success': False, 'message': 'Not authenticated'}), 401
 
         user_id = session['user_id']
-        conn = get_db()  # CHANGED from db to conn
+        conn = get_db()
+        cursor = conn.cursor()
 
-        dates = conn.execute(  # CHANGED from db.execute to conn.execute
-            'SELECT DISTINCT date FROM parameters WHERE user_id = ? ORDER BY date DESC',
-            (user_id,)
-        ).fetchall()
+        # Determine database type
+        db_uri = app.config['SQLALCHEMY_DATABASE_URI']
 
-        conn.close()  # ADDED to close connection
+        if db_uri.startswith('sqlite'):
+            query = 'SELECT DISTINCT date FROM parameters WHERE user_id = ? ORDER BY date DESC'
+            cursor.execute(query, (user_id,))
+        else:
+            query = 'SELECT DISTINCT date FROM parameters WHERE user_id = %s ORDER BY date DESC'
+            cursor.execute(query, (user_id,))
 
-        date_list = [row['date'] for row in dates]
+        dates = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        # Extract dates from results
+        date_list = []
+        for row in dates:
+            if isinstance(row, dict):
+                date_list.append(row['date'])
+            else:
+                date_list.append(row[0])
 
         return jsonify({
             'success': True,
