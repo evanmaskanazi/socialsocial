@@ -75,6 +75,7 @@ const addParameterTranslations = () => {
                 'parameters.save': 'Save Parameters',
                 'parameters.load': 'Load Parameters',
                 'parameters.clear': 'Clear Form',
+                'parameters.main_menu': 'Main Menu',
                 'parameters.saved': 'Parameters saved successfully!',
                 'parameters.loaded': 'Parameters loaded for',
                 'parameters.cleared': 'Form cleared',
@@ -104,6 +105,7 @@ const addParameterTranslations = () => {
                 'parameters.save': 'שמור פרמטרים',
                 'parameters.load': 'טען פרמטרים',
                 'parameters.clear': 'נקה טופס',
+                'parameters.main_menu': 'תפריט ראשי',
                 'parameters.saved': 'הפרמטרים נשמרו בהצלחה!',
                 'parameters.loaded': 'פרמטרים נטענו עבור',
                 'parameters.cleared': 'הטופס נוקה',
@@ -133,6 +135,7 @@ const addParameterTranslations = () => {
                 'parameters.save': 'حفظ المعاملات',
                 'parameters.load': 'تحميل المعاملات',
                 'parameters.clear': 'مسح النموذج',
+                'parameters.main_menu': 'القائمة الرئيسية',
                 'parameters.saved': 'تم حفظ المعاملات بنجاح!',
                 'parameters.loaded': 'تم تحميل المعاملات لـ',
                 'parameters.cleared': 'تم مسح النموذج',
@@ -162,6 +165,7 @@ const addParameterTranslations = () => {
                 'parameters.save': 'Сохранить параметры',
                 'parameters.load': 'Загрузить параметры',
                 'parameters.clear': 'Очистить форму',
+                'parameters.main_menu': 'Главное меню',
                 'parameters.saved': 'Параметры успешно сохранены!',
                 'parameters.loaded': 'Параметры загружены для',
                 'parameters.cleared': 'Форма очищена',
@@ -209,6 +213,7 @@ function initializeParameters() {
     const container = document.getElementById('parametersContainer');
     if (container) {
         container.innerHTML = generateParametersHTML();
+        setupLanguageSelector();
         initializeCalendar();
     }
 }
@@ -222,6 +227,36 @@ function generateParametersHTML() {
                     max-width: 800px;
                     margin: 0 auto;
                     padding: 20px;
+                    position: relative;
+                }
+
+                /* Language Selector */
+                .language-selector-wrapper {
+                    position: absolute;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 100;
+                }
+
+                [dir="rtl"] .language-selector-wrapper {
+                    right: auto;
+                    left: 20px;
+                }
+
+                .language-selector {
+                    padding: 8px 12px;
+                    border: 2px solid #667eea;
+                    border-radius: 8px;
+                    background: white;
+                    color: #667eea;
+                    font-weight: 600;
+                    cursor: pointer;
+                    min-width: 120px;
+                    font-size: 14px;
+                }
+
+                .language-selector:hover {
+                    background: #f8f9fa;
                 }
 
                 .calendar-section {
@@ -229,6 +264,7 @@ function generateParametersHTML() {
                     border-radius: 15px;
                     padding: 20px;
                     margin-bottom: 30px;
+                    margin-top: 50px; /* Space for language selector */
                     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
                 }
 
@@ -359,6 +395,11 @@ function generateParametersHTML() {
                     margin-bottom: 10px;
                 }
 
+                [dir="rtl"] .category-description {
+                    margin-left: 0;
+                    margin-right: 28px;
+                }
+
                 .rating-scale {
                     display: flex;
                     gap: 10px;
@@ -412,10 +453,12 @@ function generateParametersHTML() {
                     gap: 15px;
                     justify-content: center;
                     margin-top: 30px;
+                    flex-wrap: wrap;
                 }
 
                 .btn-primary,
-                .btn-secondary {
+                .btn-secondary,
+                .btn-info {
                     padding: 12px 30px;
                     border: none;
                     border-radius: 25px;
@@ -443,6 +486,16 @@ function generateParametersHTML() {
 
                 .btn-secondary:hover {
                     background: #f8f9fa;
+                }
+
+                .btn-info {
+                    background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+                    color: white;
+                }
+
+                .btn-info:hover {
+                    transform: scale(1.05);
+                    box-shadow: 0 6px 20px rgba(49, 130, 206, 0.4);
                 }
 
                 /* Message Container */
@@ -545,8 +598,24 @@ function generateParametersHTML() {
                     .message.flashy {
                         min-width: 90%;
                     }
+                    .parameter-actions {
+                        flex-direction: column;
+                    }
+                    .parameter-actions button {
+                        width: 100%;
+                    }
                 }
             </style>
+
+            <!-- Language Selector -->
+            <div class="language-selector-wrapper">
+                <select id="paramLanguageSelector" class="language-selector">
+                    <option value="en">English</option>
+                    <option value="he">עברית</option>
+                    <option value="ar">العربية</option>
+                    <option value="ru">Русский</option>
+                </select>
+            </div>
 
             <!-- Message Container -->
             <div id="messageContainer"></div>
@@ -607,10 +676,47 @@ function generateParametersHTML() {
                 <button class="btn-secondary" onclick="clearParameters()" data-i18n="parameters.clear">
                     ${pt('parameters.clear')}
                 </button>
+                <button class="btn-info" onclick="goToMainMenu()" data-i18n="parameters.main_menu">
+                    ${pt('parameters.main_menu')}
+                </button>
             </div>
         </div>
         </div> <!-- Close parameters-container -->
     `;
+}
+
+// Set up language selector
+function setupLanguageSelector() {
+    const langSelector = document.getElementById('paramLanguageSelector');
+    if (langSelector) {
+        // Set current language if available
+        if (window.i18n && window.i18n.currentLanguage) {
+            langSelector.value = window.i18n.currentLanguage;
+        }
+
+        // Add change event listener
+        langSelector.addEventListener('change', function() {
+            if (window.i18n && window.i18n.setLanguage) {
+                window.i18n.setLanguage(this.value);
+                // Update translations immediately
+                updateTranslations();
+
+                // Update RTL direction
+                const rtlLanguages = ['ar', 'he'];
+                if (rtlLanguages.includes(this.value)) {
+                    document.body.setAttribute('dir', 'rtl');
+                } else {
+                    document.body.setAttribute('dir', 'ltr');
+                }
+            }
+        });
+    }
+}
+
+// Go to main menu function
+function goToMainMenu() {
+    // Navigate to the main page (feed tab)
+    window.location.href = '/';
 }
 
 // Initialize calendar and load saved dates
@@ -624,7 +730,9 @@ async function initializeCalendar() {
 // Load saved dates from server
 async function loadSavedDates() {
     try {
-        const response = await fetch('/api/parameters/dates');
+        const response = await fetch('/api/parameters/dates', {
+            credentials: 'include'
+        });
         if (response.ok) {
             const data = await response.json();
             savedDates = data.dates || [];
@@ -827,7 +935,8 @@ async function saveParameters() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(parameters)
+            body: JSON.stringify(parameters),
+            credentials: 'include'
         });
 
         if (response.ok) {
@@ -853,7 +962,9 @@ async function loadParameters(showMsg = true) {
     const dateStr = selectedDate.toISOString().split('T')[0];
 
     try {
-        const response = await fetch(`/api/parameters/load/${dateStr}`);
+        const response = await fetch(`/api/parameters/load/${dateStr}`, {
+            credentials: 'include'
+        });
         const result = await response.json();
 
         if (result.success && result.data) {
@@ -919,6 +1030,22 @@ function updateTranslations() {
 
     // Update date display
     updateSelectedDateDisplay();
+
+    // Update all elements with data-i18n attribute
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        if (key) {
+            element.textContent = pt(key);
+        }
+    });
+
+    // Update placeholders
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        if (key) {
+            element.placeholder = pt(key);
+        }
+    });
 
     // Restore selected ratings
     Object.keys(selectedRatings).forEach(categoryId => {
@@ -1053,3 +1180,5 @@ window.nextMonth = nextMonth;
 window.saveParameters = saveParameters;
 window.loadParameters = loadParameters;
 window.clearParameters = clearParameters;
+window.selectRating = selectRating;
+window.goToMainMenu = goToMainMenu;
