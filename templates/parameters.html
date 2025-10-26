@@ -4,20 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parameters - TheraSocial</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background: #f5f7fa;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
 
         #loadingMessage {
             text-align: center;
             padding: 20px;
             font-size: 18px;
-            color: #667eea;
+            color: white;
         }
 
         #errorMessage {
@@ -28,6 +28,36 @@
             margin: 20px;
             border-radius: 5px;
             color: #c00;
+        }
+
+        #parametersContainer {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* RTL Support */
+        [dir="rtl"] {
+            direction: rtl;
+        }
+
+        [dir="rtl"] .parameters-page {
+            text-align: right;
+        }
+
+        [dir="rtl"] .date-controls {
+            flex-direction: row-reverse;
+        }
+
+        [dir="rtl"] .rating-buttons {
+            flex-direction: row-reverse;
+        }
+
+        [dir="rtl"] .action-buttons {
+            flex-direction: row-reverse;
         }
     </style>
 </head>
@@ -83,6 +113,16 @@
                                 if (window.i18n && window.i18n.applyLanguage) {
                                     window.i18n.applyLanguage();
                                 }
+
+                                // Set RTL direction for Arabic and Hebrew
+                                if (window.i18n && window.i18n.currentLanguage) {
+                                    const rtlLanguages = ['ar', 'he'];
+                                    if (rtlLanguages.includes(window.i18n.currentLanguage)) {
+                                        document.body.setAttribute('dir', 'rtl');
+                                    } else {
+                                        document.body.setAttribute('dir', 'ltr');
+                                    }
+                                }
                             } catch (error) {
                                 console.error('Delayed initialization error:', error);
                             }
@@ -99,6 +139,16 @@
                     // Apply initial translations
                     if (window.i18n && window.i18n.applyLanguage) {
                         window.i18n.applyLanguage();
+                    }
+
+                    // Set RTL direction for Arabic and Hebrew
+                    if (window.i18n && window.i18n.currentLanguage) {
+                        const rtlLanguages = ['ar', 'he'];
+                        if (rtlLanguages.includes(window.i18n.currentLanguage)) {
+                            document.body.setAttribute('dir', 'rtl');
+                        } else {
+                            document.body.setAttribute('dir', 'ltr');
+                        }
                     }
 
                     // Verify initialization worked
@@ -155,8 +205,15 @@
                     updateTranslations();
                 }
 
-                // Don't call applyLanguage here as it might trigger another event
-                // The updateTranslations function should handle the UI updates
+                // Update RTL direction
+                if (window.i18n && window.i18n.currentLanguage) {
+                    const rtlLanguages = ['ar', 'he'];
+                    if (rtlLanguages.includes(window.i18n.currentLanguage)) {
+                        document.body.setAttribute('dir', 'rtl');
+                    } else {
+                        document.body.setAttribute('dir', 'ltr');
+                    }
+                }
 
             } catch (error) {
                 console.error('Error updating language:', error);
