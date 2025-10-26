@@ -225,6 +225,11 @@ const translations = {
         'parameters.no_saved': 'No saved parameters for this date',
         'parameters.cleared': 'Parameters cleared',
         'parameters.today_label': 'Today',
+        'parameters.energy': 'Energy',
+'parameters.energy_desc': 'Physical and mental energy levels',
+'parameters.physical_activity': 'Physical Activity',
+'parameters.physical_activity_desc': 'Physical activity level',
+'parameters.main_menu': 'Main Menu',
 
         // Profile page
           'profile.title': 'My Profile',
@@ -363,6 +368,11 @@ const translations = {
     'parameters.cleared': 'הטופס נוקה',
     'parameters.no_saved': 'אין פרמטרים שמורים לתאריך זה',
     'parameters.today_label': 'היום',
+    'parameters.energy': 'אנרגיה',
+'parameters.energy_desc': 'רמות אנרגיה פיזית ומנטלית',
+'parameters.physical_activity': 'פעילות גופנית',
+'parameters.physical_activity_desc': 'רמת פעילות גופנית',
+'parameters.main_menu': 'תפריט ראשי',
 
         // Authentication
         'auth.welcome': 'ברוכים הבאים ל-TheraSocial',
@@ -677,6 +687,11 @@ const translations = {
     'parameters.cleared': 'تم مسح النموذج',
     'parameters.no_saved': 'لا توجد معاملات محفوظة لهذا التاريخ',
     'parameters.today_label': 'اليوم',
+    'parameters.energy': 'الطاقة',
+'parameters.energy_desc': 'مستويات الطاقة الجسدية والعقلية',
+'parameters.physical_activity': 'النشاط البدني',
+'parameters.physical_activity_desc': 'مستوى النشاط البدني',
+'parameters.main_menu': 'القائمة الرئيسية',
 
 
         // Authentication
@@ -993,6 +1008,11 @@ const translations = {
     'parameters.cleared': 'Форма очищена',
     'parameters.no_saved': 'Нет сохраненных параметров для этой даты',
     'parameters.today_label': 'Сегодня',
+    'parameters.energy': 'Энергия',
+'parameters.energy_desc': 'Уровень физической и умственной энергии',
+'parameters.physical_activity': 'Физическая активность',
+'parameters.physical_activity_desc': 'Уровень физической активности',
+'parameters.main_menu': 'Главное меню',
 
         // Authentication
         'auth.welcome': 'Добро пожаловать в TheraSocial',
