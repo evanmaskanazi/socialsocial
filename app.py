@@ -2554,7 +2554,6 @@ def internal_error(error):
 # =====================
 
 @app.cli.command()
-@app.cli.command()
 def init_db():
     """Initialize the database"""
     db.create_all()  # Let SQLAlchemy create from models.py
