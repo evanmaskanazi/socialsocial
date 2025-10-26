@@ -105,6 +105,46 @@ except Exception as e:
     logger.warning(f"Redis not available: {e}")
 
 
+def get_db():
+    """Get a direct database connection for raw SQL queries"""
+    import sqlite3
+
+    # Get the database path from SQLAlchemy config
+    db_path = app.config['SQLALCHEMY_DATABASE_URI']
+
+    # Handle SQLite (for local dev and some deployments)
+    if db_path.startswith('sqlite:///'):
+        db_path = db_path.replace('sqlite:///', '')
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+    else:
+        # For PostgreSQL, return a wrapper that uses SQLAlchemy
+        from sqlalchemy import text
+        class DBWrapper:
+            def execute(self, query, params=None):
+                if params:
+                    result = db.session.execute(text(query), dict(zip(range(len(params)), params)))
+                else:
+                    result = db.session.execute(text(query))
+                return result
+
+            def fetchone(self):
+                return self.execute.fetchone()
+
+            def fetchall(self):
+                return self.execute.fetchall()
+
+            def commit(self):
+                db.session.commit()
+
+            def close(self):
+                pass
+
+        return DBWrapper()
+
+
+
 # =====================
 # DATABASE MODELS
 # =====================
@@ -1029,6 +1069,12 @@ def circles_page():
 def messages_page():
     """Messages page"""
     return render_template('messages.html')
+
+
+@app.route('/parameters')
+@login_required
+def parameters_page():
+    return render_template('parameters.html')
 
 
 @app.route('/api/health')
@@ -2081,17 +2127,17 @@ def save_parameters():
             else:
                 validated_params[param] = None
 
-        db = get_db()
+        conn = get_db()  # CHANGED from db to conn
 
         # Check if parameters exist for this date
-        existing = db.execute(
+        existing = conn.execute(  # Already using conn here
             'SELECT id FROM parameters WHERE user_id = ? AND date = ?',
             (user_id, data['date'])
         ).fetchone()
 
         if existing:
             # Update existing parameters
-            db.execute('''
+            conn.execute('''  # CHANGED from db.execute to conn.execute
                 UPDATE parameters 
                 SET mood = ?, 
                     energy = ?,
@@ -2113,7 +2159,7 @@ def save_parameters():
             ))
         else:
             # Insert new parameters
-            db.execute('''
+            conn.execute('''  # CHANGED from db.execute to conn.execute
                 INSERT INTO parameters (
                     user_id, date, mood, energy, sleep_quality,
                     physical_activity, anxiety, notes
@@ -2129,7 +2175,8 @@ def save_parameters():
                 data.get('notes', '')
             ))
 
-        db.commit()
+        conn.commit()  # CHANGED from db.commit to conn.commit
+        conn.close()   # ADDED to close connection
 
         return jsonify({
             'success': True,
@@ -2163,15 +2210,17 @@ def load_parameters(date):
                 'message': 'Invalid date format'
             }), 400
 
-        db = get_db()
+        conn = get_db()  # CHANGED from db to conn
 
         # Load parameters - handle both old and new column names
-        params = db.execute('''
+        params = conn.execute('''  # CHANGED from db.execute to conn.execute
             SELECT mood, energy, sleep_quality, physical_activity,
                    anxiety, notes, exercise
             FROM parameters
             WHERE user_id = ? AND date = ?
         ''', (user_id, date)).fetchone()
+
+        conn.close()  # ADDED to close connection
 
         if params:
             # Handle migration from exercise to physical_activity
@@ -2213,12 +2262,14 @@ def get_parameter_dates():
             return jsonify({'success': False, 'message': 'Not authenticated'}), 401
 
         user_id = session['user_id']
-        db = get_db()
+        conn = get_db()  # CHANGED from db to conn
 
-        dates = db.execute(
+        dates = conn.execute(  # CHANGED from db.execute to conn.execute
             'SELECT DISTINCT date FROM parameters WHERE user_id = ? ORDER BY date DESC',
             (user_id,)
         ).fetchall()
+
+        conn.close()  # ADDED to close connection
 
         date_list = [row['date'] for row in dates]
 
