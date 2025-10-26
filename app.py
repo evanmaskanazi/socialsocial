@@ -113,28 +113,32 @@ except Exception as e:
 
 def get_db():
     """Get a direct database connection for raw SQL queries"""
-    import sqlite3
     import psycopg2
     from psycopg2.extras import RealDictCursor
 
-    # Get the database path from SQLAlchemy config
+    # Get the database URI from SQLAlchemy config
     db_uri = app.config['SQLALCHEMY_DATABASE_URI']
 
-    # Handle SQLite (for local dev)
-    if db_uri.startswith('sqlite:///'):
-        db_path = db_uri.replace('sqlite:///', '')
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+    # For PostgreSQL (Render uses PostgreSQL)
+    if db_uri.startswith('postgresql://') or db_uri.startswith('postgres://'):
+        # Fix postgres:// to postgresql:// if needed
+        if db_uri.startswith('postgres://'):
+            db_uri = db_uri.replace('postgres://', 'postgresql://', 1)
 
-    # Handle PostgreSQL
-    elif db_uri.startswith('postgresql://'):
         try:
             conn = psycopg2.connect(db_uri, cursor_factory=RealDictCursor)
             return conn
         except Exception as e:
             logger.error(f"Failed to connect to PostgreSQL: {e}")
             raise
+
+    # For SQLite (local development)
+    elif db_uri.startswith('sqlite:///'):
+        import sqlite3
+        db_path = db_uri.replace('sqlite:///', '')
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
 
     else:
         raise ValueError(f"Unsupported database type: {db_uri}")
@@ -344,12 +348,14 @@ def init_database():
                 db.create_all()
                 logger.info("Database schema created successfully")
                 create_admin_user()
+                create_parameters_table()  # ADD THIS LINE
             else:
                 logger.info(f"Found {len(tables)} existing tables")
 
                 # Fix all schema issues
                 fix_all_schema_issues()
                 create_test_users()
+                create_parameters_table()  # ADD THIS LINE
 
                 # Only try migrations if migrations folder exists
                 if os.path.exists('migrations'):
@@ -376,6 +382,7 @@ def init_database():
                 db.create_all()
                 logger.info("Created database tables as fallback")
                 create_admin_user()
+                create_parameters_table()  # ADD THIS LINE
             except Exception as e2:
                 logger.error(f"Failed to create tables: {e2}")
                 if not is_production:
@@ -905,6 +912,43 @@ def create_test_users():
         db.session.rollback()
 
 
+def create_parameters_table():
+    """Create parameters table if it doesn't exist with correct schema"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Drop the old incorrect table if it exists
+        cursor.execute("DROP TABLE IF EXISTS parameters CASCADE")
+
+        # Create the new parameters table with correct schema
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS parameters (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                date DATE NOT NULL,
+                mood INTEGER CHECK (mood >= 1 AND mood <= 4),
+                energy INTEGER CHECK (energy >= 1 AND energy <= 4),
+                sleep_quality INTEGER CHECK (sleep_quality >= 1 AND sleep_quality <= 4),
+                physical_activity INTEGER CHECK (physical_activity >= 1 AND physical_activity <= 4),
+                anxiety INTEGER CHECK (anxiety >= 1 AND anxiety <= 4),
+                exercise INTEGER CHECK (exercise >= 1 AND exercise <= 4),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, date)
+            )
+        ''')
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        logger.info("✓ Parameters table created with correct schema")
+
+    except Exception as e:
+        logger.error(f"Error creating parameters table: {e}")
+        raise
 
 def create_admin_user():
     """Create default admin user if it doesn't exist"""
@@ -2126,46 +2170,25 @@ def save_parameters():
         conn = get_db()
         cursor = conn.cursor()
 
-        # Determine if using SQLite or PostgreSQL
-        db_uri = app.config['SQLALCHEMY_DATABASE_URI']
-
-        if db_uri.startswith('sqlite'):
-            # SQLite query with ? placeholders
-            check_query = 'SELECT id FROM parameters WHERE user_id = ? AND date = ?'
-            cursor.execute(check_query, (user_id, data['date']))
-        else:
-            # PostgreSQL query with %s placeholders
-            check_query = 'SELECT id FROM parameters WHERE user_id = %s AND date = %s'
-            cursor.execute(check_query, (user_id, data['date']))
+        # PostgreSQL query
+        check_query = 'SELECT id FROM parameters WHERE user_id = %s AND date = %s'
+        cursor.execute(check_query, (user_id, data['date']))
 
         existing = cursor.fetchone()
 
         if existing:
             # Update existing parameters
-            if db_uri.startswith('sqlite'):
-                update_query = '''
-                    UPDATE parameters 
-                    SET mood = ?, 
-                        energy = ?,
-                        sleep_quality = ?, 
-                        physical_activity = ?, 
-                        anxiety = ?, 
-                        notes = ?,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE user_id = ? AND date = ?
-                '''
-            else:
-                update_query = '''
-                    UPDATE parameters 
-                    SET mood = %s, 
-                        energy = %s,
-                        sleep_quality = %s, 
-                        physical_activity = %s, 
-                        anxiety = %s, 
-                        notes = %s,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE user_id = %s AND date = %s
-                '''
+            update_query = '''
+                UPDATE parameters 
+                SET mood = %s, 
+                    energy = %s,
+                    sleep_quality = %s, 
+                    physical_activity = %s, 
+                    anxiety = %s, 
+                    notes = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = %s AND date = %s
+            '''
 
             cursor.execute(update_query, (
                 validated_params.get('mood'),
@@ -2179,20 +2202,12 @@ def save_parameters():
             ))
         else:
             # Insert new parameters
-            if db_uri.startswith('sqlite'):
-                insert_query = '''
-                    INSERT INTO parameters (
-                        user_id, date, mood, energy, sleep_quality,
-                        physical_activity, anxiety, notes
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                '''
-            else:
-                insert_query = '''
-                    INSERT INTO parameters (
-                        user_id, date, mood, energy, sleep_quality,
-                        physical_activity, anxiety, notes
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                '''
+            insert_query = '''
+                INSERT INTO parameters (
+                    user_id, date, mood, energy, sleep_quality,
+                    physical_activity, anxiety, notes
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            '''
 
             cursor.execute(insert_query, (
                 user_id,
@@ -2244,26 +2259,14 @@ def load_parameters(date):
         conn = get_db()
         cursor = conn.cursor()
 
-        # Determine database type
-        db_uri = app.config['SQLALCHEMY_DATABASE_URI']
-
-        # Query without the comment inside the SQL
-        if db_uri.startswith('sqlite'):
-            query = '''
-                SELECT mood, energy, sleep_quality, physical_activity,
-                       anxiety, notes, exercise
-                FROM parameters
-                WHERE user_id = ? AND date = ?
-            '''
-            cursor.execute(query, (user_id, date))
-        else:
-            query = '''
-                SELECT mood, energy, sleep_quality, physical_activity,
-                       anxiety, notes, exercise
-                FROM parameters
-                WHERE user_id = %s AND date = %s
-            '''
-            cursor.execute(query, (user_id, date))
+        # PostgreSQL query
+        query = '''
+            SELECT mood, energy, sleep_quality, physical_activity,
+                   anxiety, notes
+            FROM parameters
+            WHERE user_id = %s AND date = %s
+        '''
+        cursor.execute(query, (user_id, date))
 
         params = cursor.fetchone()
 
@@ -2271,15 +2274,11 @@ def load_parameters(date):
         conn.close()
 
         if params:
-            # Handle migration from exercise to physical_activity
-            physical_activity_value = params['physical_activity'] if params['physical_activity'] else params.get(
-                'exercise')
-
             result_data = {
                 'mood': params['mood'],
                 'energy': params['energy'],
                 'sleep_quality': params['sleep_quality'],
-                'physical_activity': physical_activity_value,
+                'physical_activity': params['physical_activity'],
                 'anxiety': params['anxiety'],
                 'notes': params['notes'] if params['notes'] else ''
             }
@@ -2313,28 +2312,27 @@ def get_parameter_dates():
         conn = get_db()
         cursor = conn.cursor()
 
-        # Determine database type
-        db_uri = app.config['SQLALCHEMY_DATABASE_URI']
-
-        if db_uri.startswith('sqlite'):
-            query = 'SELECT DISTINCT date FROM parameters WHERE user_id = ? ORDER BY date DESC'
-            cursor.execute(query, (user_id,))
-        else:
-            query = 'SELECT DISTINCT date FROM parameters WHERE user_id = %s ORDER BY date DESC'
-            cursor.execute(query, (user_id,))
+        # PostgreSQL query
+        query = 'SELECT DISTINCT date FROM parameters WHERE user_id = %s ORDER BY date DESC'
+        cursor.execute(query, (user_id,))
 
         dates = cursor.fetchall()
 
         cursor.close()
         conn.close()
 
-        # Extract dates from results
+        # Extract dates and convert to string format
         date_list = []
         for row in dates:
             if isinstance(row, dict):
-                date_list.append(row['date'])
+                # Convert date object to string
+                date_obj = row['date']
+                if hasattr(date_obj, 'isoformat'):
+                    date_list.append(date_obj.isoformat())
+                else:
+                    date_list.append(str(date_obj))
             else:
-                date_list.append(row[0])
+                date_list.append(str(row[0]))
 
         return jsonify({
             'success': True,
