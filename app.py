@@ -915,11 +915,36 @@ def create_test_users():
 def create_parameters_table():
     """Create parameters table if it doesn't exist with correct schema"""
     try:
+        logger.info("Checking parameters table...")
+
         conn = get_db()
         cursor = conn.cursor()
 
-        # Drop the old incorrect table if it exists
-        cursor.execute("DROP TABLE IF EXISTS parameters CASCADE")
+        # Check if parameters table exists and has correct columns
+        try:
+            cursor.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'parameters'
+            """)
+            columns = [row['column_name'] for row in cursor.fetchall()]
+
+            # Check if we have the correct columns
+            required_columns = ['date', 'mood', 'energy', 'sleep_quality',
+                                'physical_activity', 'anxiety', 'user_id']
+
+            if all(col in columns for col in required_columns):
+                logger.info("✓ Parameters table exists with correct schema")
+                cursor.close()
+                conn.close()
+                return  # Table is fine, don't recreate
+            else:
+                logger.info("Parameters table has wrong schema, recreating...")
+                cursor.execute("DROP TABLE IF EXISTS parameters CASCADE")
+
+        except Exception as e:
+            logger.info(f"Parameters table doesn't exist or needs recreation: {e}")
+            # Table doesn't exist, continue to create it
 
         # Create the new parameters table with correct schema
         cursor.execute('''
@@ -941,14 +966,14 @@ def create_parameters_table():
         ''')
 
         conn.commit()
+        logger.info("✓ Parameters table created with correct schema")
+
         cursor.close()
         conn.close()
 
-        logger.info("✓ Parameters table created with correct schema")
-
     except Exception as e:
         logger.error(f"Error creating parameters table: {e}")
-        raise
+        # Don't raise - allow app to continue
 
 def create_admin_user():
     """Create default admin user if it doesn't exist"""
