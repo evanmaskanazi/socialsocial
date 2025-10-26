@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parameters - Social</title>
+    <title>Parameters - TheraSocial</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
     <style>
-        /* Base styles to ensure visibility */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 20px;
             background: #f5f7fa;
         }
-        
+
         #loadingMessage {
             text-align: center;
             padding: 20px;
             font-size: 18px;
             color: #667eea;
         }
-        
+
         #errorMessage {
             display: none;
             background: #fee;
@@ -35,19 +35,14 @@
     <div id="loadingMessage">Loading parameters...</div>
     <div id="errorMessage"></div>
     <div id="parametersContainer"></div>
-    
-    <!-- Load i18n first -->
+
+    <!-- Load scripts -->
     <script src="/static/js/i18n.js"></script>
-    
-    <!-- Load parameters-social.js -->
     <script src="/static/js/parameters-social.js"></script>
-    
-    <!-- Initialize with debugging -->
+
     <script>
-        // Debug logging
         console.log('Parameters page loading...');
-        
-        // Function to show errors to user
+
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
             const loadingDiv = document.getElementById('loadingMessage');
@@ -59,84 +54,119 @@
                 loadingDiv.style.display = 'none';
             }
         }
-        
-        // Wait for DOM and scripts to fully load
+
+        // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM loaded, checking for required functions...');
-            
-            // Check if required functions exist
-            if (typeof initializeParameters !== 'function') {
-                showError('Error: initializeParameters function not found. Please check parameters-social.js is loaded correctly.');
-                console.error('initializeParameters function not found');
-                return;
+            console.log('DOM loaded, initializing parameters...');
+
+            // Hide loading message
+            const loadingDiv = document.getElementById('loadingMessage');
+            if (loadingDiv) {
+                loadingDiv.style.display = 'none';
             }
-            
-            // Check if i18n is loaded
-            if (!window.i18n) {
-                console.warn('i18n not loaded yet, waiting...');
-                // Try to initialize anyway, the script has fallbacks
-            }
-            
-            // Check if container exists
-            const container = document.getElementById('parametersContainer');
-            if (!container) {
-                showError('Error: parametersContainer element not found in DOM.');
-                console.error('parametersContainer not found');
-                return;
-            }
-            
-            try {
-                // Hide loading message
-                const loadingDiv = document.getElementById('loadingMessage');
-                if (loadingDiv) {
-                    loadingDiv.style.display = 'none';
+
+            // Wait a moment for scripts to fully load
+            setTimeout(() => {
+                // Check if function exists
+                if (typeof initializeParameters !== 'function') {
+                    showError('Error: initializeParameters function not found. Please refresh the page.');
+                    console.error('initializeParameters not found');
+
+                    // Try again after another delay
+                    setTimeout(() => {
+                        if (typeof initializeParameters === 'function') {
+                            console.log('Function now available, initializing...');
+                            try {
+                                initializeParameters();
+
+                                // Apply translations if available
+                                if (window.i18n && window.i18n.applyLanguage) {
+                                    window.i18n.applyLanguage();
+                                }
+                            } catch (error) {
+                                console.error('Delayed initialization error:', error);
+                            }
+                        }
+                    }, 2000);
+                    return;
                 }
-                
-                console.log('Initializing parameters system...');
-                // Initialize parameters system
-                initializeParameters();
-                
-                // Apply translations after content is loaded
-                if (window.i18n && window.i18n.applyLanguage) {
-                    console.log('Applying i18n translations...');
-                    window.i18n.applyLanguage();
-                }
-                
-                console.log('Parameters system initialized successfully');
-            } catch (error) {
-                console.error('Error initializing parameters:', error);
-                showError('Error initializing parameters: ' + error.message);
-            }
-        });
-        
-        // Re-apply translations when language changes
-        window.addEventListener('languageChanged', () => {
-            console.log('Language changed, updating translations...');
-            if (window.i18n && window.i18n.applyLanguage) {
-                window.i18n.applyLanguage();
-            }
-            // Update dynamic content translations
-            if (typeof updateTranslations === 'function') {
-                updateTranslations();
-            }
-        });
-        
-        // Backup initialization after a delay if nothing happens
-        setTimeout(() => {
-            const container = document.getElementById('parametersContainer');
-            if (container && container.innerHTML.trim() === '') {
-                console.warn('Container still empty after 3 seconds, attempting backup initialization...');
-                if (typeof initializeParameters === 'function') {
-                    try {
-                        initializeParameters();
-                    } catch (error) {
-                        console.error('Backup initialization failed:', error);
-                        showError('Failed to initialize parameters page after timeout: ' + error.message);
+
+                // Initialize parameters
+                try {
+                    initializeParameters();
+                    console.log('Parameters initialized successfully');
+
+                    // Apply initial translations
+                    if (window.i18n && window.i18n.applyLanguage) {
+                        window.i18n.applyLanguage();
                     }
+
+                    // Verify initialization worked
+                    setTimeout(() => {
+                        const buttons = document.querySelectorAll('.rating-button');
+                        console.log(`Initialization check: ${buttons.length} rating buttons created (expected: 20)`);
+
+                        if (buttons.length === 0) {
+                            console.warn('No rating buttons found after initialization');
+                            const container = document.getElementById('parametersContainer');
+                            if (container && container.innerHTML.trim() === '') {
+                                console.error('Container is empty - initialization may have failed');
+                                showError('Initialization failed. Please refresh the page.');
+                            }
+                        }
+                    }, 500);
+
+                } catch (error) {
+                    console.error('Error initializing:', error);
+                    showError('Error: ' + error.message);
                 }
+            }, 100); // Small delay to ensure scripts are parsed
+        });
+
+        // Handle language changes with infinite loop prevention
+        let isUpdatingLanguage = false;
+        let languageUpdateCount = 0;
+
+        window.addEventListener('languageChanged', () => {
+            // Prevent infinite loop
+            if (isUpdatingLanguage) {
+                console.log('Language update already in progress, skipping');
+                return;
             }
-        }, 3000);
+
+            // Safety check for runaway events
+            languageUpdateCount++;
+            if (languageUpdateCount > 10) {
+                console.error('Too many language change events, stopping to prevent infinite loop');
+                return;
+            }
+
+            // Reset counter after a delay
+            setTimeout(() => {
+                languageUpdateCount = 0;
+            }, 1000);
+
+            isUpdatingLanguage = true;
+            console.log('Language changed event received');
+
+            try {
+                // Update translations if function exists
+                if (typeof updateTranslations === 'function') {
+                    updateTranslations();
+                }
+
+                // Don't call applyLanguage here as it might trigger another event
+                // The updateTranslations function should handle the UI updates
+
+            } catch (error) {
+                console.error('Error updating language:', error);
+            } finally {
+                // Reset flag after a small delay
+                setTimeout(() => {
+                    isUpdatingLanguage = false;
+                }, 100);
+            }
+        });
     </script>
 </body>
 </html>
-
