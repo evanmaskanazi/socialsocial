@@ -2554,31 +2554,102 @@ def internal_error(error):
 # =====================
 
 @app.cli.command()
+@app.cli.command()
 def init_db():
     """Initialize the database"""
-    db.create_all()  # Let SQLAlchemy handle it from models.py
+    db.create_all()  # Let SQLAlchemy create from models.py
 
-    # Only add migration for existing data
+    # Only do migration for existing data
     with app.app_context():
+        db_conn = get_db()
         try:
-            # Just migrate existing text data to numeric
-            from sqlalchemy import text
-            db.session.execute(text("""
-                UPDATE parameters 
-                SET mood = CASE 
-                    WHEN mood = 'very_bad' THEN 1
-                    WHEN mood = 'bad' THEN 2
-                    WHEN mood = 'ok' THEN 3
-                    WHEN mood = 'good' THEN 4
-                    ELSE mood
-                END
-                WHERE typeof(mood) = 'text'
-            """))
-            db.session.commit()
+            migrate_parameters_data(db_conn)  # Use your migration function
         except:
             pass  # New installation, no migration needed
 
     print("Database initialized.")
+
+
+def migrate_parameters_data(db):
+    """Migrate existing text-based parameters to numeric values"""
+    try:
+        # Migrate mood from text to numeric
+        db.execute('''
+            UPDATE parameters 
+            SET mood = CASE 
+                WHEN mood = 'very_bad' OR mood = '1' THEN 1
+                WHEN mood = 'bad' OR mood = '2' THEN 2
+                WHEN mood IN ('ok', 'neutral', '3', 'moderate') THEN 3
+                WHEN mood IN ('good', '4', 'excellent') THEN 4
+                WHEN CAST(mood AS INTEGER) BETWEEN 1 AND 4 THEN CAST(mood AS INTEGER)
+                ELSE NULL
+            END
+            WHERE mood IS NOT NULL AND typeof(mood) = 'text'
+        ''')
+
+        # Migrate exercise to physical_activity
+        db.execute('''
+            UPDATE parameters 
+            SET physical_activity = CASE 
+                WHEN exercise IN ('none', '1', 'no') THEN 1
+                WHEN exercise IN ('light', '2', 'mild') THEN 2
+                WHEN exercise IN ('moderate', '3', 'medium') THEN 3
+                WHEN exercise IN ('intense', 'high', '4', 'heavy') THEN 4
+                WHEN CAST(exercise AS INTEGER) BETWEEN 1 AND 4 THEN CAST(exercise AS INTEGER)
+                ELSE exercise
+            END
+            WHERE exercise IS NOT NULL
+        ''')
+
+        # Migrate anxiety from text to numeric
+        db.execute('''
+            UPDATE parameters 
+            SET anxiety = CASE 
+                WHEN anxiety IN ('none', '1', 'no') THEN 1
+                WHEN anxiety IN ('low', 'mild', '2') THEN 2
+                WHEN anxiety IN ('moderate', '3', 'medium') THEN 3
+                WHEN anxiety IN ('high', 'severe', '4') THEN 4
+                WHEN CAST(anxiety AS INTEGER) BETWEEN 1 AND 4 THEN CAST(anxiety AS INTEGER)
+                ELSE NULL
+            END
+            WHERE anxiety IS NOT NULL AND typeof(anxiety) = 'text'
+        ''')
+
+        # Handle old energy column - ensure it's numeric
+        db.execute('''
+            UPDATE parameters 
+            SET energy = CASE 
+                WHEN energy IN ('very_low', '1') THEN 1
+                WHEN energy IN ('low', '2') THEN 2
+                WHEN energy IN ('moderate', '3', 'medium', 'ok') THEN 3
+                WHEN energy IN ('high', '4', 'good') THEN 4
+                WHEN CAST(energy AS INTEGER) BETWEEN 1 AND 4 THEN CAST(energy AS INTEGER)
+                ELSE NULL
+            END
+            WHERE energy IS NOT NULL AND typeof(energy) = 'text'
+        ''')
+
+        # Convert sleep_hours to sleep_quality if needed
+        cursor = db.execute("PRAGMA table_info(parameters)")
+        columns = [row[1] for row in cursor.fetchall()]
+
+        if 'sleep_hours' in columns:
+            db.execute('''
+                UPDATE parameters 
+                SET sleep_quality = CASE 
+                    WHEN sleep_hours <= 4 THEN 1
+                    WHEN sleep_hours > 4 AND sleep_hours <= 6 THEN 2
+                    WHEN sleep_hours > 6 AND sleep_hours <= 8 THEN 3
+                    WHEN sleep_hours > 8 THEN 4
+                    ELSE NULL
+                END
+                WHERE sleep_hours IS NOT NULL AND sleep_quality IS NULL
+            ''')
+
+        db.commit()
+        print("Parameters data migration completed successfully")
+    except Exception as e:
+        print(f"Error during migration: {e}")
 
 
 @app.cli.command()
