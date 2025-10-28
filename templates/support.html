@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Support - Social Social</title>
+    <title>Support - TheraSocial</title>
     <style>
         * {
             margin: 0;
@@ -211,7 +211,7 @@
     <div class="container">
         <div class="header">
             <div style="flex: 1;"></div>
-           <select id="languageSelector" class="language-selector" onchange="window.i18n.setLanguage(this.value)">
+            <select id="languageSelector" class="language-selector">
                 <option value="en">English</option>
                 <option value="he">עברית</option>
                 <option value="ar">العربية</option>
@@ -227,40 +227,40 @@
 
         <div class="support-sections">
             <div class="support-card">
-                <h2>📞 Contact Us</h2>
+                <h2>📞 <span data-i18n="support.contact_us">Contact Us</span></h2>
                 <div class="contact-info">
-                    <strong>Email:</strong>
-                    <a href="mailto:support@socialsocial.com" style="color: #764ba2;">support@socialsocial.com</a>
+                    <strong data-i18n="support.email">Email:</strong>
+                    <a href="mailto:support@therasocial.com" style="color: #764ba2;">support@therasocial.com</a>
                 </div>
                 <div class="contact-info">
-                    <strong>Phone:</strong>
-                    <span>1-800-SOCIAL (762425)</span>
+                    <strong data-i18n="support.phone">Phone:</strong>
+                    <span>1-800-THERAPY (843-7279)</span>
                 </div>
                 <div class="contact-info">
-                    <strong>Hours:</strong>
-                    <span>Monday-Friday<br>9:00 AM - 5:00 PM EST</span>
+                    <strong data-i18n="support.hours">Hours:</strong>
+                    <span data-i18n="support.hours_detail">Monday-Friday<br>9:00 AM - 5:00 PM EST</span>
                 </div>
             </div>
 
             <div class="support-card">
-                <h2>🚀 Quick Help</h2>
+                <h2>🚀 <span data-i18n="support.quick_help">Quick Help</span></h2>
                 <ul style="color: #666; line-height: 2; margin-left: 20px;">
-                    <li><a href="#faq" style="color: #764ba2;">Frequently Asked Questions</a></li>
-                    <li><a href="/help" style="color: #764ba2;">Help Center</a></li>
-                    <li><a href="/tutorials" style="color: #764ba2;">Video Tutorials</a></li>
-                    <li><a href="/community" style="color: #764ba2;">Community Forum</a></li>
-                    <li><a href="/status" style="color: #764ba2;">System Status</a></li>
+                    <li><a href="#faq" style="color: #764ba2;" data-i18n="support.faq_link">Frequently Asked Questions</a></li>
+                    <li><a href="/help" style="color: #764ba2;" data-i18n="support.help_center">Help Center</a></li>
+                    <li><a href="/tutorials" style="color: #764ba2;" data-i18n="support.video_tutorials">Video Tutorials</a></li>
+                    <li><a href="/community" style="color: #764ba2;" data-i18n="support.community_forum">Community Forum</a></li>
+                    <li><a href="/status" style="color: #764ba2;" data-i18n="support.system_status">System Status</a></li>
                 </ul>
             </div>
 
             <div class="support-card">
-                <h2>💡 Resources</h2>
+                <h2>💡 <span data-i18n="support.resources">Resources</span></h2>
                 <ul style="color: #666; line-height: 2; margin-left: 20px;">
-                    <li><a href="/privacy" style="color: #764ba2;">Privacy Policy</a></li>
-                    <li><a href="/terms" style="color: #764ba2;">Terms of Service</a></li>
-                    <li><a href="/guidelines" style="color: #764ba2;">Community Guidelines</a></li>
-                    <li><a href="/security" style="color: #764ba2;">Security Center</a></li>
-                    <li><a href="/blog" style="color: #764ba2;">Blog & Updates</a></li>
+                    <li><a href="/privacy" style="color: #764ba2;" data-i18n="support.privacy_policy">Privacy Policy</a></li>
+                    <li><a href="/terms" style="color: #764ba2;" data-i18n="support.terms_of_service">Terms of Service</a></li>
+                    <li><a href="/guidelines" style="color: #764ba2;" data-i18n="support.community_guidelines">Community Guidelines</a></li>
+                    <li><a href="/security" style="color: #764ba2;" data-i18n="support.security_center">Security Center</a></li>
+                    <li><a href="/blog" style="color: #764ba2;" data-i18n="support.blog_updates">Blog & Updates</a></li>
                 </ul>
             </div>
         </div>
@@ -272,36 +272,36 @@
 
             <div class="faq-item">
                 <div class="faq-question" data-i18n="support.faq1_q">How do I reset my password?</div>
-                <div class="faq-answer">
+                <div class="faq-answer" data-i18n="support.faq1_a">
                     Click on "Forgot Password" on the login page. Enter your email address, and we'll send you instructions to reset your password.
                 </div>
             </div>
 
             <div class="faq-item">
-                <div class="faq-question" data-i18n="support.faq2_q">How do I add friends to my circles?</div>
+                <div class="faq-question" data-i18n="support.faq2_q">How do I track my therapy progress?</div>
                 <div class="faq-answer" data-i18n="support.faq2_a">
-                    Go to the Circles tab in your dashboard. Search for users by username or email, then click "Add to Circle" and select which circle (General, Close Friends, or Family) you want to add them to.
+                    Go to the Progress tab in your dashboard. You can log daily parameters, set goals, and view your progress over time with visual charts and insights.
                 </div>
             </div>
 
             <div class="faq-item">
-                <div class="faq-question" data-i18n="support.faq4_q">Is my data secure?</div>
+                <div class="faq-question" data-i18n="support.faq3_q">Is my data secure?</div>
+                <div class="faq-answer" data-i18n="support.faq3_a">
+                    Yes! We are HIPAA compliant and use industry-standard encryption to protect your data. All sensitive information is encrypted both in transit and at rest. We never share your personal information with third parties without your consent.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" data-i18n="support.faq4_q">How do I delete my account?</div>
                 <div class="faq-answer" data-i18n="support.faq4_a">
-                    Yes! We use industry-standard encryption to protect your data. All sensitive information is encrypted both in transit and at rest. We never share your personal information with third parties without your consent.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">How do I delete my account?</div>
-                <div class="faq-answer">
                     Go to Settings > Account > Delete Account. Please note that this action is permanent and cannot be undone. We'll ask you to confirm before proceeding.
                 </div>
             </div>
 
             <div class="faq-item">
-                <div class="faq-question">How do I report inappropriate content?</div>
-                <div class="faq-answer">
-                    Click the "Report" button on any post or message. Select the reason for reporting and provide additional details if needed. Our moderation team will review it within 24 hours.
+                <div class="faq-question" data-i18n="support.faq5_q">How do I change my language preference?</div>
+                <div class="faq-answer" data-i18n="support.faq5_a">
+                    You can change the language at any time using the language selector at the top of any page. We support English, Hebrew, Arabic, and Russian.
                 </div>
             </div>
         </div>
@@ -310,12 +310,12 @@
             <h2 style="color: #667eea; margin-bottom: 20px;" data-i18n="support.contact_title">Send Us a Message</h2>
             <form id="supportForm">
                 <div class="form-group">
-                    <label for="name">Name</label>
+                    <label for="name" data-i18n="support.name">Name</label>
                     <input type="text" id="name" name="name" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="email">Email</label>
+                    <label for="email" data-i18n="support.email_label">Email</label>
                     <input type="email" id="email" name="email" required>
                 </div>
 
@@ -341,22 +341,26 @@
     <script src="/static/js/i18n.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Apply translations after page loads
-            window.i18n.applyLanguage();
-
-            // Set the language selector to current language
-            document.getElementById('languageSelector').value = window.i18n.getCurrentLanguage();
-
-            // Re-apply translations when language changes
-            window.addEventListener('languageChanged', () => {
+            // Apply translations
+            if (window.i18n) {
                 window.i18n.applyLanguage();
-            });
+
+                // Set language selector
+                const selector = document.getElementById('languageSelector');
+                if (selector) {
+                    selector.value = window.i18n.getCurrentLanguage() || 'en';
+
+                    selector.addEventListener('change', function() {
+                        window.i18n.setLanguage(this.value);
+                        window.i18n.applyLanguage();
+                    });
+                }
+            }
         });
 
         document.getElementById('supportForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
-            // Collect form data
             const formData = {
                 name: document.getElementById('name').value,
                 email: document.getElementById('email').value,
@@ -364,7 +368,6 @@
                 message: document.getElementById('message').value
             };
 
-            // Send to backend
             fetch('/api/support/contact', {
                 method: 'POST',
                 headers: {
@@ -374,12 +377,12 @@
             })
             .then(response => response.json())
             .then(data => {
-                alert(window.i18n.t('msg.sent') || 'Thank you for contacting us! We will respond within 24 hours.');
+                alert('Thank you for contacting us! We will respond within 24 hours.');
                 document.getElementById('supportForm').reset();
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert(window.i18n.t('msg.error') || 'There was an error sending your message. Please try again later.');
+                alert('There was an error sending your message. Please try again later.');
             });
         });
     </script>

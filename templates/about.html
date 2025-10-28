@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - Social Social</title>
+    <title>About - TheraSocial</title>
     <style>
         * {
             margin: 0;
@@ -59,6 +59,14 @@
             -webkit-text-fill-color: transparent;
         }
 
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
         .content {
             color: #333;
             line-height: 1.8;
@@ -97,6 +105,11 @@
             font-weight: bold;
         }
 
+        .feature-desc {
+            color: #666;
+            line-height: 1.6;
+        }
+
         .back-link {
             display: inline-block;
             margin-top: 30px;
@@ -115,13 +128,30 @@
         [dir="rtl"] .features {
             direction: rtl;
         }
+
+        .mission-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .values-list {
+            margin-left: 30px;
+            line-height: 2;
+        }
+
+        [dir="rtl"] .values-list {
+            margin-left: 0;
+            margin-right: 30px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1 data-i18n="about.title">About Social Social</h1>
-            <select id="languageSelector" class="language-selector" onchange="window.i18n.setLanguage(this.value)">
+            <h1 data-i18n="about.title">About TheraSocial</h1>
+            <select id="languageSelector" class="language-selector">
                 <option value="en">English</option>
                 <option value="he">עברית</option>
                 <option value="ar">العربية</option>
@@ -129,81 +159,105 @@
             </select>
         </div>
 
-        <div class="content">
-            <p>Welcome to Social Social - your premier platform for meaningful connections and authentic social interactions. Founded with the vision of bringing people closer together, we're redefining how people connect in the digital age.</p>
+        <p class="subtitle" data-i18n="about.subtitle">
+            Your trusted companion for therapy practice and personal wellness journey
+        </p>
 
-            <h2 style="color: #667eea; margin: 30px 0 20px;">Our Mission</h2>
-            <p>We believe in the power of genuine connections. Our mission is to create a safe, inclusive space where people can share their thoughts, build relationships, and support each other through life's journey.</p>
+        <div class="content">
+            <p data-i18n="about.intro">
+                Welcome to TheraSocial - a comprehensive platform designed to support both therapists and individuals on their wellness journey. We combine professional tools with personal tracking features to create a holistic approach to mental health and wellbeing.
+            </p>
+
+            <div class="mission-section">
+                <h2 style="color: #667eea; margin-bottom: 20px;" data-i18n="about.mission_title">Our Mission</h2>
+                <p data-i18n="about.mission_text">
+                    We believe in making mental health support accessible, organized, and effective. Our mission is to empower therapists with the tools they need to provide excellent care, while giving individuals the resources to track and improve their wellbeing.
+                </p>
+            </div>
 
             <div class="features">
                 <div class="feature-card">
-                    <div class="feature-icon">💥</div>
-                    <div class="feature-title">Connect</div>
-                    <p>Build meaningful relationships with friends, family, and new connections</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">💬</div>
-                    <div class="feature-title">Communicate</div>
-                    <p>Share your thoughts through posts and private messages</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <div class="feature-title">Circles</div>
-                    <p>Organize your connections into circles for better interaction</p>
-                </div>
-
-                <div class="feature-card">
                     <div class="feature-icon">🔒</div>
-                    <div class="feature-title">Privacy</div>
-                    <p>Your data is secure and your privacy is our priority</p>
+                    <div class="feature-title" data-i18n="about.privacy_title">Privacy First</div>
+                    <p class="feature-desc" data-i18n="about.privacy_desc">
+                        HIPAA compliant with end-to-end encryption to protect your sensitive information
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-title" data-i18n="about.track_title">Track Progress</div>
+                    <p class="feature-desc" data-i18n="about.track_desc">
+                        Monitor your wellness journey with daily parameters and visual insights
+                    </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🌟</div>
-                    <div class="feature-title">Growth</div>
-                    <p>Track your personal goals and celebrate achievements</p>
+                    <div class="feature-title" data-i18n="about.goals_title">Set Goals</div>
+                    <p class="feature-desc" data-i18n="about.goals_desc">
+                        Create and track personal goals with milestone celebrations
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <div class="feature-title" data-i18n="about.communication_title">Secure Communication</div>
+                    <p class="feature-desc" data-i18n="about.communication_desc">
+                        Connect with your therapist through encrypted messaging
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📅</div>
+                    <div class="feature-title" data-i18n="about.checkin_title">Daily Check-ins</div>
+                    <p class="feature-desc" data-i18n="about.checkin_desc">
+                        Log your mood, energy, and other parameters to identify patterns
+                    </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🤝</div>
-                    <div class="feature-title">Support</div>
-                    <p>Get help when you need it from our dedicated team</p>
+                    <div class="feature-title" data-i18n="about.community_title">Community Support</div>
+                    <p class="feature-desc" data-i18n="about.community_desc">
+                        Connect with others on similar journeys in a safe, moderated environment
+                    </p>
                 </div>
             </div>
 
-            <h2 style="color: #667eea; margin: 30px 0 20px;">Our Values</h2>
-            <ul style="margin-left: 30px; line-height: 2;">
-                <li><strong>Authenticity:</strong> Be yourself, always</li>
-                <li><strong>Respect:</strong> Every voice matters</li>
-                <li><strong>Innovation:</strong> Constantly improving your experience</li>
-                <li><strong>Community:</strong> Together we're stronger</li>
+            <h2 style="color: #667eea; margin: 30px 0 20px;" data-i18n="about.values_title">Our Values</h2>
+            <ul class="values-list">
+                <li><strong data-i18n="about.value1_title">Compassion:</strong> <span data-i18n="about.value1_desc">We approach every interaction with empathy and understanding</span></li>
+                <li><strong data-i18n="about.value2_title">Privacy:</strong> <span data-i18n="about.value2_desc">Your data is yours alone - we never share without explicit consent</span></li>
+                <li><strong data-i18n="about.value3_title">Innovation:</strong> <span data-i18n="about.value3_desc">Continuously improving our platform based on user feedback</span></li>
+                <li><strong data-i18n="about.value4_title">Accessibility:</strong> <span data-i18n="about.value4_desc">Making mental health tools available to everyone, everywhere</span></li>
             </ul>
 
-            <p style="margin-top: 30px; text-align: center; color: #666;">
-                Join thousands of users who have already discovered the joy of meaningful connections on Social Social.
-            </p>
+            <div style="text-align: center; margin-top: 40px;">
+                <a href="/register" class="back-link" style="margin-right: 20px;" data-i18n="btn.getstarted">Get Started</a>
+                <a href="/" class="back-link" data-i18n="btn.back">Back to Home</a>
+            </div>
         </div>
-
-        <center>
-            <a href="/" class="back-link" data-i18n="btn.back">Back to Home</a>
-        </center>
     </div>
 
     <script src="/static/js/i18n.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Apply translations after page loads
-            window.i18n.applyLanguage();
-
-            // Set the language selector to current language
-            document.getElementById('languageSelector').value = window.i18n.getCurrentLanguage();
-
-            // Re-apply translations when language changes
-            window.addEventListener('languageChanged', () => {
+            // Apply translations
+            if (window.i18n) {
                 window.i18n.applyLanguage();
-            });
+
+                // Set language selector
+                const selector = document.getElementById('languageSelector');
+                if (selector) {
+                    selector.value = window.i18n.getCurrentLanguage() || 'en';
+
+                    selector.addEventListener('change', function() {
+                        window.i18n.setLanguage(this.value);
+                        window.i18n.applyLanguage();
+                    });
+                }
+            }
         });
     </script>
 </body>
