@@ -1168,7 +1168,7 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('parametersContainer') && !window.parametersInitialized) {
             window.parametersInitialized = true;
-            initializeParameters();
+            // initializeParameters() - removed duplicate;
         }
     });
 } else {
