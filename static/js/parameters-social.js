@@ -1,15 +1,14 @@
 // Social Parameters Save/Load System with i18n support and numeric ratings
+// CLEANED VERSION - Only 5 essential categories with 1-4 ratings
 
-// Translation function helper - renamed from 't' to 'pt' to avoid conflicts
+// Translation function helper
 const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
 
 // State management
 let currentDate = new Date();
-
-
 let selectedRatings = {};
 
-// Parameter categories - 5 total categories with descriptions
+// ESSENTIAL 5 PARAMETER CATEGORIES ONLY - ratings 1-4
 const PARAMETER_CATEGORIES = [
     {
         id: 'mood',
@@ -53,7 +52,7 @@ const PARAMETER_CATEGORIES = [
     }
 ];
 
-// Add translations for new parameters
+// Add translations for parameters
 const addParameterTranslations = () => {
     if (window.i18n && window.i18n.translations) {
         // English translations
@@ -176,868 +175,721 @@ const addParameterTranslations = () => {
             });
         }
 
-        // Also add month translations if missing
+        // Add month translations if missing
         const months = ['january', 'february', 'march', 'april', 'may', 'june',
                        'july', 'august', 'september', 'october', 'november', 'december'];
 
         months.forEach((month, index) => {
             const key = `month.${month}`;
+
+            // English
             if (!window.i18n.translations.en[key]) {
                 window.i18n.translations.en[key] = month.charAt(0).toUpperCase() + month.slice(1);
             }
-        });
 
-        // Add day translations if missing
-        const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-        const dayTranslations = {
-            en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-            he: ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'],
-            ar: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
-            ru: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
-        };
+            // Hebrew months
+            const hebrewMonths = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                                  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+            if (!window.i18n.translations.he[key]) {
+                window.i18n.translations.he[key] = hebrewMonths[index];
+            }
 
-        Object.keys(dayTranslations).forEach(lang => {
-            days.forEach((day, index) => {
-                const key = `day.${day}`;
-                if (!window.i18n.translations[lang][key]) {
-                    window.i18n.translations[lang][key] = dayTranslations[lang][index];
-                }
-            });
+            // Arabic months
+            const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                                  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            if (!window.i18n.translations.ar[key]) {
+                window.i18n.translations.ar[key] = arabicMonths[index];
+            }
+
+            // Russian months
+            const russianMonths = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                                   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            if (!window.i18n.translations.ru[key]) {
+                window.i18n.translations.ru[key] = russianMonths[index];
+            }
         });
     }
 };
 
-// Initialize parameters page
-function initializeParameters() {
-    addParameterTranslations();
-    const container = document.getElementById('parametersContainer');
-    if (container) {
-        container.innerHTML = generateParametersHTML();
-        setupLanguageSelector();
-        initializeCalendar();
-        renderRatingCategories();
-    }
+// Format date for display
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
-// Generate the HTML structure with embedded styles (like original approach)
-function generateParametersHTML() {
-    return `
-        <div class="parameters-container">
-            <style>
-                .parameters-container {
-                    max-width: 800px;
-                    margin: 0 auto;
-                    padding: 20px;
-                    position: relative;
-                }
+// Main initialization function
+function initializeParameters() {
+    console.log('Initializing parameters system...');
 
-                /* Language Selector */
-                .language-selector-wrapper {
-                    position: absolute;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 100;
-                }
+    // Add translations first
+    addParameterTranslations();
 
-                [dir="rtl"] .language-selector-wrapper {
-                    right: auto;
-                    left: 20px;
-                }
+    // Get container
+    const container = document.getElementById('parametersContainer');
+    if (!container) {
+        console.error('Parameters container not found!');
+        return;
+    }
 
-                .language-selector {
-                    padding: 8px 12px;
-                    border: 2px solid #667eea;
-                    border-radius: 8px;
-                    background: white;
-                    color: #667eea;
-                    font-weight: 600;
-                    cursor: pointer;
-                    min-width: 120px;
-                    font-size: 14px;
-                }
+    // Clear any existing content
+    container.innerHTML = '';
 
-                .language-selector:hover {
-                    background: #f8f9fa;
-                }
-
-                .calendar-section {
-                    background: white;
-                    border-radius: 15px;
-                    padding: 20px;
-                    margin-bottom: 30px;
-                    margin-top: 50px; /* Space for language selector */
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-                }
-
-                .calendar-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 20px;
-                    padding-bottom: 15px;
-                    border-bottom: 2px solid #f0f0f0;
-                }
-
-                .calendar-title {
-                    font-size: 1.5em;
-                    color: #2d3436;
-                    font-weight: 600;
-                }
-
-                .calendar-navigation {
-                    display: flex;
-                    gap: 10px;
-                }
-
-                .calendar-nav-btn {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border: none;
-                    padding: 8px 15px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                }
-
-                .calendar-nav-btn:hover {
-                    transform: scale(1.05);
-                }
-
-                #currentMonth {
-                    min-width: 150px;
-                    text-align: center;
-                    font-weight: 600;
-                }
-
-                .calendar-grid {
-                    display: grid;
-                    grid-template-columns: repeat(7, 1fr);
-                    gap: 5px;
-                }
-
-                .calendar-day {
-                    aspect-ratio: 1;
-                    border: 1px solid #e1e8ed;
-                    border-radius: 8px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                    position: relative;
-                }
-
-                .calendar-day:hover {
-                    background: #f8f9fa;
-                }
-
-                .calendar-day.selected {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                }
-
-                .calendar-day.has-data::after {
-                    content: '•';
-                    position: absolute;
-                    bottom: 5px;
-                    color: #4caf50;
-                    font-size: 20px;
-                }
-
-                .day-label {
-                    font-weight: 600;
-                    color: #667eea;
-                    text-align: center;
-                    padding: 10px;
-                }
-
-                .parameters-form {
-                    background: white;
-                    border-radius: 15px;
-                    padding: 25px;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-                }
-
-                .selected-date-display {
-                    text-align: center;
-                    padding: 15px;
-                    background: #f8f9fa;
-                    border-radius: 10px;
-                    margin-bottom: 20px;
-                    color: #667eea;
-                    font-weight: 600;
-                }
-
-                /* Rating styles similar to daily check-in */
-                .rating-category {
-                    margin-bottom: 20px;
-                }
-
-                .category-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    margin-bottom: 5px;
-                }
-
-                .category-emoji {
-                    font-size: 20px;
-                }
-
-                .category-name {
-                    font-weight: 600;
-                    color: #333;
-                }
-
-                .category-description {
-                    color: #666;
-                    font-size: 0.9em;
-                    margin-left: 28px;
-                    margin-bottom: 10px;
-                }
-
-                [dir="rtl"] .category-description {
-                    margin-left: 0;
-                    margin-right: 28px;
-                }
-
-                .rating-scale {
-                    display: flex;
-                    gap: 10px;
-                }
-
-                .rating-button {
-                    flex: 1;
-                    padding: 12px;
-                    border: 2px solid #e1e8ed;
-                    background: white;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                    text-align: center;
-                }
-
-                .rating-button:hover {
-                    border-color: #667eea;
-                    background: #f8f9fa;
-                }
-
-                .rating-button.selected {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border-color: transparent;
-                }
-
-                .rating-value {
-                    font-size: 1.2em;
-                    font-weight: 600;
-                }
-
-                .notes-textarea {
-                    width: 100%;
-                    padding: 12px;
-                    border: 2px solid #e1e8ed;
-                    border-radius: 10px;
-                    font-size: 16px;
-                    min-height: 100px;
-                    resize: vertical;
-                    transition: all 0.3s;
-                }
-
-                .notes-textarea:focus {
-                    outline: none;
-                    border-color: #667eea;
-                }
-
-                .parameter-actions {
-                    display: flex;
-                    gap: 15px;
-                    justify-content: center;
-                    margin-top: 30px;
-                    flex-wrap: wrap;
-                }
-
-                .btn-primary,
-                .btn-secondary,
-                .btn-info {
-                    padding: 12px 30px;
-                    border: none;
-                    border-radius: 25px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                }
-
-                .btn-primary {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                }
-
-                .btn-primary:hover {
-                    transform: scale(1.05);
-                    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-                }
-
-                .btn-secondary {
-                    background: white;
-                    color: #667eea;
-                    border: 2px solid #667eea;
-                }
-
-                .btn-secondary:hover {
-                    background: #f8f9fa;
-                }
-
-                .btn-info {
-                    background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
-                    color: white;
-                }
-
-                .btn-info:hover {
-                    transform: scale(1.05);
-                    box-shadow: 0 6px 20px rgba(49, 130, 206, 0.4);
-                }
-
-                /* Message Container */
-                #messageContainer {
-                    position: fixed;
-                    top: 20px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    z-index: 10000;
-                    max-width: 90%;
-                }
-
-                .message {
-                    padding: 15px 25px;
-                    border-radius: 10px;
-                    margin-bottom: 10px;
-                    animation: slideDown 0.5s ease;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                }
-
-                .message.success {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                }
-
-                .message.error {
-                    background: #f5576c;
-                    color: white;
-                }
-
-                .message.info {
-                    background: #4facfe;
-                    color: white;
-                }
-
-                /* Flashy positive message style */
-                .message.flashy {
-                    background: linear-gradient(270deg, #ff6b6b, #ffd93d, #6bcf7f, #4ecdc4, #667eea, #a561e8);
-                    background-size: 1200% 100%;
-                    animation: gradientShift 3s ease infinite, pulse 1s ease infinite;
-                    padding: 25px 40px;
-                    font-size: 1.3rem;
-                    font-weight: 700;
-                    text-align: center;
-                    border-radius: 20px;
-                    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);
-                    min-width: 500px;
-                }
-
-                .flashy-content {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 15px;
-                }
-
-                .flashy-icon {
-                    font-size: 2rem;
-                    animation: spin 2s linear infinite;
-                }
-
-                @keyframes gradientShift {
-                    0% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                    100% { background-position: 0% 50%; }
-                }
-
-                @keyframes pulse {
-                    0%, 100% { transform: scale(1); }
-                    50% { transform: scale(1.05); }
-                }
-
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-
-                @keyframes slideDown {
-                    from { opacity: 0; transform: translateY(-20px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-
-                @keyframes slideIn {
-                    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-                }
-
-                @keyframes fadeOut {
-                    from { opacity: 1; transform: translateY(0); }
-                    to { opacity: 0; transform: translateY(-20px); }
-                }
-
-                @media (max-width: 768px) {
-                    .flashy-text {
-                        font-size: 1.2rem;
-                    }
-                    .flashy-icon {
-                        font-size: 1.5rem;
-                    }
-                    .message.flashy {
-                        min-width: 90%;
-                    }
-                    .parameter-actions {
-                        flex-direction: column;
-                    }
-                    .parameter-actions button {
-                        width: 100%;
-                    }
-                }
-            </style>
-
-            <!-- Language Selector -->
-            <div class="language-selector-wrapper">
-                <select id="paramLanguageSelector" class="language-selector">
-                    <option value="en">English</option>
-                    <option value="he">עברית</option>
-                    <option value="ar">العربية</option>
-                    <option value="ru">Русский</option>
-                </select>
+    // Create main structure with ONLY the 5 essential categories
+    const html = `
+        <div class="parameters-page">
+            <div class="parameters-header">
+                <h1 data-i18n="parameters.title">Daily Parameters</h1>
             </div>
 
-            <!-- Message Container -->
             <div id="messageContainer"></div>
 
-            <div class="calendar-section">
-            <div class="calendar-header">
-                <div class="calendar-title" data-i18n="parameters.select_date">${pt('parameters.select_date')}</div>
-                <div class="calendar-navigation">
-                    <button class="calendar-nav-btn" onclick="previousMonth()">←</button>
-                    <span id="currentMonth">January 2025</span>
-                    <button class="calendar-nav-btn" onclick="nextMonth()">→</button>
+            <div class="parameters-card">
+                <!-- Date Selection -->
+                <div class="date-section">
+                    <label data-i18n="parameters.select_date">Select Date</label>
+                    <div class="date-controls">
+                        <button class="date-nav-btn" onclick="previousMonth()">◀</button>
+                        <div class="calendar-display">
+                            <span id="currentMonthYear"></span>
+                        </div>
+                        <button class="date-nav-btn" onclick="nextMonth()">▶</button>
+                    </div>
+                    <div id="calendarGrid" class="calendar-grid"></div>
+                </div>
+
+                <!-- Parameters Section - ONLY 5 CATEGORIES -->
+                <div class="parameters-section">
+                    ${PARAMETER_CATEGORIES.map(category => `
+                        <div class="parameter-item">
+                            <div class="parameter-header">
+                                <span class="parameter-emoji">${category.emoji}</span>
+                                <div class="parameter-info">
+                                    <span class="parameter-name" data-i18n="${category.nameKey}">${category.nameKey}</span>
+                                    <span class="parameter-description" data-i18n="${category.descriptionKey}">${category.descriptionKey}</span>
+                                </div>
+                            </div>
+                            <div class="rating-buttons" id="${category.id}-buttons">
+                                ${[1, 2, 3, 4].map(value => `
+                                    <button class="rating-button"
+                                            data-category="${category.id}"
+                                            data-value="${value}"
+                                            onclick="selectRating('${category.id}', ${value})">
+                                        ${value}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Notes Section -->
+                <div class="notes-section">
+                    <label data-i18n="parameters.notes">Notes</label>
+                    <textarea id="notesInput"
+                              data-i18n-placeholder="parameters.notes_placeholder"
+                              placeholder="Additional thoughts for today..."></textarea>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
+                    <button class="btn btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
+                    <button class="btn btn-clear" onclick="clearParameters()" data-i18n="parameters.clear">Clear Form</button>
+                    <button class="btn btn-menu" onclick="goToMainMenu()" data-i18n="parameters.main_menu">Main Menu</button>
                 </div>
             </div>
-
-            <div class="calendar-grid" id="calendarGrid">
-                <!-- Days of week headers -->
-                <div class="day-label" data-i18n="day.sun">${pt('day.sun')}</div>
-                <div class="day-label" data-i18n="day.mon">${pt('day.mon')}</div>
-                <div class="day-label" data-i18n="day.tue">${pt('day.tue')}</div>
-                <div class="day-label" data-i18n="day.wed">${pt('day.wed')}</div>
-                <div class="day-label" data-i18n="day.thu">${pt('day.thu')}</div>
-                <div class="day-label" data-i18n="day.fri">${pt('day.fri')}</div>
-                <div class="day-label" data-i18n="day.sat">${pt('day.sat')}</div>
-                <!-- Calendar days will be inserted here -->
-            </div>
         </div>
-
-        <!-- Parameters Form -->
-        <div class="parameters-form">
-            <div id="selectedDateDisplay" class="selected-date-display">
-                ${pt('parameters.today_label')}
-            </div>
-
-            <!-- Rating Categories -->
-            <div id="ratingCategories">
-                <!-- Categories will be generated dynamically -->
-            </div>
-
-            <!-- Notes Section -->
-            <div class="notes-section">
-                <label class="notes-label" data-i18n="parameters.notes">${pt('parameters.notes')}</label>
-                <textarea
-                    id="notesInput"
-                    class="notes-textarea"
-                    placeholder="${pt('parameters.notes_placeholder')}"
-                    data-i18n-placeholder="parameters.notes_placeholder"
-                ></textarea>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="parameter-actions">
-                <button class="btn-primary" onclick="saveParameters()" data-i18n="parameters.save">
-                    ${pt('parameters.save')}
-                </button>
-                <button class="btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">
-                    ${pt('parameters.load')}
-                </button>
-                <button class="btn-secondary" onclick="clearParameters()" data-i18n="parameters.clear">
-                    ${pt('parameters.clear')}
-                </button>
-                <button class="btn-info" onclick="goToMainMenu()" data-i18n="parameters.main_menu">
-                    ${pt('parameters.main_menu')}
-                </button>
-            </div>
-        </div>
-        </div> <!-- Close parameters-container -->
     `;
+
+    container.innerHTML = html;
+
+    // Add styles
+    addParameterStyles();
+
+    // Initialize calendar
+    updateCalendar();
+
+    // Apply translations
+    if (window.i18n && window.i18n.applyLanguage) {
+        window.i18n.applyLanguage();
+    }
+
+    console.log('Parameters system initialized successfully with 5 categories only');
 }
 
-// Set up language selector
-function setupLanguageSelector() {
-    const langSelector = document.getElementById('paramLanguageSelector');
-    if (langSelector) {
-        // Set current language if available
-        if (window.i18n && window.i18n.currentLanguage) {
-            langSelector.value = window.i18n.currentLanguage;
+// Add parameter-specific styles
+function addParameterStyles() {
+    if (document.getElementById('parameterStyles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'parameterStyles';
+    style.textContent = `
+        .parameters-page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
         }
 
-        // Add change event listener
-        langSelector.addEventListener('change', function() {
-            if (window.i18n && window.i18n.setLanguage) {
-                window.i18n.setLanguage(this.value);
-                // Update translations immediately
-                updateTranslations();
+        .parameters-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
 
-                // Update RTL direction
-                const rtlLanguages = ['ar', 'he'];
-                if (rtlLanguages.includes(this.value)) {
-                    document.body.setAttribute('dir', 'rtl');
-                } else {
-                    document.body.setAttribute('dir', 'ltr');
-                }
+        .parameters-header h1 {
+            color: white;
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .parameters-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .date-section {
+            margin-bottom: 30px;
+        }
+
+        .date-section label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .date-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .date-nav-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .date-nav-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .calendar-display {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .calendar-day {
+            padding: 10px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-day:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+        }
+
+        .calendar-day.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .calendar-day.today {
+            border-color: #667eea;
+            font-weight: bold;
+        }
+
+        .parameters-section {
+            margin: 30px 0;
+        }
+
+        .parameter-item {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .parameter-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .parameter-emoji {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .parameter-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .parameter-name {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .parameter-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        .rating-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .rating-button {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 10px;
+            font-size: 1.3em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+        }
+
+        .rating-button:hover {
+            background: #f0f0f0;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .rating-button.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.1);
+        }
+
+        .notes-section {
+            margin: 30px 0;
+        }
+
+        .notes-section label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .notes-section textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            resize: vertical;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-clear {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-menu {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        #messageContainer {
+            margin-bottom: 20px;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            animation: slideInDown 0.5s ease;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .message.flashy {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            font-size: 1.2em;
+            animation: pulse 2s infinite;
+        }
+
+        .flashy-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .flashy-icon {
+            font-size: 2em;
+            animation: rotate 2s linear infinite;
+        }
+
+        .flashy-text {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
             }
-        });
-    }
-}
-
-// Go to main menu function
-function goToMainMenu() {
-    // Navigate to the main page (feed tab)
-    window.location.href = '/';
-}
-
-// Initialize calendar and load saved dates
-async function initializeCalendar() {
-    await loadSavedDates();
-    renderCalendar();
-    renderRatingCategories();
-    updateSelectedDateDisplay();
-}
-
-// Load saved dates from server
-async function loadSavedDates() {
-    try {
-        const response = await fetch('/api/parameters/dates', {
-            credentials: 'include'
-        });
-        if (response.ok) {
-            const data = await response.json();
-            savedDates = data.dates || [];
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-    } catch (error) {
-        console.error('Error loading saved dates:', error);
-    }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .parameters-page {
+                padding: 10px;
+            }
+
+            .parameters-card {
+                padding: 20px;
+            }
+
+            .rating-button {
+                width: 50px;
+                height: 50px;
+                font-size: 1.1em;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 }
 
-// Render the calendar
-function renderCalendar() {
+// Calendar functions
+function updateCalendar() {
+    const calendarGrid = document.getElementById('calendarGrid');
+    const currentMonthYear = document.getElementById('currentMonthYear');
+
+    if (!calendarGrid || !currentMonthYear) return;
+
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
 
-    // Update month display
-    const monthNames = [
-        pt('month.january'), pt('month.february'), pt('month.march'),
-        pt('month.april'), pt('month.may'), pt('month.june'),
-        pt('month.july'), pt('month.august'), pt('month.september'),
-        pt('month.october'), pt('month.november'), pt('month.december')
-    ];
+    // Update month/year display with translation
+    const monthKey = `month.${['january', 'february', 'march', 'april', 'may', 'june',
+                               'july', 'august', 'september', 'october', 'november', 'december'][month]}`;
+    currentMonthYear.textContent = `${pt(monthKey)} ${year}`;
 
-    const monthDisplay = document.getElementById('currentMonth');
-    if (monthDisplay) {
-        monthDisplay.textContent = `${monthNames[month]} ${year}`;
-    }
+    // Clear calendar
+    calendarGrid.innerHTML = '';
 
-    // Get first day of month and number of days
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Build calendar grid
-    const grid = document.getElementById('calendarGrid');
-    if (!grid) return;
-
-    // Keep the day labels
-    const dayLabels = grid.querySelectorAll('.day-label');
-    const dayLabelsHTML = Array.from(dayLabels).map(label => label.outerHTML).join('');
-
-    grid.innerHTML = dayLabelsHTML;
+    // Add day headers
+    const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayHeaders.forEach(day => {
+        const header = document.createElement('div');
+        header.className = 'calendar-header';
+        header.textContent = day;
+        header.style.fontWeight = 'bold';
+        header.style.fontSize = '0.9em';
+        calendarGrid.appendChild(header);
+    });
 
     // Add empty cells for days before month starts
-    for (let i = 0; i < firstDay; i++) {
+    for (let i = 0; i < startingDayOfWeek; i++) {
         const emptyCell = document.createElement('div');
-        grid.appendChild(emptyCell);
+        calendarGrid.appendChild(emptyCell);
     }
 
-    // Add days of month
+    // Add days of the month
+    const today = new Date();
+    const selectedDateStr = formatDate(currentDate);
+
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day';
         dayCell.textContent = day;
 
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const cellDate = new Date(year, month, day);
+        const cellDateStr = formatDate(cellDate);
 
-        // Check if this date has saved data
-        if (savedDates.includes(dateStr)) {
-            dayCell.classList.add('has-data');
+        if (cellDateStr === formatDate(today)) {
+            dayCell.classList.add('today');
+            dayCell.title = pt('parameters.today_label');
         }
 
-        // Check if this is the selected date
-        if (selectedDate.getDate() === day &&
-            selectedDate.getMonth() === month &&
-            selectedDate.getFullYear() === year) {
+        if (cellDateStr === selectedDateStr) {
             dayCell.classList.add('selected');
         }
 
-        dayCell.onclick = () => selectDate(year, month, day);
-        grid.appendChild(dayCell);
+        dayCell.onclick = () => selectDate(cellDate);
+        calendarGrid.appendChild(dayCell);
     }
 }
 
-// Render rating categories
-function renderRatingCategories() {
-    const container = document.getElementById('ratingCategories');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    PARAMETER_CATEGORIES.forEach(category => {
-        const categoryDiv = document.createElement('div');
-        categoryDiv.className = 'rating-category';
-
-        // Category header
-        const headerDiv = document.createElement('div');
-        headerDiv.className = 'category-header';
-
-        const emojiSpan = document.createElement('span');
-        emojiSpan.className = 'category-emoji';
-        emojiSpan.textContent = category.emoji;
-
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'category-name';
-        nameSpan.setAttribute('data-i18n', category.nameKey);
-        nameSpan.textContent = pt(category.nameKey);
-
-        headerDiv.appendChild(emojiSpan);
-        headerDiv.appendChild(nameSpan);
-
-        // Category description
-        const descDiv = document.createElement('div');
-        descDiv.className = 'category-description';
-        descDiv.setAttribute('data-i18n', category.descriptionKey);
-        descDiv.textContent = pt(category.descriptionKey);
-
-        // Rating scale
-        const scaleDiv = document.createElement('div');
-        scaleDiv.className = 'rating-scale';
-
-        for (let i = category.min; i <= category.max; i++) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'rating-button';
-            button.dataset.category = category.id;
-            button.dataset.value = i;
-            button.onclick = () => selectRating(category.id, i);
-
-            const valueSpan = document.createElement('span');
-            valueSpan.className = 'rating-value';
-            valueSpan.textContent = i;
-
-            button.appendChild(valueSpan);
-            scaleDiv.appendChild(button);
-        }
-
-        categoryDiv.appendChild(headerDiv);
-        categoryDiv.appendChild(descDiv);
-        categoryDiv.appendChild(scaleDiv);
-
-        container.appendChild(categoryDiv);
-    });
-}
-
-// Select a rating
-function selectRating(categoryId, value) {
-    selectedRatings[categoryId] = value;
-
-    // Update button states
-    document.querySelectorAll(`.rating-button[data-category="${categoryId}"]`).forEach(btn => {
+function selectDate(date) {
+    currentDate = date;
+    updateCalendar();
+    // Clear current ratings when changing date
+    selectedRatings = {};
+    document.querySelectorAll('.rating-button').forEach(btn => {
         btn.classList.remove('selected');
-        if (parseInt(btn.dataset.value) === value) {
-            btn.classList.add('selected');
-        }
     });
+    // Optionally auto-load parameters for the selected date
+    loadParameters(false); // false = don't show message if no data
 }
 
-// Select a date
-function selectDate(year, month, day) {
-    selectedDate = new Date(year, month, day);
-    renderCalendar();
-    updateSelectedDateDisplay();
-
-    // Clear current selections
-    clearParameters(false);
-
-    // Check if this date has saved data and show hint
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (savedDates.includes(dateStr)) {
-        showMessage(`Data exists for ${dateStr}. Click "Load Parameters" to view.`, 'info', 3000, false);
-    }
-
-    // Don't auto-load - user must click Load Parameters button
-}
-
-// Update selected date display
-function updateSelectedDateDisplay() {
-    const display = document.getElementById('selectedDateDisplay');
-    if (!display) return;
-
-    const dateStr = selectedDate.toLocaleDateString();
-    const today = new Date();
-    const isToday = selectedDate.toDateString() === today.toDateString();
-
-    display.textContent = isToday ? `${pt('parameters.today_label')} (${dateStr})` : dateStr;
-}
-
-// Navigate months
 function previousMonth() {
     currentDate.setMonth(currentDate.getMonth() - 1);
-    renderCalendar();
+    updateCalendar();
 }
 
 function nextMonth() {
     currentDate.setMonth(currentDate.getMonth() + 1);
-    renderCalendar();
+    updateCalendar();
+}
+
+// Rating selection
+function selectRating(categoryId, value) {
+    selectedRatings[categoryId] = value;
+
+    // Update UI
+    const buttons = document.querySelectorAll(`#${categoryId}-buttons .rating-button`);
+    buttons.forEach(btn => {
+        if (parseInt(btn.dataset.value) === value) {
+            btn.classList.add('selected');
+        } else {
+            btn.classList.remove('selected');
+        }
+    });
 }
 
 // Save parameters
 async function saveParameters() {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const notes = document.getElementById('notesInput')?.value || '';
+    const dateStr = formatDate(currentDate);
 
-    const parameters = {
+    // Validate that at least one rating is selected
+    if (Object.keys(selectedRatings).length === 0) {
+        showMessage(pt('error.saving') + ': Please select at least one rating', 'error');
+        return;
+    }
+
+    const data = {
         date: dateStr,
-        mood: selectedRatings.mood || null,
-        energy: selectedRatings.energy || null,
-        sleep_quality: selectedRatings.sleep_quality || null,
-        physical_activity: selectedRatings.physical_activity || null,
-        anxiety: selectedRatings.anxiety || null,
-        notes: document.getElementById('notesInput').value || ''
+        parameters: selectedRatings,
+        notes: notes
     };
 
     try {
         const response = await fetch('/api/parameters/save', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify(parameters),
-            credentials: 'include'
+            body: JSON.stringify(data)
         });
 
-        if (response.ok) {
-            const result = await response.json();
+        const result = await response.json();
 
-            // Show flashy positive message and scroll to top
-            showMessage(getRandomPositiveMessage(), 'success', 10000, true);
-
-            // Reload saved dates to update calendar
-            await loadSavedDates();
-            renderCalendar();
+        if (result.success) {
+            showMessage(getRandomPositiveMessage(), 'success', 5000, true);
         } else {
-            showMessage(pt('error.saving'), 'error', 5000, false);
+            showMessage(pt('error.saving') + ': ' + (result.message || 'Unknown error'), 'error');
         }
     } catch (error) {
-        console.error('Error saving parameters:', error);
-        showMessage(pt('error.saving'), 'error', 5000, false);
+        console.error('Save error:', error);
+        showMessage(pt('error.saving') + ': ' + error.message, 'error');
     }
 }
 
 // Load parameters
-async function loadParameters(showMsg = true) {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+async function loadParameters(showMessage = true) {
+    const dateStr = formatDate(currentDate);
 
     try {
-        const response = await fetch(`/api/parameters/load/${dateStr}`, {
-            credentials: 'include'
-        });
+        const response = await fetch(`/api/parameters/load?date=${dateStr}`);
         const result = await response.json();
 
         if (result.success && result.data) {
-            const data = result.data;
-
             // Load ratings
-            selectedRatings = {};
-            PARAMETER_CATEGORIES.forEach(category => {
-                const value = data[category.id];
-                if (value) {
-                    selectedRatings[category.id] = parseInt(value);
-                    selectRating(category.id, parseInt(value));
-                }
+            selectedRatings = result.data.parameters || {};
+
+            // Update UI
+            Object.keys(selectedRatings).forEach(categoryId => {
+                selectRating(categoryId, selectedRatings[categoryId]);
             });
 
             // Load notes
             const notesInput = document.getElementById('notesInput');
-            if (notesInput) {
-                notesInput.value = data.notes || '';
+            if (notesInput && result.data.notes) {
+                notesInput.value = result.data.notes;
             }
 
-            if (showMsg) {
-                showMessage(`${pt('parameters.loaded')} ${dateStr}`, 'success', 5000, false);
+            if (showMessage) {
+                showMessage(pt('parameters.loaded') + ' ' + dateStr, 'success');
             }
-        } else if (showMsg) {
-            showMessage(result.message || pt('parameters.no_saved'), 'info', 5000, false);
+        } else if (showMessage) {
+            showMessage(pt('parameters.no_saved'), 'info');
         }
     } catch (error) {
-        console.error('Error loading parameters:', error);
-        if (showMsg) {
-            showMessage(pt('error.loading'), 'error', 5000, false);
+        console.error('Load error:', error);
+        if (showMessage) {
+            showMessage(pt('error.loading') + ': ' + error.message, 'error');
         }
     }
 }
 
 // Clear parameters
-function clearParameters(showMsg = true) {
+function clearParameters() {
     selectedRatings = {};
-
-    // Clear all selections
-    document.querySelectorAll('.rating-button').forEach(button => {
-        button.classList.remove('selected');
+    document.querySelectorAll('.rating-button').forEach(btn => {
+        btn.classList.remove('selected');
     });
 
-    // Clear notes
     const notesInput = document.getElementById('notesInput');
     if (notesInput) {
         notesInput.value = '';
     }
 
-    if (showMsg) {
-        showMessage(pt('parameters.cleared'), 'info', 3000, false);
-    }
+    showMessage(pt('parameters.cleared'), 'info');
 }
 
-// Update translations when language changes
+// Navigate to main menu
+function goToMainMenu() {
+    window.location.href = '/dashboard';
+}
+
+// Update translations dynamically
 function updateTranslations() {
-    // Re-render rating categories with new translations
-    renderRatingCategories();
+    if (!window.i18n) return;
 
-    // Update month display
-    renderCalendar();
+    // Re-add translations in case language changed
+    addParameterTranslations();
 
-    // Update date display
-    updateSelectedDateDisplay();
-
-    // Update all elements with data-i18n attribute
+    // Update all translatable elements
     document.querySelectorAll('[data-i18n]').forEach(element => {
         const key = element.getAttribute('data-i18n');
         if (key) {
@@ -1053,13 +905,11 @@ function updateTranslations() {
         }
     });
 
-    // Restore selected ratings
-    Object.keys(selectedRatings).forEach(categoryId => {
-        selectRating(categoryId, selectedRatings[categoryId]);
-    });
+    // Update calendar to reflect new language
+    updateCalendar();
 }
 
-// Get random positive message in current language
+// Get random positive message
 function getRandomPositiveMessage() {
     const messages = {
         'en': [
@@ -1067,48 +917,28 @@ function getRandomPositiveMessage() {
             "Fantastic job! Your dedication to self-awareness is inspiring! ⭐",
             "Wonderful! Every parameter logged is a step towards understanding yourself better! 🌈",
             "Brilliant! You're building valuable insights about your wellbeing! 🎯",
-            "Outstanding! Your consistency in tracking is your superpower! 🦸",
-            "Excellent! You're creating a meaningful record of your progress! 📈",
-            "Superb! Your commitment to self-care shines through! ✨",
-            "Marvelous! You're taking charge of your wellness journey! 🌟",
-            "Spectacular! Keep up this amazing self-awareness practice! 🚀",
-            "Phenomenal! You're writing your wellness story, one day at a time! 📖"
+            "Outstanding! Your consistency in tracking is your superpower! 🦸"
         ],
         'he': [
             "עבודה מדהימה! אתה עוקב אחר מסע הבריאות שלך בצורה יפהפייה! 💪",
             "עבודה פנטסטית! המסירות שלך למודעות עצמית מעוררת השראה! ⭐",
             "נפלא! כל פרמטר שנרשם הוא צעד להבנה טובה יותר של עצמך! 🌈",
             "מבריק! אתה בונה תובנות חשובות על הרווחה שלך! 🎯",
-            "יוצא מן הכלל! העקביות שלך במעקב היא כוח העל שלך! 🦸",
-            "מצוין! אתה יוצר תיעוד משמעותי של ההתקדמות שלך! 📈",
-            "נהדר! המחויבות שלך לטיפול עצמי זוהרת! ✨",
-            "מדהים! אתה לוקח אחריות על מסע הבריאות שלך! 🌟",
-            "מרהיב! המשך בתרגול המדהים הזה של מודעות עצמית! 🚀",
-            "פנומנלי! אתה כותב את סיפור הבריאות שלך, יום אחר יום! 📖"
+            "יוצא מן הכלל! העקביות שלך במעקב היא כוח העל שלך! 🦸"
         ],
         'ar': [
             "عمل رائع! أنت تتابع رحلتك الصحية بشكل جميل! 💪",
             "عمل رائع! إخلاصك للوعي الذاتي ملهم! ⭐",
             "رائع! كل معامل مسجل هو خطوة نحو فهم نفسك بشكل أفضل! 🌈",
             "ممتاز! أنت تبني رؤى قيمة حول رفاهيتك! 🎯",
-            "متميز! ثباتك في التتبع هو قوتك الخارقة! 🦸",
-            "ممتاز! أنت تخلق سجلاً ذا معنى لتقدمك! 📈",
-            "رائع! التزامك بالعناية الذاتية يتألق! ✨",
-            "مذهل! أنت تتولى مسؤولية رحلتك الصحية! 🌟",
-            "مذهل! استمر في هذه الممارسة المذهلة للوعي الذاتي! 🚀",
-            "استثنائي! أنت تكتب قصة عافيتك، يومًا بعد يوم! 📖"
+            "متميز! ثباتك في التتبع هو قوتك الخارقة! 🦸"
         ],
         'ru': [
             "Потрясающая работа! Вы прекрасно отслеживаете свой путь к здоровью! 💪",
             "Фантастическая работа! Ваша преданность самосознанию вдохновляет! ⭐",
             "Замечательно! Каждый записанный параметр - это шаг к лучшему пониманию себя! 🌈",
             "Блестяще! Вы создаете ценные инсайты о своем благополучии! 🎯",
-            "Выдающийся результат! Ваша последовательность в отслеживании - это ваша суперсила! 🦸",
-            "Превосходно! Вы создаете значимую запись своего прогресса! 📈",
-            "Великолепно! Ваша приверженность заботе о себе сияет! ✨",
-            "Чудесно! Вы берете ответственность за свой путь к здоровью! 🌟",
-            "Впечатляюще! Продолжайте эту удивительную практику самосознания! 🚀",
-            "Феноменально! Вы пишете свою историю благополучия, день за днем! 📖"
+            "Выдающийся результат! Ваша последовательность в отслеживании - это ваша суперсила! 🦸"
         ]
     };
 
@@ -1117,7 +947,7 @@ function getRandomPositiveMessage() {
     return langMessages[Math.floor(Math.random() * langMessages.length)];
 }
 
-// Show message with optional flashy style
+// Show message
 function showMessage(text, type = 'success', duration = 5000, isFlashy = false) {
     const container = document.getElementById('messageContainer');
     if (!container) {
@@ -1149,7 +979,6 @@ function showMessage(text, type = 'success', duration = 5000, isFlashy = false) 
         flashyContent.appendChild(icon2);
         messageDiv.appendChild(flashyContent);
 
-        // Scroll to top to see the message
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
         messageDiv.textContent = text;
@@ -1163,12 +992,12 @@ function showMessage(text, type = 'success', duration = 5000, isFlashy = false) 
     }, duration);
 }
 
-// Initialize when DOM is ready (backup initialization)
+// Initialize on DOM ready (with safety checks)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('parametersContainer') && !window.parametersInitialized) {
             window.parametersInitialized = true;
-            // initializeParameters() - removed duplicate;
+            initializeParameters();
         }
     });
 } else {
@@ -1177,52 +1006,6 @@ if (document.readyState === 'loading') {
         initializeParameters();
     }
 }
-
-// ============= PARAMETER OPTIONS FUNCTIONALITY =============
-// This creates the 1-4 radio buttons for mood, sleep, etc.
-function createParameterOptions(containerId, parameterName, optionCount = 4) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = '';
-    const optionsDiv = document.createElement('div');
-    optionsDiv.className = 'parameter-options';
-
-    for (let i = 1; i <= optionCount; i++) {
-        const label = document.createElement('label');
-        label.className = 'parameter-option';
-
-        const input = document.createElement('input');
-        input.type = 'radio';
-        input.name = parameterName;
-        input.value = i;
-
-        const span = document.createElement('span');
-        span.className = 'parameter-option-number';
-        span.textContent = i;
-
-        label.appendChild(input);
-        label.appendChild(span);
-        optionsDiv.appendChild(label);
-    }
-
-    container.appendChild(optionsDiv);
-}
-
-// Initialize parameter options on page load
-document.addEventListener('DOMContentLoaded', function() {
-    createParameterOptions('moodInput', 'mood');
-    createParameterOptions('sleepInput', 'sleep');
-    createParameterOptions('exerciseInput', 'exercise');
-    createParameterOptions('stressInput', 'stress');
-    createParameterOptions('socialInput', 'social');
-});
-
-
-
-
-
-
 
 // Export functions for global access
 window.initializeParameters = initializeParameters;
@@ -1234,3 +1017,5 @@ window.loadParameters = loadParameters;
 window.clearParameters = clearParameters;
 window.selectRating = selectRating;
 window.goToMainMenu = goToMainMenu;
+
+console.log('Parameters-social.js loaded - CLEANED VERSION with only 5 essential categories');
