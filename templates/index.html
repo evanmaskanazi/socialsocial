@@ -1738,7 +1738,20 @@
                     break;
                 case 'parameters':
 case 'tracking':
-    initCalendar();
+    // Initialize parameters calendar
+    if (typeof initializeCalendar === 'function') {
+        initializeCalendar();
+    }
+    // Initialize parameter options (1-4 buttons)
+    if (typeof createParameterOptions === 'function') {
+        setTimeout(function() {
+            createParameterOptions('moodInput', 'mood');
+            createParameterOptions('sleepInput', 'sleep');
+            createParameterOptions('exerciseInput', 'exercise');
+            createParameterOptions('stressInput', 'stress');
+            createParameterOptions('socialInput', 'social');
+        }, 100);
+    }
     break;
             }
         }
@@ -2313,22 +2326,28 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
         });
 
         // Parameters/Tracking Functions
-        function initCalendar() {
-            loadSavedDates();
-            renderCalendar();
-            updateSelectedDateDisplay();
-        }
+        // Parameters/Tracking Functions
+function initCalendar() {
+    // Call the calendar initialization from parameters-social.js
+    if (typeof initializeCalendar === 'function') {
+        initializeCalendar();
+    }
 
-        async function loadSavedDates() {
-            try {
-                const response = await apiCall('/parameters/dates');
-                if (response) {
-                    savedDates = response.dates || [];
-                }
-            } catch (error) {
-                console.error('Failed to load saved dates:', error);
-            }
-        }
+    // Also initialize the 1-4 parameter options
+    if (typeof createParameterOptions === 'function') {
+        // Small delay to ensure DOM is ready
+        setTimeout(function() {
+            createParameterOptions('moodInput', 'mood');
+            createParameterOptions('sleepInput', 'sleep');
+            createParameterOptions('exerciseInput', 'exercise');
+            createParameterOptions('stressInput', 'stress');
+            createParameterOptions('socialInput', 'social');
+        }, 100);
+    }
+}
+
+// Remove or comment out your local loadSavedDates function
+// The one in parameters-social.js will be used instead
 
         function renderCalendar() {
             const year = currentMonth.getFullYear();
@@ -2674,5 +2693,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
     </script>
+
+
+
+<script>
+// Handle active_view from Flask backend
+{% if active_view %}
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        showView('{{ active_view }}');
+    }, 200);
+});
+{% endif %}
+</script>
+
+
+
+
+
+
 </body>
 </html>
