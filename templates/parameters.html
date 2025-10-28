@@ -82,19 +82,6 @@
     <script>
         console.log('Parameters page initializing...');
 
-        // Error display function
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMessage');
-            const loadingDiv = document.getElementById('loadingMessage');
-            if (errorDiv) {
-                errorDiv.style.display = 'block';
-                errorDiv.innerHTML += '<div>' + message + '</div>';
-            }
-            if (loadingDiv) {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM loaded, initializing parameters...');
@@ -110,7 +97,11 @@
                 // Check if initialization function exists
                 if (typeof initializeParameters !== 'function') {
                     console.error('initializeParameters function not found');
-                    showError('Error: Parameters system not loaded properly. Please refresh the page.');
+                    const errorDiv = document.getElementById('errorMessage');
+                    if (errorDiv) {
+                        errorDiv.style.display = 'block';
+                        errorDiv.innerHTML = 'Error: Parameters system not loaded properly. Please refresh the page.';
+                    }
                     return;
                 }
 
@@ -125,34 +116,42 @@
                     }
 
                     // Set RTL direction for Arabic and Hebrew
-                    if (window.i18n && window.i18n.currentLanguage) {
-                        const rtlLanguages = ['ar', 'he'];
-                        if (rtlLanguages.includes(window.i18n.currentLanguage)) {
-                            document.body.setAttribute('dir', 'rtl');
-                        } else {
-                            document.body.setAttribute('dir', 'ltr');
-                        }
+                    const currentLang = window.i18n?.currentLanguage || localStorage.getItem('userLanguage') || 'en';
+                    const rtlLanguages = ['ar', 'he'];
+                    if (rtlLanguages.includes(currentLang)) {
+                        document.body.setAttribute('dir', 'rtl');
+                    } else {
+                        document.body.setAttribute('dir', 'ltr');
                     }
 
                     // Verify initialization
                     setTimeout(() => {
                         const buttons = document.querySelectorAll('.rating-button');
-                        console.log(`Verification: ${buttons.length} rating buttons found (expected: 20 for 5 categories x 4 ratings)`);
-                        
                         const categories = document.querySelectorAll('.parameter-item');
+                        const languageSelector = document.getElementById('languageSelector');
+                        
+                        console.log(`Verification: ${buttons.length} rating buttons found (expected: 20)`);
                         console.log(`Verification: ${categories.length} parameter categories found (expected: 5)`);
-
+                        console.log(`Language selector present: ${languageSelector ? 'YES' : 'NO'}`);
+                        
                         if (buttons.length !== 20) {
                             console.warn(`Unexpected number of rating buttons: ${buttons.length}`);
                         }
                         if (categories.length !== 5) {
                             console.warn(`Unexpected number of categories: ${categories.length}`);
                         }
+                        if (!languageSelector) {
+                            console.warn('Language selector not found!');
+                        }
                     }, 500);
 
                 } catch (error) {
                     console.error('Error during initialization:', error);
-                    showError('Initialization error: ' + error.message);
+                    const errorDiv = document.getElementById('errorMessage');
+                    if (errorDiv) {
+                        errorDiv.style.display = 'block';
+                        errorDiv.innerHTML = 'Initialization error: ' + error.message;
+                    }
                 }
             }, 100);
         });
@@ -168,13 +167,12 @@
                 }
 
                 // Update RTL direction
-                if (window.i18n && window.i18n.currentLanguage) {
-                    const rtlLanguages = ['ar', 'he'];
-                    if (rtlLanguages.includes(window.i18n.currentLanguage)) {
-                        document.body.setAttribute('dir', 'rtl');
-                    } else {
-                        document.body.setAttribute('dir', 'ltr');
-                    }
+                const currentLang = window.i18n?.currentLanguage || localStorage.getItem('userLanguage') || 'en';
+                const rtlLanguages = ['ar', 'he'];
+                if (rtlLanguages.includes(currentLang)) {
+                    document.body.setAttribute('dir', 'rtl');
+                } else {
+                    document.body.setAttribute('dir', 'ltr');
                 }
 
                 console.log('Language update completed');
@@ -188,6 +186,8 @@
             console.log('=== Parameters Debug Info ===');
             console.log('Categories:', document.querySelectorAll('.parameter-item').length);
             console.log('Rating buttons:', document.querySelectorAll('.rating-button').length);
+            console.log('Language selector:', document.getElementById('languageSelector'));
+            console.log('Current language:', window.i18n?.getCurrentLanguage?.() || localStorage.getItem('userLanguage'));
             console.log('Selected ratings:', window.selectedRatings || {});
             console.log('Categories present:', Array.from(document.querySelectorAll('.parameter-name')).map(el => el.textContent));
             console.log('===========================');
