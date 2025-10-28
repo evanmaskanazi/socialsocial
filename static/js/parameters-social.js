@@ -1,5 +1,5 @@
 // Social Parameters Save/Load System with i18n support and numeric ratings
-// CLEANED VERSION - Only 5 essential categories with 1-4 ratings
+// COMPLETE FIXED VERSION - Includes language selector and all fixes
 
 // Translation function helper
 const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
@@ -58,6 +58,7 @@ const addParameterTranslations = () => {
         // English translations
         if (!window.i18n.translations.en['parameters.mood']) {
             Object.assign(window.i18n.translations.en, {
+                'parameters.title': 'Daily Parameters',
                 'parameters.select_date': 'Select Date',
                 'parameters.mood': 'Mood',
                 'parameters.mood_desc': 'Overall emotional state',
@@ -88,6 +89,7 @@ const addParameterTranslations = () => {
         // Hebrew translations
         if (!window.i18n.translations.he['parameters.mood']) {
             Object.assign(window.i18n.translations.he, {
+                'parameters.title': 'פרמטרים יומיים',
                 'parameters.select_date': 'בחר תאריך',
                 'parameters.mood': 'מצב רוח',
                 'parameters.mood_desc': 'מצב רגשי כללי',
@@ -118,6 +120,7 @@ const addParameterTranslations = () => {
         // Arabic translations
         if (!window.i18n.translations.ar['parameters.mood']) {
             Object.assign(window.i18n.translations.ar, {
+                'parameters.title': 'المعاملات اليومية',
                 'parameters.select_date': 'اختر التاريخ',
                 'parameters.mood': 'المزاج',
                 'parameters.mood_desc': 'الحالة العاطفية العامة',
@@ -148,6 +151,7 @@ const addParameterTranslations = () => {
         // Russian translations
         if (!window.i18n.translations.ru['parameters.mood']) {
             Object.assign(window.i18n.translations.ru, {
+                'parameters.title': 'Ежедневные параметры',
                 'parameters.select_date': 'Выберите дату',
                 'parameters.mood': 'Настроение',
                 'parameters.mood_desc': 'Общее эмоциональное состояние',
@@ -219,6 +223,51 @@ function formatDate(date) {
     return `${year}-${month}-${day}`;
 }
 
+// Show message function - FIXED SCOPE
+window.showMessage = function(text, type = 'success', duration = 5000, isFlashy = false) {
+    const container = document.getElementById('messageContainer');
+    if (!container) {
+        console.error('Message container not found');
+        return;
+    }
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type} ${isFlashy ? 'flashy' : ''}`;
+
+    if (isFlashy) {
+        const flashyContent = document.createElement('div');
+        flashyContent.className = 'flashy-content';
+
+        const icon1 = document.createElement('span');
+        icon1.className = 'flashy-icon';
+        icon1.textContent = '🌟';
+
+        const flashyText = document.createElement('p');
+        flashyText.className = 'flashy-text';
+        flashyText.textContent = text;
+
+        const icon2 = document.createElement('span');
+        icon2.className = 'flashy-icon';
+        icon2.textContent = '🌟';
+
+        flashyContent.appendChild(icon1);
+        flashyContent.appendChild(flashyText);
+        flashyContent.appendChild(icon2);
+        messageDiv.appendChild(flashyContent);
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        messageDiv.textContent = text;
+    }
+
+    container.appendChild(messageDiv);
+
+    setTimeout(() => {
+        messageDiv.style.animation = 'fadeOut 0.5s ease-out';
+        setTimeout(() => messageDiv.remove(), 500);
+    }, duration);
+};
+
 // Main initialization function
 function initializeParameters() {
     console.log('Initializing parameters system...');
@@ -236,9 +285,19 @@ function initializeParameters() {
     // Clear any existing content
     container.innerHTML = '';
 
-    // Create main structure with ONLY the 5 essential categories
+    // Create main structure with language selector and 5 categories
     const html = `
         <div class="parameters-page">
+            <!-- Language Selector -->
+            <div class="language-selector-wrapper">
+                <select id="languageSelector" class="language-selector">
+                    <option value="en">English</option>
+                    <option value="he">עברית</option>
+                    <option value="ar">العربية</option>
+                    <option value="ru">Русский</option>
+                </select>
+            </div>
+
             <div class="parameters-header">
                 <h1 data-i18n="parameters.title">Daily Parameters</h1>
             </div>
@@ -308,6 +367,9 @@ function initializeParameters() {
     // Add styles
     addParameterStyles();
 
+    // Setup language selector
+    setupLanguageSelector();
+
     // Initialize calendar
     updateCalendar();
 
@@ -316,7 +378,50 @@ function initializeParameters() {
         window.i18n.applyLanguage();
     }
 
-    console.log('Parameters system initialized successfully with 5 categories only');
+    console.log('Parameters system initialized successfully with language selector and 5 categories');
+}
+
+// Setup language selector
+function setupLanguageSelector() {
+    const selector = document.getElementById('languageSelector');
+    if (!selector) return;
+
+    // Set current language
+    const currentLang = window.i18n?.getCurrentLanguage?.() || localStorage.getItem('userLanguage') || 'en';
+    selector.value = currentLang;
+
+    // Handle language change
+    selector.addEventListener('change', function() {
+        const newLang = this.value;
+
+        // Save to localStorage
+        localStorage.setItem('userLanguage', newLang);
+
+        // Update i18n if available
+        if (window.i18n && window.i18n.setLanguage) {
+            window.i18n.setLanguage(newLang);
+        }
+
+        // Update RTL
+        const rtlLanguages = ['ar', 'he'];
+        if (rtlLanguages.includes(newLang)) {
+            document.body.setAttribute('dir', 'rtl');
+        } else {
+            document.body.setAttribute('dir', 'ltr');
+        }
+
+        // Update translations
+        updateTranslations();
+
+        // Send to server to save preference
+        if (window.fetch) {
+            fetch('/api/user/language', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ language: newLang })
+            }).catch(err => console.error('Failed to save language preference:', err));
+        }
+    });
 }
 
 // Add parameter-specific styles
@@ -330,11 +435,42 @@ function addParameterStyles() {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            position: relative;
+        }
+
+        /* Language Selector */
+        .language-selector-wrapper {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        [dir="rtl"] .language-selector-wrapper {
+            right: auto;
+            left: 20px;
+        }
+
+        .language-selector {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 120px;
+            font-size: 14px;
+        }
+
+        .language-selector:hover {
+            background: #f8f9fa;
         }
 
         .parameters-header {
             text-align: center;
             margin-bottom: 30px;
+            margin-top: 60px;
         }
 
         .parameters-header h1 {
@@ -448,6 +584,11 @@ function addParameterStyles() {
         .parameter-emoji {
             font-size: 2em;
             margin-right: 15px;
+        }
+
+        [dir="rtl"] .parameter-emoji {
+            margin-right: 0;
+            margin-left: 15px;
         }
 
         .parameter-info {
@@ -630,54 +771,36 @@ function addParameterStyles() {
         }
 
         @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-            }
+            from { opacity: 1; }
+            to { opacity: 0; }
         }
 
         @keyframes pulse {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.02);
-            }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
         }
 
         @keyframes rotate {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
-            .parameters-page {
-                padding: 10px;
-            }
-
-            .parameters-card {
-                padding: 20px;
-            }
-
+            .parameters-page { padding: 10px; }
+            .parameters-card { padding: 20px; }
             .rating-button {
                 width: 50px;
                 height: 50px;
                 font-size: 1.1em;
             }
-
-            .action-buttons {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
+            .action-buttons { flex-direction: column; }
+            .btn { width: 100%; }
+            .language-selector-wrapper {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin-bottom: 20px;
             }
         }
     `;
@@ -757,8 +880,8 @@ function selectDate(date) {
     document.querySelectorAll('.rating-button').forEach(btn => {
         btn.classList.remove('selected');
     });
-    // Optionally auto-load parameters for the selected date
-    loadParameters(false); // false = don't show message if no data
+    // Auto-load parameters for selected date
+    loadParameters(false);
 }
 
 function previousMonth() {
@@ -793,7 +916,7 @@ async function saveParameters() {
 
     // Validate that at least one rating is selected
     if (Object.keys(selectedRatings).length === 0) {
-        showMessage(pt('error.saving') + ': Please select at least one rating', 'error');
+        window.showMessage(pt('error.saving') + ': Please select at least one rating', 'error');
         return;
     }
 
@@ -815,22 +938,30 @@ async function saveParameters() {
         const result = await response.json();
 
         if (result.success) {
-            showMessage(getRandomPositiveMessage(), 'success', 5000, true);
+            window.showMessage(getRandomPositiveMessage(), 'success', 5000, true);
         } else {
-            showMessage(pt('error.saving') + ': ' + (result.message || 'Unknown error'), 'error');
+            window.showMessage(pt('error.saving') + ': ' + (result.message || 'Unknown error'), 'error');
         }
     } catch (error) {
         console.error('Save error:', error);
-        showMessage(pt('error.saving') + ': ' + error.message, 'error');
+        window.showMessage(pt('error.saving') + ': ' + error.message, 'error');
     }
 }
 
-// Load parameters
-async function loadParameters(showMessage = true) {
+// Load parameters - FIXED
+async function loadParameters(showMsg = true) {
     const dateStr = formatDate(currentDate);
 
     try {
         const response = await fetch(`/api/parameters/load?date=${dateStr}`);
+
+        if (!response.ok) {
+            if (showMsg && response.status === 404) {
+                window.showMessage(pt('parameters.no_saved'), 'info');
+            }
+            return;
+        }
+
         const result = await response.json();
 
         if (result.success && result.data) {
@@ -848,16 +979,14 @@ async function loadParameters(showMessage = true) {
                 notesInput.value = result.data.notes;
             }
 
-            if (showMessage) {
-                showMessage(pt('parameters.loaded') + ' ' + dateStr, 'success');
+            if (showMsg) {
+                window.showMessage(pt('parameters.loaded') + ' ' + dateStr, 'success');
             }
-        } else if (showMessage) {
-            showMessage(pt('parameters.no_saved'), 'info');
         }
     } catch (error) {
         console.error('Load error:', error);
-        if (showMessage) {
-            showMessage(pt('error.loading') + ': ' + error.message, 'error');
+        if (showMsg) {
+            window.showMessage(pt('error.loading') + ': ' + error.message, 'error');
         }
     }
 }
@@ -874,12 +1003,12 @@ function clearParameters() {
         notesInput.value = '';
     }
 
-    showMessage(pt('parameters.cleared'), 'info');
+    window.showMessage(pt('parameters.cleared'), 'info');
 }
 
-// Navigate to main menu
+// Navigate to main menu - FIXED
 function goToMainMenu() {
-    window.location.href = '/dashboard';
+    window.location.href = '/';  // Changed from /dashboard to /
 }
 
 // Update translations dynamically
@@ -942,54 +1071,9 @@ function getRandomPositiveMessage() {
         ]
     };
 
-    const lang = window.i18n ? window.i18n.getCurrentLanguage() : 'en';
+    const lang = window.i18n?.getCurrentLanguage?.() || 'en';
     const langMessages = messages[lang] || messages['en'];
     return langMessages[Math.floor(Math.random() * langMessages.length)];
-}
-
-// Show message
-function showMessage(text, type = 'success', duration = 5000, isFlashy = false) {
-    const container = document.getElementById('messageContainer');
-    if (!container) {
-        console.error('Message container not found');
-        return;
-    }
-
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type} ${isFlashy ? 'flashy' : ''}`;
-
-    if (isFlashy) {
-        const flashyContent = document.createElement('div');
-        flashyContent.className = 'flashy-content';
-
-        const icon1 = document.createElement('span');
-        icon1.className = 'flashy-icon';
-        icon1.textContent = '🌟';
-
-        const flashyText = document.createElement('p');
-        flashyText.className = 'flashy-text';
-        flashyText.textContent = text;
-
-        const icon2 = document.createElement('span');
-        icon2.className = 'flashy-icon';
-        icon2.textContent = '🌟';
-
-        flashyContent.appendChild(icon1);
-        flashyContent.appendChild(flashyText);
-        flashyContent.appendChild(icon2);
-        messageDiv.appendChild(flashyContent);
-
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-        messageDiv.textContent = text;
-    }
-
-    container.appendChild(messageDiv);
-
-    setTimeout(() => {
-        messageDiv.style.animation = 'fadeOut 0.5s ease-out';
-        setTimeout(() => messageDiv.remove(), 500);
-    }, duration);
 }
 
 // Initialize on DOM ready (with safety checks)
@@ -1018,4 +1102,4 @@ window.clearParameters = clearParameters;
 window.selectRating = selectRating;
 window.goToMainMenu = goToMainMenu;
 
-console.log('Parameters-social.js loaded - CLEANED VERSION with only 5 essential categories');
+console.log('Parameters-social.js loaded - FIXED VERSION with language selector and all functions');
