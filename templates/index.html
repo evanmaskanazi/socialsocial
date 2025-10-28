@@ -1187,10 +1187,10 @@
                 <span class="mobile-nav-icon">💬</span>
                 <span class="mobile-nav-label" data-i18n="menu.messages">Messages</span>
             </li>
-            <li class="mobile-nav-item" data-view="parameters" onclick="showView('parameters')">
-                <span class="mobile-nav-icon">📊</span>
-                <span class="mobile-nav-label" data-i18n="menu.parameters">Parameters</span>
-            </li>
+            <li class="mobile-nav-item" data-view="tracking" onclick="showView('tracking')">
+    <span class="mobile-nav-icon">📊</span>
+    <span class="mobile-nav-label" data-i18n="menu.parameters">Parameters</span>
+</li>
         </ul>
     </nav>
 
@@ -1210,10 +1210,8 @@
                     <li class="sidebar-item" data-view="messages" data-i18n="menu.messages">
                         💬 Messages
                     </li>
-                   <li class="sidebar-item">
-    <a href="/parameters" style="text-decoration: none; color: inherit;">
-        📊 <span data-i18n="menu.parameters">Parameters</span>
-    </a>
+                   <li class="sidebar-item" data-view="tracking">
+    📊 <span data-i18n="menu.parameters">Parameters</span>
 </li>
                 </ul>
             </aside>
@@ -1734,9 +1732,9 @@
                     loadConversations();
                     break;
                 case 'parameters':
-                    loadParameters();
-                    renderCalendar();
-                    break;
+case 'tracking':
+    initCalendar();
+    break;
             }
         }
 
@@ -2465,9 +2463,9 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
                     const hoursText = window.i18n && window.i18n.t ? window.i18n.t('parameters.sleep_hours') : 'Hours';
                     document.getElementById('sleepDisplay').innerHTML = `<span>${hours}</span> <span data-i18n="parameters.sleep_hours">${hoursText}</span>`;
 
-                    alert((window.i18n && window.i18n.t ? window.i18n.t('msg.loaded') : 'Loaded') + ` from ${dateStr}`);
+                    console.log('Parameters loaded from', dateStr);
                 } else {
-                    alert((window.i18n && window.i18n.t ? window.i18n.t('feed.no_posts') : 'No data') + ' for this date');
+                    alert((window.i18n && window.i18n.t ? window.i18n.t('parameters.no_data') : 'No data') + ' for this date');
                 }
             } catch (error) {
                 alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
