@@ -1177,6 +1177,52 @@ if (document.readyState === 'loading') {
     }
 }
 
+// ============= PARAMETER OPTIONS FUNCTIONALITY =============
+// This creates the 1-4 radio buttons for mood, sleep, etc.
+function createParameterOptions(containerId, parameterName, optionCount = 4) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    const optionsDiv = document.createElement('div');
+    optionsDiv.className = 'parameter-options';
+
+    for (let i = 1; i <= optionCount; i++) {
+        const label = document.createElement('label');
+        label.className = 'parameter-option';
+
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = parameterName;
+        input.value = i;
+
+        const span = document.createElement('span');
+        span.className = 'parameter-option-number';
+        span.textContent = i;
+
+        label.appendChild(input);
+        label.appendChild(span);
+        optionsDiv.appendChild(label);
+    }
+
+    container.appendChild(optionsDiv);
+}
+
+// Initialize parameter options on page load
+document.addEventListener('DOMContentLoaded', function() {
+    createParameterOptions('moodInput', 'mood');
+    createParameterOptions('sleepInput', 'sleep');
+    createParameterOptions('exerciseInput', 'exercise');
+    createParameterOptions('stressInput', 'stress');
+    createParameterOptions('socialInput', 'social');
+});
+
+
+
+
+
+
+
 // Export functions for global access
 window.initializeParameters = initializeParameters;
 window.updateTranslations = updateTranslations;
