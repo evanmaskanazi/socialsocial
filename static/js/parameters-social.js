@@ -215,6 +215,7 @@ function initializeParameters() {
         container.innerHTML = generateParametersHTML();
         setupLanguageSelector();
         initializeCalendar();
+        renderRatingCategories();
     }
 }
 
