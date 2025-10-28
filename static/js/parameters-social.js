@@ -382,7 +382,6 @@ function initializeParameters() {
 }
 
 // Setup language selector
-// Setup language selector
 function setupLanguageSelector() {
     const selector = document.getElementById('languageSelector');
     if (!selector) return;
@@ -849,8 +848,8 @@ function addParameterStyles() {
     document.head.appendChild(style);
 }
 
-// Calendar functions
-async function updateCalendar() {
+// Calendar functions - FIXED: Removed async
+function updateCalendar() {
     const calendarGrid = document.getElementById('calendarGrid');
     const currentMonthYear = document.getElementById('currentMonthYear');
 
@@ -888,9 +887,6 @@ async function updateCalendar() {
         calendarGrid.appendChild(emptyCell);
     }
 
-    // Get list of dates with saved parameters for this month
-    const datesWithData = await checkMonthForSavedData(year, month);
-
     // Add days of the month
     const today = new Date();
     const selectedDateStr = formatDate(currentDate);
@@ -898,32 +894,13 @@ async function updateCalendar() {
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day';
+        dayCell.textContent = day;
 
         const cellDate = new Date(year, month, day);
         const cellDateStr = formatDate(cellDate);
 
-        // Check if this date has saved data
-        if (datesWithData.includes(cellDateStr)) {
-            dayCell.classList.add('has-data');
-            // Add green dot indicator
-            const dayNumber = document.createElement('span');
-            dayNumber.textContent = day;
-            dayCell.appendChild(dayNumber);
-
-            const dot = document.createElement('span');
-            dot.className = 'data-indicator';
-            dot.textContent = '●';
-            dot.style.color = '#10b981';
-            dot.style.fontSize = '8px';
-            dot.style.position = 'absolute';
-            dot.style.bottom = '2px';
-            dot.style.left = '50%';
-            dot.style.transform = 'translateX(-50%)';
-            dayCell.appendChild(dot);
-            dayCell.style.position = 'relative';
-        } else {
-            dayCell.textContent = day;
-        }
+        // Add data-date attribute for targeting
+        dayCell.setAttribute('data-date', cellDateStr);
 
         if (cellDateStr === formatDate(today)) {
             dayCell.classList.add('today');
@@ -939,28 +916,40 @@ async function updateCalendar() {
     }
 }
 
-// New helper function to check which dates have saved data
-async function checkMonthForSavedData(year, month) {
-    const datesWithData = [];
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Check each day of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = formatDate(new Date(year, month, day));
-        try {
-            const response = await fetch(`/api/parameters/load?date=${dateStr}`);
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    datesWithData.push(dateStr);
+// Check if a specific date has saved data and add green dot
+async function checkDateForData(dateStr, dayElement) {
+    try {
+        const response = await fetch(`/api/parameters/load?date=${dateStr}`);
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+                // Add green dot
+                if (!dayElement.querySelector('.data-indicator')) {
+                    const dot = document.createElement('span');
+                    dot.className = 'data-indicator';
+                    dot.textContent = '●';
+                    dot.style.cssText = 'color: #10b981; font-size: 8px; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);';
+                    dayElement.style.position = 'relative';
+                    dayElement.appendChild(dot);
                 }
             }
-        } catch (error) {
-            // Silently ignore errors for individual dates
         }
+    } catch (error) {
+        // Silently ignore errors
     }
+}
 
-    return datesWithData;
+// Load indicators for visible month after a delay
+function loadMonthIndicators() {
+    // Only check for saved data after user action, not automatically
+    const calendarDays = document.querySelectorAll('.calendar-day[data-date]');
+    calendarDays.forEach(dayElement => {
+        const dateStr = dayElement.getAttribute('data-date');
+        if (dateStr) {
+            // Check this specific date
+            checkDateForData(dateStr, dayElement);
+        }
+    });
 }
 
 function selectDate(date) {
@@ -1004,7 +993,7 @@ function selectRating(categoryId, value) {
     });
 }
 
-// Save parameters
+// Save parameters - FIXED: Added green dot on save
 async function saveParameters() {
     const notes = document.getElementById('notesInput')?.value || '';
     const dateStr = formatDate(currentDate);
@@ -1034,6 +1023,17 @@ async function saveParameters() {
 
         if (result.success) {
             window.showMessage(getRandomPositiveMessage(), 'success', 5000, true);
+
+            // Add green dot to current date
+            const currentDayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
+            if (currentDayElement && !currentDayElement.querySelector('.data-indicator')) {
+                const dot = document.createElement('span');
+                dot.className = 'data-indicator';
+                dot.textContent = '●';
+                dot.style.cssText = 'color: #10b981; font-size: 8px; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);';
+                currentDayElement.style.position = 'relative';
+                currentDayElement.appendChild(dot);
+            }
         } else {
             window.showMessage(pt('error.saving') + ': ' + (result.message || 'Unknown error'), 'error');
         }
@@ -1043,7 +1043,7 @@ async function saveParameters() {
     }
 }
 
-// Load parameters - FIXED
+// Load parameters - FIXED: Added green dot on load
 async function loadParameters(showMsg = true) {
     const dateStr = formatDate(currentDate);
 
@@ -1072,6 +1072,17 @@ async function loadParameters(showMsg = true) {
             const notesInput = document.getElementById('notesInput');
             if (notesInput && result.data.notes) {
                 notesInput.value = result.data.notes;
+            }
+
+            // Mark current date as having data
+            const currentDayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
+            if (currentDayElement && !currentDayElement.querySelector('.data-indicator')) {
+                const dot = document.createElement('span');
+                dot.className = 'data-indicator';
+                dot.textContent = '●';
+                dot.style.cssText = 'color: #10b981; font-size: 8px; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);';
+                currentDayElement.style.position = 'relative';
+                currentDayElement.appendChild(dot);
             }
 
             if (showMsg) {
@@ -1197,4 +1208,4 @@ window.clearParameters = clearParameters;
 window.selectRating = selectRating;
 window.goToMainMenu = goToMainMenu;
 
-console.log('Parameters-social.js loaded - FIXED VERSION with language selector and all functions');
+console.log('Parameters-social.js loaded - FIXED VERSION with calendar display and no auto-loading');
