@@ -1383,10 +1383,10 @@
                         </div>
                     </div>
 
-                    <div class="parameter-grid">
+                    <div id="parametersContainer" class="parameter-grid">
                         <div class="parameter-card">
                             <div class="parameter-name" data-i18n="parameters.mood">Mood</div>
-                            <input type="text" class="parameter-input" id="moodInput" data-i18n="parameters.mood_placeholder" placeholder="e.g., Happy, Calm, Anxious">
+                            <div id="moodInput"></div>
                         </div>
 
                         <div class="parameter-card">
@@ -1399,7 +1399,7 @@
 
                         <div class="parameter-card">
                             <div class="parameter-name" data-i18n="parameters.exercise">Exercise</div>
-                            <input type="text" class="parameter-input" id="exerciseInput" data-i18n="parameters.exercise_placeholder" placeholder="e.g., Running, Yoga, Gym">
+                            <div id="exerciseInput"></div>
                         </div>
 
                         <div class="parameter-card">
@@ -1437,6 +1437,7 @@
     </div>
 
     <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/parameters-social.js"></script>
     <script>
         // API Configuration
         const API_URL = window.location.origin + '/api';
