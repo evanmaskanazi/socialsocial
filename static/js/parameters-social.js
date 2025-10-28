@@ -382,13 +382,31 @@ function initializeParameters() {
 }
 
 // Setup language selector
+// Setup language selector
 function setupLanguageSelector() {
     const selector = document.getElementById('languageSelector');
     if (!selector) return;
 
-    // Set current language
-    const currentLang = window.i18n?.getCurrentLanguage?.() || localStorage.getItem('userLanguage') || 'en';
+    // Get current language, defaulting to 'en' if nothing is set
+    let currentLang = window.i18n?.getCurrentLanguage?.() || localStorage.getItem('userLanguage');
+
+    // If no language is set anywhere, default to English
+    if (!currentLang || currentLang === '') {
+        currentLang = 'en';
+        localStorage.setItem('userLanguage', 'en');
+    }
+
+    // Set the selector value
     selector.value = currentLang;
+
+    // Force a re-render of the selector to ensure it displays properly
+    setTimeout(() => {
+        if (!selector.value || selector.value === '') {
+            selector.value = 'en';
+        }
+        // Trigger a change event to update display
+        selector.dispatchEvent(new Event('change', { bubbles: false }));
+    }, 10);
 
     // Handle language change
     selector.addEventListener('change', function() {
@@ -422,6 +440,14 @@ function setupLanguageSelector() {
             }).catch(err => console.error('Failed to save language preference:', err));
         }
     });
+
+    // Set initial RTL direction based on current language
+    const rtlLanguages = ['ar', 'he'];
+    if (rtlLanguages.includes(currentLang)) {
+        document.body.setAttribute('dir', 'rtl');
+    } else {
+        document.body.setAttribute('dir', 'ltr');
+    }
 }
 
 // Add parameter-specific styles
@@ -563,6 +589,22 @@ function addParameterStyles() {
             border-color: #667eea;
             font-weight: bold;
         }
+
+
+.calendar-day.has-data {
+    position: relative;
+}
+
+.data-indicator {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #10b981;
+    font-size: 8px;
+}
+
+
 
         .parameters-section {
             margin: 30px 0;
@@ -808,7 +850,7 @@ function addParameterStyles() {
 }
 
 // Calendar functions
-function updateCalendar() {
+async function updateCalendar() {
     const calendarGrid = document.getElementById('calendarGrid');
     const currentMonthYear = document.getElementById('currentMonthYear');
 
@@ -846,6 +888,9 @@ function updateCalendar() {
         calendarGrid.appendChild(emptyCell);
     }
 
+    // Get list of dates with saved parameters for this month
+    const datesWithData = await checkMonthForSavedData(year, month);
+
     // Add days of the month
     const today = new Date();
     const selectedDateStr = formatDate(currentDate);
@@ -853,10 +898,32 @@ function updateCalendar() {
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day';
-        dayCell.textContent = day;
 
         const cellDate = new Date(year, month, day);
         const cellDateStr = formatDate(cellDate);
+
+        // Check if this date has saved data
+        if (datesWithData.includes(cellDateStr)) {
+            dayCell.classList.add('has-data');
+            // Add green dot indicator
+            const dayNumber = document.createElement('span');
+            dayNumber.textContent = day;
+            dayCell.appendChild(dayNumber);
+
+            const dot = document.createElement('span');
+            dot.className = 'data-indicator';
+            dot.textContent = '●';
+            dot.style.color = '#10b981';
+            dot.style.fontSize = '8px';
+            dot.style.position = 'absolute';
+            dot.style.bottom = '2px';
+            dot.style.left = '50%';
+            dot.style.transform = 'translateX(-50%)';
+            dayCell.appendChild(dot);
+            dayCell.style.position = 'relative';
+        } else {
+            dayCell.textContent = day;
+        }
 
         if (cellDateStr === formatDate(today)) {
             dayCell.classList.add('today');
@@ -872,6 +939,30 @@ function updateCalendar() {
     }
 }
 
+// New helper function to check which dates have saved data
+async function checkMonthForSavedData(year, month) {
+    const datesWithData = [];
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Check each day of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = formatDate(new Date(year, month, day));
+        try {
+            const response = await fetch(`/api/parameters/load?date=${dateStr}`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    datesWithData.push(dateStr);
+                }
+            }
+        } catch (error) {
+            // Silently ignore errors for individual dates
+        }
+    }
+
+    return datesWithData;
+}
+
 function selectDate(date) {
     currentDate = date;
     updateCalendar();
@@ -880,8 +971,12 @@ function selectDate(date) {
     document.querySelectorAll('.rating-button').forEach(btn => {
         btn.classList.remove('selected');
     });
-    // Auto-load parameters for selected date
-    loadParameters(false);
+    // Clear notes field when changing date
+    const notesInput = document.getElementById('notesInput');
+    if (notesInput) {
+        notesInput.value = '';
+    }
+    // Don't auto-load - user must click Load button
 }
 
 function previousMonth() {
