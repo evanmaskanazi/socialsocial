@@ -278,19 +278,19 @@ class SavedParameters(db.Model):
     __tablename__ = 'saved_parameters'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
-    date = db.Column(db.Date, index=True)
-    mood = db.Column(db.String(100))
-    sleep_hours = db.Column(db.Float)
-    exercise = db.Column(db.String(100))
-    anxiety = db.Column(db.String(100))
-    energy = db.Column(db.String(100))
+    date = db.Column(db.String(10), index=True)  # Store as YYYY-MM-DD string
+    mood = db.Column(db.Integer)  # 1-4 rating
+    energy = db.Column(db.Integer)  # 1-4 rating
+    sleep_quality = db.Column(db.Integer)  # 1-4 rating
+    physical_activity = db.Column(db.Integer)  # 1-4 rating
+    anxiety = db.Column(db.Integer)  # 1-4 rating
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),
     )
-
 
 class Alert(db.Model):
     __tablename__ = 'alerts'
@@ -2195,36 +2195,19 @@ def save_parameters():
         data = request.json
         user_id = session['user_id']
 
-        # Validate date
+        # Extract date and parameters
         if not data.get('date'):
             return jsonify({'success': False, 'message': 'Date is required'}), 400
 
-        # Validate numeric parameters (1-4 range)
-        numeric_params = ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']
-
-        validated_params = {}
-        for param in numeric_params:
-            if param in data and data[param] is not None:
-                try:
-                    value = int(data[param])
-                    if value < 1 or value > 4:
-                        return jsonify({
-                            'success': False,
-                            'message': f'{param} must be between 1 and 4'
-                        }), 400
-                    validated_params[param] = value
-                except (TypeError, ValueError):
-                    validated_params[param] = None
-            else:
-                validated_params[param] = None
+        # Parameters are nested under 'parameters' key
+        params = data.get('parameters', {})
 
         conn = get_db()
         cursor = conn.cursor()
 
-        # PostgreSQL query
+        # Check if parameters exist for this date
         check_query = 'SELECT id FROM parameters WHERE user_id = %s AND date = %s'
         cursor.execute(check_query, (user_id, data['date']))
-
         existing = cursor.fetchone()
 
         if existing:
@@ -2240,13 +2223,12 @@ def save_parameters():
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = %s AND date = %s
             '''
-
             cursor.execute(update_query, (
-                validated_params.get('mood'),
-                validated_params.get('energy'),
-                validated_params.get('sleep_quality'),
-                validated_params.get('physical_activity'),
-                validated_params.get('anxiety'),
+                params.get('mood'),
+                params.get('energy'),
+                params.get('sleep_quality'),
+                params.get('physical_activity'),
+                params.get('anxiety'),
                 data.get('notes', ''),
                 user_id,
                 data['date']
@@ -2259,15 +2241,14 @@ def save_parameters():
                     physical_activity, anxiety, notes
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             '''
-
             cursor.execute(insert_query, (
                 user_id,
                 data['date'],
-                validated_params.get('mood'),
-                validated_params.get('energy'),
-                validated_params.get('sleep_quality'),
-                validated_params.get('physical_activity'),
-                validated_params.get('anxiety'),
+                params.get('mood'),
+                params.get('energy'),
+                params.get('sleep_quality'),
+                params.get('physical_activity'),
+                params.get('anxiety'),
                 data.get('notes', '')
             ))
 
@@ -2281,19 +2262,23 @@ def save_parameters():
         })
 
     except Exception as e:
-        print(f"Error saving parameters: {e}")
+        logger.error(f"Error saving parameters: {e}")
         return jsonify({
             'success': False,
             'message': 'Error saving parameters'
         }), 500
 
-
-@app.route('/api/parameters/load/<date>')
+@app.route('/api/parameters/load', methods=['GET'])
 @login_required
-def load_parameters(date):
+def load_parameters():
     try:
         if 'user_id' not in session:
             return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+
+        # Get date from query parameter
+        date = request.args.get('date')
+        if not date:
+            return jsonify({'success': False, 'message': 'Date is required'}), 400
 
         user_id = session['user_id']
 
@@ -2310,7 +2295,7 @@ def load_parameters(date):
         conn = get_db()
         cursor = conn.cursor()
 
-        # PostgreSQL query
+        # Query for parameters
         query = '''
             SELECT mood, energy, sleep_quality, physical_activity,
                    anxiety, notes
@@ -2318,34 +2303,34 @@ def load_parameters(date):
             WHERE user_id = %s AND date = %s
         '''
         cursor.execute(query, (user_id, date))
-
         params = cursor.fetchone()
 
         cursor.close()
         conn.close()
 
         if params:
-            result_data = {
-                'mood': params['mood'],
-                'energy': params['energy'],
-                'sleep_quality': params['sleep_quality'],
-                'physical_activity': params['physical_activity'],
-                'anxiety': params['anxiety'],
-                'notes': params['notes'] if params['notes'] else ''
-            }
-
+            # Return in the format the frontend expects
             return jsonify({
                 'success': True,
-                'data': result_data
+                'data': {
+                    'parameters': {
+                        'mood': params['mood'],
+                        'energy': params['energy'],
+                        'sleep_quality': params['sleep_quality'],
+                        'physical_activity': params['physical_activity'],
+                        'anxiety': params['anxiety']
+                    },
+                    'notes': params['notes'] if params['notes'] else ''
+                }
             })
         else:
             return jsonify({
                 'success': False,
                 'message': 'No parameters found for this date'
-            })
+            }), 404
 
     except Exception as e:
-        print(f"Error loading parameters: {e}")
+        logger.error(f"Error loading parameters: {e}")
         return jsonify({
             'success': False,
             'message': 'Error loading parameters'
