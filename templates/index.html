@@ -2445,57 +2445,92 @@ function initCalendar() {
             document.getElementById('sleepDisplay').innerHTML = `<span>${hours}</span> <span data-i18n="parameters.sleep_hours">${hoursText}</span>`;
         });
 
-        async function saveParameters() {
-            const dateStr = selectedDate.toISOString().split('T')[0];
+    async function saveParameters() {
+    const dateStr = selectedDate.toISOString().split('T')[0];
 
-            const parameters = {
-                date: dateStr,
-                mood: document.getElementById('moodInput').value,
-                sleep_hours: parseFloat(document.getElementById('sleepInput').value) || 0,
-                exercise: document.getElementById('exerciseInput').value,
-                anxiety: document.getElementById('anxietyInput').value,
-                energy: document.getElementById('energyInput').value,
-                notes: document.getElementById('notesInput').value
-            };
+    // Helper to get selected radio button value
+    function getSelectedRadioValue(name) {
+        const selected = document.querySelector(`input[name="${name}"]:checked`);
+        return selected ? selected.value : '';
+    }
 
-            try {
-                await apiCall('/parameters/save', 'POST', parameters);
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ` for ${dateStr}`);
-                loadSavedDates();
-                renderCalendar();
-            } catch (error) {
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+    const parameters = {
+        date: dateStr,
+        mood: getSelectedRadioValue('mood'),
+        sleep_hours: getSelectedRadioValue('sleep'),
+        exercise: getSelectedRadioValue('exercise'),
+        stress: getSelectedRadioValue('stress'),
+        social: getSelectedRadioValue('social'),
+        notes: document.getElementById('notesInput') ?
+               document.getElementById('notesInput').value : ''
+    };
+
+    try {
+        await apiCall('/parameters/save', 'POST', parameters);
+        alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ` for ${dateStr}`);
+
+        // Reload calendar to show saved dates
+        if (typeof loadSavedDates === 'function') {
+            loadSavedDates();
+        }
+        if (typeof renderCalendar === 'function') {
+            renderCalendar();
+        }
+    } catch (error) {
+        alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+    }
+}
+
+     async function loadParameters() {
+    const dateStr = selectedDate.toISOString().split('T')[0];
+
+    // Helper to set radio button selection
+    function setRadioValue(name, value) {
+        if (value) {
+            const radio = document.querySelector(`input[name="${name}"][value="${value}"]`);
+            if (radio) {
+                radio.checked = true;
             }
         }
+    }
 
-        async function loadParameters() {
-            const dateStr = selectedDate.toISOString().split('T')[0];
+    try {
+        const response = await apiCall(`/parameters/load/${dateStr}`);
 
-            try {
-                const response = await apiCall(`/parameters/load/${dateStr}`);
+        if (response && response.success) {
+            const data = response.data;
 
-                if (response && response.success) {
-                    const data = response.data;
-                    document.getElementById('moodInput').value = data.mood || '';
-                    document.getElementById('sleepInput').value = data.sleep_hours || '';
-                    document.getElementById('exerciseInput').value = data.exercise || '';
-                    document.getElementById('anxietyInput').value = data.anxiety || '';
-                    document.getElementById('energyInput').value = data.energy || '';
-                    document.getElementById('notesInput').value = data.notes || '';
+            // Set radio button selections
+            setRadioValue('mood', data.mood);
+            setRadioValue('sleep', data.sleep_hours);
+            setRadioValue('exercise', data.exercise);
+            setRadioValue('stress', data.stress || data.anxiety); // Handle old 'anxiety' field
+            setRadioValue('social', data.social || data.energy); // Handle old 'energy' field
 
-                    const hours = data.sleep_hours || 0;
-                    const hoursText = window.i18n && window.i18n.t ? window.i18n.t('parameters.sleep_hours') : 'Hours';
-                    document.getElementById('sleepDisplay').innerHTML = `<span>${hours}</span> <span data-i18n="parameters.sleep_hours">${hoursText}</span>`;
-
-                    console.log('Parameters loaded from', dateStr);
-                } else {
-                    alert((window.i18n && window.i18n.t ? window.i18n.t('parameters.no_data') : 'No data') + ' for this date');
-                }
-            } catch (error) {
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+            // Set notes if textarea exists
+            if (document.getElementById('notesInput') && data.notes) {
+                document.getElementById('notesInput').value = data.notes;
             }
-        }
 
+            // Update sleep display if it exists
+            if (document.getElementById('sleepDisplay') && data.sleep_hours) {
+                const hours = data.sleep_hours || 0;
+                const hoursText = window.i18n && window.i18n.t ?
+                    window.i18n.t('parameters.sleep_hours') : 'Hours';
+                document.getElementById('sleepDisplay').innerHTML =
+                    `<span>${hours}</span> <span data-i18n="parameters.sleep_hours">${hoursText}</span>`;
+            }
+
+            console.log('Parameters loaded from', dateStr);
+        } else {
+            alert((window.i18n && window.i18n.t ?
+                window.i18n.t('parameters.no_data') : 'No data') + ' for this date');
+        }
+    } catch (error) {
+        alert((window.i18n && window.i18n.t ?
+            window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+    }
+}
         // Alerts Functions
   async function loadAlerts() {
             try {
@@ -2695,14 +2730,34 @@ window.addEventListener('DOMContentLoaded', async () => {
     </script>
 
 
-
 <script>
 // Handle active_view from Flask backend
 {% if active_view %}
 document.addEventListener('DOMContentLoaded', function() {
+    // Wait for all scripts to load
     setTimeout(function() {
-        showView('{{ active_view }}');
-    }, 200);
+        // Call showView with the tracking view
+        if (typeof showView === 'function') {
+            showView('{{ active_view }}');
+        }
+
+        // Ensure calendar and options are initialized for parameters
+        if ('{{ active_view }}' === 'tracking') {
+            // Initialize the calendar
+            if (typeof initializeCalendar === 'function') {
+                initializeCalendar();
+            }
+
+            // Create parameter options
+            if (typeof createParameterOptions === 'function') {
+                createParameterOptions('moodInput', 'mood');
+                createParameterOptions('sleepInput', 'sleep');
+                createParameterOptions('exerciseInput', 'exercise');
+                createParameterOptions('stressInput', 'stress');
+                createParameterOptions('socialInput', 'social');
+            }
+        }
+    }, 500); // Increased delay from 200 to 500
 });
 {% endif %}
 </script>
