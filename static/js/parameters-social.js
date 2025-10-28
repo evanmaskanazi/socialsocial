@@ -6,7 +6,7 @@ const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
 // State management
 let currentDate = new Date();
 
-let savedDates = [];
+
 let selectedRatings = {};
 
 // Parameter categories - 5 total categories with descriptions
