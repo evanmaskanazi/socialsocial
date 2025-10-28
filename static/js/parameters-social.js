@@ -7,7 +7,7 @@ const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
 // State management
 let currentDate = new Date();
 let selectedRatings = {};
-let datesWithData = new Set();
+let datesWithData = new Set(JSON.parse(localStorage.getItem('savedParameterDates') || '[]'));
 
 // ESSENTIAL 5 PARAMETER CATEGORIES ONLY - ratings 1-4
 const PARAMETER_CATEGORIES = [
@@ -377,7 +377,7 @@ function initializeParameters() {
 
   const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    setTimeout(() => checkMonthData(year, month), 100); 
+    setTimeout(() => checkMonthData(year, month), 100);
 
 
     // Apply translations
@@ -952,6 +952,7 @@ async function checkMonthData(year, month) {
                     const result = await response.json();
                     if (result.success && result.data) {
                         datesWithData.add(dateStr);
+                        localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
                         // Add dot to existing calendar day
                         const dayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
                         if (dayElement && !dayElement.querySelector('.data-indicator')) {
@@ -1083,6 +1084,7 @@ async function saveParameters() {
 
             // Add this date to our tracking set
             datesWithData.add(dateStr);
+            localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
 
             // Add green dot to current date
             const currentDayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
@@ -1137,7 +1139,7 @@ async function loadParameters(showMsg = true) {
 
             // Add this date to our tracking set
             datesWithData.add(dateStr);
-
+localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
             // Mark current date as having data
             const currentDayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
             if (currentDayElement && !currentDayElement.querySelector('.data-indicator')) {
