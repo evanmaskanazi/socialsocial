@@ -374,6 +374,12 @@ function initializeParameters() {
     // Initialize calendar
     updateCalendar();
 
+
+  const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    setTimeout(() => checkMonthData(year, month), 100); 
+
+
     // Apply translations
     if (window.i18n && window.i18n.applyLanguage) {
         window.i18n.applyLanguage();
