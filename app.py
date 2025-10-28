@@ -1165,7 +1165,7 @@ def messages_page():
 @app.route('/parameters')
 @login_required
 def parameters_page():
-    return render_template('index.html', active_view='tracking')
+    return render_template('parameters.html')
 
 
 @app.route('/api/health')
