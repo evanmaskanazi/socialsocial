@@ -1,0 +1,450 @@
+#!/usr/bin/env python3
+"""
+Manual test script to verify parameters page rendering
+Run this on Render to test if the JavaScript/HTML works correctly
+"""
+
+import os
+import sys
+
+def create_test_endpoint():
+    """Add a test endpoint to verify parameters page independently"""
+    
+    test_route = '''
+# Add this to your app.py temporarily for testing
+
+@app.route('/test-parameters')
+def test_parameters():
+    """Test endpoint with inline HTML/JS to verify functionality"""
+    return \'\'\'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parameters Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 200px 1fr 300px;
+            gap: 20px;
+        }
+        .sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+        }
+        .main-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+        }
+        .calendar-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #f3f4f6;
+        }
+        .calendar-day.selected {
+            background: #6B46C1;
+            color: white;
+        }
+        .parameter-section {
+            margin-bottom: 25px;
+        }
+        .parameter-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .parameter-emoji {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        .parameter-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .parameter-desc {
+            font-size: 12px;
+            color: #666;
+            margin-left: 34px;
+        }
+        .rating-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .rating-btn {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+        .rating-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .rating-btn.selected {
+            background: #6B46C1;
+            color: white;
+            border-color: #6B46C1;
+        }
+        .save-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .notes-field {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h3>TheraSocial</h3>
+            <nav style="margin-top: 30px;">
+                <div>Feed</div>
+                <div>Profile</div>
+                <div>Circles</div>
+                <div>Messages</div>
+                <div style="background: #6B46C1; color: white; padding: 10px; border-radius: 8px; margin-top: 10px;">
+                    📊 Parameters
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <h1>Daily Parameters</h1>
+            
+            <!-- Calendar -->
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <button>Previous</button>
+                    <h3>October 2025</h3>
+                    <button>Next</button>
+                </div>
+                <div class="calendar-grid" id="calendar">
+                    <!-- Calendar will be generated by JS -->
+                </div>
+            </div>
+
+            <!-- Date Selection -->
+            <div style="text-align: center; margin: 20px 0; color: #666;">
+                Selected Date: <span id="selectedDate">Tue, October 28, 2025</span>
+            </div>
+
+            <!-- Parameters -->
+            <div id="parameters">
+                <!-- Will be generated by JavaScript -->
+            </div>
+
+            <!-- Notes -->
+            <div class="parameter-section">
+                <h3>Notes</h3>
+                <textarea class="notes-field" placeholder="Additional thoughts for today..."></textarea>
+            </div>
+
+            <!-- Buttons -->
+            <div style="display: flex; gap: 10px;">
+                <button class="save-button">Save Parameters</button>
+                <button style="padding: 12px 30px; background: white; border: 2px solid #6B46C1; color: #6B46C1; border-radius: 25px; cursor: pointer;">
+                    Load Parameters
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="sidebar">
+            <h3>Alerts</h3>
+            <div style="background: #fef3c7; padding: 15px; border-radius: 10px; margin-top: 15px;">
+                <strong>New message from alice</strong>
+                <p style="font-size: 14px; color: #666; margin-top: 5px;">It all goes according to plan</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Parameter categories
+        const PARAMETER_CATEGORIES = [
+            {
+                id: "mood",
+                emoji: "😊",
+                name: "Mood",
+                description: "Overall mood level"
+            },
+            {
+                id: "energy", 
+                emoji: "⚡",
+                name: "Energy",
+                description: "Physical and mental energy levels"
+            },
+            {
+                id: "sleep_quality",
+                emoji: "😴", 
+                name: "Sleep Quality",
+                description: "Quality of sleep"
+            },
+            {
+                id: "physical_activity",
+                emoji: "🏃",
+                name: "Physical Activity",
+                description: "Physical activity level"
+            },
+            {
+                id: "anxiety",
+                emoji: "😰",
+                name: "Anxiety",
+                description: "Level of anxiety experienced"
+            }
+        ];
+
+        // Generate calendar
+        function generateCalendar() {
+            const calendar = document.getElementById("calendar");
+            const daysInMonth = 31;
+            const firstDay = 2; // Tuesday
+            
+            // Day headers
+            const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            dayHeaders.forEach(day => {
+                const header = document.createElement("div");
+                header.style.fontWeight = "bold";
+                header.style.fontSize = "12px";
+                header.style.color = "#666";
+                header.textContent = day;
+                calendar.appendChild(header);
+            });
+            
+            // Empty cells before first day
+            for (let i = 0; i < firstDay; i++) {
+                calendar.appendChild(document.createElement("div"));
+            }
+            
+            // Days of month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayEl = document.createElement("div");
+                dayEl.className = "calendar-day";
+                if (day === 28) dayEl.classList.add("selected");
+                dayEl.textContent = day;
+                dayEl.onclick = () => selectDate(day);
+                calendar.appendChild(dayEl);
+            }
+        }
+
+        // Generate parameters
+        function generateParameters() {
+            const container = document.getElementById("parameters");
+            
+            PARAMETER_CATEGORIES.forEach(param => {
+                const section = document.createElement("div");
+                section.className = "parameter-section";
+                
+                section.innerHTML = `
+                    <div class="parameter-header">
+                        <span class="parameter-emoji">${param.emoji}</span>
+                        <span class="parameter-name">${param.name}</span>
+                    </div>
+                    <div class="parameter-desc">${param.description}</div>
+                    <div class="rating-buttons" id="rating-${param.id}">
+                        <button class="rating-btn" data-value="1">1</button>
+                        <button class="rating-btn" data-value="2">2</button>
+                        <button class="rating-btn" data-value="3">3</button>
+                        <button class="rating-btn" data-value="4">4</button>
+                    </div>
+                `;
+                
+                container.appendChild(section);
+                
+                // Add click handlers
+                const buttons = section.querySelectorAll(".rating-btn");
+                buttons.forEach(btn => {
+                    btn.onclick = () => selectRating(param.id, btn.dataset.value, buttons);
+                });
+            });
+        }
+
+        function selectRating(paramId, value, buttons) {
+            buttons.forEach(btn => {
+                btn.classList.remove("selected");
+                if (btn.dataset.value === value) {
+                    btn.classList.add("selected");
+                }
+            });
+        }
+
+        function selectDate(day) {
+            document.querySelectorAll(".calendar-day").forEach(el => {
+                el.classList.remove("selected");
+                if (el.textContent == day) {
+                    el.classList.add("selected");
+                }
+            });
+            document.getElementById("selectedDate").textContent = `October ${day}, 2025`;
+        }
+
+        // Initialize
+        generateCalendar();
+        generateParameters();
+    </script>
+</body>
+</html>
+\'\'\'
+'''
+    
+    print("Test route code to add to app.py:")
+    print("=" * 60)
+    print(test_route)
+    print("=" * 60)
+    print("\nInstructions:")
+    print("1. Add the above code to your app.py")
+    print("2. Restart the service")
+    print("3. Visit: https://socialsocial-72gn.onrender.com/test-parameters")
+    print("4. If this works, we know the issue is with file loading")
+    print("5. If this doesn't work, the issue is deeper")
+
+def fix_git_detached_head():
+    """Commands to fix the detached HEAD issue"""
+    
+    print("\n" + "=" * 60)
+    print("FIX FOR DETACHED HEAD STATE")
+    print("=" * 60)
+    
+    commands = """
+# First, check current status
+git status
+git branch
+
+# Option 1: Get back on main branch
+git checkout main
+git pull origin main
+
+# Option 2: If Option 1 fails, force it
+git fetch origin
+git reset --hard origin/main
+
+# Option 3: Complete reset (nuclear option)
+rm -rf .git
+git init
+git remote add origin https://github.com/evanmaskanazi/socialsocial.git
+git fetch
+git checkout -t origin/main
+
+# After fixing, verify:
+git branch  # Should show: * main
+git log --oneline -1  # Should show latest commit
+"""
+    
+    print("Run these commands in order until one works:")
+    print(commands)
+    
+    print("\n" + "=" * 60)
+    print("IMPORTANT: After fixing git, you must:")
+    print("1. Restart the service in Render dashboard")
+    print("2. Or trigger a new deployment")
+    print("=" * 60)
+
+def verify_files():
+    """Verify all files are correct"""
+    
+    print("\n" + "=" * 60)
+    print("FILE VERIFICATION")
+    print("=" * 60)
+    
+    # Check if running on Render
+    if os.path.exists('/opt/render'):
+        print("✓ Running on Render")
+    else:
+        print("⚠ Not running on Render - run this script on your Render shell")
+        return
+    
+    files_to_check = [
+        ('static/js/parameters-social.js', 48355),  # Expected size from your output
+        ('static/js/feed-calendar.js', None),
+        ('static/js/i18n.js', None),
+        ('templates/index.html', None)
+    ]
+    
+    for filepath, expected_size in files_to_check:
+        if os.path.exists(filepath):
+            size = os.path.getsize(filepath)
+            print(f"✓ {filepath}: {size} bytes", end="")
+            if expected_size and size != expected_size:
+                print(f" ⚠ (expected {expected_size} bytes)")
+            else:
+                print()
+        else:
+            print(f"✗ {filepath}: NOT FOUND")
+    
+    # Check git status
+    print("\n" + "=" * 60)
+    print("GIT STATUS CHECK")
+    print("=" * 60)
+    os.system("git status")
+    print("\n" + "=" * 60)
+    print("CURRENT BRANCH")
+    print("=" * 60)
+    os.system("git branch")
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("RENDER PARAMETERS PAGE DIAGNOSTIC & FIX")
+    print("=" * 60)
+    
+    verify_files()
+    fix_git_detached_head()
+    create_test_endpoint()
+    
+    print("\n" + "=" * 60)
+    print("SUMMARY")
+    print("=" * 60)
+    print("Your main issue: Git is in DETACHED HEAD state")
+    print("This means Render is stuck on an old commit")
+    print("Follow the git commands above to fix this")
+    print("=" * 60)
