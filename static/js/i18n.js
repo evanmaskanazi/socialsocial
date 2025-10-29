@@ -235,6 +235,13 @@ const translations = {
     'support.subject': 'Subject',
     'support.message': 'Message',
     'support.send': 'Send Message',
+    'feed.select_city': 'Select City',
+'menu.following': 'Following',
+'menu.followers': 'Followers',
+'following.title': 'Following',
+'following.recommendations': 'Recommended for You',
+'following.your_following': 'People You Follow',
+'followers.title': 'Followers',
 
     // About page
     'about.title': 'About TheraSocial',
@@ -441,6 +448,13 @@ const translations = {
 'parameters.physical_activity': 'פעילות גופנית',
 'parameters.physical_activity_desc': 'רמת פעילות גופנית',
 'parameters.main_menu': 'תפריט ראשי',
+'feed.select_city': 'בחר עיר',
+'menu.following': 'עוקב',
+'menu.followers': 'עוקבים',
+'following.title': 'עוקב אחרי',
+'following.recommendations': 'מומלץ עבורך',
+'following.your_following': 'אנשים שאתה עוקב אחריהם',
+'followers.title': 'עוקבים',
 
 
  // Support page
@@ -829,6 +843,13 @@ const translations = {
 'parameters.physical_activity': 'النشاط البدني',
 'parameters.physical_activity_desc': 'مستوى النشاط البدني',
 'parameters.main_menu': 'القائمة الرئيسية',
+'feed.select_city': 'اختر المدينة',
+'menu.following': 'يتابع',
+'menu.followers': 'المتابعون',
+'following.title': 'يتابع',
+'following.recommendations': 'موصى به لك',
+'following.your_following': 'الأشخاص الذين تتابعهم',
+'followers.title': 'المتابعون',
 
 
   'support.title': 'مركز الدعم',
@@ -1254,6 +1275,13 @@ const translations = {
     'support.subject': 'Тема',
     'support.message': 'Сообщение',
     'support.send': 'Отправить сообщение',
+    'feed.select_city': 'Выберите город',
+'menu.following': 'Подписки',
+'menu.followers': 'Подписчики',
+'following.title': 'Подписки',
+'following.recommendations': 'Рекомендуется для вас',
+'following.your_following': 'Люди, на которых вы подписаны',
+'followers.title': 'Подписчики',
 
     // About page
     'about.title': 'О TheraSocial',
