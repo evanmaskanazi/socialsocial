@@ -2678,6 +2678,364 @@ def create_sample_users():
 
 
 # =====================
+# CITY/TIMEZONE ROUTES
+# =====================
+
+@app.route('/api/user/city', methods=['GET', 'POST'])
+@login_required
+def user_city():
+    """Get or update user's selected city"""
+    user_id = session.get('user_id')
+    user = db.session.get(User, user_id)
+
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if request.method == 'GET':
+        return jsonify({
+            'selected_city': user.selected_city or 'Jerusalem, Israel'
+        })
+
+    elif request.method == 'POST':
+        try:
+            data = request.json
+            city = data.get('selected_city')
+
+            # List of valid cities
+            valid_cities = [
+                'Jerusalem, Israel', 'Tokyo, Japan', 'Delhi, India', 'Shanghai, China',
+                'Mexico City, Mexico', 'São Paulo, Brazil', 'Cairo, Egypt',
+                'Dhaka, Bangladesh', 'Beijing, China', 'Mumbai, India',
+                'Osaka, Japan', 'Karachi, Pakistan', 'Chongqing, China',
+                'Kinshasa, DR Congo', 'New York City, USA', 'Istanbul, Turkey',
+                'London, United Kingdom', 'Paris, France', 'Buenos Aires, Argentina',
+                'Moscow, Russia', 'Seoul, South Korea', 'Hong Kong, China',
+                'Dubai, UAE', 'Sydney, Australia', 'Singapore, Singapore',
+                'Los Angeles, USA', 'Chicago, USA', 'Melbourne, Australia',
+                'Berlin, Germany', 'Madrid, Spain', 'Rome, Italy',
+                'Bangkok, Thailand', 'Jakarta, Indonesia', 'Tehran, Iran',
+                'Lagos, Nigeria', 'Rio de Janeiro, Brazil', 'Vancouver, Canada',
+                'Amsterdam, Netherlands', 'Washington, USA', 'Houston, USA'
+            ]
+
+            if city not in valid_cities:
+                return jsonify({'error': 'Invalid city'}), 400
+
+            user.selected_city = city
+            user.updated_at = datetime.utcnow()
+            db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'selected_city': user.selected_city
+            })
+        except Exception as e:
+            logger.error(f"City update error: {str(e)}")
+            db.session.rollback()
+            return jsonify({'error': 'Failed to update city'}), 500
+
+
+# =====================
+# FOLLOWING/FOLLOWERS ROUTES
+# =====================
+
+@app.route('/api/follow/<int:user_id>', methods=['POST'])
+@login_required
+def follow_user(user_id):
+    """Follow another user"""
+    try:
+        current_user_id = session.get('user_id')
+        current_user = db.session.get(User, current_user_id)
+        user_to_follow = db.session.get(User, user_id)
+
+        if not user_to_follow:
+            return jsonify({'error': 'User not found'}), 404
+
+        if current_user_id == user_id:
+            return jsonify({'error': 'Cannot follow yourself'}), 400
+
+        current_user.follow(user_to_follow)
+        db.session.commit()
+
+        # Create alert for followed user
+        alert = Alert(
+            user_id=user_id,
+            title=f'{current_user.username} started following you',
+            content='You have a new follower!',
+            alert_type='info'
+        )
+        db.session.add(alert)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'User followed'})
+
+    except Exception as e:
+        logger.error(f"Follow error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to follow user'}), 500
+
+
+@app.route('/api/unfollow/<int:user_id>', methods=['POST'])
+@login_required
+def unfollow_user(user_id):
+    """Unfollow a user"""
+    try:
+        current_user_id = session.get('user_id')
+        current_user = db.session.get(User, current_user_id)
+        user_to_unfollow = db.session.get(User, user_id)
+
+        if not user_to_unfollow:
+            return jsonify({'error': 'User not found'}), 404
+
+        current_user.unfollow(user_to_unfollow)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'User unfollowed'})
+
+    except Exception as e:
+        logger.error(f"Unfollow error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to unfollow user'}), 500
+
+
+@app.route('/api/following')
+@login_required
+def get_following():
+    """Get list of users the current user is following"""
+    try:
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id)
+
+        following = []
+        for follow in user.following.all():
+            followed_user = db.session.get(User, follow.followed_id)
+            if followed_user:
+                following.append({
+                    'id': followed_user.id,
+                    'username': followed_user.username,
+                    'email': followed_user.email,
+                    'selected_city': followed_user.selected_city,
+                    'created_at': follow.created_at.isoformat()
+                })
+
+        return jsonify({'following': following})
+
+    except Exception as e:
+        logger.error(f"Get following error: {str(e)}")
+        return jsonify({'error': 'Failed to get following'}), 500
+
+
+@app.route('/api/followers')
+@login_required
+def get_followers():
+    """Get list of users following the current user"""
+    try:
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id)
+
+        followers = []
+        for follow in user.followers.all():
+            follower_user = db.session.get(User, follow.follower_id)
+            if follower_user:
+                followers.append({
+                    'id': follower_user.id,
+                    'username': follower_user.username,
+                    'email': follower_user.email,
+                    'selected_city': follower_user.selected_city,
+                    'created_at': follow.created_at.isoformat(),
+                    'is_following_back': user.is_following(follower_user)
+                })
+
+        return jsonify({'followers': followers})
+
+    except Exception as e:
+        logger.error(f"Get followers error: {str(e)}")
+        return jsonify({'error': 'Failed to get followers'}), 500
+
+
+@app.route('/api/recommendations')
+@login_required
+def get_recommendations():
+    """Get follow recommendations based on city and circles"""
+    try:
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id)
+
+        recommendations = []
+
+        # Get users in same city
+        same_city_users = User.query.filter(
+            User.selected_city == user.selected_city,
+            User.id != user_id,
+            User.is_active == True
+        ).limit(10).all()
+
+        # Get users from circles
+        circle_users = db.session.execute(
+            select(Circle.circle_user_id).filter_by(user_id=user_id)
+        ).scalars().all()
+
+        # Get friends of friends
+        for circle_user_id in circle_users:
+            their_circles = db.session.execute(
+                select(Circle.circle_user_id).filter_by(
+                    user_id=circle_user_id
+                ).filter(Circle.circle_user_id != user_id)
+            ).scalars().all()
+
+            for potential_id in their_circles[:5]:
+                potential_user = db.session.get(User, potential_id)
+                if potential_user and not user.is_following(potential_user):
+                    recommendations.append({
+                        'id': potential_user.id,
+                        'username': potential_user.username,
+                        'email': potential_user.email,
+                        'selected_city': potential_user.selected_city,
+                        'reason': 'Friend of friend'
+                    })
+
+        # Add same city users
+        for city_user in same_city_users:
+            if not user.is_following(city_user):
+                recommendations.append({
+                    'id': city_user.id,
+                    'username': city_user.username,
+                    'email': city_user.email,
+                    'selected_city': city_user.selected_city,
+                    'reason': 'Same city'
+                })
+
+        # Remove duplicates and limit
+        seen = set()
+        unique_recommendations = []
+        for rec in recommendations:
+            if rec['id'] not in seen:
+                seen.add(rec['id'])
+                unique_recommendations.append(rec)
+
+        return jsonify({'recommendations': unique_recommendations[:20]})
+
+    except Exception as e:
+        logger.error(f"Get recommendations error: {str(e)}")
+        return jsonify({'error': 'Failed to get recommendations'}), 500
+
+
+@app.route('/api/user/<int:user_id>/profile')
+@login_required
+def get_user_profile(user_id):
+    """Get another user's profile (for following)"""
+    try:
+        current_user_id = session.get('user_id')
+        current_user = db.session.get(User, current_user_id)
+
+        user = db.session.get(User, user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        profile = Profile.query.filter_by(user_id=user_id).first()
+
+        return jsonify({
+            'user': user.to_dict(),
+            'profile': {
+                'bio': profile.bio if profile else '',
+                'interests': profile.interests if profile else '',
+                'occupation': profile.occupation if profile else '',
+                'goals': profile.goals if profile else '',
+                'favorite_hobbies': profile.favorite_hobbies if profile else ''
+            },
+            'is_following': current_user.is_following(user),
+            'is_self': user_id == current_user_id
+        })
+
+    except Exception as e:
+        logger.error(f"Get user profile error: {str(e)}")
+        return jsonify({'error': 'Failed to get profile'}), 500
+
+
+@app.route('/api/user/<int:user_id>/feed/<date_str>')
+@login_required
+def get_user_feed(user_id, date_str):
+    """Get another user's feed for a specific date (read-only)"""
+    try:
+        current_user_id = session.get('user_id')
+        current_user = db.session.get(User, current_user_id)
+
+        # Check if following or is self
+        target_user = db.session.get(User, user_id)
+        if not target_user:
+            return jsonify({'error': 'User not found'}), 404
+
+        if user_id != current_user_id and not current_user.is_following(target_user):
+            return jsonify({'error': 'You must follow this user to view their feed'}), 403
+
+        post = Post.query.filter_by(user_id=user_id).filter(
+            db.func.date(Post.created_at) == date_str
+        ).first()
+
+        if post:
+            return jsonify({
+                'content': post.content,
+                'date': date_str,
+                'updated_at': post.updated_at.isoformat() if post.updated_at else None
+            })
+        else:
+            return jsonify({'content': '', 'date': date_str})
+
+    except Exception as e:
+        logger.error(f"Get user feed error: {str(e)}")
+        return jsonify({'error': 'Failed to get feed'}), 500
+
+
+@app.route('/api/user/<int:user_id>/parameters/<date_str>')
+@login_required
+def get_user_parameters(user_id, date_str):
+    """Get another user's parameters for a specific date (read-only)"""
+    try:
+        current_user_id = session.get('user_id')
+        current_user = db.session.get(User, current_user_id)
+
+        # Check if following or is self
+        target_user = db.session.get(User, user_id)
+        if not target_user:
+            return jsonify({'error': 'User not found'}), 404
+
+        if user_id != current_user_id and not current_user.is_following(target_user):
+            return jsonify({'error': 'You must follow this user to view their parameters'}), 403
+
+        params = SavedParameters.query.filter_by(
+            user_id=user_id,
+            date=date_str
+        ).first()
+
+        if params:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'parameters': {
+                        'mood': params.mood,
+                        'energy': params.energy,
+                        'sleep_quality': params.sleep_quality,
+                        'physical_activity': params.physical_activity,
+                        'anxiety': params.anxiety
+                    },
+                    'notes': params.notes or ''
+                }
+            })
+        else:
+            return jsonify({'success': False, 'message': 'No parameters for this date'})
+
+    except Exception as e:
+        logger.error(f"Get user parameters error: {str(e)}")
+        return jsonify({'error': 'Failed to get parameters'}), 500
+
+
+
+
+
+
+
+
+# =====================
 # ERROR HANDLERS
 # =====================
 
