@@ -2569,9 +2569,10 @@ def load_parameters():  # Remove @login_required
             })
         else:
             return jsonify({
-                'success': False,
+                'success': True,
+                'data': None,
                 'message': 'No parameters found for this date'
-            }), 404
+            }), 200
 
     except Exception as e:
         logger.error(f"Error loading parameters: {e}")
@@ -3051,7 +3052,7 @@ def get_following():
         user = db.session.get(User, user_id)
 
         following = []
-        for follow in user.following.all():
+        for follow in user.following:
             followed_user = db.session.get(User, follow.followed_id)
             if followed_user:
                 following.append({
@@ -3078,7 +3079,7 @@ def get_followers():
         user = db.session.get(User, user_id)
 
         followers = []
-        for follow in user.followers.all():
+        for follow in user.followers:
             follower_user = db.session.get(User, follow.follower_id)
             if follower_user:
                 followers.append({
