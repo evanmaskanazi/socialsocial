@@ -158,6 +158,7 @@ class User(db.Model):
     role = db.Column(db.String(50), default='user')
     is_active = db.Column(db.Boolean, default=True)
     preferred_language = db.Column(db.String(5), default='en')
+    selected_city = db.Column(db.String(100), default='Jerusalem, Israel')  # ← ADD THIS LINE
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
