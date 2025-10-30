@@ -180,6 +180,28 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def follow(self, user):
+        """Follow another user"""
+        if not self.is_following(user):
+            follow = Follow(follower_id=self.id, following_id=user.id)
+            db.session.add(follow)
+
+    def unfollow(self, user):
+        """Unfollow a user"""
+        follow = Follow.query.filter_by(
+            follower_id=self.id,
+            following_id=user.id
+        ).first()
+        if follow:
+            db.session.delete(follow)
+
+    def is_following(self, user):
+        """Check if following a user"""
+        return Follow.query.filter_by(
+            follower_id=self.id,
+            following_id=user.id
+        ).first() is not None
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -1493,148 +1515,10 @@ def profile():
         return jsonify({'success': True, 'message': 'Profile updated'})
 
 
-@app.route('/api/users/recommended', methods=['GET'])
-@login_required
-def get_recommended_users():
-    """Get recommended users based on same city"""
-    try:
-        current_user_id = session.get('user_id')
-        current_user = User.query.get(current_user_id)
-
-        if not current_user or not current_user.city:
-            return jsonify({'recommended': []})
-
-        # Get users already following
-        following_ids = [f.following_id for f in Follow.query.filter_by(follower_id=current_user_id).all()]
-        following_ids.append(current_user_id)  # Exclude self
-
-        # Find users in same city that user is not already following
-        recommended = User.query.filter(
-            User.city == current_user.city,
-            User.id.notin_(following_ids),
-            User.email_verified == True
-        ).limit(50).all()
-
-        return jsonify({
-            'recommended': [{
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'city': user.city,
-                'country': user.country,
-                'avatar_color': user.avatar_color or '#6B46C1'
-            } for user in recommended]
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/users/<int:user_id>/follow', methods=['POST'])
-@login_required
-def follow_user(user_id):
-    """Follow a user"""
-    try:
-        current_user_id = session.get('user_id')
-
-        # Can't follow yourself
-        if current_user_id == user_id:
-            return jsonify({'error': 'Cannot follow yourself'}), 400
-
-        # Check if user exists
-        user_to_follow = User.query.get(user_id)
-        if not user_to_follow:
-            return jsonify({'error': 'User not found'}), 404
-
-        # Check if already following
-        existing_follow = Follow.query.filter_by(
-            follower_id=current_user_id,
-            following_id=user_id
-        ).first()
-
-        if existing_follow:
-            return jsonify({'message': 'Already following'}), 200
-
-        # Create new follow
-        new_follow = Follow(follower_id=current_user_id, following_id=user_id)
-        db.session.add(new_follow)
-        db.session.commit()
-
-        return jsonify({'message': 'Successfully followed user'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/users/<int:user_id>/unfollow', methods=['POST'])
-@login_required
-def unfollow_user(user_id):
-    """Unfollow a user"""
-    try:
-        current_user_id = session.get('user_id')
-
-        follow = Follow.query.filter_by(
-            follower_id=current_user_id,
-            following_id=user_id
-        ).first()
-
-        if not follow:
-            return jsonify({'error': 'Not following this user'}), 404
-
-        db.session.delete(follow)
-        db.session.commit()
-
-        return jsonify({'message': 'Successfully unfollowed user'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/users/following', methods=['GET'])
-@login_required
-def get_following():
-    """Get list of users the current user is following"""
-    try:
-        current_user_id = session.get('user_id')
-
-        follows = Follow.query.filter_by(follower_id=current_user_id).all()
-        following_users = [follow.following for follow in follows]
-
-        return jsonify({
-            'following': [{
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'city': user.city,
-                'country': user.country,
-                'avatar_color': user.avatar_color or '#6B46C1'
-            } for user in following_users]
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/users/followers', methods=['GET'])
-@login_required
-def get_followers():
-    """Get list of users following the current user"""
-    try:
-        current_user_id = session.get('user_id')
-
-        follows = Follow.query.filter_by(following_id=current_user_id).all()
-        follower_users = [follow.follower for follow in follows]
-
-        return jsonify({
-            'followers': [{
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'city': user.city,
-                'country': user.country,
-                'avatar_color': user.avatar_color or '#6B46C1'
-            } for user in follower_users]
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/users/<int:user_id>/profile', methods=['GET'])
