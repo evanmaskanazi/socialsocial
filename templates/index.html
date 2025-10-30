@@ -2085,12 +2085,34 @@ let currentUserId = null;
             });
         });
 
-        // Mobile Navigation
    function showView(viewName) {
     // Reset viewing mode when navigating away from certain views
     if (viewName !== 'profile' && viewName !== 'feed' && viewName !== 'circles' && viewName !== 'parameters') {
         if (viewingUserId !== null) {
             viewingUserId = null;
+
+            // Re-enable profile fields
+            const bioElement = document.getElementById('profileBio');
+            const interestsElement = document.getElementById('profileInterests');
+            const occupationElement = document.getElementById('profileOccupation');
+            const goalsElement = document.getElementById('profileGoals');
+            const hobbiesElement = document.getElementById('profileFavoriteHobbies');
+            const saveButton = document.getElementById('updateProfileBtn');
+
+            // Re-enable all fields
+            [bioElement, interestsElement, occupationElement, goalsElement, hobbiesElement].forEach(el => {
+                if (el) {
+                    el.disabled = false;
+                    el.style.backgroundColor = '';
+                    el.style.cursor = '';
+                }
+            });
+
+            // Show save button
+            if (saveButton) {
+                saveButton.style.display = '';
+            }
+
             // Show edit buttons again
             const editButtons = document.querySelectorAll('.btn-primary, .btn-secondary');
             editButtons.forEach(btn => {
@@ -3217,7 +3239,6 @@ async function viewUserProfile(userId) {
     }
 }
 
-
 async function loadUserProfileView(userId) {
     try {
         const response = await fetch(`/api/users/${userId}/profile`, {
@@ -3244,19 +3265,69 @@ async function loadUserProfileView(userId) {
             profileHeader.textContent = `${userData.username}'s Profile`;
         }
 
-        // Hide edit buttons
+        // Update profile avatar and username
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileUsername = document.getElementById('profileUsername');
+        if (profileAvatar) {
+            profileAvatar.textContent = userData.username.charAt(0).toUpperCase();
+        }
+        if (profileUsername) {
+            profileUsername.textContent = userData.username;
+        }
+
+        // Populate all profile fields with user data
+        const bioElement = document.getElementById('profileBio');
+        const interestsElement = document.getElementById('profileInterests');
+        const occupationElement = document.getElementById('profileOccupation');
+        const goalsElement = document.getElementById('profileGoals');
+        const hobbiesElement = document.getElementById('profileFavoriteHobbies');
+
+        if (bioElement) {
+            bioElement.value = userData.bio || '';
+            bioElement.disabled = true;
+            bioElement.style.backgroundColor = '#f3f4f6';
+            bioElement.style.cursor = 'default';
+        }
+
+        if (interestsElement) {
+            interestsElement.value = userData.interests || '';
+            interestsElement.disabled = true;
+            interestsElement.style.backgroundColor = '#f3f4f6';
+            interestsElement.style.cursor = 'default';
+        }
+
+        if (occupationElement) {
+            occupationElement.value = userData.occupation || '';
+            occupationElement.disabled = true;
+            occupationElement.style.backgroundColor = '#f3f4f6';
+            occupationElement.style.cursor = 'default';
+        }
+
+        if (goalsElement) {
+            goalsElement.value = userData.goals || '';
+            goalsElement.disabled = true;
+            goalsElement.style.backgroundColor = '#f3f4f6';
+            goalsElement.style.cursor = 'default';
+        }
+
+        if (hobbiesElement) {
+            hobbiesElement.value = userData.favorite_hobbies || '';
+            hobbiesElement.disabled = true;
+            hobbiesElement.style.backgroundColor = '#f3f4f6';
+            hobbiesElement.style.cursor = 'default';
+        }
+
+        // Hide the Save Profile button and any edit buttons
+        const saveButton = document.getElementById('updateProfileBtn');
+        if (saveButton) {
+            saveButton.style.display = 'none';
+        }
+
         document.querySelectorAll('#profileView .btn-primary, #profileView .btn-secondary').forEach(btn => {
             if (btn.textContent.includes('Edit') || btn.textContent.includes('Save') || btn.textContent.includes('Add')) {
                 btn.style.display = 'none';
             }
         });
-
-        // Display profile info (update existing profile display elements)
-        const bioElement = document.querySelector('#profileView .bio, #profileView [data-field="bio"]');
-        if (bioElement) bioElement.textContent = userData.bio || 'No bio available';
-
-        const cityElement = document.querySelector('#profileView .city, #profileView [data-field="city"]');
-        if (cityElement) cityElement.textContent = userData.city || 'Unknown';
 
         // Add back button
         addBackToFollowingButton('profileView');
@@ -3478,7 +3549,6 @@ async function loadUserParameters(userId) {
     }
 }
 
-
 function addBackToFollowingButton(viewId) {
     const view = document.getElementById(viewId);
     if (!view) return;
@@ -3492,6 +3562,34 @@ function addBackToFollowingButton(viewId) {
     backButton.style.marginBottom = '1rem';
     backButton.onclick = () => {
         viewingUserId = null;
+
+        // Re-enable profile fields if in profile view
+        if (viewId === 'profileView') {
+            const bioElement = document.getElementById('profileBio');
+            const interestsElement = document.getElementById('profileInterests');
+            const occupationElement = document.getElementById('profileOccupation');
+            const goalsElement = document.getElementById('profileGoals');
+            const hobbiesElement = document.getElementById('profileFavoriteHobbies');
+            const saveButton = document.getElementById('updateProfileBtn');
+
+            // Re-enable all fields
+            [bioElement, interestsElement, occupationElement, goalsElement, hobbiesElement].forEach(el => {
+                if (el) {
+                    el.disabled = false;
+                    el.style.backgroundColor = '';
+                    el.style.cursor = '';
+                }
+            });
+
+            // Show save button
+            if (saveButton) {
+                saveButton.style.display = '';
+            }
+
+            // Reload current user's profile data
+            loadProfile();
+        }
+
         // Show all edit buttons again
         document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
             btn.style.display = '';
