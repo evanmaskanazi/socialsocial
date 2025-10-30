@@ -386,6 +386,8 @@ def init_database():
                 db.create_all()
                 logger.info("Database schema created successfully")
                 create_admin_user()
+                create_test_users()  # ← ADD THIS LINE
+                create_test_follows()  #
                 create_parameters_table()  # ADD THIS LINE
             else:
                 logger.info(f"Found {len(tables)} existing tables")
@@ -393,6 +395,7 @@ def init_database():
                 # Fix all schema issues
                 fix_all_schema_issues()
                 create_test_users()
+                create_test_follows()
                 create_parameters_table()  # ADD THIS LINE
 
                 # Only try migrations if migrations folder exists
@@ -420,7 +423,9 @@ def init_database():
                 db.create_all()
                 logger.info("Created database tables as fallback")
                 create_admin_user()
-                create_parameters_table()  # ADD THIS LINE
+                create_test_users()  # ← ADD THIS LINE
+                create_test_follows()
+            create_parameters_table()  # ADD THIS LINE
             except Exception as e2:
                 logger.error(f"Failed to create tables: {e2}")
                 if not is_production:
@@ -985,6 +990,83 @@ def create_test_users():
     except Exception as e:
         logger.error(f"Error creating test users: {e}")
         db.session.rollback()
+
+
+def create_test_follows():
+    """Create follow relationships between test users and main user"""
+    try:
+        logger.info("Setting up test follow relationships...")
+
+        # Get the main user (emaskanazi_1)
+        main_user = User.query.filter_by(username='emaskanazi_1').first()
+        if not main_user:
+            logger.info("Main user emaskanazi_1 not found, skipping test follows")
+            return
+
+        # Get test users
+        test_usernames = ['alice', 'bob', 'charlie', 'diana', 'edward', 'fiona',
+                          'george', 'helen', 'ivan', 'julia', 'kevin', 'laura']
+
+        test_users = User.query.filter(User.username.in_(test_usernames)).all()
+
+        if not test_users:
+            logger.info("No test users found, skipping test follows")
+            return
+
+        # Count existing follows
+        existing_follows = Follow.query.filter_by(followed_id=main_user.id).count()
+
+        if existing_follows >= len(test_users):
+            logger.info(f"✓ Test follows already exist ({existing_follows} followers)")
+            return
+
+        # Create follows: each test user follows the main user
+        created_count = 0
+        for test_user in test_users:
+            # Check if follow already exists
+            existing = Follow.query.filter_by(
+                follower_id=test_user.id,
+                followed_id=main_user.id
+            ).first()
+
+            if not existing:
+                follow = Follow(
+                    follower_id=test_user.id,
+                    followed_id=main_user.id
+                )
+                db.session.add(follow)
+                created_count += 1
+
+        # Also make main user follow some test users back
+        for test_user in test_users[:6]:  # Follow back half of them
+            existing = Follow.query.filter_by(
+                follower_id=main_user.id,
+                followed_id=test_user.id
+            ).first()
+
+            if not existing:
+                follow = Follow(
+                    follower_id=main_user.id,
+                    followed_id=test_user.id
+                )
+                db.session.add(follow)
+
+        db.session.commit()
+        logger.info(f"✓ Created {created_count} new follow relationships")
+
+        # Verify
+        follower_count = Follow.query.filter_by(followed_id=main_user.id).count()
+        following_count = Follow.query.filter_by(follower_id=main_user.id).count()
+        logger.info(f"Main user now has {follower_count} followers and is following {following_count} users")
+
+    except Exception as e:
+        logger.error(f"Error creating test follows: {e}")
+        db.session.rollback()
+
+
+
+
+
 
 
 def create_parameters_table():
