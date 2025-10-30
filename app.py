@@ -1412,19 +1412,35 @@ def get_current_user():
 
 
 @app.route('/api/user/language', methods=['GET', 'POST'])
-@login_required
-def user_language():
+def user_language():  # Remove @login_required
     """Get or update user's preferred language"""
-    user_id = session.get('user_id')
-    user = db.session.get(User, user_id)
-
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
 
     if request.method == 'GET':
+        # Return default language if not authenticated
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'preferred_language': 'en'}), 200
+
+        user = db.session.get(User, user_id)
+        if not user:
+            return jsonify({'preferred_language': 'en'}), 200
+
         return jsonify({
             'preferred_language': user.preferred_language or 'en'
         })
+
+    elif request.method == 'POST':
+        # POST still requires authentication
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id)
+
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # ... rest of POST logic remains the same
 
     elif request.method == 'POST':
         try:
@@ -2460,11 +2476,11 @@ def save_parameters():
         }), 500
 
 @app.route('/api/parameters/load', methods=['GET'])
-@login_required
-def load_parameters():
+def load_parameters():  # Remove @login_required
     try:
         if 'user_id' not in session:
-            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+            # Return empty data instead of 401
+            return jsonify({'success': True, 'data': None}), 200
 
         # Get date from query parameter
         date = request.args.get('date')
