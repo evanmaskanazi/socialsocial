@@ -3110,36 +3110,6 @@ def get_recommendations():
         return jsonify({'error': 'Failed to get recommendations'}), 500
 
 
-@app.route('/api/user/<int:user_id>/profile')
-@login_required
-def get_user_profile(user_id):
-    """Get another user's profile (for following)"""
-    try:
-        current_user_id = session.get('user_id')
-        current_user = db.session.get(User, current_user_id)
-
-        user = db.session.get(User, user_id)
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-
-        profile = Profile.query.filter_by(user_id=user_id).first()
-
-        return jsonify({
-            'user': user.to_dict(),
-            'profile': {
-                'bio': profile.bio if profile else '',
-                'interests': profile.interests if profile else '',
-                'occupation': profile.occupation if profile else '',
-                'goals': profile.goals if profile else '',
-                'favorite_hobbies': profile.favorite_hobbies if profile else ''
-            },
-            'is_following': current_user.is_following(user),
-            'is_self': user_id == current_user_id
-        })
-
-    except Exception as e:
-        logger.error(f"Get user profile error: {str(e)}")
-        return jsonify({'error': 'Failed to get profile'}), 500
 
 
 @app.route('/api/user/<int:user_id>/feed/<date_str>')
