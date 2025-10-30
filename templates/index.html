@@ -3032,7 +3032,7 @@ function initCalendar() {
         const recommendedData = await recommendedResponse.json();
 
         // Display following
-        const followingContainer = document.querySelector('#followingView .following-list');
+        const followingContainer = document.querySelector('#followingList');
         if (followingContainer) {
             if (followingData.following && followingData.following.length > 0) {
                 followingContainer.innerHTML = followingData.following.map(user => `
@@ -3075,7 +3075,7 @@ function initCalendar() {
         }
 
         // Display recommended
-        const recommendedContainer = document.querySelector('#followingView .recommended-list');
+        const recommendedContainer = document.querySelector('#recommendationsList');
         if (recommendedContainer) {
             const recommendations = recommendedData.recommendations || [];
 
@@ -3128,7 +3128,7 @@ function initCalendar() {
         if (!response.ok) throw new Error('Failed to load followers');
         const data = await response.json();
 
-        const followersContainer = document.querySelector('#followersView .followers-list');
+        const followersContainer = document.querySelector('#followersList');
         if (followersContainer) {
             if (data.followers && data.followers.length > 0) {
                 followersContainer.innerHTML = data.followers.map(user => `
