@@ -3145,10 +3145,9 @@ def get_user_feed(user_id, date_str):
         logger.error(f"Get user feed error: {str(e)}")
         return jsonify({'error': 'Failed to get feed'}), 500
 
-
 @app.route('/api/user/<int:user_id>/parameters/<date_str>')
 @login_required
-def get_user_parameters(user_id, date_str):
+def get_user_parameters_by_date(user_id, date_str):
     """Get another user's parameters for a specific date (read-only)"""
     try:
         current_user_id = session.get('user_id')
