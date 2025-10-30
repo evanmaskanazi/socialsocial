@@ -1467,7 +1467,7 @@ def user_language():  # Remove @login_required
         })
 
     elif request.method == 'POST':
-        # POST still requires authentication
+        # POST requires authentication
         if 'user_id' not in session:
             return jsonify({'error': 'Authentication required'}), 401
 
@@ -1477,9 +1477,6 @@ def user_language():  # Remove @login_required
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        # ... rest of POST logic remains the same
-
-    elif request.method == 'POST':
         try:
             data = request.json
             language = data.get('preferred_language', 'en')
