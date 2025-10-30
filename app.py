@@ -183,14 +183,14 @@ class User(db.Model):
     def follow(self, user):
         """Follow another user"""
         if not self.is_following(user):
-            follow = Follow(follower_id=self.id, following_id=user.id)
+            follow = Follow(follower_id=self.id, followed_id=user.id)  # ← CHANGE
             db.session.add(follow)
 
     def unfollow(self, user):
         """Unfollow a user"""
         follow = Follow.query.filter_by(
             follower_id=self.id,
-            following_id=user.id
+            followed_id=user.id  # ← CHANGE
         ).first()
         if follow:
             db.session.delete(follow)
@@ -199,7 +199,7 @@ class User(db.Model):
         """Check if following a user"""
         return Follow.query.filter_by(
             follower_id=self.id,
-            following_id=user.id
+            followed_id=user.id  # ← CHANGE
         ).first() is not None
 
     def to_dict(self):
@@ -357,15 +357,15 @@ class Follow(db.Model):
     __tablename__ = 'follows'
     id = db.Column(db.Integer, primary_key=True)
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    following_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # ← CHANGE THIS
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
-    follower = db.relationship('User', foreign_keys=[follower_id], backref='following_relationships')
-    following = db.relationship('User', foreign_keys=[following_id], backref='follower_relationships')
+    follower = db.relationship('User', foreign_keys=[follower_id], backref='following')
+    followed = db.relationship('User', foreign_keys=[followed_id], backref='followers')
 
     # Ensure a user can't follow the same person twice
-    __table_args__ = (db.UniqueConstraint('follower_id', 'following_id', name='unique_follow'),)
+    __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id', name='unique_follow'),)
 
 
 # =====================
