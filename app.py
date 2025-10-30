@@ -1674,17 +1674,22 @@ def get_user_profile(user_id):
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
+        # Get profile data if it exists
+        profile = user.profile if user.profile else None
+
         return jsonify({
             'id': user.id,
             'username': user.username,
             'email': user.email,
-            'city': user.city,
-            'country': user.country,
-            'avatar_color': user.avatar_color or '#6B46C1',
-            'bio': user.bio,
+            'city': user.selected_city or '',
+            'bio': profile.bio if profile else '',
+            'avatar_url': profile.avatar_url if profile else '',
+            'occupation': profile.occupation if profile else '',
+            'interests': profile.interests if profile else '',
             'created_at': user.created_at.isoformat() if user.created_at else None
         })
     except Exception as e:
+        logger.error(f"Error loading user profile {user_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
