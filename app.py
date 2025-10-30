@@ -1686,6 +1686,8 @@ def get_user_profile(user_id):
             'avatar_url': profile.avatar_url if profile else '',
             'occupation': profile.occupation if profile else '',
             'interests': profile.interests if profile else '',
+            'goals': profile.goals if profile else '',
+            'favorite_hobbies': profile.favorite_hobbies if profile else '',
             'created_at': user.created_at.isoformat() if user.created_at else None
         })
     except Exception as e:
