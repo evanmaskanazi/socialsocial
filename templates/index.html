@@ -1358,7 +1358,7 @@
                 <span class="mobile-nav-icon">💬</span>
                 <span class="mobile-nav-label" data-i18n="menu.messages">Messages</span>
             </li>
-            <li class="mobile-nav-item" data-view="tracking" onclick="window.location.href='/parameters'">
+            <li class="mobile-nav-item" data-view="tracking" onclick="showView('tracking')">
     <span class="mobile-nav-icon">📊</span>
     <span class="mobile-nav-label" data-i18n="menu.parameters">Parameters</span>
 </li>
@@ -1391,7 +1391,7 @@
                     <li class="sidebar-item" data-view="messages" data-i18n="menu.messages">
                         💬 Messages
                     </li>
-                   <li class="sidebar-item" data-view="tracking" onclick="window.location.href='/parameters'" style="cursor: pointer;">
+                   <li class="sidebar-item" data-view="tracking" style="cursor: pointer;">
     📊 <span data-i18n="menu.parameters">Parameters</span>
 </li>
 
@@ -2061,29 +2061,73 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
             }
         });
 
-      switch(view) {
-            case 'feed':
-                initFeedCalendar();
-                break;
-            case 'profile':
-                loadProfile();
-                break;
-            case 'circles':
-                loadCircles();
-                break;
-            case 'messages':
-                loadConversations();
-                break;
-            case 'tracking':
-                initCalendar();
-                break;
-            case 'following':
-                loadFollowing();
-                break;
-            case 'followers':
-                loadFollowers();
-                break;
-        }
+   // Check if viewing another user's profile
+                if (viewingUserId !== null && viewingUserId !== currentUserId) {
+                    // Viewing another user
+                    switch(view) {
+                        case 'feed':
+                            loadUserFeed(viewingUserId);
+                            break;
+                        case 'profile':
+                            loadUserProfileView(viewingUserId);
+                            break;
+                        case 'circles':
+                            loadUserCircles(viewingUserId);
+                            break;
+                        case 'parameters':
+                        case 'tracking':
+                            loadUserParameters(viewingUserId);
+                            break;
+                        case 'following':
+                            loadUserFollowing(viewingUserId);
+                            break;
+                        case 'followers':
+                            loadUserFollowers(viewingUserId);
+                            break;
+                        case 'messages':
+                            // Don't allow viewing another user's messages
+                            showNotification('Cannot view another user\'s messages', 'error');
+                            viewingUserId = null;
+                            loadConversations();
+                            break;
+                    }
+                } else {
+                    // Viewing own profile
+                    switch(view) {
+                        case 'feed':
+                            initFeedCalendar();
+                            break;
+                        case 'profile':
+                            loadProfile();
+                            break;
+                        case 'circles':
+                            loadCircles();
+                            break;
+                        case 'messages':
+                            loadConversations();
+                            break;
+                        case 'tracking':
+                            // Initialize parameters calendar
+                            if (typeof initializeCalendar === 'function') {
+                                initializeCalendar();
+                            }
+                            // Initialize parameter options
+                            setTimeout(function() {
+                                createParameterOptions('moodInput', 'mood');
+                                createParameterOptions('sleepInput', 'sleep');
+                                createParameterOptions('exerciseInput', 'exercise');
+                                createParameterOptions('stressInput', 'stress');
+                                createParameterOptions('socialInput', 'social');
+                            }, 100);
+                            break;
+                        case 'following':
+                            loadFollowing();
+                            break;
+                        case 'followers':
+                            loadFollowers();
+                            break;
+                    }
+                }
     });
 });
 
