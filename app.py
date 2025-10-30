@@ -1664,7 +1664,7 @@ def get_user_profile(user_id):
         # Check if following this user
         is_following = Follow.query.filter_by(
             follower_id=current_user_id,
-            following_id=user_id
+            followed_id=user_id
         ).first() is not None
 
         if not is_following and user_id != current_user_id:
@@ -1703,7 +1703,7 @@ def get_user_posts(user_id):
         # Check if following this user
         is_following = Follow.query.filter_by(
             follower_id=current_user_id,
-            following_id=user_id
+            followed_id=user_id
         ).first() is not None
 
         if not is_following and user_id != current_user_id:
@@ -1737,7 +1737,7 @@ def get_user_circles(user_id):
         # Check if following this user
         is_following = Follow.query.filter_by(
             follower_id=current_user_id,
-            following_id=user_id
+            followed_id=user_id
         ).first() is not None
 
         if not is_following and user_id != current_user_id:
@@ -1769,7 +1769,7 @@ def get_user_parameters(user_id):
         # Check if following this user
         is_following = Follow.query.filter_by(
             follower_id=current_user_id,
-            following_id=user_id
+            followed_id=user_id
         ).first() is not None
 
         if not is_following and user_id != current_user_id:
