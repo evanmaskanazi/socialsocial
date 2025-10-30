@@ -331,6 +331,21 @@ class Activity(db.Model):
     )
 
 
+class Follow(db.Model):
+    __tablename__ = 'follows'
+    id = db.Column(db.Integer, primary_key=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    following_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    follower = db.relationship('User', foreign_keys=[follower_id], backref='following_relationships')
+    following = db.relationship('User', foreign_keys=[following_id], backref='follower_relationships')
+
+    # Ensure a user can't follow the same person twice
+    __table_args__ = (db.UniqueConstraint('follower_id', 'following_id', name='unique_follow'),)
+
+
 # =====================
 # DATABASE INITIALIZATION
 # =====================
@@ -1476,6 +1491,297 @@ def profile():
 
         db.session.commit()
         return jsonify({'success': True, 'message': 'Profile updated'})
+
+
+@app.route('/api/users/recommended', methods=['GET'])
+@login_required
+def get_recommended_users():
+    """Get recommended users based on same city"""
+    try:
+        current_user_id = session.get('user_id')
+        current_user = User.query.get(current_user_id)
+
+        if not current_user or not current_user.city:
+            return jsonify({'recommended': []})
+
+        # Get users already following
+        following_ids = [f.following_id for f in Follow.query.filter_by(follower_id=current_user_id).all()]
+        following_ids.append(current_user_id)  # Exclude self
+
+        # Find users in same city that user is not already following
+        recommended = User.query.filter(
+            User.city == current_user.city,
+            User.id.notin_(following_ids),
+            User.email_verified == True
+        ).limit(50).all()
+
+        return jsonify({
+            'recommended': [{
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'city': user.city,
+                'country': user.country,
+                'avatar_color': user.avatar_color or '#6B46C1'
+            } for user in recommended]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users/<int:user_id>/follow', methods=['POST'])
+@login_required
+def follow_user(user_id):
+    """Follow a user"""
+    try:
+        current_user_id = session.get('user_id')
+
+        # Can't follow yourself
+        if current_user_id == user_id:
+            return jsonify({'error': 'Cannot follow yourself'}), 400
+
+        # Check if user exists
+        user_to_follow = User.query.get(user_id)
+        if not user_to_follow:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Check if already following
+        existing_follow = Follow.query.filter_by(
+            follower_id=current_user_id,
+            following_id=user_id
+        ).first()
+
+        if existing_follow:
+            return jsonify({'message': 'Already following'}), 200
+
+        # Create new follow
+        new_follow = Follow(follower_id=current_user_id, following_id=user_id)
+        db.session.add(new_follow)
+        db.session.commit()
+
+        return jsonify({'message': 'Successfully followed user'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users/<int:user_id>/unfollow', methods=['POST'])
+@login_required
+def unfollow_user(user_id):
+    """Unfollow a user"""
+    try:
+        current_user_id = session.get('user_id')
+
+        follow = Follow.query.filter_by(
+            follower_id=current_user_id,
+            following_id=user_id
+        ).first()
+
+        if not follow:
+            return jsonify({'error': 'Not following this user'}), 404
+
+        db.session.delete(follow)
+        db.session.commit()
+
+        return jsonify({'message': 'Successfully unfollowed user'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users/following', methods=['GET'])
+@login_required
+def get_following():
+    """Get list of users the current user is following"""
+    try:
+        current_user_id = session.get('user_id')
+
+        follows = Follow.query.filter_by(follower_id=current_user_id).all()
+        following_users = [follow.following for follow in follows]
+
+        return jsonify({
+            'following': [{
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'city': user.city,
+                'country': user.country,
+                'avatar_color': user.avatar_color or '#6B46C1'
+            } for user in following_users]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users/followers', methods=['GET'])
+@login_required
+def get_followers():
+    """Get list of users following the current user"""
+    try:
+        current_user_id = session.get('user_id')
+
+        follows = Follow.query.filter_by(following_id=current_user_id).all()
+        follower_users = [follow.follower for follow in follows]
+
+        return jsonify({
+            'followers': [{
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'city': user.city,
+                'country': user.country,
+                'avatar_color': user.avatar_color or '#6B46C1'
+            } for user in follower_users]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users/<int:user_id>/profile', methods=['GET'])
+@login_required
+def get_user_profile(user_id):
+    """Get another user's profile"""
+    try:
+        current_user_id = session.get('user_id')
+
+        # Check if following this user
+        is_following = Follow.query.filter_by(
+            follower_id=current_user_id,
+            following_id=user_id
+        ).first() is not None
+
+        if not is_following and user_id != current_user_id:
+            return jsonify({'error': 'Must be following user to view profile'}), 403
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        return jsonify({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'city': user.city,
+            'country': user.country,
+            'avatar_color': user.avatar_color or '#6B46C1',
+            'bio': user.bio,
+            'created_at': user.created_at.isoformat() if user.created_at else None
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users/<int:user_id>/posts', methods=['GET'])
+@login_required
+def get_user_posts(user_id):
+    """Get another user's feed posts"""
+    try:
+        current_user_id = session.get('user_id')
+
+        # Check if following this user
+        is_following = Follow.query.filter_by(
+            follower_id=current_user_id,
+            following_id=user_id
+        ).first() is not None
+
+        if not is_following and user_id != current_user_id:
+            return jsonify({'error': 'Must be following user to view posts'}), 403
+
+        posts = Post.query.filter_by(user_id=user_id).order_by(Post.created_at.desc()).all()
+
+        return jsonify({
+            'posts': [{
+                'id': post.id,
+                'content': post.content,
+                'category': post.category,
+                'mood': post.mood,
+                'is_anonymous': post.is_anonymous,
+                'created_at': post.created_at.isoformat() if post.created_at else None,
+                'likes_count': post.likes_count or 0,
+                'comments_count': post.comments_count or 0
+            } for post in posts]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users/<int:user_id>/circles', methods=['GET'])
+@login_required
+def get_user_circles(user_id):
+    """Get another user's circles (read-only)"""
+    try:
+        current_user_id = session.get('user_id')
+
+        # Check if following this user
+        is_following = Follow.query.filter_by(
+            follower_id=current_user_id,
+            following_id=user_id
+        ).first() is not None
+
+        if not is_following and user_id != current_user_id:
+            return jsonify({'error': 'Must be following user to view circles'}), 403
+
+        circles = Circle.query.filter_by(creator_id=user_id).all()
+
+        return jsonify({
+            'circles': [{
+                'id': circle.id,
+                'name': circle.name,
+                'description': circle.description,
+                'color': circle.color,
+                'member_count': len(circle.members),
+                'created_at': circle.created_at.isoformat() if circle.created_at else None
+            } for circle in circles]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users/<int:user_id>/parameters', methods=['GET'])
+@login_required
+def get_user_parameters(user_id):
+    """Get another user's wellness parameters"""
+    try:
+        current_user_id = session.get('user_id')
+
+        # Check if following this user
+        is_following = Follow.query.filter_by(
+            follower_id=current_user_id,
+            following_id=user_id
+        ).first() is not None
+
+        if not is_following and user_id != current_user_id:
+            return jsonify({'error': 'Must be following user to view parameters'}), 403
+
+        # Get date range from query params
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        query = WellnessParameter.query.filter_by(user_id=user_id)
+
+        if start_date:
+            query = query.filter(WellnessParameter.date >= start_date)
+        if end_date:
+            query = query.filter(WellnessParameter.date <= end_date)
+
+        parameters = query.order_by(WellnessParameter.date.desc()).all()
+
+        return jsonify({
+            'parameters': [{
+                'id': param.id,
+                'date': param.date.isoformat() if param.date else None,
+                'mood': param.mood,
+                'sleep': param.sleep,
+                'exercise': param.exercise,
+                'stress': param.stress,
+                'social': param.social,
+                'notes': param.notes
+            } for param in parameters]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 
 
 @app.route('/api/users/search')
