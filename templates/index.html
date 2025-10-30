@@ -2085,9 +2085,12 @@ let currentUserId = null;
             });
         });
 
-   function showView(viewName) {
-    // Reset viewing mode when navigating away from certain views
-    if (viewName !== 'profile' && viewName !== 'feed' && viewName !== 'circles' && viewName !== 'parameters') {
+ function showView(viewName) {
+    // Only reset viewing mode when navigating to views that should go back to own account
+    // Maintain viewing mode for: profile, feed, circles, parameters, tracking, following, followers
+    const viewsToMaintainUser = ['profile', 'feed', 'circles', 'parameters', 'tracking', 'following', 'followers'];
+
+    if (!viewsToMaintainUser.includes(viewName)) {
         if (viewingUserId !== null) {
             viewingUserId = null;
 
@@ -2180,6 +2183,12 @@ let currentUserId = null;
             case 'parameters':
             case 'tracking':
                 loadUserParameters(viewingUserId);
+                break;
+            case 'following':
+                loadUserFollowing(viewingUserId);
+                break;
+            case 'followers':
+                loadUserFollowers(viewingUserId);
                 break;
             case 'messages':
                 // Don't allow viewing another user's messages
@@ -2307,11 +2316,69 @@ let currentUserId = null;
             }
         }
 
-        function selectFeedDate(year, month, day) {
-            feedSelectedDate = new Date(year, month, day);
-            renderFeedCalendar();
-            updateFeedSelectedDateDisplay();
+       function selectFeedDate(day) {
+    feedSelectedDate = `${feedCurrentYear}-${String(feedCurrentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    renderFeedCalendar();
+    updateFeedSelectedDateDisplay();
+
+    // Check if viewing another user's feed
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        loadUserFeedForDate(viewingUserId, feedSelectedDate);
+    } else {
+        loadFeedForDate(feedSelectedDate);
+    }
+}
+
+// Load a specific user's feed for a date (read-only)
+async function loadUserFeedForDate(userId, dateStr) {
+    try {
+        const response = await fetch(`/api/user/${userId}/feed/${dateStr}`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                showNotification('You must follow this user to view their feed', 'error');
+                return;
+            }
+            throw new Error('Failed to load feed for date');
         }
+
+        const data = await response.json();
+        const feedContent = document.getElementById('feedContent');
+
+        if (feedContent) {
+            if (data.content) {
+                feedContent.value = data.content;
+            } else {
+                feedContent.value = 'No post for this date.';
+            }
+            // Make it read-only
+            feedContent.disabled = true;
+            feedContent.style.backgroundColor = '#f3f4f6';
+            feedContent.style.cursor = 'default';
+        }
+
+        // Hide save button
+        const saveButton = document.getElementById('saveFeedBtn');
+        if (saveButton) {
+            saveButton.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error loading user feed for date:', error);
+        const feedContent = document.getElementById('feedContent');
+        if (feedContent) {
+            feedContent.value = 'Error loading post.';
+            feedContent.disabled = true;
+            feedContent.style.backgroundColor = '#f3f4f6';
+        }
+    }
+}
+
+
+
+
+
 
         function updateFeedSelectedDateDisplay() {
             const date = feedSelectedDate;
@@ -2901,11 +2968,112 @@ function initCalendar() {
             }
         }
 
-        function selectDate(year, month, day) {
-            selectedDate = new Date(year, month, day);
-            renderCalendar();
-            updateSelectedDateDisplay();
+      function selectDate(day) {
+    selectedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    renderCalendar();
+    updateSelectedDateDisplay();
+
+    // Check if viewing another user's parameters
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        loadUserParametersForDate(viewingUserId, selectedDate);
+    } else {
+        loadParametersForDate(selectedDate);
+    }
+}
+
+
+
+
+// Load a specific user's parameters for a date (read-only)
+async function loadUserParametersForDate(userId, dateStr) {
+    try {
+        const response = await fetch(`/api/user/${userId}/parameters/${dateStr}`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                showNotification('You must follow this user to view their parameters', 'error');
+                return;
+            }
+            throw new Error('Failed to load parameters for date');
         }
+
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            const params = data.data.parameters;
+
+            // Display parameters as read-only
+            displayParameterReadOnly('moodInput', params.mood, 'Mood');
+            displayParameterReadOnly('sleepInput', params.sleep_quality, 'Sleep');
+            displayParameterReadOnly('exerciseInput', params.physical_activity, 'Exercise');
+            displayParameterReadOnly('anxietyInput', params.anxiety, 'Anxiety');
+
+            // Display notes if present
+            const notesElement = document.getElementById('parameterNotes');
+            if (notesElement) {
+                notesElement.value = data.data.notes || 'No notes for this date';
+                notesElement.disabled = true;
+                notesElement.style.backgroundColor = '#f3f4f6';
+                notesElement.style.cursor = 'default';
+            }
+        } else {
+            // No data for this date
+            clearParameterDisplays();
+        }
+
+        // Hide all save buttons
+        document.querySelectorAll('#trackingView button, #parametersView button').forEach(btn => {
+            if (btn.textContent.includes('Save') || btn.textContent.includes('Submit') || btn.type === 'submit') {
+                btn.style.display = 'none';
+            }
+        });
+    } catch (error) {
+        console.error('Error loading user parameters for date:', error);
+        clearParameterDisplays();
+    }
+}
+
+// Helper function to display a single parameter as read-only
+function displayParameterReadOnly(elementId, value, label) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    if (value !== null && value !== undefined && value !== '') {
+        // Create a read-only display
+        element.innerHTML = `
+            <div style="padding: 10px; background: var(--primary); color: white; border-radius: 8px; text-align: center; font-weight: 600;">
+                ${label}: ${value}/4
+            </div>
+        `;
+    } else {
+        element.innerHTML = `
+            <div style="padding: 10px; background: var(--light); color: var(--gray); border-radius: 8px; text-align: center;">
+                No data
+            </div>
+        `;
+    }
+}
+
+// Helper function to clear all parameter displays
+function clearParameterDisplays() {
+    displayParameterReadOnly('moodInput', null, 'Mood');
+    displayParameterReadOnly('sleepInput', null, 'Sleep');
+    displayParameterReadOnly('exerciseInput', null, 'Exercise');
+    displayParameterReadOnly('anxietyInput', null, 'Anxiety');
+
+    const notesElement = document.getElementById('parameterNotes');
+    if (notesElement) {
+        notesElement.value = 'No data for this date';
+        notesElement.disabled = true;
+        notesElement.style.backgroundColor = '#f3f4f6';
+        notesElement.style.cursor = 'default';
+    }
+}
+
+
+
 
         function updateSelectedDateDisplay() {
             const date = selectedDate;
@@ -3138,6 +3306,44 @@ function initCalendar() {
 
 
 
+async function loadUserFollowing(userId) {
+    try {
+        // Get the user's profile first for the username
+        const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+        if (!profileResponse.ok) {
+            throw new Error('Failed to load user profile');
+        }
+        const userProfile = await profileResponse.json();
+
+        // Update header
+        const followingHeader = document.querySelector('#followingView h2');
+        if (followingHeader) {
+            followingHeader.textContent = `${userProfile.username}'s Following`;
+        }
+
+        // For now, show a message that this feature requires backend support
+        const container = document.getElementById('followingList') || document.querySelector('#followingView .following-list');
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--gray);">
+                    <p style="margin-bottom: 1rem;">Following list for other users is currently view-only.</p>
+                    <p style="font-size: 0.875rem;">This user's following list is private.</p>
+                </div>
+            `;
+        }
+
+        // Add back button
+        addBackToFollowingButton('followingView');
+
+    } catch (error) {
+        console.error('Error loading user following:', error);
+        showNotification('Failed to load user following', 'error');
+    }
+}
+
+
+
+
     async function loadFollowers() {
     try {
         const response = await fetch('/api/followers', {
@@ -3182,6 +3388,50 @@ function initCalendar() {
         showNotification('Failed to load followers', 'error');
     }
 }
+
+
+
+async function loadUserFollowers(userId) {
+    try {
+        // Get the user's profile first for the username
+        const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+        if (!profileResponse.ok) {
+            throw new Error('Failed to load user profile');
+        }
+        const userProfile = await profileResponse.json();
+
+        // Update header
+        const followersHeader = document.querySelector('#followersView h2');
+        if (followersHeader) {
+            followersHeader.textContent = `${userProfile.username}'s Followers`;
+        }
+
+        // For now, show a message that this feature requires backend support
+        const container = document.getElementById('followersList') || document.querySelector('#followersView .followers-list');
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--gray);">
+                    <p style="margin-bottom: 1rem;">Followers list for other users is currently view-only.</p>
+                    <p style="font-size: 0.875rem;">This user's followers list is private.</p>
+                </div>
+            `;
+        }
+
+        // Add back button
+        addBackToFollowingButton('followersView');
+
+    } catch (error) {
+        console.error('Error loading user followers:', error);
+        showNotification('Failed to load user followers', 'error');
+    }
+}
+
+
+
+
+
+
+
 
 async function followUser(userId) {
     try {
@@ -3372,6 +3622,21 @@ async function loadUserFeed(userId) {
         const postForm = document.querySelector('#feedView form, #feedView .post-creation');
         if (postForm) postForm.style.display = 'none';
 
+        // Hide all buttons except back button
+        document.querySelectorAll('#feedView button').forEach(btn => {
+            if (!btn.classList.contains('back-to-following-btn')) {
+                btn.style.display = 'none';
+            }
+        });
+
+        // Make feed content read-only
+        const feedContent = document.getElementById('feedContent');
+        if (feedContent) {
+            feedContent.disabled = true;
+            feedContent.style.backgroundColor = '#f3f4f6';
+            feedContent.style.cursor = 'default';
+        }
+
         // Display posts
         const feedContainer = document.querySelector('#feedView .feed-posts, #feedView .posts-container, #feedView .feed-content');
         if (!feedContainer) {
@@ -3409,7 +3674,6 @@ async function loadUserFeed(userId) {
     }
 }
 
-
 async function loadUserCircles(userId) {
     try {
         const response = await fetch(`/api/users/${userId}/circles`, {
@@ -3438,34 +3702,57 @@ async function loadUserCircles(userId) {
             if (circlesHeader) circlesHeader.textContent = `${user.username}'s Circles`;
         }
 
-        // Hide add circle button
-        document.querySelectorAll('#circlesView .btn-primary, #circlesView .btn-secondary').forEach(btn => {
-            if (btn.textContent.includes('Add') || btn.textContent.includes('Create') || btn.textContent.includes('New')) {
+        // Hide the user search bar completely (can't add people to their circles)
+        const userSearch = document.querySelector('#circlesView .user-search');
+        if (userSearch) userSearch.style.display = 'none';
+
+        // Hide all buttons (add, remove, etc)
+        document.querySelectorAll('#circlesView button').forEach(btn => {
+            if (!btn.classList.contains('back-to-following-btn')) {
                 btn.style.display = 'none';
             }
         });
 
-        // Display circles
-        const circlesContainer = document.querySelector('#circlesView .circles-grid, #circlesView .circles-container, #circlesView .circles-list');
-        if (!circlesContainer) {
-            console.error('Circles container not found');
-            return;
+        // Display the three circle types with their members
+        const generalContainer = document.getElementById('generalMembers');
+        const closeFriendsContainer = document.getElementById('closeFriendsMembers');
+        const familyContainer = document.getElementById('familyMembers');
+        const generalCount = document.getElementById('generalCount');
+        const closeFriendsCount = document.getElementById('closeFriendsCount');
+        const familyCount = document.getElementById('familyCount');
+
+        // Find circles by type from the response
+        const generalCircle = data.circles ? data.circles.find(c => c.name === 'general' || c.circle_type === 'general') : null;
+        const closeFriendsCircle = data.circles ? data.circles.find(c => c.name === 'close_friends' || c.circle_type === 'close_friends') : null;
+        const familyCircle = data.circles ? data.circles.find(c => c.name === 'family' || c.circle_type === 'family') : null;
+
+        // Helper function to display members read-only
+        function displayMembersReadOnly(container, countElement, circle) {
+            if (!container || !countElement) return;
+
+            const members = circle && circle.members ? circle.members : [];
+            countElement.textContent = members.length;
+
+            if (members.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--gray);">No members yet</p>';
+            } else {
+                container.innerHTML = members.map(member => `
+                    <div class="member-item" style="display: flex; align-items: center; padding: 0.75rem; background: white; border-radius: 8px; margin-bottom: 0.5rem;">
+                        <div class="member-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: 600;">
+                            ${member.username ? member.username[0].toUpperCase() : 'U'}
+                        </div>
+                        <span style="font-weight: 500;">${member.username || 'Unknown'}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Remove all action buttons from member items
+            container.querySelectorAll('button').forEach(btn => btn.remove());
         }
 
-        if (data.circles && data.circles.length > 0) {
-            circlesContainer.innerHTML = data.circles.map(circle => `
-                <div class="circle-card" style="border-left: 4px solid ${circle.color || '#6B46C1'}; padding: 1rem; background: white; border-radius: 8px; margin-bottom: 1rem;">
-                    <h3 style="margin-bottom: 0.5rem;">${circle.name}</h3>
-                    <p style="color: var(--gray); margin-bottom: 0.5rem;">${circle.description || 'No description'}</p>
-                    <div class="circle-stats" style="font-size: 0.875rem; color: var(--gray);">
-                        <span>👥 ${circle.member_count} members</span>
-                        <span style="margin-left: 1rem;">📅 ${new Date(circle.created_at).toLocaleDateString()}</span>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            circlesContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No circles yet.</p>';
-        }
+        displayMembersReadOnly(generalContainer, generalCount, generalCircle);
+        displayMembersReadOnly(closeFriendsContainer, closeFriendsCount, closeFriendsCircle);
+        displayMembersReadOnly(familyContainer, familyCount, familyCircle);
 
         // Add back button
         addBackToFollowingButton('circlesView');
@@ -3513,6 +3800,14 @@ async function loadUserParameters(userId) {
         document.querySelectorAll('#parametersView form, #parametersView .parameter-inputs, #trackingView form, #trackingView .parameter-inputs').forEach(form => {
             form.style.display = 'none';
         });
+// Hide all save/submit buttons
+        document.querySelectorAll('#parametersView button, #trackingView button').forEach(btn => {
+            if (btn.textContent.includes('Save') || btn.textContent.includes('Submit') || btn.type === 'submit') {
+                btn.style.display = 'none';
+            }
+        });
+
+
 
         // Display parameters
         const parametersContainer = document.querySelector('#parametersView .parameters-display, #parametersView .parameters-list, #trackingView .parameters-display, #trackingView .parameters-list');
