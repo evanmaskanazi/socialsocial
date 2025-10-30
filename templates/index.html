@@ -2408,6 +2408,25 @@ let currentUserId = null;
         });
 
         // Profile Functions
+
+function showNotification(message, type = 'info') {
+    // Simple alert for now - you can enhance this later
+    alert(message);
+
+    // OR if you have a custom notification system, use it:
+    // For example: if you have a div with id="notification"
+    // const notif = document.getElementById('notification');
+    // notif.textContent = message;
+    // notif.className = type;
+    // notif.style.display = 'block';
+    // setTimeout(() => notif.style.display = 'none', 3000);
+}
+
+
+
+
+
+
         async function loadProfile() {
             try {
                 const response = await apiCall('/profile');
