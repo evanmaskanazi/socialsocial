@@ -425,7 +425,7 @@ def init_database():
                 create_admin_user()
                 create_test_users()  # ← ADD THIS LINE
                 create_test_follows()
-            create_parameters_table()  # ADD THIS LINE
+                create_parameters_table()  # ADD THIS LINE
             except Exception as e2:
                 logger.error(f"Failed to create tables: {e2}")
                 if not is_production:
