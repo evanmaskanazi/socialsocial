@@ -846,6 +846,43 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not add preferred_language column to users table: {e}")
 
+            try:
+                if is_postgres:
+                    result = conn.execute(text(
+                        """SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='users'"""
+                    ))
+                    existing_columns = [row[0] for row in result]
+
+                    if existing_columns and 'selected_city' not in existing_columns:
+                        logger.info("Adding missing selected_city column to users table...")
+                        conn.execute(
+                            text("ALTER TABLE users ADD COLUMN selected_city VARCHAR(100) DEFAULT 'Jerusalem, Israel'"))
+                        conn.commit()
+                        logger.info("✓ Added selected_city column to users table")
+                    elif 'selected_city' in existing_columns:
+                        logger.info("✓ Users table already has selected_city column")
+                else:
+                    # SQLite
+                    result = conn.execute(text("PRAGMA table_info(users)"))
+                    existing_columns = [row[1] for row in result]
+
+                    if existing_columns and 'selected_city' not in existing_columns:
+                        logger.info("Adding selected_city column to users table...")
+                        conn.execute(
+                            text("ALTER TABLE users ADD COLUMN selected_city VARCHAR(100) DEFAULT 'Jerusalem, Israel'"))
+                        conn.commit()
+                        logger.info("✓ Added selected_city column to users table")
+                    elif 'selected_city' in existing_columns:
+                        logger.info("✓ Users table already has selected_city column")
+
+            except Exception as e:
+                logger.warning(f"Could not add selected_city column to users table: {e}")
+
+
+
+
             logger.info("✓ All schema fixes complete")
 
     except Exception as e:
