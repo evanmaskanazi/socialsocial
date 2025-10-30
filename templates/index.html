@@ -1358,7 +1358,7 @@
                 <span class="mobile-nav-icon">💬</span>
                 <span class="mobile-nav-label" data-i18n="menu.messages">Messages</span>
             </li>
-            <li class="mobile-nav-item" data-view="tracking" onclick="window.location.href='/parameters'">
+            <li class="mobile-nav-item" data-view="tracking" onclick="showView('tracking')">
     <span class="mobile-nav-icon">📊</span>
     <span class="mobile-nav-label" data-i18n="menu.parameters">Parameters</span>
 </li>
@@ -1391,7 +1391,7 @@
                     <li class="sidebar-item" data-view="messages" data-i18n="menu.messages">
                         💬 Messages
                     </li>
-                   <li class="sidebar-item" data-view="tracking" onclick="window.location.href='/parameters'" style="cursor: pointer;">
+                   <li class="sidebar-item" data-view="tracking" style="cursor: pointer;">
     📊 <span data-i18n="menu.parameters">Parameters</span>
 </li>
 
@@ -2041,49 +2041,13 @@ let currentUserId = null;
 
         // Sidebar Navigation
      // Sidebar Navigation
-        document.querySelectorAll('.sidebar-item').forEach(item => {
-            item.addEventListener('click', () => {
-                document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-
-                document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-
-                const view = item.dataset.view;
-                document.getElementById(`${view}View`).classList.remove('hidden');
-
-                // Update mobile nav active state
-                document.querySelectorAll('.mobile-nav-item').forEach(mobileItem => {
-                    mobileItem.classList.remove('active');
-                    if (mobileItem.dataset.view === view) {
-                        mobileItem.classList.add('active');
-                    }
-                });
-
-              switch(view) {
-                    case 'feed':
-                        initFeedCalendar();
-                        break;
-                    case 'profile':
-                        loadProfile();
-                        break;
-                    case 'circles':
-                        loadCircles();
-                        break;
-                    case 'messages':
-                        loadConversations();
-                        break;
-                    case 'tracking':
-                        initCalendar();
-                        break;
-                    case 'following':
-                        loadFollowing();
-                        break;
-                    case 'followers':
-                        loadFollowers();
-                        break;
-                }
-            });
-        });
+      // Sidebar Navigation - use showView to maintain viewingUserId state
+document.querySelectorAll('.sidebar-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const view = item.dataset.view;
+        showView(view);
+    });
+});
 
  function showView(viewName) {
     // Only reset viewing mode when navigating to views that should go back to own account
