@@ -7,6 +7,96 @@
     <style>
 
 
+        /* User card styles for following/followers */
+.user-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.user-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.25rem;
+}
+
+.user-location {
+    font-size: 0.875rem;
+    color: var(--gray);
+}
+
+.follow-btn, .unfollow-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.follow-btn:hover {
+    transform: scale(1.05);
+}
+
+.unfollow-btn {
+    background: var(--light);
+    color: var(--gray);
+}
+
+.unfollow-btn:hover {
+    background: var(--danger);
+    color: white;
+}
+
+.back-to-following-btn {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .user-card {
+        padding: 0.75rem;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+
+    .follow-btn, .unfollow-btn {
+        padding: 0.375rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+
 /* City Selector Styles */
 .city-selector-container {
     background: white;
@@ -1628,6 +1718,8 @@
     let authToken = localStorage.getItem('authToken');
     let currentUser = null;
     let isLoginMode = true;
+    let viewingUserId = null; // Track which user profile we're viewing
+let currentUserId = null;
     // Variables above already declared before parameters-social.js
 
         // Helper function to format message time with translation
@@ -1994,72 +2086,130 @@
         });
 
         // Mobile Navigation
-        function showView(viewName) {
-            // Update desktop sidebar
-            document.querySelectorAll('.sidebar-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.dataset.view === viewName) {
-                    item.classList.add('active');
+   function showView(viewName) {
+    // Reset viewing mode when navigating away from certain views
+    if (viewName !== 'profile' && viewName !== 'feed' && viewName !== 'circles' && viewName !== 'parameters') {
+        if (viewingUserId !== null) {
+            viewingUserId = null;
+            // Show edit buttons again
+            const editButtons = document.querySelectorAll('.btn-primary, .btn-secondary');
+            editButtons.forEach(btn => {
+                if (btn.textContent.includes('Edit') || btn.textContent.includes('Save') || btn.textContent.includes('Add')) {
+                    btn.style.display = '';
                 }
             });
+            // Remove back button if exists
+            const backBtn = document.querySelector('.back-to-following-btn');
+            if (backBtn) backBtn.remove();
 
-            // Update mobile nav
-            document.querySelectorAll('.mobile-nav-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.dataset.view === viewName) {
-                    item.classList.add('active');
-                }
+            // Reset view headers
+            const profileHeader = document.querySelector('#profileView h2');
+            if (profileHeader) profileHeader.textContent = 'Profile';
+            const feedHeader = document.querySelector('#feedView h2');
+            if (feedHeader) feedHeader.textContent = 'Feed';
+            const circlesHeader = document.querySelector('#circlesView h2');
+            if (circlesHeader) circlesHeader.textContent = 'Circles';
+            const parametersHeader = document.querySelector('#parametersView h2, #trackingView h2');
+            if (parametersHeader) parametersHeader.textContent = 'Wellness Parameters';
+
+            // Show input forms again
+            document.querySelectorAll('form, .post-creation, .parameter-inputs').forEach(form => {
+                form.style.display = '';
             });
-
-            // Show/hide views
-            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-            const selectedView = document.getElementById(`${viewName}View`);
-            if (selectedView) {
-                selectedView.classList.remove('hidden');
-            }
-
-            // Load view content
-            switch(viewName) {
-                case 'feed':
-                    initFeedCalendar();
-                    break;
-                case 'profile':
-                    loadProfile();
-                    break;
-                case 'circles':
-                    loadCircles();
-                    break;
-                case 'messages':
-                    loadConversations();
-                    break;
-                case 'parameters':
-case 'tracking':
-    // Initialize parameters calendar
-    if (typeof initializeCalendar === 'function') {
-        initializeCalendar();
-    }
-    // Initialize parameter options (1-4 buttons)
-    if (typeof createParameterOptions === 'function') {
-        setTimeout(function() {
-            createParameterOptions('moodInput', 'mood');
-            createParameterOptions('sleepInput', 'sleep');
-            createParameterOptions('exerciseInput', 'exercise');
-            createParameterOptions('stressInput', 'stress');
-            createParameterOptions('socialInput', 'social');
-        }, 100);
-    }
-    break;
-    case 'following':
-                    loadFollowing();
-                    break;
-                case 'followers':
-                    loadFollowers();
-                    break;
-
-
-
-            }
         }
+    }
+
+    // Update desktop sidebar
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.view === viewName) {
+            item.classList.add('active');
+        }
+    });
+
+    // Update mobile nav
+    document.querySelectorAll('.mobile-nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.view === viewName) {
+            item.classList.add('active');
+        }
+    });
+
+    // Show/hide views
+    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    const selectedView = document.getElementById(`${viewName}View`);
+    if (selectedView) {
+        selectedView.classList.remove('hidden');
+    }
+
+    // Load view content - check if viewing another user
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        // Viewing another user's profile
+        switch(viewName) {
+            case 'feed':
+                loadUserFeed(viewingUserId);
+                break;
+            case 'profile':
+                loadUserProfileView(viewingUserId);
+                break;
+            case 'circles':
+                loadUserCircles(viewingUserId);
+                break;
+            case 'parameters':
+            case 'tracking':
+                loadUserParameters(viewingUserId);
+                break;
+            case 'messages':
+                // Don't allow viewing another user's messages
+                showNotification('Cannot view another user\'s messages', 'error');
+                showView('following');
+                break;
+            default:
+                // For other views, go back to own profile
+                viewingUserId = null;
+                showView('following');
+        }
+    } else {
+        // Viewing own profile
+        switch(viewName) {
+            case 'feed':
+                initFeedCalendar();
+                break;
+            case 'profile':
+                loadProfile();
+                break;
+            case 'circles':
+                loadCircles();
+                break;
+            case 'messages':
+                loadConversations();
+                break;
+            case 'parameters':
+            case 'tracking':
+                // Initialize parameters calendar
+                if (typeof initializeCalendar === 'function') {
+                    initializeCalendar();
+                }
+                // Initialize parameter options (1-4 buttons)
+                if (typeof createParameterOptions === 'function') {
+                    setTimeout(function() {
+                        createParameterOptions('moodInput', 'mood');
+                        createParameterOptions('sleepInput', 'sleep');
+                        createParameterOptions('exerciseInput', 'exercise');
+                        createParameterOptions('stressInput', 'stress');
+                        createParameterOptions('socialInput', 'social');
+                    }, 100);
+                }
+                break;
+            case 'following':
+                loadFollowing();
+                break;
+            case 'followers':
+                loadFollowers();
+                break;
+        }
+    }
+}
 
         // Feed Calendar Functions
         function initFeedCalendar() {
@@ -2838,121 +2988,514 @@ function initCalendar() {
 }
 
 // Following/Followers Functions
-        async function loadFollowing() {
-            try {
-                const response = await apiCall('/following');
-                const list = document.getElementById('followingList');
+    async function loadFollowing() {
+    try {
+        // Load people user is following
+        const followingResponse = await fetch('/api/following', {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
 
-                if (!response || !response.following || response.following.length === 0) {
-                    list.innerHTML = '<p style="text-align: center; color: var(--gray);">You are not following anyone yet</p>';
-                } else {
-                    list.innerHTML = response.following.map(user => `
-                        <div class="follow-card">
-                            <div class="follow-user-info" onclick="viewUserProfile(${user.id})">
-                                <div class="avatar">${user.username[0].toUpperCase()}</div>
-                                <div>
-                                    <div style="font-weight: 600;">${user.username}</div>
-                                    <div style="font-size: 14px; color: var(--gray);">${user.selected_city || 'No city set'}</div>
-                                </div>
-                            </div>
-                            <button class="follow-btn following" onclick="unfollowUser(${user.id})">Unfollow</button>
+        if (!followingResponse.ok) throw new Error('Failed to load following');
+        const followingData = await followingResponse.json();
+
+        // Load recommended users
+        const recommendedResponse = await fetch('/api/recommendations', {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!recommendedResponse.ok) throw new Error('Failed to load recommended');
+        const recommendedData = await recommendedResponse.json();
+
+        // Display following
+        const followingContainer = document.querySelector('#followingView .following-list');
+        if (followingContainer) {
+            if (followingData.following && followingData.following.length > 0) {
+                followingContainer.innerHTML = followingData.following.map(user => `
+                    <div class="user-card" data-user-id="${user.id}">
+                        <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
+                            ${user.username.charAt(0).toUpperCase()}
                         </div>
-                    `).join('');
-                }
-
-                // Load recommendations
-                loadRecommendations();
-
-            } catch (error) {
-                console.error('Error loading following:', error);
-            }
-        }
-
-        async function loadFollowers() {
-            try {
-                const response = await apiCall('/followers');
-                const list = document.getElementById('followersList');
-
-                if (!response || !response.followers || response.followers.length === 0) {
-                    list.innerHTML = '<p style="text-align: center; color: var(--gray);">You have no followers yet</p>';
-                } else {
-                    list.innerHTML = response.followers.map(user => `
-                        <div class="follow-card">
-                            <div class="follow-user-info" onclick="viewUserProfile(${user.id})">
-                                <div class="avatar">${user.username[0].toUpperCase()}</div>
-                                <div>
-                                    <div style="font-weight: 600;">${user.username}</div>
-                                    <div style="font-size: 14px; color: var(--gray);">${user.selected_city || 'No city set'}</div>
-                                </div>
-                            </div>
-                            ${!user.is_following_back ?
-                                `<button class="follow-btn" onclick="followUser(${user.id})">Follow Back</button>` :
-                                `<span style="color: var(--success);">✓ Following</span>`
-                            }
+                        <div class="user-info">
+                            <div class="user-name">${user.username}</div>
+                            <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
                         </div>
-                    `).join('');
-                }
+                        <button class="btn-secondary unfollow-btn" data-user-id="${user.id}">
+                            Unfollow
+                        </button>
+                    </div>
+                `).join('');
 
-            } catch (error) {
-                console.error('Error loading followers:', error);
+                // Add click handlers to view profiles
+                followingContainer.querySelectorAll('.user-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('unfollow-btn')) {
+                            const userId = card.dataset.userId;
+                            viewUserProfile(parseInt(userId));
+                        }
+                    });
+                });
+
+                // Add unfollow handlers
+                followingContainer.querySelectorAll('.unfollow-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const userId = btn.dataset.userId;
+                        await unfollowUser(parseInt(userId));
+                        loadFollowing();
+                    });
+                });
+            } else {
+                followingContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">You are not following anyone yet. Check out recommended users below!</p>';
             }
         }
 
-        async function loadRecommendations() {
-            try {
-                const response = await apiCall('/recommendations');
-                const list = document.getElementById('recommendationsList');
+        // Display recommended
+        const recommendedContainer = document.querySelector('#followingView .recommended-list');
+        if (recommendedContainer) {
+            const recommendations = recommendedData.recommendations || [];
 
-                if (!response || !response.recommendations || response.recommendations.length === 0) {
-                    list.innerHTML = '<p style="text-align: center; color: var(--gray);">No recommendations at this time</p>';
-                } else {
-                    list.innerHTML = response.recommendations.slice(0, 5).map(user => `
-                        <div class="follow-card">
-                            <div class="follow-user-info" onclick="viewUserProfile(${user.id})">
-                                <div class="avatar">${user.username[0].toUpperCase()}</div>
-                                <div>
-                                    <div style="font-weight: 600;">${user.username}</div>
-                                    <div style="font-size: 14px; color: var(--gray);">${user.selected_city || 'No city set'}</div>
-                                    <div class="recommendation-reason">${user.reason}</div>
-                                </div>
-                            </div>
-                            <button class="follow-btn" onclick="followUser(${user.id})">Follow</button>
+            if (recommendations && recommendations.length > 0) {
+                recommendedContainer.innerHTML = recommendations.map(user => `
+                    <div class="user-card">
+                        <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
+                            ${user.username.charAt(0).toUpperCase()}
                         </div>
-                    `).join('');
-                }
+                        <div class="user-info">
+                            <div class="user-name">${user.username}</div>
+                            <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
+                            ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${user.reason}</div>` : ''}
+                        </div>
+                        <button class="btn-primary follow-btn" data-user-id="${user.id}">
+                            Follow
+                        </button>
+                    </div>
+                `).join('');
 
-            } catch (error) {
-                console.error('Error loading recommendations:', error);
+                // Add follow handlers
+                recommendedContainer.querySelectorAll('.follow-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const userId = btn.dataset.userId;
+                        await followUser(parseInt(userId));
+                        loadFollowing();
+                    });
+                });
+            } else {
+                recommendedContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No recommendations available. Try updating your city in your profile!</p>';
             }
         }
+    } catch (error) {
+        console.error('Error loading following:', error);
+        showNotification('Failed to load following', 'error');
+    }
+}
 
-        async function followUser(userId) {
-            try {
-                await apiCall(`/follow/${userId}`, 'POST');
-                loadFollowing();
-                loadFollowers();
-            } catch (error) {
-                alert('Error following user');
+
+
+    async function loadFollowers() {
+    try {
+        const response = await fetch('/api/followers', {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to load followers');
+        const data = await response.json();
+
+        const followersContainer = document.querySelector('#followersView .followers-list');
+        if (followersContainer) {
+            if (data.followers && data.followers.length > 0) {
+                followersContainer.innerHTML = data.followers.map(user => `
+                    <div class="user-card" data-user-id="${user.id}">
+                        <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
+                            ${user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">${user.username}</div>
+                            <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
+                        </div>
+                        ${user.is_following_back ? '<span style="color: var(--success); font-size: 0.875rem;">Following back</span>' : ''}
+                    </div>
+                `).join('');
+
+                // Add click handlers to view profiles
+                followersContainer.querySelectorAll('.user-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const userId = card.dataset.userId;
+                        viewUserProfile(parseInt(userId));
+                    });
+                });
+            } else {
+                followersContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No one is following you yet.</p>';
             }
         }
+    } catch (error) {
+        console.error('Error loading followers:', error);
+        showNotification('Failed to load followers', 'error');
+    }
+}
 
-        async function unfollowUser(userId) {
-            if (confirm('Are you sure you want to unfollow this user?')) {
-                try {
-                    await apiCall(`/unfollow/${userId}`, 'POST');
-                    loadFollowing();
-                } catch (error) {
-                    alert('Error unfollowing user');
-                }
+async function followUser(userId) {
+    try {
+        const response = await fetch(`/api/follow/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to follow user');
+        showNotification('Successfully followed user', 'success');
+    } catch (error) {
+        console.error('Error following user:', error);
+        showNotification('Failed to follow user', 'error');
+    }
+}
+
+async function unfollowUser(userId) {
+    try {
+        const response = await fetch(`/api/unfollow/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to unfollow user');
+        showNotification('Successfully unfollowed user', 'success');
+    } catch (error) {
+        console.error('Error unfollowing user:', error);
+        showNotification('Failed to unfollow user', 'error');
+    }
+}
+
+async function viewUserProfile(userId) {
+    try {
+        viewingUserId = userId;
+
+        // Get current user ID from session or local storage
+        const sessionResponse = await fetch('/api/profile', {credentials: 'include'});
+        if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
+            currentUserId = sessionData.id || sessionData.user_id;
+        }
+
+        // Show profile view first
+        showView('profile');
+
+    } catch (error) {
+        console.error('Error viewing user profile:', error);
+        showNotification('Failed to load user profile', 'error');
+    }
+}
+
+
+async function loadUserProfileView(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/profile`, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                showNotification('You must follow this user to view their profile', 'error');
+                showView('following');
+                return;
             }
+            throw new Error('Failed to load profile');
         }
 
-        async function viewUserProfile(userId) {
-            // This would open a modal or navigate to user profile
-            // Implementation depends on your UI preferences
-            window.location.href = `/user/${userId}`;
+        const userData = await response.json();
+
+        // Update header
+        const profileHeader = document.querySelector('#profileView h2');
+        if (profileHeader) {
+            profileHeader.textContent = `${userData.username}'s Profile`;
         }
 
+        // Hide edit buttons
+        document.querySelectorAll('#profileView .btn-primary, #profileView .btn-secondary').forEach(btn => {
+            if (btn.textContent.includes('Edit') || btn.textContent.includes('Save') || btn.textContent.includes('Add')) {
+                btn.style.display = 'none';
+            }
+        });
+
+        // Display profile info (update existing profile display elements)
+        const bioElement = document.querySelector('#profileView .bio, #profileView [data-field="bio"]');
+        if (bioElement) bioElement.textContent = userData.bio || 'No bio available';
+
+        const cityElement = document.querySelector('#profileView .city, #profileView [data-field="city"]');
+        if (cityElement) cityElement.textContent = userData.city || 'Unknown';
+
+        // Add back button
+        addBackToFollowingButton('profileView');
+
+    } catch (error) {
+        console.error('Error loading user profile:', error);
+        showNotification('Failed to load user profile', 'error');
+    }
+}
+
+
+
+async function loadUserFeed(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/posts`, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                showNotification('You must follow this user to view their feed', 'error');
+                showView('following');
+                return;
+            }
+            throw new Error('Failed to load feed');
+        }
+
+        const data = await response.json();
+
+        // Get username for header
+        const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+        if (profileResponse.ok) {
+            const user = await profileResponse.json();
+            const feedHeader = document.querySelector('#feedView h2');
+            if (feedHeader) feedHeader.textContent = `${user.username}'s Feed`;
+        }
+
+        // Hide post creation form
+        const postForm = document.querySelector('#feedView form, #feedView .post-creation');
+        if (postForm) postForm.style.display = 'none';
+
+        // Display posts
+        const feedContainer = document.querySelector('#feedView .feed-posts, #feedView .posts-container, #feedView .feed-content');
+        if (!feedContainer) {
+            console.error('Feed container not found');
+            return;
+        }
+
+        if (data.posts && data.posts.length > 0) {
+            feedContainer.innerHTML = data.posts.map(post => `
+                <div class="post-card">
+                    <div class="post-header">
+                        <span class="post-category">${post.category || 'General'}</span>
+                        <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div class="post-content">${post.content}</div>
+                    ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
+                    <div class="post-footer" style="margin-top: 1rem; display: flex; justify-content: space-between;">
+                        <div class="post-stats">
+                            <span>❤️ ${post.likes_count || 0}</span>
+                            <span style="margin-left: 1rem;">💬 ${post.comments_count || 0}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            feedContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No posts yet.</p>';
+        }
+
+        // Add back button
+        addBackToFollowingButton('feedView');
+
+    } catch (error) {
+        console.error('Error loading user feed:', error);
+        showNotification('Failed to load user feed', 'error');
+    }
+}
+
+
+async function loadUserCircles(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/circles`, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                showNotification('You must follow this user to view their circles', 'error');
+                showView('following');
+                return;
+            }
+            throw new Error('Failed to load circles');
+        }
+
+        const data = await response.json();
+
+        // Get username for header
+        const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+        if (profileResponse.ok) {
+            const user = await profileResponse.json();
+            const circlesHeader = document.querySelector('#circlesView h2');
+            if (circlesHeader) circlesHeader.textContent = `${user.username}'s Circles`;
+        }
+
+        // Hide add circle button
+        document.querySelectorAll('#circlesView .btn-primary, #circlesView .btn-secondary').forEach(btn => {
+            if (btn.textContent.includes('Add') || btn.textContent.includes('Create') || btn.textContent.includes('New')) {
+                btn.style.display = 'none';
+            }
+        });
+
+        // Display circles
+        const circlesContainer = document.querySelector('#circlesView .circles-grid, #circlesView .circles-container, #circlesView .circles-list');
+        if (!circlesContainer) {
+            console.error('Circles container not found');
+            return;
+        }
+
+        if (data.circles && data.circles.length > 0) {
+            circlesContainer.innerHTML = data.circles.map(circle => `
+                <div class="circle-card" style="border-left: 4px solid ${circle.color || '#6B46C1'}; padding: 1rem; background: white; border-radius: 8px; margin-bottom: 1rem;">
+                    <h3 style="margin-bottom: 0.5rem;">${circle.name}</h3>
+                    <p style="color: var(--gray); margin-bottom: 0.5rem;">${circle.description || 'No description'}</p>
+                    <div class="circle-stats" style="font-size: 0.875rem; color: var(--gray);">
+                        <span>👥 ${circle.member_count} members</span>
+                        <span style="margin-left: 1rem;">📅 ${new Date(circle.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            circlesContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No circles yet.</p>';
+        }
+
+        // Add back button
+        addBackToFollowingButton('circlesView');
+
+    } catch (error) {
+        console.error('Error loading user circles:', error);
+        showNotification('Failed to load user circles', 'error');
+    }
+}
+
+
+async function loadUserParameters(userId) {
+    try {
+        // Get date range (last 30 days)
+        const endDate = new Date().toISOString().split('T')[0];
+        const startDate = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+
+        const response = await fetch(`/api/users/${userId}/parameters?start_date=${startDate}&end_date=${endDate}`, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                showNotification('You must follow this user to view their wellness data', 'error');
+                showView('following');
+                return;
+            }
+            throw new Error('Failed to load parameters');
+        }
+
+        const data = await response.json();
+
+        // Get username for header
+        const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+        if (profileResponse.ok) {
+            const user = await profileResponse.json();
+            const parametersHeader = document.querySelector('#parametersView h2, #trackingView h2');
+            if (parametersHeader) parametersHeader.textContent = `${user.username}'s Wellness Parameters`;
+        }
+
+        // Hide input forms
+        document.querySelectorAll('#parametersView form, #parametersView .parameter-inputs, #trackingView form, #trackingView .parameter-inputs').forEach(form => {
+            form.style.display = 'none';
+        });
+
+        // Display parameters
+        const parametersContainer = document.querySelector('#parametersView .parameters-display, #parametersView .parameters-list, #trackingView .parameters-display, #trackingView .parameters-list');
+        if (!parametersContainer) {
+            console.error('Parameters container not found');
+            return;
+        }
+
+        if (data.parameters && data.parameters.length > 0) {
+            parametersContainer.innerHTML = data.parameters.map(param => `
+                <div class="parameter-card" style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid var(--primary);">
+                    <div class="parameter-date" style="font-weight: 600; margin-bottom: 0.5rem;">${new Date(param.date).toLocaleDateString()}</div>
+                    <div class="parameter-values" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem;">
+                        ${param.mood ? `<div class="parameter-item"><span style="color: var(--gray);">Mood:</span> <span style="font-weight: 600;">${param.mood}/4</span></div>` : ''}
+                        ${param.sleep ? `<div class="parameter-item"><span style="color: var(--gray);">Sleep:</span> <span style="font-weight: 600;">${param.sleep}/4</span></div>` : ''}
+                        ${param.exercise ? `<div class="parameter-item"><span style="color: var(--gray);">Exercise:</span> <span style="font-weight: 600;">${param.exercise}/4</span></div>` : ''}
+                        ${param.stress ? `<div class="parameter-item"><span style="color: var(--gray);">Stress:</span> <span style="font-weight: 600;">${param.stress}/4</span></div>` : ''}
+                        ${param.social ? `<div class="parameter-item"><span style="color: var(--gray);">Social:</span> <span style="font-weight: 600;">${param.social}/4</span></div>` : ''}
+                    </div>
+                    ${param.notes ? `<div class="parameter-notes" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--light); color: var(--gray);">${param.notes}</div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            parametersContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No parameters recorded yet.</p>';
+        }
+
+        // Add back button
+        const viewId = document.getElementById('parametersView') ? 'parametersView' : 'trackingView';
+        addBackToFollowingButton(viewId);
+
+    } catch (error) {
+        console.error('Error loading user parameters:', error);
+        showNotification('Failed to load user parameters', 'error');
+    }
+}
+
+
+function addBackToFollowingButton(viewId) {
+    const view = document.getElementById(viewId);
+    if (!view) return;
+
+    // Check if back button already exists
+    if (view.querySelector('.back-to-following-btn')) return;
+
+    const backButton = document.createElement('button');
+    backButton.className = 'btn-secondary back-to-following-btn';
+    backButton.textContent = '← Back to Following';
+    backButton.style.marginBottom = '1rem';
+    backButton.onclick = () => {
+        viewingUserId = null;
+        // Show all edit buttons again
+        document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
+            btn.style.display = '';
+        });
+        // Show post forms again
+        document.querySelectorAll('form, .post-creation, .parameter-inputs').forEach(form => {
+            form.style.display = '';
+        });
+        // Reset headers
+        const profileHeader = document.querySelector('#profileView h2');
+        if (profileHeader) profileHeader.textContent = 'Profile';
+        const feedHeader = document.querySelector('#feedView h2');
+        if (feedHeader) feedHeader.textContent = 'Feed';
+        const circlesHeader = document.querySelector('#circlesView h2');
+        if (circlesHeader) circlesHeader.textContent = 'Circles';
+        const parametersHeader = document.querySelector('#parametersView h2, #trackingView h2');
+        if (parametersHeader) parametersHeader.textContent = 'Wellness Parameters';
+
+        showView('following');
+    };
+
+    view.insertBefore(backButton, view.firstChild);
+}
 
 
 
