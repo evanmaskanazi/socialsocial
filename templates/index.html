@@ -2254,11 +2254,11 @@ function handleParametersClick() {
                 viewingUserId = null;
                 showView('following');
         }
-    } else {
+  } else {
         // Viewing own profile
         switch(viewName) {
             case 'feed':
-               viewingUserId = null; // Reset viewing user when returning to own feed
+                viewingUserId = null; // Reset viewing user when returning to own feed
                 restoreFeedEditMode(); // Restore editable mode
                 initFeedCalendar();
                 break;
@@ -2266,6 +2266,10 @@ function handleParametersClick() {
                 loadProfile();
                 break;
             case 'circles':
+                // Reset viewingUserId if returning to own circles
+                if (viewingUserId === null || viewingUserId === currentUserId) {
+                    viewingUserId = null;
+                }
                 loadCircles();
                 break;
             case 'messages':
@@ -2613,50 +2617,121 @@ function showNotification(message, type = 'info') {
         });
 
         // Circles Functions
-        async function loadCircles() {
-            try {
-                const response = await apiCall('/circles');
-                if (!response) return;
+       async function loadCircles() {
+    try {
+        let response;
 
-                updateCircleDisplay('general', response.general || []);
-                updateCircleDisplay('close_friends', response.close_friends || []);
-                updateCircleDisplay('family', response.family || []);
-            } catch (error) {
-                console.error('Failed to load circles:', error);
+        // Check if viewing another user's circles
+        if (viewingUserId !== null && viewingUserId !== currentUserId) {
+            // Load another user's circles (read-only)
+            response = await fetch(`/api/users/${viewingUserId}/circles`, {
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                if (response.status === 403) {
+                    showNotification('You must follow this user to view their circles', 'error');
+                    return;
+                }
+                throw new Error('Failed to load user circles');
             }
+
+            response = await response.json();
+
+            // Hide add/remove functionality when viewing another user
+            hideCircleEditControls();
+        } else {
+            // Load own circles (editable)
+            response = await apiCall('/circles');
+            if (!response) return;
+
+            // Show add/remove functionality for own circles
+            showCircleEditControls();
         }
 
-        function updateCircleDisplay(type, members) {
-            let containerId, countId;
+        updateCircleDisplay('general', response.general || []);
+        updateCircleDisplay('close_friends', response.close_friends || []);
+        updateCircleDisplay('family', response.family || []);
+    } catch (error) {
+        console.error('Failed to load circles:', error);
+    }
+}
 
-            if (type === 'general') {
-                containerId = 'generalMembers';
-                countId = 'generalCount';
-            } else if (type === 'close_friends') {
-                containerId = 'closeFriendsMembers';
-                countId = 'closeFriendsCount';
-            } else {
-                containerId = 'familyMembers';
-                countId = 'familyCount';
-            }
+ function hideCircleEditControls() {
+    // Hide search box and add buttons
+    const searchBox = document.getElementById('userSearchInput');
+    const searchResults = document.getElementById('searchResults');
 
-            const container = document.getElementById(containerId);
-            const count = document.getElementById(countId);
+    if (searchBox) {
+        searchBox.style.display = 'none';
+        searchBox.parentElement.style.display = 'none';
+    }
+    if (searchResults) {
+        searchResults.style.display = 'none';
+    }
 
-            count.textContent = members.length;
+    // Hide all remove buttons
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.style.display = 'none';
+    });
+}
 
-            if (members.length === 0) {
-                container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${(window.i18n && window.i18n.t ? window.i18n.t('circles.no_members') : 'No members yet')}</p>`;
-            } else {
-                container.innerHTML = members.map(member => `
-                    <div class="member-item">
-                        <div class="member-avatar">${member.username[0].toUpperCase()}</div>
-                        <span class="member-name">${member.username}</span>
-                        <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${(window.i18n && window.i18n.t ? window.i18n.t('circles.remove') : 'Remove')}</button>
-                    </div>
-                `).join('');
-            }
-        }
+function showCircleEditControls() {
+    // Show search box and add buttons
+    const searchBox = document.getElementById('userSearchInput');
+
+    if (searchBox) {
+        searchBox.style.display = '';
+        searchBox.parentElement.style.display = '';
+    }
+
+    // Show all remove buttons
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.style.display = '';
+    });
+}
+
+
+
+
+
+
+
+
+   function updateCircleDisplay(type, members) {
+    let containerId, countId;
+
+    if (type === 'general') {
+        containerId = 'generalMembers';
+        countId = 'generalCount';
+    } else if (type === 'close_friends') {
+        containerId = 'closeFriendsMembers';
+        countId = 'closeFriendsCount';
+    } else {
+        containerId = 'familyMembers';
+        countId = 'familyCount';
+    }
+
+    const container = document.getElementById(containerId);
+    const count = document.getElementById(countId);
+
+    count.textContent = members.length;
+
+    if (members.length === 0) {
+        container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${(window.i18n && window.i18n.t ? window.i18n.t('circles.no_members') : 'No members yet')}</p>`;
+    } else {
+        // Check if viewing another user's circles (read-only mode)
+        const isReadOnly = viewingUserId !== null && viewingUserId !== currentUserId;
+
+        container.innerHTML = members.map(member => `
+            <div class="member-item">
+                <div class="member-avatar">${member.username[0].toUpperCase()}</div>
+                <span class="member-name">${member.username}</span>
+                ${!isReadOnly ? `<button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${(window.i18n && window.i18n.t ? window.i18n.t('circles.remove') : 'Remove')}</button>` : ''}
+            </div>
+        `).join('');
+    }
+}
 
         async function searchUsers() {
             const query = document.getElementById('userSearchInput').value;
