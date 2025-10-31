@@ -1752,11 +1752,10 @@ def get_user_posts(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/api/users/<int:user_id>/circles', methods=['GET'])
 @login_required
 def get_user_circles(user_id):
-    """Get another user's circles (read-only)"""
+    """Get another user's circles (read-only) - returns same format as /api/circles"""
     try:
         current_user_id = session.get('user_id')
 
@@ -1769,26 +1768,35 @@ def get_user_circles(user_id):
         if not is_following and user_id != current_user_id:
             return jsonify({'error': 'Must be following user to view circles'}), 403
 
-        # Get users in each circle type for this user
-        circles_data = []
-        for circle_type in ['family', 'close_friends', 'general']:
-            circle_members = Circle.query.filter_by(
-                user_id=user_id,
-                circle_type=circle_type
-            ).all()
+        # Get all circles for this user - SQLAlchemy 2.0 style
+        general_stmt = select(Circle).filter_by(user_id=user_id, circle_type='general')
+        general = db.session.execute(general_stmt).scalars().all()
 
-            circles_data.append({
-                'id': f'{user_id}_{circle_type}',
-                'name': circle_type.replace('_', ' ').title(),
-                'description': f'{circle_type.replace("_", " ").title()} circle',
-                'color': '#8B5CF6' if circle_type == 'family' else '#EC4899' if circle_type == 'close_friends' else '#3B82F6',
-                'member_count': len(circle_members),
-                'created_at': datetime.utcnow().isoformat()
-            })
+        close_friends_stmt = select(Circle).filter_by(user_id=user_id, circle_type='close_friends')
+        close_friends = db.session.execute(close_friends_stmt).scalars().all()
 
-        return jsonify({'circles': circles_data})
+        family_stmt = select(Circle).filter_by(user_id=user_id, circle_type='family')
+        family = db.session.execute(family_stmt).scalars().all()
+
+        def get_user_info(circle):
+            user = db.session.get(User, circle.circle_user_id)
+            if user:
+                return {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email
+                }
+            return None
+
+        return jsonify({
+            'general': [info for c in general if (info := get_user_info(c))],
+            'close_friends': [info for c in close_friends if (info := get_user_info(c))],
+            'family': [info for c in family if (info := get_user_info(c))]
+        })
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Get user circles error: {str(e)}")
+        return jsonify({'error': 'Failed to get circles'}), 500
 
 
 @app.route('/api/users/<int:user_id>/parameters', methods=['GET'])
