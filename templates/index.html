@@ -3888,12 +3888,13 @@ async function loadUserCircles(userId) {
         const closeFriendsCount = document.getElementById('closeFriendsCount');
         const familyCount = document.getElementById('familyCount');
 
-        // Find circles by type from the response
-        const generalCircle = data.circles ? data.circles.find(c => c.name === 'general' || c.circle_type === 'general') : null;
-        const closeFriendsCircle = data.circles ? data.circles.find(c => c.name === 'close_friends' || c.circle_type === 'close_friends') : null;
-        const familyCircle = data.circles ? data.circles.find(c => c.name === 'family' || c.circle_type === 'family') : null;
+        // FIXED: Backend now returns {general: [...], close_friends: [...], family: [...]}
+        // Convert to the format this function expects
+        const generalCircle = {members: data.general || []};
+        const closeFriendsCircle = {members: data.close_friends || []};
+        const familyCircle = {members: data.family || []};
 
-        // Helper function to display members read-only
+        // Helper function to display members read-only (UNCHANGED)
         function displayMembersReadOnly(container, countElement, circle) {
             if (!container || !countElement) return;
 
