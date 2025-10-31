@@ -1354,7 +1354,7 @@
                 <span class="mobile-nav-icon">⭕</span>
                 <span class="mobile-nav-label" data-i18n="menu.circles">Circles</span>
             </li>
-            <li class="mobile-nav-item" data-view="messages" onclick="showView('messages')">
+            <li class="mobile-nav-item" id="mobileMessagesNav" data-view="messages" onclick="showView('messages')">
                 <span class="mobile-nav-icon">💬</span>
                 <span class="mobile-nav-label" data-i18n="menu.messages">Messages</span>
             </li>
@@ -1388,7 +1388,7 @@
                     <li class="sidebar-item" data-view="circles" data-i18n="menu.circles">
                         👥 Circles
                     </li>
-                    <li class="sidebar-item" data-view="messages" data-i18n="menu.messages">
+                    <li class="sidebar-item" id="desktopMessagesNav" data-view="messages" data-i18n="menu.messages">
                         💬 Messages
                     </li>
                    <li class="sidebar-item" data-view="tracking" onclick="handleParametersClick()" style="cursor: pointer;">
@@ -2146,6 +2146,7 @@ function handleParametersClick() {
     if (!viewsToMaintainUser.includes(viewName)) {
         if (viewingUserId !== null) {
             viewingUserId = null;
+            updateMessagesNavVisibility();
 
             // Re-enable profile fields
             const bioElement = document.getElementById('profileBio');
@@ -2370,7 +2371,7 @@ function handleParametersClick() {
         }
 
        function selectFeedDate(day) {
-    feedSelectedDate = `${feedCurrentYear}-${String(feedCurrentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    feedSelectedDate = `${feedCurrentMonth.getFullYear()}-${String(feedCurrentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     renderFeedCalendar();
     updateFeedSelectedDateDisplay();
 
@@ -3534,7 +3535,11 @@ async function viewUserProfile(userId) {
         }
 
         // Show profile view first
-        showView('profile');
+       // Show profile view first
+showView('profile');
+
+// Hide messages tab when viewing another user
+updateMessagesNavVisibility();
 
     } catch (error) {
         console.error('Error viewing user profile:', error);
@@ -3640,6 +3645,27 @@ async function loadUserProfileView(userId) {
         showNotification('Failed to load user profile', 'error');
     }
 }
+
+
+
+// Hide or show messages nav based on viewing context
+function updateMessagesNavVisibility() {
+    const mobileMessagesNav = document.getElementById('mobileMessagesNav');
+    const desktopMessagesNav = document.getElementById('desktopMessagesNav');
+
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        // Viewing another user - hide messages
+        if (mobileMessagesNav) mobileMessagesNav.style.display = 'none';
+        if (desktopMessagesNav) desktopMessagesNav.style.display = 'none';
+    } else {
+        // Viewing own profile - show messages
+        if (mobileMessagesNav) mobileMessagesNav.style.display = '';
+        if (desktopMessagesNav) desktopMessagesNav.style.display = '';
+    }
+}
+
+
+
 
 
 
