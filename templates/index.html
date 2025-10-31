@@ -1358,7 +1358,7 @@
                 <span class="mobile-nav-icon">💬</span>
                 <span class="mobile-nav-label" data-i18n="menu.messages">Messages</span>
             </li>
-            <li class="mobile-nav-item" data-view="tracking" onclick="window.location.href='/parameters'">
+            <li class="mobile-nav-item" data-view="tracking" onclick="handleParametersClick()">
     <span class="mobile-nav-icon">📊</span>
     <span class="mobile-nav-label" data-i18n="menu.parameters">Parameters</span>
 </li>
@@ -1391,7 +1391,7 @@
                     <li class="sidebar-item" data-view="messages" data-i18n="menu.messages">
                         💬 Messages
                     </li>
-                   <li class="sidebar-item" data-view="tracking" onclick="window.location.href='/parameters'" style="cursor: pointer;">
+                   <li class="sidebar-item" data-view="tracking" onclick="handleParametersClick()" style="cursor: pointer;">
     📊 <span data-i18n="menu.parameters">Parameters</span>
 </li>
 
@@ -2061,31 +2061,82 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
             }
         });
 
-      switch(view) {
-            case 'feed':
-                initFeedCalendar();
-                break;
-            case 'profile':
-                loadProfile();
-                break;
-            case 'circles':
-                loadCircles();
-                break;
-            case 'messages':
-                loadConversations();
-                break;
-            case 'tracking':
-                initCalendar();
-                break;
-            case 'following':
-                loadFollowing();
-                break;
-            case 'followers':
-                loadFollowers();
-                break;
-        }
+  switch(view) {
+                    case 'feed':
+                        // Check if viewing another user
+                        if (viewingUserId !== null && viewingUserId !== currentUserId) {
+                            loadUserFeed(viewingUserId);
+                        } else {
+                            initFeedCalendar();
+                        }
+                        break;
+                    case 'profile':
+                        // Check if viewing another user
+                        if (viewingUserId !== null && viewingUserId !== currentUserId) {
+                            loadUserProfileView(viewingUserId);
+                        } else {
+                            loadProfile();
+                        }
+                        break;
+                    case 'circles':
+                        // Check if viewing another user
+                        if (viewingUserId !== null && viewingUserId !== currentUserId) {
+                            loadUserCircles(viewingUserId);
+                        } else {
+                            loadCircles();
+                        }
+                        break;
+                    case 'messages':
+                        loadConversations();
+                        break;
+                    case 'tracking':
+                        // Check if viewing another user
+                        if (viewingUserId !== null && viewingUserId !== currentUserId) {
+                            loadUserParameters(viewingUserId);
+                        } else {
+                            // This shouldn't be reached since tracking tab now uses handleParametersClick()
+                            // But keep as fallback
+                            window.location.href = '/parameters';
+                        }
+                        break;
+                    case 'following':
+                        // Check if viewing another user
+                        if (viewingUserId !== null && viewingUserId !== currentUserId) {
+                            loadUserFollowing(viewingUserId);
+                        } else {
+                            loadFollowing();
+                        }
+                        break;
+                    case 'followers':
+                        // Check if viewing another user
+                        if (viewingUserId !== null && viewingUserId !== currentUserId) {
+                            loadUserFollowers(viewingUserId);
+                        } else {
+                            loadFollowers();
+                        }
+                        break;
+                }
     });
 });
+
+
+
+// Handle parameters click - redirect to /parameters page for own data, show trackingView for other users
+function handleParametersClick() {
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        // Viewing another user - stay on this page and show tracking view
+        showView('tracking');
+    } else {
+        // Viewing own parameters - redirect to full parameters page
+        window.location.href = '/parameters';
+    }
+}
+
+
+
+
+
+
 
  function showView(viewName) {
     // Only reset viewing mode when navigating to views that should go back to own account
