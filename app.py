@@ -239,6 +239,7 @@ class Post(db.Model):
     image_url = db.Column(db.String(500))
     likes = db.Column(db.Integer, default=0)
     circle_id = db.Column(db.Integer, db.ForeignKey('circles.id'))
+    visibility = db.Column(db.String(50), default='general')
     is_published = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -369,6 +370,27 @@ class Follow(db.Model):
     __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id', name='unique_follow'),)
 
 
+def ensure_database_schema():
+    """Automatically ensure all required columns exist"""
+    try:
+        with db.engine.connect() as conn:
+            # Check and add visibility column to posts table
+            result = conn.execute(text("PRAGMA table_info(posts)"))
+            columns = [row[1] for row in result]
+
+            if 'visibility' not in columns:
+                logger.info("Adding visibility column to posts table...")
+                conn.execute(text("ALTER TABLE posts ADD COLUMN visibility VARCHAR(50) DEFAULT 'general'"))
+                conn.commit()
+                logger.info("Visibility column added successfully")
+
+    except Exception as e:
+        logger.error(f"Database schema check error: {str(e)}")
+
+
+
+
+
 # =====================
 # DATABASE INITIALIZATION
 # =====================
@@ -384,6 +406,7 @@ def init_database():
             if not tables:
                 logger.info("No tables found, creating database schema...")
                 db.create_all()
+                ensure_database_schema()
                 logger.info("Database schema created successfully")
                 create_admin_user()
                 create_test_users()  # ← ADD THIS LINE
@@ -394,6 +417,7 @@ def init_database():
 
                 # Fix all schema issues
                 fix_all_schema_issues()
+                ensure_database_schema()
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()  # ADD THIS LINE
@@ -1745,18 +1769,24 @@ def get_user_circles(user_id):
         if not is_following and user_id != current_user_id:
             return jsonify({'error': 'Must be following user to view circles'}), 403
 
-        circles = Circle.query.filter_by(creator_id=user_id).all()
+        # Get users in each circle type for this user
+        circles_data = []
+        for circle_type in ['family', 'close_friends', 'general']:
+            circle_members = Circle.query.filter_by(
+                user_id=user_id,
+                circle_type=circle_type
+            ).all()
 
-        return jsonify({
-            'circles': [{
-                'id': circle.id,
-                'name': circle.name,
-                'description': circle.description,
-                'color': circle.color,
-                'member_count': len(circle.members),
-                'created_at': circle.created_at.isoformat() if circle.created_at else None
-            } for circle in circles]
-        })
+            circles_data.append({
+                'id': f'{user_id}_{circle_type}',
+                'name': circle_type.replace('_', ' ').title(),
+                'description': f'{circle_type.replace("_", " ").title()} circle',
+                'color': '#8B5CF6' if circle_type == 'family' else '#EC4899' if circle_type == 'close_friends' else '#3B82F6',
+                'member_count': len(circle_members),
+                'created_at': datetime.utcnow().isoformat()
+            })
+
+        return jsonify({'circles': circles_data})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1781,7 +1811,7 @@ def get_user_parameters(user_id):
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
 
-        query = WellnessParameter.query.filter_by(user_id=user_id)
+        query = SavedParameters.query.filter_by(user_id=user_id)
 
         if start_date:
             query = query.filter(WellnessParameter.date >= start_date)
@@ -1793,12 +1823,12 @@ def get_user_parameters(user_id):
         return jsonify({
             'parameters': [{
                 'id': param.id,
-                'date': param.date.isoformat() if param.date else None,
+                'date': param.date if isinstance(param.date, str) else param.date.isoformat(),
                 'mood': param.mood,
-                'sleep': param.sleep,
-                'exercise': param.exercise,
-                'stress': param.stress,
-                'social': param.social,
+                'energy': param.energy,
+                'sleep_quality': param.sleep_quality,
+                'physical_activity': param.physical_activity,
+                'anxiety': param.anxiety,
                 'notes': param.notes
             } for param in parameters]
         })
@@ -3251,12 +3281,10 @@ def get_recommendations():
         return jsonify({'error': 'Failed to get recommendations'}), 500
 
 
-
-
 @app.route('/api/user/<int:user_id>/feed/<date_str>')
 @login_required
 def get_user_feed(user_id, date_str):
-    """Get another user's feed for a specific date (read-only)"""
+    """Get another user's feed for a specific date (read-only with circle permissions)"""
     try:
         current_user_id = session.get('user_id')
         current_user = db.session.get(User, current_user_id)
@@ -3273,14 +3301,41 @@ def get_user_feed(user_id, date_str):
             db.func.date(Post.created_at) == date_str
         ).first()
 
-        if post:
-            return jsonify({
-                'content': post.content,
-                'date': date_str,
-                'updated_at': post.updated_at.isoformat() if post.updated_at else None
-            })
-        else:
+        if not post:
             return jsonify({'content': '', 'date': date_str})
+
+        # Check circle permission if viewing another user's post
+        if user_id != current_user_id:
+            post_visibility = post.visibility if post.visibility else 'general'
+
+            if post_visibility == 'family':
+                # Must be in family circle
+                in_circle = Circle.query.filter_by(
+                    user_id=user_id,
+                    circle_user_id=current_user_id,
+                    circle_type='family'
+                ).first() is not None
+
+                if not in_circle:
+                    return jsonify({'error': 'This post is only visible to family members'}), 403
+
+            elif post_visibility == 'close_friends':
+                # Must be in family OR close_friends circle
+                in_circle = Circle.query.filter(
+                    Circle.user_id == user_id,
+                    Circle.circle_user_id == current_user_id,
+                    Circle.circle_type.in_(['family', 'close_friends'])
+                ).first() is not None
+
+                if not in_circle:
+                    return jsonify({'error': 'This post is only visible to close friends'}), 403
+
+        return jsonify({
+            'content': post.content,
+            'date': date_str,
+            'visibility': post.visibility if post.visibility else 'general',
+            'updated_at': post.updated_at.isoformat() if post.updated_at else None
+        })
 
     except Exception as e:
         logger.error(f"Get user feed error: {str(e)}")
