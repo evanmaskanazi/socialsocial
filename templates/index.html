@@ -3798,8 +3798,19 @@ async function viewUserParameters(userId, username) {
 }
 
 function showUserParametersModal(userId, username, parameters, startDate, endDate) {
+    console.log('[DEBUG] showUserParametersModal called');
+    console.log('[DEBUG] Parameters:', parameters.length, 'entries');
+
+    // Remove any existing modal first
+    const existing = document.getElementById('userParametersModal');
+    if (existing) {
+        console.log('[DEBUG] Removing existing modal');
+        existing.remove();
+    }
+
     const modalHtml = `
         <div id="userParametersModal" class="modal" style="display: flex;">
+
             <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header">
                     <h2>${username}'s Parameters</h2>
@@ -3818,15 +3829,18 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
         </div>
     `;
 
-    const existing = document.getElementById('userParametersModal');
-    if (existing) existing.remove();
-
+    console.log('[DEBUG] Inserting modal HTML');
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
     const modal = document.getElementById('userParametersModal');
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeUserParametersModal();
-    });
+    console.log('[DEBUG] Modal element:', modal ? 'found' : 'NOT FOUND');
+
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeUserParametersModal();
+        });
+        console.log('[DEBUG] Modal event listener added');
+    }
 }
 
 function closeUserParametersModal() {
