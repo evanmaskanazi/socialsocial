@@ -3793,7 +3793,7 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                 </div>
                 <div class="modal-body">
                     <div class="date-range-info">
-                        <p>Showing data from ${formatDate(startDate)} to ${formatDate(endDate)}</p>
+                        <p>Showing data from ${formatDateDisplay(startDate)} to ${formatDateDisplay(endDate)}</p>
                     </div>
                     ${parameters.length === 0 ?
                         '<p style="text-align: center; padding: 20px;">No parameters recorded in this period.</p>' :
@@ -3880,7 +3880,7 @@ function generateParametersChart(parameters) {
             const value = param[category.key];
             if (value !== null && value !== undefined) {
                 const percentage = (value / 4) * 100;
-                html += `<div class="param-day"><span class="param-date">${formatDate(param.date)}</span><div class="param-bar-container"><div class="param-bar" style="width: ${percentage}%"></div></div><span class="param-value">${value}/4</span></div>`;
+                html += `<div class="param-day"><span class="param-date">${formatDateDisplay(param.date)}</span><div class="param-bar-container"><div class="param-bar" style="width: ${percentage}%"></div></div><span class="param-value">${value}/4</span></div>`;
             }
         });
 
@@ -3892,7 +3892,7 @@ function generateParametersChart(parameters) {
         html += '<div class="param-category"><div class="param-header"><span class="param-label">Notes</span></div>';
         parameters.forEach(param => {
             if (param.notes && param.notes.trim()) {
-                html += `<div class="param-notes"><strong>${formatDate(param.date)}:</strong> ${escapeHtml(param.notes)}</div>`;
+                html += `<div class="param-notes"><strong>${formatDateDisplay(param.date)}:</strong> ${escapeHtml(param.notes)}</div>`;
             }
         });
         html += '</div>';
@@ -3902,7 +3902,7 @@ function generateParametersChart(parameters) {
     return html;
 }
 
-function formatDate(dateString) {
+function formatDateDisplay(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
