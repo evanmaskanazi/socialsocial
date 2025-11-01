@@ -2108,7 +2108,14 @@ let currentUserId = null;
       // Sidebar Navigation - use showView to maintain viewingUserId state
 // Sidebar Navigation
 document.querySelectorAll('.sidebar-item').forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
+        // Skip this handler if the tracking/parameters item was clicked
+        // (it has its own onclick handler)
+        if (item.dataset.view === 'tracking') {
+            console.log('[DEBUG] Skipping generic handler for tracking item');
+            return;
+        }
+
         document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
         item.classList.add('active');
 
