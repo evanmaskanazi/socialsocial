@@ -3699,6 +3699,9 @@ updateMessagesNavVisibility();
 
 // Function to view another user's parameters
 async function viewUserParameters(userId, username) {
+    // Show loading modal immediately
+    showLoadingModal();
+
     try {
         console.log(`Loading parameters for user ${userId} (${username})`);
 
@@ -3712,23 +3715,32 @@ async function viewUserParameters(userId, username) {
         const response = await fetch(`/api/users/${userId}/parameters?start_date=${start}&end_date=${end}`);
 
         if (response.status === 401) {
+            closeLoadingModal();
             window.location.href = '/';
             return;
         }
 
         if (response.status === 403) {
+            closeLoadingModal();
             showToast('You must follow this user to view their parameters', 'error');
             return;
         }
 
         if (!response.ok) {
+            closeLoadingModal();
             throw new Error(`Failed to load parameters: ${response.status}`);
         }
 
         const parameters = await response.json();
+
+        // Close loading modal before showing parameters
+        closeLoadingModal();
+
+        // Show parameters modal
         showUserParametersModal(userId, username, parameters, start, end);
 
     } catch (error) {
+        closeLoadingModal();
         console.error('Error loading user parameters:', error);
         showToast('Failed to load user parameters', 'error');
     }
@@ -3770,6 +3782,48 @@ function closeUserParametersModal() {
     const modal = document.getElementById('userParametersModal');
     if (modal) modal.remove();
 }
+
+
+function showLoadingModal() {
+    // Remove any existing loading modal
+    const existing = document.getElementById('loadingParametersModal');
+    if (existing) existing.remove();
+
+    const loadingHtml = `
+        <div id="loadingParametersModal" class="modal" style="display: flex;">
+            <div class="modal-content" style="max-width: 400px; text-align: center;">
+                <div class="modal-body" style="padding: 2rem;">
+                    <div class="loading-spinner" style="
+                        width: 50px;
+                        height: 50px;
+                        border: 4px solid #f3f3f3;
+                        border-top: 4px solid #667eea;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto 1rem;
+                    "></div>
+                    <p style="color: #666; font-size: 16px;">Loading parameters...</p>
+                </div>
+            </div>
+        </div>
+        <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        </style>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', loadingHtml);
+}
+
+function closeLoadingModal() {
+    const modal = document.getElementById('loadingParametersModal');
+    if (modal) modal.remove();
+}
+
+
+
 
 function generateParametersChart(parameters) {
     const categories = [
@@ -4125,86 +4179,7 @@ async function loadUserCircles(userId) {
     }
 }
 
-
-async function loadUserParameters(userId) {
-    try {
-        // Get date range (last 30 days)
-        const endDate = new Date().toISOString().split('T')[0];
-        const startDate = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
-
-        const response = await fetch(`/api/users/${userId}/parameters?start_date=${startDate}&end_date=${endDate}`, {
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            if (response.status === 403) {
-                showNotification('You must follow this user to view their wellness data', 'error');
-                showView('following');
-                return;
-            }
-            throw new Error('Failed to load parameters');
-        }
-
-        const data = await response.json();
-
-        // Get username for header
-        const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
-        if (profileResponse.ok) {
-            const user = await profileResponse.json();
-            const parametersHeader = document.querySelector('#parametersView h2, #trackingView h2');
-            if (parametersHeader) parametersHeader.textContent = `${user.username}'s Wellness Parameters`;
-        }
-
-        // Hide input forms
-        document.querySelectorAll('#parametersView form, #parametersView .parameter-inputs, #trackingView form, #trackingView .parameter-inputs').forEach(form => {
-            form.style.display = 'none';
-        });
-// Hide all save/submit buttons
-        document.querySelectorAll('#parametersView button, #trackingView button').forEach(btn => {
-            if (btn.textContent.includes('Save') || btn.textContent.includes('Submit') || btn.type === 'submit') {
-                btn.style.display = 'none';
-            }
-        });
-
-
-
-        // Display parameters
-        const parametersContainer = document.querySelector('#parametersView .parameters-display, #parametersView .parameters-list, #trackingView .parameters-display, #trackingView .parameters-list');
-        if (!parametersContainer) {
-            console.error('Parameters container not found');
-            return;
-        }
-
-        if (data.parameters && data.parameters.length > 0) {
-            parametersContainer.innerHTML = data.parameters.map(param => `
-                <div class="parameter-card" style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid var(--primary);">
-                    <div class="parameter-date" style="font-weight: 600; margin-bottom: 0.5rem;">${new Date(param.date).toLocaleDateString()}</div>
-                    <div class="parameter-values" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem;">
-                        ${param.mood ? `<div class="parameter-item"><span style="color: var(--gray);">Mood:</span> <span style="font-weight: 600;">${param.mood}/4</span></div>` : ''}
-                        ${param.sleep ? `<div class="parameter-item"><span style="color: var(--gray);">Sleep:</span> <span style="font-weight: 600;">${param.sleep}/4</span></div>` : ''}
-                        ${param.exercise ? `<div class="parameter-item"><span style="color: var(--gray);">Exercise:</span> <span style="font-weight: 600;">${param.exercise}/4</span></div>` : ''}
-                        ${param.stress ? `<div class="parameter-item"><span style="color: var(--gray);">Stress:</span> <span style="font-weight: 600;">${param.stress}/4</span></div>` : ''}
-                        ${param.social ? `<div class="parameter-item"><span style="color: var(--gray);">Social:</span> <span style="font-weight: 600;">${param.social}/4</span></div>` : ''}
-                    </div>
-                    ${param.notes ? `<div class="parameter-notes" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--light); color: var(--gray);">${param.notes}</div>` : ''}
-                </div>
-            `).join('');
-        } else {
-            parametersContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No parameters recorded yet.</p>';
-        }
-
-        // Add back button
-        const viewId = document.getElementById('parametersView') ? 'parametersView' : 'trackingView';
-        addBackToFollowingButton(viewId);
-
-    } catch (error) {
-        console.error('Error loading user parameters:', error);
-        showNotification('Failed to load user parameters', 'error');
-    }
-}
+// Old loadUserParameters function removed - now using viewUserParameters with modal display
 
 function addBackToFollowingButton(viewId) {
     const view = document.getElementById(viewId);
