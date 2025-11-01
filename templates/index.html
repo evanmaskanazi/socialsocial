@@ -2154,15 +2154,29 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                         loadConversations();
                         break;
                     case 'tracking':
-                        // Check if viewing another user
-                        if (viewingUserId !== null && viewingUserId !== currentUserId) {
-                            loadUserParameters(viewingUserId);
-                        } else {
-                            // This shouldn't be reached since tracking tab now uses handleParametersClick()
-                            // But keep as fallback
-                            window.location.href = '/parameters';
-                        }
-                        break;
+    // Check if viewing another user
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        // Get username first, then view parameters
+        fetch(`/api/users/${viewingUserId}/profile`, {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch profile');
+            return response.json();
+        })
+        .then(data => {
+            viewUserParameters(viewingUserId, data.username || 'User');
+        })
+        .catch(error => {
+            console.error('Error loading user parameters:', error);
+            showNotification('Error loading parameters', 'error');
+        });
+    } else {
+        // This shouldn't be reached since tracking tab now uses handleParametersClick()
+        // But keep as fallback
+        window.location.href = '/parameters';
+    }
+    break;
                     case 'following':
                         // Check if viewing another user
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
@@ -2299,9 +2313,23 @@ function handleParametersClick() {
                 loadUserCircles(viewingUserId);
                 break;
             case 'parameters':
-            case 'tracking':
-                loadUserParameters(viewingUserId);
-                break;
+          case 'tracking':
+    // Get username first, then view parameters in modal
+    fetch(`/api/users/${viewingUserId}/profile`, {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to fetch profile');
+        return response.json();
+    })
+    .then(data => {
+        viewUserParameters(viewingUserId, data.username || 'User');
+    })
+    .catch(error => {
+        console.error('Error loading user parameters:', error);
+        showNotification('Error loading parameters', 'error');
+    });
+    break;
             case 'following':
                 loadUserFollowing(viewingUserId);
                 break;
