@@ -3724,9 +3724,15 @@ updateMessagesNavVisibility();
     }
 }
 
-
 // Function to view another user's parameters
 async function viewUserParameters(userId, username) {
+    // Prevent duplicate calls - stop double modal issue
+    if (window._loadingParametersFor === userId) {
+        console.log('Already loading parameters for user', userId, '- ignoring duplicate call');
+        return;
+    }
+    window._loadingParametersFor = userId;
+
     // Show loading modal immediately
     showLoadingModal();
 
@@ -3750,7 +3756,7 @@ async function viewUserParameters(userId, username) {
 
         if (response.status === 403) {
             closeLoadingModal();
-            showToast('You must follow this user to view their parameters', 'error');
+            showNotification('You must follow this user to view their parameters', 'error');
             return;
         }
 
@@ -3770,7 +3776,10 @@ async function viewUserParameters(userId, username) {
     } catch (error) {
         closeLoadingModal();
         console.error('Error loading user parameters:', error);
-        showToast('Failed to load user parameters', 'error');
+        showNotification('Failed to load user parameters', 'error');
+    } finally {
+        // Always clear the flag when done (even if error occurred)
+        window._loadingParametersFor = null;
     }
 }
 
