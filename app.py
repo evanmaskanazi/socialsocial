@@ -100,6 +100,52 @@ logging.basicConfig(
 )
 logger = logging.getLogger('thera_social')
 
+
+def ensure_saved_parameters_schema():
+    """Ensure saved_parameters table has all required columns - runs on startup"""
+    try:
+        with app.app_context():
+            # Check if table exists
+            inspector = inspect(db.engine)
+            if 'saved_parameters' not in inspector.get_table_names():
+                logger.info("saved_parameters table doesn't exist yet, will be created by migrations")
+                return
+
+            # Get existing columns
+            existing_columns = {col['name'] for col in inspector.get_columns('saved_parameters')}
+            logger.info(f"Existing columns in saved_parameters: {existing_columns}")
+
+            # Define required columns with their types
+            required_columns = {
+                'sleep_quality': 'INTEGER',
+                'physical_activity': 'INTEGER',
+                'anxiety': 'INTEGER'
+            }
+
+            # Add missing columns
+            missing_columns = set(required_columns.keys()) - existing_columns
+
+            if missing_columns:
+                logger.info(f"Adding missing columns to saved_parameters: {missing_columns}")
+
+                with db.engine.connect() as connection:
+                    for column_name in missing_columns:
+                        column_type = required_columns[column_name]
+                        # Use text() for raw SQL
+                        alter_query = text(
+                            f"ALTER TABLE saved_parameters ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+                        connection.execute(alter_query)
+                        connection.commit()
+                        logger.info(f"Added column: {column_name}")
+
+                logger.info("Successfully added all missing columns to saved_parameters")
+            else:
+                logger.info("All required columns exist in saved_parameters")
+
+    except Exception as e:
+        logger.error(f"Error ensuring saved_parameters schema: {str(e)}")
+        # Don't raise - allow app to start even if this fails
+
 # Initialize Redis client (optional, for caching)
 try:
     redis_client = redis.from_url(REDIS_URL) if REDIS_URL else None
@@ -407,20 +453,22 @@ def init_database():
                 logger.info("No tables found, creating database schema...")
                 db.create_all()
                 ensure_database_schema()
+                ensure_saved_parameters_schema()  # ← ADDED
                 logger.info("Database schema created successfully")
                 create_admin_user()
-                create_test_users()  # ← ADD THIS LINE
-                create_test_follows()  #
-                create_parameters_table()  # ADD THIS LINE
+                create_test_users()
+                create_test_follows()
+                create_parameters_table()
             else:
                 logger.info(f"Found {len(tables)} existing tables")
 
                 # Fix all schema issues
                 fix_all_schema_issues()
                 ensure_database_schema()
+                ensure_saved_parameters_schema()  # ← ADDED
                 create_test_users()
                 create_test_follows()
-                create_parameters_table()  # ADD THIS LINE
+                create_parameters_table()
 
                 # Only try migrations if migrations folder exists
                 if os.path.exists('migrations'):
@@ -446,10 +494,11 @@ def init_database():
             try:
                 db.create_all()
                 logger.info("Created database tables as fallback")
+                ensure_saved_parameters_schema()  # ← ADDED
                 create_admin_user()
-                create_test_users()  # ← ADD THIS LINE
+                create_test_users()
                 create_test_follows()
-                create_parameters_table()  # ADD THIS LINE
+                create_parameters_table()
             except Exception as e2:
                 logger.error(f"Failed to create tables: {e2}")
                 if not is_production:
@@ -1828,28 +1877,67 @@ def get_user_parameters(user_id):
 
         # Parse dates
         try:
-            from datetime import datetime
             start = datetime.strptime(start_date, '%Y-%m-%d').date()
             end = datetime.strptime(end_date, '%Y-%m-%d').date()
         except ValueError:
             return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
 
-        # Query with CONSISTENT model name (use SavedParameters throughout)
-        query = SavedParameters.query.filter_by(user_id=user_id)
-        query = query.filter(SavedParameters.date >= start)
-        query = query.filter(SavedParameters.date <= end)
-        parameters = query.order_by(SavedParameters.date.asc()).all()
+        # Check which columns exist in the table
+        inspector = inspect(db.engine)
+        existing_columns = {col['name'] for col in inspector.get_columns('saved_parameters')}
 
-        # Return as simple array (not nested in 'parameters' key)
-        return jsonify([{
-            'date': param.date if isinstance(param.date, str) else param.date.isoformat(),
-            'mood': param.mood,
-            'energy': param.energy,
-            'sleep_quality': param.sleep_quality,
-            'physical_activity': param.physical_activity,
-            'anxiety': param.anxiety,
-            'notes': param.notes
-        } for param in parameters]), 200
+        # Build query based on existing columns
+        if all(col in existing_columns for col in ['sleep_quality', 'physical_activity', 'anxiety']):
+            # All columns exist - use ORM
+            query = SavedParameters.query.filter_by(user_id=user_id)
+            query = query.filter(SavedParameters.date >= start.isoformat())
+            query = query.filter(SavedParameters.date <= end.isoformat())
+            parameters = query.order_by(SavedParameters.date.asc()).all()
+
+            result = [{
+                'date': param.date,
+                'mood': param.mood,
+                'energy': param.energy,
+                'sleep_quality': param.sleep_quality,
+                'physical_activity': param.physical_activity,
+                'anxiety': param.anxiety,
+                'notes': param.notes
+            } for param in parameters]
+        else:
+            # Some columns missing - use raw SQL with only existing columns
+            app.logger.warning(f"Some parameter columns missing. Existing: {existing_columns}")
+
+            query = text("""
+                SELECT date, mood, energy, notes
+                FROM saved_parameters
+                WHERE user_id = :user_id 
+                  AND date >= :start_date 
+                  AND date <= :end_date
+                ORDER BY date ASC
+            """)
+
+            result_proxy = db.session.execute(
+                query,
+                {
+                    'user_id': user_id,
+                    'start_date': start.isoformat(),
+                    'end_date': end.isoformat()
+                }
+            )
+
+            parameters = result_proxy.fetchall()
+
+            result = [{
+                'date': row[0],
+                'mood': row[1] if len(row) > 1 else None,
+                'energy': row[2] if len(row) > 2 else None,
+                'sleep_quality': None,
+                'physical_activity': None,
+                'anxiety': None,
+                'notes': row[3] if len(row) > 3 else None
+            } for row in parameters]
+
+        return jsonify(result), 200
 
     except Exception as e:
         app.logger.error(f"Error loading user parameters: {str(e)}")
