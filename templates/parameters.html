@@ -59,15 +59,6 @@
         [dir="rtl"] .action-buttons {
             flex-direction: row-reverse;
         }
-
-        [dir="rtl"] .parameter-header {
-            flex-direction: row-reverse;
-        }
-
-        [dir="rtl"] .parameter-emoji {
-            margin-right: 0;
-            margin-left: 15px;
-        }
     </style>
 </head>
 <body>
@@ -75,16 +66,61 @@
     <div id="errorMessage"></div>
     <div id="parametersContainer"></div>
 
-    <!-- Load scripts in correct order -->
+    <!-- Load scripts -->
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/parameters-social.js"></script>
 
     <script>
-        console.log('Parameters page initializing...');
+        console.log('Parameters page loading...');
+
+        // Check if this is for another user - if so, redirect
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('user_id');
+
+        if (userId) {
+            // This page is only for own parameters, viewing others should be handled in the main app
+            console.log('Attempting to view user parameters from parameters page - redirecting');
+            window.location.href = '/';
+            return;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const loadingDiv = document.getElementById('loadingMessage');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerHTML += '<div>' + message + '</div>';
+            }
+            if (loadingDiv) {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // Verify authentication before initializing
+        async function checkAuthentication() {
+            try {
+                const response = await fetch('/api/auth/session');
+                if (response.status === 401) {
+                    // Not authenticated - redirect to login
+                    window.location.href = '/';
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+                return false;
+            }
+        }
 
         // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM loaded, initializing parameters...');
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('DOM loaded, checking authentication...');
+
+            // Check authentication first
+            const isAuthenticated = await checkAuthentication();
+            if (!isAuthenticated) {
+                return;
+            }
 
             // Hide loading message
             const loadingDiv = document.getElementById('loadingMessage');
@@ -92,21 +128,44 @@
                 loadingDiv.style.display = 'none';
             }
 
-            // Small delay to ensure scripts are fully loaded
+            // Wait a moment for scripts to fully load
             setTimeout(() => {
-                // Check if initialization function exists
+                // Check if function exists
                 if (typeof initializeParameters !== 'function') {
-                    console.error('initializeParameters function not found');
-                    const errorDiv = document.getElementById('errorMessage');
-                    if (errorDiv) {
-                        errorDiv.style.display = 'block';
-                        errorDiv.innerHTML = 'Error: Parameters system not loaded properly. Please refresh the page.';
-                    }
+                    showError('Error: initializeParameters function not found. Please refresh the page.');
+                    console.error('initializeParameters not found');
+
+                    // Try again after another delay
+                    setTimeout(() => {
+                        if (typeof initializeParameters === 'function') {
+                            console.log('Function now available, initializing...');
+                            try {
+                                initializeParameters();
+
+                                // Apply translations if available
+                                if (window.i18n && window.i18n.applyLanguage) {
+                                    window.i18n.applyLanguage();
+                                }
+
+                                // Set RTL direction for Arabic and Hebrew
+                                if (window.i18n && window.i18n.currentLanguage) {
+                                    const rtlLanguages = ['ar', 'he'];
+                                    if (rtlLanguages.includes(window.i18n.currentLanguage)) {
+                                        document.body.setAttribute('dir', 'rtl');
+                                    } else {
+                                        document.body.setAttribute('dir', 'ltr');
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('Delayed initialization error:', error);
+                            }
+                        }
+                    }, 2000);
                     return;
                 }
 
+                // Initialize parameters for current user only
                 try {
-                    // Initialize parameters
                     initializeParameters();
                     console.log('Parameters initialized successfully');
 
@@ -116,82 +175,88 @@
                     }
 
                     // Set RTL direction for Arabic and Hebrew
-                    const currentLang = window.i18n?.currentLanguage || localStorage.getItem('userLanguage') || 'en';
-                    const rtlLanguages = ['ar', 'he'];
-                    if (rtlLanguages.includes(currentLang)) {
-                        document.body.setAttribute('dir', 'rtl');
-                    } else {
-                        document.body.setAttribute('dir', 'ltr');
+                    if (window.i18n && window.i18n.currentLanguage) {
+                        const rtlLanguages = ['ar', 'he'];
+                        if (rtlLanguages.includes(window.i18n.currentLanguage)) {
+                            document.body.setAttribute('dir', 'rtl');
+                        } else {
+                            document.body.setAttribute('dir', 'ltr');
+                        }
                     }
 
-                    // Verify initialization
+                    // Verify initialization worked
                     setTimeout(() => {
                         const buttons = document.querySelectorAll('.rating-button');
-                        const categories = document.querySelectorAll('.parameter-item');
-                        const languageSelector = document.getElementById('languageSelector');
-                        
-                        console.log(`Verification: ${buttons.length} rating buttons found (expected: 20)`);
-                        console.log(`Verification: ${categories.length} parameter categories found (expected: 5)`);
-                        console.log(`Language selector present: ${languageSelector ? 'YES' : 'NO'}`);
-                        
-                        if (buttons.length !== 20) {
-                            console.warn(`Unexpected number of rating buttons: ${buttons.length}`);
-                        }
-                        if (categories.length !== 5) {
-                            console.warn(`Unexpected number of categories: ${categories.length}`);
-                        }
-                        if (!languageSelector) {
-                            console.warn('Language selector not found!');
+                        console.log(`Initialization check: ${buttons.length} rating buttons created (expected: 20)`);
+
+                        if (buttons.length === 0) {
+                            console.warn('No rating buttons found after initialization');
+                            const container = document.getElementById('parametersContainer');
+                            if (container && container.innerHTML.trim() === '') {
+                                console.error('Container is empty - initialization may have failed');
+                                showError('Initialization failed. Please refresh the page.');
+                            }
                         }
                     }, 500);
 
                 } catch (error) {
-                    console.error('Error during initialization:', error);
-                    const errorDiv = document.getElementById('errorMessage');
-                    if (errorDiv) {
-                        errorDiv.style.display = 'block';
-                        errorDiv.innerHTML = 'Initialization error: ' + error.message;
-                    }
+                    console.error('Error initializing:', error);
+                    showError('Error: ' + error.message);
                 }
-            }, 100);
+            }, 100); // Small delay to ensure scripts are parsed
         });
 
-        // Handle language changes
+        // Handle language changes with infinite loop prevention
+        let isUpdatingLanguage = false;
+        let languageUpdateCount = 0;
+
         window.addEventListener('languageChanged', () => {
-            console.log('Language changed, updating parameters UI...');
-            
+            // Prevent infinite loop
+            if (isUpdatingLanguage) {
+                console.log('Language update already in progress, skipping');
+                return;
+            }
+
+            // Safety check for runaway events
+            languageUpdateCount++;
+            if (languageUpdateCount > 10) {
+                console.error('Too many language change events, stopping to prevent infinite loop');
+                return;
+            }
+
+            // Reset counter after a delay
+            setTimeout(() => {
+                languageUpdateCount = 0;
+            }, 1000);
+
+            isUpdatingLanguage = true;
+            console.log('Language changed event received');
+
             try {
-                // Update translations
+                // Update translations if function exists
                 if (typeof updateTranslations === 'function') {
                     updateTranslations();
                 }
 
                 // Update RTL direction
-                const currentLang = window.i18n?.currentLanguage || localStorage.getItem('userLanguage') || 'en';
-                const rtlLanguages = ['ar', 'he'];
-                if (rtlLanguages.includes(currentLang)) {
-                    document.body.setAttribute('dir', 'rtl');
-                } else {
-                    document.body.setAttribute('dir', 'ltr');
+                if (window.i18n && window.i18n.currentLanguage) {
+                    const rtlLanguages = ['ar', 'he'];
+                    if (rtlLanguages.includes(window.i18n.currentLanguage)) {
+                        document.body.setAttribute('dir', 'rtl');
+                    } else {
+                        document.body.setAttribute('dir', 'ltr');
+                    }
                 }
 
-                console.log('Language update completed');
             } catch (error) {
                 console.error('Error updating language:', error);
+            } finally {
+                // Reset flag after a small delay
+                setTimeout(() => {
+                    isUpdatingLanguage = false;
+                }, 100);
             }
         });
-
-        // Debug helper
-        window.debugParameters = function() {
-            console.log('=== Parameters Debug Info ===');
-            console.log('Categories:', document.querySelectorAll('.parameter-item').length);
-            console.log('Rating buttons:', document.querySelectorAll('.rating-button').length);
-            console.log('Language selector:', document.getElementById('languageSelector'));
-            console.log('Current language:', window.i18n?.getCurrentLanguage?.() || localStorage.getItem('userLanguage'));
-            console.log('Selected ratings:', window.selectedRatings || {});
-            console.log('Categories present:', Array.from(document.querySelectorAll('.parameter-name')).map(el => el.textContent));
-            console.log('===========================');
-        };
     </script>
 </body>
 </html>

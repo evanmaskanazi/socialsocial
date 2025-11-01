@@ -1185,6 +1185,70 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+
+
+
+        .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    width: 90%;
+    max-width: 900px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #333;
+}
+
+.close {
+    font-size: 28px;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.date-range-info {
+    text-align: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+
     </style>
 </head>
 <body>
@@ -3631,6 +3695,136 @@ updateMessagesNavVisibility();
         showNotification('Failed to load user profile', 'error');
     }
 }
+
+
+// Function to view another user's parameters
+async function viewUserParameters(userId, username) {
+    try {
+        console.log(`Loading parameters for user ${userId} (${username})`);
+
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+
+        const start = startDate.toISOString().split('T')[0];
+        const end = endDate.toISOString().split('T')[0];
+
+        const response = await fetch(`/api/users/${userId}/parameters?start_date=${start}&end_date=${end}`);
+
+        if (response.status === 401) {
+            window.location.href = '/';
+            return;
+        }
+
+        if (response.status === 403) {
+            showToast('You must follow this user to view their parameters', 'error');
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Failed to load parameters: ${response.status}`);
+        }
+
+        const parameters = await response.json();
+        showUserParametersModal(userId, username, parameters, start, end);
+
+    } catch (error) {
+        console.error('Error loading user parameters:', error);
+        showToast('Failed to load user parameters', 'error');
+    }
+}
+
+function showUserParametersModal(userId, username, parameters, startDate, endDate) {
+    const modalHtml = `
+        <div id="userParametersModal" class="modal" style="display: flex;">
+            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h2>${username}'s Parameters</h2>
+                    <span class="close" onclick="closeUserParametersModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="date-range-info">
+                        <p>Showing data from ${formatDate(startDate)} to ${formatDate(endDate)}</p>
+                    </div>
+                    ${parameters.length === 0 ?
+                        '<p style="text-align: center; padding: 20px;">No parameters recorded in this period.</p>' :
+                        generateParametersChart(parameters)
+                    }
+                </div>
+            </div>
+        </div>
+    `;
+
+    const existing = document.getElementById('userParametersModal');
+    if (existing) existing.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const modal = document.getElementById('userParametersModal');
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeUserParametersModal();
+    });
+}
+
+function closeUserParametersModal() {
+    const modal = document.getElementById('userParametersModal');
+    if (modal) modal.remove();
+}
+
+function generateParametersChart(parameters) {
+    const categories = [
+        { key: 'mood', label: 'Mood', icon: '😊' },
+        { key: 'energy', label: 'Energy', icon: '⚡' },
+        { key: 'sleep_quality', label: 'Sleep Quality', icon: '😴' },
+        { key: 'physical_activity', label: 'Physical Activity', icon: '🏃' },
+        { key: 'anxiety', label: 'Anxiety', icon: '😰' }
+    ];
+
+    let html = '<div class="parameters-visualization"><style>.parameters-visualization{padding:20px}.param-category{margin-bottom:30px;padding:15px;background:#f8f9fa;border-radius:8px}.param-header{display:flex;align-items:center;margin-bottom:15px}.param-icon{font-size:24px;margin-right:10px}.param-label{font-weight:600;font-size:16px}.param-timeline{display:flex;flex-direction:column;gap:8px}.param-day{display:flex;align-items:center;gap:10px}.param-date{min-width:100px;font-size:14px;color:#666}.param-bar-container{flex:1;height:30px;background:#e9ecef;border-radius:4px;position:relative;overflow:hidden}.param-bar{height:100%;background:linear-gradient(90deg,#667eea 0%,#764ba2 100%);border-radius:4px;transition:width 0.3s ease}.param-value{min-width:30px;text-align:center;font-weight:600;color:#667eea}.param-notes{margin-top:10px;padding:10px;background:white;border-radius:4px;font-size:14px;font-style:italic;color:#666}</style>';
+
+    categories.forEach(category => {
+        html += `<div class="param-category"><div class="param-header"><span class="param-icon">${category.icon}</span><span class="param-label">${category.label}</span></div><div class="param-timeline">`;
+
+        parameters.forEach(param => {
+            const value = param[category.key];
+            if (value !== null && value !== undefined) {
+                const percentage = (value / 4) * 100;
+                html += `<div class="param-day"><span class="param-date">${formatDate(param.date)}</span><div class="param-bar-container"><div class="param-bar" style="width: ${percentage}%"></div></div><span class="param-value">${value}/4</span></div>`;
+            }
+        });
+
+        html += '</div></div>';
+    });
+
+    const notesExist = parameters.some(p => p.notes && p.notes.trim());
+    if (notesExist) {
+        html += '<div class="param-category"><div class="param-header"><span class="param-label">Notes</span></div>';
+        parameters.forEach(param => {
+            if (param.notes && param.notes.trim()) {
+                html += `<div class="param-notes"><strong>${formatDate(param.date)}:</strong> ${escapeHtml(param.notes)}</div>`;
+            }
+        });
+        html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+
+
+
 
 async function loadUserProfileView(userId) {
     // Set the viewing user ID so feed knows we're viewing another user
