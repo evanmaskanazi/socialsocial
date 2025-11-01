@@ -119,7 +119,8 @@ def ensure_saved_parameters_schema():
             required_columns = {
                 'sleep_quality': 'INTEGER',
                 'physical_activity': 'INTEGER',
-                'anxiety': 'INTEGER'
+                'anxiety': 'INTEGER',
+                'updated_at': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
             }
 
             # Add missing columns
@@ -1906,7 +1907,6 @@ def get_user_circles(user_id):
         logger.error(f"Get user circles error: {str(e)}")
         return jsonify({'error': 'Failed to get circles'}), 500
 
-
 @app.route('/api/users/<int:user_id>/parameters', methods=['GET'])
 @login_required
 def get_user_parameters(user_id):
@@ -1937,60 +1937,41 @@ def get_user_parameters(user_id):
         except ValueError:
             return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
 
-        # Check which columns exist in the table
-        inspector = inspect(db.engine)
-        existing_columns = {col['name'] for col in inspector.get_columns('saved_parameters')}
+        # Use raw SQL to avoid ORM issues with updated_at column
+        # This works regardless of whether updated_at exists
+        query = text("""
+            SELECT date, mood, energy, sleep_quality, 
+                   physical_activity, anxiety, notes
+            FROM saved_parameters
+            WHERE user_id = :user_id 
+              AND date >= :start_date 
+              AND date <= :end_date
+            ORDER BY date ASC
+        """)
 
-        # Build query based on existing columns
-        if all(col in existing_columns for col in ['sleep_quality', 'physical_activity', 'anxiety']):
-            # All columns exist - use ORM
-            query = SavedParameters.query.filter_by(user_id=user_id)
-            query = query.filter(SavedParameters.date >= start.isoformat())
-            query = query.filter(SavedParameters.date <= end.isoformat())
-            parameters = query.order_by(SavedParameters.date.asc()).all()
+        result_proxy = db.session.execute(
+            query,
+            {
+                'user_id': user_id,
+                'start_date': start.isoformat(),
+                'end_date': end.isoformat()
+            }
+        )
 
-            result = [{
-                'date': param.date,
-                'mood': param.mood,
-                'energy': param.energy,
-                'sleep_quality': param.sleep_quality,
-                'physical_activity': param.physical_activity,
-                'anxiety': param.anxiety,
-                'notes': param.notes
-            } for param in parameters]
-        else:
-            # Some columns missing - use raw SQL with only existing columns
-            app.logger.warning(f"Some parameter columns missing. Existing: {existing_columns}")
+        parameters = result_proxy.fetchall()
 
-            query = text("""
-                SELECT date, mood, energy, notes
-                FROM saved_parameters
-                WHERE user_id = :user_id 
-                  AND date >= :start_date 
-                  AND date <= :end_date
-                ORDER BY date ASC
-            """)
-
-            result_proxy = db.session.execute(
-                query,
-                {
-                    'user_id': user_id,
-                    'start_date': start.isoformat(),
-                    'end_date': end.isoformat()
-                }
-            )
-
-            parameters = result_proxy.fetchall()
-
-            result = [{
+        # Build result array from query results
+        result = []
+        for row in parameters:
+            result.append({
                 'date': row[0],
-                'mood': row[1] if len(row) > 1 else None,
-                'energy': row[2] if len(row) > 2 else None,
-                'sleep_quality': None,
-                'physical_activity': None,
-                'anxiety': None,
-                'notes': row[3] if len(row) > 3 else None
-            } for row in parameters]
+                'mood': row[1],
+                'energy': row[2],
+                'sleep_quality': row[3],
+                'physical_activity': row[4],
+                'anxiety': row[5],
+                'notes': row[6]
+            })
 
         return jsonify(result), 200
 
