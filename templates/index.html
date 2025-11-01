@@ -2153,29 +2153,8 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                     case 'messages':
                         loadConversations();
                         break;
-                    case 'tracking':
-    // Check if viewing another user
-    if (viewingUserId !== null && viewingUserId !== currentUserId) {
-        // Get username first, then view parameters
-        fetch(`/api/users/${viewingUserId}/profile`, {
-            credentials: 'include'
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('Failed to fetch profile');
-            return response.json();
-        })
-        .then(data => {
-            viewUserParameters(viewingUserId, data.username || 'User');
-        })
-        .catch(error => {
-            console.error('Error loading user parameters:', error);
-            showNotification('Error loading parameters', 'error');
-        });
-    } else {
-        // This shouldn't be reached since tracking tab now uses handleParametersClick()
-        // But keep as fallback
-        window.location.href = '/parameters';
-    }
+                   case 'tracking':
+    // Let showView handle the logic - don't duplicate here
     break;
                     case 'following':
                         // Check if viewing another user
