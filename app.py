@@ -1942,8 +1942,8 @@ def get_user_parameters(user_id):
         query = text("""
             SELECT date, mood, energy, sleep_quality, 
                    physical_activity, anxiety, notes
-            FROM saved_parameters
-            WHERE user_id = :user_id 
+            FROM parameters
+            WHERE user_id = :user_id
               AND date >= :start_date 
               AND date <= :end_date
             ORDER BY date ASC
@@ -1980,7 +1980,45 @@ def get_user_parameters(user_id):
         return jsonify({'error': 'Failed to load parameters'}), 500
 
 
+@app.route('/api/debug/parameters/<int:user_id>')
+@login_required
+def debug_parameters(user_id):
+    """Temporary debug endpoint - DELETE after fixing"""
+    try:
+        # Get ALL parameters for this user (no date filter)
+        query = text("""
+            SELECT date, mood, energy, sleep_quality, 
+                   physical_activity, anxiety, notes, user_id
+            FROM saved_parameters
+            WHERE user_id = :user_id
+            ORDER BY date DESC
+            LIMIT 10
+        """)
 
+        result = db.session.execute(query, {'user_id': user_id})
+        rows = result.fetchall()
+
+        parameters = []
+        for row in rows:
+            parameters.append({
+                'date': str(row[0]),  # Convert to string to see exact format
+                'date_type': type(row[0]).__name__,
+                'mood': row[1],
+                'energy': row[2],
+                'sleep_quality': row[3],
+                'physical_activity': row[4],
+                'anxiety': row[5],
+                'notes': row[6],
+                'user_id': row[7]
+            })
+
+        return jsonify({
+            'count': len(parameters),
+            'data': parameters
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/users/search')
 @login_required
