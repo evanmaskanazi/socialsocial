@@ -74,15 +74,15 @@
         console.log('Parameters page loading...');
 
         // Check if this is for another user - if so, redirect
-        const urlParams = new URLSearchParams(window.location.search);
-        const userId = urlParams.get('user_id');
+      const urlParams = new URLSearchParams(window.location.search);
+const userId = urlParams.get('user_id');
 
-        if (userId) {
-            // This page is only for own parameters, viewing others should be handled in the main app
-            console.log('Attempting to view user parameters from parameters page - redirecting');
-            window.location.href = '/';
-            return;
-        }
+if (userId) {
+    // This page is only for own parameters, viewing others should be handled in the main app
+    console.log('Attempting to view user parameters from parameters page - redirecting');
+    window.location.href = '/';
+    // Redirect happens above, no need for return
+}
 
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
