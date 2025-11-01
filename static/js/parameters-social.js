@@ -895,8 +895,11 @@ function updateCalendar() {
         calendarGrid.appendChild(emptyCell);
     }
 
-    // Add days of the month
+    // Get today's date for comparison (normalized to start of day)
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Add days of the month
     const selectedDateStr = formatDate(currentDate);
 
     for (let day = 1; day <= daysInMonth; day++) {
@@ -907,43 +910,68 @@ function updateCalendar() {
         const cellDate = new Date(year, month, day);
         const cellDateStr = formatDate(cellDate);
 
+        // Check if this is a future date
+        const isFutureDate = cellDate > today;
+
         // Add data-date attribute for targeting
         dayCell.setAttribute('data-date', cellDateStr);
 
-        // Check if this date has saved data and add green dot
-        if (datesWithData.has(cellDateStr)) {
-            dayCell.style.position = 'relative';
-            const dot = document.createElement('span');
-            dot.className = 'data-indicator';
-            dot.textContent = '●';
-            dot.style.cssText = 'color: #10b981; font-size: 8px; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);';
-            dayCell.appendChild(dot);
+        // Disable future dates
+        if (isFutureDate) {
+            dayCell.style.opacity = '0.3';
+            dayCell.style.cursor = 'not-allowed';
+            dayCell.style.pointerEvents = 'none';
+            dayCell.title = 'Future date - not available';
+        } else {
+            // Check if this date has saved data and add green dot
+            if (datesWithData.has(cellDateStr)) {
+                dayCell.style.position = 'relative';
+                const dot = document.createElement('span');
+                dot.className = 'data-indicator';
+                dot.textContent = '●';
+                dot.style.cssText = 'color: #10b981; font-size: 8px; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);';
+                dayCell.appendChild(dot);
+            }
+
+            if (cellDateStr === formatDate(today)) {
+                dayCell.classList.add('today');
+                dayCell.title = pt('parameters.today_label');
+            }
+
+            if (cellDateStr === selectedDateStr) {
+                dayCell.classList.add('selected');
+            }
+
+            // Only add click handler for past/present dates
+            dayCell.onclick = () => selectDate(cellDate);
         }
 
-        if (cellDateStr === formatDate(today)) {
-            dayCell.classList.add('today');
-            dayCell.title = pt('parameters.today_label');
-        }
-
-        if (cellDateStr === selectedDateStr) {
-            dayCell.classList.add('selected');
-        }
-
-        dayCell.onclick = () => selectDate(cellDate);
         calendarGrid.appendChild(dayCell);
     }
 
-    // Check for saved data for current month
+    // Check for saved data for current month (only for past dates)
     checkMonthData(year, month);
 }
 
 
 // Check for saved data in current month
 async function checkMonthData(year, month) {
+    // Get today's date for comparison (normalized)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = formatDate(new Date(year, month, day));
+        const cellDate = new Date(year, month, day);
+
+        // Skip future dates - don't check for data
+        if (cellDate > today) {
+            continue;
+        }
+
+        const dateStr = formatDate(cellDate);
+
         if (!datesWithData.has(dateStr)) {
             // Only check dates we don't already know about
             try {
@@ -966,7 +994,8 @@ async function checkMonthData(year, month) {
                     }
                 }
             } catch (error) {
-                // Silently ignore
+                // Silently ignore - this is just for UI indicators
+                console.debug('Could not check date:', dateStr, error.message);
             }
         }
     }
@@ -1031,6 +1060,23 @@ function previousMonth() {
 }
 
 function nextMonth() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Calculate what the next month would be
+    const nextMonthDate = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        1
+    );
+    nextMonthDate.setHours(0, 0, 0, 0);
+
+    // Don't allow going past current month
+    if (nextMonthDate > today) {
+        showMessage('Cannot view future months', 'error', 2000);
+        return;
+    }
+
     currentDate.setMonth(currentDate.getMonth() + 1);
     updateCalendar();
 }
