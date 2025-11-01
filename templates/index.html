@@ -2181,8 +2181,11 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 // Handle parameters click - redirect to /parameters page for own data, show trackingView for other users
 function handleParametersClick() {
     if (viewingUserId !== null && viewingUserId !== currentUserId) {
-        // Viewing another user - stay on this page and show tracking view
-        showView('tracking');
+        // Viewing another user - fetch their profile and show parameters modal
+        fetch(`/api/users/${viewingUserId}/profile`, { credentials: 'include' })
+            .then(r => r.ok ? r.json() : Promise.reject('Failed'))
+            .then(data => viewUserParameters(viewingUserId, data.username || 'User'))
+            .catch(err => showNotification('Error loading parameters', 'error'));
     } else {
         // Viewing own parameters - redirect to full parameters page
         window.location.href = '/parameters';
