@@ -1719,6 +1719,10 @@ def get_user_profile(user_id):
         return jsonify({'error': str(e)}), 500
 
 
+
+
+
+
 @app.route('/api/users/<int:user_id>/posts', methods=['GET'])
 @login_required
 def get_user_posts(user_id):
@@ -1815,33 +1819,41 @@ def get_user_parameters(user_id):
         if not is_following and user_id != current_user_id:
             return jsonify({'error': 'Must be following user to view parameters'}), 403
 
-        # Get date range from query params
+        # Get date range from query params (REQUIRED)
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
 
+        if not start_date or not end_date:
+            return jsonify({'error': 'start_date and end_date are required'}), 400
+
+        # Parse dates
+        try:
+            from datetime import datetime
+            start = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+
+        # Query with CONSISTENT model name (use SavedParameters throughout)
         query = SavedParameters.query.filter_by(user_id=user_id)
+        query = query.filter(SavedParameters.date >= start)
+        query = query.filter(SavedParameters.date <= end)
+        parameters = query.order_by(SavedParameters.date.asc()).all()
 
-        if start_date:
-            query = query.filter(WellnessParameter.date >= start_date)
-        if end_date:
-            query = query.filter(WellnessParameter.date <= end_date)
+        # Return as simple array (not nested in 'parameters' key)
+        return jsonify([{
+            'date': param.date if isinstance(param.date, str) else param.date.isoformat(),
+            'mood': param.mood,
+            'energy': param.energy,
+            'sleep_quality': param.sleep_quality,
+            'physical_activity': param.physical_activity,
+            'anxiety': param.anxiety,
+            'notes': param.notes
+        } for param in parameters]), 200
 
-        parameters = query.order_by(WellnessParameter.date.desc()).all()
-
-        return jsonify({
-            'parameters': [{
-                'id': param.id,
-                'date': param.date if isinstance(param.date, str) else param.date.isoformat(),
-                'mood': param.mood,
-                'energy': param.energy,
-                'sleep_quality': param.sleep_quality,
-                'physical_activity': param.physical_activity,
-                'anxiety': param.anxiety,
-                'notes': param.notes
-            } for param in parameters]
-        })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error(f"Error loading user parameters: {str(e)}")
+        return jsonify({'error': 'Failed to load parameters'}), 500
 
 
 
