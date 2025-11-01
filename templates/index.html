@@ -1422,7 +1422,7 @@
                 <span class="mobile-nav-icon">💬</span>
                 <span class="mobile-nav-label" data-i18n="menu.messages">Messages</span>
             </li>
-            <li class="mobile-nav-item" data-view="tracking" onclick="handleParametersClick()">
+            <li class="mobile-nav-item" data-view="tracking" onclick="handleParametersClick(event)">
     <span class="mobile-nav-icon">📊</span>
     <span class="mobile-nav-label" data-i18n="menu.parameters">Parameters</span>
 </li>
@@ -1455,7 +1455,7 @@
                     <li class="sidebar-item" id="desktopMessagesNav" data-view="messages" data-i18n="menu.messages">
                         💬 Messages
                     </li>
-                   <li class="sidebar-item" data-view="tracking" onclick="handleParametersClick()" style="cursor: pointer;">
+                   <li class="sidebar-item" data-view="tracking" onclick="handleParametersClick(event)" style="cursor: pointer;">
     📊 <span data-i18n="menu.parameters">Parameters</span>
 </li>
 
@@ -2179,19 +2179,37 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 
 
 // Handle parameters click - redirect to /parameters page for own data, show trackingView for other users
-function handleParametersClick() {
+function handleParametersClick(event) {
+    // Stop event propagation to prevent both handlers from firing
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
+    console.log('[DEBUG] handleParametersClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+
     if (viewingUserId !== null && viewingUserId !== currentUserId) {
-        // Viewing another user - fetch their profile and show parameters modal
+        // Viewing another user - show their parameters in modal
+        console.log('[DEBUG] Fetching profile for user:', viewingUserId);
         fetch(`/api/users/${viewingUserId}/profile`, { credentials: 'include' })
-            .then(r => r.ok ? r.json() : Promise.reject('Failed'))
-            .then(data => viewUserParameters(viewingUserId, data.username || 'User'))
-            .catch(err => showNotification('Error loading parameters', 'error'));
+            .then(r => {
+                console.log('[DEBUG] Profile fetch status:', r.status);
+                return r.ok ? r.json() : Promise.reject('Failed to fetch profile');
+            })
+            .then(data => {
+                console.log('[DEBUG] Profile data received, calling viewUserParameters');
+                viewUserParameters(viewingUserId, data.username || 'User');
+            })
+            .catch(err => {
+                console.error('[DEBUG] Error in handleParametersClick:', err);
+                showNotification('Error loading parameters', 'error');
+            });
     } else {
         // Viewing own parameters - redirect to full parameters page
+        console.log('[DEBUG] Redirecting to /parameters for own data');
         window.location.href = '/parameters';
     }
 }
-
 
 
 
@@ -3708,18 +3726,21 @@ updateMessagesNavVisibility();
 
 // Function to view another user's parameters
 async function viewUserParameters(userId, username) {
+    console.log('[DEBUG] viewUserParameters called with userId:', userId, 'username:', username);
+
     // Prevent duplicate calls - stop double modal issue
     if (window._loadingParametersFor === userId) {
-        console.log('Already loading parameters for user', userId, '- ignoring duplicate call');
+        console.log('[DEBUG] Already loading parameters for user', userId, '- ignoring duplicate call');
         return;
     }
     window._loadingParametersFor = userId;
 
+    console.log('[DEBUG] Showing loading modal');
     // Show loading modal immediately
     showLoadingModal();
 
     try {
-        console.log(`Loading parameters for user ${userId} (${username})`);
+        console.log(`[DEBUG] Loading parameters for user ${userId} (${username})`);
 
         const endDate = new Date();
         const startDate = new Date();
@@ -3728,39 +3749,50 @@ async function viewUserParameters(userId, username) {
         const start = startDate.toISOString().split('T')[0];
         const end = endDate.toISOString().split('T')[0];
 
+        console.log('[DEBUG] Fetching parameters from API:', start, 'to', end);
         const response = await fetch(`/api/users/${userId}/parameters?start_date=${start}&end_date=${end}`);
+        console.log('[DEBUG] API response status:', response.status);
 
         if (response.status === 401) {
+            console.log('[DEBUG] Unauthorized - redirecting to login');
             closeLoadingModal();
             window.location.href = '/';
             return;
         }
 
         if (response.status === 403) {
+            console.log('[DEBUG] Forbidden - must follow user');
             closeLoadingModal();
             showNotification('You must follow this user to view their parameters', 'error');
             return;
         }
 
         if (!response.ok) {
+            console.log('[DEBUG] Response not OK:', response.status);
             closeLoadingModal();
             throw new Error(`Failed to load parameters: ${response.status}`);
         }
 
         const parameters = await response.json();
+        console.log('[DEBUG] Parameters received:', parameters.length, 'entries');
+        console.log('[DEBUG] Parameters data:', parameters);
 
         // Close loading modal before showing parameters
+        console.log('[DEBUG] Closing loading modal');
         closeLoadingModal();
 
         // Show parameters modal
+        console.log('[DEBUG] Calling showUserParametersModal');
         showUserParametersModal(userId, username, parameters, start, end);
+        console.log('[DEBUG] showUserParametersModal completed');
 
     } catch (error) {
+        console.error('[DEBUG] Error loading user parameters:', error);
         closeLoadingModal();
-        console.error('Error loading user parameters:', error);
         showNotification('Failed to load user parameters', 'error');
     } finally {
         // Always clear the flag when done (even if error occurred)
+        console.log('[DEBUG] Clearing loading flag');
         window._loadingParametersFor = null;
     }
 }
