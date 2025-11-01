@@ -1603,57 +1603,112 @@ def get_current_user():
     return jsonify(user.to_dict())
 
 
-@app.route('/api/user/language', methods=['GET', 'POST'])
-def user_language():  # Remove @login_required
-    """Get or update user's preferred language"""
+@app.route('/api/user/language', methods=['POST'])
+def update_user_language():
+    """
+    Update user's language preference
+    Works both for authenticated and unauthenticated users
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No data provided'
+            }), 400
 
-    if request.method == 'GET':
-        # Return default language if not authenticated
-        user_id = session.get('user_id')
-        if not user_id:
-            return jsonify({'preferred_language': 'en'}), 200
+        language = data.get('language', 'en')
 
-        user = db.session.get(User, user_id)
-        if not user:
-            return jsonify({'preferred_language': 'en'}), 200
+        # Validate language code
+        valid_languages = ['en', 'he', 'ar', 'ru']
+        if language not in valid_languages:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid language code'
+            }), 400
 
-        return jsonify({
-            'preferred_language': user.preferred_language or 'en'
-        })
+        # If user is authenticated, save to database
+        if 'user_id' in session:
+            user_id = session['user_id']
 
-    elif request.method == 'POST':
-        # POST requires authentication
-        if 'user_id' not in session:
-            return jsonify({'error': 'Authentication required'}), 401
+            try:
+                # Update user's language preference in database
+                user = db.session.get(User, user_id)
+                if user:
+                    user.language = language
+                    db.session.commit()
 
-        user_id = session.get('user_id')
-        user = db.session.get(User, user_id)
+                    logger.info(f"Updated language for user {user_id} to {language}")
+                    return jsonify({
+                        'success': True,
+                        'message': 'Language preference saved'
+                    }), 200
+                else:
+                    return jsonify({
+                        'success': False,
+                        'message': 'User not found'
+                    }), 404
 
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Error updating language preference: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': 'Database error'
+                }), 500
+        else:
+            # For unauthenticated users, just store in session
+            # This allows language selection before login
+            session['language'] = language
 
-        try:
-            data = request.json
-            language = data.get('preferred_language', 'en')
-
-            # Validate language
-            if language not in ['en', 'he', 'ar', 'ru']:
-                return jsonify({'error': 'Unsupported language'}), 400
-
-            user.preferred_language = language
-            user.updated_at = datetime.utcnow()
-            db.session.commit()
-
-            logger.info(f"User {user.username} changed language to {language}")
-
+            logger.info(f"Stored language {language} in session (unauthenticated)")
             return jsonify({
                 'success': True,
-                'preferred_language': user.preferred_language
-            })
-        except Exception as e:
-            logger.error(f"Language update error: {str(e)}")
-            db.session.rollback()
-            return jsonify({'error': 'Failed to update language'}), 500
+                'message': 'Language preference saved in session'
+            }), 200
+
+    except Exception as e:
+        logger.error(f"Error in update_user_language: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Server error'
+        }), 500
+
+
+@app.route('/api/user/language', methods=['GET'])
+def get_user_language():
+    """Get user's language preference"""
+    try:
+        # Check if user is authenticated
+        if 'user_id' in session:
+            user_id = session['user_id']
+            user = db.session.get(User, user_id)
+
+            if user and hasattr(user, 'language') and user.language:
+                return jsonify({
+                    'success': True,
+                    'language': user.language
+                }), 200
+
+        # Check session for unauthenticated users
+        if 'language' in session:
+            return jsonify({
+                'success': True,
+                'language': session['language']
+            }), 200
+
+        # Default to English
+        return jsonify({
+            'success': True,
+            'language': 'en'
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting language preference: {e}")
+        return jsonify({
+            'success': True,  # Don't fail hard on language errors
+            'language': 'en'
+        }), 200
 
 
 
