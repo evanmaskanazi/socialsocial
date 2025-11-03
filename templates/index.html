@@ -1848,7 +1848,7 @@ let currentUserId = null;
         // Global variables for calendar state
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
-let currentUserId = null; // Store current logged-in user ID
+
 
 
 
@@ -3120,7 +3120,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
             container.innerHTML = response.messages.map(msg => {
                 // Safely check if sender exists and get ID
                 const senderId = msg.sender && msg.sender.id ? msg.sender.id : null;
-                const currentUserId = currentUser && currentUser.id ? currentUser.id : null;
+                currentUserId = currentUser && currentUser.id ? currentUser.id : null;  // Remove 'const' - just assign to existing variable
                 const isOwn = senderId === currentUserId;
                 const content = msg.content || '';
                 const senderPrefix = isOwn ? youText : (msg.sender && msg.sender.username ? msg.sender.username : 'Unknown');
