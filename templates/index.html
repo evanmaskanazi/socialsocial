@@ -3971,22 +3971,92 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
         existing.remove();
     }
 
+    // Format the date range display
+    const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    // Build the parameters display for ALL entries
+    let parametersHtml = '';
+
+    if (!parameters || parameters.length === 0) {
+        parametersHtml = '<p style="text-align: center; color: #666;">No data available for this period</p>';
+    } else {
+        // Group parameters by date and display each one
+        parametersHtml = '<div class="parameters-timeline">';
+
+        parameters.forEach(param => {
+            const date = new Date(param.date);
+            const dateStr = date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+
+            parametersHtml += `
+                <div class="parameter-day" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <h4 style="margin-bottom: 10px; color: #333;">${dateStr}</h4>
+                    <div class="parameter-values" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+            `;
+
+            // Display each parameter with privacy handling
+            const paramLabels = {
+                mood: '😊 Mood',
+                energy: '⚡ Energy',
+                sleep_quality: '😴 Sleep Quality',
+                physical_activity: '🏃 Physical Activity',
+                anxiety: '😰 Anxiety'
+            };
+
+            for (const [key, label] of Object.entries(paramLabels)) {
+                if (param[key] !== null && param[key] !== undefined) {
+                    parametersHtml += `
+                        <div class="param-item" style="padding: 8px; background: white; border-radius: 5px;">
+                            <span style="font-size: 0.9em; color: #666;">${label}:</span>
+                            <strong style="margin-left: 5px; color: #333;">${param[key]}/4</strong>
+                        </div>
+                    `;
+                } else {
+                    parametersHtml += `
+                        <div class="param-item" style="padding: 8px; background: white; border-radius: 5px; opacity: 0.5;">
+                            <span style="font-size: 0.9em; color: #999;">${label}:</span>
+                            <span style="margin-left: 5px; color: #999;">Private</span>
+                        </div>
+                    `;
+                }
+            }
+
+            // Add notes if available
+            if (param.notes) {
+                parametersHtml += `
+                    <div style="grid-column: 1 / -1; margin-top: 10px; padding: 8px; background: white; border-radius: 5px;">
+                        <span style="font-size: 0.9em; color: #666;">📝 Notes:</span>
+                        <div style="margin-top: 5px; color: #333;">${escapeHtml(param.notes)}</div>
+                    </div>
+                `;
+            }
+
+            parametersHtml += '</div></div>';
+        });
+
+        parametersHtml += '</div>';
+    }
+
     const modalHtml = `
         <div id="userParametersModal" class="modal" style="display: flex;">
-
-            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
                 <div class="modal-header">
-                    <h2>${username}'s Parameters</h2>
+                    <h2>${escapeHtml(username)}'s Parameters</h2>
                     <span class="close" onclick="closeUserParametersModal()">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <div class="date-range-info">
-                        <p>Showing data from ${formatDateDisplay(startDate)} to ${formatDateDisplay(endDate)}</p>
-                    </div>
-                    ${parameters.length === 0 ?
-                        '<p style="text-align: center; padding: 20px;">No parameters recorded in this period.</p>' :
-                        generateParametersChart(parameters)
-                    }
+                    <p style="color: #666; margin-bottom: 20px;">
+                        Showing data from ${formatDate(startDate)} to ${formatDate(endDate)}
+                        <br><small>(${parameters.length} ${parameters.length === 1 ? 'entry' : 'entries'})</small>
+                    </p>
+                    ${parametersHtml}
                 </div>
             </div>
         </div>
@@ -4052,46 +4122,6 @@ function closeLoadingModal() {
 
 
 
-
-function generateParametersChart(parameters) {
-    const categories = [
-        { key: 'mood', label: 'Mood', icon: '😊' },
-        { key: 'energy', label: 'Energy', icon: '⚡' },
-        { key: 'sleep_quality', label: 'Sleep Quality', icon: '😴' },
-        { key: 'physical_activity', label: 'Physical Activity', icon: '🏃' },
-        { key: 'anxiety', label: 'Anxiety', icon: '😰' }
-    ];
-
-    let html = '<div class="parameters-visualization"><style>.parameters-visualization{padding:20px}.param-category{margin-bottom:30px;padding:15px;background:#f8f9fa;border-radius:8px}.param-header{display:flex;align-items:center;margin-bottom:15px}.param-icon{font-size:24px;margin-right:10px}.param-label{font-weight:600;font-size:16px}.param-timeline{display:flex;flex-direction:column;gap:8px}.param-day{display:flex;align-items:center;gap:10px}.param-date{min-width:100px;font-size:14px;color:#666}.param-bar-container{flex:1;height:30px;background:#e9ecef;border-radius:4px;position:relative;overflow:hidden}.param-bar{height:100%;background:linear-gradient(90deg,#667eea 0%,#764ba2 100%);border-radius:4px;transition:width 0.3s ease}.param-value{min-width:30px;text-align:center;font-weight:600;color:#667eea}.param-notes{margin-top:10px;padding:10px;background:white;border-radius:4px;font-size:14px;font-style:italic;color:#666}</style>';
-
-    categories.forEach(category => {
-        html += `<div class="param-category"><div class="param-header"><span class="param-icon">${category.icon}</span><span class="param-label">${category.label}</span></div><div class="param-timeline">`;
-
-        parameters.forEach(param => {
-            const value = param[category.key];
-            if (value !== null && value !== undefined) {
-                const percentage = (value / 4) * 100;
-                html += `<div class="param-day"><span class="param-date">${formatDateDisplay(param.date)}</span><div class="param-bar-container"><div class="param-bar" style="width: ${percentage}%"></div></div><span class="param-value">${value}/4</span></div>`;
-            }
-        });
-
-        html += '</div></div>';
-    });
-
-    const notesExist = parameters.some(p => p.notes && p.notes.trim());
-    if (notesExist) {
-        html += '<div class="param-category"><div class="param-header"><span class="param-label">Notes</span></div>';
-        parameters.forEach(param => {
-            if (param.notes && param.notes.trim()) {
-                html += `<div class="param-notes"><strong>${formatDateDisplay(param.date)}:</strong> ${escapeHtml(param.notes)}</div>`;
-            }
-        });
-        html += '</div>';
-    }
-
-    html += '</div>';
-    return html;
-}
 
 function formatDateDisplay(dateString) {
     const date = new Date(dateString);
@@ -4366,9 +4396,9 @@ async function loadUserCircles(userId) {
 
         // FIXED: Backend now returns {general: [...], close_friends: [...], family: [...]}
         // Convert to the format this function expects
-        const generalCircle = {members: data.general || []};
-        const closeFriendsCircle = {members: data.close_friends || []};
-        const familyCircle = {members: data.family || []};
+         const generalCircle = {members: data.public || []};
+        const closeFriendsCircle = {members: data.class_b || []};
+        const familyCircle = {members: data.class_a || []};
 
         // Helper function to display members read-only (UNCHANGED)
         function displayMembersReadOnly(container, countElement, circle) {
