@@ -399,7 +399,7 @@ class Circle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     circle_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
-    circle_type = db.Column(db.String(50))  # 'general', 'close_friends', 'family'
+    circle_type = db.Column(db.String(50))  # 'public', 'class_b', 'class_a'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     circle_user = db.relationship('User', foreign_keys=[circle_user_id])
@@ -437,6 +437,8 @@ class SavedParameters(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Add privacy field if not present:
+    privacy = db.Column(db.JSON)  # Store privacy settings as JSON
 
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),)
 
@@ -2085,14 +2087,23 @@ def get_user_circles(user_id):
             return jsonify({'error': 'Must be following user to view circles'}), 403
 
         # Get all circles for this user - SQLAlchemy 2.0 style
-        general_stmt = select(Circle).filter_by(user_id=user_id, circle_type='general')
-        general = db.session.execute(general_stmt).scalars().all()
+        public_stmt = select(Circle).filter(
+            Circle.user_id == user_id,
+            or_(Circle.circle_type == 'public', Circle.circle_type == 'general')
+        )
+        public = db.session.execute(public_stmt).scalars().all()
 
-        close_friends_stmt = select(Circle).filter_by(user_id=user_id, circle_type='close_friends')
-        close_friends = db.session.execute(close_friends_stmt).scalars().all()
+        class_b_stmt = select(Circle).filter(
+            Circle.user_id == user_id,
+            or_(Circle.circle_type == 'class_b', Circle.circle_type == 'close_friends')
+        )
+        class_b = db.session.execute(class_b_stmt).scalars().all()
 
-        family_stmt = select(Circle).filter_by(user_id=user_id, circle_type='family')
-        family = db.session.execute(family_stmt).scalars().all()
+        class_a_stmt = select(Circle).filter(
+            Circle.user_id == user_id,
+            or_(Circle.circle_type == 'class_a', Circle.circle_type == 'family')
+        )
+        class_a = db.session.execute(class_a_stmt).scalars().all()
 
         def get_user_info(circle):
             user = db.session.get(User, circle.circle_user_id)
@@ -2596,14 +2607,23 @@ def circles():
     if request.method == 'GET':
         try:
             # Get all circles - SQLAlchemy 2.0 style
-            general_stmt = select(Circle).filter_by(user_id=user_id, circle_type='general')
-            general = db.session.execute(general_stmt).scalars().all()
+            public_stmt = select(Circle).filter(
+                Circle.user_id == user_id,
+                or_(Circle.circle_type == 'public', Circle.circle_type == 'general')
+            )
+            public = db.session.execute(public_stmt).scalars().all()
 
-            close_friends_stmt = select(Circle).filter_by(user_id=user_id, circle_type='close_friends')
-            close_friends = db.session.execute(close_friends_stmt).scalars().all()
+            class_b_stmt = select(Circle).filter(
+                Circle.user_id == user_id,
+                or_(Circle.circle_type == 'class_b', Circle.circle_type == 'close_friends')
+            )
+            class_b = db.session.execute(class_b_stmt).scalars().all()
 
-            family_stmt = select(Circle).filter_by(user_id=user_id, circle_type='family')
-            family = db.session.execute(family_stmt).scalars().all()
+            class_a_stmt = select(Circle).filter(
+                Circle.user_id == user_id,
+                or_(Circle.circle_type == 'class_a', Circle.circle_type == 'family')
+            )
+            class_a = db.session.execute(class_a_stmt).scalars().all()
 
             def get_user_info(circle):
                 user = db.session.get(User, circle.circle_user_id)
@@ -2631,7 +2651,16 @@ def circles():
             circle_user_id = data.get('user_id')
             circle_type = data.get('circle_type')
 
-            if circle_type not in ['general', 'close_friends', 'family']:
+            valid_types = ['public', 'class_b', 'class_a', 'general', 'close_friends', 'family']
+            # Map old names to new names
+            type_mapping = {
+                'general': 'public',
+                'close_friends': 'class_b',
+                'family': 'class_a'
+            }
+            circle_type = type_mapping.get(circle_type, circle_type)
+
+            if circle_type not in ['public', 'class_b', 'class_a']:
                 return jsonify({'error': 'Invalid circle type'}), 400
 
             # Check if user exists
@@ -2694,6 +2723,77 @@ def remove_from_circle():
         logger.error(f"Remove from circle error: {str(e)}")
         return jsonify({'error': 'Failed to remove from circle'}), 500
 
+
+@app.route('/api/circles/membership/<int:check_user_id>', methods=['GET'])
+@login_required
+def check_circle_membership(check_user_id):
+    """Check what circle the current user is in for another user"""
+    try:
+        current_user_id = session.get('user_id')
+
+        # Check if current user is in any of check_user's circles
+        circle_stmt = select(Circle).filter_by(
+            user_id=check_user_id,
+            circle_user_id=current_user_id
+        )
+        circle = db.session.execute(circle_stmt).scalar_one_or_none()
+
+        if circle:
+            # Map old types to new if needed
+            type_mapping = {
+                'general': 'public',
+                'close_friends': 'class_b',
+                'family': 'class_a'
+            }
+            circle_type = type_mapping.get(circle.circle_type, circle.circle_type)
+            return jsonify({'circle': circle_type})
+
+        return jsonify({'circle': None})
+
+    except Exception as e:
+        logger.error(f"Check circle membership error: {str(e)}")
+        return jsonify({'error': 'Failed to check membership'}), 500
+
+
+@app.route('/api/circles/my-circles', methods=['GET'])
+@login_required
+def get_my_circles():
+    """Get all circles with proper member information"""
+    try:
+        user_id = session.get('user_id')
+
+        # Get all circles
+        circles_stmt = select(Circle).filter_by(user_id=user_id)
+        circles = db.session.execute(circles_stmt).scalars().all()
+
+        result = {
+            'public': [],
+            'class_b': [],
+            'class_a': []
+        }
+
+        type_mapping = {
+            'general': 'public',
+            'close_friends': 'class_b',
+            'family': 'class_a'
+        }
+
+        for circle in circles:
+            user = db.session.get(User, circle.circle_user_id)
+            if user:
+                user_info = {
+                    'user_id': user.id,
+                    'username': user.username
+                }
+                circle_type = type_mapping.get(circle.circle_type, circle.circle_type)
+                if circle_type in result:
+                    result[circle_type].append(user_info)
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Get my circles error: {str(e)}")
+        return jsonify({'error': 'Failed to get circles'}), 500
 
 # =====================
 # FEED & POSTS ROUTES
@@ -2903,35 +3003,48 @@ def load_feed_by_date(date_str):
 @app.route('/api/parameters', methods=['GET'])
 @login_required
 def get_parameters():
-    """Get current parameters"""
-    user_id = session['user_id']
-    today = datetime.now().date()
+    """Get parameters for a specific date"""
+    try:
+        user_id = session.get('user_id')
+        date_str = request.args.get('date')
 
-    # SQLAlchemy 2.0 style
-    params_stmt = select(SavedParameters).filter_by(
-        user_id=user_id,
-        date=today
-    )
-    params = db.session.execute(params_stmt).scalar_one_or_none()
+        if not date_str:
+            date_str = datetime.now().strftime('%Y-%m-%d')
 
-    if params:
-        return jsonify({
-            'mood': params.mood or '',
-            'sleep_hours': params.sleep_hours or 0,
-            'exercise': params.exercise or '',
-            'anxiety': params.anxiety or '',
-            'energy': params.energy or '',
-            'notes': params.notes or ''
-        })
+        # Parse the date
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
 
-    return jsonify({
-        'mood': '',
-        'sleep_hours': 0,
-        'exercise': '',
-        'anxiety': '',
-        'energy': '',
-        'notes': ''
-    })
+        # Query for existing parameters
+        params = SavedParameters.query.filter_by(
+            user_id=user_id,
+            date=date_obj
+        ).first()
+
+        if params:
+            return jsonify({
+                'date': params.date.isoformat(),
+                'mood': params.mood or 0,
+                'energy': params.energy or 0,
+                'sleep_quality': params.sleep_quality or 0,  # NOT sleep_hours!
+                'physical_activity': params.physical_activity or 0,
+                'anxiety': params.anxiety or 0,
+                'notes': params.notes or ''
+            })
+        else:
+            # Return empty parameters for this date
+            return jsonify({
+                'date': date_str,
+                'mood': 0,
+                'energy': 0,
+                'sleep_quality': 0,
+                'physical_activity': 0,
+                'anxiety': 0,
+                'notes': ''
+            })
+
+    except Exception as e:
+        logger.error(f"Get parameters error: {str(e)}")
+        return jsonify({'error': 'Failed to get parameters'}), 500
 
 
 @app.route('/api/parameters', methods=['POST'])
