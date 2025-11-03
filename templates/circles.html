@@ -3,25 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Circles - Social Social</title>
+    <title>Circles - TheraSocial</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* RTL Support */
+        [dir="rtl"] {
+            direction: rtl;
+        }
+
+        [dir="rtl"] .circles-container {
+            text-align: right;
+        }
+
+        [dir="rtl"] .circle-selector {
+            flex-direction: row-reverse;
+        }
+    </style>
 </head>
 <body>
     <div id="circlesContainer"></div>
+
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/circles-messages.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Apply translations after i18n is loaded
-            document.getElementById('circlesContainer').innerHTML = circlesHTML;
+        // Verify authentication before loading
+        async function checkAuthentication() {
+            try {
+                const response = await fetch('/api/auth/session');
+                if (response.status === 401) {
+                    // Not authenticated - redirect to login
+                    window.location.href = '/';
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+                return false;
+            }
+        }
 
-            // Apply translations to the dynamically loaded content
-            window.i18n.applyLanguage();
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Circles page loading...');
 
-            loadCircles();
+            // Check authentication first
+            const isAuthenticated = await checkAuthentication();
+            if (!isAuthenticated) {
+                return;
+            }
 
-            // Re-apply translations when language changes
-            window.addEventListener('languageChanged', () => {
+            // Wait for i18n to load
+            let waitCount = 0;
+            while ((!window.i18n || !window.i18n.translations) && waitCount < 20) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                waitCount++;
+            }
+
+            // Add circle translations if the function exists
+            if (typeof addCircleTranslations === 'function') {
+                addCircleTranslations();
+            }
+
+            // Load the HTML
+            if (typeof circlesHTML !== 'undefined') {
+                document.getElementById('circlesContainer').innerHTML = circlesHTML;
+                console.log('Circles HTML loaded');
+            } else {
+                console.error('circlesHTML not found');
+                return;
+            }
+
+            // Apply translations
+            if (window.i18n && window.i18n.applyLanguage) {
                 window.i18n.applyLanguage();
+
+                // Set RTL direction for Arabic and Hebrew
+                const rtlLanguages = ['ar', 'he'];
+                if (rtlLanguages.includes(window.i18n.currentLanguage)) {
+                    document.body.setAttribute('dir', 'rtl');
+                } else {
+                    document.body.setAttribute('dir', 'ltr');
+                }
+            }
+
+            // Initialize circles
+            if (typeof initializeCircles === 'function') {
+                console.log('Calling initializeCircles');
+                initializeCircles();
+            } else if (typeof loadCircles === 'function') {
+                console.log('Calling loadCircles');
+                loadCircles();
+            } else {
+                console.error('No circle initialization function found');
+            }
+
+            // Handle language changes
+            window.addEventListener('languageChanged', () => {
+                if (window.i18n && window.i18n.applyLanguage) {
+                    window.i18n.applyLanguage();
+
+                    // Update RTL direction
+                    const rtlLanguages = ['ar', 'he'];
+                    if (rtlLanguages.includes(window.i18n.currentLanguage)) {
+                        document.body.setAttribute('dir', 'rtl');
+                    } else {
+                        document.body.setAttribute('dir', 'ltr');
+                    }
+                }
+
+                // Reload circles to apply translations
+                if (typeof loadCircles === 'function') {
+                    loadCircles();
+                }
             });
         });
     </script>
