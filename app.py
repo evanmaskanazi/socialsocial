@@ -3369,7 +3369,8 @@ def get_parameter_dates():
         params = SavedParameters.query.filter_by(user_id=user_id).all()
 
         # Extract just the dates
-        dates = [param.date for param in params if param.date]
+        dates = [param.date.strftime('%Y-%m-%d') if hasattr(param.date, 'strftime') else str(param.date)
+                 for param in params if param.date]
 
         return jsonify({
             'success': True,
