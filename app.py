@@ -2999,7 +2999,6 @@ def load_feed_by_date(date_str):
 # =====================
 # PARAMETERS ROUTES (Therapy Companion)
 # =====================
-
 @app.route('/api/parameters', methods=['GET'])
 @login_required
 def get_parameters():
@@ -3011,29 +3010,26 @@ def get_parameters():
         if not date_str:
             date_str = datetime.now().strftime('%Y-%m-%d')
 
-        # Query using string date directly (matches the model's date field type)
         params = SavedParameters.query.filter_by(
             user_id=user_id,
             date=date_str
         ).first()
 
         if params:
-            # Return in the format frontend expects
             return jsonify({
                 'success': True,
                 'data': {
                     'parameters': {
-                        'mood': params.mood or 0,
-                        'energy': params.energy or 0,
-                        'sleep_quality': params.sleep_quality or 0,
-                        'physical_activity': params.physical_activity or 0,
-                        'anxiety': params.anxiety or 0
+                        'mood': int(params.mood) if params.mood else 0,
+                        'energy': int(params.energy) if params.energy else 0,
+                        'sleep_quality': int(params.sleep_quality) if params.sleep_quality else 0,
+                        'physical_activity': int(params.physical_activity) if params.physical_activity else 0,
+                        'anxiety': int(params.anxiety) if params.anxiety else 0
                     },
                     'notes': params.notes or ''
                 }
             })
         else:
-            # Return empty parameters for this date
             return jsonify({
                 'success': True,
                 'data': {
@@ -3068,7 +3064,7 @@ def save_parameters():
         # Find or create parameter entry
         params = SavedParameters.query.filter_by(
             user_id=user_id,
-            date=date_str  # Use string date directly
+            date=date_str
         ).first()
 
         if not params:
@@ -3077,12 +3073,18 @@ def save_parameters():
                 date=date_str
             )
 
-        # Update values - handle the flat structure from frontend
+        # Update values - ENSURE INTEGER CONVERSION
         for field in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
             if field in data:
                 value = data[field]
-                if value is not None and 1 <= value <= 4:
-                    setattr(params, field, value)
+                if value is not None:
+                    try:
+                        # Convert to integer
+                        int_value = int(value)
+                        if 1 <= int_value <= 4:
+                            setattr(params, field, int_value)
+                    except (ValueError, TypeError):
+                        pass  # Skip invalid values
 
             # Handle privacy settings
             privacy_field = f"{field}_privacy"
@@ -3110,11 +3112,21 @@ def save_parameters():
             "Your commitment to wellness is admirable! 🌈"
         ]
 
+        # Return consistent format
         return jsonify({
-            'success': True,  # Add success flag for frontend
+            'success': True,
             'message': 'Parameters saved successfully',
             'encouragement': random.choice(encouragements),
-            'data': params.to_dict(viewer_id=user_id)
+            'data': {
+                'parameters': {
+                    'mood': params.mood or 0,
+                    'energy': params.energy or 0,
+                    'sleep_quality': params.sleep_quality or 0,
+                    'physical_activity': params.physical_activity or 0,
+                    'anxiety': params.anxiety or 0
+                },
+                'notes': params.notes or ''
+            }
         }), 200
 
     except Exception as e:
