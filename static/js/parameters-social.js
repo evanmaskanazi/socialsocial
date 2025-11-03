@@ -8,6 +8,12 @@ const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
 let currentDate = new Date();
 let selectedRatings = {};
 let datesWithData = new Set(JSON.parse(localStorage.getItem('savedParameterDates') || '[]'));
+let selectedPrivacy = {};
+
+function updatePrivacy(categoryId, privacyLevel) {
+    selectedPrivacy[categoryId] = privacyLevel;
+    console.log('Privacy updated:', categoryId, privacyLevel);
+}
 
 // ESSENTIAL 5 PARAMETER CATEGORIES ONLY - ratings 1-4
 const PARAMETER_CATEGORIES = [
@@ -321,27 +327,46 @@ function initializeParameters() {
 
                 <!-- Parameters Section - ONLY 5 CATEGORIES -->
                 <div class="parameters-section">
-                    ${PARAMETER_CATEGORIES.map(category => `
-                        <div class="parameter-item">
-                            <div class="parameter-header">
-                                <span class="parameter-emoji">${category.emoji}</span>
-                                <div class="parameter-info">
-                                    <span class="parameter-name" data-i18n="${category.nameKey}">${category.nameKey}</span>
-                                    <span class="parameter-description" data-i18n="${category.descriptionKey}">${category.descriptionKey}</span>
-                                </div>
-                            </div>
-                            <div class="rating-buttons" id="${category.id}-buttons">
-                                ${[1, 2, 3, 4].map(value => `
-                                    <button class="rating-button"
-                                            data-category="${category.id}"
-                                            data-value="${value}"
-                                            onclick="selectRating('${category.id}', ${value})">
-                                        ${value}
-                                    </button>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
+                  ${PARAMETER_CATEGORIES.map(category => {
+    const privacy = selectedPrivacy[category.id] || 'public';
+    return `
+        <div class="parameter-item">
+            <div class="parameter-header">
+                <span class="parameter-emoji">${category.emoji}</span>
+                <div class="parameter-info">
+                    <span class="parameter-name" data-i18n="${category.nameKey}">${category.nameKey}</span>
+                    <span class="parameter-description" data-i18n="${category.descriptionKey}">${category.descriptionKey}</span>
+                </div>
+                <div class="privacy-selector">
+                    <select class="privacy-select"
+                            data-category="${category.id}"
+                            onchange="updatePrivacy('${category.id}', this.value)"
+                            title="Who can see this parameter">
+                        <option value="public" ${privacy === 'public' ? 'selected' : ''}>
+                            🌍 Public
+                        </option>
+                        <option value="class_b" ${privacy === 'class_b' ? 'selected' : ''}>
+                            👥 Class B (Friends)
+                        </option>
+                        <option value="class_a" ${privacy === 'class_a' ? 'selected' : ''}>
+                            👨‍👩‍👧‍👦 Class A (Family)
+                        </option>
+                    </select>
+                </div>
+            </div>
+            <div class="rating-buttons" id="${category.id}-buttons">
+                ${[1, 2, 3, 4].map(value => `
+                    <button class="rating-button"
+                            data-category="${category.id}"
+                            data-value="${value}"
+                            onclick="selectRating('${category.id}', ${value})">
+                        ${value}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}).join('')}
                 </div>
 
                 <!-- Notes Section -->
@@ -975,7 +1000,7 @@ async function checkMonthData(year, month) {
         if (!datesWithData.has(dateStr)) {
             // Only check dates we don't already know about
             try {
-                const response = await fetch(`/api/parameters/load?date=${dateStr}`);
+                const response = await fetch(`/api/parameters?date=${dateStr}`);
                 if (response.ok) {
                     const result = await response.json();
                     if (result.success && result.data) {
@@ -1005,7 +1030,7 @@ async function checkMonthData(year, month) {
 // Check if a specific date has saved data and add green dot
 async function checkDateForData(dateStr, dayElement) {
     try {
-        const response = await fetch(`/api/parameters/load?date=${dateStr}`);
+        const response = await fetch(`/api/parameters?date=${dateStr}`);
         if (response.ok) {
             const result = await response.json();
             if (result.success && result.data) {
@@ -1108,14 +1133,23 @@ async function saveParameters() {
         return;
     }
 
-    const data = {
-        date: dateStr,
-        parameters: selectedRatings,
-        notes: notes
-    };
+   const data = {
+    date: dateStr,
+    mood: selectedRatings.mood || null,
+    energy: selectedRatings.energy || null,
+    sleep_quality: selectedRatings.sleep_quality || null,
+    physical_activity: selectedRatings.physical_activity || null,
+    anxiety: selectedRatings.anxiety || null,
+    mood_privacy: selectedPrivacy.mood || 'public',
+    energy_privacy: selectedPrivacy.energy || 'public',
+    sleep_quality_privacy: selectedPrivacy.sleep_quality || 'public',
+    physical_activity_privacy: selectedPrivacy.physical_activity || 'public',
+    anxiety_privacy: selectedPrivacy.anxiety || 'public',
+    notes: notes
+};
 
     try {
-        const response = await fetch('/api/parameters/save', {
+        const response = await fetch('/api/parameters', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1157,7 +1191,7 @@ async function loadParameters(showMsg = true) {
     const dateStr = formatDate(currentDate);
 
     try {
-        const response = await fetch(`/api/parameters/load?date=${dateStr}`);
+        const response = await fetch(`/api/parameters?date=${dateStr}`);
 
         if (!response.ok) {
             if (showMsg && response.status === 404) {
