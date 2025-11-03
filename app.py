@@ -438,7 +438,7 @@ class SavedParameters(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Add privacy field if not present:
-    privacy = db.Column(db.JSON)  # Store privacy settings as JSON
+  #  privacy = db.Column(db.JSON)  # Store privacy settings as JSON
 
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),)
 
