@@ -191,11 +191,77 @@ def get_db():
         raise ValueError(f"Unsupported database type: {db_uri}")
 
 
+def auto_migrate_database():
+    """Automatically update database schema on startup"""
+    with app.app_context():
+        try:
+            # Create all tables first
+            db.create_all()
+
+            # Now add missing columns
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+
+            with db.engine.connect() as conn:
+                # Check if we're using PostgreSQL or SQLite
+                is_postgres = 'postgresql' in str(db.engine.url)
+
+                # Update users table
+                if 'users' in inspector.get_table_names():
+                    columns = [col['name'] for col in inspector.get_columns('users')]
+
+                    if 'has_completed_onboarding' not in columns:
+                        if is_postgres:
+                            conn.execute(
+                                text("ALTER TABLE users ADD COLUMN has_completed_onboarding BOOLEAN DEFAULT FALSE"))
+                        else:
+                            conn.execute(
+                                text("ALTER TABLE users ADD COLUMN has_completed_onboarding INTEGER DEFAULT 0"))
+                        conn.commit()
+
+                    if 'onboarding_dismissed' not in columns:
+                        if is_postgres:
+                            conn.execute(
+                                text("ALTER TABLE users ADD COLUMN onboarding_dismissed BOOLEAN DEFAULT FALSE"))
+                        else:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN onboarding_dismissed INTEGER DEFAULT 0"))
+                        conn.commit()
+
+                    if 'shareable_link_token' not in columns:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN shareable_link_token VARCHAR(100)"))
+                        conn.commit()
+
+                # Update parameters/saved_parameters table
+                params_table = 'saved_parameters' if 'saved_parameters' in inspector.get_table_names() else 'parameters'
+                if params_table in inspector.get_table_names():
+                    columns = [col['name'] for col in inspector.get_columns(params_table)]
+
+                    privacy_columns = ['mood_privacy', 'energy_privacy', 'sleep_quality_privacy',
+                                       'physical_activity_privacy', 'anxiety_privacy']
+
+                    for col in privacy_columns:
+                        if col not in columns:
+                            conn.execute(
+                                text(f"ALTER TABLE {params_table} ADD COLUMN {col} VARCHAR(20) DEFAULT 'public'"))
+                            conn.commit()
+
+                logger.info("Database auto-migration completed successfully")
+
+        except Exception as e:
+            logger.warning(f"Auto-migration error (may be normal if columns exist): {e}")
+
+
+# Call auto-migration on startup
+auto_migrate_database()
+
+
+
+
+
 
 # =====================
 # DATABASE MODELS
 # =====================
-
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -205,12 +271,16 @@ class User(db.Model):
     role = db.Column(db.String(50), default='user')
     is_active = db.Column(db.Boolean, default=True)
     preferred_language = db.Column(db.String(5), default='en')
-    selected_city = db.Column(db.String(100), default='Jerusalem, Israel')  # ← ADD THIS LINE
+    selected_city = db.Column(db.String(100), default='Jerusalem, Israel')
+    # ADD THESE THREE NEW FIELDS:
+    has_completed_onboarding = db.Column(db.Boolean, default=False)
+    onboarding_dismissed = db.Column(db.Boolean, default=False)
+    shareable_link_token = db.Column(db.String(100), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
 
-    # Relationships
+    # Keep ALL existing relationships
     profile = db.relationship('Profile', backref='user', uselist=False, cascade='all, delete-orphan')
     sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender',
                                     cascade='all, delete-orphan')
@@ -228,17 +298,18 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    # KEEP THESE METHODS - THEY'RE ESSENTIAL!
     def follow(self, user):
         """Follow another user"""
         if not self.is_following(user):
-            follow = Follow(follower_id=self.id, followed_id=user.id)  # ← CHANGE
+            follow = Follow(follower_id=self.id, followed_id=user.id)
             db.session.add(follow)
 
     def unfollow(self, user):
         """Unfollow a user"""
         follow = Follow.query.filter_by(
             follower_id=self.id,
-            followed_id=user.id  # ← CHANGE
+            followed_id=user.id
         ).first()
         if follow:
             db.session.delete(follow)
@@ -247,7 +318,7 @@ class User(db.Model):
         """Check if following a user"""
         return Follow.query.filter_by(
             follower_id=self.id,
-            followed_id=user.id  # ← CHANGE
+            followed_id=user.id
         ).first() is not None
 
     def to_dict(self):
@@ -259,7 +330,10 @@ class User(db.Model):
             'is_active': self.is_active,
             'preferred_language': self.preferred_language or 'en',
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'last_login': self.last_login.isoformat() if self.last_login else None
+            'last_login': self.last_login.isoformat() if self.last_login else None,
+            # ADD THESE TO to_dict():
+            'has_completed_onboarding': self.has_completed_onboarding,
+            'shareable_link_token': self.shareable_link_token
         }
 
 
@@ -349,19 +423,54 @@ class SavedParameters(db.Model):
     __tablename__ = 'saved_parameters'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
-    date = db.Column(db.String(10), index=True)  # Store as YYYY-MM-DD string
-    mood = db.Column(db.Integer)  # 1-4 rating
-    energy = db.Column(db.Integer)  # 1-4 rating
-    sleep_quality = db.Column(db.Integer)  # 1-4 rating
-    physical_activity = db.Column(db.Integer)  # 1-4 rating
-    anxiety = db.Column(db.Integer)  # 1-4 rating
+    date = db.Column(db.String(10), index=True)
+    mood = db.Column(db.Integer)
+    energy = db.Column(db.Integer)
+    sleep_quality = db.Column(db.Integer)
+    physical_activity = db.Column(db.Integer)
+    anxiety = db.Column(db.Integer)
+    mood_privacy = db.Column(db.String(20), default='public')
+    energy_privacy = db.Column(db.String(20), default='public')
+    sleep_quality_privacy = db.Column(db.String(20), default='public')
+    physical_activity_privacy = db.Column(db.String(20), default='public')
+    anxiety_privacy = db.Column(db.String(20), default='public')
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    __table_args__ = (
-        db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),
-    )
+    __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),)
+
+    def to_dict(self, viewer_id=None, privacy_level=None):
+        base_dict = {
+            'id': self.id,
+            'date': self.date,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+        if viewer_id == self.user_id:
+            base_dict.update({
+                'mood': self.mood,
+                'energy': self.energy,
+                'sleep_quality': self.sleep_quality,
+                'physical_activity': self.physical_activity,
+                'anxiety': self.anxiety,
+                'mood_privacy': self.mood_privacy,
+                'energy_privacy': self.energy_privacy,
+                'sleep_quality_privacy': self.sleep_quality_privacy,
+                'physical_activity_privacy': self.physical_activity_privacy,
+                'anxiety_privacy': self.anxiety_privacy,
+                'notes': self.notes
+            })
+        else:
+            for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
+                param_privacy = getattr(self, f"{param}_privacy", 'public')
+                if param_privacy == 'public' or \
+                        (param_privacy == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
+                        (param_privacy == 'class_a' and privacy_level == 'class_a'):
+                    base_dict[param] = getattr(self, param)
+
+        return base_dict
 
 class Alert(db.Model):
     __tablename__ = 'alerts'
@@ -415,6 +524,67 @@ class Follow(db.Model):
 
     # Ensure a user can't follow the same person twice
     __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id', name='unique_follow'),)
+
+
+class FollowRequest(db.Model):
+    __tablename__ = 'follow_requests'
+    id = db.Column(db.Integer, primary_key=True)
+    requester_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    target_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    privacy_level = db.Column(db.String(20), default='public')
+    status = db.Column(db.String(20), default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    responded_at = db.Column(db.DateTime)
+
+    requester = db.relationship('User', foreign_keys=[requester_id], backref='sent_follow_requests')
+    target = db.relationship('User', foreign_keys=[target_id], backref='received_follow_requests')
+
+    __table_args__ = (db.UniqueConstraint('requester_id', 'target_id', name='unique_follow_request'),)
+
+
+class ParameterTrigger(db.Model):
+    __tablename__ = 'parameter_triggers'
+    id = db.Column(db.Integer, primary_key=True)
+    watcher_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    watched_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    parameter_name = db.Column(db.String(50), nullable=False)
+    trigger_condition = db.Column(db.String(20), nullable=False)
+    trigger_value = db.Column(db.Integer, nullable=False)
+    consecutive_days = db.Column(db.Integer)
+    is_active = db.Column(db.Boolean, default=True)
+    last_triggered = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    watcher = db.relationship('User', foreign_keys=[watcher_id], backref='watching_triggers')
+    watched = db.relationship('User', foreign_keys=[watched_id], backref='watched_triggers')
+
+    def check_trigger(self, parameter_value):
+        if not self.is_active:
+            return False
+        if self.trigger_condition == 'below':
+            return parameter_value < self.trigger_value
+        elif self.trigger_condition == 'above':
+            return parameter_value > self.trigger_value
+        elif self.trigger_condition == 'equals':
+            return parameter_value == self.trigger_value
+        return False
+
+
+class NotificationSettings(db.Model):
+    __tablename__ = 'notification_settings'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+    follow_requests = db.Column(db.Boolean, default=True)
+    parameter_triggers = db.Column(db.Boolean, default=True)
+    daily_reminder = db.Column(db.Boolean, default=False)
+    weekly_summary = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('notification_settings', uselist=False))
+
+
+
 
 
 def ensure_database_schema():
@@ -1441,9 +1611,19 @@ def register():
         email = sanitize_input(data.get('email', '').strip().lower())
         password = data.get('password', '')
 
-        # Validation
-        if not username or not email or not password:
-            return jsonify({'error': 'All fields are required'}), 400
+        # Default username to email local part if not provided
+        if not username and email:
+            username = email.split('@')[0]
+            # Sanitize the generated username too
+            username = sanitize_input(username)
+
+        # Validation - now password and email are required, username will have a default
+        if not email or not password:
+            return jsonify({'error': 'Email and password are required'}), 400
+
+        # Check username after defaulting
+        if not username:
+            return jsonify({'error': 'Username could not be generated from email'}), 400
 
         if not validate_email(email):
             return jsonify({'error': 'Invalid email format'}), 400
@@ -1573,6 +1753,33 @@ def logout():
     session.clear()
     logger.info(f"User logged out: {user_id}")
     return jsonify({'success': True}), 200
+
+
+@app.route('/api/onboarding/status', methods=['GET'])
+@login_required
+def get_onboarding_status():
+    user = User.query.get(session['user_id'])
+    return jsonify({
+        'needs_onboarding': not user.has_completed_onboarding and not user.onboarding_dismissed,
+        'has_completed': user.has_completed_onboarding,
+        'was_dismissed': user.onboarding_dismissed
+    })
+
+@app.route('/api/onboarding/complete', methods=['POST'])
+@login_required
+def complete_onboarding():
+    user = User.query.get(session['user_id'])
+    user.has_completed_onboarding = True
+    db.session.commit()
+    return jsonify({'message': 'Onboarding completed'}), 200
+
+@app.route('/api/onboarding/dismiss', methods=['POST'])
+@login_required
+def dismiss_onboarding():
+    user = User.query.get(session['user_id'])
+    user.onboarding_dismissed = True
+    db.session.commit()
+    return jsonify({'message': 'Onboarding dismissed'}), 200
 
 
 @app.route('/api/auth/session', methods=['GET'])
@@ -2727,88 +2934,94 @@ def get_parameters():
     })
 
 
-@app.route('/api/parameters/save', methods=['POST'])
+@app.route('/api/parameters', methods=['POST'])
 @login_required
 def save_parameters():
+    """Save user parameters with privacy settings"""
     try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+        data = request.get_json()
+        user_id = session.get('user_id')
+        date_str = data.get('date')
 
-        data = request.json
-        user_id = session['user_id']
+        if not date_str:
+            return jsonify({'error': 'Date is required'}), 400
 
-        # Extract date and parameters
-        if not data.get('date'):
-            return jsonify({'success': False, 'message': 'Date is required'}), 400
+        # Find or create parameter entry
+        params = SavedParameters.query.filter_by(
+            user_id=user_id,
+            date=date_str
+        ).first()
 
-        # Parameters are nested under 'parameters' key
-        params = data.get('parameters', {})
+        if not params:
+            params = SavedParameters(
+                user_id=user_id,
+                date=date_str
+            )
 
-        conn = get_db()
-        cursor = conn.cursor()
+        # Update values and privacy
+        for field in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
+            if field in data:
+                value = data[field]
+                if value is not None and 1 <= value <= 4:
+                    setattr(params, field, value)
 
-        # Check if parameters exist for this date
-        check_query = 'SELECT id FROM parameters WHERE user_id = %s AND date = %s'
-        cursor.execute(check_query, (user_id, data['date']))
-        existing = cursor.fetchone()
+            privacy_field = f"{field}_privacy"
+            if privacy_field in data:
+                privacy_value = data[privacy_field]
+                if privacy_value in ['public', 'class_a', 'class_b']:
+                    setattr(params, privacy_field, privacy_value)
 
-        if existing:
-            # Update existing parameters
-            update_query = '''
-                UPDATE parameters 
-                SET mood = %s, 
-                    energy = %s,
-                    sleep_quality = %s, 
-                    physical_activity = %s, 
-                    anxiety = %s, 
-                    notes = %s,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = %s AND date = %s
-            '''
-            cursor.execute(update_query, (
-                params.get('mood'),
-                params.get('energy'),
-                params.get('sleep_quality'),
-                params.get('physical_activity'),
-                params.get('anxiety'),
-                data.get('notes', ''),
-                user_id,
-                data['date']
-            ))
-        else:
-            # Insert new parameters
-            insert_query = '''
-                INSERT INTO parameters (
-                    user_id, date, mood, energy, sleep_quality,
-                    physical_activity, anxiety, notes
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            '''
-            cursor.execute(insert_query, (
-                user_id,
-                data['date'],
-                params.get('mood'),
-                params.get('energy'),
-                params.get('sleep_quality'),
-                params.get('physical_activity'),
-                params.get('anxiety'),
-                data.get('notes', '')
-            ))
+        if 'notes' in data:
+            params.notes = data['notes']
 
-        conn.commit()
-        cursor.close()
-        conn.close()
+        db.session.add(params)
+        db.session.commit()
+
+        # Check triggers
+        check_parameter_triggers(user_id, params)
+
+        import random
+        encouragements = [
+            "Great job tracking your wellness today! 🌟",
+            "Your consistency is inspiring! Keep it up! 💪",
+            "Every check-in is a step forward! 🚀",
+            "Thank you for taking care of yourself! ❤️",
+            "Your commitment to wellness is admirable! 🌈"
+        ]
 
         return jsonify({
-            'success': True,
-            'message': 'Parameters saved successfully'
-        })
+            'message': 'Parameters saved successfully',
+            'encouragement': random.choice(encouragements),
+            'data': params.to_dict(viewer_id=user_id)
+        }), 200
 
     except Exception as e:
-        logger.error(f"Error saving parameters: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Error saving parameters'
-        }), 500
+        logger.error(f"Error saving parameters: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to save parameters'}), 500
+
+
+def check_parameter_triggers(user_id, params):
+    """Check triggers when parameters are saved"""
+    triggers = ParameterTrigger.query.filter_by(
+        watched_id=user_id,
+        is_active=True
+    ).all()
+
+    for trigger in triggers:
+        param_value = getattr(params, trigger.parameter_name, None)
+        if param_value and trigger.check_trigger(param_value):
+            # Create alert
+            alert = Alert(
+                user_id=trigger.watcher_id,
+                title=f"Parameter Alert",
+                content=f"Trigger fired for {trigger.parameter_name}",
+                alert_type='trigger'
+            )
+            db.session.add(alert)
+            trigger.last_triggered = datetime.utcnow()
+
+    db.session.commit()
 
 @app.route('/api/parameters/load', methods=['GET'])
 def load_parameters():  # Remove @login_required
@@ -3566,9 +3779,190 @@ def get_user_parameters_by_date(user_id, date_str):
         return jsonify({'error': 'Failed to get parameters'}), 500
 
 
+@app.route('/api/follow-requests', methods=['POST'])
+@login_required
+def create_follow_request():
+    try:
+        data = request.get_json()
+        requester_id = session.get('user_id')
+        target_id = data.get('target_id')
+
+        if not target_id or requester_id == target_id:
+            return jsonify({'error': 'Invalid target'}), 400
+
+        existing = FollowRequest.query.filter_by(
+            requester_id=requester_id,
+            target_id=target_id
+        ).first()
+
+        if existing:
+            if existing.status == 'pending':
+                return jsonify({'error': 'Request already pending'}), 400
+            existing.status = 'pending'
+            existing.created_at = datetime.utcnow()
+        else:
+            existing = FollowRequest(
+                requester_id=requester_id,
+                target_id=target_id
+            )
+            db.session.add(existing)
+
+        db.session.commit()
+
+        # Create alert
+        alert = Alert(
+            user_id=target_id,
+            title="New Follow Request",
+            content=f"Someone wants to follow your journey",
+            alert_type='follow_request'
+        )
+        db.session.add(alert)
+        db.session.commit()
+
+        return jsonify({'message': 'Follow request sent'}), 200
+
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed'}), 500
 
 
+@app.route('/api/follow-requests/received', methods=['GET'])
+@login_required
+def get_received_follow_requests():
+    user_id = session.get('user_id')
+    requests = FollowRequest.query.filter_by(
+        target_id=user_id,
+        status='pending'
+    ).all()
 
+    return jsonify({
+        'requests': [{
+            'id': req.id,
+            'requester_id': req.requester_id,
+            'requester_name': req.requester.username,
+            'created_at': req.created_at.isoformat()
+        } for req in requests]
+    })
+
+
+@app.route('/api/follow-requests/<int:request_id>/respond', methods=['POST'])
+@login_required
+def respond_to_follow_request(request_id):
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')
+        action = data.get('action')
+        privacy_level = data.get('privacy_level', 'public')
+
+        follow_request = FollowRequest.query.get(request_id)
+
+        if not follow_request or follow_request.target_id != user_id:
+            return jsonify({'error': 'Not found'}), 404
+
+        if follow_request.status != 'pending':
+            return jsonify({'error': 'Already processed'}), 400
+
+        if action == 'accept':
+            follow_request.status = 'accepted'
+            follow_request.privacy_level = privacy_level
+            follow_request.responded_at = datetime.utcnow()
+
+            follow = Follow(
+                follower_id=follow_request.requester_id,
+                followed_id=follow_request.target_id
+            )
+            db.session.add(follow)
+
+        elif action == 'reject':
+            follow_request.status = 'rejected'
+            follow_request.responded_at = datetime.utcnow()
+
+        db.session.commit()
+        return jsonify({'message': f'Request {action}ed'}), 200
+
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed'}), 500
+
+
+@app.route('/api/triggers', methods=['GET'])
+@login_required
+def get_triggers():
+    user_id = session.get('user_id')
+    triggers = ParameterTrigger.query.filter_by(
+        watcher_id=user_id,
+        is_active=True
+    ).all()
+
+    return jsonify({
+        'triggers': [{
+            'id': t.id,
+            'watched_user': t.watched.username,
+            'parameter': t.parameter_name,
+            'condition': t.trigger_condition,
+            'value': t.trigger_value,
+            'consecutive_days': t.consecutive_days
+        } for t in triggers]
+    })
+
+
+@app.route('/api/triggers', methods=['POST'])
+@login_required
+def create_trigger():
+    try:
+        data = request.get_json()
+        trigger = ParameterTrigger(
+            watcher_id=session.get('user_id'),
+            watched_id=data.get('watched_id'),
+            parameter_name=data.get('parameter_name'),
+            trigger_condition=data.get('condition'),
+            trigger_value=data.get('value'),
+            consecutive_days=data.get('consecutive_days')
+        )
+        db.session.add(trigger)
+        db.session.commit()
+        return jsonify({'message': 'Trigger created'}), 201
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed'}), 500
+
+
+@app.route('/api/triggers/<int:trigger_id>', methods=['DELETE'])
+@login_required
+def delete_trigger(trigger_id):
+    trigger = ParameterTrigger.query.get(trigger_id)
+    if trigger and trigger.watcher_id == session.get('user_id'):
+        trigger.is_active = False
+        db.session.commit()
+        return jsonify({'message': 'Deleted'}), 200
+    return jsonify({'error': 'Not found'}), 404
+
+
+@app.route('/api/users/shareable-link', methods=['GET'])
+@login_required
+def get_shareable_link():
+    user = User.query.get(session.get('user_id'))
+
+    if not user.shareable_link_token:
+        import uuid
+        user.shareable_link_token = str(uuid.uuid4())
+        db.session.commit()
+
+    base_url = request.host_url.rstrip('/')
+    shareable_link = f"{base_url}/profile/{user.shareable_link_token}"
+
+    return jsonify({'link': shareable_link})
+
+
+@app.route('/api/profile/<token>', methods=['GET'])
+def get_profile_by_token(token):
+    user = User.query.filter_by(shareable_link_token=token).first()
+    if not user:
+        return jsonify({'error': 'Not found'}), 404
+    return jsonify({'display_name': user.username, 'id': user.id})
 
 
 
