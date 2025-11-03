@@ -3184,6 +3184,9 @@ def load_feed_by_date(date_str):
 # =====================
 # PARAMETERS ROUTES (Therapy Companion)
 # =====================
+# app.py - Fix for /api/parameters GET endpoint
+# Location: Replace lines 3189-3235 in app.py
+
 @app.route('/api/parameters', methods=['GET'])
 @login_required
 def get_parameters():
@@ -3211,6 +3214,12 @@ def get_parameters():
                         'physical_activity': int(params.physical_activity) if params.physical_activity else 0,
                         'anxiety': int(params.anxiety) if params.anxiety else 0
                     },
+                    # FIXED: Added privacy settings to response
+                    'mood_privacy': params.mood_privacy or 'public',
+                    'energy_privacy': params.energy_privacy or 'public',
+                    'sleep_quality_privacy': params.sleep_quality_privacy or 'public',
+                    'physical_activity_privacy': params.physical_activity_privacy or 'public',
+                    'anxiety_privacy': params.anxiety_privacy or 'public',
                     'notes': params.notes or ''
                 }
             })
@@ -3225,6 +3234,12 @@ def get_parameters():
                         'physical_activity': 0,
                         'anxiety': 0
                     },
+                    # FIXED: Added default privacy settings
+                    'mood_privacy': 'public',
+                    'energy_privacy': 'public',
+                    'sleep_quality_privacy': 'public',
+                    'physical_activity_privacy': 'public',
+                    'anxiety_privacy': 'public',
                     'notes': ''
                 }
             })
