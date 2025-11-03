@@ -3284,52 +3284,30 @@ def check_parameter_triggers(user_id, params):
     db.session.commit()
 
 
-
-@app.route('/api/parameters/dates')
+@app.route('/api/parameters/dates', methods=['GET'])
 @login_required
 def get_parameter_dates():
+    """Get all dates that have saved parameters for the current user"""
     try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+        user_id = session.get('user_id')
 
-        user_id = session['user_id']
-        conn = get_db()
-        cursor = conn.cursor()
+        # Get all parameter dates for this user using SQLAlchemy ORM
+        params = SavedParameters.query.filter_by(user_id=user_id).all()
 
-        # PostgreSQL query
-        query = 'SELECT DISTINCT date FROM parameters WHERE user_id = %s ORDER BY date DESC'
-        cursor.execute(query, (user_id,))
-
-        dates = cursor.fetchall()
-
-        cursor.close()
-        conn.close()
-
-        # Extract dates and convert to string format
-        date_list = []
-        for row in dates:
-            if isinstance(row, dict):
-                # Convert date object to string
-                date_obj = row['date']
-                if hasattr(date_obj, 'isoformat'):
-                    date_list.append(date_obj.isoformat())
-                else:
-                    date_list.append(str(date_obj))
-            else:
-                date_list.append(str(row[0]))
+        # Extract just the dates
+        dates = [param.date for param in params if param.date]
 
         return jsonify({
             'success': True,
-            'dates': date_list
+            'dates': dates
         })
 
     except Exception as e:
-        print(f"Error getting parameter dates: {e}")
+        logger.error(f"Get parameter dates error: {str(e)}")
         return jsonify({
             'success': False,
-            'message': 'Error loading dates',
             'dates': []
-        }), 500
+        })
 
 
 @app.route('/api/parameters/insights')
