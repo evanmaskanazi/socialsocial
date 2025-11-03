@@ -8,7 +8,7 @@ const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
 let currentDate = new Date();
 let selectedRatings = {};
 let datesWithData = new Set(JSON.parse(localStorage.getItem('savedParameterDates') || '[]'));
-let selectedPrivacy = {};
+window.selectedPrivacy = {};
 let savedParameterState = {};
 
 // Add function to save parameter state
@@ -69,7 +69,10 @@ function restoreParameterState(state) {
 }
 
 function updatePrivacy(categoryId, privacyLevel) {
-    selectedPrivacy[categoryId] = privacyLevel;
+    if (!window.selectedPrivacy) {
+        window.selectedPrivacy = {};
+    }
+    window.selectedPrivacy[categoryId] = privacyLevel;
     console.log('Privacy updated:', categoryId, privacyLevel);
 }
 
@@ -293,11 +296,38 @@ const addParameterTranslations = () => {
 };
 
 // Format date for display
+// Format date for display
 function formatDate(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+// Convert date format from backend to YYYY-MM-DD
+function convertDateFormat(dateStr) {
+    // Convert from "Fri, 10 Oct 2025 00:00:00 GMT" to "2025-10-10"
+    const date = new Date(dateStr);
+    return formatDate(date);
+}
+
+// Load saved dates from backend
+async function loadSavedDates() {
+    try {
+        const response = await fetch('/api/parameters/dates');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.dates) {
+                // Convert date formats
+                const formattedDates = data.dates.map(convertDateFormat);
+                datesWithData = new Set(formattedDates);
+                localStorage.setItem('savedParameterDates', JSON.stringify(formattedDates));
+                updateCalendar(); // Refresh to show green dots
+            }
+        }
+    } catch (error) {
+        console.error('Error loading saved dates:', error);
+    }
 }
 
 // Show message function - FIXED SCOPE
@@ -346,8 +376,12 @@ window.showMessage = function(text, type = 'success', duration = 5000, isFlashy 
 };
 
 // Main initialization function
+// Main initialization function
 function initializeParameters() {
     console.log('Initializing parameters system...');
+
+    // Initialize global variables
+    window.selectedPrivacy = window.selectedPrivacy || {};
 
     // Add translations first
     addParameterTranslations();
@@ -468,6 +502,12 @@ function initializeParameters() {
 
     // Initialize calendar
     updateCalendar();
+
+ setTimeout(() => {
+        loadSavedDates();
+    }, 500);
+
+    console.log('Parameters system initialized successfully');
 
 
   const year = currentDate.getFullYear();
@@ -1212,11 +1252,11 @@ async function saveParameters() {
         sleep_quality: selectedRatings.sleep_quality || null,
         physical_activity: selectedRatings.physical_activity || null,
         anxiety: selectedRatings.anxiety || null,
-        mood_privacy: selectedPrivacy.mood || 'public',
-        energy_privacy: selectedPrivacy.energy || 'public',
-        sleep_quality_privacy: selectedPrivacy.sleep_quality || 'public',
-        physical_activity_privacy: selectedPrivacy.physical_activity || 'public',
-        anxiety_privacy: selectedPrivacy.anxiety || 'public',
+        mood_privacy: window.selectedPrivacy.mood || 'public',
+        energy_privacy: window.selectedPrivacy.energy || 'public',
+        sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'public',
+        physical_activity_privacy: window.selectedPrivacy.physical_activity || 'public',
+        anxiety_privacy: window.selectedPrivacy.anxiety || 'public',
         notes: notes
     };
 
@@ -1287,13 +1327,26 @@ async function loadParameters(showMsg = true) {
 
         const result = await response.json();
 
-        if (result.success && result.data) {
+     if (result.success && result.data) {
             // Load ratings
             selectedRatings = result.data.parameters || {};
 
             // Update UI
             Object.keys(selectedRatings).forEach(categoryId => {
                 selectRating(categoryId, selectedRatings[categoryId]);
+            });
+
+            // Load privacy settings for each parameter
+            ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+                const privacyKey = `${param}_privacy`;
+                if (result.data[privacyKey]) {
+                    window.selectedPrivacy[param] = result.data[privacyKey];
+                    // Update the dropdown
+                    const selector = document.querySelector(`[data-category="${param}"]`);
+                    if (selector) {
+                        selector.value = result.data[privacyKey];
+                    }
+                }
             });
 
             // Load notes

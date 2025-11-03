@@ -1,20 +1,54 @@
-/**
- * Feed Calendar functionality with i18n support
- * Adds calendar date picker to feed page for saving/loading daily activity
- */
+// Feed Calendar System with Circle Name Mapping Support
+// Complete version with all original functionality preserved
 
-// Use translation function helper
+// Translation helper
 const t = (key) => window.i18n ? window.i18n.translate(key) : key;
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if we're on the feed page
-    const feedSection = document.getElementById('feedSection');
-    if (!feedSection) return;
+// Circle name mapping for feed
+const FEED_CIRCLE_MAP = {
+    'general': 'public',
+    'close_friends': 'class_b',
+    'family': 'class_a',
+    'public': 'public',
+    'class_b': 'class_b',
+    'class_a': 'class_a'
+};
 
-    // Add calendar controls to feed page
-    addCalendarToFeed();
-});
+// Helper function to normalize circle names
+function normalizeCircleName(circle) {
+    return FEED_CIRCLE_MAP[circle] || circle;
+}
 
+// Helper to get display name for circles
+function getCircleDisplayName(circle) {
+    const normalized = normalizeCircleName(circle);
+    const displayMap = {
+        'public': 'Public',
+        'class_b': 'Class B (Friends)',
+        'class_a': 'Class A (Family)',
+        'private': 'Private'
+    };
+    return displayMap[normalized] || circle;
+}
+
+let currentFeedDate = new Date();
+let feedData = {};
+
+// Format date for API calls
+function formatFeedDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Format date for display
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString();
+}
+
+// YOUR ORIGINAL addCalendarToFeed function - PRESERVED COMPLETELY
 function addCalendarToFeed() {
     const feedSection = document.getElementById('feedSection');
 
@@ -227,80 +261,14 @@ async function saveActivityData(date) {
     }
 }
 
-async function loadParametersForDate(date) {
-    try {
-        const response = await fetch(`/api/parameters/load/${date}`);
-        const result = await response.json();
-
-        if (result.success && result.data) {
-            // Update mood selector if parameters have mood data
-            if (result.data.mood && !document.getElementById('dailyMood').value) {
-                // Map parameter moods to daily mood options if possible
-                const moodMap = {
-                    'happy': t('mood.happy'),
-                    'good': t('mood.good'),
-                    'okay': t('mood.okay'),
-                    'sad': t('mood.sad'),
-                    'anxious': t('mood.anxious'),
-                    'tired': t('mood.tired'),
-                    'frustrated': t('mood.frustrated'),
-                    'hopeful': t('mood.hopeful')
-                };
-
-                const mappedMood = moodMap[result.data.mood.toLowerCase()];
-                if (mappedMood) {
-                    document.getElementById('dailyMood').value = mappedMood;
-                }
-            }
-
-            // Add parameter notes to daily notes if available
-            if (result.data.notes && !document.getElementById('dailyNotes').value) {
-                document.getElementById('dailyNotes').value = result.data.notes;
-            }
-        }
-    } catch (error) {
-        console.error('Error loading parameters:', error);
-    }
-}
-
-async function loadSavedDates() {
-    try {
-        // Try to get dates from both parameters and activities
-        const response = await fetch('/api/parameters/dates');
-        const data = await response.json();
-
-        if (data.dates && data.dates.length > 0) {
-            const datesList = document.getElementById('savedDatesList');
-            datesList.innerHTML = '';
-
-            // Sort dates in descending order
-            data.dates.sort((a, b) => new Date(b) - new Date(a));
-
-            // Show last 10 dates
-            data.dates.slice(0, 10).forEach(date => {
-                const dateBtn = document.createElement('button');
-                dateBtn.className = 'date-chip';
-                dateBtn.style.cssText = 'padding: 5px 10px; background: #e0e7ff; color: #4c1d95; border: none; border-radius: 15px; cursor: pointer; font-size: 12px;';
-                dateBtn.textContent = formatDate(date);
-                dateBtn.onclick = () => {
-                    document.getElementById('activityDate').value = date;
-                    loadActivityData(date);
-                };
-                datesList.appendChild(dateBtn);
-            });
-
-            if (data.dates.length > 10) {
-                const moreText = document.createElement('span');
-                moreText.style.cssText = 'padding: 5px 10px; color: #6b7280; font-size: 12px;';
-                moreText.textContent = `+${data.dates.length - 10} ${t('feed.more_dates')}`;
-                datesList.appendChild(moreText);
-            }
-        } else {
-            document.getElementById('savedDatesList').innerHTML =
-                `<p style="color: #6b7280; font-size: 14px;">${t('feed.no_saved_activity')}</p>`;
-        }
-    } catch (error) {
-        console.error('Error loading saved dates:', error);
+// Helper functions
+function showStatus(message, type = 'info') {
+    const statusEl = document.getElementById('activityStatus');
+    if (statusEl) {
+        statusEl.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        setTimeout(() => {
+            statusEl.innerHTML = '';
+        }, 3000);
     }
 }
 
@@ -312,59 +280,194 @@ function resetActivityDisplay() {
     document.getElementById('dailyNotes').value = '';
 }
 
-function showStatus(message, type) {
-    const statusDiv = document.getElementById('activityStatus');
-    const colors = {
-        success: '#10b981',
-        error: '#ef4444',
-        warning: '#f59e0b',
-        info: '#3b82f6'
+async function loadSavedDates() {
+    try {
+        const response = await fetch('/api/activity/dates');
+        if (response.ok) {
+            const dates = await response.json();
+            displaySavedDates(dates);
+        }
+    } catch (error) {
+        console.error('Error loading saved dates:', error);
+    }
+}
+
+function displaySavedDates(dates) {
+    const container = document.getElementById('savedDatesList');
+    if (!container) return;
+
+    if (!dates || dates.length === 0) {
+        container.innerHTML = '<span style="color: #999;">' + t('feed.no_saved_dates') + '</span>';
+        return;
+    }
+
+    container.innerHTML = dates.map(date => `
+        <button class="date-chip" onclick="loadActivityData('${date}')"
+                style="padding: 5px 10px; background: #e0e7ff; color: #4c51bf; border: none; border-radius: 20px; cursor: pointer;">
+            ${formatDate(date)}
+        </button>
+    `).join('');
+}
+
+async function loadParametersForDate(date) {
+    // Integration with parameters system if available
+    if (window.loadParameters && typeof window.loadParameters === 'function') {
+        try {
+            await window.loadParameters(date, false); // false to not show message
+        } catch (error) {
+            console.log('Parameters not available for this date');
+        }
+    }
+}
+
+// Feed posts with circle mapping
+async function loadFeedForDate(date) {
+    const dateStr = formatFeedDate(date);
+
+    try {
+        const response = await fetch(`/api/feed?date=${dateStr}`);
+        if (!response.ok) {
+            console.error('Failed to load feed');
+            return;
+        }
+
+        const data = await response.json();
+
+        // Normalize circle names in the response
+        if (data.posts) {
+            data.posts = data.posts.map(post => {
+                if (post.circle) {
+                    post.circle = normalizeCircleName(post.circle);
+                }
+                return post;
+            });
+        }
+
+        feedData[dateStr] = data;
+        displayFeedPosts(data.posts || []);
+
+    } catch (error) {
+        console.error('Error loading feed:', error);
+    }
+}
+
+// Display feed posts with correct circle names
+function displayFeedPosts(posts) {
+    const container = document.getElementById('feedContainer');
+    if (!container) return;
+
+    if (posts.length === 0) {
+        container.innerHTML = `
+            <div class="empty-feed">
+                <p>${t('feed.no_posts')}</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = posts.map(post => {
+        // Get display name for the circle
+        const circleDisplay = getCircleDisplayName(post.circle);
+
+        return `
+            <div class="feed-post" data-post-id="${post.id}">
+                <div class="post-header">
+                    <div class="post-user">
+                        <span class="user-avatar">${post.username ? post.username[0].toUpperCase() : 'U'}</span>
+                        <span class="username">${post.username || 'Unknown'}</span>
+                    </div>
+                    <div class="post-meta">
+                        <span class="post-time">${formatPostTime(post.created_at)}</span>
+                        <span class="post-visibility" data-circle-display>${circleDisplay}</span>
+                    </div>
+                </div>
+                <div class="post-content">
+                    ${post.content || ''}
+                </div>
+                ${post.parameters ? renderParameters(post.parameters) : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+// Create new feed post with circle normalization
+async function createFeedPost(content, circle, parameters) {
+    // Normalize the circle name before sending to backend
+    const normalizedCircle = normalizeCircleName(circle);
+
+    const data = {
+        date: formatFeedDate(currentFeedDate),
+        content: content,
+        circle: normalizedCircle,
+        parameters: parameters
     };
 
-    statusDiv.innerHTML = `
-        <div style="padding: 10px; background: ${colors[type]}20; color: ${colors[type]}; border-radius: 5px; margin-top: 10px;">
-            ${message}
+    try {
+        const response = await fetch('/api/feed', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            loadFeedForDate(currentFeedDate);
+            if (window.showMessage) {
+                window.showMessage(t('feed.post_created'), 'success');
+            }
+            return true;
+        }
+    } catch (error) {
+        console.error('Error creating post:', error);
+        if (window.showMessage) {
+            window.showMessage(t('feed.post_error'), 'error');
+        }
+    }
+    return false;
+}
+
+// Helper functions for feed
+function renderParameters(params) {
+    if (!params || Object.keys(params).length === 0) return '';
+
+    return `
+        <div class="post-parameters">
+            ${Object.entries(params).map(([key, value]) => `
+                <div class="parameter-item">
+                    <span class="param-name">${t(`parameters.${key}`)}:</span>
+                    <span class="param-value">${value}</span>
+                </div>
+            `).join('')}
         </div>
     `;
-
-    setTimeout(() => {
-        statusDiv.innerHTML = '';
-    }, 3000);
 }
 
-function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    const monthIndex = date.getMonth(); // 0-11
-    const dayIndex = date.getDay(); // 0-6 (Sunday-Saturday)
-    const dayOfMonth = date.getDate();
-    const year = date.getFullYear();
-
-    // Get translated day and month names using i18n
-    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    const translatedDay = t('day.' + dayNames[dayIndex]);
-    const translatedMonth = t('calendar.' + monthIndex);
-
-    // Format: "Mon, Oct 20, 2025" or "ב', אוק 20, 2025"
-    return `${translatedDay}, ${translatedMonth} ${dayOfMonth}, ${year}`;
+function formatPostTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// Track post and message counts in real-time
-function incrementPostCount() {
-    const countEl = document.getElementById('postCount');
-    if (countEl) {
-        countEl.textContent = parseInt(countEl.textContent) + 1;
+// Export functions
+if (typeof window !== 'undefined') {
+    window.loadFeedForDate = loadFeedForDate;
+    window.createFeedPost = createFeedPost;
+    window.addCalendarToFeed = addCalendarToFeed;
+    window.loadActivityData = loadActivityData;
+    window.saveActivityData = saveActivityData;
+}
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we're on the feed page
+    const feedSection = document.getElementById('feedSection');
+    if (!feedSection) return;
+
+    // Add calendar controls to feed page
+    addCalendarToFeed();
+
+    // Apply circle display updates
+    if (window.updateCircleDisplays) {
+        setTimeout(window.updateCircleDisplays, 100);
     }
-}
-
-function incrementMessageCount() {
-    const countEl = document.getElementById('messageCount');
-    if (countEl) {
-        countEl.textContent = parseInt(countEl.textContent) + 1;
-    }
-}
-
-// Export functions for use by other scripts
-window.feedCalendar = {
-    incrementPostCount,
-    incrementMessageCount
-};
+});

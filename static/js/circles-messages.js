@@ -381,6 +381,7 @@ let circlesData = {
 };
 
 // Load circles from backend
+// Load circles from backend
 async function loadCircles() {
     try {
         const response = await fetch('/api/circles');
@@ -392,18 +393,16 @@ async function loadCircles() {
         const circles = await response.json();
         console.log('Loaded circles data:', circles);
 
-        // Store the data
-        circlesData.general = circles.general || [];
-        circlesData.close_friends = circles.close_friends || [];
-        circlesData.family = circles.family || [];
+        // Store globally for debugging
+        window.circlesData = circles;
 
-        // Update display for Public (backend: general)
+        // Update display for Public - Backend NOW returns 'public'
         const publicMembers = document.getElementById('publicMembers');
         if (publicMembers) {
-            if (circlesData.general.length > 0) {
+            if (circles.public && circles.public.length > 0) {
                 publicMembers.innerHTML = '';
-                circlesData.general.forEach(member => {
-                    const memberDiv = createMemberElement(member, 'general');
+                circles.public.forEach(member => {
+                    const memberDiv = createMemberElement(member, 'public');
                     publicMembers.appendChild(memberDiv);
                 });
             } else {
@@ -413,16 +412,16 @@ async function loadCircles() {
                         <p>No members yet</p>
                     </div>`;
             }
-            document.getElementById('publicCount').textContent = circlesData.general.length;
+            document.getElementById('publicCount').textContent = circles.public.length || 0;
         }
 
-        // Update display for Class B/Friends (backend: close_friends)
+        // Update display for Class B/Friends - Backend NOW returns 'class_b'
         const classBMembers = document.getElementById('class_bMembers');
         if (classBMembers) {
-            if (circlesData.close_friends.length > 0) {
+            if (circles.class_b && circles.class_b.length > 0) {
                 classBMembers.innerHTML = '';
-                circlesData.close_friends.forEach(member => {
-                    const memberDiv = createMemberElement(member, 'close_friends');
+                circles.class_b.forEach(member => {
+                    const memberDiv = createMemberElement(member, 'class_b');
                     classBMembers.appendChild(memberDiv);
                 });
             } else {
@@ -432,16 +431,16 @@ async function loadCircles() {
                         <p>No members yet</p>
                     </div>`;
             }
-            document.getElementById('class_bCount').textContent = circlesData.close_friends.length;
+            document.getElementById('class_bCount').textContent = circles.class_b.length || 0;
         }
 
-        // Update display for Class A/Family (backend: family)
+        // Update display for Class A/Family - Backend NOW returns 'class_a'
         const classAMembers = document.getElementById('class_aMembers');
         if (classAMembers) {
-            if (circlesData.family.length > 0) {
+            if (circles.class_a && circles.class_a.length > 0) {
                 classAMembers.innerHTML = '';
-                circlesData.family.forEach(member => {
-                    const memberDiv = createMemberElement(member, 'family');
+                circles.class_a.forEach(member => {
+                    const memberDiv = createMemberElement(member, 'class_a');
                     classAMembers.appendChild(memberDiv);
                 });
             } else {
@@ -451,7 +450,7 @@ async function loadCircles() {
                         <p>No members yet</p>
                     </div>`;
             }
-            document.getElementById('class_aCount').textContent = circlesData.family.length;
+            document.getElementById('class_aCount').textContent = circles.class_a.length || 0;
         }
 
     } catch (error) {
@@ -467,8 +466,8 @@ function createMemberElement(member, circleType) {
     const memberDiv = document.createElement('div');
     memberDiv.className = 'member-item';
     memberDiv.innerHTML = `
-        <div class="user-avatar">${(member.display_name || member.username)[0].toUpperCase()}</div>
-        <div class="member-name">${member.display_name || member.username}</div>
+        <div class="user-avatar">${(member.display_name || member.username || member.email || 'U')[0].toUpperCase()}</div>
+        <div class="member-name">${member.display_name || member.username || member.email}</div>
         <button class="remove-btn" onclick="removeFromCircle('${member.id}', '${circleType}')">Remove</button>
     `;
     return memberDiv;
@@ -478,13 +477,13 @@ function createMemberElement(member, circleType) {
 async function removeFromCircle(memberId, circleType) {
     try {
         const response = await fetch('/api/circles/remove', {
-            method: 'POST',
+            method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                member_id: memberId,
-                circle: circleType
+                user_id: memberId,
+                circle_type: circleType
             })
         });
 
@@ -511,47 +510,52 @@ async function searchUsers() {
 
     try {
         const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
-        const users = await response.json();
+        const data = await response.json();
+        const users = data.users || [];
 
         const searchResults = document.getElementById('searchResults');
         searchResults.innerHTML = '';
         searchResults.classList.add('active');
 
-        users.forEach(user => {
-            const resultItem = document.createElement('div');
-            resultItem.className = 'search-result-item';
-            resultItem.innerHTML = `
-                <div class="user-info">
-                    <div class="user-avatar">${user.username[0].toUpperCase()}</div>
-                    <span>${user.display_name || user.username}</span>
-                </div>
-                <select onchange="addToCircle('${user.id}', this.value)">
-                    <option value="">Add to circle...</option>
-                    <option value="general">Public</option>
-                    <option value="close_friends">Class B (Friends)</option>
-                    <option value="family">Class A (Family)</option>
-                </select>
-            `;
-            searchResults.appendChild(resultItem);
-        });
+        if (users.length === 0) {
+            searchResults.innerHTML = '<div class="search-result-item">No users found</div>';
+        } else {
+            users.forEach(user => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'search-result-item';
+                resultItem.innerHTML = `
+                    <div class="user-info">
+                        <div class="user-avatar">${(user.username || user.email || 'U')[0].toUpperCase()}</div>
+                        <span>${user.display_name || user.username || user.email}</span>
+                    </div>
+                    <select onchange="addToCircle('${user.id}', this.value)">
+                        <option value="">Add to circle...</option>
+                        <option value="public">Public</option>
+                        <option value="class_b">Class B (Friends)</option>
+                        <option value="class_a">Class A (Family)</option>
+                    </select>
+                `;
+                searchResults.appendChild(resultItem);
+            });
+        }
     } catch (error) {
         console.error('Error searching users:', error);
     }
 }
 
 // Add user to circle
-async function addToCircle(memberId, circle) {
-    if (!circle) return;
+async function addToCircle(userId, circleType) {
+    if (!circleType) return;
 
     try {
-        const response = await fetch('/api/circles/add', {
+        const response = await fetch('/api/circles', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                member_id: memberId,
-                circle: circle
+                user_id: userId,
+                circle_type: circleType
             })
         });
 
@@ -579,8 +583,11 @@ function initializeCircles() {
     // Close search results when clicking outside
     document.addEventListener('click', (e) => {
         const searchContainer = document.querySelector('.user-search');
-        if (!searchContainer.contains(e.target)) {
-            document.getElementById('searchResults').classList.remove('active');
+        if (!searchContainer && e.target.id !== 'userSearchInput') {
+            const searchResults = document.getElementById('searchResults');
+            if (searchResults) {
+                searchResults.classList.remove('active');
+            }
         }
     });
 }
@@ -596,90 +603,13 @@ if (typeof window !== 'undefined') {
 
 
 
-
-
-async function loadCircles() {
-    try {
-        const response = await fetch('/api/circles');
-        if (response.status === 401) {
-            window.location.href = '/';
-            return;
-        }
-
-        const circles = await response.json();
-        console.log('Loaded circles data:', circles);
-
-        // Map internal names to display structure
-        const circleMapping = {
-            'general': 'public',
-            'close_friends': 'class_b',
-            'family': 'class_a'
-        };
-
-        // Update display for Public (from general)
-        const publicList = document.getElementById('publicList') || document.getElementById('general-members');
-        if (publicList) {
-            publicList.innerHTML = '';
-            if (circles.general && circles.general.length > 0) {
-                circles.general.forEach(member => {
-                    const memberDiv = createMemberElement(member, 'public');
-                    publicList.appendChild(memberDiv);
-                });
-            }
-        }
-
-        // Update display for Class B/Friends (from close_friends)
-        const classBList = document.getElementById('class_bList') || document.getElementById('close_friends-members');
-        if (classBList) {
-            classBList.innerHTML = '';
-            if (circles.close_friends && circles.close_friends.length > 0) {
-                circles.close_friends.forEach(member => {
-                    const memberDiv = createMemberElement(member, 'class_b');
-                    classBList.appendChild(memberDiv);
-                });
-            }
-        }
-
-        // Update display for Class A/Family (from family)
-        const classAList = document.getElementById('class_aList') || document.getElementById('family-members');
-        if (classAList) {
-            classAList.innerHTML = '';
-            if (circles.family && circles.family.length > 0) {
-                circles.family.forEach(member => {
-                    const memberDiv = createMemberElement(member, 'class_a');
-                    classAList.appendChild(memberDiv);
-                });
-            }
-        }
-
-        // Update the display names in headers
-        const circleHeaders = {
-            'general': 'Public',
-            'close_friends': 'Class B (Friends)',
-            'family': 'Class A (Family)'
-        };
-
-        Object.entries(circleHeaders).forEach(([internal, display]) => {
-            const header = document.querySelector(`[data-circle="${internal}"] h2`);
-            if (header) {
-                header.textContent = display;
-            }
-        });
-
-        updateMemberCounts();
-
-    } catch (error) {
-        console.error('Error loading circles:', error);
-        showMessage(pt('error.loading_circles'), 'error');
-    }
-}
-
-
-
 function updateCirclesDisplay() {
-       updateCircleDisplay('public', circlesData.public, 'publicMembers', 'publicCount');
-    updateCircleDisplay('class_b', circlesData.class_b, 'class_bMembers', 'class_bCount');
-    updateCircleDisplay('class_a', circlesData.class_a, 'class_aMembers', 'class_aCount');
+    // Use the correct keys from backend
+    if (window.circlesData) {
+        updateCircleDisplay('public', window.circlesData.public, 'publicMembers', 'publicCount');
+        updateCircleDisplay('class_b', window.circlesData.class_b, 'class_bMembers', 'class_bCount');
+        updateCircleDisplay('class_a', window.circlesData.class_a, 'class_aMembers', 'class_aCount');
+    }
 }
 
 function updateCircleDisplay(circleType, members, containerId, countId) {
