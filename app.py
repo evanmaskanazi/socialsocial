@@ -2116,9 +2116,9 @@ def get_user_circles(user_id):
             return None
 
         return jsonify({
-            'general': [info for c in general if (info := get_user_info(c))],
-            'close_friends': [info for c in close_friends if (info := get_user_info(c))],
-            'family': [info for c in family if (info := get_user_info(c))]
+             'public': [info for c in public if (info := get_user_info(c))],
+    'class_b': [info for c in class_b if (info := get_user_info(c))],
+    'class_a': [info for c in class_a if (info := get_user_info(c))]
         })
 
     except Exception as e:
@@ -2636,9 +2636,9 @@ def circles():
                 return None
 
             return jsonify({
-                'general': [info for c in general if (info := get_user_info(c))],
-                'close_friends': [info for c in close_friends if (info := get_user_info(c))],
-                'family': [info for c in family if (info := get_user_info(c))]
+                 'public': [info for c in public if (info := get_user_info(c))],
+    'class_b': [info for c in class_b if (info := get_user_info(c))],
+    'class_a': [info for c in class_a if (info := get_user_info(c))]
             })
 
         except Exception as e:
