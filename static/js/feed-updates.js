@@ -30,6 +30,15 @@ function getInternalName(displayName) {
 function updateCircleDisplays() {
     console.log('Updating circle displays...');
 
+    // Fix circles page headers
+    const circleHeaders = document.querySelectorAll('.circle-header h2, .circle-name');
+    circleHeaders.forEach(header => {
+        const text = header.textContent.trim();
+        if (text === 'General') header.textContent = 'Public';
+        else if (text === 'Close Friends') header.textContent = 'Class B (Friends)';
+        else if (text === 'Family') header.textContent = 'Class A (Family)';
+    });
+
     // Update all circle selectors in feed
     document.querySelectorAll('.circle-selector, .visibility-selector, select[name="circle"], .privacy-select').forEach(selector => {
         // Store current value
@@ -38,19 +47,20 @@ function updateCircleDisplays() {
         // Update all options
         selector.querySelectorAll('option').forEach(option => {
             const value = option.value;
+            const text = option.textContent.trim();
 
-            // Map old values to new display names
-            if (value === 'general' || value === 'public') {
-                option.textContent = '🌍 Public';
+            // Map both by value AND by text
+            if (value === 'general' || value === 'public' || text === 'General') {
+                option.textContent = 'Public';
                 option.value = 'public';
-            } else if (value === 'close_friends' || value === 'class_b') {
-                option.textContent = '👥 Class B (Friends)';
+            } else if (value === 'close_friends' || value === 'class_b' || text === 'Close Friends') {
+                option.textContent = 'Class B (Friends)';
                 option.value = 'class_b';
-            } else if (value === 'family' || value === 'class_a') {
-                option.textContent = '👨‍👩‍👧‍👦 Class A (Family)';
+            } else if (value === 'family' || value === 'class_a' || text === 'Family') {
+                option.textContent = 'Class A (Family)';
                 option.value = 'class_a';
             } else if (value === 'private') {
-                option.textContent = '🔒 Private';
+                option.textContent = 'Private';
                 option.value = 'private';
             }
         });
@@ -61,26 +71,6 @@ function updateCircleDisplays() {
         else if (currentValue === 'family') selector.value = 'class_a';
         else selector.value = currentValue;
     });
-
-    // Update any text displays showing circle names
-    document.querySelectorAll('[data-circle-display]').forEach(element => {
-        const text = element.textContent;
-        if (text === 'General') element.textContent = 'Public';
-        else if (text === 'Close Friends') element.textContent = 'Class B (Friends)';
-        else if (text === 'Family') element.textContent = 'Class A (Family)';
-    });
-
-    // Update feed post visibility labels
-    document.querySelectorAll('.post-visibility, .feed-visibility').forEach(element => {
-        const text = element.textContent.trim();
-        if (text === 'General' || text === 'general') {
-            element.textContent = 'Public';
-        } else if (text === 'Close Friends' || text === 'close_friends') {
-            element.textContent = 'Class B (Friends)';
-        } else if (text === 'Family' || text === 'family') {
-            element.textContent = 'Class A (Family)';
-        }
-    });
 }
 
 // Export functions for use in other files
@@ -90,13 +80,21 @@ if (typeof window !== 'undefined') {
     window.updateCircleDisplays = updateCircleDisplays;
 }
 
-// Call on page load
+// Call on page load with delay to ensure DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Feed updates DOM loaded');
+    // Multiple attempts to ensure it runs
     setTimeout(updateCircleDisplays, 100);
+    setTimeout(updateCircleDisplays, 500);
+    setTimeout(updateCircleDisplays, 1000);
 });
 
 // Also update when language changes
 window.addEventListener('languageChanged', () => {
     setTimeout(updateCircleDisplays, 100);
 });
+
+// Try to run immediately as well
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(updateCircleDisplays, 100);
+}
