@@ -3119,11 +3119,11 @@ def save_parameters():
             'encouragement': random.choice(encouragements),
             'data': {
                 'parameters': {
-                    'mood': params.mood or 0,
-                    'energy': params.energy or 0,
-                    'sleep_quality': params.sleep_quality or 0,
-                    'physical_activity': params.physical_activity or 0,
-                    'anxiety': params.anxiety or 0
+                    'mood': int(params.mood) if params.mood else 0,
+                    'energy': int(params.energy) if params.energy else 0,
+                    'sleep_quality': int(params.sleep_quality) if params.sleep_quality else 0,
+                    'physical_activity': int(params.physical_activity) if params.physical_activity else 0,
+                    'anxiety': int(params.anxiety) if params.anxiety else 0
                 },
                 'notes': params.notes or ''
             }
