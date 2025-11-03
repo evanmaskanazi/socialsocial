@@ -514,14 +514,20 @@ function initializeParameters() {
 
     // Initialize calendar
     updateCalendar();
-     fetchAllParameterDates();
 
- setTimeout(() => {
-        loadSavedDates();
-    }, 500);
 
-    console.log('Parameters system initialized successfully');
+ //setTimeout(() => {
+   //     loadSavedDates();
+    //}, 500);
 
+   console.log('Parameters system initialized successfully');
+
+    // Call fetchAllParameterDates after a delay to ensure everything is loaded
+    setTimeout(() => {
+        if (typeof fetchAllParameterDates === 'function') {
+            fetchAllParameterDates();
+        }
+    }, 1000);
 
   const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -1176,6 +1182,12 @@ async function checkDateForData(dateStr, dayElement) {
 
 
 
+
+
+
+
+
+
 // Fetch all dates with saved parameters from backend
 async function fetchAllParameterDates() {
     try {
@@ -1261,8 +1273,10 @@ function previousMonth() {
     currentDate.setMonth(currentDate.getMonth() - 1);
     updateCalendar();
 
-    // Refresh saved dates for new month
-    fetchAllParameterDates();
+    // Refresh dates for new month
+    if (typeof fetchAllParameterDates === 'function') {
+        fetchAllParameterDates();
+    }
 }
 
 function nextMonth() {
@@ -1283,11 +1297,13 @@ function nextMonth() {
         return;
     }
 
-     currentDate.setMonth(currentDate.getMonth() + 1);
+    currentDate.setMonth(currentDate.getMonth() + 1);
     updateCalendar();
 
-    // Refresh saved dates for new month
-    fetchAllParameterDates();
+    // Refresh dates for new month
+    if (typeof fetchAllParameterDates === 'function') {
+        fetchAllParameterDates();
+    }
 }
 
 // Rating selection
