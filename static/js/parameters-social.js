@@ -44,6 +44,7 @@ function saveParameterState(date) {
 }
 
 // Add function to restore state
+// Add function to restore state
 function restoreParameterState(state) {
     ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
         if (state[param]) {
@@ -394,9 +395,9 @@ function initializeParameters() {
     // Add translations first
     addParameterTranslations();
 
-      setTimeout(() => {
-        fetchAllParameterDates();
-    }, 500);
+    //  setTimeout(() => {
+      //  fetchAllParameterDates();
+   // }, 500);
 
     // Get container
     const container = document.getElementById('parametersContainer');
@@ -444,7 +445,7 @@ function initializeParameters() {
                 <!-- Parameters Section - ONLY 5 CATEGORIES -->
                 <div class="parameters-section">
                   ${PARAMETER_CATEGORIES.map(category => {
-    const privacy = selectedPrivacy[category.id] || 'public';
+    const privacy = window.selectedPrivacy[category.id] || 'public';
     return `
         <div class="parameter-item">
             <div class="parameter-header">
@@ -1254,7 +1255,9 @@ function selectDate(date) {
     updateCalendar();
 
     // Refresh saved dates when changing dates
-    fetchAllParameterDates();
+     if (typeof fetchAllParameterDates === 'function') {
+        fetchAllParameterDates();
+    }
 
     // Clear current ratings when changing date
     selectedRatings = {};
@@ -1447,11 +1450,16 @@ async function loadParameters(showMsg = true) {
             }
 
             // Save to session storage for persistence
-            const state = {
-                ...selectedRatings,
-                notes: result.data.notes || ''
-            };
-            sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
+          const state = {
+    ...selectedRatings,
+    mood_privacy: result.data.mood_privacy || 'public',
+    energy_privacy: result.data.energy_privacy || 'public',
+    sleep_quality_privacy: result.data.sleep_quality_privacy || 'public',
+    physical_activity_privacy: result.data.physical_activity_privacy || 'public',
+    anxiety_privacy: result.data.anxiety_privacy || 'public',
+    notes: result.data.notes || ''
+};
+sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
 
             // Add this date to our tracking set
             datesWithData.add(dateStr);
