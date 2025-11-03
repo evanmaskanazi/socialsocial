@@ -15,16 +15,20 @@ let savedParameterState = {};
 function saveParameterState(date) {
     const state = {};
 
-    // Save all parameter values
-    ['mood', 'energy', 'sleep', 'physical', 'anxiety'].forEach(param => {
-        const selected = document.querySelector(`.${param}-section .rating-button.selected`);
+    // Save all parameter values AND privacy settings
+    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+        // Find selected rating button
+        const selected = document.querySelector(`.rating-button.selected[data-category="${param}"]`);
         if (selected) {
             state[param] = selected.dataset.value;
         }
-        // Save friend selections if applicable
-        const friendSelect = document.querySelector(`.${param}-section select`);
-        if (friendSelect) {
-            state[`${param}_friend`] = friendSelect.value;
+
+        // Save privacy settings
+        const privacySelect = document.querySelector(`select[data-category="${param}"]`);
+        if (privacySelect) {
+            state[`${param}_privacy`] = privacySelect.value;
+            // Also update global privacy object
+            window.selectedPrivacy[param] = privacySelect.value;
         }
     });
 
@@ -41,21 +45,25 @@ function saveParameterState(date) {
 
 // Add function to restore state
 function restoreParameterState(state) {
-    ['mood', 'energy', 'sleep', 'physical', 'anxiety'].forEach(param => {
+    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
         if (state[param]) {
-            const button = document.querySelector(`.${param}-section .rating-button[data-value="${state[param]}"]`);
+            const button = document.querySelector(`.rating-button[data-category="${param}"][data-value="${state[param]}"]`);
             if (button) {
-                document.querySelectorAll(`.${param}-section .rating-button`).forEach(b => {
+                document.querySelectorAll(`.rating-button[data-category="${param}"]`).forEach(b => {
                     b.classList.remove('selected');
                 });
                 button.classList.add('selected');
+                // Update selectedRatings
+                selectedRatings[param] = parseInt(state[param]);
             }
         }
 
-        if (state[`${param}_friend`]) {
-            const select = document.querySelector(`.${param}-section select`);
+        // Restore privacy settings
+        if (state[`${param}_privacy`]) {
+            const select = document.querySelector(`select[data-category="${param}"]`);
             if (select) {
-                select.value = state[`${param}_friend`];
+                select.value = state[`${param}_privacy`];
+                window.selectedPrivacy[param] = state[`${param}_privacy`];
             }
         }
     });
@@ -386,6 +394,10 @@ function initializeParameters() {
     // Add translations first
     addParameterTranslations();
 
+      setTimeout(() => {
+        fetchAllParameterDates();
+    }, 500);
+
     // Get container
     const container = document.getElementById('parametersContainer');
     if (!container) {
@@ -502,6 +514,7 @@ function initializeParameters() {
 
     // Initialize calendar
     updateCalendar();
+     fetchAllParameterDates();
 
  setTimeout(() => {
         loadSavedDates();
@@ -1161,6 +1174,56 @@ async function checkDateForData(dateStr, dayElement) {
     }
 }
 
+
+
+// Fetch all dates with saved parameters from backend
+async function fetchAllParameterDates() {
+    try {
+        const response = await fetch('/api/parameters/dates');
+        const result = await response.json();
+
+        if (result.success && result.dates) {
+            // Clear and rebuild the datesWithData set
+            datesWithData.clear();
+            result.dates.forEach(date => datesWithData.add(date));
+
+            // Save to localStorage for offline access
+            localStorage.setItem('savedParameterDates', JSON.stringify(result.dates));
+
+            // Update all calendar days with green dots
+            result.dates.forEach(dateStr => {
+                const dayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
+                if (dayElement && !dayElement.querySelector('.data-indicator')) {
+                    dayElement.style.position = 'relative';
+                    const dot = document.createElement('span');
+                    dot.className = 'data-indicator';
+                    dot.textContent = '●';
+                    dot.style.cssText = 'color: #10b981; font-size: 8px; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);';
+                    dayElement.appendChild(dot);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error fetching parameter dates:', error);
+        // Fall back to localStorage if API fails
+        const stored = localStorage.getItem('savedParameterDates');
+        if (stored) {
+            try {
+                const dates = JSON.parse(stored);
+                datesWithData.clear();
+                dates.forEach(date => datesWithData.add(date));
+            } catch (e) {
+                console.error('Error parsing stored dates:', e);
+            }
+        }
+    }
+}
+
+
+
+
+
+
 // Load indicators for visible month after a delay
 function loadMonthIndicators() {
     // Only check for saved data after user action, not automatically
@@ -1177,6 +1240,10 @@ function loadMonthIndicators() {
 function selectDate(date) {
     currentDate = date;
     updateCalendar();
+
+    // Refresh saved dates when changing dates
+    fetchAllParameterDates();
+
     // Clear current ratings when changing date
     selectedRatings = {};
     document.querySelectorAll('.rating-button').forEach(btn => {
@@ -1193,6 +1260,9 @@ function selectDate(date) {
 function previousMonth() {
     currentDate.setMonth(currentDate.getMonth() - 1);
     updateCalendar();
+
+    // Refresh saved dates for new month
+    fetchAllParameterDates();
 }
 
 function nextMonth() {
@@ -1213,8 +1283,11 @@ function nextMonth() {
         return;
     }
 
-    currentDate.setMonth(currentDate.getMonth() + 1);
+     currentDate.setMonth(currentDate.getMonth() + 1);
     updateCalendar();
+
+    // Refresh saved dates for new month
+    fetchAllParameterDates();
 }
 
 // Rating selection
@@ -1337,15 +1410,17 @@ async function loadParameters(showMsg = true) {
             });
 
             // Load privacy settings for each parameter
-            ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+          ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
                 const privacyKey = `${param}_privacy`;
-                if (result.data[privacyKey]) {
-                    window.selectedPrivacy[param] = result.data[privacyKey];
-                    // Update the dropdown
-                    const selector = document.querySelector(`[data-category="${param}"]`);
-                    if (selector) {
-                        selector.value = result.data[privacyKey];
-                    }
+                // Check both direct property and nested in data - FIXED to load from correct location
+                const privacyValue = result.data[privacyKey] || result.data[param + '_privacy'] || 'public';
+
+                window.selectedPrivacy[param] = privacyValue;
+
+                // Update the dropdown
+                const selector = document.querySelector(`select[data-category="${param}"]`);
+                if (selector) {
+                    selector.value = privacyValue;
                 }
             });
 
@@ -1517,5 +1592,6 @@ window.clearParameters = clearParameters;
 window.selectRating = selectRating;
 window.goToMainMenu = goToMainMenu;
 window.updatePrivacy = updatePrivacy;
+window.fetchAllParameterDates = fetchAllParameterDates;
 
 console.log('Parameters-social.js loaded - FIXED VERSION with calendar display and no auto-loading');
