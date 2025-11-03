@@ -2071,10 +2071,11 @@ def get_user_posts(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/users/<int:user_id>/circles', methods=['GET'])
 @login_required
 def get_user_circles(user_id):
-    """Get another user's circles (read-only) - returns same format as /api/circles"""
+    """Get another user's circles (read-only) - returns members in each circle"""
     try:
         current_user_id = session.get('user_id')
 
@@ -2087,49 +2088,52 @@ def get_user_circles(user_id):
         if not is_following and user_id != current_user_id:
             return jsonify({'error': 'Must be following user to view circles'}), 403
 
-        # Get all circles for this user - SQLAlchemy 2.0 style
-        public_stmt = select(Circle).filter(
-            Circle.user_id == user_id,
-            or_(Circle.circle_type == 'public', Circle.circle_type == 'general')
-        )
-        public = db.session.execute(public_stmt).scalars().all()
+        # Get all circles for this user
+        circles_stmt = select(Circle).filter_by(user_id=user_id)
+        circles = db.session.execute(circles_stmt).scalars().all()
 
-        class_b_stmt = select(Circle).filter(
-            Circle.user_id == user_id,
-            or_(Circle.circle_type == 'class_b', Circle.circle_type == 'close_friends')
-        )
-        class_b = db.session.execute(class_b_stmt).scalars().all()
+        # Organize by circle type
+        result = {
+            'public': [],
+            'class_b': [],
+            'class_a': []
+        }
 
-        class_a_stmt = select(Circle).filter(
-            Circle.user_id == user_id,
-            or_(Circle.circle_type == 'class_a', Circle.circle_type == 'family')
-        )
-        class_a = db.session.execute(class_a_stmt).scalars().all()
+        type_mapping = {
+            'public': 'public',
+            'general': 'public',
+            'class_b': 'class_b',
+            'close_friends': 'class_b',
+            'class_a': 'class_a',
+            'family': 'class_a'
+        }
 
-        def get_user_info(circle):
-            user = db.session.get(User, circle.circle_user_id)
-            if user:
-                return {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email
+        for circle in circles:
+            # Get the user info for the circle member
+            member_user = db.session.get(User, circle.circle_user_id)
+            if member_user:
+                user_info = {
+                    'id': member_user.id,
+                    'username': member_user.username,
+                    'email': member_user.email
                 }
-            return None
 
-        return jsonify({
-             'public': [info for c in public if (info := get_user_info(c))],
-    'class_b': [info for c in class_b if (info := get_user_info(c))],
-    'class_a': [info for c in class_a if (info := get_user_info(c))]
-        })
+                # Map to normalized circle type
+                circle_type = type_mapping.get(circle.circle_type, circle.circle_type)
+                if circle_type in result:
+                    result[circle_type].append(user_info)
+
+        return jsonify(result)
 
     except Exception as e:
         logger.error(f"Get user circles error: {str(e)}")
         return jsonify({'error': 'Failed to get circles'}), 500
 
+
 @app.route('/api/users/<int:user_id>/parameters', methods=['GET'])
 @login_required
 def get_user_parameters(user_id):
-    """Get another user's wellness parameters"""
+    """Get another user's wellness parameters with circle-based privacy"""
     try:
         current_user_id = session.get('user_id')
 
@@ -2156,16 +2160,41 @@ def get_user_parameters(user_id):
         except ValueError:
             return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
 
-        # Use raw SQL to avoid ORM issues with updated_at column
-        # This works regardless of whether updated_at exists
+        # Check what circle the current user is in for the target user
+        circle_level = 'public'  # Default to public
+        if current_user_id != user_id:
+            circle_stmt = select(Circle).filter_by(
+                user_id=user_id,
+                circle_user_id=current_user_id
+            )
+            circle = db.session.execute(circle_stmt).scalar_one_or_none()
+
+            if circle:
+                # Map circle types to privacy levels
+                type_mapping = {
+                    'public': 'public',
+                    'general': 'public',
+                    'class_b': 'class_b',
+                    'close_friends': 'class_b',
+                    'class_a': 'class_a',
+                    'family': 'class_a'
+                }
+                circle_level = type_mapping.get(circle.circle_type, 'public')
+        else:
+            # User viewing their own parameters - full access
+            circle_level = 'class_a'
+
+        # Get parameters with privacy settings
         query = text("""
-            SELECT date, mood, energy, sleep_quality, 
-                   physical_activity, anxiety, notes
-            FROM parameters
-            WHERE user_id = :user_id
-              AND date >= :start_date 
-              AND date <= :end_date
-            ORDER BY date ASC
+            SELECT p.date, p.mood, p.energy, p.sleep_quality, 
+                   p.physical_activity, p.anxiety, p.notes,
+                   p.mood_privacy, p.energy_privacy, p.sleep_quality_privacy,
+                   p.physical_activity_privacy, p.anxiety_privacy
+            FROM saved_parameters p
+            WHERE p.user_id = :user_id
+              AND p.date >= :start_date 
+              AND p.date <= :end_date
+            ORDER BY p.date ASC
         """)
 
         result_proxy = db.session.execute(
@@ -2179,24 +2208,73 @@ def get_user_parameters(user_id):
 
         parameters = result_proxy.fetchall()
 
-        # Build result array from query results
+        # Build result array with privacy filtering
         result = []
         for row in parameters:
-            result.append({
-                'date': row[0],
-                'mood': row[1],
-                'energy': row[2],
-                'sleep_quality': row[3],
-                'physical_activity': row[4],
-                'anxiety': row[5],
-                'notes': row[6]
-            })
+            param_dict = {
+                'date': row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0])
+            }
+
+            # Check privacy for each parameter
+            # mood
+            mood_privacy = row[7] or 'public'
+            if check_param_visibility(mood_privacy, circle_level):
+                param_dict['mood'] = row[1]
+            else:
+                param_dict['mood'] = None
+
+            # energy
+            energy_privacy = row[8] or 'public'
+            if check_param_visibility(energy_privacy, circle_level):
+                param_dict['energy'] = row[2]
+            else:
+                param_dict['energy'] = None
+
+            # sleep_quality
+            sleep_privacy = row[9] or 'public'
+            if check_param_visibility(sleep_privacy, circle_level):
+                param_dict['sleep_quality'] = row[3]
+            else:
+                param_dict['sleep_quality'] = None
+
+            # physical_activity
+            activity_privacy = row[10] or 'public'
+            if check_param_visibility(activity_privacy, circle_level):
+                param_dict['physical_activity'] = row[4]
+            else:
+                param_dict['physical_activity'] = None
+
+            # anxiety
+            anxiety_privacy = row[11] or 'public'
+            if check_param_visibility(anxiety_privacy, circle_level):
+                param_dict['anxiety'] = row[5]
+            else:
+                param_dict['anxiety'] = None
+
+            # Notes are always private unless user is in class_a
+            if circle_level == 'class_a':
+                param_dict['notes'] = row[6]
+            else:
+                param_dict['notes'] = None
+
+            result.append(param_dict)
 
         return jsonify(result), 200
 
     except Exception as e:
         app.logger.error(f"Error loading user parameters: {str(e)}")
         return jsonify({'error': 'Failed to load parameters'}), 500
+
+
+def check_param_visibility(param_privacy, viewer_circle_level):
+    """Helper function to check if a parameter should be visible based on privacy and viewer's circle"""
+    if param_privacy == 'public':
+        return True
+    elif param_privacy == 'class_b':
+        return viewer_circle_level in ['class_b', 'class_a']
+    elif param_privacy == 'class_a':
+        return viewer_circle_level == 'class_a'
+    return False
 
 
 @app.route('/api/debug/parameters/<int:user_id>')
