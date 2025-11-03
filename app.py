@@ -423,7 +423,7 @@ class SavedParameters(db.Model):
     __tablename__ = 'saved_parameters'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
-    date = db.Column(db.String(10), index=True)
+    date = db.Column(db.String(10), index=True)  # String date like '2025-11-03'
     mood = db.Column(db.Integer)
     energy = db.Column(db.Integer)
     sleep_quality = db.Column(db.Integer)
@@ -437,8 +437,7 @@ class SavedParameters(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
-    # Add privacy field if not present:
-  #  privacy = db.Column(db.JSON)  # Store privacy settings as JSON
+    # REMOVED: privacy = db.Column(db.JSON)  # This line should be removed/commented
 
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),)
 
@@ -473,6 +472,7 @@ class SavedParameters(db.Model):
                     base_dict[param] = getattr(self, param)
 
         return base_dict
+
 
 class Alert(db.Model):
     __tablename__ = 'alerts'
@@ -3011,35 +3011,41 @@ def get_parameters():
         if not date_str:
             date_str = datetime.now().strftime('%Y-%m-%d')
 
-        # Parse the date
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-
-        # Query for existing parameters
+        # Query using string date directly (matches the model's date field type)
         params = SavedParameters.query.filter_by(
             user_id=user_id,
-            date=date_obj
+            date=date_str
         ).first()
 
         if params:
+            # Return in the format frontend expects
             return jsonify({
-                'date': params.date.isoformat(),
-                'mood': params.mood or 0,
-                'energy': params.energy or 0,
-                'sleep_quality': params.sleep_quality or 0,  # NOT sleep_hours!
-                'physical_activity': params.physical_activity or 0,
-                'anxiety': params.anxiety or 0,
-                'notes': params.notes or ''
+                'success': True,
+                'data': {
+                    'parameters': {
+                        'mood': params.mood or 0,
+                        'energy': params.energy or 0,
+                        'sleep_quality': params.sleep_quality or 0,
+                        'physical_activity': params.physical_activity or 0,
+                        'anxiety': params.anxiety or 0
+                    },
+                    'notes': params.notes or ''
+                }
             })
         else:
             # Return empty parameters for this date
             return jsonify({
-                'date': date_str,
-                'mood': 0,
-                'energy': 0,
-                'sleep_quality': 0,
-                'physical_activity': 0,
-                'anxiety': 0,
-                'notes': ''
+                'success': True,
+                'data': {
+                    'parameters': {
+                        'mood': 0,
+                        'energy': 0,
+                        'sleep_quality': 0,
+                        'physical_activity': 0,
+                        'anxiety': 0
+                    },
+                    'notes': ''
+                }
             })
 
     except Exception as e:
@@ -3062,7 +3068,7 @@ def save_parameters():
         # Find or create parameter entry
         params = SavedParameters.query.filter_by(
             user_id=user_id,
-            date=date_str
+            date=date_str  # Use string date directly
         ).first()
 
         if not params:
@@ -3071,13 +3077,14 @@ def save_parameters():
                 date=date_str
             )
 
-        # Update values and privacy
+        # Update values - handle the flat structure from frontend
         for field in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
             if field in data:
                 value = data[field]
                 if value is not None and 1 <= value <= 4:
                     setattr(params, field, value)
 
+            # Handle privacy settings
             privacy_field = f"{field}_privacy"
             if privacy_field in data:
                 privacy_value = data[privacy_field]
@@ -3087,6 +3094,7 @@ def save_parameters():
         if 'notes' in data:
             params.notes = data['notes']
 
+        params.updated_at = datetime.utcnow()
         db.session.add(params)
         db.session.commit()
 
@@ -3103,6 +3111,7 @@ def save_parameters():
         ]
 
         return jsonify({
+            'success': True,  # Add success flag for frontend
             'message': 'Parameters saved successfully',
             'encouragement': random.choice(encouragements),
             'data': params.to_dict(viewer_id=user_id)
@@ -3136,74 +3145,6 @@ def check_parameter_triggers(user_id, params):
 
     db.session.commit()
 
-@app.route('/api/parameters/load', methods=['GET'])
-def load_parameters():  # Remove @login_required
-    try:
-        if 'user_id' not in session:
-            # Return empty data instead of 401
-            return jsonify({'success': True, 'data': None}), 200
-
-        # Get date from query parameter
-        date = request.args.get('date')
-        if not date:
-            return jsonify({'success': False, 'message': 'Date is required'}), 400
-
-        user_id = session['user_id']
-
-        # Validate date format
-        try:
-            from datetime import datetime
-            datetime.strptime(date, '%Y-%m-%d')
-        except ValueError:
-            return jsonify({
-                'success': False,
-                'message': 'Invalid date format'
-            }), 400
-
-        conn = get_db()
-        cursor = conn.cursor()
-
-        # Query for parameters
-        query = '''
-            SELECT mood, energy, sleep_quality, physical_activity,
-                   anxiety, notes
-            FROM parameters
-            WHERE user_id = %s AND date = %s
-        '''
-        cursor.execute(query, (user_id, date))
-        params = cursor.fetchone()
-
-        cursor.close()
-        conn.close()
-
-        if params:
-            # Return in the format the frontend expects
-            return jsonify({
-                'success': True,
-                'data': {
-                    'parameters': {
-                        'mood': params['mood'],
-                        'energy': params['energy'],
-                        'sleep_quality': params['sleep_quality'],
-                        'physical_activity': params['physical_activity'],
-                        'anxiety': params['anxiety']
-                    },
-                    'notes': params['notes'] if params['notes'] else ''
-                }
-            })
-        else:
-            return jsonify({
-                'success': True,
-                'data': None,
-                'message': 'No parameters found for this date'
-            }), 200
-
-    except Exception as e:
-        logger.error(f"Error loading parameters: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Error loading parameters'
-        }), 500
 
 
 @app.route('/api/parameters/dates')
