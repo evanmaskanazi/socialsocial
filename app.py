@@ -3214,7 +3214,7 @@ def get_parameters():
                         'physical_activity': int(params.physical_activity) if params.physical_activity else 0,
                         'anxiety': int(params.anxiety) if params.anxiety else 0
                     },
-                    # FIXED: Added privacy settings to response
+                    # ADD ALL PRIVACY SETTINGS HERE
                     'mood_privacy': params.mood_privacy or 'public',
                     'energy_privacy': params.energy_privacy or 'public',
                     'sleep_quality_privacy': params.sleep_quality_privacy or 'public',
@@ -3234,7 +3234,7 @@ def get_parameters():
                         'physical_activity': 0,
                         'anxiety': 0
                     },
-                    # FIXED: Added default privacy settings
+                    # ADD DEFAULT PRIVACY SETTINGS
                     'mood_privacy': 'public',
                     'energy_privacy': 'public',
                     'sleep_quality_privacy': 'public',
