@@ -2850,6 +2850,132 @@ def get_feed():
         return jsonify({'posts': []})
 
 
+# Add these new endpoints right here, after get_feed() function ends
+
+
+@app.route('/api/feed/hierarchical', methods=['GET'])
+@login_required
+def get_hierarchical_feed():
+    """Get feed posts with visibility hierarchy applied"""
+    try:
+        user_id = session.get('user_id')
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+
+        # Get all posts the user can see
+        visible_posts = []
+
+        # 1. User's own posts (all visible)
+        own_posts = Post.query.filter_by(user_id=user_id, is_published=True).all()
+        visible_posts.extend(own_posts)
+
+        # 2. Check circles user belongs to for other users' posts
+        # Get circles where current user is a member
+        circles_in = db.session.execute(
+            select(Circle).filter_by(circle_user_id=user_id)
+        ).scalars().all()
+
+        for circle in circles_in:
+            # Get posts from this circle owner
+            owner_posts = Post.query.filter_by(
+                user_id=circle.user_id,
+                is_published=True
+            ).all()
+
+            for post in owner_posts:
+                # Apply hierarchy rules
+                if post.visibility == 'public':
+                    # Public posts visible to all circle members
+                    if post not in visible_posts:
+                        visible_posts.append(post)
+                elif post.visibility == 'class_b':
+                    # Class B posts visible to Class B and Class A members
+                    if circle.circle_type in ['class_b', 'class_a']:
+                        if post not in visible_posts:
+                            visible_posts.append(post)
+                elif post.visibility == 'class_a':
+                    # Class A posts only visible to Class A members
+                    if circle.circle_type == 'class_a':
+                        if post not in visible_posts:
+                            visible_posts.append(post)
+
+        # Sort by created_at descending
+        visible_posts.sort(key=lambda x: x.created_at, reverse=True)
+
+        # Paginate
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated_posts = visible_posts[start:end]
+
+        # Format response
+        posts_data = []
+        for post in paginated_posts:
+            author = db.session.get(User, post.user_id)
+            posts_data.append({
+                'id': post.id,
+                'author': {
+                    'id': author.id,
+                    'username': author.username
+                } if author else None,
+                'content': post.content,
+                'visibility': post.visibility,
+                'created_at': post.created_at.isoformat(),
+                'likes': post.likes,
+                'comments_count': len(post.comments)
+            })
+
+        return jsonify({
+            'posts': posts_data,
+            'has_more': len(visible_posts) > end
+        })
+
+    except Exception as e:
+        logger.error(f"Hierarchical feed error: {str(e)}")
+        return jsonify({'error': 'Failed to load feed'}), 500
+
+
+@app.route('/api/parameters/hierarchical/<int:view_user_id>', methods=['GET'])
+@login_required
+def get_hierarchical_parameters(view_user_id):
+    """Get parameters with visibility hierarchy applied"""
+    try:
+        current_user_id = session.get('user_id')
+
+        # If viewing own parameters, return all
+        if view_user_id == current_user_id:
+            params = SavedParameters.query.filter_by(user_id=view_user_id).all()
+            return jsonify({
+                'parameters': [p.to_dict(viewer_id=current_user_id) for p in params]
+            })
+
+        # Check what circle current user is in for the viewed user
+        circle = Circle.query.filter_by(
+            user_id=view_user_id,
+            circle_user_id=current_user_id
+        ).first()
+
+        if not circle:
+            # Not in any circle - can only see public
+            privacy_level = 'public'
+        else:
+            privacy_level = circle.circle_type
+
+        # Get parameters and apply visibility rules
+        params = SavedParameters.query.filter_by(user_id=view_user_id).all()
+        visible_params = []
+
+        for param in params:
+            param_dict = param.to_dict(viewer_id=current_user_id, privacy_level=privacy_level)
+            visible_params.append(param_dict)
+
+        return jsonify({'parameters': visible_params})
+
+    except Exception as e:
+        logger.error(f"Hierarchical parameters error: {str(e)}")
+        return jsonify({'error': 'Failed to load parameters'}), 500
+
+
+
 @app.route('/api/feed/dates')
 @login_required
 def get_feed_saved_dates():
