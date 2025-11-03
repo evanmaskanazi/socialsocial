@@ -33,6 +33,8 @@
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/circles-messages.js"></script>
 
+    <script src="/static/js/feed-updates.js?v=1.0"></script>
+
     <script>
         // Verify authentication before loading
         async function checkAuthentication() {
@@ -93,6 +95,10 @@
                 }
             }
 
+             if (typeof updateCircleDisplays === 'function') {
+                updateCircleDisplays();
+            }
+
             // Initialize circles
             if (typeof initializeCircles === 'function') {
                 console.log('Calling initializeCircles');
@@ -118,9 +124,17 @@
                     }
                 }
 
+ if (typeof updateCircleDisplays === 'function') {
+                updateCircleDisplays();
+            }
+
+
                 // Reload circles to apply translations
                 if (typeof loadCircles === 'function') {
                     loadCircles();
+                }
+                 if (typeof updateCircleDisplays === 'function') {
+                    updateCircleDisplays();
                 }
             });
         });

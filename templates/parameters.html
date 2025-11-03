@@ -69,6 +69,7 @@
     <!-- Load scripts -->
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/parameters-social.js"></script>
+    <script src="/static/js/feed-updates.js?v=1.0"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -156,6 +157,10 @@ if (userId) {
                                         document.body.setAttribute('dir', 'ltr');
                                     }
                                 }
+                                // Apply feed updates
+                    if (typeof updateCircleDisplays === 'function') {
+                        updateCircleDisplays();
+                    }
                             } catch (error) {
                                 console.error('Delayed initialization error:', error);
                             }
@@ -182,6 +187,11 @@ if (userId) {
                         } else {
                             document.body.setAttribute('dir', 'ltr');
                         }
+                    }
+
+// Apply feed updates
+                    if (typeof updateCircleDisplays === 'function') {
+                        updateCircleDisplays();
                     }
 
                     // Verify initialization worked
@@ -247,6 +257,11 @@ if (userId) {
                         document.body.setAttribute('dir', 'ltr');
                     }
                 }
+
+// Apply feed updates
+                    if (typeof updateCircleDisplays === 'function') {
+                        updateCircleDisplays();
+                    }
 
             } catch (error) {
                 console.error('Error updating language:', error);
