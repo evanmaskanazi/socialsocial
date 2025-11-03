@@ -9,6 +9,64 @@ let currentDate = new Date();
 let selectedRatings = {};
 let datesWithData = new Set(JSON.parse(localStorage.getItem('savedParameterDates') || '[]'));
 let selectedPrivacy = {};
+let savedParameterState = {};
+
+// Add function to save parameter state
+function saveParameterState(date) {
+    const state = {};
+
+    // Save all parameter values
+    ['mood', 'energy', 'sleep', 'physical', 'anxiety'].forEach(param => {
+        const selected = document.querySelector(`.${param}-section .rating-button.selected`);
+        if (selected) {
+            state[param] = selected.dataset.value;
+        }
+        // Save friend selections if applicable
+        const friendSelect = document.querySelector(`.${param}-section select`);
+        if (friendSelect) {
+            state[`${param}_friend`] = friendSelect.value;
+        }
+    });
+
+    // Save notes
+    const notesField = document.querySelector('textarea');
+    if (notesField) {
+        state.notes = notesField.value;
+    }
+
+    // Store in session storage for persistence
+    sessionStorage.setItem(`parameters_${date}`, JSON.stringify(state));
+    savedParameterState[date] = state;
+}
+
+// Add function to restore state
+function restoreParameterState(state) {
+    ['mood', 'energy', 'sleep', 'physical', 'anxiety'].forEach(param => {
+        if (state[param]) {
+            const button = document.querySelector(`.${param}-section .rating-button[data-value="${state[param]}"]`);
+            if (button) {
+                document.querySelectorAll(`.${param}-section .rating-button`).forEach(b => {
+                    b.classList.remove('selected');
+                });
+                button.classList.add('selected');
+            }
+        }
+
+        if (state[`${param}_friend`]) {
+            const select = document.querySelector(`.${param}-section select`);
+            if (select) {
+                select.value = state[`${param}_friend`];
+            }
+        }
+    });
+
+    if (state.notes) {
+        const notesField = document.querySelector('textarea');
+        if (notesField) {
+            notesField.value = state.notes;
+        }
+    }
+}
 
 function updatePrivacy(categoryId, privacyLevel) {
     selectedPrivacy[categoryId] = privacyLevel;
@@ -1134,11 +1192,12 @@ function selectRating(categoryId, value) {
     });
 }
 
-// Save parameters - FIXED: Added green dot on save
-// Save parameters - FIXED: Added green dot on save and tracking
 async function saveParameters() {
     const notes = document.getElementById('notesInput')?.value || '';
     const dateStr = formatDate(currentDate);
+
+    // Save state before submitting
+    saveParameterState(dateStr);
 
     // Validate that at least one rating is selected
     if (Object.keys(selectedRatings).length === 0) {
@@ -1146,20 +1205,20 @@ async function saveParameters() {
         return;
     }
 
-   const data = {
-    date: dateStr,
-    mood: selectedRatings.mood || null,
-    energy: selectedRatings.energy || null,
-    sleep_quality: selectedRatings.sleep_quality || null,
-    physical_activity: selectedRatings.physical_activity || null,
-    anxiety: selectedRatings.anxiety || null,
-    mood_privacy: selectedPrivacy.mood || 'public',
-    energy_privacy: selectedPrivacy.energy || 'public',
-    sleep_quality_privacy: selectedPrivacy.sleep_quality || 'public',
-    physical_activity_privacy: selectedPrivacy.physical_activity || 'public',
-    anxiety_privacy: selectedPrivacy.anxiety || 'public',
-    notes: notes
-};
+    const data = {
+        date: dateStr,
+        mood: selectedRatings.mood || null,
+        energy: selectedRatings.energy || null,
+        sleep_quality: selectedRatings.sleep_quality || null,
+        physical_activity: selectedRatings.physical_activity || null,
+        anxiety: selectedRatings.anxiety || null,
+        mood_privacy: selectedPrivacy.mood || 'public',
+        energy_privacy: selectedPrivacy.energy || 'public',
+        sleep_quality_privacy: selectedPrivacy.sleep_quality || 'public',
+        physical_activity_privacy: selectedPrivacy.physical_activity || 'public',
+        anxiety_privacy: selectedPrivacy.anxiety || 'public',
+        notes: notes
+    };
 
     try {
         const response = await fetch('/api/parameters', {
@@ -1198,8 +1257,10 @@ async function saveParameters() {
     }
 }
 
-// Load parameters - FIXED: Added green dot on load
-// Load parameters - FIXED: Added green dot on load and tracking
+
+
+
+
 async function loadParameters(showMsg = true) {
     const dateStr = formatDate(currentDate);
 
@@ -1207,6 +1268,17 @@ async function loadParameters(showMsg = true) {
         const response = await fetch(`/api/parameters?date=${dateStr}`);
 
         if (!response.ok) {
+            // Try to restore from session storage if API fails
+            const stored = sessionStorage.getItem(`parameters_${dateStr}`);
+            if (stored) {
+                const state = JSON.parse(stored);
+                restoreParameterState(state);
+                if (showMsg) {
+                    window.showMessage('Restored from session cache', 'info');
+                }
+                return;
+            }
+
             if (showMsg && response.status === 404) {
                 window.showMessage(pt('parameters.no_saved'), 'info');
             }
@@ -1230,9 +1302,17 @@ async function loadParameters(showMsg = true) {
                 notesInput.value = result.data.notes;
             }
 
+            // Save to session storage for persistence
+            const state = {
+                ...selectedRatings,
+                notes: result.data.notes || ''
+            };
+            sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
+
             // Add this date to our tracking set
             datesWithData.add(dateStr);
-localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
+            localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
+
             // Mark current date as having data
             const currentDayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
             if (currentDayElement && !currentDayElement.querySelector('.data-indicator')) {
@@ -1250,11 +1330,28 @@ localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
         }
     } catch (error) {
         console.error('Load error:', error);
+
+        // Try to restore from session storage on error
+        const stored = sessionStorage.getItem(`parameters_${dateStr}`);
+        if (stored) {
+            const state = JSON.parse(stored);
+            restoreParameterState(state);
+            if (showMsg) {
+                window.showMessage('Restored from session cache', 'info');
+            }
+            return;
+        }
+
         if (showMsg) {
             window.showMessage(pt('error.loading') + ': ' + error.message, 'error');
         }
     }
 }
+
+
+
+
+
 
 // Clear parameters
 function clearParameters() {

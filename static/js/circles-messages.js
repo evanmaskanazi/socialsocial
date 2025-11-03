@@ -95,7 +95,6 @@ function escapeHtml(text) {
 // ===================
 // CIRCLES MANAGEMENT
 // ===================
-
 const circlesHTML = `
 <div class="circles-container">
     <style>
@@ -328,11 +327,11 @@ const circlesHTML = `
         <div class="search-results" id="searchResults"></div>
     </div>
 
-<div class="circles-grid">
-        <div class="circle-card">
+    <div class="circles-grid">
+        <div class="circle-card" data-circle="general">
             <div class="circle-header">
                 <span class="circle-icon">👥</span>
-                <span class="circle-title" data-i18n="circles.public">Public</span>
+                <span class="circle-title">Public</span>
                 <span class="circle-count" id="publicCount">0</span>
             </div>
             <div class="circle-members" id="publicMembers">
@@ -343,10 +342,10 @@ const circlesHTML = `
             </div>
         </div>
 
-        <div class="circle-card">
+        <div class="circle-card" data-circle="close_friends">
             <div class="circle-header">
                 <span class="circle-icon">❤️</span>
-                <span class="circle-title" data-i18n="circles.class_b">Class B (Friends)</span>
+                <span class="circle-title">Class B (Friends)</span>
                 <span class="circle-count" id="class_bCount">0</span>
             </div>
             <div class="circle-members" id="class_bMembers">
@@ -357,10 +356,10 @@ const circlesHTML = `
             </div>
         </div>
 
-        <div class="circle-card">
+        <div class="circle-card" data-circle="family">
             <div class="circle-header">
                 <span class="circle-icon">👨‍👩‍👧‍👦</span>
-                <span class="circle-title" data-i18n="circles.class_a">Class A (Family)</span>
+                <span class="circle-title">Class A (Family)</span>
                 <span class="circle-count" id="class_aCount">0</span>
             </div>
             <div class="circle-members" id="class_aMembers">
@@ -374,16 +373,17 @@ const circlesHTML = `
 </div>
 `;
 
-// Circles JavaScript Functions
+// Circles Data Storage - maps backend names to frontend display
 let circlesData = {
-    public: [],
-    class_b: [],
-    class_a: []
+    general: [],      // Maps to "Public" display
+    close_friends: [], // Maps to "Class B (Friends)" display
+    family: []        // Maps to "Class A (Family)" display
 };
 
+// Load circles from backend
 async function loadCircles() {
     try {
-        const response = await fetch('/api/circles/my-circles');
+        const response = await fetch('/api/circles');
         if (response.status === 401) {
             window.location.href = '/';
             return;
@@ -392,41 +392,279 @@ async function loadCircles() {
         const circles = await response.json();
         console.log('Loaded circles data:', circles);
 
-        // Update display for Public
-        const publicList = document.getElementById('publicList');
+        // Store the data
+        circlesData.general = circles.general || [];
+        circlesData.close_friends = circles.close_friends || [];
+        circlesData.family = circles.family || [];
+
+        // Update display for Public (backend: general)
+        const publicMembers = document.getElementById('publicMembers');
+        if (publicMembers) {
+            if (circlesData.general.length > 0) {
+                publicMembers.innerHTML = '';
+                circlesData.general.forEach(member => {
+                    const memberDiv = createMemberElement(member, 'general');
+                    publicMembers.appendChild(memberDiv);
+                });
+            } else {
+                publicMembers.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <p>No members yet</p>
+                    </div>`;
+            }
+            document.getElementById('publicCount').textContent = circlesData.general.length;
+        }
+
+        // Update display for Class B/Friends (backend: close_friends)
+        const classBMembers = document.getElementById('class_bMembers');
+        if (classBMembers) {
+            if (circlesData.close_friends.length > 0) {
+                classBMembers.innerHTML = '';
+                circlesData.close_friends.forEach(member => {
+                    const memberDiv = createMemberElement(member, 'close_friends');
+                    classBMembers.appendChild(memberDiv);
+                });
+            } else {
+                classBMembers.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❤️</div>
+                        <p>No members yet</p>
+                    </div>`;
+            }
+            document.getElementById('class_bCount').textContent = circlesData.close_friends.length;
+        }
+
+        // Update display for Class A/Family (backend: family)
+        const classAMembers = document.getElementById('class_aMembers');
+        if (classAMembers) {
+            if (circlesData.family.length > 0) {
+                classAMembers.innerHTML = '';
+                circlesData.family.forEach(member => {
+                    const memberDiv = createMemberElement(member, 'family');
+                    classAMembers.appendChild(memberDiv);
+                });
+            } else {
+                classAMembers.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👨‍👩‍👧‍👦</div>
+                        <p>No members yet</p>
+                    </div>`;
+            }
+            document.getElementById('class_aCount').textContent = circlesData.family.length;
+        }
+
+    } catch (error) {
+        console.error('Error loading circles:', error);
+        if (window.showMessage) {
+            window.showMessage('Error loading circles', 'error');
+        }
+    }
+}
+
+// Create member element
+function createMemberElement(member, circleType) {
+    const memberDiv = document.createElement('div');
+    memberDiv.className = 'member-item';
+    memberDiv.innerHTML = `
+        <div class="user-avatar">${(member.display_name || member.username)[0].toUpperCase()}</div>
+        <div class="member-name">${member.display_name || member.username}</div>
+        <button class="remove-btn" onclick="removeFromCircle('${member.id}', '${circleType}')">Remove</button>
+    `;
+    return memberDiv;
+}
+
+// Remove member from circle
+async function removeFromCircle(memberId, circleType) {
+    try {
+        const response = await fetch('/api/circles/remove', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                member_id: memberId,
+                circle: circleType
+            })
+        });
+
+        if (response.ok) {
+            loadCircles(); // Reload to show updated circles
+            if (window.showMessage) {
+                window.showMessage('Member removed from circle', 'success');
+            }
+        }
+    } catch (error) {
+        console.error('Error removing from circle:', error);
+        if (window.showMessage) {
+            window.showMessage('Error removing member', 'error');
+        }
+    }
+}
+
+// Search users
+async function searchUsers() {
+    const searchInput = document.getElementById('userSearchInput');
+    const query = searchInput.value.trim();
+
+    if (!query) return;
+
+    try {
+        const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+        const users = await response.json();
+
+        const searchResults = document.getElementById('searchResults');
+        searchResults.innerHTML = '';
+        searchResults.classList.add('active');
+
+        users.forEach(user => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'search-result-item';
+            resultItem.innerHTML = `
+                <div class="user-info">
+                    <div class="user-avatar">${user.username[0].toUpperCase()}</div>
+                    <span>${user.display_name || user.username}</span>
+                </div>
+                <select onchange="addToCircle('${user.id}', this.value)">
+                    <option value="">Add to circle...</option>
+                    <option value="general">Public</option>
+                    <option value="close_friends">Class B (Friends)</option>
+                    <option value="family">Class A (Family)</option>
+                </select>
+            `;
+            searchResults.appendChild(resultItem);
+        });
+    } catch (error) {
+        console.error('Error searching users:', error);
+    }
+}
+
+// Add user to circle
+async function addToCircle(memberId, circle) {
+    if (!circle) return;
+
+    try {
+        const response = await fetch('/api/circles/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                member_id: memberId,
+                circle: circle
+            })
+        });
+
+        if (response.ok) {
+            loadCircles();
+            document.getElementById('searchResults').classList.remove('active');
+            document.getElementById('userSearchInput').value = '';
+            if (window.showMessage) {
+                window.showMessage('Member added to circle', 'success');
+            }
+        }
+    } catch (error) {
+        console.error('Error adding to circle:', error);
+        if (window.showMessage) {
+            window.showMessage('Error adding member', 'error');
+        }
+    }
+}
+
+// Initialize circles
+function initializeCircles() {
+    console.log('Initializing circles...');
+    loadCircles();
+
+    // Close search results when clicking outside
+    document.addEventListener('click', (e) => {
+        const searchContainer = document.querySelector('.user-search');
+        if (!searchContainer.contains(e.target)) {
+            document.getElementById('searchResults').classList.remove('active');
+        }
+    });
+}
+
+// Export for use in other files
+if (typeof window !== 'undefined') {
+    window.loadCircles = loadCircles;
+    window.initializeCircles = initializeCircles;
+    window.searchUsers = searchUsers;
+    window.addToCircle = addToCircle;
+    window.removeFromCircle = removeFromCircle;
+}
+
+
+
+
+
+async function loadCircles() {
+    try {
+        const response = await fetch('/api/circles');
+        if (response.status === 401) {
+            window.location.href = '/';
+            return;
+        }
+
+        const circles = await response.json();
+        console.log('Loaded circles data:', circles);
+
+        // Map internal names to display structure
+        const circleMapping = {
+            'general': 'public',
+            'close_friends': 'class_b',
+            'family': 'class_a'
+        };
+
+        // Update display for Public (from general)
+        const publicList = document.getElementById('publicList') || document.getElementById('general-members');
         if (publicList) {
             publicList.innerHTML = '';
-            if (circles.public && circles.public.length > 0) {
-                circles.public.forEach(member => {
+            if (circles.general && circles.general.length > 0) {
+                circles.general.forEach(member => {
                     const memberDiv = createMemberElement(member, 'public');
                     publicList.appendChild(memberDiv);
                 });
             }
         }
 
-        // Update display for Class B (Friends)
-        const classBList = document.getElementById('class_bList');
+        // Update display for Class B/Friends (from close_friends)
+        const classBList = document.getElementById('class_bList') || document.getElementById('close_friends-members');
         if (classBList) {
             classBList.innerHTML = '';
-            if (circles.class_b && circles.class_b.length > 0) {
-                circles.class_b.forEach(member => {
+            if (circles.close_friends && circles.close_friends.length > 0) {
+                circles.close_friends.forEach(member => {
                     const memberDiv = createMemberElement(member, 'class_b');
                     classBList.appendChild(memberDiv);
                 });
             }
         }
 
-        // Update display for Class A (Family)
-        const classAList = document.getElementById('class_aList');
+        // Update display for Class A/Family (from family)
+        const classAList = document.getElementById('class_aList') || document.getElementById('family-members');
         if (classAList) {
             classAList.innerHTML = '';
-            if (circles.class_a && circles.class_a.length > 0) {
-                circles.class_a.forEach(member => {
+            if (circles.family && circles.family.length > 0) {
+                circles.family.forEach(member => {
                     const memberDiv = createMemberElement(member, 'class_a');
                     classAList.appendChild(memberDiv);
                 });
             }
         }
+
+        // Update the display names in headers
+        const circleHeaders = {
+            'general': 'Public',
+            'close_friends': 'Class B (Friends)',
+            'family': 'Class A (Family)'
+        };
+
+        Object.entries(circleHeaders).forEach(([internal, display]) => {
+            const header = document.querySelector(`[data-circle="${internal}"] h2`);
+            if (header) {
+                header.textContent = display;
+            }
+        });
 
         updateMemberCounts();
 
@@ -435,11 +673,6 @@ async function loadCircles() {
         showMessage(pt('error.loading_circles'), 'error');
     }
 }
-
-
-
-
-
 
 
 
