@@ -992,35 +992,35 @@ function updateCalendar() {
 
 
 // Check for saved data in current month
+// Check for saved data in current month - FIXED to only show dots for actual saved data
 async function checkMonthData(year, month) {
     // Get today's date for comparison (normalized)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // Clear all existing dots first
+    document.querySelectorAll('.calendar-day .data-indicator').forEach(dot => dot.remove());
 
-    for (let day = 1; day <= daysInMonth; day++) {
-        const cellDate = new Date(year, month, day);
+    // Clear the local storage cache to force fresh check
+    datesWithData.clear();
 
-        // Skip future dates - don't check for data
-        if (cellDate > today) {
-            continue;
-        }
+    try {
+        // Get all saved dates for this user from the server
+        const response = await fetch('/api/parameters/dates');
+        if (response.ok) {
+            const result = await response.json();
+            if (result.dates && Array.isArray(result.dates)) {
+                // Update our local set with actual saved dates
+                datesWithData = new Set(result.dates);
+                localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
 
-        const dateStr = formatDate(cellDate);
-
-        if (!datesWithData.has(dateStr)) {
-            // Only check dates we don't already know about
-            try {
-                const response = await fetch(`/api/parameters?date=${dateStr}`);
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.success && result.data) {
-                        datesWithData.add(dateStr);
-                        localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
-                        // Add dot to existing calendar day
-                        const dayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
-                        if (dayElement && !dayElement.querySelector('.data-indicator')) {
+                // Add dots only to dates that actually have data
+                result.dates.forEach(dateStr => {
+                    const dayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
+                    if (dayElement && !dayElement.querySelector('.data-indicator')) {
+                        // Check if this is not a future date
+                        const cellDate = new Date(dateStr);
+                        if (cellDate <= today) {
                             dayElement.style.position = 'relative';
                             const dot = document.createElement('span');
                             dot.className = 'data-indicator';
@@ -1029,12 +1029,13 @@ async function checkMonthData(year, month) {
                             dayElement.appendChild(dot);
                         }
                     }
-                }
-            } catch (error) {
-                // Silently ignore - this is just for UI indicators
-                console.debug('Could not check date:', dateStr, error.message);
+                });
             }
         }
+    } catch (error) {
+        console.error('Error checking month data:', error);
+        // On error, just don't show any dots rather than showing incorrect ones
+        datesWithData.clear();
     }
 }
 
