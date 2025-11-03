@@ -1554,10 +1554,10 @@
         <textarea class="post-input" data-i18n="feed.placeholder" placeholder="How are you feeling today?" id="postInput"></textarea>
         <div class="post-actions">
             <select class="visibility-select" id="visibilitySelect">
-                <option value="general" data-i18n="visibility.general">General</option>
-                <option value="close_friends" data-i18n="visibility.close_friends">Close Friends</option>
-                <option value="family" data-i18n="visibility.family">Family</option>
-                <option value="private" data-i18n="visibility.private">Private</option>
+                <option value="general">Public</option>
+<option value="close_friends">Class B (Friends)</option>
+<option value="family">Class A (Family)</option>
+
             </select>
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-secondary" style="width: auto;" onclick="loadFeedForDate()" data-i18n="feed.load_update">Load Update</button>
@@ -1621,7 +1621,7 @@
                     <div class="circles-container">
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title" data-i18n="circles.general">💥 General</span>
+                                <span class="circle-title">💥 Public</span>
                                 <span class="circle-count" id="generalCount">0</span>
                             </div>
                             <div class="circle-members" id="generalMembers">
@@ -1631,7 +1631,7 @@
 
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title" data-i18n="circles.close_friends">❤️ Close Friends</span>
+                                <span class="circle-title">❤️ Class B (Friends)</span>
                                 <span class="circle-count" id="closeFriendsCount">0</span>
                             </div>
                             <div class="circle-members" id="closeFriendsMembers">
@@ -1641,7 +1641,7 @@
 
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title" data-i18n="circles.family">👨‍👩‍👧‍👦 Family</span>
+                                <span class="circle-title">👨‍👩‍👧‍👦 Class A (Family)</span>
                                 <span class="circle-count" id="familyCount">0</span>
                             </div>
                             <div class="circle-members" id="familyMembers">
@@ -1845,6 +1845,10 @@ let currentUserId = null;
         let feedSelectedDate = new Date();
         let feedCurrentMonth = new Date();
         let feedSavedDates = [];
+        // Global variables for calendar state
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth();
+let currentUserId = null; // Store current logged-in user ID
 
 
 
@@ -2053,9 +2057,10 @@ let currentUserId = null;
                 }
                 const response = await apiCall(endpoint, 'POST', body);
 
-                if (response && response.success) {
-                    currentUser = response.user;
-                    showDashboard();
+              if (response && response.success) {
+    currentUser = response.user;
+    currentUserId = response.user.id; // Store the user ID
+    showDashboard();
                 }
             } catch (error) {
                 alert(error.message);
@@ -2080,19 +2085,25 @@ let currentUserId = null;
         }
 
         // Dashboard Functions
-    function showDashboard() {
-            hideAllViews();
-            document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('logoutBtn').style.display = 'block';
+  function showDashboard() {
+    hideAllViews();
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('logoutBtn').style.display = 'block';
 
-            if (currentUser && currentUser.username) {
-                document.getElementById('profileAvatar').textContent = currentUser.username[0].toUpperCase();
-                document.getElementById('profileUsername').textContent = currentUser.username;
-            }
+    if (currentUser && currentUser.username) {
+        document.getElementById('profileAvatar').textContent = currentUser.username[0].toUpperCase();
+        document.getElementById('profileUsername').textContent = currentUser.username;
+        currentUserId = currentUser.id; // Ensure user ID is set
+    }
 
-            initFeedCalendar();
-            loadUserCity();  // Add this line
-            updateCityTime(); // Add this line
+    initFeedCalendar();
+    loadUserCity();
+    updateCityTime();
+
+    // Initialize parameter calendar
+    if (typeof initializeCalendar === 'function') {
+        initializeCalendar();
+    }
 
             // Initialize city selector event
             const citySelector = document.getElementById('citySelector');
@@ -2581,12 +2592,24 @@ async function loadUserFeedForDate(userId, dateStr) {
             renderFeedCalendar();
         }
 
-        async function loadFeedForDate() {
-            const dateStr = feedSelectedDate.toISOString().split('T')[0];
-            const visibility = document.getElementById('visibilitySelect').value;
+     async function loadFeedForDate() {
+    const dateStr = feedSelectedDate.toISOString().split('T')[0];
+    let visibility = document.getElementById('visibilitySelect').value;
 
-            try {
-                const response = await apiCall(`/feed/${dateStr}?visibility=${visibility}`);
+    // Map old visibility values to ensure backward compatibility
+    const visibilityMap = {
+        'general': 'general',
+        'public': 'general',
+        'close_friends': 'close_friends',
+        'class_b': 'close_friends',
+        'family': 'family',
+        'class_a': 'family'
+    };
+
+    visibility = visibilityMap[visibility] || visibility;
+
+    try {
+        const response = await apiCall(`/feed/${dateStr}?visibility=${visibility}`);
 
                 if (response) {
                     document.getElementById('postInput').value = response.content || '';
@@ -2723,7 +2746,7 @@ function showNotification(message, type = 'info') {
         });
 
         // Circles Functions
-       async function loadCircles() {
+    async function loadCircles() {
     try {
         let response;
 
@@ -2755,9 +2778,21 @@ function showNotification(message, type = 'info') {
             showCircleEditControls();
         }
 
-        updateCircleDisplay('general', response.general || []);
-        updateCircleDisplay('close_friends', response.close_friends || []);
-        updateCircleDisplay('family', response.family || []);
+        // Handle both old and new data structures
+        let generalMembers = response.general || response.public || [];
+        let closeFriendsMembers = response.close_friends || response.class_b || [];
+        let familyMembers = response.family || response.class_a || [];
+
+        // If circles object exists, use it (new structure)
+        if (response.circles) {
+            generalMembers = response.circles.general || response.circles.public || [];
+            closeFriendsMembers = response.circles.close_friends || response.circles.class_b || [];
+            familyMembers = response.circles.family || response.circles.class_a || [];
+        }
+
+        updateCircleDisplay('general', generalMembers);
+        updateCircleDisplay('close_friends', closeFriendsMembers);
+        updateCircleDisplay('family', familyMembers);
     } catch (error) {
         console.error('Failed to load circles:', error);
     }
@@ -2800,28 +2835,45 @@ function showCircleEditControls() {
 
 
 
+function updateCircleDisplay(type, members) {
+    let containerId, countId, displayLabel;
 
-
-
-
-   function updateCircleDisplay(type, members) {
-    let containerId, countId;
-
+    // Map internal types to display labels and container IDs
     if (type === 'general') {
         containerId = 'generalMembers';
         countId = 'generalCount';
+        displayLabel = 'Public';
     } else if (type === 'close_friends') {
         containerId = 'closeFriendsMembers';
         countId = 'closeFriendsCount';
+        displayLabel = 'Class B (Friends)';
     } else {
         containerId = 'familyMembers';
         countId = 'familyCount';
+        displayLabel = 'Class A (Family)';
     }
 
     const container = document.getElementById(containerId);
     const count = document.getElementById(countId);
 
+    if (!container || !count) {
+        console.error('Container or count element not found for type:', type);
+        return;
+    }
+
     count.textContent = members.length;
+
+    // Update the circle header to show the correct label
+    const circleSection = container.closest('.circle-card');
+    if (circleSection) {
+        const headerElement = circleSection.querySelector('.circle-title');
+        if (headerElement) {
+            // Update the label text while keeping the emoji
+            const emoji = type === 'general' ? '💥' :
+                         type === 'close_friends' ? '❤️' : '👨‍👩‍👧‍👦';
+            headerElement.textContent = `${emoji} ${displayLabel}`;
+        }
+    }
 
     if (members.length === 0) {
         container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${(window.i18n && window.i18n.t ? window.i18n.t('circles.no_members') : 'No members yet')}</p>`;
@@ -2866,12 +2918,12 @@ function showCircleEditControls() {
                                     ${user.bio ? `<br><small style="color: var(--gray); font-style: italic;">${user.bio.substring(0, 60)}${user.bio.length > 60 ? '...' : ''}</small>` : ''}
                                 </div>
                             </div>
-                            <select onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
-                                <option value="">${(window.i18n && window.i18n.t ? window.i18n.t('circles.add_to') : 'Add to circle...')}</option>
-                                <option value="general">${(window.i18n && window.i18n.t ? window.i18n.t('visibility.general') : 'General')}</option>
-                                <option value="close_friends">${(window.i18n && window.i18n.t ? window.i18n.t('visibility.close_friends') : 'Close Friends')}</option>
-                                <option value="family">${(window.i18n && window.i18n.t ? window.i18n.t('visibility.family') : 'Family')}</option>
-                            </select>
+                           <select onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
+    <option value="">${(window.i18n && window.i18n.t ? window.i18n.t('circles.add_to') : 'Add to circle...')}</option>
+    <option value="general">Public</option>
+    <option value="close_friends">Class B (Friends)</option>
+    <option value="family">Class A (Family)</option>
+</select>
                         </div>
                     `).join('');
                 }
@@ -2891,7 +2943,12 @@ function showCircleEditControls() {
                     circle_type: circleType
                 });
 
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + `! ${username} added to ${circleType.replace('_', ' ')} circle`);
+                const circleLabels = {
+    'general': 'Public',
+    'close_friends': 'Class B (Friends)',
+    'family': 'Class A (Family)'
+};
+alert(`${username} added to ${circleLabels[circleType]} circle!`);
                 loadCircles();
                 document.getElementById('userSearchInput').value = '';
                 document.getElementById('searchResults').classList.remove('active');
@@ -3154,75 +3211,108 @@ function initCalendar() {
     }
 }
 
+
+
+
+// Initialize calendar with saved dates
+async function initializeCalendar() {
+    try {
+        // Load saved dates first
+        if (typeof loadSavedDates === 'function') {
+            await loadSavedDates();
+        }
+        // Then render the calendar
+        renderCalendar();
+        updateSelectedDateDisplay();
+    } catch (error) {
+        console.error('Error initializing calendar:', error);
+    }
+}
+
+
+
 // Remove or comment out your local loadSavedDates function
 // The one in parameters-social.js will be used instead
+function renderCalendar() {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
 
-        function renderCalendar() {
-            const year = currentMonth.getFullYear();
-            const month = currentMonth.getMonth();
+    // FIX: Use numeric month index directly
+    const translatedMonth = window.i18n && window.i18n.translate ?
+        window.i18n.translate('calendar.' + month) :
+        ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month];
 
-            // FIX: Use numeric month index directly
-            const translatedMonth = window.i18n && window.i18n.translate ?
-                window.i18n.translate('calendar.' + month) :
-                ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month];
+    document.getElementById('currentMonth').textContent = `${translatedMonth} ${year}`;
 
-            document.getElementById('currentMonth').textContent = `${translatedMonth} ${year}`;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
 
-            const grid = document.getElementById('calendarGrid');
-            grid.innerHTML = '';
+    // FIX: Get day headers using individual day keys
+    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    dayNames.forEach(dayKey => {
+        const header = document.createElement('div');
+        header.style.fontWeight = '600';
+        header.style.textAlign = 'center';
+        header.style.padding = '8px';
+        header.textContent = window.i18n && window.i18n.translate ?
+            window.i18n.translate('day.' + dayKey) :
+            dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+        grid.appendChild(header);
+    });
 
-            // FIX: Get day headers using individual day keys
-            const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-            dayNames.forEach(dayKey => {
-                const header = document.createElement('div');
-                header.style.fontWeight = '600';
-                header.style.textAlign = 'center';
-                header.style.padding = '8px';
-                header.textContent = window.i18n && window.i18n.translate ?
-                    window.i18n.translate('day.' + dayKey) :
-                    dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
-                grid.appendChild(header);
-            });
+    for (let i = 0; i < firstDay; i++) {
+        grid.appendChild(document.createElement('div'));
+    }
 
-            for (let i = 0; i < firstDay; i++) {
-                grid.appendChild(document.createElement('div'));
-            }
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day';
+        dayCell.textContent = day;
 
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayCell = document.createElement('div');
-                dayCell.className = 'calendar-day';
-                dayCell.textContent = day;
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-                if (savedDates.includes(dateStr)) {
-                    dayCell.classList.add('has-data');
-                }
-
-                if (selectedDate.getDate() === day &&
-                    selectedDate.getMonth() === month &&
-                    selectedDate.getFullYear() === year) {
-                    dayCell.classList.add('selected');
-                }
-
-                dayCell.onclick = () => selectDate(year, month, day);
-                grid.appendChild(dayCell);
-            }
+        // Check if this date has saved data
+        if (savedDates && savedDates.includes(dateStr)) {
+            dayCell.classList.add('has-data');
+            // Add green dot indicator
+            const dot = document.createElement('div');
+            dot.className = 'parameter-dot';
+            dot.style.cssText = 'width: 6px; height: 6px; background: #10B981; border-radius: 50%; position: absolute; bottom: 2px; right: 2px;';
+            dayCell.style.position = 'relative';
+            dayCell.appendChild(dot);
         }
 
-      function selectDate(day) {
-    selectedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (selectedDate.getDate() === day &&
+            selectedDate.getMonth() === month &&
+            selectedDate.getFullYear() === year) {
+            dayCell.classList.add('selected');
+        }
+
+        dayCell.onclick = () => selectDate(year, month, day);
+        grid.appendChild(dayCell);
+    }
+
+    // Ensure saved dates are loaded
+    if (typeof loadSavedDates === 'function') {
+        loadSavedDates();
+    }
+}
+
+  function selectDate(year, month, day) {
+    selectedDate = new Date(year, month, day);
     renderCalendar();
     updateSelectedDateDisplay();
 
+    const dateStr = selectedDate.toISOString().split('T')[0];
+
     // Check if viewing another user's parameters
     if (viewingUserId !== null && viewingUserId !== currentUserId) {
-        loadUserParametersForDate(viewingUserId, selectedDate);
+        loadUserParametersForDate(viewingUserId, dateStr);
     } else {
-        loadParametersForDate(selectedDate);
+        loadParametersForDate(dateStr);
     }
 }
 
@@ -3440,6 +3530,65 @@ function clearParameterDisplays() {
             window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
     }
 }
+
+
+// Fix parameter persistence when switching dates
+async function loadParametersForDate(dateStr) {
+    // Clear all previous selections first
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.checked = false;
+    });
+
+    // Clear notes
+    const notesInput = document.getElementById('notesInput');
+    if (notesInput) {
+        notesInput.value = '';
+    }
+
+    try {
+        const response = await apiCall(`/parameters/load/${dateStr}`);
+
+        if (response && response.success && response.data) {
+            const data = response.data;
+
+            // Set radio button selections using proper value matching
+            if (data.mood) {
+                const moodRadio = document.querySelector(`input[name="mood"][value="${data.mood}"]`);
+                if (moodRadio) moodRadio.checked = true;
+            }
+
+            if (data.sleep_hours) {
+                const sleepRadio = document.querySelector(`input[name="sleep"][value="${data.sleep_hours}"]`);
+                if (sleepRadio) sleepRadio.checked = true;
+            }
+
+            if (data.exercise) {
+                const exerciseRadio = document.querySelector(`input[name="exercise"][value="${data.exercise}"]`);
+                if (exerciseRadio) exerciseRadio.checked = true;
+            }
+
+            if (data.stress || data.anxiety) {
+                const stressRadio = document.querySelector(`input[name="stress"][value="${data.stress || data.anxiety}"]`);
+                if (stressRadio) stressRadio.checked = true;
+            }
+
+            if (data.social || data.energy) {
+                const socialRadio = document.querySelector(`input[name="social"][value="${data.social || data.energy}"]`);
+                if (socialRadio) socialRadio.checked = true;
+            }
+
+            // Set notes
+            if (notesInput && data.notes) {
+                notesInput.value = data.notes;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading parameters:', error);
+    }
+}
+
+
+
 
 // Following/Followers Functions
     async function loadFollowing() {
