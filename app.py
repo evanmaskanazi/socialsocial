@@ -101,75 +101,6 @@ logging.basicConfig(
 logger = logging.getLogger('thera_social')
 
 
-# Add this function near the top of app.py after imports
-def migrate_circle_names():
-    """Migrate old circle names to new ones in the database"""
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-
-        # Update circle_members table
-        cursor.execute("""
-            UPDATE circle_members 
-            SET circle = CASE 
-                WHEN circle = 'general' THEN 'general'
-                WHEN circle = 'close_friends' THEN 'close_friends'
-                WHEN circle = 'family' THEN 'family'
-                ELSE circle 
-            END
-        """)
-
-        conn.commit()
-        app.logger.info("Circle names migration completed")
-    except Exception as e:
-        app.logger.error(f"Error migrating circle names: {e}")
-
-
-# Call this once when the app starts (add after app initialization)
-with app.app_context():
-    migrate_circle_names()
-
-
-# Update the get_circles route to return with proper display names
-@app.route('/api/circles')
-@login_required
-def get_circles():
-    """Get user's circles with members"""
-    try:
-        user_id = session.get('user_id')
-        conn = get_db()
-        cursor = conn.cursor()
-
-        # Get circles with proper display names
-        circles = {
-            'general': [],
-            'close_friends': [],
-            'family': []
-        }
-
-        cursor.execute('''
-            SELECT cm.circle, u.id, u.username, u.display_name, u.email
-            FROM circle_members cm
-            JOIN users u ON cm.member_id = u.id
-            WHERE cm.user_id = ?
-        ''', (user_id,))
-
-        for row in cursor.fetchall():
-            circle = row[0]
-            member_data = {
-                'id': row[1],
-                'username': row[2],
-                'display_name': row[3] or row[2],
-                'email': row[4]
-            }
-            if circle in circles:
-                circles[circle].append(member_data)
-
-        return jsonify(circles), 200
-
-    except Exception as e:
-        app.logger.error(f"Error getting circles: {e}")
-        return jsonify({'error': 'Failed to load circles'}), 500
 
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
@@ -2794,6 +2725,64 @@ def remove_from_circle():
         return jsonify({'error': 'Failed to remove from circle'}), 500
 
 
+def migrate_circle_names():
+    """Migrate old circle names to new ones in the database"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Just check that circle_members table exists
+        cursor.execute("""
+            SELECT COUNT(*) FROM circle_members
+        """)
+
+        conn.commit()
+        app.logger.info("Circle names check completed")
+    except Exception as e:
+        app.logger.error(f"Error checking circle names: {e}")
+
+
+@app.route('/api/circles')
+@login_required
+def get_circles():
+    """Get user's circles with members"""
+    try:
+        user_id = session.get('user_id')
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Get circles - keep internal names for database
+        circles = {
+            'general': [],
+            'close_friends': [],
+            'family': []
+        }
+
+        cursor.execute('''
+            SELECT cm.circle, u.id, u.username, u.display_name, u.email
+            FROM circle_members cm
+            JOIN users u ON cm.member_id = u.id
+            WHERE cm.user_id = ?
+        ''', (user_id,))
+
+        for row in cursor.fetchall():
+            circle = row[0]
+            member_data = {
+                'id': row[1],
+                'username': row[2],
+                'display_name': row[3] or row[2],
+                'email': row[4]
+            }
+            if circle in circles:
+                circles[circle].append(member_data)
+
+        return jsonify(circles), 200
+
+    except Exception as e:
+        app.logger.error(f"Error getting circles: {e}")
+        return jsonify({'error': 'Failed to load circles'}), 500
+
+
 @app.route('/api/circles/membership/<int:check_user_id>', methods=['GET'])
 @login_required
 def check_circle_membership(check_user_id):
@@ -4342,6 +4331,7 @@ def fix_alerts():
 if __name__ == '__main__':
     # Initialize database
     init_database()
+    migrate_circle_names()
     #data time
 
     # Get port from environment
