@@ -283,6 +283,24 @@ const translations = {
     'about.value4_desc': 'Making mental health tools available to everyone, everywhere',
     'btn.getstarted': 'Get Started',
     'btn.back': 'Back to Home',
+    'circles.title': 'My Circles',
+            'circles.search_placeholder': 'Search users to add to circles...',
+            'circles.public': 'Public',
+            'circles.class_b': 'Class B (Close Friends)',
+            'circles.class_a': 'Class A (Family)',
+            'circles.members': 'Members',
+            'circles.no_members': 'No members in this circle yet',
+            'circles.add_to_circle': 'Add to Circle',
+            'circles.remove_from_circle': 'Remove',
+            'circles.user_added': 'added to',
+            'circles.user_removed': 'User removed',
+            'circles.circle': 'circle',
+            'circles.remove_confirm': 'Remove this member from the circle?',
+
+            // Privacy levels (for parameters - aligned with circles)
+            'privacy.public': 'Public',
+            'privacy.class_b': 'Class B (Close Friends)',
+            'privacy.class_a': 'Class A (Family)',
 
         // Parameters page
         'parameters.title': 'Daily Parameters',
@@ -719,6 +737,24 @@ const translations = {
         'mood.calm': '😌 רגוע',
         'mood.sad': '😢 עצוב',
         'mood.energetic': '🔥 אנרגטי',
+          'circles.title': 'המעגלים שלי',
+            'circles.search_placeholder': 'חפש משתמשים להוספה למעגלים...',
+            'circles.public': 'ציבורי',
+            'circles.class_b': 'מחלקה ב\' (חברים קרובים)',
+            'circles.class_a': 'מחלקה א\' (משפחה)',
+            'circles.members': 'חברים',
+            'circles.no_members': 'אין חברים במעגל זה עדיין',
+            'circles.add_to_circle': 'הוסף למעגל',
+            'circles.remove_from_circle': 'הסר',
+            'circles.user_added': 'נוסף ל',
+            'circles.user_removed': 'המשתמש הוסר',
+            'circles.circle': 'מעגל',
+            'circles.remove_confirm': 'להסיר את החבר הזה מהמעגל?',
+
+            // Privacy levels (for parameters - aligned with circles)
+            'privacy.public': 'ציבורי',
+            'privacy.class_b': 'מחלקה ב\' (חברים קרובים)',
+            'privacy.class_a': 'מחלקה א\' (משפחה)',
 
         // Parameters page
         'parameters.title': 'פרמטרים יומיים',
@@ -1152,6 +1188,24 @@ const translations = {
         'parameters.loaded': 'تم تحميل المعاملات من',
         'parameters.no_saved': 'لا توجد معاملات محفوظة لهذا التاريخ',
         'parameters.cleared': 'تم مسح المعاملات',
+         'circles.title': 'دوائري',
+            'circles.search_placeholder': 'ابحث عن المستخدمين لإضافتهم إلى الدوائر...',
+            'circles.public': 'عام',
+            'circles.class_b': 'الفئة ب (الأصدقاء المقربون)',
+            'circles.class_a': 'الفئة أ (العائلة)',
+            'circles.members': 'الأعضاء',
+            'circles.no_members': 'لا يوجد أعضاء في هذه الدائرة بعد',
+            'circles.add_to_circle': 'أضف إلى الدائرة',
+            'circles.remove_from_circle': 'إزالة',
+            'circles.user_added': 'تمت الإضافة إلى',
+            'circles.user_removed': 'تمت إزالة المستخدم',
+            'circles.circle': 'دائرة',
+            'circles.remove_confirm': 'إزالة هذا العضو من الدائرة؟',
+
+            // Privacy levels (for parameters - aligned with circles)
+            'privacy.public': 'عام',
+            'privacy.class_b': 'الفئة ب (الأصدقاء المقربون)',
+            'privacy.class_a': 'الفئة أ (العائلة)',
 
 
         // Profile page
@@ -1529,6 +1583,24 @@ const translations = {
         'mood.calm': '😌 Спокойный',
         'mood.sad': '😢 Грустный',
         'mood.energetic': '🔥 Энергичный',
+         'circles.title': 'Мои круги',
+            'circles.search_placeholder': 'Искать пользователей для добавления в круги...',
+            'circles.public': 'Публичный',
+            'circles.class_b': 'Класс Б (Близкие друзья)',
+            'circles.class_a': 'Класс А (Семья)',
+            'circles.members': 'Участники',
+            'circles.no_members': 'В этом круге пока нет участников',
+            'circles.add_to_circle': 'Добавить в круг',
+            'circles.remove_from_circle': 'Удалить',
+            'circles.user_added': 'добавлен в',
+            'circles.user_removed': 'Пользователь удален',
+            'circles.circle': 'круг',
+            'circles.remove_confirm': 'Удалить этого участника из круга?',
+
+            // Privacy levels (for parameters - aligned with circles)
+            'privacy.public': 'Публичный',
+            'privacy.class_b': 'Класс Б (Близкие друзья)',
+            'privacy.class_a': 'Класс А (Семья)',
 
         // Parameters page
         'parameters.title': 'Ежедневные параметры',

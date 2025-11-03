@@ -489,10 +489,10 @@ function displaySearchResults(users) {
                         </div>
                     </div>
                     <select class="add-to-circle-btn" onchange="addToCircle(${user.id}, this.value, '${escapeHtml(user.username).replace(/'/g, "\\'")}')">
-                        <option value="">${t('circles.add_to_circle', 'Add to circle...')}</option>
-                        <option value="general">${t('circles.general', 'General')}</option>
-                        <option value="close_friends">${t('circles.close_friends', 'Close Friends')}</option>
-                        <option value="family">${t('circles.family', 'Family')}</option>
+    <option value="">${t('circles.add_to_circle', 'Add to circle...')}</option>
+    <option value="public">${t('circles.public', 'Public')}</option>              // Line 493 - NEW
+    <option value="class_b">${t('circles.class_b', 'Class B (Close Friends)')}</option>  // Line 494 - NEW
+    <option value="class_a">${t('circles.class_a', 'Class A (Family)')}</option>  // Line 495 - NEW
                     </select>
                 </div>
             `;
@@ -523,11 +523,15 @@ async function addToCircle(userId, circleType, username) {
             throw new Error(error.error || 'Failed to add to circle');
         }
 
-        const circleNames = {
-            'general': t('circles.general', 'General'),
-            'close_friends': t('circles.close_friends', 'Close Friends'),
-            'family': t('circles.family', 'Family')
-        };
+       const circleNames = {
+    'public': t('circles.public', 'Public'),
+    'class_b': t('circles.class_b', 'Class B (Close Friends)'),
+    'class_a': t('circles.class_a', 'Class A (Family)'),
+    // Support old names for backwards compatibility
+    'general': t('circles.public', 'Public'),
+    'close_friends': t('circles.class_b', 'Class B (Close Friends)'),
+    'family': t('circles.class_a', 'Class A (Family)')
+};
 
         showNotification(
             `${username} ${t('circles.user_added', 'added to')} ${circleNames[circleType]} ${t('circles.circle', 'circle')}`,

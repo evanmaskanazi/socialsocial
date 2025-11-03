@@ -89,6 +89,9 @@ const addParameterTranslations = () => {
                 'parameters.no_saved': 'No saved parameters for this date',
                 'parameters.today_label': 'Today',
                 'error.saving': 'Error saving parameters',
+                'privacy.public': 'Public',
+'privacy.class_b': 'Class B (Close Friends)',
+'privacy.class_a': 'Class A (Family)',
                 'error.loading': 'Error loading parameters'
             });
         }
@@ -120,6 +123,9 @@ const addParameterTranslations = () => {
                 'parameters.no_saved': 'אין פרמטרים שמורים לתאריך זה',
                 'parameters.today_label': 'היום',
                 'error.saving': 'שגיאה בשמירת פרמטרים',
+                'privacy.public': 'ציבורי',
+'privacy.class_b': 'מחלקה ב\' (חברים קרובים)',
+'privacy.class_a': 'מחלקה א\' (משפחה)',
                 'error.loading': 'שגיאה בטעינת פרמטרים'
             });
         }
@@ -151,6 +157,9 @@ const addParameterTranslations = () => {
                 'parameters.no_saved': 'لا توجد معاملات محفوظة لهذا التاريخ',
                 'parameters.today_label': 'اليوم',
                 'error.saving': 'خطأ في حفظ المعاملات',
+                'privacy.public': 'عام',
+'privacy.class_b': 'الفئة ب (الأصدقاء المقربون)',
+'privacy.class_a': 'الفئة أ (العائلة)',
                 'error.loading': 'خطأ في تحميل المعاملات'
             });
         }
@@ -182,6 +191,9 @@ const addParameterTranslations = () => {
                 'parameters.no_saved': 'Нет сохраненных параметров для этой даты',
                 'parameters.today_label': 'Сегодня',
                 'error.saving': 'Ошибка сохранения параметров',
+                'privacy.public': 'Публичный',
+'privacy.class_b': 'Класс Б (Близкие друзья)',
+'privacy.class_a': 'Класс А (Семья)',
                 'error.loading': 'Ошибка загрузки параметров'
             });
         }
@@ -1353,5 +1365,6 @@ window.loadParameters = loadParameters;
 window.clearParameters = clearParameters;
 window.selectRating = selectRating;
 window.goToMainMenu = goToMainMenu;
+window.updatePrivacy = updatePrivacy;
 
 console.log('Parameters-social.js loaded - FIXED VERSION with calendar display and no auto-loading');
