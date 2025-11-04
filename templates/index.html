@@ -2588,7 +2588,7 @@ async function loadUserFeedForDate(userId, dateStr) {
     const loadButton = document.querySelector('button[onclick="loadFeedForDate()"]');
 
     try {
-        const response = await fetch(`/api/user/${userId}/feed/${dateStr}`, {
+        const response = await fetch(`/api/users/${userId}/feed/${dateStr}`, {
             credentials: 'include'
         });
 
