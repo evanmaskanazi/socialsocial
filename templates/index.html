@@ -3971,9 +3971,10 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
         existing.remove();
     }
 
-    // Format the date range display
+   // Format the date range display
     const formatDate = (dateStr) => {
-        const date = new Date(dateStr);
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
 
@@ -3987,7 +3988,9 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
         parametersHtml = '<div class="parameters-timeline">';
 
         parameters.forEach(param => {
-            const date = new Date(param.date);
+            // Parse date string as local date to avoid timezone issues
+            const [year, month, day] = param.date.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
             const dateStr = date.toLocaleDateString('en-US', {
                 weekday: 'short',
                 month: 'short',
@@ -4124,7 +4127,10 @@ function closeLoadingModal() {
 
 
 function formatDateDisplay(dateString) {
-    const date = new Date(dateString);
+    // Handle date string as local date, not UTC
+    // If dateString is "2025-10-11", treat it as October 11 in local time
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
