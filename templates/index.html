@@ -2490,15 +2490,16 @@ function handleParametersClick(event) {
 }
 
         // Feed Calendar Functions
-        function initFeedCalendar() {
-            loadFeedSavedDates();
+     function initFeedCalendar(userId = null) {
+            loadFeedSavedDates(userId);
             renderFeedCalendar();
             updateFeedSelectedDateDisplay();
         }
 
-        async function loadFeedSavedDates() {
+        async function loadFeedSavedDates(userId = null) {
             try {
-                const response = await apiCall('/feed/dates');
+                const endpoint = userId ? `/users/${userId}/feed/dates` : '/feed/dates';
+                const response = await apiCall(endpoint);
                 if (response) {
                     feedSavedDates = Object.keys(response.dates || {});
                 }
@@ -4347,7 +4348,9 @@ async function loadUserFeed(userId) {
         const isOwnFeed = sessionData.user_id === userId;
 
         // Load the calendar for this user
-        await loadUserCalendar(userId, isOwnFeed);
+        window.viewingUserId = userId;
+        window.currentUserId = sessionData.user_id;
+        initFeedCalendar(isOwnFeed ? null : userId);
 
         const response = await fetch(`/api/users/${userId}/posts`, {
             headers: {
