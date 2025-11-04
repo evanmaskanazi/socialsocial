@@ -2,16 +2,23 @@
 // Complete version with all original functionality preserved
 
 // Translation helper
+// Feed Calendar System with Circle Name Mapping Support
+// Complete version with all original functionality preserved
+
+// Translation helper
 const t = (key) => window.i18n ? window.i18n.translate(key) : key;
 
-// Circle name mapping for feed
+// Circle name mapping for feed - supports both old and new naming conventions
 const FEED_CIRCLE_MAP = {
     'general': 'public',
     'close_friends': 'class_b',
     'family': 'class_a',
     'public': 'public',
     'class_b': 'class_b',
-    'class_a': 'class_a'
+    'class_a': 'class_a',
+    1: 'public',
+    2: 'class_b',
+    3: 'class_a'
 };
 
 // Helper function to normalize circle names
@@ -19,16 +26,27 @@ function normalizeCircleName(circle) {
     return FEED_CIRCLE_MAP[circle] || circle;
 }
 
-// Helper to get display name for circles
+// Helper to get display name for circles (also exported as getDisplayName for compatibility)
 function getCircleDisplayName(circle) {
     const normalized = normalizeCircleName(circle);
     const displayMap = {
         'public': 'Public',
         'class_b': 'Class B (Friends)',
         'class_a': 'Class A (Family)',
-        'private': 'Private'
+        'private': 'Private',
+        'general': 'Public',
+        'close_friends': 'Class B (Friends)',
+        'family': 'Class A (Family)',
+        1: 'Public',
+        2: 'Class B (Friends)',
+        3: 'Class A (Family)'
     };
-    return displayMap[normalized] || circle;
+    return displayMap[normalized] || displayMap[circle] || circle;
+}
+
+// Alias for compatibility with other modules
+function getDisplayName(internalName) {
+    return getCircleDisplayName(internalName);
 }
 
 let currentFeedDate = new Date();
@@ -450,11 +468,14 @@ function formatPostTime(timestamp) {
 
 // Export functions
 if (typeof window !== 'undefined') {
-    window.loadFeedForDate = loadFeedForDate;
+      window.loadFeedForDate = loadFeedForDate;
     window.createFeedPost = createFeedPost;
     window.addCalendarToFeed = addCalendarToFeed;
     window.loadActivityData = loadActivityData;
     window.saveActivityData = saveActivityData;
+    window.getDisplayName = getDisplayName;
+    window.getCircleDisplayName = getCircleDisplayName;
+    window.normalizeCircleName = normalizeCircleName;
 }
 
 // Initialize on DOM ready

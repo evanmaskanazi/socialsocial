@@ -8,7 +8,11 @@ const CIRCLE_MAPPINGS = {
     // New internal names
     'public': 'Public',
     'class_b': 'Class B (Friends)',
-    'class_a': 'Class A (Family)'
+    'class_a': 'Class A (Family)',
+    // Numeric IDs
+    1: 'Public',
+    2: 'Class B (Friends)',
+    3: 'Class A (Family)'
 };
 
 function getDisplayName(internalName) {
