@@ -1632,8 +1632,13 @@
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-secondary" style="width: auto;" onclick="loadFeedForDate()" data-i18n="feed.load_update">Load Update</button>
                 <button class="btn btn-primary" style="width: auto;" id="postBtn" data-i18n="feed.save_update">Save Update</button>
-            </div>
+               </div>
         </div>
+    </div>
+
+    <!-- Posts Display Container -->
+    <div class="feed-posts" id="feedPostsContainer" style="margin-top: 20px;">
+        <!-- Posts will be displayed here -->
     </div>
 </div>
 
@@ -2582,11 +2587,8 @@ function handleParametersClick(event) {
 
 // Load a specific user's feed for a date (read-only)
 // Load a specific user's feed for a date (read-only)
+// Load a specific user's feed for a date (read-only)
 async function loadUserFeedForDate(userId, dateStr) {
-    const feedContent = document.getElementById('postInput');
-    const saveButton = document.querySelector('button[onclick="saveFeed()"]');
-    const loadButton = document.querySelector('button[onclick="loadFeedForDate()"]');
-
     try {
         const response = await fetch(`/api/users/${userId}/feed/${dateStr}`, {
             credentials: 'include'
@@ -2594,7 +2596,7 @@ async function loadUserFeedForDate(userId, dateStr) {
 
         if (!response.ok) {
             if (response.status === 403) {
-                showNotification('You must follow this user to view their feed', 'error');
+                showNotification('This update is not available to you based on your circle membership', 'error');
                 return;
             }
             throw new Error('Failed to load feed for date');
@@ -2602,32 +2604,47 @@ async function loadUserFeedForDate(userId, dateStr) {
 
         const data = await response.json();
 
-        if (feedContent) {
-            if (data.content) {
-                feedContent.value = data.content;
-            } else {
-                feedContent.value = 'No post for this date.';
-            }
-            // Make it read-only
-            feedContent.disabled = true;
-            feedContent.style.backgroundColor = '#f3f4f6';
-            feedContent.style.cursor = 'default';
+        // Display posts in the feed container
+        const feedContainer = document.getElementById('feedPostsContainer');
+        if (!feedContainer) {
+            console.error('Feed posts container not found');
+            return;
         }
 
-        // Hide save and load buttons when viewing another user
-        if (saveButton) {
-            saveButton.style.display = 'none';
-        }
-        if (loadButton) {
-            loadButton.style.display = 'none';
+        const circleNames = {
+            1: 'Public',
+            2: 'Class B (Friends)',
+            3: 'Class A (Family)',
+            'general': 'Public',
+            'close_friends': 'Class B (Friends)',
+            'family': 'Class A (Family)',
+            'private': 'Private'
+        };
+
+        if (data.posts && data.posts.length > 0) {
+            feedContainer.innerHTML = data.posts.map(post => `
+                <div class="post-card">
+                    <div class="post-header">
+                        <span class="post-category">${post.category || 'General'}</span>
+                        <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || 'Public'})</span>` : ''}
+                    </div>
+                    <div class="post-content">${post.content}</div>
+                    ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
+                    <div class="post-footer" style="margin-top: 1rem;">
+                        <div class="post-stats">
+                            <span>❤️ ${post.likes_count || 0}</span>
+                            <span style="margin-left: 1rem;">💬 ${post.comments_count || 0}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            feedContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No post for this date.</p>';
         }
     } catch (error) {
         console.error('Error loading user feed for date:', error);
-        if (feedContent) {
-            feedContent.value = 'Error loading post.';
-            feedContent.disabled = true;
-            feedContent.style.backgroundColor = '#f3f4f6';
-        }
+        showNotification('Error loading post', 'error');
     }
 }
 
@@ -4379,23 +4396,24 @@ async function loadUserFeed(userId) {
         }
 
         // Hide post creation form when viewing others' feeds
+     // Hide/modify elements when viewing others' feeds
         if (!isOwnFeed) {
-            const postForm = document.querySelector('#feedView form, #feedView .post-creation');
-            if (postForm) postForm.style.display = 'none';
+            // Hide textarea
+            const postInput = document.getElementById('postInput');
+            if (postInput) {
+                postInput.style.display = 'none';
+            }
 
-            // Hide all buttons except back button
-            document.querySelectorAll('#feedView button').forEach(btn => {
-                if (!btn.classList.contains('back-to-following-btn')) {
-                    btn.style.display = 'none';
-                }
-            });
+            // Hide visibility selector
+            const visibilitySelect = document.getElementById('visibilitySelect');
+            if (visibilitySelect) {
+                visibilitySelect.style.display = 'none';
+            }
 
-            // Make feed content read-only
-            const feedContent = document.getElementById('feedContent');
-            if (feedContent) {
-                feedContent.disabled = true;
-                feedContent.style.backgroundColor = '#f3f4f6';
-                feedContent.style.cursor = 'default';
+            // Hide ONLY the Save Update button, keep Load Update visible
+            const saveBtn = document.getElementById('postBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'none';
             }
         }
 
