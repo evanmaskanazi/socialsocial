@@ -2046,14 +2046,10 @@ def get_user_profile(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-
-
-
-
 @app.route('/api/users/<int:user_id>/posts', methods=['GET'])
 @login_required
 def get_user_posts(user_id):
-    """Get another user's feed posts"""
+    """Get another user's feed posts with circle-based visibility"""
     try:
         current_user_id = session.get('user_id')
 
@@ -2066,7 +2062,42 @@ def get_user_posts(user_id):
         if not is_following and user_id != current_user_id:
             return jsonify({'error': 'Must be following user to view posts'}), 403
 
-        posts = Post.query.filter_by(user_id=user_id).order_by(Post.created_at.desc()).all()
+        # If viewing own posts, return all
+        if user_id == current_user_id:
+            posts = Post.query.filter_by(user_id=user_id).order_by(Post.created_at.desc()).all()
+            return jsonify({
+                'posts': [{
+                    'id': post.id,
+                    'content': post.content,
+                    'category': post.category,
+                    'mood': post.mood,
+                    'is_anonymous': post.is_anonymous,
+                    'created_at': post.created_at.isoformat() if post.created_at else None,
+                    'likes_count': post.likes_count or 0,
+                    'comments_count': post.comments_count or 0,
+                    'circle_id': post.circle_id
+                } for post in posts]
+            })
+
+        # Check circle membership for viewing other users' posts
+        membership = CircleMembership.query.filter_by(
+            user_id=user_id,
+            member_id=current_user_id
+        ).first()
+
+        # Determine which circle IDs current user can see
+        visible_circle_ids = [1]  # Everyone can see general/public (circle_id=1)
+        if membership:
+            if membership.circle_name in ['class_a', 'family']:
+                visible_circle_ids.extend([2, 3])  # Can see close_friends (2) and family (3)
+            elif membership.circle_name in ['class_b', 'close_friends']:
+                visible_circle_ids.append(2)  # Can see close_friends (2)
+
+        # Get posts filtered by visible circles
+        posts = Post.query.filter(
+            Post.user_id == user_id,
+            Post.circle_id.in_(visible_circle_ids)
+        ).order_by(Post.created_at.desc()).all()
 
         return jsonify({
             'posts': [{
@@ -2077,10 +2108,13 @@ def get_user_posts(user_id):
                 'is_anonymous': post.is_anonymous,
                 'created_at': post.created_at.isoformat() if post.created_at else None,
                 'likes_count': post.likes_count or 0,
-                'comments_count': post.comments_count or 0
+                'comments_count': post.comments_count or 0,
+                'circle_id': post.circle_id
             } for post in posts]
         })
+
     except Exception as e:
+        logger.error(f"Error getting user posts: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -3165,6 +3199,200 @@ def get_feed_saved_dates():
     except Exception as e:
         logger.error(f"Get feed dates error: {e}")
         return jsonify({'dates': {}})
+
+
+@app.route('/api/users/<int:user_id>/feed/dates')
+@login_required
+def get_user_feed_dates(user_id):
+    """Get dates that have feed entries for a specific user with circle-based visibility"""
+    try:
+        current_user_id = session.get('user_id')
+
+        # If viewing own dates, use the standard endpoint logic
+        if user_id == current_user_id:
+            posts = db.session.query(
+                db.func.date(Post.created_at).label('date'),
+                Post.circle_id
+            ).filter_by(
+                user_id=user_id
+            ).group_by(
+                db.func.date(Post.created_at),
+                Post.circle_id
+            ).all()
+
+            dates_with_visibility = {}
+            circle_to_visibility = {
+                1: 'general',
+                2: 'close_friends',
+                3: 'family',
+                None: 'private'
+            }
+
+            for post in posts:
+                date_str = post.date.strftime('%Y-%m-%d')
+                if date_str not in dates_with_visibility:
+                    dates_with_visibility[date_str] = []
+
+                visibility = circle_to_visibility.get(post.circle_id, 'general')
+                dates_with_visibility[date_str].append(visibility)
+
+            return jsonify({'dates': dates_with_visibility})
+
+        # Check circle membership
+        membership = CircleMembership.query.filter_by(
+            user_id=user_id,
+            member_id=current_user_id
+        ).first()
+
+        # Determine which circle IDs current user can see
+        visible_circle_ids = [1]  # Everyone can see general/public (circle_id=1)
+        if membership:
+            if membership.circle_name == 'class_a' or membership.circle_name == 'family':
+                visible_circle_ids.extend([2, 3])  # Can see close_friends (2) and family (3)
+            elif membership.circle_name == 'class_b' or membership.circle_name == 'close_friends':
+                visible_circle_ids.append(2)  # Can see close_friends (2)
+
+        # Get posts filtered by visible circles
+        posts = db.session.query(
+            db.func.date(Post.created_at).label('date'),
+            Post.circle_id
+        ).filter(
+            Post.user_id == user_id,
+            Post.circle_id.in_(visible_circle_ids)
+        ).group_by(
+            db.func.date(Post.created_at),
+            Post.circle_id
+        ).all()
+
+        dates_with_visibility = {}
+        circle_to_visibility = {
+            1: 'general',
+            2: 'close_friends',
+            3: 'family',
+            None: 'private'
+        }
+
+        for post in posts:
+            date_str = post.date.strftime('%Y-%m-%d')
+            if date_str not in dates_with_visibility:
+                dates_with_visibility[date_str] = []
+
+            visibility = circle_to_visibility.get(post.circle_id, 'general')
+            dates_with_visibility[date_str].append(visibility)
+
+        return jsonify({'dates': dates_with_visibility})
+
+    except Exception as e:
+        logger.error(f"Error getting user feed dates: {e}")
+        return jsonify({'dates': {}})
+
+
+@app.route('/api/users/<int:user_id>/feed/<date>')
+@login_required
+def get_user_feed_by_date(user_id, date):
+    """Get a specific user's feed posts for a date with circle-based visibility"""
+    try:
+        current_user_id = session.get('user_id')
+
+        # Parse the date
+        from datetime import datetime, timedelta
+        feed_date = datetime.fromisoformat(date).date()
+
+        # Get start and end of the day
+        start_datetime = datetime.combine(feed_date, datetime.min.time())
+        end_datetime = datetime.combine(feed_date, datetime.max.time())
+
+        # If viewing own posts, return all for that date
+        if user_id == current_user_id:
+            posts = Post.query.filter(
+                Post.user_id == user_id,
+                Post.created_at >= start_datetime,
+                Post.created_at <= end_datetime
+            ).order_by(Post.created_at.desc()).all()
+
+            circle_to_visibility = {
+                1: 'general',
+                2: 'close_friends',
+                3: 'family',
+                None: 'private'
+            }
+
+            return jsonify({
+                'posts': [{
+                    'id': post.id,
+                    'content': post.content,
+                    'category': post.category,
+                    'mood': post.mood,
+                    'is_anonymous': post.is_anonymous,
+                    'created_at': post.created_at.isoformat() if post.created_at else None,
+                    'circle': circle_to_visibility.get(post.circle_id, 'private'),
+                    'circle_id': post.circle_id,
+                    'likes_count': post.likes_count or 0,
+                    'comments_count': post.comments_count or 0
+                } for post in posts]
+            })
+
+        # Check if following this user
+        is_following = Follow.query.filter_by(
+            follower_id=current_user_id,
+            followed_id=user_id
+        ).first() is not None
+
+        if not is_following:
+            return jsonify({'error': 'Must be following user to view posts'}), 403
+
+        # Check circle membership
+        membership = CircleMembership.query.filter_by(
+            user_id=user_id,
+            member_id=current_user_id
+        ).first()
+
+        # Determine which circle IDs current user can see
+        visible_circle_ids = [1]  # Everyone can see general/public (circle_id=1)
+        if membership:
+            if membership.circle_name in ['class_a', 'family']:
+                visible_circle_ids.extend([2, 3])  # Can see close_friends (2) and family (3)
+            elif membership.circle_name in ['class_b', 'close_friends']:
+                visible_circle_ids.append(2)  # Can see close_friends (2)
+
+        # Get posts filtered by visible circles for that date
+        posts = Post.query.filter(
+            Post.user_id == user_id,
+            Post.circle_id.in_(visible_circle_ids),
+            Post.created_at >= start_datetime,
+            Post.created_at <= end_datetime
+        ).order_by(Post.created_at.desc()).all()
+
+        if not posts:
+            return jsonify({'error': 'This update is not available to you based on your circle membership'}), 403
+
+        circle_to_visibility = {
+            1: 'general',
+            2: 'close_friends',
+            3: 'family',
+            None: 'private'
+        }
+
+        return jsonify({
+            'posts': [{
+                'id': post.id,
+                'content': post.content,
+                'category': post.category,
+                'mood': post.mood,
+                'is_anonymous': post.is_anonymous,
+                'created_at': post.created_at.isoformat() if post.created_at else None,
+                'circle': circle_to_visibility.get(post.circle_id, 'private'),
+                'circle_id': post.circle_id,
+                'likes_count': post.likes_count or 0,
+                'comments_count': post.comments_count or 0
+            } for post in posts]
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting user feed by date: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 
 
 @app.route('/api/posts', methods=['POST'])
