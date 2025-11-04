@@ -2080,17 +2080,17 @@ def get_user_posts(user_id):
             })
 
         # Check circle membership for viewing other users' posts
-        membership = CircleMembership.query.filter_by(
+        membership = Circle.query.filter_by(
             user_id=user_id,
-            member_id=current_user_id
+            circle_user_id=current_user_id
         ).first()
 
         # Determine which circle IDs current user can see
         visible_circle_ids = [1]  # Everyone can see general/public (circle_id=1)
         if membership:
-            if membership.circle_name in ['class_a', 'family']:
+            if membership.circle_type in ['class_a', 'family']:
                 visible_circle_ids.extend([2, 3])  # Can see close_friends (2) and family (3)
-            elif membership.circle_name in ['class_b', 'close_friends']:
+            elif membership.circle_type in ['class_b', 'close_friends']:
                 visible_circle_ids.append(2)  # Can see close_friends (2)
 
         # Get posts filtered by visible circles
@@ -3239,17 +3239,18 @@ def get_user_feed_dates(user_id):
             return jsonify({'dates': dates_with_visibility})
 
         # Check circle membership
-        membership = CircleMembership.query.filter_by(
+            # Check circle membership
+        membership = Circle.query.filter_by(
             user_id=user_id,
-            member_id=current_user_id
+            circle_user_id=current_user_id
         ).first()
 
         # Determine which circle IDs current user can see
         visible_circle_ids = [1]  # Everyone can see general/public (circle_id=1)
         if membership:
-            if membership.circle_name == 'class_a' or membership.circle_name == 'family':
+            if membership.circle_type == 'class_a' or membership.circle_type == 'family':
                 visible_circle_ids.extend([2, 3])  # Can see close_friends (2) and family (3)
-            elif membership.circle_name == 'class_b' or membership.circle_name == 'close_friends':
+            elif membership.circle_type == 'class_b' or membership.circle_type == 'close_friends':
                 visible_circle_ids.append(2)  # Can see close_friends (2)
 
         # Get posts filtered by visible circles
@@ -3342,17 +3343,17 @@ def get_user_feed_by_date(user_id, date):
             return jsonify({'error': 'Must be following user to view posts'}), 403
 
         # Check circle membership
-        membership = CircleMembership.query.filter_by(
+        membership = Circle.query.filter_by(
             user_id=user_id,
-            member_id=current_user_id
+            circle_user_id=current_user_id
         ).first()
 
         # Determine which circle IDs current user can see
         visible_circle_ids = [1]  # Everyone can see general/public (circle_id=1)
         if membership:
-            if membership.circle_name in ['class_a', 'family']:
+            if membership.circle_type in ['class_a', 'family']:
                 visible_circle_ids.extend([2, 3])  # Can see close_friends (2) and family (3)
-            elif membership.circle_name in ['class_b', 'close_friends']:
+            elif membership.circle_type in ['class_b', 'close_friends']:
                 visible_circle_ids.append(2)  # Can see close_friends (2)
 
         # Get posts filtered by visible circles for that date
