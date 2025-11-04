@@ -1254,6 +1254,76 @@
     margin-bottom: 20px;
 }
 
+/* Calendar update indicator - green dots for days with updates */
+.update-indicator {
+    width: 8px;
+    height: 8px;
+    background-color: #4CAF50;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+}
+
+/* User update modal for viewing other users' feed updates */
+#user-update-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+#user-update-modal .modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 30px;
+    border: 1px solid #888;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+#user-update-modal .close-modal {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#user-update-modal .close-modal:hover,
+#user-update-modal .close-modal:focus {
+    color: #000;
+}
+
+#update-content-display {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    min-height: 100px;
+}
+
+#edit-update-btn {
+    background-color: #667eea;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 15px;
+}
+
+#edit-update-btn:hover {
+    background-color: #5568d3;
+}
+
 
     </style>
 </head>
@@ -4267,10 +4337,18 @@ function updateMessagesNavVisibility() {
 
 
 
-
-
 async function loadUserFeed(userId) {
     try {
+        // Get current user ID to check if viewing own feed
+        const sessionResponse = await fetch('/api/auth/session', {
+            credentials: 'include'
+        });
+        const sessionData = await sessionResponse.json();
+        const isOwnFeed = sessionData.user_id === userId;
+
+        // Load the calendar for this user
+        await loadUserCalendar(userId, isOwnFeed);
+
         const response = await fetch(`/api/users/${userId}/posts`, {
             headers: {
                 'Content-Type': 'application/json'
@@ -4297,23 +4375,25 @@ async function loadUserFeed(userId) {
             if (feedHeader) feedHeader.textContent = `${user.username}'s Feed`;
         }
 
-        // Hide post creation form
-        const postForm = document.querySelector('#feedView form, #feedView .post-creation');
-        if (postForm) postForm.style.display = 'none';
+        // Hide post creation form when viewing others' feeds
+        if (!isOwnFeed) {
+            const postForm = document.querySelector('#feedView form, #feedView .post-creation');
+            if (postForm) postForm.style.display = 'none';
 
-        // Hide all buttons except back button
-        document.querySelectorAll('#feedView button').forEach(btn => {
-            if (!btn.classList.contains('back-to-following-btn')) {
-                btn.style.display = 'none';
+            // Hide all buttons except back button
+            document.querySelectorAll('#feedView button').forEach(btn => {
+                if (!btn.classList.contains('back-to-following-btn')) {
+                    btn.style.display = 'none';
+                }
+            });
+
+            // Make feed content read-only
+            const feedContent = document.getElementById('feedContent');
+            if (feedContent) {
+                feedContent.disabled = true;
+                feedContent.style.backgroundColor = '#f3f4f6';
+                feedContent.style.cursor = 'default';
             }
-        });
-
-        // Make feed content read-only
-        const feedContent = document.getElementById('feedContent');
-        if (feedContent) {
-            feedContent.disabled = true;
-            feedContent.style.backgroundColor = '#f3f4f6';
-            feedContent.style.cursor = 'default';
         }
 
         // Display posts
@@ -4323,12 +4403,23 @@ async function loadUserFeed(userId) {
             return;
         }
 
+        const circleNames = {
+            1: 'Public',
+            2: 'Class B (Friends)',
+            3: 'Class A (Family)',
+            'general': 'Public',
+            'close_friends': 'Class B (Friends)',
+            'family': 'Class A (Family)',
+            'private': 'Private'
+        };
+
         if (data.posts && data.posts.length > 0) {
             feedContainer.innerHTML = data.posts.map(post => `
                 <div class="post-card">
                     <div class="post-header">
                         <span class="post-category">${post.category || 'General'}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || 'Public'})</span>` : ''}
                     </div>
                     <div class="post-content">${post.content}</div>
                     ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
