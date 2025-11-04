@@ -2069,13 +2069,10 @@ def get_user_posts(user_id):
                 'posts': [{
                     'id': post.id,
                     'content': post.content,
-                    'category': post.category,
-                    'mood': post.mood,
-                    'is_anonymous': post.is_anonymous,
                     'created_at': post.created_at.isoformat() if post.created_at else None,
-                    'likes_count': post.likes_count or 0,
-                    'comments_count': post.comments_count or 0,
-                    'circle_id': post.circle_id
+                    'likes': post.likes or 0,
+                    'circle_id': post.circle_id,
+                    'visibility': post.visibility
                 } for post in posts]
             })
 
@@ -2103,13 +2100,10 @@ def get_user_posts(user_id):
             'posts': [{
                 'id': post.id,
                 'content': post.content,
-                'category': post.category,
-                'mood': post.mood,
-                'is_anonymous': post.is_anonymous,
                 'created_at': post.created_at.isoformat() if post.created_at else None,
-                'likes_count': post.likes_count or 0,
-                'comments_count': post.comments_count or 0,
-                'circle_id': post.circle_id
+                'likes': post.likes or 0,
+                'circle_id': post.circle_id,
+                'visibility': post.visibility
             } for post in posts]
         })
 
@@ -3180,9 +3174,9 @@ def get_feed_saved_dates():
         # Organize by date with visibility info
         dates_with_visibility = {}
         circle_to_visibility = {
-            1: 'general',
-            2: 'close_friends',
-            3: 'family',
+            1: 'public',  # was 'general'
+            2: 'class_b',  # was 'close_friends'
+            3: 'class_a',  # was 'family'
             None: 'private'
         }
 
@@ -3222,9 +3216,9 @@ def get_user_feed_dates(user_id):
 
             dates_with_visibility = {}
             circle_to_visibility = {
-                1: 'general',
-                2: 'close_friends',
-                3: 'family',
+                1: 'public',  # was 'general'
+                2: 'class_b',  # was 'close_friends'
+                3: 'class_a',  # was 'family'
                 None: 'private'
             }
 
@@ -3267,9 +3261,9 @@ def get_user_feed_dates(user_id):
 
         dates_with_visibility = {}
         circle_to_visibility = {
-            1: 'general',
-            2: 'close_friends',
-            3: 'family',
+            1: 'public',  # was 'general'
+            2: 'class_b',  # was 'close_friends'
+            3: 'class_a',  # was 'family'
             None: 'private'
         }
 
@@ -3312,9 +3306,9 @@ def get_user_feed_by_date(user_id, date):
             ).order_by(Post.created_at.desc()).all()
 
             circle_to_visibility = {
-                1: 'general',
-                2: 'close_friends',
-                3: 'family',
+                1: 'public',  # was 'general'
+                2: 'class_b',  # was 'close_friends'
+                3: 'class_a',  # was 'family'
                 None: 'private'
             }
 
@@ -3322,14 +3316,10 @@ def get_user_feed_by_date(user_id, date):
                 'posts': [{
                     'id': post.id,
                     'content': post.content,
-                    'category': post.category,
-                    'mood': post.mood,
-                    'is_anonymous': post.is_anonymous,
                     'created_at': post.created_at.isoformat() if post.created_at else None,
-                    'circle': circle_to_visibility.get(post.circle_id, 'private'),
                     'circle_id': post.circle_id,
-                    'likes_count': post.likes_count or 0,
-                    'comments_count': post.comments_count or 0
+                    'likes': post.likes or 0,
+                    'visibility': post.visibility
                 } for post in posts]
             })
 
@@ -3368,9 +3358,9 @@ def get_user_feed_by_date(user_id, date):
             return jsonify({'error': 'This update is not available to you based on your circle membership'}), 403
 
         circle_to_visibility = {
-            1: 'general',
-            2: 'close_friends',
-            3: 'family',
+            1: 'public',  # was 'general'
+            2: 'class_b',  # was 'close_friends'
+            3: 'class_a',  # was 'family'
             None: 'private'
         }
 
@@ -3378,14 +3368,10 @@ def get_user_feed_by_date(user_id, date):
             'posts': [{
                 'id': post.id,
                 'content': post.content,
-                'category': post.category,
-                'mood': post.mood,
-                'is_anonymous': post.is_anonymous,
                 'created_at': post.created_at.isoformat() if post.created_at else None,
-                'circle': circle_to_visibility.get(post.circle_id, 'private'),
                 'circle_id': post.circle_id,
-                'likes_count': post.likes_count or 0,
-                'comments_count': post.comments_count or 0
+                'likes': post.likes or 0,
+                'visibility': post.visibility
             } for post in posts]
         })
 
