@@ -159,6 +159,18 @@ except Exception as e:
     logger.warning(f"Redis not available: {e}")
 
 
+def parse_date_as_local(date_string):
+    """Parse date string as local date without timezone conversion"""
+    from datetime import datetime
+    try:
+        # This ensures the date is treated as-is without timezone shifts
+        return datetime.strptime(date_string, '%Y-%m-%d').date()
+    except ValueError:
+        # Fallback for other formats
+        return datetime.fromisoformat(date_string.split('T')[0]).date()
+
+
+
 def get_db():
     """Get a direct database connection for raw SQL queries"""
     import psycopg2
@@ -2155,8 +2167,8 @@ def get_user_parameters(user_id):
 
         # Parse dates
         try:
-            start = datetime.strptime(start_date, '%Y-%m-%d').date()
-            end = datetime.strptime(end_date, '%Y-%m-%d').date()
+            start = parse_date_as_local(start_date)
+            end = parse_date_as_local(end_date)
         except ValueError:
             return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
 
@@ -3339,6 +3351,14 @@ def save_parameters():
         if not date_str:
             return jsonify({'error': 'Date is required'}), 400
 
+            # Parse the date as local date without timezone conversion
+        try:
+            param_date = parse_date_as_local(date_str)
+            date_str = param_date.isoformat()  # Ensure consistent YYYY-MM-DD format
+        except ValueError:
+            return jsonify({'error': 'Invalid date format'}), 400
+
+        # Find or create parameter entry
         # Find or create parameter entry
         params = SavedParameters.query.filter_by(
             user_id=user_id,
