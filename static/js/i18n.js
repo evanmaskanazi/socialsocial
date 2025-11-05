@@ -399,6 +399,8 @@ const translations = {
 'invite.suggested': 'Suggested People to Invite',
 'invite.suggested_description': 'Based on your location and connections',
 'invite.send_request': 'Send Request',
+ 'invite.find_people': '🔍 Find People to Follow',
+ 'invite.view_public': '👁️ View Your Public Invite Page',
 
 
 
@@ -555,6 +557,8 @@ const translations = {
     'invite.cta_title': 'עבודה מצוינת במעקב אחר הבריאות שלך!',
 'invite.cta_subtitle': 'שתף את המסע שלך עם אחרים:',
 'invite.copy_link': 'העתק את קישור ההזמנה שלך',
+'invite.find_people': '🔍 מצא אנשים לעקוב',
+ 'invite.view_public': '👁️ צפה בדף ההזמנה הציבורי שלך',
 'invite.invite_friends': 'הזמן חברים',
 'invite.find_people': 'מצא אנשים לעקוב אחריהם',
 'invite.link_copied': 'קישור ההזמנה הועתק ללוח!',
@@ -958,6 +962,8 @@ const translations = {
 'invite.cta_title': 'عمل رائع في تتبع صحتك!',
 'invite.cta_subtitle': 'شارك رحلتك مع الآخرين:',
 'invite.copy_link': 'نسخ رابط الدعوة الخاص بك',
+'invite.find_people': '🔍 ابحث عن أشخاص لمتابعتهم',
+ 'invite.view_public': '👁️ عرض صفحة الدعوة العامة الخاصة بك',
 'invite.invite_friends': 'دعوة الأصدقاء',
 'invite.find_people': 'ابحث عن أشخاص لمتابعتهم',
 'invite.link_copied': 'تم نسخ رابط الدعوة إلى الحافظة!',
@@ -1445,6 +1451,8 @@ const translations = {
 'invite.your_link': 'Ваша личная ссылка для приглашения',
 'invite.link_description': 'Поделитесь этой ссылкой с друзьями и семьей, чтобы они могли следить за вашим путешествием к здоровью',
 'invite.copy': 'Скопировать ссылку',
+'invite.find_people': '🔍 Найти людей для подписки',
+ 'invite.view_public': '👁️ Просмотреть вашу публичную страницу приглашения',
 'invite.email': 'Email',
 'invite.sms': 'SMS',
 'invite.whatsapp': 'WhatsApp',
