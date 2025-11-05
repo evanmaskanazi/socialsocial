@@ -4978,6 +4978,10 @@ function addBackToFollowingButton(viewId) {
                                 const username = title.replace('New message from ', '');
                                 title = `${translateKey('alerts.new_message_from')} ${username}`;
                             }
+
+                              else if (title === 'New Follow Request') {
+                                title = translateKey('invite.alert_title') || 'New Invitation';
+                            }
                         }
 
                         // Translate content if it's a key
@@ -4988,6 +4992,10 @@ function addBackToFollowingButton(viewId) {
                             const [username, i18nKey] = content.split('|');
                             const template = translateKey(i18nKey) || 'has invited you to follow them';
                             content = template.replace('{username}', username);
+                        }
+                         // Handle legacy "Someone wants to follow your journey" format
+                        else if (content === 'Someone wants to follow your journey') {
+                            content = translateKey('invite.legacy_alert_content') || 'Someone has invited you to follow them';
                         }
 
                         return `
