@@ -1903,7 +1903,7 @@
     <!-- Recommendations Section -->
     <div style="margin-bottom: 30px;">
         <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="following.recommendations">Recommended for You</h3>
-        <div id="recommendationsList"></div>
+        <div id="followingRecommendationsList"></div>
     </div>
 
     <!-- Following List -->
@@ -4063,7 +4063,7 @@ async function loadParametersForDate(dateStr) {
         }
 
         // Display recommended
-        const recommendedContainer = document.querySelector('#recommendationsList');
+        const recommendedContainer = document.querySelector('#followingRecommendationsList');
         if (recommendedContainer) {
             const recommendations = recommendedData.recommendations || [];
 
