@@ -25,11 +25,7 @@ from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, and_, or_, desc, func, inspect, text
-from models import (
-    User, Parameter, Follow, Circle, Post,
-    ParameterValue, Trend, Alert, PrivateMessage,
-    Report, Penalty, CircleMember
-)
+
 
 import mimetypes
 
@@ -97,6 +93,12 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite compatibility
 CORS(app, supports_credentials=True)
 Session(app)
+
+from models import (
+    User, Parameter, Follow, Circle, Post,
+    ParameterValue, Trend, Alert, PrivateMessage,
+    Report, Penalty, CircleMember
+)
 
 # Setup logging
 logging.basicConfig(
