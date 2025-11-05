@@ -2659,27 +2659,44 @@ function loadInviteView() {
 }
 
 function loadUserRecommendations() {
+    console.log('🔍 loadUserRecommendations called');
+
     const list = document.getElementById('recommendationsList');
-    if (!list) return;
+    console.log('🔍 recommendationsList element:', list);
+
+    if (!list) {
+        console.error('❌ recommendationsList element not found!');
+        return;
+    }
 
     // Prevent multiple simultaneous loads
-    if (list.dataset.loading === 'true') return;
+    if (list.dataset.loading === 'true') {
+        console.log('⚠️ Already loading, skipping...');
+        return;
+    }
     list.dataset.loading = 'true';
 
     list.innerHTML = '<div class="loading">Loading recommendations...</div>';
+    console.log('🔍 Set loading state');
 
     fetch('/api/users/recommendations', {
         credentials: 'include'
     })
         .then(response => {
-            console.log('Recommendations status:', response.status);
+            console.log('🔍 Recommendations status:', response.status);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
         })
         .then(data => {
-            console.log('Recommendations data:', data);
+            console.log('🔍 Recommendations data:', data);
+            console.log('🔍 Recommendations array:', data.recommendations);
+            console.log('🔍 Array length:', data.recommendations?.length);
+            console.log('🔍 Count:', data.count);
+
             if (data.recommendations && data.recommendations.length > 0) {
-                list.innerHTML = data.recommendations.map(user => `
+                console.log('✅ Rendering', data.recommendations.length, 'recommendations');
+
+                const html = data.recommendations.map(user => `
                     <div class="user-card">
                         <div class="user-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                             ${user.username.charAt(0).toUpperCase()}
@@ -2694,17 +2711,23 @@ function loadUserRecommendations() {
                     </div>
                 `).join('');
 
+                console.log('🔍 Generated HTML length:', html.length);
+                list.innerHTML = html;
+                console.log('✅ HTML set to list');
+
                 // Apply translations
                 if (window.i18n && window.i18n.applyLanguage) {
                     window.i18n.applyLanguage();
                 }
             } else {
+                console.log('⚠️ No recommendations in array');
                 list.innerHTML = '<div class="empty-state">No recommendations available yet. Check back soon!</div>';
             }
             list.dataset.loading = 'false';
+            console.log('✅ Loading complete');
         })
         .catch(error => {
-            console.error('Error loading recommendations:', error);
+            console.error('❌ Error loading recommendations:', error);
             list.innerHTML = `<div class="error-state">Failed to load recommendations: ${error.message}</div>`;
             list.dataset.loading = 'false';
         });
