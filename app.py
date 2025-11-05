@@ -84,33 +84,40 @@ app.config['SESSION_KEY_PREFIX'] = 'thera_social:'
 app.config['SESSION_USE_SIGNER'] = True
 
 # Redis configuration for sessions
+# Redis configuration for sessions
 REDIS_URL = os.environ.get('REDIS_URL')
 if REDIS_URL:
     app.config['SESSION_REDIS'] = redis.from_url(REDIS_URL)
 
+# =====================
+# DATABASE INITIALIZATION - CRITICAL FIX
+# =====================
 
-# Import the db from models
+# Step 1: Import ONLY the db object (not model classes yet)
 from models import db
 
-# Then initialize it with your app
+# Step 2: Initialize db with app - THIS IS CRITICAL
 db.init_app(app)
-from models import (
-    User, Parameter, Follow, Circle, Post,
-    ParameterValue, Trend, Alert, PrivateMessage,
-    Report, Penalty, CircleMember
-)
-migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite compatibility
+
+# Step 3: Initialize extensions that don't need models
+migrate = Migrate(app, db, render_as_batch=True)
 CORS(app, supports_credentials=True)
 Session(app)
 
-
-
-# Setup logging
+# Step 4: Setup logging
 logging.basicConfig(
     level=logging.INFO if is_production else logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('thera_social')
+
+# Step 5: NOW we can safely create an app context and import models
+with app.app_context():
+    from models import (
+        User, Parameter, Follow, Circle, Post,
+        ParameterValue, Trend, Alert, PrivateMessage,
+        Report, Penalty, CircleMember
+    )
 
 
 
