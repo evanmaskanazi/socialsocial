@@ -1792,13 +1792,21 @@ function closeInviteCTA() {
 }
 
 function showInviteTab() {
-    // Redirect to main page with invite tab selected
-    window.location.href = '/?tab=invite';
+    // Redirect to main page with invite view selected
+    if (typeof showView === 'function') {
+        showView('invite');
+    } else {
+        window.location.href = '/?view=invite';
+    }
 }
 
 function findPeopleToFollow() {
-    // Redirect to main page with discover tab
-    window.location.href = '/?tab=discover';
+    // Redirect to main page with following view
+    if (typeof showView === 'function') {
+        showView('following');
+    } else {
+        window.location.href = '/?view=following';
+    }
 }
 
 
