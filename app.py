@@ -4245,49 +4245,51 @@ def get_recommendations():
 @app.route('/api/users/recommendations', methods=['GET'])
 @login_required
 def get_user_recommendations():
-    """Get recommended users for invite tab based on location"""
+    """Get recommended users to INVITE to follow YOU (not people for you to follow)"""
     try:
         # Set query timeout to prevent hanging (PostgreSQL only)
         try:
             db.session.execute(text("SET LOCAL statement_timeout = '5000'"))
         except Exception:
-            pass  # Ignore if not PostgreSQL or if command fails
+            pass  # Ignore if not PostgreSQL
 
         user_id = session.get('user_id')
         current_user = db.session.get(User, user_id)
 
         if not current_user:
-            # Return empty recommendations instead of 404 to prevent UI from breaking
             return jsonify({
                 'error': 'User not found',
                 'recommendations': [],
                 'count': 0
             }), 200
 
-        # Get IDs of users already following (with error handling)
-        existing_follows = []
+        # Get IDs of users who are ALREADY FOLLOWING ME (my current followers)
+        # These should be EXCLUDED because they're already following me
+        my_followers = []
         try:
-            existing_follows = db.session.execute(
-                select(Follow.followed_id).filter_by(follower_id=user_id)
+            my_followers = db.session.execute(
+                select(Follow.follower_id).filter_by(followed_id=user_id)
             ).scalars().all()
         except Exception as e:
-            logger.warning(f"Follow query failed: {e}")
+            logger.warning(f"Followers query failed: {e}")
 
-        # Get pending follow requests (with error handling)
-        existing_requests = []
+        # Get pending follow requests I RECEIVED
+        # These should be EXCLUDED because they already want to follow me
+        received_requests = []
         try:
-            existing_requests = db.session.execute(
-                select(FollowRequest.target_id).filter_by(
-                    requester_id=user_id,
+            received_requests = db.session.execute(
+                select(FollowRequest.requester_id).filter_by(
+                    target_id=user_id,
                     status='pending'
                 )
             ).scalars().all()
         except Exception as e:
-            logger.warning(f"Follow request query failed: {e}")
+            logger.warning(f"Received requests query failed: {e}")
 
-        exclude_ids = set(existing_follows + existing_requests + [user_id])
+        # Exclude: myself, people already following me, and people who sent me requests
+        exclude_ids = set(my_followers + received_requests + [user_id])
 
-        # Get users with similar location (with error handling)
+        # Get users with similar location (potential people to invite)
         location_matches = []
         try:
             if hasattr(current_user, 'selected_city') and current_user.selected_city:
@@ -4301,7 +4303,7 @@ def get_user_recommendations():
             logger.warning(f"Location query failed: {e}")
             location_matches = []
 
-        # Get recently active users (with error handling)
+        # Get recently active users (potential people to invite)
         recent_users = []
         try:
             recent_users = db.session.execute(
@@ -4337,7 +4339,6 @@ def get_user_recommendations():
 
     except Exception as e:
         logger.error(f"Recommendations error: {str(e)}")
-        # Return empty recommendations instead of 500 error to prevent UI breaking
         return jsonify({
             'error': 'Failed to load recommendations',
             'recommendations': [],
