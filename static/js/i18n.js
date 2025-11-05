@@ -254,6 +254,7 @@ const translations = {
 'following.recommendations': 'Recommended for You',
 'following.your_following': 'People You Follow',
 'followers.title': 'Followers',
+'invite.legacy_alert_content': 'Someone has invited you to follow them',
 
     // About page
     'about.title': 'About TheraSocial',
@@ -563,6 +564,7 @@ const translations = {
 'invite.copy_link': 'העתק את קישור ההזמנה שלך',
 'invite.find_people': '🔍 מצא אנשים לעקוב',
  'invite.view_public': '👁️ צפה בדף ההזמנה הציבורי שלך',
+ 'invite.legacy_alert_content': 'מישהו הזמין אותך לעקוב אחריו/ה',
 'invite.invite_friends': 'הזמן חברים',
 'invite.find_people': 'מצא אנשים לעקוב אחריהם',
 'invite.link_copied': 'קישור ההזמנה הועתק ללוח!',
@@ -984,6 +986,7 @@ const translations = {
 'invite.suggested': 'أشخاص مقترحون للدعوة',
 'invite.suggested_description': 'بناءً على موقعك واتصالاتك',
 'invite.send_request': 'إرسال طلب',
+'invite.legacy_alert_content': 'دعاك شخص ما لمتابعته',
 
 
   'support.title': 'مركز الدعم',
@@ -1451,6 +1454,7 @@ const translations = {
 'invite.cta_title': 'Отличная работа по отслеживанию вашего здоровья!',
 'invite.cta_subtitle': 'Поделитесь своим путешествием с другими:',
 'invite.copy_link': 'Скопировать ссылку для приглашения',
+'invite.legacy_alert_content': 'Кто-то пригласил вас подписаться',
 'invite.invite_friends': 'Пригласить друзей',
 'invite.find_people': 'Найти людей для подписки',
 'invite.link_copied': 'Ссылка для приглашения скопирована в буфер обмена!',
