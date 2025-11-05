@@ -4970,7 +4970,7 @@ function addBackToFollowingButton(viewId) {
                             }
                         } catch (e) {
                             // Not JSON, handle as plain string
-                            if (title.startsWith('alerts.')) {
+                            if (title.startsWith('alerts.') || title.startsWith('invite.')) {
                                 title = translateKey(title);
                             }
                             // Handle legacy "New message from" format (old alerts in DB)
@@ -4983,6 +4983,11 @@ function addBackToFollowingButton(viewId) {
                         // Translate content if it's a key
                         if (content.startsWith('alerts.')) {
                             content = translateKey(content);
+                        }
+                        else if (content.includes('|')) {
+                            const [username, i18nKey] = content.split('|');
+                            const template = translateKey(i18nKey) || 'has invited you to follow them';
+                            content = template.replace('{username}', username);
                         }
 
                         return `
