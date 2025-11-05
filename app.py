@@ -4247,43 +4247,71 @@ def get_recommendations():
 def get_user_recommendations():
     """Get recommended users for invite tab based on location"""
     try:
+        # Set query timeout to prevent hanging (PostgreSQL only)
+        try:
+            db.session.execute(text("SET LOCAL statement_timeout = '5000'"))
+        except Exception:
+            pass  # Ignore if not PostgreSQL or if command fails
+
         user_id = session.get('user_id')
         current_user = db.session.get(User, user_id)
 
         if not current_user:
-            return jsonify({'error': 'User not found'}), 404
+            # Return empty recommendations instead of 404 to prevent UI from breaking
+            return jsonify({
+                'error': 'User not found',
+                'recommendations': [],
+                'count': 0
+            }), 200
 
-        # Get IDs of users already following
-        existing_follows = db.session.execute(
-            select(Follow.followed_id).filter_by(follower_id=user_id)
-        ).scalars().all()
+        # Get IDs of users already following (with error handling)
+        existing_follows = []
+        try:
+            existing_follows = db.session.execute(
+                select(Follow.followed_id).filter_by(follower_id=user_id)
+            ).scalars().all()
+        except Exception as e:
+            logger.warning(f"Follow query failed: {e}")
 
-        # Get pending follow requests
-        existing_requests = db.session.execute(
-            select(FollowRequest.target_id).filter_by(
-                requester_id=user_id,
-                status='pending'
-            )
-        ).scalars().all()
+        # Get pending follow requests (with error handling)
+        existing_requests = []
+        try:
+            existing_requests = db.session.execute(
+                select(FollowRequest.target_id).filter_by(
+                    requester_id=user_id,
+                    status='pending'
+                )
+            ).scalars().all()
+        except Exception as e:
+            logger.warning(f"Follow request query failed: {e}")
 
         exclude_ids = set(existing_follows + existing_requests + [user_id])
 
-        # Get users with similar location
+        # Get users with similar location (with error handling)
         location_matches = []
-        if hasattr(current_user, 'selected_city') and current_user.selected_city:
-            location_matches = db.session.execute(
-                select(User).filter(
-                    User.selected_city == current_user.selected_city,
-                    ~User.id.in_(exclude_ids)
-                ).limit(10)
-            ).scalars().all()
+        try:
+            if hasattr(current_user, 'selected_city') and current_user.selected_city:
+                location_matches = db.session.execute(
+                    select(User).filter(
+                        User.selected_city == current_user.selected_city,
+                        ~User.id.in_(exclude_ids)
+                    ).limit(10)
+                ).scalars().all()
+        except Exception as e:
+            logger.warning(f"Location query failed: {e}")
+            location_matches = []
 
-        # Get recently active users
-        recent_users = db.session.execute(
-            select(User).filter(
-                ~User.id.in_(exclude_ids)
-            ).order_by(User.created_at.desc()).limit(10)
-        ).scalars().all()
+        # Get recently active users (with error handling)
+        recent_users = []
+        try:
+            recent_users = db.session.execute(
+                select(User).filter(
+                    ~User.id.in_(exclude_ids)
+                ).order_by(User.created_at.desc()).limit(10)
+            ).scalars().all()
+        except Exception as e:
+            logger.warning(f"Recent users query failed: {e}")
+            recent_users = []
 
         # Combine and deduplicate
         all_recommendations = []
@@ -4309,7 +4337,12 @@ def get_user_recommendations():
 
     except Exception as e:
         logger.error(f"Recommendations error: {str(e)}")
-        return jsonify({'error': 'Failed to load recommendations'}), 500
+        # Return empty recommendations instead of 500 error to prevent UI breaking
+        return jsonify({
+            'error': 'Failed to load recommendations',
+            'recommendations': [],
+            'count': 0
+        }), 200
 
 
 @app.route('/invite/<username>')
