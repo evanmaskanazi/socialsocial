@@ -1325,6 +1325,82 @@
 }
 
 
+        /* Invite View Styles */
+.invite-section {
+    display: grid;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.share-link-card,
+.recommendations-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.share-link-card h3,
+.recommendations-card h3 {
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.link-display {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.invite-link-input {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #f0f0f0;
+    border-radius: 8px;
+    font-family: monospace;
+    background: #f8f9fa;
+}
+
+.share-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.share-buttons .btn {
+    flex: 1;
+    min-width: 120px;
+}
+
+.recommendations-list {
+    margin-top: 20px;
+}
+
+.empty-state,
+.error-state,
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+@media (max-width: 768px) {
+    .link-display {
+        flex-direction: column;
+    }
+
+    .share-buttons {
+        flex-direction: column;
+    }
+
+    .share-buttons .btn {
+        width: 100%;
+    }
+}
+
+
+
     </style>
 </head>
 <body>
@@ -1510,7 +1586,10 @@
     <span class="mobile-nav-icon">👥</span>
     <span class="mobile-nav-label" data-i18n="menu.followers">Followers</span>
 </li>
-
+<li class="mobile-nav-item" data-view="invite" onclick="showView('invite')">
+    <span class="mobile-nav-icon">👋</span>
+    <span class="mobile-nav-label" data-i18n="menu.invite">Invite</span>
+</li>
 
         </ul>
     </nav>
@@ -1541,7 +1620,9 @@
 <li class="sidebar-item" data-view="followers" data-i18n="menu.followers">
     👥 Followers
 </li>
-
+<li class="sidebar-item" data-view="invite" data-i18n="menu.invite">
+    👋 Invite
+</li>
 
                 </ul>
             </aside>
@@ -1837,6 +1918,48 @@
     <h2 style="margin-bottom: 20px;" data-i18n="followers.title">Followers</h2>
     <div id="followersList"></div>
 </div>
+
+<!-- Invite View -->
+<div id="inviteView" class="view hidden">
+    <h2 style="margin-bottom: 20px;" data-i18n="invite.title">Invite Friends to Your Wellness Journey</h2>
+
+    <div class="invite-section">
+        <div class="share-link-card">
+            <h3 data-i18n="invite.your_link">Your Personal Invite Link</h3>
+            <p data-i18n="invite.link_description">Share this link with friends and family so they can follow your wellness journey</p>
+
+            <div class="link-display">
+                <input type="text" id="userInviteLink" readonly class="invite-link-input">
+                <button onclick="copyUserInviteLink()" class="btn btn-primary">
+                    <span data-i18n="invite.copy">📋 Copy Link</span>
+                </button>
+            </div>
+
+            <div class="share-buttons">
+                <button onclick="shareViaEmail()" class="btn btn-secondary">
+                    <span data-i18n="invite.email">✉️ Email</span>
+                </button>
+                <button onclick="shareViaSMS()" class="btn btn-secondary">
+                    <span data-i18n="invite.sms">💬 SMS</span>
+                </button>
+                <button onclick="shareViaWhatsApp()" class="btn btn-secondary">
+                    <span data-i18n="invite.whatsapp">📱 WhatsApp</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="recommendations-card">
+            <h3 data-i18n="invite.suggested">Suggested People to Invite</h3>
+            <p data-i18n="invite.suggested_description">Based on your location and connections</p>
+
+            <div id="recommendationsList" class="recommendations-list">
+                <div class="loading">Loading recommendations...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
             </main>
 
@@ -2490,9 +2613,157 @@ function handleParametersClick(event) {
             case 'followers':
                 loadFollowers();
                 break;
+                 case 'invite':
+                loadInviteView();
+                break;
         }
     }
 }
+
+
+// ===============================================
+// INVITE VIEW FUNCTIONS
+// ===============================================
+
+function loadInviteView() {
+    // Get and display user's invite link
+    fetch('/api/auth/session', {
+        credentials: 'include'
+    })
+        .then(response => response.json())
+        .then(data => {
+            const username = data.user?.username || 'user';
+            const inviteLink = `${window.location.origin}/invite/${username}`;
+            const linkInput = document.getElementById('userInviteLink');
+            if (linkInput) {
+                linkInput.value = inviteLink;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading invite link:', error);
+        });
+
+    // Load recommendations
+    loadUserRecommendations();
+}
+
+function loadUserRecommendations() {
+    const list = document.getElementById('recommendationsList');
+    if (!list) return;
+
+    list.innerHTML = '<div class="loading">Loading recommendations...</div>';
+
+    fetch('/api/users/recommendations', {
+        credentials: 'include'
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.recommendations && data.recommendations.length > 0) {
+                list.innerHTML = data.recommendations.map(user => `
+                    <div class="user-card">
+                        <div class="user-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            ${user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">${user.username}</div>
+                            ${user.location ? `<div class="user-location">📍 ${user.location}</div>` : ''}
+                        </div>
+                        <button class="follow-btn" onclick="sendFollowRequestFromInvite(${user.id})">
+                            <span data-i18n="invite.send_request">Send Request</span>
+                        </button>
+                    </div>
+                `).join('');
+
+                // Apply translations
+                if (window.i18n && window.i18n.applyLanguage) {
+                    window.i18n.applyLanguage();
+                }
+            } else {
+                list.innerHTML = '<div class="empty-state">No recommendations available yet. Check back soon!</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading recommendations:', error);
+            list.innerHTML = '<div class="error-state">Failed to load recommendations. Please try again.</div>';
+        });
+}
+
+function copyUserInviteLink() {
+    const linkInput = document.getElementById('userInviteLink');
+    if (linkInput) {
+        linkInput.select();
+        navigator.clipboard.writeText(linkInput.value).then(() => {
+            showNotification('Invite link copied to clipboard! 📋', 'success');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            showNotification('Failed to copy link', 'error');
+        });
+    }
+}
+
+function shareViaEmail() {
+    const linkInput = document.getElementById('userInviteLink');
+    if (linkInput) {
+        const link = linkInput.value;
+        const subject = encodeURIComponent('Join me on my wellness journey!');
+        const body = encodeURIComponent(`I'd love for you to follow my wellness journey on TheraSocial. Click here to connect: ${link}`);
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+}
+
+function shareViaSMS() {
+    const linkInput = document.getElementById('userInviteLink');
+    if (linkInput) {
+        const link = linkInput.value;
+        const message = encodeURIComponent(`Join me on my wellness journey! ${link}`);
+        window.location.href = `sms:?body=${message}`;
+    }
+}
+
+function shareViaWhatsApp() {
+    const linkInput = document.getElementById('userInviteLink');
+    if (linkInput) {
+        const link = linkInput.value;
+        const message = encodeURIComponent(`Join me on my wellness journey on TheraSocial! ${link}`);
+        window.open(`https://wa.me/?text=${message}`, '_blank');
+    }
+}
+
+function sendFollowRequestFromInvite(userId) {
+    if (typeof followRequestsManager !== 'undefined' && followRequestsManager.sendFollowRequest) {
+        followRequestsManager.sendFollowRequest(userId);
+    } else {
+        // Fallback direct API call
+        fetch('/api/follow-requests', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ target_id: userId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                showNotification('Follow request sent!', 'success');
+                // Reload recommendations
+                setTimeout(() => loadUserRecommendations(), 1000);
+            } else {
+                showNotification(data.error || 'Failed to send request', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Failed to send follow request', 'error');
+        });
+    }
+}
+
+
+
+
+
+
 
         // Feed Calendar Functions
      function initFeedCalendar(userId = null) {
