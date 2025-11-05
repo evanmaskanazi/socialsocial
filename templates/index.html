@@ -2662,9 +2662,13 @@ function loadUserRecommendations() {
     const list = document.getElementById('recommendationsList');
     if (!list) return;
 
+    // Prevent multiple simultaneous loads
+    if (list.dataset.loading === 'true') return;
+    list.dataset.loading = 'true';
+
     list.innerHTML = '<div class="loading">Loading recommendations...</div>';
 
-   fetch('/api/users/recommendations', {
+    fetch('/api/users/recommendations', {
         credentials: 'include'
     })
         .then(response => {
@@ -2673,6 +2677,7 @@ function loadUserRecommendations() {
             return response.json();
         })
         .then(data => {
+            console.log('Recommendations data:', data);
             if (data.recommendations && data.recommendations.length > 0) {
                 list.innerHTML = data.recommendations.map(user => `
                     <div class="user-card">
@@ -2696,10 +2701,12 @@ function loadUserRecommendations() {
             } else {
                 list.innerHTML = '<div class="empty-state">No recommendations available yet. Check back soon!</div>';
             }
+            list.dataset.loading = 'false';
         })
-       .catch(error => {
+        .catch(error => {
             console.error('Error loading recommendations:', error);
             list.innerHTML = `<div class="error-state">Failed to load recommendations: ${error.message}</div>`;
+            list.dataset.loading = 'false';
         });
 }
 
