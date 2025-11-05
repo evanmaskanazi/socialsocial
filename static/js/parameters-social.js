@@ -1006,6 +1006,119 @@ function addParameterStyles() {
                 margin-bottom: 20px;
             }
         }
+
+
+  .invite-cta {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            color: white;
+            position: relative;
+            animation: slideIn 0.5s ease-out;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .cta-content h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.4em;
+            color: white;
+        }
+
+        .cta-content p {
+            margin: 0 0 20px 0;
+            opacity: 0.95;
+        }
+
+        .cta-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .cta-button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .cta-button.primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .cta-button.primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+        }
+
+        .cta-button.secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .cta-button.secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .cta-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .cta-close:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .cta-actions {
+                flex-direction: column;
+            }
+
+            .cta-button {
+                width: 100%;
+            }
+        }
+
+        [dir="rtl"] .cta-close {
+            right: auto;
+            left: 10px;
+        }
+
+
+
     `;
     document.head.appendChild(style);
 }
@@ -1366,8 +1479,11 @@ async function saveParameters() {
         if (result.success) {
             window.showMessage(getRandomPositiveMessage(), 'success', 5000, true);
 
+             // Show invite CTA after successful save
+            showInviteCTA();
+
             // Add this date to our tracking set
-            datesWithData.add(dateStr);
+            datesWithData.add(dateStr)
             localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
 
             // Add green dot to current date
@@ -1590,6 +1706,106 @@ function getRandomPositiveMessage() {
     return langMessages[Math.floor(Math.random() * langMessages.length)];
 }
 
+
+
+function showInviteCTA() {
+    // Check if CTA already exists to avoid duplicates
+    if (document.getElementById('inviteCTA')) {
+        return;
+    }
+
+    const messageContainer = document.getElementById('messageContainer');
+    const calendarSection = document.querySelector('.date-section');
+
+    if (!messageContainer || !calendarSection) {
+        console.warn('Cannot show invite CTA - containers not found');
+        return;
+    }
+
+    // Create CTA div
+    const ctaDiv = document.createElement('div');
+    ctaDiv.id = 'inviteCTA';
+    ctaDiv.className = 'invite-cta';
+
+    // Get current user's username for shareable link
+    fetch('/api/auth/session')
+        .then(response => response.json())
+        .then(data => {
+            const username = data.user?.username || 'user';
+            const inviteLink = `${window.location.origin}/invite/${username}`;
+
+            ctaDiv.innerHTML = `
+                <div class="cta-content">
+                    <h3 data-i18n="invite.cta_title">🎉 Great job tracking your wellness!</h3>
+                    <p data-i18n="invite.cta_subtitle">Share your journey with others:</p>
+
+                    <div class="cta-actions">
+                        <button class="cta-button primary" onclick="copyInviteLink('${inviteLink}')">
+                            <span data-i18n="invite.copy_link">📋 Copy Your Invite Link</span>
+                        </button>
+                        <button class="cta-button secondary" onclick="showInviteTab()">
+                            <span data-i18n="invite.invite_friends">👥 Invite Friends</span>
+                        </button>
+                        <button class="cta-button secondary" onclick="findPeopleToFollow()">
+                            <span data-i18n="invite.find_people">🔍 Find People to Follow</span>
+                        </button>
+                    </div>
+
+                    <button class="cta-close" onclick="closeInviteCTA()">✕</button>
+                </div>
+            `;
+
+            // Insert before calendar
+            calendarSection.parentNode.insertBefore(ctaDiv, calendarSection);
+
+            // Apply translations if i18n is available
+            if (window.i18n && window.i18n.applyLanguage) {
+                window.i18n.applyLanguage();
+            }
+
+            // Auto-hide after 15 seconds
+            setTimeout(() => {
+                closeInviteCTA();
+            }, 15000);
+        })
+        .catch(error => {
+            console.error('Error fetching user info for CTA:', error);
+        });
+}
+
+function copyInviteLink(link) {
+    navigator.clipboard.writeText(link).then(() => {
+        window.showMessage(pt('invite.link_copied') || 'Invite link copied to clipboard! 📋', 'success', 3000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        // Fallback: show the link
+        prompt('Copy this link:', link);
+    });
+}
+
+function closeInviteCTA() {
+    const cta = document.getElementById('inviteCTA');
+    if (cta) {
+        cta.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => cta.remove(), 300);
+    }
+}
+
+function showInviteTab() {
+    // Redirect to main page with invite tab selected
+    window.location.href = '/?tab=invite';
+}
+
+function findPeopleToFollow() {
+    // Redirect to main page with discover tab
+    window.location.href = '/?tab=discover';
+}
+
+
+
+
+
+
 // Initialize on DOM ready (with safety checks)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
@@ -1617,5 +1833,10 @@ window.selectRating = selectRating;
 window.goToMainMenu = goToMainMenu;
 window.updatePrivacy = updatePrivacy;
 window.fetchAllParameterDates = fetchAllParameterDates;
+window.showInviteCTA = showInviteCTA;
+window.copyInviteLink = copyInviteLink;
+window.closeInviteCTA = closeInviteCTA;
+window.showInviteTab = showInviteTab;
+window.findPeopleToFollow = findPeopleToFollow;
 
 console.log('Parameters-social.js loaded - FIXED VERSION with calendar display and no auto-loading');
