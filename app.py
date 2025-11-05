@@ -4296,12 +4296,25 @@ def get_user_recommendations():
         except Exception as e:
             logger.warning(f"Received requests query failed: {e}")
 
-        # Exclude: myself, people already following me, and people who sent me requests
-        exclude_ids = set(my_followers + received_requests + [user_id])
-        
+        # Get pending follow requests I SENT
+        # These should be EXCLUDED because I already invited them
+        sent_requests = []
+        try:
+            sent_requests = db.session.execute(
+                select(FollowRequest.target_id).filter_by(
+                    requester_id=user_id,
+                    status='pending'
+                )
+            ).scalars().all()
+        except Exception as e:
+            logger.warning(f"Sent requests query failed: {e}")
+
+        # Exclude: myself, people already following me, people who sent me requests, and people I sent requests to
+        exclude_ids = set(my_followers + received_requests + sent_requests + [user_id])
+
         logger.info(f"User {user_id} ({current_user.username}) invite recommendations - "
-                   f"excluding {len(exclude_ids)} users: "
-                   f"followers={len(my_followers)}, received_requests={len(received_requests)}")
+                    f"excluding {len(exclude_ids)} users: "
+                    f"followers={len(my_followers)}, received_requests={len(received_requests)}, sent_requests={len(sent_requests)}")
 
         # Get users with similar location (potential people to invite)
         location_matches = []
@@ -4314,7 +4327,7 @@ def get_user_recommendations():
                     ).limit(10)
                 ).scalars().all()
                 logger.info(f"Found {len(location_matches)} location matches in "
-                           f"{current_user.selected_city} for user {current_user.username}")
+                            f"{current_user.selected_city} for user {current_user.username}")
         except Exception as e:
             logger.warning(f"Location query failed: {e}")
             location_matches = []
@@ -4348,9 +4361,9 @@ def get_user_recommendations():
 
         # Limit to 20 recommendations
         all_recommendations = all_recommendations[:20]
-        
+
         logger.info(f"Returning {len(all_recommendations)} recommendations for user "
-                   f"{current_user.username}: {[r['username'] for r in all_recommendations]}")
+                    f"{current_user.username}: {[r['username'] for r in all_recommendations]}")
 
         return jsonify({
             'recommendations': all_recommendations,
