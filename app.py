@@ -26,7 +26,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, and_, or_, desc, func, inspect, text
 
-
 import mimetypes
 
 # Add MIME type for CSS files
@@ -84,40 +83,22 @@ app.config['SESSION_KEY_PREFIX'] = 'thera_social:'
 app.config['SESSION_USE_SIGNER'] = True
 
 # Redis configuration for sessions
-# Redis configuration for sessions
 REDIS_URL = os.environ.get('REDIS_URL')
 if REDIS_URL:
     app.config['SESSION_REDIS'] = redis.from_url(REDIS_URL)
 
-# =====================
-# DATABASE INITIALIZATION - CRITICAL FIX
-# =====================
-
-# Step 1: Import ONLY the db object (not model classes yet)
-from models import db
-
-# Step 2: Initialize db with app - THIS IS CRITICAL
-db.init_app(app)
-
-# Step 3: Initialize extensions that don't need models
-migrate = Migrate(app, db, render_as_batch=True)
+# Initialize extensions
+db = SQLAlchemy(app)
+migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite compatibility
 CORS(app, supports_credentials=True)
 Session(app)
 
-# Step 4: Setup logging
+# Setup logging
 logging.basicConfig(
     level=logging.INFO if is_production else logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('thera_social')
-
-# Step 5: NOW we can safely create an app context and import models
-with app.app_context():
-    from models import (
-        User, Parameter, Follow, Circle, Post,
-        ParameterValue, Trend, Alert, PrivateMessage,
-        Report, Penalty, CircleMember
-    )
 
 
 
@@ -4253,6 +4234,144 @@ def get_recommendations():
         return jsonify({'error': 'Failed to get recommendations'}), 500
 
 
+# ADD THESE TWO ENDPOINTS TO app.py AFTER LINE 4235
+# (Right after the existing get_recommendations() function)
+
+@app.route('/api/users/recommendations', methods=['GET'])
+@login_required
+def get_user_recommendations():
+    """Get recommended users for invite tab based on location"""
+    try:
+        user_id = session.get('user_id')
+        current_user = db.session.get(User, user_id)
+
+        if not current_user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Get IDs of users already following
+        existing_follows = db.session.execute(
+            select(Follow.followed_id).filter_by(follower_id=user_id)
+        ).scalars().all()
+
+        # Get pending follow requests
+        existing_requests = db.session.execute(
+            select(FollowRequest.target_id).filter_by(
+                requester_id=user_id,
+                status='pending'
+            )
+        ).scalars().all()
+
+        exclude_ids = set(existing_follows + existing_requests + [user_id])
+
+        # Get users with similar location
+        location_matches = []
+        if hasattr(current_user, 'selected_city') and current_user.selected_city:
+            location_matches = db.session.execute(
+                select(User).filter(
+                    User.selected_city == current_user.selected_city,
+                    ~User.id.in_(exclude_ids)
+                ).limit(10)
+            ).scalars().all()
+
+        # Get recently active users
+        recent_users = db.session.execute(
+            select(User).filter(
+                ~User.id.in_(exclude_ids)
+            ).order_by(User.created_at.desc()).limit(10)
+        ).scalars().all()
+
+        # Combine and deduplicate
+        all_recommendations = []
+        seen_ids = set()
+
+        for user_list in [location_matches, recent_users]:
+            for user in user_list:
+                if user.id not in seen_ids:
+                    seen_ids.add(user.id)
+                    all_recommendations.append({
+                        'id': user.id,
+                        'username': user.username,
+                        'location': getattr(user, 'selected_city', None)
+                    })
+
+        # Limit to 20 recommendations
+        all_recommendations = all_recommendations[:20]
+
+        return jsonify({
+            'recommendations': all_recommendations,
+            'count': len(all_recommendations)
+        })
+
+    except Exception as e:
+        logger.error(f"Recommendations error: {str(e)}")
+        return jsonify({'error': 'Failed to load recommendations'}), 500
+
+
+@app.route('/invite/<username>')
+def public_invite_page(username):
+    """Public invite page for a user - accessible without login"""
+    try:
+        # Find user by username
+        user = db.session.execute(
+            select(User).filter_by(username=username)
+        ).scalar_one_or_none()
+
+        if not user:
+            return render_template('invite_not_found.html'), 404
+
+        # Get user's public stats
+        follower_count = db.session.execute(
+            select(func.count(Follow.id)).filter_by(followed_id=user.id)
+        ).scalar()
+
+        following_count = db.session.execute(
+            select(func.count(Follow.id)).filter_by(follower_id=user.id)
+        ).scalar()
+
+        # Check if current user is logged in
+        current_user_id = session.get('user_id')
+        is_logged_in = current_user_id is not None
+
+        # Check follow status if logged in
+        already_following = False
+        pending_request = False
+
+        if is_logged_in:
+            # Check if already following
+            follow_exists = db.session.execute(
+                select(Follow).filter_by(
+                    follower_id=current_user_id,
+                    followed_id=user.id
+                )
+            ).scalar_one_or_none()
+
+            already_following = follow_exists is not None
+
+            # Check for pending request
+            request_exists = db.session.execute(
+                select(FollowRequest).filter_by(
+                    requester_id=current_user_id,
+                    target_id=user.id,
+                    status='pending'
+                )
+            ).scalar_one_or_none()
+
+            pending_request = request_exists is not None
+
+        return render_template('invite.html',
+                               invite_user=user,
+                               follower_count=follower_count,
+                               following_count=following_count,
+                               is_logged_in=is_logged_in,
+                               already_following=already_following,
+                               pending_request=pending_request
+                               )
+
+    except Exception as e:
+        logger.error(f"Invite page error: {str(e)}")
+        return render_template('invite_error.html'), 500
+
+
 @app.route('/api/user/<int:user_id>/feed/<date_str>')
 @login_required
 def get_user_feed(user_id, date_str):
@@ -4462,151 +4581,6 @@ def respond_to_follow_request(request_id):
         logger.error(f"Error: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed'}), 500
-
-
-@app.route('/api/users/recommendations', methods=['GET'])
-@login_required
-def get_user_recommendations():
-    """Get recommended users to invite based on location and connections"""
-    try:
-        user_id = session.get('user_id')
-        current_user = db.session.get(User, user_id)
-
-        if not current_user:
-            return jsonify({'error': 'User not found'}), 404
-
-        # Get users already following or requested
-        existing_follows = db.session.execute(
-            select(Follow.followed_id).filter_by(follower_id=user_id)
-        ).scalars().all()
-
-        existing_requests = db.session.execute(
-            select(FollowRequest.target_id).filter_by(
-                requester_id=user_id,
-                status='pending'
-            )
-        ).scalars().all()
-
-        exclude_ids = set(existing_follows + existing_requests + [user_id])
-
-        # Get users with similar location (if available)
-        location_matches = []
-        if hasattr(current_user, 'location') and current_user.location:
-            location_matches = db.session.execute(
-                select(User).filter(
-                    User.location == current_user.location,
-                    ~User.id.in_(exclude_ids)
-                ).limit(5)
-            ).scalars().all()
-
-        # Get users who follow people you follow (2nd degree connections)
-        second_degree = db.session.execute(
-            select(User).join(
-                Follow, Follow.follower_id == User.id
-            ).filter(
-                Follow.followed_id.in_(existing_follows),
-                ~User.id.in_(exclude_ids)
-            ).limit(5)
-        ).scalars().all()
-
-        # Get recently active users
-        recent_users = db.session.execute(
-            select(User).filter(
-                ~User.id.in_(exclude_ids)
-            ).order_by(User.created_at.desc()).limit(10)
-        ).scalars().all()
-
-        # Combine and deduplicate
-        all_recommendations = []
-        seen_ids = set()
-
-        for user_list in [location_matches, second_degree, recent_users]:
-            for user in user_list:
-                if user.id not in seen_ids:
-                    seen_ids.add(user.id)
-                    all_recommendations.append({
-                        'id': user.id,
-                        'username': user.username,
-                        'location': getattr(user, 'location', None),
-                        'created_at': user.created_at.isoformat()
-                    })
-
-        # Limit to 20 recommendations
-        all_recommendations = all_recommendations[:20]
-
-        return jsonify({
-            'recommendations': all_recommendations,
-            'count': len(all_recommendations)
-        })
-
-    except Exception as e:
-        logger.error(f"Recommendations error: {str(e)}")
-        return jsonify({'error': 'Failed to load recommendations'}), 500
-
-
-@app.route('/invite/<username>')
-def public_invite_page(username):
-    """Public invite page for a user - accessible without login"""
-    try:
-        # Find user by username
-        user = db.session.execute(
-            select(User).filter_by(username=username)
-        ).scalar_one_or_none()
-
-        if not user:
-            return render_template('invite_not_found.html'), 404
-
-        # Get user's public stats
-        follower_count = db.session.execute(
-            select(func.count(Follow.id)).filter_by(followed_id=user.id)
-        ).scalar()
-
-        following_count = db.session.execute(
-            select(func.count(Follow.id)).filter_by(follower_id=user.id)
-        ).scalar()
-
-        # Check if current user is logged in
-        current_user_id = session.get('user_id')
-        is_logged_in = current_user_id is not None
-
-        # Check follow status if logged in
-        already_following = False
-        pending_request = False
-
-        if is_logged_in:
-            # Check if already following
-            follow_exists = db.session.execute(
-                select(Follow).filter_by(
-                    follower_id=current_user_id,
-                    followed_id=user.id
-                )
-            ).scalar_one_or_none()
-
-            already_following = follow_exists is not None
-
-            # Check for pending request
-            request_exists = db.session.execute(
-                select(FollowRequest).filter_by(
-                    requester_id=current_user_id,
-                    target_id=user.id,
-                    status='pending'
-                )
-            ).scalar_one_or_none()
-
-            pending_request = request_exists is not None
-
-        return render_template('invite.html',
-                               invite_user=user,
-                               follower_count=follower_count,
-                               following_count=following_count,
-                               is_logged_in=is_logged_in,
-                               already_following=already_following,
-                               pending_request=pending_request
-                               )
-
-    except Exception as e:
-        logger.error(f"Invite page error: {str(e)}")
-        return render_template('invite_error.html'), 500
 
 
 @app.route('/api/triggers', methods=['GET'])
