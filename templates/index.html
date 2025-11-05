@@ -5130,7 +5130,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
+// Handle URL parameters for navigation
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get('view');
 
+    if (viewParam) {
+        // Wait for page to fully load
+        window.addEventListener('load', function() {
+            // Remove the parameter from URL without reload
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            // Navigate to the specified view
+            if (typeof showView === 'function') {
+                showView(viewParam);
+            }
+        });
+    }
+})();
 
 
 </body>
