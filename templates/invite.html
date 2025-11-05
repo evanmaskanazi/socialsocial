@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join {{ invite_user.username }} on TheraSocial</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .invite-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .user-avatar-large {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 3em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-weight: 600;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f5f7fa;
+            border-radius: 10px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+            margin: 10px;
+        }
+
+        .action-button:hover {
+            transform: scale(1.05);
+        }
+
+        .action-button.secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+
+        .status-badge.following {
+            background: #10b981;
+            color: white;
+        }
+
+        .status-badge.pending {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .description {
+            color: #666;
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .invite-container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .stats {
+                gap: 20px;
+            }
+
+            .stat-number {
+                font-size: 1.5em;
+            }
+
+            .action-button {
+                display: block;
+                width: 100%;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invite-container">
+        <div class="user-avatar-large">
+            {{ invite_user.username[0].upper() }}
+        </div>
+
+        <h1>Join {{ invite_user.username }}'s Wellness Journey</h1>
+        <p class="subtitle">Follow their progress on TheraSocial</p>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">{{ follower_count }}</div>
+                <div class="stat-label">Followers</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">{{ following_count }}</div>
+                <div class="stat-label">Following</div>
+            </div>
+        </div>
+
+        <div class="description">
+            {{ invite_user.username }} is tracking their wellness journey and wants to share it with you.
+            Join TheraSocial to follow their progress and support their mental health goals.
+        </div>
+
+        {% if is_logged_in %}
+            {% if already_following %}
+                <div class="status-badge following">
+                    ✓ You're Following
+                </div>
+                <br>
+                <button class="action-button" onclick="window.location.href='/?tab=feed'">
+                    View Feed
+                </button>
+            {% elif pending_request %}
+                <div class="status-badge pending">
+                    ⏳ Request Pending
+                </div>
+                <p style="color: #666; margin-top: 10px;">Waiting for {{ invite_user.username }} to accept your request</p>
+                <br>
+                <button class="action-button secondary" onclick="window.location.href='/'">
+                    Go to Dashboard
+                </button>
+            {% else %}
+                <button class="action-button" onclick="sendFollowRequest()">
+                    Follow {{ invite_user.username }}
+                </button>
+                <br>
+                <button class="action-button secondary" onclick="window.location.href='/'">
+                    Go to Dashboard
+                </button>
+            {% endif %}
+        {% else %}
+            <button class="action-button" onclick="window.location.href='/'">
+                Sign Up to Follow
+            </button>
+            <br>
+            <button class="action-button secondary" onclick="window.location.href='/'">
+                Log In
+            </button>
+        {% endif %}
+    </div>
+
+    <script>
+        function sendFollowRequest() {
+            fetch('/api/follow-requests', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    target_id: {{ invite_user.id }}
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert('Follow request sent successfully!');
+                    window.location.reload();
+                } else {
+                    alert(data.error || 'Failed to send request');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to send follow request');
+            });
+        }
+    </script>
+</body>
+</html>
