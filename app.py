@@ -101,7 +101,6 @@ logging.basicConfig(
 logger = logging.getLogger('thera_social')
 
 
-
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
     try:
@@ -148,6 +147,7 @@ def ensure_saved_parameters_schema():
         logger.error(f"Error ensuring saved_parameters schema: {str(e)}")
         # Don't raise - allow app to start even if this fails
 
+
 # Initialize Redis client (optional, for caching)
 try:
     redis_client = redis.from_url(REDIS_URL) if REDIS_URL else None
@@ -168,7 +168,6 @@ def parse_date_as_local(date_string):
     except ValueError:
         # Fallback for other formats
         return datetime.fromisoformat(date_string.split('T')[0]).date()
-
 
 
 def get_db():
@@ -266,10 +265,6 @@ def auto_migrate_database():
 
 # Call auto-migration on startup
 auto_migrate_database()
-
-
-
-
 
 
 # =====================
@@ -599,9 +594,6 @@ class NotificationSettings(db.Model):
     user = db.relationship('User', backref=db.backref('notification_settings', uselist=False))
 
 
-
-
-
 def ensure_database_schema():
     """Automatically ensure all required columns exist"""
     try:
@@ -623,9 +615,6 @@ def ensure_database_schema():
 
     except Exception as e:
         logger.error(f"Database schema check error: {str(e)}")
-
-
-
 
 
 # =====================
@@ -1149,9 +1138,6 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not add selected_city column to users table: {e}")
 
-
-
-
             logger.info("✓ All schema fixes complete")
 
     except Exception as e:
@@ -1328,11 +1314,6 @@ def create_test_follows():
         db.session.rollback()
 
 
-
-
-
-
-
 def create_parameters_table():
     """Create parameters table if it doesn't exist with correct schema"""
     try:
@@ -1421,6 +1402,7 @@ def create_parameters_table():
                 conn.close()
         except:
             pass
+
 
 def create_admin_user():
     """Create default admin user if it doesn't exist"""
@@ -1785,6 +1767,7 @@ def get_onboarding_status():
         'was_dismissed': user.onboarding_dismissed
     })
 
+
 @app.route('/api/onboarding/complete', methods=['POST'])
 @login_required
 def complete_onboarding():
@@ -1792,6 +1775,7 @@ def complete_onboarding():
     user.has_completed_onboarding = True
     db.session.commit()
     return jsonify({'message': 'Onboarding completed'}), 200
+
 
 @app.route('/api/onboarding/dismiss', methods=['POST'])
 @login_required
@@ -1939,7 +1923,6 @@ def get_user_language():
         }), 200
 
 
-
 @app.route('/api/profile', methods=['GET', 'PUT'])
 @login_required
 def profile():
@@ -2002,12 +1985,6 @@ def profile():
 
         db.session.commit()
         return jsonify({'success': True, 'message': 'Profile updated'})
-
-
-
-
-
-
 
 
 @app.route('/api/users/<int:user_id>/profile', methods=['GET'])
@@ -2361,6 +2338,7 @@ def debug_parameters(user_id):
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/users/search')
 @login_required
@@ -2731,25 +2709,34 @@ def circles():
     if request.method == 'GET':
         try:
             # Get all circles - SQLAlchemy 2.0 style
+            # Filter out circles with NULL circle_user_id to prevent SAWarning
             public_stmt = select(Circle).filter(
                 Circle.user_id == user_id,
+                Circle.circle_user_id.isnot(None),
                 or_(Circle.circle_type == 'public', Circle.circle_type == 'general')
             )
             public = db.session.execute(public_stmt).scalars().all()
 
             class_b_stmt = select(Circle).filter(
                 Circle.user_id == user_id,
+                Circle.circle_user_id.isnot(None),
                 or_(Circle.circle_type == 'class_b', Circle.circle_type == 'close_friends')
             )
             class_b = db.session.execute(class_b_stmt).scalars().all()
 
             class_a_stmt = select(Circle).filter(
                 Circle.user_id == user_id,
+                Circle.circle_user_id.isnot(None),
                 or_(Circle.circle_type == 'class_a', Circle.circle_type == 'family')
             )
             class_a = db.session.execute(class_a_stmt).scalars().all()
 
             def get_user_info(circle):
+                """Safely get user info, handling None/NULL circle_user_id"""
+                if not circle.circle_user_id:
+                    logger.warning(f"Circle {circle.id} has NULL circle_user_id for user {user_id}")
+                    return None
+
                 user = db.session.get(User, circle.circle_user_id)
                 if user:
                     return {
@@ -2757,12 +2744,13 @@ def circles():
                         'username': user.username,
                         'email': user.email
                     }
+                logger.warning(f"User {circle.circle_user_id} not found for circle {circle.id}")
                 return None
 
             return jsonify({
-                 'public': [info for c in public if (info := get_user_info(c))],
-    'class_b': [info for c in class_b if (info := get_user_info(c))],
-    'class_a': [info for c in class_a if (info := get_user_info(c))]
+                'public': [info for c in public if (info := get_user_info(c))],
+                'class_b': [info for c in class_b if (info := get_user_info(c))],
+                'class_a': [info for c in class_a if (info := get_user_info(c))]
             })
 
         except Exception as e:
@@ -2977,6 +2965,7 @@ def get_my_circles():
         logger.error(f"Get my circles error: {str(e)}")
         return jsonify({'error': 'Failed to get circles'}), 500
 
+
 # =====================
 # FEED & POSTS ROUTES
 # =====================
@@ -3157,7 +3146,6 @@ def get_hierarchical_parameters(view_user_id):
         return jsonify({'error': 'Failed to load parameters'}), 500
 
 
-
 @app.route('/api/feed/dates')
 @login_required
 def get_feed_saved_dates():
@@ -3238,7 +3226,7 @@ def get_user_feed_dates(user_id):
             return jsonify({'dates': dates_with_visibility})
 
         # Check circle membership
-            # Check circle membership
+        # Check circle membership
         membership = Circle.query.filter_by(
             user_id=user_id,
             circle_user_id=current_user_id
@@ -3385,8 +3373,6 @@ def get_user_feed_by_date(user_id, date):
         return jsonify({'error': str(e)}), 500
 
 
-
-
 @app.route('/api/posts', methods=['POST'])
 @login_required
 def save_feed_entry():
@@ -3490,6 +3476,7 @@ def load_feed_by_date(date_str):
     except Exception as e:
         logger.error(f"Load feed error: {e}")
         return jsonify({'error': 'Failed to load feed'}), 500
+
 
 # =====================
 # PARAMETERS ROUTES (Therapy Companion)
@@ -3861,7 +3848,6 @@ def update_activity(date_str):
         return jsonify({'error': 'Failed to update activity'}), 500
 
 
-
 @app.route('/api/activity/dates')
 @login_required
 def get_activity_dates():
@@ -3876,7 +3862,6 @@ def get_activity_dates():
     except Exception as e:
         logger.error(f"Get activity dates error: {str(e)}")
         return jsonify({'dates': []})
-
 
 
 # =====================
@@ -4289,6 +4274,10 @@ def get_user_recommendations():
         # Exclude: myself, people already following me, and people who sent me requests
         exclude_ids = set(my_followers + received_requests + [user_id])
 
+        logger.info(f"User {user_id} ({current_user.username}) invite recommendations - "
+                    f"excluding {len(exclude_ids)} users: "
+                    f"followers={len(my_followers)}, received_requests={len(received_requests)}")
+
         # Get users with similar location (potential people to invite)
         location_matches = []
         try:
@@ -4299,6 +4288,8 @@ def get_user_recommendations():
                         ~User.id.in_(exclude_ids)
                     ).limit(10)
                 ).scalars().all()
+                logger.info(f"Found {len(location_matches)} location matches in "
+                            f"{current_user.selected_city} for user {current_user.username}")
         except Exception as e:
             logger.warning(f"Location query failed: {e}")
             location_matches = []
@@ -4311,6 +4302,7 @@ def get_user_recommendations():
                     ~User.id.in_(exclude_ids)
                 ).order_by(User.created_at.desc()).limit(10)
             ).scalars().all()
+            logger.info(f"Found {len(recent_users)} recent users for user {current_user.username}")
         except Exception as e:
             logger.warning(f"Recent users query failed: {e}")
             recent_users = []
@@ -4331,6 +4323,9 @@ def get_user_recommendations():
 
         # Limit to 20 recommendations
         all_recommendations = all_recommendations[:20]
+
+        logger.info(f"Returning {len(all_recommendations)} recommendations for user "
+                    f"{current_user.username}: {[r['username'] for r in all_recommendations]}")
 
         return jsonify({
             'recommendations': all_recommendations,
@@ -4470,6 +4465,7 @@ def get_user_feed(user_id, date_str):
     except Exception as e:
         logger.error(f"Get user feed error: {str(e)}")
         return jsonify({'error': 'Failed to get feed'}), 500
+
 
 @app.route('/api/user/<int:user_id>/parameters/<date_str>')
 @login_required
@@ -4700,7 +4696,6 @@ def get_profile_by_token(token):
     return jsonify({'display_name': user.username, 'id': user.id})
 
 
-
 # =====================
 # ERROR HANDLERS
 # =====================
@@ -4838,7 +4833,7 @@ if __name__ == '__main__':
     # Initialize database
     init_database()
     migrate_circle_names()
-    #data time
+    # data time
 
     # Get port from environment
     port = int(os.environ.get('PORT', 5000))
