@@ -25,6 +25,7 @@ from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, and_, or_, desc, func, inspect, text
+from models import User, Parameter, Follow, FollowRequest, Circle, Post, Activity, Message, Conversation, Trigger
 
 import mimetypes
 
