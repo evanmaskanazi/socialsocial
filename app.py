@@ -4565,10 +4565,13 @@ def create_follow_request():
         db.session.commit()
 
         # Create alert
+        requester = db.session.get(User, requester_id)
+        requester_username = requester.username if requester else "Someone"
+
         alert = Alert(
             user_id=target_id,
-            title="New Follow Request",
-            content=f"Someone wants to follow your journey",
+            title="invite.alert_title",
+            content=f"{requester_username}|invite.alert_content",
             alert_type='follow_request'
         )
         db.session.add(alert)
