@@ -88,17 +88,22 @@ REDIS_URL = os.environ.get('REDIS_URL')
 if REDIS_URL:
     app.config['SESSION_REDIS'] = redis.from_url(REDIS_URL)
 
-# Initialize extensions
-db = SQLAlchemy(app)
-migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite compatibility
-CORS(app, supports_credentials=True)
-Session(app)
 
+# Import the db from models
+from models import db
+
+# Then initialize it with your app
+db.init_app(app)
 from models import (
     User, Parameter, Follow, Circle, Post,
     ParameterValue, Trend, Alert, PrivateMessage,
     Report, Penalty, CircleMember
 )
+migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite compatibility
+CORS(app, supports_credentials=True)
+Session(app)
+
+
 
 # Setup logging
 logging.basicConfig(
