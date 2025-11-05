@@ -1297,13 +1297,35 @@ async function checkDateForData(dateStr, dayElement) {
 
 
 
+// Debounce utility to prevent excessive API calls
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
 
+// Loading flag to prevent concurrent API calls
+let isLoadingDates = false;
 
 
 
 
 // Fetch all dates with saved parameters from backend
+// FIND THIS:
 async function fetchAllParameterDates() {
+    // Prevent concurrent calls
+    if (isLoadingDates) {
+        console.log('Already loading dates, skipping...');
+        return;
+    }
+
+    isLoadingDates = true;
     try {
         const response = await fetch('/api/parameters/dates');
         const result = await response.json();
@@ -1329,7 +1351,7 @@ async function fetchAllParameterDates() {
                 }
             });
         }
-    } catch (error) {
+   } catch (error) {
         console.error('Error fetching parameter dates:', error);
         // Fall back to localStorage if API fails
         const stored = localStorage.getItem('savedParameterDates');
@@ -1342,6 +1364,9 @@ async function fetchAllParameterDates() {
                 console.error('Error parsing stored dates:', e);
             }
         }
+    } finally {
+        // Always reset loading flag
+        isLoadingDates = false;
     }
 }
 
