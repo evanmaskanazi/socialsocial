@@ -606,9 +606,14 @@ def ensure_database_schema():
     """Automatically ensure all required columns exist"""
     try:
         with db.engine.connect() as conn:
-            # Check and add visibility column to posts table
-            result = conn.execute(text("PRAGMA table_info(posts)"))
-            columns = [row[1] for row in result]
+            # Check and add visibility column to posts table (PostgreSQL compatible)
+            result = conn.execute(text("""
+                    SELECT column_name
+                    FROM information_schema.columns 
+                    WHERE table_name = 'posts' 
+                    AND table_schema = 'public'
+                """))
+            columns = [row[0] for row in result]
 
             if 'visibility' not in columns:
                 logger.info("Adding visibility column to posts table...")
