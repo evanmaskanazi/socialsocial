@@ -1620,7 +1620,7 @@
 <li class="sidebar-item" data-view="followers" data-i18n="menu.followers">
     👥 Followers
 </li>
-<li class="sidebar-item" data-view="invite" data-i18n="menu.invite">
+<li class="sidebar-item" data-view="invite" onclick="showView('invite')" data-i18n="menu.invite">
     👋 Invite
 </li>
 
@@ -2626,24 +2626,35 @@ function handleParametersClick(event) {
 // ===============================================
 
 function loadInviteView() {
-    // Get and display user's invite link
+    console.log('Loading invite view...');
+
     fetch('/api/auth/session', {
         credentials: 'include'
     })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Session response status:', response.status);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
         .then(data => {
             const username = data.user?.username || 'user';
             const inviteLink = `${window.location.origin}/invite/${username}`;
             const linkInput = document.getElementById('userInviteLink');
             if (linkInput) {
                 linkInput.value = inviteLink;
+                console.log('Invite link set:', inviteLink);
             }
         })
         .catch(error => {
             console.error('Error loading invite link:', error);
+            if (typeof currentUser !== 'undefined' && currentUser?.username) {
+                const linkInput = document.getElementById('userInviteLink');
+                if (linkInput) {
+                    linkInput.value = `${window.location.origin}/invite/${currentUser.username}`;
+                }
+            }
         });
 
-    // Load recommendations
     loadUserRecommendations();
 }
 
@@ -2653,10 +2664,14 @@ function loadUserRecommendations() {
 
     list.innerHTML = '<div class="loading">Loading recommendations...</div>';
 
-    fetch('/api/users/recommendations', {
+   fetch('/api/users/recommendations', {
         credentials: 'include'
     })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Recommendations status:', response.status);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
         .then(data => {
             if (data.recommendations && data.recommendations.length > 0) {
                 list.innerHTML = data.recommendations.map(user => `
@@ -2682,9 +2697,9 @@ function loadUserRecommendations() {
                 list.innerHTML = '<div class="empty-state">No recommendations available yet. Check back soon!</div>';
             }
         })
-        .catch(error => {
+       .catch(error => {
             console.error('Error loading recommendations:', error);
-            list.innerHTML = '<div class="error-state">Failed to load recommendations. Please try again.</div>';
+            list.innerHTML = `<div class="error-state">Failed to load recommendations: ${error.message}</div>`;
         });
 }
 
