@@ -198,6 +198,10 @@ def send_password_reset_email(user_email, reset_token):
 
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
+    # Guard: Skip if already run in this process
+    if hasattr(ensure_saved_parameters_schema, '_completed'):
+        return
+
     try:
         with app.app_context():
             # Check if table exists
@@ -208,7 +212,7 @@ def ensure_saved_parameters_schema():
 
             # Get existing columns
             existing_columns = {col['name'] for col in inspector.get_columns('saved_parameters')}
-            logger.info(f"Existing columns in saved_parameters: {existing_columns}")
+            logger.debug(f"Existing columns in saved_parameters: {existing_columns}")  # Changed to debug
 
             # Check if we're using PostgreSQL or SQLite
             is_postgres = 'postgresql' in str(db.engine.url)
@@ -258,11 +262,14 @@ def ensure_saved_parameters_schema():
                             logger.info(f"Added column: {column_name}")
                         except Exception as e:
                             # Column might already exist in SQLite (which doesn't support IF NOT EXISTS)
-                            logger.info(f"Column {column_name} might already exist: {e}")
+                            logger.debug(f"Column {column_name} might already exist: {e}")
 
                 logger.info("Successfully added all missing columns to saved_parameters")
             else:
-                logger.info("All required columns exist in saved_parameters")
+                logger.debug("All required columns exist in saved_parameters")  # Changed to debug
+
+        # Mark as completed for this process
+        ensure_saved_parameters_schema._completed = True
 
     except Exception as e:
         logger.error(f"Error ensuring saved_parameters schema: {str(e)}")
@@ -770,6 +777,10 @@ class NotificationSettings(db.Model):
 
 def ensure_database_schema():
     """Automatically ensure all required columns exist"""
+    # Guard: Skip if already run in this process
+    if hasattr(ensure_database_schema, '_completed'):
+        return
+
     try:
         with db.engine.connect() as conn:
             # Check if we're using PostgreSQL or SQLite
@@ -806,7 +817,7 @@ def ensure_database_schema():
                     conn.commit()
                     logger.info("circles_privacy column added successfully")
                 else:
-                    logger.info("✓ circles_privacy column already exists in users table")
+                    logger.debug("✓ circles_privacy column already exists")  # Changed to debug
 
             else:
                 # SQLite - Check and add visibility column to posts table
@@ -829,7 +840,10 @@ def ensure_database_schema():
                     conn.commit()
                     logger.info("circles_privacy column added successfully")
                 else:
-                    logger.info("✓ circles_privacy column already exists in users table")
+                    logger.debug("✓ circles_privacy column already exists")  # Changed to debug
+
+        # Mark as completed for this process
+        ensure_database_schema._completed = True
 
     except Exception as e:
         logger.error(f"Database schema check error: {str(e)}")
