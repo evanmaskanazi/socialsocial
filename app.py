@@ -3378,32 +3378,37 @@ def remove_from_circle():
 
         logger.info(f"Removing user {circle_user_id} from circle {circle_type} for user {user_id}")
 
-        # Map old names to new names for backwards compatibility
+        # Map old names to new names AND create list of possible matches
         type_mapping = {
-            'general': 'public',
-            'close_friends': 'class_b',
-            'family': 'class_a',
-            'public': 'public',
-            'class_b': 'class_b',
-            'class_a': 'class_a'
+            'general': ['public', 'general'],  # Check both new and old
+            'public': ['public', 'general'],
+            'close_friends': ['class_b', 'close_friends'],
+            'class_b': ['class_b', 'close_friends'],
+            'family': ['class_a', 'family'],
+            'class_a': ['class_a', 'family'],
+            'private': ['private']  # Private only has one name
         }
-        circle_type = type_mapping.get(circle_type, circle_type)
 
-        # Use SQLAlchemy to delete from circles table (NOT circle_members)
-        stmt = select(Circle).filter_by(
-            user_id=user_id,
-            circle_user_id=circle_user_id,
-            circle_type=circle_type
+        # Get list of possible type names to check
+        possible_types = type_mapping.get(circle_type, [circle_type])
+
+        logger.info(f"Checking for circle types: {possible_types}")
+
+        # Use SQLAlchemy to delete - check for ANY of the possible type names
+        stmt = select(Circle).filter(
+            Circle.user_id == user_id,
+            Circle.circle_user_id == circle_user_id,
+            Circle.circle_type.in_(possible_types)  # Check BOTH old and new names
         )
         circle = db.session.execute(stmt).scalar_one_or_none()
 
         if circle:
             db.session.delete(circle)
             db.session.commit()
-            logger.info(f"Successfully removed user {circle_user_id} from circle {circle_type}")
+            logger.info(f"Successfully removed user {circle_user_id} from circle {circle.circle_type}")
             return jsonify({'success': True})
         else:
-            logger.warning(f"No circle membership found to remove")
+            logger.warning(f"No circle membership found for types {possible_types}")
             return jsonify({'error': 'Not found'}), 404
 
     except Exception as e:
