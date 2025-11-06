@@ -589,6 +589,11 @@ async function loadCircles() {
     }
 }
 
+
+
+
+
+
 // Create member element
 function createMemberElement(member, circleType) {
     const memberDiv = document.createElement('div');
@@ -596,9 +601,87 @@ function createMemberElement(member, circleType) {
     memberDiv.innerHTML = `
         <div class="user-avatar">${(member.display_name || member.username || member.email || 'U')[0].toUpperCase()}</div>
         <div class="member-name">${member.display_name || member.username || member.email}</div>
-        <button class="remove-btn" onclick="removeFromCircle('${member.id}', '${circleType}')">Remove</button>
+        <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${circleType}')">Remove</button>
     `;
     return memberDiv;
+}
+
+
+// Re-render circles UI without reloading data from server
+function renderCirclesUI() {
+    console.log('Re-rendering circles UI with current data');
+
+    // Use cached circles data
+    if (!window.circlesData) {
+        console.log('No circles data available to render');
+        return;
+    }
+
+    const circles = window.circlesData;
+
+    // Check if circles are private
+    if (circles.private) {
+        console.log('Circles are private, skipping render');
+        return;
+    }
+
+    // Re-render Public circle
+    const publicMembers = document.getElementById('publicMembers');
+    if (publicMembers && circles.public) {
+        publicMembers.innerHTML = '';
+        if (circles.public.length > 0) {
+            circles.public.forEach(member => {
+                publicMembers.appendChild(createMemberElement(member, 'public'));
+            });
+        } else {
+            publicMembers.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">👥</div>
+                    <p data-i18n="circles.no_members">${t('circles.no_members', 'No members yet')}</p>
+                </div>`;
+        }
+    }
+
+    // Re-render Class B circle
+    const classBMembers = document.getElementById('class_bMembers');
+    if (classBMembers && circles.class_b) {
+        classBMembers.innerHTML = '';
+        if (circles.class_b.length > 0) {
+            circles.class_b.forEach(member => {
+                classBMembers.appendChild(createMemberElement(member, 'class_b'));
+            });
+        } else {
+            classBMembers.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">👥</div>
+                    <p data-i18n="circles.no_members">${t('circles.no_members', 'No members yet')}</p>
+                </div>`;
+        }
+    }
+
+    // Re-render Class A circle
+    const classAMembers = document.getElementById('class_aMembers');
+    if (classAMembers && circles.class_a) {
+        classAMembers.innerHTML = '';
+        if (circles.class_a.length > 0) {
+            circles.class_a.forEach(member => {
+                classAMembers.appendChild(createMemberElement(member, 'class_a'));
+            });
+        } else {
+            classAMembers.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">👥</div>
+                    <p data-i18n="circles.no_members">${t('circles.no_members', 'No members yet')}</p>
+                </div>`;
+        }
+    }
+
+    console.log('Circles UI re-rendered successfully');
+}
+
+// Export the function
+if (typeof window !== 'undefined') {
+    window.renderCirclesUI = renderCirclesUI;
 }
 
 // Search users
