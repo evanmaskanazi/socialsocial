@@ -144,6 +144,7 @@ const translations = {
         'visibility.close_friends': 'Close Friends',
         'visibility.family': 'Family',
         'visibility.private': 'Private',
+        'settings.language': 'Language:',
 
         // Alerts
         'alerts.title': 'Notifications',
@@ -578,6 +579,7 @@ const translations = {
 'about.on_linkedin': ' בלינקדאין',
 'btn.signin': 'התחבר',
 'parameters.home': 'בית',
+'settings.language': ':שפה',
 
  // Support page
     'support.title': 'מרכז תמיכה',
@@ -1136,6 +1138,7 @@ const translations = {
 'auth.password_reset_success': 'تم إعادة تعيين كلمة المرور بنجاح',
 'auth.enter_email': 'أدخل بريدك الإلكتروني',
 'parameters.home': 'الصفحة الرئيسية',
+'settings.language': ':اللغة',
 
   'support.title': 'مركز الدعم',
     'support.subtitle': 'نحن هنا للمساعدة! اختر كيف تريد الاتصال بنا أو العثور على إجابات لأسئلتك.',
@@ -1740,6 +1743,7 @@ const translations = {
         'btn.clear': 'Очистить',
         'btn.today': 'Сегодня',
         'btn.logout': 'Выход',
+        'settings.language': 'Язык:',
 
         // Feed page
         'feed.title': 'Моя лента',

@@ -1579,23 +1579,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Re-apply translations when language changes
-       window.addEventListener('languageChanged', () => {
-        if (window.i18n && window.i18n.applyLanguage) {
-            window.i18n.applyLanguage();
-        }
 
-        // Reload conversations to apply new time translations
-        if (document.getElementById('conversationsList')) {
-            loadMessages();
-            if (currentRecipient && currentRecipient.id) {
-                displayConversationMessages(currentRecipient.id);
-            }
-        }
-
-        // Reload circles to apply new translations
-        if (document.getElementById('publicMembers')) {
-            updateCirclesDisplay();
-        }
-    });
 });
