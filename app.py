@@ -2846,7 +2846,10 @@ def search_users():
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
+                'display_name': user.display_name or user.username,
                 'bio': profile.bio if profile else None,
+                'occupation': profile.occupation if profile else None,
+                'interests': profile.interests if profile else None,
                 'avatar_url': profile.avatar_url if profile else None
             })
 
