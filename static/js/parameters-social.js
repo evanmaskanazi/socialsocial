@@ -152,7 +152,7 @@ const addParameterTranslations = () => {
                 'parameters.save': 'Save Parameters',
                 'parameters.load': 'Load Parameters',
                 'parameters.clear': 'Clear Form',
-                'parameters.main_menu': 'Main Menu',
+                'parameters.home': 'Home',
                 'parameters.saved': 'Parameters saved successfully!',
                 'parameters.loaded': 'Parameters loaded for',
                 'parameters.cleared': 'Form cleared',
@@ -162,6 +162,7 @@ const addParameterTranslations = () => {
                 'privacy.public': 'Public',
 'privacy.class_b': 'Class B (Close Friends)',
 'privacy.class_a': 'Class A (Family)',
+'privacy.private': 'Private',
                 'error.loading': 'Error loading parameters'
             });
         }
@@ -186,7 +187,7 @@ const addParameterTranslations = () => {
                 'parameters.save': 'שמור פרמטרים',
                 'parameters.load': 'טען פרמטרים',
                 'parameters.clear': 'נקה טופס',
-                'parameters.main_menu': 'תפריט ראשי',
+                'parameters.home': 'בית',
                 'parameters.saved': 'הפרמטרים נשמרו בהצלחה!',
                 'parameters.loaded': 'פרמטרים נטענו עבור',
                 'parameters.cleared': 'הטופס נוקה',
@@ -196,6 +197,7 @@ const addParameterTranslations = () => {
                 'privacy.public': 'ציבורי',
 'privacy.class_b': 'מחלקה ב\' (חברים קרובים)',
 'privacy.class_a': 'מחלקה א\' (משפחה)',
+'privacy.private': 'פרטי',
                 'error.loading': 'שגיאה בטעינת פרמטרים'
             });
         }
@@ -220,7 +222,7 @@ const addParameterTranslations = () => {
                 'parameters.save': 'حفظ المعاملات',
                 'parameters.load': 'تحميل المعاملات',
                 'parameters.clear': 'مسح النموذج',
-                'parameters.main_menu': 'القائمة الرئيسية',
+               'parameters.home': 'الصفحة الرئيسية',
                 'parameters.saved': 'تم حفظ المعاملات بنجاح!',
                 'parameters.loaded': 'تم تحميل المعاملات لـ',
                 'parameters.cleared': 'تم مسح النموذج',
@@ -230,6 +232,7 @@ const addParameterTranslations = () => {
                 'privacy.public': 'عام',
 'privacy.class_b': 'الفئة ب (الأصدقاء المقربون)',
 'privacy.class_a': 'الفئة أ (العائلة)',
+'privacy.private': 'خاص',
                 'error.loading': 'خطأ في تحميل المعاملات'
             });
         }
@@ -254,7 +257,7 @@ const addParameterTranslations = () => {
                 'parameters.save': 'Сохранить параметры',
                 'parameters.load': 'Загрузить параметры',
                 'parameters.clear': 'Очистить форму',
-                'parameters.main_menu': 'Главное меню',
+                'parameters.home': 'Главная',
                 'parameters.saved': 'Параметры успешно сохранены!',
                 'parameters.loaded': 'Параметры загружены для',
                 'parameters.cleared': 'Форма очищена',
@@ -264,6 +267,7 @@ const addParameterTranslations = () => {
                 'privacy.public': 'Публичный',
 'privacy.class_b': 'Класс Б (Близкие друзья)',
 'privacy.class_a': 'Класс А (Семья)',
+'privacy.private': 'Приватный',
                 'error.loading': 'Ошибка загрузки параметров'
             });
         }
@@ -458,8 +462,7 @@ function initializeParameters() {
                     <select class="privacy-select"
                             data-category="${category.id}"
                             onchange="updatePrivacy('${category.id}', this.value)"
-                            title="Who can see this parameter">
-                        <option value="public" ${privacy === 'public' ? 'selected' : ''}>
+                     <option value="public" ${privacy === 'public' ? 'selected' : ''}>
                             🌍 Public
                         </option>
                         <option value="class_b" ${privacy === 'class_b' ? 'selected' : ''}>
@@ -467,6 +470,9 @@ function initializeParameters() {
                         </option>
                         <option value="class_a" ${privacy === 'class_a' ? 'selected' : ''}>
                             👨‍👩‍👧‍👦 Class A (Family)
+                        </option>
+                        <option value="private" ${privacy === 'private' ? 'selected' : ''}>
+                            🔒 Private
                         </option>
                     </select>
                 </div>
@@ -499,7 +505,7 @@ function initializeParameters() {
                     <button class="btn btn-primary" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
                     <button class="btn btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
                     <button class="btn btn-clear" onclick="clearParameters()" data-i18n="parameters.clear">Clear Form</button>
-                    <button class="btn btn-menu" onclick="goToMainMenu()" data-i18n="parameters.main_menu">Main Menu</button>
+                    <button class="btn btn-menu" onclick="goToHome()" data-i18n="parameters.home">Home</button>
                 </div>
             </div>
         </div>
@@ -1662,8 +1668,13 @@ function clearParameters() {
 }
 
 // Navigate to main menu - FIXED
-function goToMainMenu() {
-    window.location.href = '/';  // Changed from /dashboard to /
+function goToHome() {
+    // Navigate to home view in the same page
+    if (typeof showView === 'function') {
+        showView('home');
+    } else {
+        window.location.href = '/#home';
+    }
 }
 
 // Update translations dynamically
@@ -1863,7 +1874,7 @@ window.saveParameters = saveParameters;
 window.loadParameters = loadParameters;
 window.clearParameters = clearParameters;
 window.selectRating = selectRating;
-window.goToMainMenu = goToMainMenu;
+window.goToHome = goToHome;
 window.updatePrivacy = updatePrivacy;
 window.fetchAllParameterDates = fetchAllParameterDates;
 window.showInviteCTA = showInviteCTA;
