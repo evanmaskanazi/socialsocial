@@ -2817,47 +2817,80 @@ def debug_parameters(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/users/search')
 @login_required
 def search_users():
     """Search for users by username or email"""
     try:
+        # Log the incoming request
         query = request.args.get('q', '').strip().lower()
+        logger.info(f"🔍 User search request: query='{query}', from IP={request.remote_addr}")
 
         if not query or len(query) < 2:
+            logger.info(f"❌ Query rejected: too short (length={len(query)})")
             return jsonify({'users': []})
 
         # Get current user to exclude from results
-        current_user_id = session['user_id']
+        current_user_id = session.get('user_id')
+        if not current_user_id:
+            logger.error("❌ No user_id in session")
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        logger.info(f"👤 Current user ID: {current_user_id}, excluding from results")
 
         # Search for users by username (case-insensitive)
+        logger.info(f"🔎 Executing query: User.query.filter(id != {current_user_id}, username ilike '%{query}%')")
+
         users = User.query.filter(
             User.id != current_user_id,
             User.username.ilike(f'%{query}%')
         ).limit(10).all()
 
+        logger.info(f"✓ Query completed: Found {len(users)} user(s)")
+
+        if users:
+            logger.info(f"   Users found: {[u.username for u in users]}")
+
         # Format results
         results = []
         for user in users:
-            # Get user's profile if it exists
-            profile = Profile.query.filter_by(user_id=user.id).first()
+            try:
+                # Get user's profile if it exists
+                profile = Profile.query.filter_by(user_id=user.id).first()
 
-            results.append({
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'display_name': user.username,
-                'bio': profile.bio if profile else None,
-                'occupation': profile.occupation if profile else None,
-                'interests': profile.interests if profile else None,
-                'avatar_url': profile.avatar_url if profile else None
-            })
+                results.append({
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'display_name': user.username,
+                    'bio': profile.bio if profile else None,
+                    'occupation': profile.occupation if profile else None,
+                    'interests': profile.interests if profile else None,
+                    'avatar_url': profile.avatar_url if profile else None
+                })
+            except Exception as profile_error:
+                logger.error(f"⚠️  Error loading profile for user {user.id}: {profile_error}")
+                # Include user even if profile fails
+                results.append({
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'display_name': user.username,
+                    'bio': None,
+                    'occupation': None,
+                    'interests': None,
+                    'avatar_url': None
+                })
 
+        logger.info(f"📤 Returning {len(results)} formatted result(s)")
         return jsonify({'users': results})
 
     except Exception as e:
-        logger.error(f"User search error: {e}")
-        return jsonify({'users': []})
+        logger.error(f"❌ User search error: {type(e).__name__}: {e}")
+        logger.error(f"   Query was: '{request.args.get('q', '')}'")
+        logger.error(f"   Traceback:", exc_info=True)
+        return jsonify({'users': [], 'error': 'Search failed'}), 500
 
 
 # =====================
