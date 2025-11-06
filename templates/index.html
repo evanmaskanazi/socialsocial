@@ -1476,14 +1476,14 @@
             <p style="text-align: center; color: var(--gray); margin-bottom: 20px;" data-i18n="auth.enter_new_password">Enter your new password below.</p>
             <form id="resetPasswordForm">
                 <input type="hidden" id="resetToken">
-                <div class="form-group">
+               <div class="form-group">
                     <label class="form-label" data-i18n="auth.new_password">New Password</label>
-                    <input type="password" id="resetNewPassword" required class="form-input" data-i18n-placeholder="auth.enter_new_password" placeholder="Enter new password">
+                    <input type="password" id="resetNewPassword" name="new_password" autocomplete="new-password" required class="form-input" data-i18n-placeholder="auth.enter_new_password" placeholder="Enter new password">
                     <small style="color: #6B7280; display: block; margin-top: 5px;" data-i18n="auth.password_requirements">Password must be at least 12 characters with uppercase, lowercase, number, and special character.</small>
                 </div>
                 <div class="form-group">
                     <label class="form-label" data-i18n="auth.confirm_password">Confirm Password</label>
-                    <input type="password" id="resetConfirmPassword" required class="form-input" data-i18n-placeholder="auth.confirm_new_password" placeholder="Confirm new password">
+                    <input type="password" id="resetConfirmPassword" name="confirm_password" autocomplete="new-password" required class="form-input" data-i18n-placeholder="auth.confirm_new_password" placeholder="Confirm new password">
                 </div>
                 <button type="submit" class="btn btn-primary" data-i18n="auth.reset_password_button">Reset Password</button>
                 <p style="text-align: center; margin-top: 20px;">
@@ -1753,29 +1753,31 @@
 
                   <!-- Change Password Section -->
                   <div class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                      <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.change_password">Change Password</h3>
+                <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.change_password">Change Password</h3>
 
                       <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
                       <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
 
-                      <div style="display: grid; gap: 15px;">
-                          <div>
-                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
-                              <input type="password" id="currentPassword" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
-                          </div>
+                      <form id="changePasswordForm" onsubmit="updatePassword(); return false;">
+                          <div style="display: grid; gap: 15px;">
+                              <div>
+                                  <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
+                                  <input type="password" id="currentPassword" name="current_password" autocomplete="current-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
+                              </div>
 
-                          <div>
-                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
-                              <input type="password" id="newPassword" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
-                          </div>
+                              <div>
+                                  <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
+                                  <input type="password" id="newPassword" name="new_password" autocomplete="new-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
+                              </div>
 
-                          <div>
-                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
-                              <input type="password" id="confirmNewPassword" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
-                          </div>
+                              <div>
+                                  <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
+                                  <input type="password" id="confirmNewPassword" name="confirm_password" autocomplete="new-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
+                              </div>
 
-                          <button onclick="updatePassword()" class="btn btn-primary" style="padding: 12px 24px; font-size: 16px; font-weight: 600;" data-i18n="home.update_password">Update Password</button>
-                      </div>
+                              <button type="submit" class="btn btn-primary" style="padding: 12px 24px; font-size: 16px; font-weight: 600;" data-i18n="home.update_password">Update Password</button>
+                          </div>
+                      </form>
                   </div>
 
                   <!-- Account Deletion Section -->
