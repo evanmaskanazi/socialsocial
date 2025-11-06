@@ -2846,7 +2846,7 @@ def search_users():
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
-                'display_name': user.display_name or user.username,
+                'display_name': user.username,
                 'bio': profile.bio if profile else None,
                 'occupation': profile.occupation if profile else None,
                 'interests': profile.interests if profile else None,
@@ -3238,7 +3238,7 @@ def circles():
                         'id': user.id,
                         'username': user.username,
                         'email': user.email,
-                        'display_name': user.display_name or user.username
+                        'display_name': user.username
                     }
                 logger.warning(f"User {circle.circle_user_id} not found for circle {circle.id}")
                 return None
