@@ -461,7 +461,7 @@ function initializeParameters() {
                 <div class="privacy-selector">
                     <select class="privacy-select"
                             data-category="${category.id}"
-                            onchange="updatePrivacy('${category.id}', this.value)"
+                            onchange="updatePrivacy('${category.id}', this.value)">
                      <option value="public" ${privacy === 'public' ? 'selected' : ''}>
                             🌍 Public
                         </option>
