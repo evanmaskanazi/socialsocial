@@ -195,9 +195,11 @@ window.circlesHTML = `
             z-index: 10;
         }
 
-        .search-results.active {
-            display: block;
-        }
+      .search-results.active {
+    display: block !important;
+    visibility: visible !important;
+    z-index: 9999 !important;
+}
 
         .search-result-item {
             padding: 15px 20px;
