@@ -3,13 +3,8 @@
 
 // Safe translation function with fallbacks
 const t = (key, fallback = key) => {
-    try {
-        if (window.i18n && typeof window.i18n.translate === 'function') {
-            const translation = window.i18n.translate(key);
-            return translation || fallback;
-        }
-    } catch (error) {
-        console.warn('Translation error:', error);
+    if (window.i18n && typeof window.i18n.t === 'function') {
+        return window.i18n.t(key, fallback);
     }
     return fallback;
 };
