@@ -95,7 +95,7 @@ function escapeHtml(text) {
 // ===================
 // CIRCLES MANAGEMENT
 // ===================
-const circlesHTML = `
+window.circlesHTML = `
 <div class="circles-container">
     <style>
         .circles-container {
