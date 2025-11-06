@@ -378,11 +378,11 @@ window.circlesHTML = `
         <div class="search-results" id="searchResults"></div>
     </div>
 
-    <div class="circles-grid">
+<div class="circles-grid">
         <div class="circle-card" data-circle="general">
             <div class="circle-header">
                 <span class="circle-icon">👥</span>
-                <span class="circle-title">Public</span>
+                <span class="circle-title" data-i18n="circles.public">Public</span>
                 <span class="circle-count" id="publicCount">0</span>
             </div>
             <div class="circle-members" id="publicMembers">
@@ -396,7 +396,7 @@ window.circlesHTML = `
         <div class="circle-card" data-circle="close_friends">
             <div class="circle-header">
                 <span class="circle-icon">❤️</span>
-                <span class="circle-title">Class B (Friends)</span>
+                <span class="circle-title" data-i18n="circles.class_b">Class B (Friends)</span>
                 <span class="circle-count" id="class_bCount">0</span>
             </div>
             <div class="circle-members" id="class_bMembers">
@@ -410,7 +410,7 @@ window.circlesHTML = `
         <div class="circle-card" data-circle="family">
         <div class="circle-header">
                 <span class="circle-icon">👨‍👩‍👧‍👦</span>
-                <span class="circle-title">Class A (Family)</span>
+                <span class="circle-title" data-i18n="circles.class_a">Class A (Family)</span>
                 <span class="circle-count" id="class_aCount">0</span>
             </div>
             <div class="circle-members" id="class_aMembers">
@@ -455,9 +455,26 @@ let circlesData = {
     family: []        // Maps to "Class A (Family)" display
 };
 
+
+let isLoadingCircles = false;
+let loadCirclesTimeout = null;
+
 // Load circles from backend
 // Load circles from backend
 async function loadCircles() {
+    // Debounce: prevent multiple simultaneous loads
+    if (isLoadingCircles) {
+        console.log('Already loading circles, skipping duplicate call...');
+        return;
+    }
+
+    // Clear any pending timeout
+    if (loadCirclesTimeout) {
+        clearTimeout(loadCirclesTimeout);
+    }
+
+    isLoadingCircles = true;
+
     try {
         const response = await fetch('/api/circles');
         if (response.status === 401) {
@@ -561,6 +578,11 @@ async function loadCircles() {
         if (window.showMessage) {
             window.showMessage('Error loading circles', 'error');
         }
+    } finally {
+        // Reset the loading flag after a short delay to prevent rapid successive calls
+        loadCirclesTimeout = setTimeout(() => {
+            isLoadingCircles = false;
+        }, 300);
     }
 }
 
@@ -644,7 +666,7 @@ async function searchUsers() {
                     detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${interests}</div>`;
                 }
 
-                resultItem.innerHTML = `
+               resultItem.innerHTML = `
                     <div class="user-info">
                         <div class="user-avatar">${(displayName || 'U')[0].toUpperCase()}</div>
                         <div style="flex: 1; min-width: 0;">
@@ -653,11 +675,11 @@ async function searchUsers() {
                             ${detailLine}
                         </div>
                     </div>
-                    <select onchange="addToCircle('${user.id}', this.value)" style="margin-left: 10px; flex-shrink: 0;">
+                    <select onchange="addToCircle('${user.id}', this.value, '${escapeHtml(displayName)}')" style="margin-left: 10px; flex-shrink: 0;">
                         <option value="">Add to circle...</option>
-                        <option value="public">Public</option>
-                        <option value="class_b">Class B (Friends)</option>
-                        <option value="class_a">Class A (Family)</option>
+                        <option value="public" data-i18n="circles.public">Public</option>
+                        <option value="class_b" data-i18n="circles.class_b">Class B (Friends)</option>
+                        <option value="class_a" data-i18n="circles.class_a">Class A (Family)</option>
                     </select>
                 `;
                 searchResults.appendChild(resultItem);
