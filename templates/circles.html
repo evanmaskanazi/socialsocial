@@ -112,7 +112,19 @@
 
             // Handle language changes
        // Handle language changes
-            window.addEventListener('languageChanged', () => {
+      // Handle language changes with debouncing to prevent flashing
+            window.addEventListener('languageChanged', (event) => {
+                // Debounce rapid language changes
+                const now = Date.now();
+                if (!window.lastLanguageChange) {
+                    window.lastLanguageChange = 0;
+                }
+                if (now - window.lastLanguageChange < 500) {
+                    console.log('Ignoring rapid language change');
+                    return;
+                }
+                window.lastLanguageChange = now;
+
                 // DON'T call applyLanguage() here - it causes infinite loop!
                 // The applyLanguage() function already dispatched this event
 
