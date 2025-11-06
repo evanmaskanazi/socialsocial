@@ -421,6 +421,7 @@ class User(db.Model):
     has_completed_onboarding = db.Column(db.Boolean, default=False)
     onboarding_dismissed = db.Column(db.Boolean, default=False)
     shareable_link_token = db.Column(db.String(100), unique=True)
+    circles_privacy = db.Column(db.String(20), default='private')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
@@ -478,7 +479,8 @@ class User(db.Model):
             'last_login': self.last_login.isoformat() if self.last_login else None,
             # ADD THESE TO to_dict():
             'has_completed_onboarding': self.has_completed_onboarding,
-            'shareable_link_token': self.shareable_link_token
+            'shareable_link_token': self.shareable_link_token,
+            'circles_privacy': self.circles_privacy or 'private'
         }
 
 
@@ -590,11 +592,11 @@ class SavedParameters(db.Model):
     sleep_quality = db.Column(db.Integer)
     physical_activity = db.Column(db.Integer)
     anxiety = db.Column(db.Integer)
-    mood_privacy = db.Column(db.String(20), default='public')
-    energy_privacy = db.Column(db.String(20), default='public')
-    sleep_quality_privacy = db.Column(db.String(20), default='public')
-    physical_activity_privacy = db.Column(db.String(20), default='public')
-    anxiety_privacy = db.Column(db.String(20), default='public')
+    mood_privacy = db.Column(db.String(20), default='private')
+    energy_privacy = db.Column(db.String(20), default='private')
+    sleep_quality_privacy = db.Column(db.String(20), default='private')
+    physical_activity_privacy = db.Column(db.String(20), default='private')
+    anxiety_privacy = db.Column(db.String(20), default='private')
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -3331,8 +3333,63 @@ def get_my_circles():
     try:
         user_id = session.get('user_id')
 
-        # Get all circles
-        circles_stmt = select(Circle).filter_by(user_id=user_id)
+        # Check if requesting user's own circles or someone else's
+        target_user_id = request.args.get('user_id', user_id, type=int)
+
+        # If viewing someone else's circles, check their privacy settings
+        if target_user_id != user_id:
+            target_user = db.session.get(User, target_user_id)
+            if not target_user:
+                return jsonify({'error': 'User not found'}), 404
+
+            privacy_level = target_user.circles_privacy or 'private'
+
+            # If private, return message
+            if privacy_level == 'private':
+                return jsonify({
+                    'private': True,
+                    'message': 'Circles set to private'
+                })
+
+            # Check viewer's circle membership with target user
+            viewer_circle = db.session.execute(
+                select(Circle).filter_by(
+                    user_id=target_user_id,
+                    circle_user_id=user_id
+                )
+            ).scalars().first()
+
+            viewer_circle_type = None
+            if viewer_circle:
+                type_mapping = {
+                    'general': 'public',
+                    'close_friends': 'class_b',
+                    'family': 'class_a',
+                    'public': 'public',
+                    'class_b': 'class_b',
+                    'class_a': 'class_a'
+                }
+                viewer_circle_type = type_mapping.get(viewer_circle.circle_type, 'public')
+
+            # Apply privacy filtering
+            if privacy_level == 'class_a' and viewer_circle_type != 'class_a':
+                return jsonify({
+                    'private': True,
+                    'message': 'Circles set to private'
+                })
+
+            if privacy_level == 'class_b' and viewer_circle_type not in ['class_a', 'class_b']:
+                return jsonify({
+                    'private': True,
+                    'message': 'Circles set to private'
+                })
+
+            # For public or allowed viewers, continue with circles
+            circles_stmt = select(Circle).filter_by(user_id=target_user_id)
+        else:
+            # User viewing own circles - no restrictions
+            circles_stmt = select(Circle).filter_by(user_id=user_id)
+
         circles = db.session.execute(circles_stmt).scalars().all()
 
         result = {
@@ -3344,7 +3401,10 @@ def get_my_circles():
         type_mapping = {
             'general': 'public',
             'close_friends': 'class_b',
-            'family': 'class_a'
+            'family': 'class_a',
+            'public': 'public',
+            'class_b': 'class_b',
+            'class_a': 'class_a'
         }
 
         for circle in circles:
@@ -3363,6 +3423,57 @@ def get_my_circles():
     except Exception as e:
         logger.error(f"Get my circles error: {str(e)}")
         return jsonify({'error': 'Failed to get circles'}), 500
+
+
+@app.route('/api/circles/privacy', methods=['GET'])
+@login_required
+def get_circles_privacy():
+    """Get user's circles privacy setting"""
+    try:
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id)
+
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        return jsonify({
+            'circles_privacy': user.circles_privacy or 'private'
+        })
+    except Exception as e:
+        logger.error(f"Get circles privacy error: {str(e)}")
+        return jsonify({'error': 'Failed to get circles privacy'}), 500
+
+
+@app.route('/api/circles/privacy', methods=['POST'])
+@login_required
+def update_circles_privacy():
+    """Update user's circles privacy setting"""
+    try:
+        user_id = session.get('user_id')
+        data = request.get_json()
+
+        privacy_level = data.get('privacy_level')
+
+        # Validate privacy level
+        if privacy_level not in ['public', 'class_b', 'class_a', 'private']:
+            return jsonify({'error': 'Invalid privacy level'}), 400
+
+        user = db.session.get(User, user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        user.circles_privacy = privacy_level
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Privacy updated successfully',
+            'circles_privacy': privacy_level
+        })
+
+    except Exception as e:
+        logger.error(f"Update circles privacy error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update privacy'}), 500
 
 # =====================
 # FEED & POSTS ROUTES
