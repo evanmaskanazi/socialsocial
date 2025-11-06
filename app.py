@@ -3995,7 +3995,7 @@ def save_parameters():
             privacy_field = f"{field}_privacy"
             if privacy_field in data:
                 privacy_value = data[privacy_field]
-                if privacy_value in ['public', 'class_a', 'class_b']:
+                if privacy_value in ['public', 'class_a', 'class_b', 'private']:
                     setattr(params, privacy_field, privacy_value)
 
         if 'notes' in data:
