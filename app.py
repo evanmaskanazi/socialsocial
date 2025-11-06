@@ -2823,43 +2823,39 @@ def debug_parameters(user_id):
 def search_users():
     """Search for users by username or email"""
     try:
-        # Log the incoming request
+        # Get and validate query
         query = request.args.get('q', '').strip().lower()
-        logger.info(f"🔍 User search request: query='{query}', from IP={request.remote_addr}")
+        logger.info(f"🔍 Search request: query='{query}'")
 
         if not query or len(query) < 2:
-            logger.info(f"❌ Query rejected: too short (length={len(query)})")
+            logger.info(f"❌ Query too short: length={len(query)}")
             return jsonify({'users': []})
 
-        # Get current user to exclude from results
+        # Get current user
         current_user_id = session.get('user_id')
         if not current_user_id:
             logger.error("❌ No user_id in session")
             return jsonify({'error': 'Not authenticated'}), 401
 
-        logger.info(f"👤 Current user ID: {current_user_id}, excluding from results")
+        logger.info(f"👤 Current user: {current_user_id}")
 
-        # Search for users by username (case-insensitive)
-        logger.info(f"🔎 Executing query: User.query.filter(id != {current_user_id}, username ilike '%{query}%')")
+        # Perform search
+        logger.info(f"🔎 Searching: username ILIKE '%{query}%' WHERE id != {current_user_id}")
 
         users = User.query.filter(
             User.id != current_user_id,
             User.username.ilike(f'%{query}%')
         ).limit(10).all()
 
-        logger.info(f"✓ Query completed: Found {len(users)} user(s)")
+        logger.info(f"✓ Found {len(users)} user(s): {[u.username for u in users]}")
 
-        if users:
-            logger.info(f"   Users found: {[u.username for u in users]}")
-
-        # Format results
+        # Format results with profile data
         results = []
         for user in users:
             try:
-                # Get user's profile if it exists
                 profile = Profile.query.filter_by(user_id=user.id).first()
 
-                results.append({
+                user_data = {
                     'id': user.id,
                     'username': user.username,
                     'email': user.email,
@@ -2868,10 +2864,14 @@ def search_users():
                     'occupation': profile.occupation if profile else None,
                     'interests': profile.interests if profile else None,
                     'avatar_url': profile.avatar_url if profile else None
-                })
+                }
+
+                results.append(user_data)
+                logger.debug(f"  - Formatted user {user.id}: {user.username}")
+
             except Exception as profile_error:
-                logger.error(f"⚠️  Error loading profile for user {user.id}: {profile_error}")
-                # Include user even if profile fails
+                # Include user even if profile loading fails
+                logger.warning(f"⚠️  Profile error for user {user.id}: {profile_error}")
                 results.append({
                     'id': user.id,
                     'username': user.username,
@@ -2883,13 +2883,13 @@ def search_users():
                     'avatar_url': None
                 })
 
-        logger.info(f"📤 Returning {len(results)} formatted result(s)")
+        logger.info(f"📤 Returning {len(results)} result(s)")
         return jsonify({'users': results})
 
     except Exception as e:
-        logger.error(f"❌ User search error: {type(e).__name__}: {e}")
-        logger.error(f"   Query was: '{request.args.get('q', '')}'")
-        logger.error(f"   Traceback:", exc_info=True)
+        logger.error(f"❌ Search failed: {type(e).__name__}: {e}", exc_info=True)
+        logger.error(f"   Query: '{request.args.get('q', '')}'")
+        logger.error(f"   Session: {dict(session)}")
         return jsonify({'users': [], 'error': 'Search failed'}), 500
 
 
