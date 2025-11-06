@@ -3309,13 +3309,13 @@ def remove_from_circle():
 
         logger.info(f"Removing user {circle_user_id} from circle {circle_type} for user {user_id}")
 
-        # Use sqlite3 for circle_members table
+        # Use PostgreSQL with %s placeholders
         conn = get_db()
         cursor = conn.cursor()
 
         cursor.execute('''
             DELETE FROM circle_members 
-            WHERE user_id = ? AND member_id = ? AND circle = ?
+            WHERE user_id = %s AND member_id = %s AND circle = %s
         ''', (user_id, circle_user_id, circle_type))
 
         conn.commit()
