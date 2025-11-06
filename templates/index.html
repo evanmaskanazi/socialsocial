@@ -1640,7 +1640,7 @@
                 <span class="mobile-nav-icon">👤</span>
                 <span class="mobile-nav-label" data-i18n="menu.profile">Profile</span>
             </li>
-            <li class="mobile-nav-item" data-view="circles" onclick="showView('circles')">
+          <li class="mobile-nav-item" data-view="circles" onclick="handleCirclesClick(event)">
                 <span class="mobile-nav-icon">⭕</span>
                 <span class="mobile-nav-label" data-i18n="menu.circles">Circles</span>
             </li>
@@ -1681,7 +1681,7 @@
                     <li class="sidebar-item" data-view="profile" data-i18n="menu.profile">
                         👤 Profile
                     </li>
-                    <li class="sidebar-item" data-view="circles" data-i18n="menu.circles">
+                    <li class="sidebar-item" data-view="circles" onclick="handleCirclesClick(event)" style="cursor: pointer;" data-i18n="menu.circles">
                         👥 Circles
                     </li>
                     <li class="sidebar-item" id="desktopMessagesNav" data-view="messages" data-i18n="menu.messages">
@@ -2710,6 +2710,19 @@ function handleParametersClick(event) {
 }
 
 
+function handleCirclesClick(event) {
+    // Stop event propagation to prevent both handlers from firing
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
+    console.log('[DEBUG] handleCirclesClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+
+    // Always redirect to circles page
+    console.log('[DEBUG] Redirecting to /circles');
+    window.location.href = '/circles';
+}
 
 
 
