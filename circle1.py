@@ -2,62 +2,50 @@ import psycopg2, os
 conn = psycopg2.connect(os.environ['DATABASE_URL'])
 cursor = conn.cursor()
 
-# Your account
-owner_username = 'emaskanazi_1'  # Your account
-member_username = 'diana'  # User to remove
-circle_type = 'Public'  # From screenshot: public, class_b, class_a
+owner_username = 'emaskanazi_1'
+member_username = 'diana'
+circle_type = 'public'  # LOWERCASE! And it's stored directly in circles table
 
-print(f"=== Test: Remove '{member_username}' from '{circle_type}' ===")
+print(f"=== Test: Remove '{member_username}' from '{circle_type}' ===\n")
 
-# Step 1: Get owner user_id
+# Get owner ID
 cursor.execute("SELECT id FROM users WHERE username = %s", (owner_username,))
-owner = cursor.fetchone()
-if not owner:
-    print(f"✗ Owner '{owner_username}' not found")
-    exit()
-owner_id = owner[0]
+owner_id = cursor.fetchone()[0]
 print(f"Owner ID: {owner_id}")
 
-# Step 2: Get member user_id
+# Get member ID
 cursor.execute("SELECT id FROM users WHERE username = %s", (member_username,))
-member = cursor.fetchone()
-if not member:
-    print(f"✗ Member '{member_username}' not found")
-    exit()
-member_id = member[0]
+member_id = cursor.fetchone()[0]
 print(f"Member ID: {member_id}")
 
-# Step 3: Find the circle
+# Find the membership row in circles table
 cursor.execute("""
-    SELECT id, name FROM circles 
-    WHERE circle_user_id = %s AND circle_type = %s
-""", (owner_id, circle_type))
+    SELECT id FROM circles
+    WHERE circle_user_id = %s 
+    AND user_id = %s 
+    AND circle_type = %s
+""", (owner_id, member_id, circle_type))
 
-circle = cursor.fetchone()
-if not circle:
-    print(f"✗ Circle '{circle_type}' not found for owner")
-    exit()
-
-circle_id = circle[0]
-print(f"Circle ID: {circle_id}, Name: {circle[1]}")
-
-# Step 4: Check if member is in circle
-cursor.execute("""
-    SELECT * FROM circle_members 
-    WHERE circle_id = %s AND user_id = %s
-""", (circle_id, member_id))
-
-if not cursor.fetchone():
-    print(f"✗ '{member_username}' is NOT in this circle")
-else:
-    # Step 5: Remove
-    cursor.execute("""
-        DELETE FROM circle_members 
-        WHERE circle_id = %s AND user_id = %s
-    """, (circle_id, member_id))
+circle_row = cursor.fetchone()
+if not circle_row:
+    print(f"\n✗ '{member_username}' is NOT in {circle_type}")
     
-    print(f"✓ Would remove '{member_username}' (deleted {cursor.rowcount} row)")
-    conn.rollback()  # DON'T commit - just test
+    # Show what circles they ARE in
+    cursor.execute("""
+        SELECT circle_type FROM circles 
+        WHERE circle_user_id = %s AND user_id = %s
+    """, (owner_id, member_id))
+    existing = cursor.fetchall()
+    if existing:
+        print(f"   But they ARE in: {[r[0] for r in existing]}")
+else:
+    circle_row_id = circle_row[0]
+    print(f"\n✓ Found membership (circle row id: {circle_row_id})")
+    
+    # Delete
+    cursor.execute("DELETE FROM circles WHERE id = %s", (circle_row_id,))
+    print(f"✓ Would delete '{member_username}' from {circle_type}")
+    conn.rollback()  # Don't commit - just test
 
 cursor.close()
 conn.close()
