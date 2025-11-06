@@ -196,15 +196,6 @@ def send_password_reset_email(user_email, reset_token):
         return False
 
 
-
-
-
-
-
-
-
-
-
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
     try:
@@ -219,6 +210,9 @@ def ensure_saved_parameters_schema():
             existing_columns = {col['name'] for col in inspector.get_columns('saved_parameters')}
             logger.info(f"Existing columns in saved_parameters: {existing_columns}")
 
+            # Check if we're using PostgreSQL or SQLite
+            is_postgres = 'postgresql' in str(db.engine.url)
+
             # Define required columns with their types
             required_columns = {
                 'sleep_quality': 'INTEGER',
@@ -227,21 +221,44 @@ def ensure_saved_parameters_schema():
                 'updated_at': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
             }
 
+            # Privacy columns (will be added if missing, with private default)
+            privacy_columns = {
+                'mood_privacy': 'VARCHAR(20) DEFAULT \'private\'',
+                'energy_privacy': 'VARCHAR(20) DEFAULT \'private\'',
+                'sleep_quality_privacy': 'VARCHAR(20) DEFAULT \'private\'',
+                'physical_activity_privacy': 'VARCHAR(20) DEFAULT \'private\'',
+                'anxiety_privacy': 'VARCHAR(20) DEFAULT \'private\''
+            }
+
+            # Combine all required columns
+            all_required = {**required_columns, **privacy_columns}
+
             # Add missing columns
-            missing_columns = set(required_columns.keys()) - existing_columns
+            missing_columns = set(all_required.keys()) - existing_columns
 
             if missing_columns:
                 logger.info(f"Adding missing columns to saved_parameters: {missing_columns}")
 
                 with db.engine.connect() as connection:
                     for column_name in missing_columns:
-                        column_type = required_columns[column_name]
-                        # Use text() for raw SQL
-                        alter_query = text(
-                            f"ALTER TABLE saved_parameters ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
-                        connection.execute(alter_query)
-                        connection.commit()
-                        logger.info(f"Added column: {column_name}")
+                        column_type = all_required[column_name]
+
+                        if is_postgres:
+                            # PostgreSQL syntax with IF NOT EXISTS
+                            alter_query = text(
+                                f"ALTER TABLE saved_parameters ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+                        else:
+                            # SQLite syntax (no IF NOT EXISTS)
+                            alter_query = text(
+                                f"ALTER TABLE saved_parameters ADD COLUMN {column_name} {column_type}")
+
+                        try:
+                            connection.execute(alter_query)
+                            connection.commit()
+                            logger.info(f"Added column: {column_name}")
+                        except Exception as e:
+                            # Column might already exist in SQLite (which doesn't support IF NOT EXISTS)
+                            logger.info(f"Column {column_name} might already exist: {e}")
 
                 logger.info("Successfully added all missing columns to saved_parameters")
             else:
@@ -751,27 +768,68 @@ class NotificationSettings(db.Model):
     user = db.relationship('User', backref=db.backref('notification_settings', uselist=False))
 
 
-
-
-
 def ensure_database_schema():
     """Automatically ensure all required columns exist"""
     try:
         with db.engine.connect() as conn:
-            # Check and add visibility column to posts table (PostgreSQL compatible)
-            result = conn.execute(text("""
+            # Check if we're using PostgreSQL or SQLite
+            is_postgres = 'postgresql' in str(db.engine.url)
+
+            if is_postgres:
+                # PostgreSQL - Check and add visibility column to posts table
+                result = conn.execute(text("""
                     SELECT column_name
                     FROM information_schema.columns 
                     WHERE table_name = 'posts' 
                     AND table_schema = 'public'
                 """))
-            columns = [row[0] for row in result]
+                columns = [row[0] for row in result]
 
-            if 'visibility' not in columns:
-                logger.info("Adding visibility column to posts table...")
-                conn.execute(text("ALTER TABLE posts ADD COLUMN visibility VARCHAR(50) DEFAULT 'general'"))
-                conn.commit()
-                logger.info("Visibility column added successfully")
+                if 'visibility' not in columns:
+                    logger.info("Adding visibility column to posts table...")
+                    conn.execute(text("ALTER TABLE posts ADD COLUMN visibility VARCHAR(50) DEFAULT 'general'"))
+                    conn.commit()
+                    logger.info("Visibility column added successfully")
+
+                # PostgreSQL - Check and add circles_privacy column to users table
+                result = conn.execute(text("""
+                    SELECT column_name
+                    FROM information_schema.columns 
+                    WHERE table_name = 'users' 
+                    AND table_schema = 'public'
+                """))
+                user_columns = [row[0] for row in result]
+
+                if 'circles_privacy' not in user_columns:
+                    logger.info("Adding circles_privacy column to users table...")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN circles_privacy VARCHAR(20) DEFAULT 'private'"))
+                    conn.commit()
+                    logger.info("circles_privacy column added successfully")
+                else:
+                    logger.info("✓ circles_privacy column already exists in users table")
+
+            else:
+                # SQLite - Check and add visibility column to posts table
+                result = conn.execute(text("PRAGMA table_info(posts)"))
+                columns = [row[1] for row in result]
+
+                if 'visibility' not in columns:
+                    logger.info("Adding visibility column to posts table...")
+                    conn.execute(text("ALTER TABLE posts ADD COLUMN visibility VARCHAR(50) DEFAULT 'general'"))
+                    conn.commit()
+                    logger.info("Visibility column added successfully")
+
+                # SQLite - Check and add circles_privacy column to users table
+                result = conn.execute(text("PRAGMA table_info(users)"))
+                user_columns = [row[1] for row in result]
+
+                if 'circles_privacy' not in user_columns:
+                    logger.info("Adding circles_privacy column to users table...")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN circles_privacy VARCHAR(20) DEFAULT 'private'"))
+                    conn.commit()
+                    logger.info("circles_privacy column added successfully")
+                else:
+                    logger.info("✓ circles_privacy column already exists in users table")
 
     except Exception as e:
         logger.error(f"Database schema check error: {str(e)}")
