@@ -1,13 +1,8 @@
 // Circles and Messages Management System with i18n support
 // Complete Fixed Version with null safety and proper error handling
 
-// Safe translation function with fallbacks
-const t = (key, fallback = key) => {
-    if (window.i18n && typeof window.i18n.t === 'function') {
-        return window.i18n.t(key, fallback);
-    }
-    return fallback;
-};
+
+
 
 // Wait for i18n to be ready
 function waitForI18n() {
