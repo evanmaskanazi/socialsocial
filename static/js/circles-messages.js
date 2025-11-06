@@ -458,6 +458,9 @@ let circlesData = {
 
 let isLoadingCircles = false;
 let loadCirclesTimeout = null;
+// Prevent rapid language switching
+let lastLanguageChange = 0;
+const LANGUAGE_CHANGE_DELAY = 500; // ms
 
 // Load circles from backend
 // Load circles from backend
@@ -598,34 +601,6 @@ function createMemberElement(member, circleType) {
     return memberDiv;
 }
 
-// Remove member from circle
-async function removeFromCircle(memberId, circleType) {
-    try {
-        const response = await fetch('/api/circles/remove', {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                user_id: memberId,
-                circle_type: circleType
-            })
-        });
-
-        if (response.ok) {
-            loadCircles(); // Reload to show updated circles
-            if (window.showMessage) {
-                window.showMessage('Member removed from circle', 'success');
-            }
-        }
-    } catch (error) {
-        console.error('Error removing from circle:', error);
-        if (window.showMessage) {
-            window.showMessage('Error removing member', 'error');
-        }
-    }
-}
-
 // Search users
 async function searchUsers() {
     const searchInput = document.getElementById('userSearchInput');
@@ -675,7 +650,7 @@ async function searchUsers() {
                             ${detailLine}
                         </div>
                     </div>
-                    <select onchange="addToCircle('${user.id}', this.value, '${escapeHtml(displayName)}')" style="margin-left: 10px; flex-shrink: 0;">
+                    <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-left: 10px; flex-shrink: 0;">
                         <option value="">Add to circle...</option>
                         <option value="public" data-i18n="circles.public">Public</option>
                         <option value="class_b" data-i18n="circles.class_b">Class B (Friends)</option>
