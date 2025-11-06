@@ -100,6 +100,109 @@ logging.basicConfig(
 )
 logger = logging.getLogger('thera_social')
 
+# Email configuration for password reset
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+
+def send_password_reset_email(user_email, reset_token):
+    """Send password reset email"""
+    try:
+        # Configure your email settings here
+        SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+        SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+        SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
+        SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+        FROM_EMAIL = os.environ.get('FROM_EMAIL', SMTP_USERNAME)
+
+        if not SMTP_USERNAME or not SMTP_PASSWORD:
+            logger.warning("Email configuration not set, skipping email send")
+            return False
+
+        # Create reset link
+        reset_link = f"{os.environ.get('APP_URL', 'http://localhost:5000')}?reset_token={reset_token}"
+
+        # Create email message
+        message = MIMEMultipart('alternative')
+        message['Subject'] = 'TheraSocial - Password Reset Request'
+        message['From'] = FROM_EMAIL
+        message['To'] = user_email
+
+        # Create HTML and text versions
+        text_content = f"""
+        Hello,
+
+        You requested to reset your password for TheraSocial.
+
+        Click the link below to reset your password:
+        {reset_link}
+
+        This link will expire in 1 hour.
+
+        If you did not request this reset, please ignore this email.
+
+        Best regards,
+        TheraSocial Team
+        """
+
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #667eea;">Password Reset Request</h2>
+                <p>Hello,</p>
+                <p>You requested to reset your password for TheraSocial.</p>
+                <p>Click the button below to reset your password:</p>
+                <p style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_link}" 
+                       style="background: #667eea; color: white; padding: 12px 30px; 
+                              text-decoration: none; border-radius: 5px; display: inline-block;">
+                        Reset Password
+                    </a>
+                </p>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; color: #667eea;">{reset_link}</p>
+                <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
+                <p style="color: #666; font-size: 14px;">
+                    If you did not request this reset, please ignore this email.
+                </p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="color: #999; font-size: 12px;">
+                    Best regards,<br>
+                    TheraSocial Team
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+
+        part1 = MIMEText(text_content, 'plain')
+        part2 = MIMEText(html_content, 'html')
+        message.attach(part1)
+        message.attach(part2)
+
+        # Send email
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(message)
+
+        logger.info(f"Password reset email sent to {user_email}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to send password reset email: {e}")
+        return False
+
+
+
+
+
+
+
+
+
 
 
 def ensure_saved_parameters_schema():
@@ -258,6 +361,35 @@ def auto_migrate_database():
                                 text(f"ALTER TABLE {params_table} ADD COLUMN {col} VARCHAR(20) DEFAULT 'public'"))
                             conn.commit()
 
+                # Create password_reset_tokens table if it doesn't exist
+                if 'password_reset_tokens' not in inspector.get_table_names():
+                    logger.info("Creating password_reset_tokens table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE password_reset_tokens (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                token VARCHAR(100) UNIQUE NOT NULL,
+                                expires_at TIMESTAMP NOT NULL,
+                                used BOOLEAN DEFAULT FALSE,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE password_reset_tokens (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL,
+                                token VARCHAR(100) UNIQUE NOT NULL,
+                                expires_at TIMESTAMP NOT NULL,
+                                used INTEGER DEFAULT 0,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ Created password_reset_tokens table")
+
                 logger.info("Database auto-migration completed successfully")
 
         except Exception as e:
@@ -348,6 +480,22 @@ class User(db.Model):
             'has_completed_onboarding': self.has_completed_onboarding,
             'shareable_link_token': self.shareable_link_token
         }
+
+
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    token = db.Column(db.String(100), unique=True, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='reset_tokens')
+
+
+
+
 
 
 class Profile(db.Model):
@@ -479,9 +627,11 @@ class SavedParameters(db.Model):
         else:
             for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
                 param_privacy = getattr(self, f"{param}_privacy", 'public')
+                # Only show if public, or if viewer has proper access level (NOT private)
                 if param_privacy == 'public' or \
                         (param_privacy == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
                         (param_privacy == 'class_a' and privacy_level == 'class_a'):
+                    # Note: 'private' params are excluded - only owner can see
                     base_dict[param] = getattr(self, param)
 
         return base_dict
@@ -1902,6 +2052,233 @@ def update_user_language():
             'message': 'Server error'
         }), 500
 
+
+@app.route('/api/user/update-city', methods=['POST'])
+@login_required
+def update_user_city():
+    """Update user's selected city"""
+    try:
+        data = request.json
+        selected_city = data.get('selected_city')
+
+        if not selected_city:
+            return jsonify({'error': 'City required'}), 400
+
+        user = db.session.get(User, session['user_id'])
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        user.selected_city = selected_city
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'City updated successfully'
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error updating city: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update city'}), 500
+
+
+@app.route('/api/user/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """Change user password"""
+    try:
+        data = request.json
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+
+        if not current_password or not new_password:
+            return jsonify({'error': 'Current and new passwords required'}), 400
+
+        user = db.session.get(User, session['user_id'])
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Verify current password
+        if not user.check_password(current_password):
+            return jsonify({'error': 'Current password is incorrect'}), 401
+
+        # Validate new password
+        if len(new_password) < 12:
+            return jsonify({'error': 'Password must be at least 12 characters long'}), 400
+
+        # Check complexity
+        import re
+        has_upper = bool(re.search(r'[A-Z]', new_password))
+        has_lower = bool(re.search(r'[a-z]', new_password))
+        has_digit = bool(re.search(r'[0-9]', new_password))
+        has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password))
+
+        if not (has_upper and has_lower and has_digit and has_special):
+            return jsonify({'error': 'Password must contain uppercase, lowercase, number, and special character'}), 400
+
+        # Update password
+        user.set_password(new_password)
+        db.session.commit()
+
+        logger.info(f"Password changed for user {user.id}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Password updated successfully'
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error changing password: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to change password'}), 500
+
+
+@app.route('/api/user/delete-account', methods=['POST'])
+@login_required
+def delete_account():
+    """Delete user account and all associated data"""
+    try:
+        user_id = session['user_id']
+        user = db.session.get(User, user_id)
+
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Log the deletion
+        logger.info(f"Deleting account for user {user.id} ({user.username})")
+
+        # Delete user (cascade will handle related data)
+        db.session.delete(user)
+        db.session.commit()
+
+        # Clear session
+        session.clear()
+
+        return jsonify({
+            'success': True,
+            'message': 'Account deleted successfully'
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error deleting account: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete account'}), 500
+
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+@rate_limit(max_attempts=5, window_minutes=60)
+def forgot_password():
+    """Request password reset"""
+    try:
+        data = request.json
+        email = data.get('email', '').strip().lower()
+
+        if not email:
+            return jsonify({'error': 'Email required'}), 400
+
+        # Find user
+        user = db.session.execute(
+            select(User).filter_by(email=email)
+        ).scalar_one_or_none()
+
+        # Always return success to prevent email enumeration
+        if not user:
+            logger.info(f"Password reset requested for non-existent email: {email}")
+            return jsonify({
+                'success': True,
+                'message': 'If an account exists with that email, a reset link has been sent'
+            }), 200
+
+        # Generate reset token
+        import secrets
+        reset_token = secrets.token_urlsafe(32)
+        expires_at = datetime.utcnow() + timedelta(hours=1)
+
+        # Save token to database
+        token_record = PasswordResetToken(
+            user_id=user.id,
+            token=reset_token,
+            expires_at=expires_at
+        )
+        db.session.add(token_record)
+        db.session.commit()
+
+        # Send reset email
+        email_sent = send_password_reset_email(user.email, reset_token)
+
+        if not email_sent:
+            logger.warning(f"Failed to send reset email to {email}, but token created")
+
+        logger.info(f"Password reset requested for user {user.id}")
+
+        return jsonify({
+            'success': True,
+            'message': 'If an account exists with that email, a reset link has been sent'
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Forgot password error: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to process request'}), 500
+
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """Reset password using token"""
+    try:
+        data = request.json
+        token = data.get('token')
+        new_password = data.get('new_password')
+
+        if not token or not new_password:
+            return jsonify({'error': 'Token and new password required'}), 400
+
+        # Find token
+        token_record = db.session.execute(
+            select(PasswordResetToken).filter_by(token=token, used=False)
+        ).scalar_one_or_none()
+
+        if not token_record:
+            return jsonify({'error': 'Invalid or expired reset token'}), 400
+
+        # Check if token expired
+        if datetime.utcnow() > token_record.expires_at:
+            return jsonify({'error': 'Reset token has expired'}), 400
+
+        # Validate new password
+        if len(new_password) < 12:
+            return jsonify({'error': 'Password must be at least 12 characters long'}), 400
+
+        # Check complexity
+        import re
+        has_upper = bool(re.search(r'[A-Z]', new_password))
+        has_lower = bool(re.search(r'[a-z]', new_password))
+        has_digit = bool(re.search(r'[0-9]', new_password))
+        has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password))
+
+        if not (has_upper and has_lower and has_digit and has_special):
+            return jsonify({'error': 'Password must contain uppercase, lowercase, number, and special character'}), 400
+
+        # Get user and update password
+        user = db.session.get(User, token_record.user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        user.set_password(new_password)
+        token_record.used = True
+        db.session.commit()
+
+        logger.info(f"Password reset successful for user {user.id}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Password reset successfully'
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Reset password error: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to reset password'}), 500
 
 @app.route('/api/user/language', methods=['GET'])
 def get_user_language():
