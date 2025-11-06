@@ -13,6 +13,10 @@ import redis
 import logging
 from datetime import datetime, timedelta
 from functools import wraps
+import time
+
+# Cache busting timestamp - updates on every app restart
+CACHE_BUST_VERSION = str(int(time.time()))
 
 from flask import (
     Flask, request, jsonify, session,
@@ -1797,7 +1801,7 @@ def profile_page():
 @login_required
 def circles_page():
     """Circles page"""
-    return render_template('circles.html')
+    return render_template('circles.html', cache_bust=CACHE_BUST_VERSION)
 
 
 @app.route('/messages')
