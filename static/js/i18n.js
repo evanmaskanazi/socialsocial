@@ -309,9 +309,10 @@ const translations = {
 'circles.privacy_updated': 'הגדרת הפרטיות עודכנה',
 'error.updating_privacy': 'שגיאה בעדכון הפרטיות',
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': 'Public',
-            'privacy.class_b': 'Class B (Close Friends)',
-            'privacy.class_a': 'Class A (Family)',
+            'privacy.public': '🌍 Public',
+'privacy.class_b': '👥 Class B (Close Friends)',
+'privacy.class_a': '👨‍👩‍👧‍👦 Class A (Family)',
+'privacy.private': '🔒 Private',
             'invite.alert_title': 'New Invitation',
 'invite.alert_content': '{username} has invited you to follow them',
 
@@ -899,9 +900,10 @@ const translations = {
             'circles.remove_confirm': 'להסיר את החבר הזה מהמעגל?',
 
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': 'ציבורי',
-            'privacy.class_b': 'מחלקה ב\' (חברים קרובים)',
-            'privacy.class_a': 'מחלקה א\' (משפחה)',
+            'privacy.public': '🌍 ציבורי',
+'privacy.class_b': '👥 מחלקה ב\' (חברים קרובים)',
+'privacy.class_a': '👨‍👩‍👧‍👦 מחלקה א\' (משפחה)',
+'privacy.private': '🔒 פרטי',
 
         // Parameters page
         'parameters.title': 'פרמטרים יומיים',
@@ -1422,9 +1424,10 @@ const translations = {
             'circles.remove_confirm': 'إزالة هذا العضو من الدائرة؟',
 
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': 'عام',
-            'privacy.class_b': 'الفئة ب (الأصدقاء المقربون)',
-            'privacy.class_a': 'الفئة أ (العائلة)',
+           'privacy.public': '🌍 عام',
+'privacy.class_b': '👥 الفئة ب (الأصدقاء المقربون)',
+'privacy.class_a': '👨‍👩‍👧‍👦 الفئة أ (العائلة)',
+'privacy.private': '🔒 خاص',
 
 
         // Profile page
@@ -1889,9 +1892,10 @@ const translations = {
             'circles.remove_confirm': 'Удалить этого участника из круга?',
 
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': 'Публичный',
-            'privacy.class_b': 'Класс Б (Близкие друзья)',
-            'privacy.class_a': 'Класс А (Семья)',
+            'privacy.public': '🌍 Публичный',
+'privacy.class_b': '👥 Класс Б (Близкие друзья)',
+'privacy.class_a': '👨‍👩‍👧‍👦 Класс А (Семья)',
+'privacy.private': '🔒 Приватный',
 
         // Parameters page
         'parameters.title': 'Ежедневные параметры',

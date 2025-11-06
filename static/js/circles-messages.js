@@ -345,9 +345,20 @@ window.circlesHTML = `
         }
     </style>
 
- <div class="circles-header">
+  <div class="circles-header">
             <h1 data-i18n="circles.title">Your Circles</h1>
             <p style="color: #8898aa;" data-i18n="circles.subtitle">Organize your connections</p>
+        </div>
+
+        <!-- Language Selector -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <label for="languageSelect" style="margin-right: 10px; color: #8898aa;" data-i18n="settings.language">Language:</label>
+            <select id="languageSelect" onchange="window.i18n.changeLanguage(this.value)" style="padding: 8px 15px; border: 2px solid #dfe1e6; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
+                <option value="en">English</option>
+                <option value="he">עברית (Hebrew)</option>
+                <option value="ar">العربية (Arabic)</option>
+                <option value="ru">Русский (Russian)</option>
+            </select>
         </div>
 
         <!-- Circle Privacy Selector -->
@@ -397,7 +408,7 @@ window.circlesHTML = `
         </div>
 
         <div class="circle-card" data-circle="family">
-            <div class="circle-header">
+        <div class="circle-header">
                 <span class="circle-icon">👨‍👩‍👧‍👦</span>
                 <span class="circle-title">Class A (Family)</span>
                 <span class="circle-count" id="class_aCount">0</span>
@@ -410,6 +421,30 @@ window.circlesHTML = `
             </div>
         </div>
     </div>
+
+    <!-- Home Button - INSERT THIS SECTION -->
+    <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+        <button onclick="window.location.href='/'" style="
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(40, 167, 69, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(40, 167, 69, 0.3)'">
+            <span style="font-size: 20px;">🏠</span>
+            <span data-i18n="nav.home">Home</span>
+        </button>
+    </div>
+    <!-- End Home Button -->
+
 </div>
 `;
 
@@ -587,16 +622,38 @@ async function searchUsers() {
 
         if (users.length === 0) {
             searchResults.innerHTML = '<div class="search-result-item">No users found</div>';
-        } else {
+      } else {
             users.forEach(user => {
                 const resultItem = document.createElement('div');
                 resultItem.className = 'search-result-item';
+
+                // Build user details
+                const displayName = user.display_name || user.username;
+                const email = user.email || '';
+                const bio = user.bio || '';
+                const occupation = user.occupation || '';
+                const interests = user.interests || '';
+
+                // Build detail line (occupation and interests)
+                let detailLine = '';
+                if (occupation && interests) {
+                    detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${occupation} • ${interests}</div>`;
+                } else if (occupation) {
+                    detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${occupation}</div>`;
+                } else if (interests) {
+                    detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${interests}</div>`;
+                }
+
                 resultItem.innerHTML = `
                     <div class="user-info">
-                        <div class="user-avatar">${(user.username || user.email || 'U')[0].toUpperCase()}</div>
-                        <span>${user.display_name || user.username || user.email}</span>
+                        <div class="user-avatar">${(displayName || 'U')[0].toUpperCase()}</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600;">${displayName}</div>
+                            <div style="font-size: 13px; color: #8898aa;">${email}</div>
+                            ${detailLine}
+                        </div>
                     </div>
-                    <select onchange="addToCircle('${user.id}', this.value)">
+                    <select onchange="addToCircle('${user.id}', this.value)" style="margin-left: 10px; flex-shrink: 0;">
                         <option value="">Add to circle...</option>
                         <option value="public">Public</option>
                         <option value="class_b">Class B (Friends)</option>
