@@ -5,7 +5,7 @@ cursor = conn.cursor()
 # Your account
 owner_username = 'emaskanazi_1'  # Your account
 member_username = 'diana'  # User to remove
-circle_type = 'public'  # From screenshot: public, class_b, class_a
+circle_type = 'Public'  # From screenshot: public, class_b, class_a
 
 print(f"=== Test: Remove '{member_username}' from '{circle_type}' ===")
 
