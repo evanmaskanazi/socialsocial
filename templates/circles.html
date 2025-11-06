@@ -111,30 +111,27 @@
             }
 
             // Handle language changes
+       // Handle language changes
             window.addEventListener('languageChanged', () => {
-                if (window.i18n && window.i18n.applyLanguage) {
-                    window.i18n.applyLanguage();
+                // DON'T call applyLanguage() here - it causes infinite loop!
+                // The applyLanguage() function already dispatched this event
 
-                    // Update RTL direction
-                    const rtlLanguages = ['ar', 'he'];
-                    if (rtlLanguages.includes(window.i18n.currentLanguage)) {
-                        document.body.setAttribute('dir', 'rtl');
-                    } else {
-                        document.body.setAttribute('dir', 'ltr');
-                    }
+                // Update RTL direction
+                const rtlLanguages = ['ar', 'he'];
+                if (window.i18n && rtlLanguages.includes(window.i18n.currentLanguage)) {
+                    document.body.setAttribute('dir', 'rtl');
+                } else {
+                    document.body.setAttribute('dir', 'ltr');
                 }
 
- if (typeof updateCircleDisplays === 'function') {
-                updateCircleDisplays();
-            }
-
+                // Update circle displays with new translations
+                if (typeof updateCirclesDisplay === 'function') {
+                    updateCirclesDisplay();
+                }
 
                 // Reload circles to apply translations
                 if (typeof loadCircles === 'function') {
                     loadCircles();
-                }
-                 if (typeof updateCircleDisplays === 'function') {
-                    updateCircleDisplays();
                 }
             });
         });
@@ -142,4 +139,3 @@
 </body>
 
 </html>
-
