@@ -3179,7 +3179,6 @@ def get_conversations():
 # =====================
 # CIRCLES ROUTES
 # =====================
-
 @app.route('/api/circles', methods=['GET', 'POST'])
 @login_required
 def circles():
@@ -3188,8 +3187,24 @@ def circles():
 
     if request.method == 'GET':
         try:
+            # Check privacy setting first
+            user = db.session.get(User, user_id)
+            circles_privacy = getattr(user, 'circles_privacy', 'public') if user else 'public'
+
+            logger.info(f"User {user_id} circles privacy: {circles_privacy}")
+
+            # If circles are completely private, return empty circles with flag
+            if circles_privacy == 'private':
+                return jsonify({
+                    'public': [],
+                    'class_b': [],
+                    'class_a': [],
+                    'private': True
+                })
+
             # Get all circles - SQLAlchemy 2.0 style
             # Filter out circles with NULL circle_user_id to prevent SAWarning
+            # Support both old and new naming conventions
             public_stmt = select(Circle).filter(
                 Circle.user_id == user_id,
                 Circle.circle_user_id.isnot(None),
@@ -3216,22 +3231,39 @@ def circles():
                 if not circle.circle_user_id:
                     logger.warning(f"Circle {circle.id} has NULL circle_user_id for user {user_id}")
                     return None
-                    
+
                 user = db.session.get(User, circle.circle_user_id)
                 if user:
                     return {
                         'id': user.id,
                         'username': user.username,
-                        'email': user.email
+                        'email': user.email,
+                        'display_name': user.display_name or user.username
                     }
                 logger.warning(f"User {circle.circle_user_id} not found for circle {circle.id}")
                 return None
 
-            return jsonify({
-                 'public': [info for c in public if (info := get_user_info(c))],
-    'class_b': [info for c in class_b if (info := get_user_info(c))],
-    'class_a': [info for c in class_a if (info := get_user_info(c))]
-            })
+            # Apply privacy filtering
+            result = {
+                'public': [],
+                'class_b': [],
+                'class_a': []
+            }
+
+            if circles_privacy == 'public':
+                # Show all circles
+                result['public'] = [info for c in public if (info := get_user_info(c))]
+                result['class_b'] = [info for c in class_b if (info := get_user_info(c))]
+                result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
+            elif circles_privacy == 'class_b':
+                # Show only Class B and Class A
+                result['class_b'] = [info for c in class_b if (info := get_user_info(c))]
+                result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
+            elif circles_privacy == 'class_a':
+                # Show only Class A
+                result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
+
+            return jsonify(result)
 
         except Exception as e:
             logger.error(f"Get circles error: {str(e)}")
@@ -3248,7 +3280,10 @@ def circles():
             type_mapping = {
                 'general': 'public',
                 'close_friends': 'class_b',
-                'family': 'class_a'
+                'family': 'class_a',
+                'public': 'public',
+                'class_b': 'class_b',
+                'class_a': 'class_a'
             }
             circle_type = type_mapping.get(circle_type, circle_type)
 
@@ -3278,6 +3313,7 @@ def circles():
             db.session.add(circle)
             db.session.commit()
 
+            logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
             return jsonify({'success': True, 'message': 'User added to circle'})
 
         except Exception as e:
@@ -3309,18 +3345,28 @@ def remove_from_circle():
 
         logger.info(f"Removing user {circle_user_id} from circle {circle_type} for user {user_id}")
 
-        # Use PostgreSQL with %s placeholders
-        conn = get_db()
-        cursor = conn.cursor()
+        # Map old names to new names for backwards compatibility
+        type_mapping = {
+            'general': 'public',
+            'close_friends': 'class_b',
+            'family': 'class_a',
+            'public': 'public',
+            'class_b': 'class_b',
+            'class_a': 'class_a'
+        }
+        circle_type = type_mapping.get(circle_type, circle_type)
 
-        cursor.execute('''
-            DELETE FROM circle_members 
-            WHERE user_id = %s AND member_id = %s AND circle = %s
-        ''', (user_id, circle_user_id, circle_type))
+        # Use SQLAlchemy to delete from circles table (NOT circle_members)
+        stmt = select(Circle).filter_by(
+            user_id=user_id,
+            circle_user_id=circle_user_id,
+            circle_type=circle_type
+        )
+        circle = db.session.execute(stmt).scalar_one_or_none()
 
-        conn.commit()
-
-        if cursor.rowcount > 0:
+        if circle:
+            db.session.delete(circle)
+            db.session.commit()
             logger.info(f"Successfully removed user {circle_user_id} from circle {circle_type}")
             return jsonify({'success': True})
         else:
@@ -3329,105 +3375,43 @@ def remove_from_circle():
 
     except Exception as e:
         logger.error(f"Remove from circle error: {str(e)}", exc_info=True)
+        db.session.rollback()
         return jsonify({'error': 'Failed to remove from circle'}), 500
 
 
 def migrate_circle_names():
     """Migrate old circle names to new ones in the database"""
     try:
-        conn = get_db()
-        cursor = conn.cursor()
-
-        # Just check that circle_members table exists
-        cursor.execute("""
-            SELECT COUNT(*) FROM circle_members
-        """)
-
-        conn.commit()
-        app.logger.info("Circle names check completed")
-    except Exception as e:
-        app.logger.error(f"Error checking circle names: {e}")
-
-
-@app.route('/api/circles')
-@login_required
-def get_circles():
-    """Get user's circles with members - respects privacy settings"""
-    try:
-        user_id = session.get('user_id')
-        conn = get_db()
-        cursor = conn.cursor()
-
-        # Check privacy setting
-        cursor.execute('SELECT circles_privacy FROM users WHERE id = ?', (user_id,))
-        privacy_row = cursor.fetchone()
-        circles_privacy = privacy_row[0] if privacy_row else 'public'
-
-        logger.info(f"User {user_id} circles privacy: {circles_privacy}")
-
-        # If circles are completely private, return empty circles
-        if circles_privacy == 'private':
-            return jsonify({
-                'public': [],
-                'class_b': [],
-                'class_a': [],
-                'private': True
-            }), 200
-
-        # Initialize circles with new naming convention
-        circles = {
-            'public': [],
-            'class_b': [],
-            'class_a': []
-        }
-
-        # Map old circle names to new ones
-        circle_name_map = {
+        # Map old names to new names
+        name_mapping = {
             'general': 'public',
             'close_friends': 'class_b',
-            'family': 'class_a',
-            'public': 'public',
-            'class_b': 'class_b',
-            'class_a': 'class_a'
+            'family': 'class_a'
         }
 
-        cursor.execute('''
-            SELECT cm.circle, u.id, u.username, u.display_name, u.email
-            FROM circle_members cm
-            JOIN users u ON cm.member_id = u.id
-            WHERE cm.user_id = ?
-        ''', (user_id,))
+        migrated_count = 0
 
-        for row in cursor.fetchall():
-            circle_name = row[0]
-            # Map old names to new names
-            new_circle_name = circle_name_map.get(circle_name, circle_name)
+        # Get all circles with old names and update them
+        for old_name, new_name in name_mapping.items():
+            stmt = select(Circle).filter_by(circle_type=old_name)
+            old_circles = db.session.execute(stmt).scalars().all()
 
-            member_data = {
-                'id': row[1],
-                'username': row[2],
-                'display_name': row[3] or row[2],
-                'email': row[4]
-            }
+            for circle in old_circles:
+                logger.info(f"Migrating circle {circle.id} from '{old_name}' to '{new_name}'")
+                circle.circle_type = new_name
+                migrated_count += 1
 
-            # Apply privacy filtering
-            if circles_privacy == 'class_a':
-                # Only show Class A (family)
-                if new_circle_name == 'class_a':
-                    circles[new_circle_name].append(member_data)
-            elif circles_privacy == 'class_b':
-                # Show Class A and Class B
-                if new_circle_name in ['class_a', 'class_b']:
-                    circles[new_circle_name].append(member_data)
-            else:  # 'public' - show all circles
-                if new_circle_name in circles:
-                    circles[new_circle_name].append(member_data)
-
-        return jsonify(circles), 200
+        if migrated_count > 0:
+            db.session.commit()
+            app.logger.info(f"Circle names migration completed: {migrated_count} circles updated")
+        else:
+            app.logger.info("Circle names check completed - no migration needed")
 
     except Exception as e:
-        app.logger.error(f"Error getting circles: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to load circles'}), 500
+        app.logger.error(f"Error checking circle names: {e}")
+        db.session.rollback()
+
+
 
 
 @app.route('/api/circles/membership/<int:check_user_id>', methods=['GET'])
