@@ -113,39 +113,33 @@
             // Handle language changes
        // Handle language changes
       // Handle language changes with debouncing to prevent flashing
-            window.addEventListener('languageChanged', (event) => {
-                // Debounce rapid language changes
-                const now = Date.now();
-                if (!window.lastLanguageChange) {
-                    window.lastLanguageChange = 0;
-                }
-                if (now - window.lastLanguageChange < 500) {
-                    console.log('Ignoring rapid language change');
-                    return;
-                }
-                window.lastLanguageChange = now;
+   window.addEventListener('languageChanged', (event) => {
+    console.log('Language changed to:', event.detail?.language || window.i18n?.currentLanguage);
 
-                // DON'T call applyLanguage() here - it causes infinite loop!
-                // The applyLanguage() function already dispatched this event
+    // Update RTL direction
+    const rtlLanguages = ['ar', 'he'];
+    if (window.i18n && rtlLanguages.includes(window.i18n.currentLanguage)) {
+        document.body.setAttribute('dir', 'rtl');
+    } else {
+        document.body.setAttribute('dir', 'ltr');
+    }
 
-                // Update RTL direction
-                const rtlLanguages = ['ar', 'he'];
-                if (window.i18n && rtlLanguages.includes(window.i18n.currentLanguage)) {
-                    document.body.setAttribute('dir', 'rtl');
-                } else {
-                    document.body.setAttribute('dir', 'ltr');
-                }
+    // Update circle display names (using correct function name)
+    if (typeof updateCircleDisplay === 'function') {
+        updateCircleDisplay();
+    }
 
-                // Update circle displays with new translations
-                if (typeof updateCirclesDisplay === 'function') {
-                    updateCirclesDisplay();
-                }
+    // Update display names from feed-updates.js
+    if (typeof updateCircleDisplays === 'function') {
+        updateCircleDisplays();
+    }
 
-                // Reload circles to apply translations
-                if (typeof loadCircles === 'function') {
-                    loadCircles();
-                }
-            });
+    // Re-render UI with new translations WITHOUT reloading data from server
+    // This prevents the infinite loop caused by loadCircles() triggering syncLanguageWithBackend()
+    if (typeof renderCirclesUI === 'function') {
+        renderCirclesUI();
+    }
+});
         });
     </script>
 </body>
