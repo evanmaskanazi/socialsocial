@@ -353,7 +353,7 @@ window.circlesHTML = `
         <!-- Language Selector -->
         <div style="text-align: center; margin-bottom: 20px;">
             <label for="languageSelect" style="margin-right: 10px; color: #8898aa;" data-i18n="settings.language">Language:</label>
-            <select id="languageSelect" onchange="window.i18n.changeLanguage(this.value)" style="padding: 8px 15px; border: 2px solid #dfe1e6; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
+            <select id="languageSelect" onchange="window.i18n.setLanguage(this.value)" style="padding: 8px 15px; border: 2px solid #dfe1e6; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
                 <option value="en">English</option>
                 <option value="he">עברית (Hebrew)</option>
                 <option value="ar">العربية (Arabic)</option>
@@ -668,37 +668,6 @@ async function searchUsers() {
     }
 }
 
-// Add user to circle
-async function addToCircle(userId, circleType) {
-    if (!circleType) return;
-
-    try {
-        const response = await fetch('/api/circles', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                user_id: userId,
-                circle_type: circleType
-            })
-        });
-
-        if (response.ok) {
-            loadCircles();
-            document.getElementById('searchResults').classList.remove('active');
-            document.getElementById('userSearchInput').value = '';
-            if (window.showMessage) {
-                window.showMessage('Member added to circle', 'success');
-            }
-        }
-    } catch (error) {
-        console.error('Error adding to circle:', error);
-        if (window.showMessage) {
-            window.showMessage('Error adding member', 'error');
-        }
-    }
-}
 
 // Initialize circles
 function initializeCircles() {
@@ -770,65 +739,7 @@ function updateCircleDisplay(circleType, members, containerId, countId) {
     }
 }
 
-async function searchUsers() {
-    const input = document.getElementById('userSearchInput');
-    if (!input) return;
 
-    const query = input.value;
-    if (query.length < 2) {
-        const results = document.getElementById('searchResults');
-        if (results) results.classList.remove('active');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        displaySearchResults(data.users || []);
-    } catch (error) {
-        console.error('Error searching users:', error);
-        showNotification(t('error.searching', 'Error searching users'), 'error');
-    }
-}
-
-function displaySearchResults(users) {
-    const resultsContainer = document.getElementById('searchResults');
-    if (!resultsContainer) return;
-
-    if (!users || users.length === 0) {
-        resultsContainer.innerHTML = `<div class="search-result-item">${t('circles.no_users_found', 'No users found')}</div>`;
-    } else {
-        resultsContainer.innerHTML = users.map(user => {
-            if (!user || !user.username || !user.id) return '';
-            return `
-                <div class="search-result-item">
-                    <div class="user-info">
-                        <div class="user-avatar">${user.username[0].toUpperCase()}</div>
-                        <div>
-                            <div style="font-weight: 600;">${escapeHtml(user.username)}</div>
-                            <div style="font-size: 14px; color: #8898aa;">${escapeHtml(user.email || '')}</div>
-                        </div>
-                    </div>
-                     <select class="add-to-circle-btn" onchange="addToCircle(${user.id}, this.value, '${escapeHtml(user.username).replace(/'/g, "\\'")}')">
-    <option value="">${t('circles.add_to_circle', 'Add to circle...')}</option>
-    <option value="public">${t('circles.public', 'Public')}</option>
-    <option value="class_b">${t('circles.class_b', 'Class B (Friends)')}</option>
-    <option value="class_a">${t('circles.class_a', 'Class A (Family)')}</option>
-                    </select>
-                </div>
-            `;
-        }).filter(html => html).join('');
-    }
-
-    resultsContainer.classList.add('active');
-}
 
 async function addToCircle(userId, circleType, username) {
     if (!circleType || !userId) return;
