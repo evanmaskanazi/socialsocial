@@ -13,12 +13,14 @@ const FEED_CIRCLE_MAP = {
     'general': 'public',
     'close_friends': 'class_b',
     'family': 'class_a',
+    'private': 'private',
     'public': 'public',
     'class_b': 'class_b',
     'class_a': 'class_a',
     1: 'public',
     2: 'class_b',
-    3: 'class_a'
+    3: 'class_a',
+    4: 'private'
 };
 
 // Helper function to normalize circle names
@@ -39,7 +41,8 @@ function getCircleDisplayName(circle) {
         'family': 'Class A (Family)',
         1: 'Public',
         2: 'Class B (Friends)',
-        3: 'Class A (Family)'
+        3: 'Class A (Family)',
+        4: 'Private'
     };
     return displayMap[normalized] || displayMap[circle] || circle;
 }
