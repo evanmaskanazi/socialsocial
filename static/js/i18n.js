@@ -449,6 +449,7 @@ const translations = {
 'auth.reset_failed': 'Failed to send reset link',
 'auth.password_reset_success': 'Password has been reset successfully',
 'auth.enter_email': 'Enter your email',
+'parameters.home': 'Home',
 
 
 
@@ -566,6 +567,7 @@ const translations = {
 'about.and': ' ואת ',
 'about.on_linkedin': ' בלינקדאין',
 'btn.signin': 'התחבר',
+'parameters.home': 'בית',
 
  // Support page
     'support.title': 'מרכז תמיכה',
@@ -1122,6 +1124,7 @@ const translations = {
 'auth.reset_failed': 'فشل إرسال رابط إعادة التعيين',
 'auth.password_reset_success': 'تم إعادة تعيين كلمة المرور بنجاح',
 'auth.enter_email': 'أدخل بريدك الإلكتروني',
+'parameters.home': 'الصفحة الرئيسية',
 
   'support.title': 'مركز الدعم',
     'support.subtitle': 'نحن هنا للمساعدة! اختر كيف تريد الاتصال بنا أو العثور على إجابات لأسئلتك.',
@@ -1650,6 +1653,7 @@ const translations = {
 'auth.reset_failed': 'Не удалось отправить ссылку для сброса',
 'auth.password_reset_success': 'Пароль успешно сброшен',
 'auth.enter_email': 'Введите вашу электронную почту',
+'parameters.home': 'Главная',
     // About page
     'about.title': 'О TheraSocial',
     'about.subtitle': 'Ваш надежный спутник для терапевтической практики и личного пути к здоровью',
