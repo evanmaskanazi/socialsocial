@@ -29,7 +29,7 @@
 </head>
 <body>
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;">Loading circles...</div>
-    <div id="circlesContainer" style="opacity: 0; transition: opacity 0.3s;"></div>
+    <div id="circlesContainer" style="visibility: hidden;"></div>
 
     <script src="/static/js/i18n.js"></script>
    <script src="/static/js/circles-messages.js?v=20241107"></script>
@@ -53,6 +53,15 @@
             }
         }
 
+        // Wait for circles data to actually load
+        async function waitForCirclesData(maxWaitMs = 3000) {
+            const startTime = Date.now();
+            while (!window.circlesData && (Date.now() - startTime) < maxWaitMs) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            return !!window.circlesData;
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('Circles page loading...');
 
@@ -74,10 +83,10 @@
                 addCircleTranslations();
             }
 
-            // Load the HTML (but keep it invisible)
+            // Load the HTML structure (but keep it hidden)
             if (typeof circlesHTML !== 'undefined') {
                 document.getElementById('circlesContainer').innerHTML = circlesHTML;
-                console.log('Circles HTML loaded');
+                console.log('Circles HTML loaded (hidden)');
             } else {
                 console.error('circlesHTML not found');
                 return;
@@ -100,25 +109,38 @@
                 updateCircleDisplay();
             }
 
-            // Initialize circles (this fetches the data)
+            // Start loading circles data
+            let dataLoadStarted = false;
             if (typeof initializeCircles === 'function') {
                 console.log('Calling initializeCircles');
                 initializeCircles();
+                dataLoadStarted = true;
             } else if (typeof loadCircles === 'function') {
                 console.log('Calling loadCircles');
                 loadCircles();
+                dataLoadStarted = true;
             } else {
                 console.error('No circle initialization function found');
             }
 
-            // Wait a moment for data to load, then fade in
-            setTimeout(() => {
-                const container = document.getElementById('circlesContainer');
-                const loadingDiv = document.getElementById('loadingMessage');
+            // Wait for the actual data to load
+            if (dataLoadStarted) {
+                console.log('Waiting for circles data...');
+                const dataLoaded = await waitForCirclesData(3000);
                 
-                container.style.opacity = '1';
-                if (loadingDiv) loadingDiv.style.display = 'none';
-            }, 800);
+                if (dataLoaded) {
+                    console.log('Circles data loaded, showing content');
+                } else {
+                    console.warn('Timeout waiting for circles data, showing anyway');
+                }
+            }
+
+            // NOW show the content with data already populated
+            const container = document.getElementById('circlesContainer');
+            const loadingDiv = document.getElementById('loadingMessage');
+            
+            container.style.visibility = 'visible';
+            if (loadingDiv) loadingDiv.style.display = 'none';
 
             // Handle language changes
        // Handle language changes
@@ -155,3 +177,4 @@
 </body>
 
 </html>
+
