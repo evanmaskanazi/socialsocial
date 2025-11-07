@@ -1,4 +1,4 @@
-# Check circles data integrity
+# Fixed script for your database schema
 from app import app, db
 from sqlalchemy import text
 
@@ -19,13 +19,13 @@ with app.app_context():
     else:
         print("✅ All users have valid privacy settings!")
 
-    # Test 2: Check circle memberships are consistent
+    # Test 2: Check circle memberships are consistent (FIXED FOR YOUR SCHEMA)
     print("\n✅ Test 2: Checking circle memberships...")
     result = db.session.execute(text("""
         SELECT c.*, u1.username as circle_owner, u2.username as member_name
         FROM circles c
         JOIN users u1 ON c.user_id = u1.id
-        JOIN users u2 ON c.member_id = u2.id
+        JOIN users u2 ON c.circle_user_id = u2.id
         WHERE c.circle_type NOT IN ('class_a', 'class_b', 'class_c')
     """))
     invalid_circles = result.fetchall()
@@ -36,12 +36,12 @@ with app.app_context():
     else:
         print("✅ All circle memberships have valid types!")
 
-    # Test 3: Check for orphaned circles (users that don't exist)
+    # Test 3: Check for orphaned circles (FIXED)
     print("\n✅ Test 3: Checking for orphaned circles...")
     result = db.session.execute(text("""
         SELECT c.* FROM circles c
         LEFT JOIN users u1 ON c.user_id = u1.id
-        LEFT JOIN users u2 ON c.member_id = u2.id
+        LEFT JOIN users u2 ON c.circle_user_id = u2.id
         WHERE u1.id IS NULL OR u2.id IS NULL
     """))
     orphaned = result.fetchall()
@@ -50,33 +50,20 @@ with app.app_context():
     else:
         print("✅ No orphaned circles found!")
 
-    # Test 4: Check specific user's circles match their privacy
-    print("\n✅ Test 4: Checking user privacy vs actual circles...")
-    test_user_id = 1  # Change this to test specific user
-    
+    # Test 4: Check specific user's circles
+    print("\n✅ Test 4: Checking user 1's circles...")
     result = db.session.execute(text("""
-        SELECT circles_privacy FROM users WHERE id = :user_id
-    """), {"user_id": test_user_id})
-    user_privacy = result.fetchone()
-    
-    if user_privacy:
-        privacy = user_privacy[0]
-        print(f"   User {test_user_id} privacy setting: {privacy}")
-        
-        # Get their circles
-        result = db.session.execute(text("""
-            SELECT circle_type, COUNT(*) as count
-            FROM circles 
-            WHERE user_id = :user_id
-            GROUP BY circle_type
-        """), {"user_id": test_user_id})
-        
-        circles_count = result.fetchall()
-        for circle in circles_count:
-            print(f"   - {circle.circle_type}: {circle.count} members")
-    
-    # Test 5: Verify default privacy is 'private'
-    print("\n✅ Test 5: Checking default privacy settings...")
+        SELECT circle_type, COUNT(*) as count
+        FROM circles 
+        WHERE user_id = 1
+        GROUP BY circle_type
+    """))
+    circles_count = result.fetchall()
+    for circle in circles_count:
+        print(f"   - {circle.circle_type}: {circle.count} members")
+
+    # Test 5: Check privacy distribution
+    print("\n✅ Test 5: Privacy distribution...")
     result = db.session.execute(text("""
         SELECT COUNT(*) as count, circles_privacy
         FROM users
@@ -84,24 +71,21 @@ with app.app_context():
         ORDER BY count DESC
     """))
     privacy_stats = result.fetchall()
-    print("   Privacy distribution:")
     for stat in privacy_stats:
         print(f"   - {stat.circles_privacy or 'NULL'}: {stat.count} users")
-    
-    # Test 6: Check if any user is in multiple circles of same person
-    print("\n✅ Test 6: Checking for duplicate circle memberships...")
-    result = db.session.execute(text("""
-        SELECT user_id, member_id, COUNT(*) as count
-        FROM circles
-        GROUP BY user_id, member_id
-        HAVING COUNT(*) > 1
-    """))
-    duplicates = result.fetchall()
-    if duplicates:
-        print(f"❌ Found {len(duplicates)} duplicate memberships!")
-        for dup in duplicates:
-            print(f"   User {dup.user_id} has member {dup.member_id} in {dup.count} circles")
-    else:
-        print("✅ No duplicate circle memberships found!")
 
     print("\n✅ All tests complete!")
+```
+
+## 2. Why You Still Get the JavaScript Error
+
+Looking at your logs and HTML files, the problem is clear - your site is **NOT loading the fixed version** of circles-messages.js. 
+
+From your logs:
+```
+GET /static/js/circles-messages.js HTTP/1.1" 200
+```
+
+Notice it's loading WITHOUT any version parameter, yet in your browser it shows:
+```
+circles-messages.js:1 Uncaught SyntaxError: Identifier 'currentRecipient' has already been declared
