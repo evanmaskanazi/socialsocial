@@ -186,15 +186,26 @@ def send_password_reset_email(user_email, reset_token):
         message.attach(part1)
         message.attach(part2)
 
-        # Send email
+        # Send email with proper TLS context
+        import ssl
+        context = ssl.create_default_context()
+
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
+            server.ehlo()  # Identify ourselves to the SMTP server
+            server.starttls(context=context)  # Enable TLS with proper context
+            server.ehlo()  # Re-identify after TLS
+
+            # Use app password (not regular password)
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(message)
 
         logger.info(f"Password reset email sent to {user_email}")
         return True
 
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(
+            f"SMTP Authentication failed - Please verify: 1) Using App Password (not regular password) 2) 2-Step Verification enabled 3) Less secure app access if needed. Error: {e}")
+        return False
     except Exception as e:
         logger.error(f"Failed to send password reset email: {e}")
         return False
