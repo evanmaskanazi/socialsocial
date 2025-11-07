@@ -3786,9 +3786,13 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
 
       async function loadMessages(userId, username) {
     // Validate inputs
+  // Validate inputs
     if (!userId || !username) {
         console.error('Invalid userId or username:', { userId, username });
-        alert(window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error: Invalid user data');
+        // Don't show error alert for unauthenticated users
+        if (authToken) {
+            alert(window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error: Invalid user data');
+        }
         return;
     }
 
