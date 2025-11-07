@@ -3355,12 +3355,15 @@ def circles():
                     if viewer_circle_level in ['class_b', 'class_a']:
                         result['class_b'] = [info for c in class_b if (info := get_user_info(c))]
                         result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
+                        result['public'] = [info for c in public if (info := get_user_info(c))]
                     # else: viewer is only in public circle, can't see anything (result stays empty)
 
                 elif circles_privacy == 'class_a':
                     # Only Class A members can see
                     if viewer_circle_level == 'class_a':
                         result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
+                        result['public'] = [info for c in public if (info := get_user_info(c))]
+                        result['class_b'] = [info for c in class_b if (info := get_user_info(c))]
                     # else: viewer is not in class_a, can't see anything (result stays empty)
 
             return jsonify(result)
