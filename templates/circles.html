@@ -29,7 +29,7 @@
 </head>
 <body>
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;">Loading circles...</div>
-    <div id="circlesContainer" style="display: none;"></div>
+    <div id="circlesContainer" style="opacity: 0; transition: opacity 0.3s;"></div>
 
     <script src="/static/js/i18n.js"></script>
    <script src="/static/js/circles-messages.js?v=20241107"></script>
@@ -74,13 +74,9 @@
                 addCircleTranslations();
             }
 
-            // Load the HTML
+            // Load the HTML (but keep it invisible)
             if (typeof circlesHTML !== 'undefined') {
                 document.getElementById('circlesContainer').innerHTML = circlesHTML;
-                // Show container, hide loading message
-                document.getElementById('circlesContainer').style.display = 'block';
-                const loadingDiv = document.getElementById('loadingMessage');
-                if (loadingDiv) loadingDiv.style.display = 'none';
                 console.log('Circles HTML loaded');
             } else {
                 console.error('circlesHTML not found');
@@ -104,7 +100,7 @@
                 updateCircleDisplay();
             }
 
-            // Initialize circles
+            // Initialize circles (this fetches the data)
             if (typeof initializeCircles === 'function') {
                 console.log('Calling initializeCircles');
                 initializeCircles();
@@ -114,6 +110,15 @@
             } else {
                 console.error('No circle initialization function found');
             }
+
+            // Wait a moment for data to load, then fade in
+            setTimeout(() => {
+                const container = document.getElementById('circlesContainer');
+                const loadingDiv = document.getElementById('loadingMessage');
+                
+                container.style.opacity = '1';
+                if (loadingDiv) loadingDiv.style.display = 'none';
+            }, 800);
 
             // Handle language changes
        // Handle language changes
