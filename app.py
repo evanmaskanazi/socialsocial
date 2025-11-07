@@ -3333,38 +3333,35 @@ def circles():
             }
 
             if is_viewing_own:
-                # Owner sees everything based on their privacy setting
-                if circles_privacy == 'public':
-                    result['public'] = [info for c in public if (info := get_user_info(c))]
-                    result['class_b'] = [info for c in class_b if (info := get_user_info(c))]
-                    result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
-                elif circles_privacy == 'class_b':
-                    result['class_b'] = [info for c in class_b if (info := get_user_info(c))]
-                    result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
-                elif circles_privacy == 'class_a':
-                    result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
+                # ✅ OWNER ALWAYS SEES ALL THEIR CIRCLES (regardless of privacy setting)
+                result['public'] = [info for c in public if (info := get_user_info(c))]
+                result['class_b'] = [info for c in class_b if (info := get_user_info(c))]
+                result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
             else:
-                # Viewer sees based on their circle level AND privacy setting
-                # They can only see circles if their level meets the privacy requirement
+                # ✅ VIEWING SOMEONE ELSE'S CIRCLES - Apply privacy rules
 
-                if circles_privacy == 'public':
-                    # Anyone can see all circles
+                if circles_privacy == 'private':
+                    # Nobody sees anything (already returned earlier, but just in case)
+                    pass  # result stays empty
+
+                elif circles_privacy == 'public':
+                    # Everyone sees all circles
                     result['public'] = [info for c in public if (info := get_user_info(c))]
                     result['class_b'] = [info for c in class_b if (info := get_user_info(c))]
                     result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
 
                 elif circles_privacy == 'class_b':
-                    # Only Class B and Class A can see
+                    # Only Class B and Class A members can see
                     if viewer_circle_level in ['class_b', 'class_a']:
                         result['class_b'] = [info for c in class_b if (info := get_user_info(c))]
                         result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
-                    # else: viewer is only in public, can't see anything (already empty)
+                    # else: viewer is only in public circle, can't see anything (result stays empty)
 
                 elif circles_privacy == 'class_a':
-                    # Only Class A can see
+                    # Only Class A members can see
                     if viewer_circle_level == 'class_a':
                         result['class_a'] = [info for c in class_a if (info := get_user_info(c))]
-                    # else: viewer is not in class_a, can't see anything (already empty)
+                    # else: viewer is not in class_a, can't see anything (result stays empty)
 
             return jsonify(result)
 
