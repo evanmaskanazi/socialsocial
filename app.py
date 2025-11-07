@@ -3220,40 +3220,63 @@ def circles():
 
     if request.method == 'GET':
         try:
-            # Check privacy setting first
-            user = db.session.get(User, user_id)
-            circles_privacy = getattr(user, 'circles_privacy', 'public') if user else 'public'
+            # NEW: Support viewing another user's circles
+            viewing_user_id = request.args.get('user_id', type=int)
 
-            logger.info(f"User {user_id} circles privacy: {circles_privacy}")
+            # If no user_id specified, show logged-in user's circles
+            target_user_id = viewing_user_id if viewing_user_id else user_id
+            is_viewing_own = (target_user_id == user_id)
 
-            # If circles are completely private, return empty circles with flag
-            if circles_privacy == 'private':
-                return jsonify({
-                    'public': [],
-                    'class_b': [],
-                    'class_a': [],
-                    'private': True
-                })
+            # Get target user
+            target_user = db.session.get(User, target_user_id)
+            if not target_user:
+                return jsonify({'error': 'User not found'}), 404
+
+            circles_privacy = getattr(target_user, 'circles_privacy', 'public')
+
+            logger.info(
+                f"User {user_id} viewing circles of user {target_user_id} (privacy: {circles_privacy}, is_own: {is_viewing_own})")
+
+            # If viewing someone else's circles, check follow status
+            if not is_viewing_own:
+                is_following = db.session.execute(
+                    select(Follow).filter_by(
+                        follower_id=user_id,
+                        followed_id=target_user_id
+                    )
+                ).scalar_one_or_none()
+
+                if not is_following:
+                    return jsonify({'error': 'Must be following user to view circles'}), 403
+
+                # If circles are private AND viewing someone else's, return empty
+                if circles_privacy == 'private':
+                    return jsonify({
+                        'public': [],
+                        'class_b': [],
+                        'class_a': [],
+                        'private': True
+                    })
 
             # Get all circles - SQLAlchemy 2.0 style
             # Filter out circles with NULL circle_user_id to prevent SAWarning
             # Support both old and new naming conventions
             public_stmt = select(Circle).filter(
-                Circle.user_id == user_id,
+                Circle.user_id == target_user_id,
                 Circle.circle_user_id.isnot(None),
                 or_(Circle.circle_type == 'public', Circle.circle_type == 'general')
             )
             public = db.session.execute(public_stmt).scalars().all()
 
             class_b_stmt = select(Circle).filter(
-                Circle.user_id == user_id,
+                Circle.user_id == target_user_id,
                 Circle.circle_user_id.isnot(None),
                 or_(Circle.circle_type == 'class_b', Circle.circle_type == 'close_friends')
             )
             class_b = db.session.execute(class_b_stmt).scalars().all()
 
             class_a_stmt = select(Circle).filter(
-                Circle.user_id == user_id,
+                Circle.user_id == target_user_id,
                 Circle.circle_user_id.isnot(None),
                 or_(Circle.circle_type == 'class_a', Circle.circle_type == 'family')
             )
@@ -3262,7 +3285,7 @@ def circles():
             def get_user_info(circle):
                 """Safely get user info, handling None/NULL circle_user_id"""
                 if not circle.circle_user_id:
-                    logger.warning(f"Circle {circle.id} has NULL circle_user_id for user {user_id}")
+                    logger.warning(f"Circle {circle.id} has NULL circle_user_id for user {target_user_id}")
                     return None
 
                 user = db.session.get(User, circle.circle_user_id)
