@@ -2717,11 +2717,16 @@ function handleCirclesClick(event) {
         event.preventDefault();
     }
 
-    console.log('[DEBUG] handleCirclesClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+  console.log('[DEBUG] handleCirclesClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
 
-    // Always redirect to circles page
-    console.log('[DEBUG] Redirecting to /circles');
-    window.location.href = '/circles';
+    // Redirect to circles page with user_id if viewing someone else's profile
+    if (viewingUserId && viewingUserId !== currentUserId) {
+        console.log('[DEBUG] Redirecting to /circles with user_id:', viewingUserId);
+        window.location.href = `/circles?user_id=${viewingUserId}`;
+    } else {
+        console.log('[DEBUG] Redirecting to own /circles');
+        window.location.href = '/circles';
+    }
 }
 
 
