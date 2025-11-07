@@ -28,7 +28,8 @@
     </style>
 </head>
 <body>
-    <div id="circlesContainer"></div>
+    <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;">Loading circles...</div>
+    <div id="circlesContainer" style="display: none;"></div>
 
     <script src="/static/js/i18n.js"></script>
    <script src="/static/js/circles-messages.js?v=20241107"></script>
@@ -76,6 +77,10 @@
             // Load the HTML
             if (typeof circlesHTML !== 'undefined') {
                 document.getElementById('circlesContainer').innerHTML = circlesHTML;
+                // Show container, hide loading message
+                document.getElementById('circlesContainer').style.display = 'block';
+                const loadingDiv = document.getElementById('loadingMessage');
+                if (loadingDiv) loadingDiv.style.display = 'none';
                 console.log('Circles HTML loaded');
             } else {
                 console.error('circlesHTML not found');
