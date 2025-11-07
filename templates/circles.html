@@ -29,7 +29,7 @@
 </head>
 <body>
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;">Loading circles...</div>
-    <div id="circlesContainer" style="visibility: hidden;"></div>
+    <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
     <script src="/static/js/i18n.js"></script>
    <script src="/static/js/circles-messages.js?v=20241107"></script>
@@ -53,13 +53,52 @@
             }
         }
 
-        // Wait for circles data to actually load
-        async function waitForCirclesData(maxWaitMs = 3000) {
-            const startTime = Date.now();
-            while (!window.circlesData && (Date.now() - startTime) < maxWaitMs) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-            return !!window.circlesData;
+        // Monitor DOM for when circles are actually populated
+        function waitForCirclesPopulated(maxWaitMs = 3000) {
+            return new Promise((resolve) => {
+                const startTime = Date.now();
+
+                const checkPopulated = () => {
+                    // Check if any member containers have actual member content (not just empty state)
+                    const publicMembers = document.getElementById('publicMembers');
+                    const classBMembers = document.getElementById('class_bMembers');
+                    const classAMembers = document.getElementById('class_aMembers');
+
+                    // Check if at least one circle has been populated with real data
+                    // (has member-item divs or has been set to private message)
+                    const hasRealContent =
+                        (publicMembers && (
+                            publicMembers.querySelector('.member-item') ||
+                            publicMembers.textContent.includes('private')
+                        )) ||
+                        (classBMembers && (
+                            classBMembers.querySelector('.member-item') ||
+                            classBMembers.textContent.includes('private')
+                        )) ||
+                        (classAMembers && (
+                            classAMembers.querySelector('.member-item') ||
+                            classAMembers.textContent.includes('private')
+                        ));
+
+                    if (hasRealContent) {
+                        console.log('Circles populated with real data');
+                        resolve(true);
+                        return;
+                    }
+
+                    // Timeout check
+                    if (Date.now() - startTime > maxWaitMs) {
+                        console.warn('Timeout waiting for circles to populate');
+                        resolve(false);
+                        return;
+                    }
+
+                    // Check again in 50ms
+                    setTimeout(checkPopulated, 50);
+                };
+
+                checkPopulated();
+            });
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -83,10 +122,10 @@
                 addCircleTranslations();
             }
 
-            // Load the HTML structure (but keep it hidden)
+            // Load the HTML structure FIRST (but keep it invisible with opacity: 0)
             if (typeof circlesHTML !== 'undefined') {
                 document.getElementById('circlesContainer').innerHTML = circlesHTML;
-                console.log('Circles HTML loaded (hidden)');
+                console.log('Circles HTML loaded (invisible)');
             } else {
                 console.error('circlesHTML not found');
                 return;
@@ -105,42 +144,32 @@
                 }
             }
 
-             if (typeof updateCircleDisplay === 'function') {
+            if (typeof updateCircleDisplay === 'function') {
                 updateCircleDisplay();
             }
 
-            // Start loading circles data
-            let dataLoadStarted = false;
+            // Initialize circles (this will populate the invisible HTML)
             if (typeof initializeCircles === 'function') {
                 console.log('Calling initializeCircles');
                 initializeCircles();
-                dataLoadStarted = true;
             } else if (typeof loadCircles === 'function') {
                 console.log('Calling loadCircles');
                 loadCircles();
-                dataLoadStarted = true;
             } else {
                 console.error('No circle initialization function found');
             }
 
-            // Wait for the actual data to load
-            if (dataLoadStarted) {
-                console.log('Waiting for circles data...');
-                const dataLoaded = await waitForCirclesData(3000);
-                
-                if (dataLoaded) {
-                    console.log('Circles data loaded, showing content');
-                } else {
-                    console.warn('Timeout waiting for circles data, showing anyway');
-                }
-            }
+            // Wait for the DOM to be populated with real data
+            console.log('Waiting for circles to be populated...');
+            await waitForCirclesPopulated(3000);
 
-            // NOW show the content with data already populated
+            // NOW fade in the content (with fresh data already in place)
             const container = document.getElementById('circlesContainer');
             const loadingDiv = document.getElementById('loadingMessage');
-            
-            container.style.visibility = 'visible';
+
+            container.style.opacity = '1';
             if (loadingDiv) loadingDiv.style.display = 'none';
+            console.log('Circles now visible');
 
             // Handle language changes
        // Handle language changes
