@@ -2146,7 +2146,9 @@
     let currentMonth = new Date();
     let savedDates = [];
     let currentYear = new Date().getFullYear(); // ADD THIS LINE
-    let currentRecipient = null;
+    if (typeof currentRecipient === 'undefined') {
+    var currentRecipient = null;
+}
 </script>
 <script src="/static/js/parameters-social.js"></script>
     <script src="/static/js/circles-messages.js"></script>
@@ -2158,7 +2160,9 @@
     let currentUser = null;
     let isLoginMode = true;
     let viewingUserId = null; // Track which user profile we're viewing
-let currentUserId = null;
+if (typeof currentUserId === 'undefined') {
+    var currentUserId = null;
+}
     // Variables above already declared before parameters-social.js
 
         // Helper function to format message time with translation
