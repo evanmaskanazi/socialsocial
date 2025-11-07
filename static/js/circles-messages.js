@@ -464,6 +464,33 @@ let loadCirclesTimeout = null;
 let lastLanguageChange = 0;
 const LANGUAGE_CHANGE_DELAY = 500; // ms
 
+
+// NEW: Function to show private circles message
+function showPrivateCirclesMessage() {
+    const container = document.querySelector('.circles-grid');
+    if (container) {
+        container.innerHTML = `
+            <div style="
+                grid-column: 1 / -1;
+                text-align: center;
+                padding: 40px;
+                background: white;
+                border-radius: 15px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            ">
+                <div style="font-size: 48px; margin-bottom: 20px;">🔒</div>
+                <h3 style="color: #667eea; margin-bottom: 10px;">Private Circles</h3>
+                <p style="color: #8898aa;">This user's circles are private.</p>
+            </div>
+        `;
+    }
+}
+
+
+
+
+
+
 // Load circles from backend
 // Load circles from backend
 async function loadCircles() {
@@ -481,7 +508,20 @@ async function loadCircles() {
     isLoadingCircles = true;
 
     try {
-        const response = await fetch('/api/circles');
+        // NEW: Check if viewing another user's circles
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewingUserId = urlParams.get('user_id');
+
+        // Build URL with optional user_id parameter
+        let url = '/api/circles';
+        if (viewingUserId) {
+            url += `?user_id=${viewingUserId}`;
+            console.log(`Loading circles for user ${viewingUserId}`);
+        } else {
+            console.log('Loading own circles');
+        }
+
+        const response = await fetch(url);
         if (response.status === 401) {
             window.location.href = '/';
             return;
