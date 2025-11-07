@@ -74,18 +74,8 @@
                 addCircleTranslations();
             }
 
-            // Load the HTML
-            if (typeof circlesHTML !== 'undefined') {
-                document.getElementById('circlesContainer').innerHTML = circlesHTML;
-                // Show container, hide loading message
-                document.getElementById('circlesContainer').style.display = 'block';
-                const loadingDiv = document.getElementById('loadingMessage');
-                if (loadingDiv) loadingDiv.style.display = 'none';
-                console.log('Circles HTML loaded');
-            } else {
-                console.error('circlesHTML not found');
-                return;
-            }
+            // DON'T load static circlesHTML - we'll let initializeCircles handle everything
+            // This prevents the flash of old content
 
             // Apply translations
             if (window.i18n && window.i18n.applyLanguage) {
@@ -100,19 +90,36 @@
                 }
             }
 
-             if (typeof updateCircleDisplay === 'function') {
+            if (typeof updateCircleDisplay === 'function') {
                 updateCircleDisplay();
             }
 
-            // Initialize circles
+            // Initialize circles - this will fetch data and render everything
             if (typeof initializeCircles === 'function') {
                 console.log('Calling initializeCircles');
-                initializeCircles();
+                await initializeCircles();
+
+                // Hide loading message and show container only AFTER initialization completes
+                const loadingDiv = document.getElementById('loadingMessage');
+                if (loadingDiv) loadingDiv.style.display = 'none';
+                document.getElementById('circlesContainer').style.display = 'block';
+
             } else if (typeof loadCircles === 'function') {
                 console.log('Calling loadCircles');
-                loadCircles();
+                await loadCircles();
+
+                // Hide loading message and show container
+                const loadingDiv = document.getElementById('loadingMessage');
+                if (loadingDiv) loadingDiv.style.display = 'none';
+                document.getElementById('circlesContainer').style.display = 'block';
             } else {
                 console.error('No circle initialization function found');
+                // Show error in loading message
+                const loadingDiv = document.getElementById('loadingMessage');
+                if (loadingDiv) {
+                    loadingDiv.textContent = 'Error: Unable to load circles. Please refresh the page.';
+                    loadingDiv.style.color = '#fee';
+                }
             }
 
             // Handle language changes
