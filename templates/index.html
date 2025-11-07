@@ -2129,8 +2129,7 @@
 
 
 
-            </main>
-
+           </main>
             <!-- Right Sidebar -->
             <aside class="right-sidebar">
                 <h3 style="margin-bottom: 15px;" data-i18n="alerts.title">Alerts</h3>
@@ -2138,17 +2137,16 @@
             </aside>
         </div>
     </div>
-
     <script src="/static/js/i18n.js"></script>
- <script>
+<script>
     // Global variables needed by parameters-social.js - MUST be declared first
     let selectedDate = new Date();
     let currentMonth = new Date();
     let savedDates = [];
     let currentYear = new Date().getFullYear(); // ADD THIS LINE
     if (typeof currentRecipient === 'undefined') {
-    var currentRecipient = null;
-}
+        var currentRecipient = null;
+    }
 </script>
 <script src="/static/js/parameters-social.js"></script>
     <script src="/static/js/circles-messages.js"></script>
@@ -2160,13 +2158,12 @@
     let currentUser = null;
     let isLoginMode = true;
     let viewingUserId = null; // Track which user profile we're viewing
-if (typeof currentUserId === 'undefined') {
-    var currentUserId = null;
-}
+    if (typeof currentUserId === 'undefined') {
+        var currentUserId = null;
+    }
     // Variables above already declared before parameters-social.js
-
-        // Helper function to format message time with translation
-      function formatMessageTime(timestamp) {
+    // Helper function to format message time with translation
+    function formatMessageTime(timestamp) {
     try {
         if (!timestamp) {
             return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time') : 'Unknown time';
