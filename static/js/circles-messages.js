@@ -1238,7 +1238,9 @@ let messagesData = {
     sent: [],
     received: []
 };
-let currentRecipient = null;
+if (typeof currentRecipient === 'undefined') {
+    var currentRecipient = null;
+}
 let currentUserId = null;
 
 async function getCurrentUser() {
