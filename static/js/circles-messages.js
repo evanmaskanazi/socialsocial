@@ -1672,9 +1672,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     await waitForI18n();
 
     // Apply initial translations
-    if (window.i18n && window.i18n.applyLanguage) {
-        window.i18n.applyLanguage();
-    }
+    // RE-APPLY TRANSLATIONS after setting innerHTML
+if (window.i18n && window.i18n.applyLanguage) {
+    const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+    window.i18n.applyLanguage(currentLang);
+}
 
     // Get current user
     await getCurrentUser();
