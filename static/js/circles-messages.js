@@ -530,33 +530,14 @@ async function loadCircles() {
         const circles = await response.json();
 
         // If viewing another user's circles, update the privacy dropdown to show THEIR setting
-       // If viewing another user's circles, show THEIR privacy setting
+      // Privacy dropdown is now handled by loadCirclesPrivacy() function
+        // Just disable/enable based on viewing context
         if (viewingUserId) {
             const privacySelect = document.getElementById('circlesPrivacySelect');
             if (privacySelect) {
-                // Disable the dropdown when viewing another user's circles
                 privacySelect.disabled = true;
-
-                // Set dropdown to match what the VIEWED USER has their circles set to
-                // The backend tells us this via circles.private or the privacy level
-                if (circles.private) {
-                    privacySelect.value = 'private';
-                } else if (circles.viewer_circle_type) {
-                    // Use the target user's actual circles privacy level
-                    // The viewer_circle_type tells us what circle WE are in, not their privacy setting
-                    // We need to fetch their actual privacy setting
-                    fetch(`/api/circles/privacy?user_id=${viewingUserId}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.privacy) {
-                                privacySelect.value = data.privacy;
-                            }
-                        })
-                        .catch(err => console.error('Error fetching privacy setting:', err));
-                }
             }
         } else if (!viewingUserId) {
-            // Re-enable dropdown when viewing own circles
             const privacySelect = document.getElementById('circlesPrivacySelect');
             if (privacySelect) {
                 privacySelect.disabled = false;
@@ -839,8 +820,12 @@ async function searchUsers() {
 // Initialize circles
 function initializeCircles() {
     console.log('Initializing circles...');
-     // Load circles privacy setting
-    loadCirclesPrivacy();  // ADD THIS LINE
+    // Get user_id from URL if viewing another user's circles
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewingUserId = urlParams.get('user_id');
+
+    // Load circles privacy setting (with optional user_id)
+    loadCirclesPrivacy(viewingUserId);
     loadCircles();
 
     // Close search results when clicking outside
@@ -1618,20 +1603,27 @@ function showNotification(message, type = 'info') {
 // CIRCLES PRIVACY FUNCTIONS
 // ============================================================
 
-async function loadCirclesPrivacy() {
+async function loadCirclesPrivacy(viewingUserId = null) {
     try {
-        const response = await fetch('/api/circles/privacy', {
+        // Build URL with optional user_id parameter
+        let url = '/api/circles/privacy';
+        if (viewingUserId) {
+            url += `?user_id=${viewingUserId}`;
+        }
+
+        const response = await fetch(url, {
             credentials: 'include'
         });
 
         if (response.ok) {
             const data = await response.json();
-            const privacyLevel = data.circles_privacy || 'private';
+            const privacyLevel = data.privacy || data.circles_privacy || 'private';
 
-         const selector = document.getElementById('circlesPrivacySelect');
+            const selector = document.getElementById('circlesPrivacySelect');
             if (selector) {
                 selector.value = privacyLevel;
-                selector.disabled = false; // Ensure it's enabled for own circles
+                // Disable if viewing another user, enable if viewing own
+                selector.disabled = viewingUserId ? true : false;
             }
         }
     } catch (error) {
