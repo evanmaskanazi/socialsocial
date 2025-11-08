@@ -3685,16 +3685,20 @@ def get_my_circles():
 @app.route('/api/circles/privacy', methods=['GET'])
 @login_required
 def get_circles_privacy():
-    """Get user's circles privacy setting"""
+    """Get user's circles privacy setting - supports querying other users"""
     try:
-        user_id = session.get('user_id')
-        user = db.session.get(User, user_id)
+        current_user_id = session.get('user_id')
+        # Allow checking another user's privacy setting via query parameter
+        target_user_id = request.args.get('user_id', current_user_id, type=int)
+
+        user = db.session.get(User, target_user_id)
 
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
         return jsonify({
-            'circles_privacy': user.circles_privacy or 'private'
+            'privacy': user.circles_privacy or 'private',
+            'circles_privacy': user.circles_privacy or 'private'  # Keep both for backwards compatibility
         })
     except Exception as e:
         logger.error(f"Get circles privacy error: {str(e)}")
