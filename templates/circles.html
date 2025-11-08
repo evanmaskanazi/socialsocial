@@ -186,6 +186,7 @@
     }
 
     // Update circle display names (using correct function name)
+  // Update circle display names (using correct function name)
     if (typeof updateCircleDisplay === 'function') {
         updateCircleDisplay();
     }
@@ -193,6 +194,11 @@
     // Update display names from feed-updates.js
     if (typeof updateCircleDisplays === 'function') {
         updateCircleDisplays();
+    }
+
+    // Update privacy dropdown translations
+    if (typeof updatePrivacyDropdownTranslations === 'function') {
+        updatePrivacyDropdownTranslations();
     }
 
     // Re-render UI with new translations WITHOUT reloading data from server
