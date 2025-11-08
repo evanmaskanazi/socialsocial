@@ -97,30 +97,7 @@ function updateCircleDisplays() {
         else selector.value = currentValue;
     });
 
-    // Update all standalone dropdown options with data-i18n attributes
-    // (This handles any dropdowns not caught by the selector above)
-  // Update all standalone dropdown options with data-i18n attributes
-    // (This handles any dropdowns not caught by the selector above)
-    document.querySelectorAll('select option[data-i18n]').forEach(option => {
-        const key = option.getAttribute('data-i18n');
-        const value = option.value;
-        if (key && window.i18n && window.i18n.translate) {
-            const translation = window.i18n.translate(key);
-            // Determine emoji based on VALUE, not existing text
-            let emoji = '';
-            if (value === 'private') {
-                emoji = '🔒 ';
-            } else if (value === 'public' || value === 'general') {
-                emoji = '🌐 ';
-            } else if (value === 'close_friends' || value === 'class_b') {
-                emoji = '👥 ';
-            } else if (value === 'family' || value === 'class_a') {
-                emoji = '👨‍👩‍👧‍👦 ';
-            }
-            // Remove any existing emoji from translation
-            const cleanTranslation = translation.replace(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u200D]+\s*/ug, '');
-            option.textContent = emoji + cleanTranslation;
-        }
+
     });
 }
 

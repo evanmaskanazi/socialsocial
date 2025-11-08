@@ -952,10 +952,12 @@ function addCircleTranslations() {
         // Update English translations
       // Update English translations
         Object.assign(window.i18n.translations.en, {
-            'circles.public': 'Public',
+           'circles.public': 'Public',
             'circles.class_b': 'Class B (Friends)',
             'circles.class_a': 'Class A (Family)',
             'circles.add_to_circle': 'Add to Circle',
+            'circles.privacy_label': 'Circle Visibility',
+            'circles.circles_private': 'Circles set to private',
             'privacy.public': 'Public',
             'privacy.class_b': 'Class B (Close Friends)',
             'privacy.class_a': 'Class A (Family)',
@@ -969,6 +971,8 @@ function addCircleTranslations() {
             'circles.class_b': 'מחלקה ב\' (חברים)',
             'circles.class_a': 'מחלקה א\' (משפחה)',
             'circles.add_to_circle': 'הוסף למעגל',
+            'circles.privacy_label': 'נראות מעגלים',
+            'circles.circles_private': 'מעגלים מוגדרים כפרטיים',
             'privacy.public': 'ציבורי',
             'privacy.class_b': 'מחלקה ב\' (חברים קרובים)',
             'privacy.class_a': 'מחלקה א\' (משפחה)',
@@ -982,6 +986,8 @@ function addCircleTranslations() {
             'circles.class_b': 'الفئة ب (الأصدقاء)',
             'circles.class_a': 'الفئة أ (العائلة)',
             'circles.add_to_circle': 'أضف إلى الدائرة',
+            'circles.privacy_label': 'رؤية الدوائر',
+            'circles.circles_private': 'تم تعيين الدوائر كخاصة',
             'privacy.public': 'عام',
             'privacy.class_b': 'الفئة ب (الأصدقاء المقربين)',
             'privacy.class_a': 'الفئة أ (العائلة)',
@@ -992,10 +998,12 @@ function addCircleTranslations() {
      // Update Russian translations
      // Update Russian translations
         Object.assign(window.i18n.translations.ru, {
-            'circles.public': 'Публичный',
+             'circles.public': 'Публичный',
             'circles.class_b': 'Класс Б (Друзья)',
             'circles.class_a': 'Класс А (Семья)',
             'circles.add_to_circle': 'Добавить в круг',
+            'circles.privacy_label': 'Видимость кругов',
+            'circles.circles_private': 'Круги установлены как приватные',
             'privacy.public': 'Публичный',
             'privacy.class_b': 'Класс Б (Близкие друзья)',
             'privacy.class_a': 'Класс А (Семья)',
