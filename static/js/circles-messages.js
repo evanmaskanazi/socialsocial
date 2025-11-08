@@ -577,9 +577,12 @@ async function loadCircles() {
             }
 
             // RE-APPLY TRANSLATIONS after setting innerHTML
-            if (window.i18n && window.i18n.applyLanguage) {
-                window.i18n.applyLanguage();
-            }
+           // RE-APPLY TRANSLATIONS after setting innerHTML
+if (window.i18n && window.i18n.applyLanguage) {
+    const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+    console.log('Applying language to private message:', currentLang);
+    window.i18n.applyLanguage(currentLang);
+}
 
             // Set counts to 0
             const publicCount = document.getElementById('publicCount');
