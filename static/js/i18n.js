@@ -2048,25 +2048,36 @@ function setLanguage(lang) {
     window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
 }
 
+// Debounce timer for language sync
+let syncLanguageTimeout = null;
+
 async function syncLanguageWithBackend(lang) {
-    try {
-        const response = await fetch('/api/user/language', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                preferred_language: lang
-            })
-        });
-        // Don't throw on 401 - user just not logged in yet
-        if (response.ok) {
-            console.log('Language preference synced with backend');
-        }
-    } catch (error) {
-        // Silently fail - language is still saved in localStorage
-        console.log('Could not sync language preference with server');
+    // Debounce: cancel any pending sync
+    if (syncLanguageTimeout) {
+        clearTimeout(syncLanguageTimeout);
     }
+
+    // Schedule new sync after 500ms of no changes
+    syncLanguageTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch('/api/user/language', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    preferred_language: lang
+                })
+            });
+            // Don't throw on 401 - user just not logged in yet
+            if (response.ok) {
+                console.log('Language preference synced with backend');
+            }
+        } catch (error) {
+            // Silently fail - language is still saved in localStorage
+            console.log('Could not sync language preference with server');
+        }
+    }, 500); // 500ms debounce
 }
 
 function translate(key, lang = null) {
@@ -2098,14 +2109,14 @@ function applyLanguage(lang) {
         element.placeholder = translate(key, lang);
     });
 
-    // Update language selector if it exists
+   // Update language selector if it exists
     const langSelector = document.getElementById('languageSelector');
     if (langSelector) {
         langSelector.value = lang;
     }
 
-    // Dispatch custom event for other components to listen to
-    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+    // Note: DO NOT dispatch languageChanged event here
+    // setLanguage() already dispatches it, and we don't want duplicates
 }
 
 // Initialize on page load
