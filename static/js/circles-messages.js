@@ -366,11 +366,11 @@ window.circlesHTML = `
         <!-- Circle Privacy Selector -->
         <div class="circle-privacy-section">
             <label data-i18n="circles.privacy_label">Circle Visibility</label>
-            <select id="circlesPrivacySelect" class="privacy-select" onchange="updateCirclesPrivacy(this.value)">
-                <option value="public" data-i18n="privacy.public">🌍 Public</option>
-                <option value="class_b" data-i18n="privacy.class_b">👥 Class B (Close Friends)</option>
-                <option value="class_a" data-i18n="privacy.class_a">👨‍👩‍👧‍👦 Class A (Family)</option>
-                <option value="private" data-i18n="privacy.private">🔒 Private</option>
+           <select id="circlesPrivacySelect" class="privacy-select" onchange="updateCirclesPrivacy(this.value)">
+                <option value="public" data-i18n="privacy.public">Public</option>
+                <option value="class_b" data-i18n="privacy.class_b">Class B (Close Friends)</option>
+                <option value="class_a" data-i18n="privacy.class_a">Class A (Family)</option>
+                <option value="private" data-i18n="privacy.private">Private</option>
             </select>
         </div>
 
@@ -1031,15 +1031,26 @@ function updatePrivacyDropdownTranslations() {
         const i18nKey = option.getAttribute('data-i18n');
 
         if (i18nKey && window.i18n && window.i18n.t) {
-            // Get translation without emoji
+            // Get translation
             const translation = t(i18nKey, option.textContent);
 
-            // Extract emoji from original text
-            const emojiMatch = option.textContent.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])\s*/u);
-            const emoji = emojiMatch ? emojiMatch[0] : '';
+            // Determine emoji based on value
+            let emoji = '';
+            if (value === 'private') {
+                emoji = '🔒 ';
+            } else if (value === 'public') {
+                emoji = '🌐 ';
+            } else if (value === 'class_b') {
+                emoji = '👥 ';
+            } else if (value === 'class_a') {
+                emoji = '👨‍👩‍👧‍👦 ';
+            }
 
-            // Remove emoji from translation if present
-            const cleanTranslation = translation.replace(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])\s*/u, '');
+            // Remove any existing emoji from translation (same logic as feed-updates.js)
+            const cleanTranslation = translation
+                .replace(/[\u{1F000}-\u{1FFFF}][\u{FE00}-\u{FE0F}\u{200D}\u{E0020}-\u{E007F}\u{1F000}-\u{1FFFF}]*/ug, '')
+                .replace(/[\u{2600}-\u{27BF}]/ug, '')
+                .replace(/^\s+/, '');
 
             // Set with emoji prefix
             option.textContent = emoji + cleanTranslation;

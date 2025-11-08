@@ -70,7 +70,12 @@ function updateCircleDisplays() {
                     emoji = '👨‍👩‍👧‍👦 ';
                 }
                 // Remove any existing emoji from translation
-                const cleanTranslation = translation.replace(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u200D]+\s*/ug, '');
+                  // Remove any existing emoji from translation (including complex emojis with zero-width joiners)
+                // This regex handles all Unicode emoji ranges and modifier sequences
+                const cleanTranslation = translation
+                    .replace(/[\u{1F000}-\u{1FFFF}][\u{FE00}-\u{FE0F}\u{200D}\u{E0020}-\u{E007F}\u{1F000}-\u{1FFFF}]*/ug, '')
+                    .replace(/[\u{2600}-\u{27BF}]/ug, '')
+                    .replace(/^\s+/, '');
                 option.textContent = emoji + cleanTranslation;
             } else {
                 // Fallback: Map both by value AND by text
