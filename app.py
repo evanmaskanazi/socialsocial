@@ -3564,8 +3564,6 @@ def check_circle_membership(check_user_id):
         return jsonify({'error': 'Failed to check membership'}), 500
 
 
-@app.route('/api/circles/my-circles', methods=['GET'])
-@login_required
 def get_my_circles():
     """Get all circles with proper member information"""
     try:
@@ -3573,6 +3571,9 @@ def get_my_circles():
 
         # Check if requesting user's own circles or someone else's
         target_user_id = request.args.get('user_id', user_id, type=int)
+
+        # Initialize viewer_circle_type for later use
+        viewer_circle_type = None
 
         # If viewing someone else's circles, check their privacy settings
         if target_user_id != user_id:
@@ -3582,17 +3583,7 @@ def get_my_circles():
 
             privacy_level = target_user.circles_privacy or 'private'
 
-            # If private, return message
-            if privacy_level == 'private':
-                return jsonify({
-                    'private': True,
-                    'message': 'Circles set to private',
-                    'public': [],
-                    'class_b': [],
-                    'class_a': []
-                })
-
-            # Check viewer's circle membership with target user
+            # Check viewer's circle membership with target user FIRST (before any privacy checks)
             viewer_circle = db.session.execute(
                 select(Circle).filter_by(
                     user_id=target_user_id,
@@ -3600,7 +3591,6 @@ def get_my_circles():
                 )
             ).scalars().first()
 
-            viewer_circle_type = None
             if viewer_circle:
                 type_mapping = {
                     'general': 'public',
@@ -3612,14 +3602,27 @@ def get_my_circles():
                 }
                 viewer_circle_type = type_mapping.get(viewer_circle.circle_type, 'public')
 
-            # Apply privacy filtering
+            # Apply privacy filtering with consistent response format
+            if privacy_level == 'private':
+                return jsonify({
+                    'private': True,
+                    'message': 'Circles set to private',
+                    'public': [],
+                    'class_b': [],
+                    'class_a': [],
+                    'viewer_circle_type': viewer_circle_type,
+                    'viewing_user_id': target_user_id
+                })
+
             if privacy_level == 'class_a' and viewer_circle_type != 'class_a':
                 return jsonify({
                     'private': True,
                     'message': 'Circles set to private',
                     'public': [],
                     'class_b': [],
-                    'class_a': []
+                    'class_a': [],
+                    'viewer_circle_type': viewer_circle_type,
+                    'viewing_user_id': target_user_id
                 })
 
             if privacy_level == 'class_b' and viewer_circle_type not in ['class_a', 'class_b']:
@@ -3628,7 +3631,9 @@ def get_my_circles():
                     'message': 'Circles set to private',
                     'public': [],
                     'class_b': [],
-                    'class_a': []
+                    'class_a': [],
+                    'viewer_circle_type': viewer_circle_type,
+                    'viewing_user_id': target_user_id
                 })
 
             # For public or allowed viewers, continue with circles
@@ -3665,7 +3670,7 @@ def get_my_circles():
                 if circle_type in result:
                     result[circle_type].append(user_info)
 
-            # If viewing another user's circles, include the viewer's circle type
+        # If viewing another user's circles, include the viewer's circle type
         if target_user_id != user_id:
             result['viewer_circle_type'] = viewer_circle_type
             result['viewing_user_id'] = target_user_id
