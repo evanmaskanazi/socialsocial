@@ -132,17 +132,46 @@
             }
 
             // Apply translations
-            if (window.i18n && window.i18n.applyLanguage) {
-                window.i18n.applyLanguage();
+          // Fetch user's language preference from backend first
+try {
+    const response = await fetch('/api/user/profile');
+    if (response.ok) {
+        const profile = await response.json();
+        if (profile.preferred_language && window.i18n && window.i18n.setLanguage) {
+            window.i18n.setLanguage(profile.preferred_language);
+        }
+    }
+} catch (error) {
+    console.log('Could not fetch user language preference');
+}
 
-                // Set RTL direction for Arabic and Hebrew
-                const rtlLanguages = ['ar', 'he'];
-                if (rtlLanguages.includes(window.i18n.currentLanguage)) {
-                    document.body.setAttribute('dir', 'rtl');
-                } else {
-                    document.body.setAttribute('dir', 'ltr');
-                }
-            }
+// Apply translations
+// Fetch user's language preference from backend first
+try {
+    const response = await fetch('/api/user/profile');
+    if (response.ok) {
+        const profile = await response.json();
+        if (profile.preferred_language && window.i18n && window.i18n.setLanguage) {
+            window.i18n.setLanguage(profile.preferred_language);
+        }
+    }
+} catch (error) {
+    console.log('Could not fetch user language preference');
+}
+
+// Apply translations
+if (window.i18n && window.i18n.applyLanguage) {
+    const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+    window.i18n.applyLanguage(currentLang);
+
+    // Set RTL direction for Arabic and Hebrew
+    const rtlLanguages = ['ar', 'he'];
+    if (rtlLanguages.includes(currentLang)) {
+        document.body.setAttribute('dir', 'rtl');
+    } else {
+        document.body.setAttribute('dir', 'ltr');
+    }
+}
 
             if (typeof updateCircleDisplay === 'function') {
                 updateCircleDisplay();
