@@ -512,6 +512,10 @@ async function loadCircles() {
         const urlParams = new URLSearchParams(window.location.search);
         const viewingUserId = urlParams.get('user_id');
 
+        // CRITICAL: Load privacy setting FIRST before loading circles
+        // This ensures the dropdown shows the correct value
+        await loadCirclesPrivacy(viewingUserId);
+
         // Build URL with optional user_id parameter
         let url = '/api/circles';
         if (viewingUserId) {
@@ -521,7 +525,7 @@ async function loadCircles() {
             console.log('Loading own circles');
         }
 
-      const response = await fetch(url);
+        const response = await fetch(url);
         if (response.status === 401) {
             window.location.href = '/';
             return;
@@ -529,19 +533,10 @@ async function loadCircles() {
 
         const circles = await response.json();
 
-        // If viewing another user's circles, update the privacy dropdown to show THEIR setting
-      // Privacy dropdown is now handled by loadCirclesPrivacy() function
-        // Just disable/enable based on viewing context
-        if (viewingUserId) {
-            const privacySelect = document.getElementById('circlesPrivacySelect');
-            if (privacySelect) {
-                privacySelect.disabled = true;
-            }
-        } else if (!viewingUserId) {
-            const privacySelect = document.getElementById('circlesPrivacySelect');
-            if (privacySelect) {
-                privacySelect.disabled = false;
-            }
+        // Disable/enable privacy dropdown based on viewing context
+        const privacySelect = document.getElementById('circlesPrivacySelect');
+        if (privacySelect) {
+            privacySelect.disabled = viewingUserId ? true : false;
         }
 
 

@@ -45,7 +45,7 @@ function updateCircleDisplays() {
     });
 
     // Update all circle selectors in feed
-    document.querySelectorAll('.circle-selector, .visibility-selector, select[name="circle"], .privacy-select, .visibility-select').forEach(selector => {
+   document.querySelectorAll('.circle-selector, .visibility-selector, select[name="circle"], .privacy-select, .visibility-select, #circlesPrivacySelect').forEach(selector => {
         // Store current value
         const currentValue = selector.value;
 
@@ -141,8 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Also update when language changes
+// Also update when language changes
+// NOTE: This is debounced in circles.html, so we don't need another setTimeout here
 window.addEventListener('languageChanged', () => {
-    setTimeout(updateCircleDisplays, 100);
+    updateCircleDisplays();
 });
 
 // Try to run immediately as well
