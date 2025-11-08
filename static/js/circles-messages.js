@@ -590,7 +590,7 @@ async function loadCircles() {
             if (classACount) classACount.textContent = '0';
 
             return;
-
+}
         // Update display for Public - Backend NOW returns 'public'
         const publicMembers = document.getElementById('publicMembers');
         if (publicMembers) {
