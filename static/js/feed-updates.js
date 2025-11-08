@@ -70,7 +70,7 @@ function updateCircleDisplays() {
                     emoji = '👨‍👩‍👧‍👦 ';
                 }
                 // Remove any existing emoji from translation
-                const cleanTranslation = translation.replace(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🔒|🌐|👥|👨‍👩‍👧‍👦)\s*/u, '');
+                const cleanTranslation = translation.replace(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u200D]+\s*/ug, '');
                 option.textContent = emoji + cleanTranslation;
             } else {
                 // Fallback: Map both by value AND by text
@@ -118,7 +118,7 @@ function updateCircleDisplays() {
                 emoji = '👨‍👩‍👧‍👦 ';
             }
             // Remove any existing emoji from translation
-            const cleanTranslation = translation.replace(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🔒|🌐|👥|👨‍👩‍👧‍👦)\s*/u, '');
+            const cleanTranslation = translation.replace(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u200D]+\s*/ug, '');
             option.textContent = emoji + cleanTranslation;
         }
     });
