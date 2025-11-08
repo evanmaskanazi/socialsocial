@@ -466,19 +466,19 @@ function initializeParameters() {
                     <span class="parameter-description" data-i18n="${category.descriptionKey}">${category.descriptionKey}</span>
                 </div>
                 <div class="privacy-selector">
-                  <select class="privacy-select"
+              <select class="privacy-select"
         data-category="${category.id}"
         onchange="updatePrivacy('${category.id}', this.value)">
-    <option value="private" ${privacy === 'private' ? 'selected' : ''}>
+    <option value="private" data-i18n="privacy.private" ${privacy === 'private' ? 'selected' : ''}>
         🔒 Private
     </option>
-    <option value="class_a" ${privacy === 'class_a' ? 'selected' : ''}>
+    <option value="class_a" data-i18n="privacy.class_a" ${privacy === 'class_a' ? 'selected' : ''}>
         👨‍👩‍👧‍👦 Class A (Family)
     </option>
-    <option value="class_b" ${privacy === 'class_b' ? 'selected' : ''}>
+    <option value="class_b" data-i18n="privacy.class_b" ${privacy === 'class_b' ? 'selected' : ''}>
         👥 Class B (Friends)
     </option>
-    <option value="public" ${privacy === 'public' ? 'selected' : ''}>
+    <option value="public" data-i18n="privacy.public" ${privacy === 'public' ? 'selected' : ''}>
         🌍 Public
     </option>
 </select>
@@ -1695,7 +1695,15 @@ function updateTranslations() {
     document.querySelectorAll('[data-i18n]').forEach(element => {
         const key = element.getAttribute('data-i18n');
         if (key) {
-            element.textContent = pt(key);
+            // For option elements, preserve emoji prefix
+            if (element.tagName === 'OPTION') {
+                const currentText = element.textContent;
+                const emojiMatch = currentText.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])\s*/u);
+                const emoji = emojiMatch ? emojiMatch[0] : '';
+                element.textContent = emoji + pt(key);
+            } else {
+                element.textContent = pt(key);
+            }
         }
     });
 

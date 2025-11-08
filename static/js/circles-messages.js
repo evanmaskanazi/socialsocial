@@ -938,36 +938,56 @@ async function addToCircle(userId, circleType, username) {
 function addCircleTranslations() {
     if (window.i18n && window.i18n.translations) {
         // Update English translations
+      // Update English translations
         Object.assign(window.i18n.translations.en, {
             'circles.public': 'Public',
             'circles.class_b': 'Class B (Friends)',
             'circles.class_a': 'Class A (Family)',
-            'circles.add_to_circle': 'Add to Circle'
+            'circles.add_to_circle': 'Add to Circle',
+            'privacy.public': 'Public',
+            'privacy.class_b': 'Class B (Close Friends)',
+            'privacy.class_a': 'Class A (Family)',
+            'privacy.private': 'Private'
         });
 
         // Update Hebrew translations
+      // Update Hebrew translations
         Object.assign(window.i18n.translations.he, {
             'circles.public': 'ציבורי',
             'circles.class_b': 'מחלקה ב\' (חברים)',
             'circles.class_a': 'מחלקה א\' (משפחה)',
-            'circles.add_to_circle': 'הוסף למעגל'
+            'circles.add_to_circle': 'הוסף למעגל',
+            'privacy.public': 'ציבורי',
+            'privacy.class_b': 'מחלקה ב\' (חברים קרובים)',
+            'privacy.class_a': 'מחלקה א\' (משפחה)',
+            'privacy.private': 'פרטי'
         });
 
         // Update Arabic translations
+     // Update Arabic translations
         Object.assign(window.i18n.translations.ar, {
             'circles.public': 'عام',
             'circles.class_b': 'الفئة ب (الأصدقاء)',
             'circles.class_a': 'الفئة أ (العائلة)',
-            'circles.add_to_circle': 'أضف إلى الدائرة'
+            'circles.add_to_circle': 'أضف إلى الدائرة',
+            'privacy.public': 'عام',
+            'privacy.class_b': 'الفئة ب (الأصدقاء المقربين)',
+            'privacy.class_a': 'الفئة أ (العائلة)',
+            'privacy.private': 'خاص'
         });
 
         // Update Russian translations
+     // Update Russian translations
      // Update Russian translations
         Object.assign(window.i18n.translations.ru, {
             'circles.public': 'Публичный',
             'circles.class_b': 'Класс Б (Друзья)',
             'circles.class_a': 'Класс А (Семья)',
-            'circles.add_to_circle': 'Добавить в круг'
+            'circles.add_to_circle': 'Добавить в круг',
+            'privacy.public': 'Публичный',
+            'privacy.class_b': 'Класс Б (Близкие друзья)',
+            'privacy.class_a': 'Класс А (Семья)',
+            'privacy.private': 'Приватный'
         });
 
         // Update privacy dropdown translations immediately
