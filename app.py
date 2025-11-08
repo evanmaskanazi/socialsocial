@@ -2599,6 +2599,65 @@ def get_user_circles(user_id):
         if not is_following and user_id != current_user_id:
             return jsonify({'error': 'Must be following user to view circles'}), 403
 
+        # Check circles privacy settings if viewing another user's circles
+        if user_id != current_user_id:
+            target_user = db.session.get(User, user_id)
+            if not target_user:
+                return jsonify({'error': 'User not found'}), 404
+
+            privacy_level = target_user.circles_privacy or 'private'
+
+            # Check viewer's circle membership with target user
+            viewer_circle = db.session.execute(
+                select(Circle).filter_by(
+                    user_id=user_id,
+                    circle_user_id=current_user_id
+                )
+            ).scalars().first()
+
+            viewer_circle_type = None
+            if viewer_circle:
+                type_mapping_check = {
+                    'general': 'public',
+                    'close_friends': 'class_b',
+                    'family': 'class_a',
+                    'public': 'public',
+                    'class_b': 'class_b',
+                    'class_a': 'class_a'
+                }
+                viewer_circle_type = type_mapping_check.get(viewer_circle.circle_type, 'public')
+
+            # Apply privacy filtering
+            if privacy_level == 'private':
+                return jsonify({
+                    'private': True,
+                    'message': 'Circles set to private',
+                    'public': [],
+                    'class_b': [],
+                    'class_a': [],
+                    'viewer_circle_type': viewer_circle_type
+                })
+
+            if privacy_level == 'class_a' and viewer_circle_type != 'class_a':
+                return jsonify({
+                    'private': True,
+                    'message': 'Circles set to private',
+                    'public': [],
+                    'class_b': [],
+                    'class_a': [],
+                    'viewer_circle_type': viewer_circle_type
+                })
+
+            if privacy_level == 'class_b' and viewer_circle_type not in ['class_a', 'class_b']:
+                return jsonify({
+                    'private': True,
+                    'message': 'Circles set to private',
+                    'public': [],
+                    'class_b': [],
+                    'class_a': [],
+                    'viewer_circle_type': viewer_circle_type
+                })
+
         # Get all circles for this user
         circles_stmt = select(Circle).filter_by(user_id=user_id)
         circles = db.session.execute(circles_stmt).scalars().all()
