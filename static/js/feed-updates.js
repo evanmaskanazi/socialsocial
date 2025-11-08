@@ -1,8 +1,14 @@
 // feed-updates.js - Circle display name mappings
+
+// Emoji map - NO trailing spaces
 const CIRCLE_EMOJIS = {
-    'private': '🔒 ', 'public': '🌍 ', 'general': '🌍 ',
-    'class_b': '👥 ', 'close_friends': '👥 ',
-    'class_a': '👨‍👩‍👧‍👦 ', 'family': '👨‍👩‍👧‍👦 '
+    'private': '🔒',
+    'public': '🌍',
+    'general': '🌍',
+    'class_b': '👥',
+    'close_friends': '👥',
+    'class_a': '👨‍👩‍👧‍👦',
+    'family': '👨‍👩‍👧‍👦'
 };
 
 function getDisplayName(internalName) {
@@ -11,67 +17,21 @@ function getDisplayName(internalName) {
 
 function getInternalName(displayName) {
     const reverseMap = {
-        'Public': 'public', 'Class B (Friends)': 'class_b',
-        'Class A (Family)': 'class_a', 'Private': 'private'
+        'Public': 'public',
+        'Class B (Friends)': 'class_b',
+        'Class A (Family)': 'class_a',
+        'Private': 'private'
     };
     return reverseMap[displayName] || displayName;
 }
 
-// Simple emoji removal - catches all Unicode emojis
+// Remove all emojis from text
 function removeAllEmojis(text) {
+    if (!text) return '';
     return text
-        .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{200D}\u{FE0F}]/ug, '')
-        .replace(/\s+/g, ' ').trim();
-}
-
-// Update all dropdowns and displays
-function updateCircleDisplays() {
-    console.log('Updating circle displays...');
-
-    // Update circle selectors
-    document.querySelectorAll('.circle-selector, .visibility-selector, select[name="circle"], .privacy-select, .visibility-select, #circlesPrivacySelect').forEach(selector => {
-        const currentValue = selector.value;
-
-        selector.querySelectorAll('option').forEach(option => {
-            const value = option.value;
-            const i18nKey = option.getAttribute('data-i18n');
-
-            // Use i18n translation if available
-            if (i18nKey && window.i18n && window.i18n.translate) {
-                const translation = window.i18n.translate(i18nKey);
-                const cleanText = removeAllEmojis(translation);
-                const emoji = CIRCLE_EMOJIS[value] || '';
-                option.textContent = emoji + cleanText;
-            }
-        });
-
-        selector.value = currentValue;
-    });
-}
-
-// Export functions
-if (typeof window !== 'undefined') {
-    window.getDisplayName = getDisplayName;
-    window.getInternalName = getInternalName;
-    window.updateCircleDisplays = updateCircleDisplays;
-}
-
-// Initialize once when DOM ready
-let initialized = false;
-document.addEventListener('DOMContentLoaded', () => {
-    if (!initialized) {
-        initialized = true;
-        setTimeout(updateCircleDisplays, 200);
-    }
-});
-
-// Update on language change
-window.addEventListener('languageChanged', updateCircleDisplays);
-
-// Run immediately if DOM already ready
-if ((document.readyState === 'complete' || document.readyState === 'interactive') && !initialized) {
-    initialized = true;
-    setTimeout(updateCircleDisplays, 200);
+        .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{200D}\u{FE0F}\u{FE0E}]/ug, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 // Update all dropdowns and displays
@@ -102,12 +62,12 @@ function updateCircleDisplays() {
                 const i18nKey = `privacy.${internalValue}`;
                 const translatedText = window.i18n.translate(i18nKey);
                 const emoji = CIRCLE_EMOJIS[internalValue] || '';
-                header.textContent = emoji + ' ' + removeAllEmojis(translatedText);
+                header.textContent = emoji + (emoji ? ' ' : '') + removeAllEmojis(translatedText);
             }
         });
     }
 
-    // Update all circle selectors in feed
+    // Update all circle selectors in feed AND parameters page
     document.querySelectorAll('.circle-selector, .visibility-selector, select[name="circle"], .privacy-select, .visibility-select, #circlesPrivacySelect').forEach(selector => {
         // Store current value
         const currentValue = selector.value;
@@ -116,6 +76,10 @@ function updateCircleDisplays() {
         selector.querySelectorAll('option').forEach(option => {
             const value = option.value;
             const i18nKey = option.getAttribute('data-i18n');
+            const currentText = option.textContent;
+
+            // Check if this option has duplicate emojis
+            const emojiCount = (currentText.match(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/ug) || []).length;
 
             // ALWAYS use i18n translation if available
             if (i18nKey && window.i18n && window.i18n.translate) {
@@ -125,17 +89,24 @@ function updateCircleDisplays() {
 
                 // Set text with single emoji
                 option.textContent = emoji ? emoji + ' ' + cleanTranslation : cleanTranslation;
-            } else {
-                // Fallback: just add emoji to existing text
-                const currentText = removeAllEmojis(option.textContent);
+            } else if (emojiCount > 1) {
+                // Fix duplicate emojis even without i18n
+                const cleanText = removeAllEmojis(currentText);
                 const emoji = CIRCLE_EMOJIS[value] || '';
-                option.textContent = emoji ? emoji + ' ' + currentText : currentText;
+                option.textContent = emoji ? emoji + ' ' + cleanText : cleanText;
+            } else if (emojiCount === 0) {
+                // Add emoji if missing
+                const emoji = CIRCLE_EMOJIS[value] || '';
+                option.textContent = emoji ? emoji + ' ' + currentText.trim() : currentText.trim();
             }
+            // If emojiCount === 1, leave it alone (already correct)
         });
 
         // Restore the selection
         selector.value = currentValue;
     });
+
+    console.log('✅ Circle displays updated');
 }
 
 // Export functions for use in other files
@@ -143,21 +114,23 @@ if (typeof window !== 'undefined') {
     window.getDisplayName = getDisplayName;
     window.getInternalName = getInternalName;
     window.updateCircleDisplays = updateCircleDisplays;
-    window.removeAllEmojis = removeAllEmojis; // Export for debugging
+    window.removeAllEmojis = removeAllEmojis;
 }
 
 // SIMPLIFIED initialization - only run once when DOM is ready
 let initialized = false;
-document.addEventListener('DOMContentLoaded', () => {
+
+function initialize() {
     if (initialized) return;
     initialized = true;
-
-    console.log('Feed updates DOM loaded');
+    console.log('Feed updates initializing...');
     // Single delayed call to let i18n initialize first
     setTimeout(updateCircleDisplays, 200);
-});
+}
 
-// Update when language changes - but don't re-initialize
+document.addEventListener('DOMContentLoaded', initialize);
+
+// Update when language changes
 window.addEventListener('languageChanged', () => {
     console.log('Language changed, updating circle displays');
     updateCircleDisplays();
@@ -165,8 +138,7 @@ window.addEventListener('languageChanged', () => {
 
 // Try to run immediately if DOM already ready
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    if (!initialized) {
-        initialized = true;
-        setTimeout(updateCircleDisplays, 200);
-    }
+    initialize();
 }
+
+console.log('✅ feed-updates.js loaded');
