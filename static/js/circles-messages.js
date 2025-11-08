@@ -521,13 +521,33 @@ async function loadCircles() {
             console.log('Loading own circles');
         }
 
-        const response = await fetch(url);
+      const response = await fetch(url);
         if (response.status === 401) {
             window.location.href = '/';
             return;
         }
 
-       const circles = await response.json();
+        const circles = await response.json();
+
+        // If viewing another user's circles, update the privacy dropdown to show THEIR setting
+        if (viewingUserId && circles.viewer_circle_type) {
+            const privacySelect = document.getElementById('circlesPrivacySelect');
+            if (privacySelect) {
+                // Disable the dropdown when viewing another user's circles
+                privacySelect.disabled = true;
+                // Set to the viewer's access level (what circle they're in)
+                privacySelect.value = circles.viewer_circle_type;
+            }
+        } else if (!viewingUserId) {
+            // Re-enable dropdown when viewing own circles
+            const privacySelect = document.getElementById('circlesPrivacySelect');
+            if (privacySelect) {
+                privacySelect.disabled = false;
+            }
+        }
+
+
+
         console.log('Loaded circles data:', circles);
 
         // Store globally for debugging
@@ -816,6 +836,7 @@ if (typeof window !== 'undefined') {
     window.initializeCircles = initializeCircles;
     window.searchUsers = searchUsers;
     window.addToCircle = addToCircle;
+    window.updatePrivacyDropdownTranslations = updatePrivacyDropdownTranslations;
     window.removeFromCircle = removeFromCircle;
 }
 
@@ -941,12 +962,18 @@ function addCircleTranslations() {
         });
 
         // Update Russian translations
+     // Update Russian translations
         Object.assign(window.i18n.translations.ru, {
             'circles.public': 'Публичный',
             'circles.class_b': 'Класс Б (Друзья)',
             'circles.class_a': 'Класс А (Семья)',
             'circles.add_to_circle': 'Добавить в круг'
         });
+
+        // Update privacy dropdown translations immediately
+        if (typeof updatePrivacyDropdownTranslations === 'function') {
+            updatePrivacyDropdownTranslations();
+        }
     }
 }
 
@@ -954,7 +981,31 @@ function addCircleTranslations() {
 
 
 
+function updatePrivacyDropdownTranslations() {
+    const privacySelect = document.getElementById('circlesPrivacySelect');
+    if (!privacySelect) return;
 
+    const options = privacySelect.querySelectorAll('option');
+    options.forEach(option => {
+        const value = option.value;
+        const i18nKey = option.getAttribute('data-i18n');
+
+        if (i18nKey && window.i18n && window.i18n.t) {
+            // Get translation without emoji
+            const translation = t(i18nKey, option.textContent);
+
+            // Extract emoji from original text
+            const emojiMatch = option.textContent.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])\s*/u);
+            const emoji = emojiMatch ? emojiMatch[0] : '';
+
+            // Remove emoji from translation if present
+            const cleanTranslation = translation.replace(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])\s*/u, '');
+
+            // Set with emoji prefix
+            option.textContent = emoji + cleanTranslation;
+        }
+    });
+}
 
 
 
@@ -1532,9 +1583,10 @@ async function loadCirclesPrivacy() {
             const data = await response.json();
             const privacyLevel = data.circles_privacy || 'private';
 
-            const selector = document.getElementById('circlesPrivacySelect');
+         const selector = document.getElementById('circlesPrivacySelect');
             if (selector) {
                 selector.value = privacyLevel;
+                selector.disabled = false; // Ensure it's enabled for own circles
             }
         }
     } catch (error) {
