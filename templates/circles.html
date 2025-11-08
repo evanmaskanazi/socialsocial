@@ -203,39 +203,40 @@ if (window.i18n && window.i18n.applyLanguage) {
             // Handle language changes
        // Handle language changes
       // Handle language changes with debouncing to prevent flashing
-   window.addEventListener('languageChanged', (event) => {
-    console.log('Language changed to:', event.detail?.language || window.i18n?.currentLanguage);
+// Handle language changes with debouncing
+            let languageChangeTimeout;
+            window.addEventListener('languageChanged', (event) => {
+                // Debounce rapid language changes
+                clearTimeout(languageChangeTimeout);
 
-    // Update RTL direction
-    const rtlLanguages = ['ar', 'he'];
-    if (window.i18n && rtlLanguages.includes(window.i18n.currentLanguage)) {
-        document.body.setAttribute('dir', 'rtl');
-    } else {
-        document.body.setAttribute('dir', 'ltr');
-    }
+                languageChangeTimeout = setTimeout(() => {
+                    console.log('Language changed to:', event.detail?.language || window.i18n?.currentLanguage);
 
-    // Update circle display names (using correct function name)
-  // Update circle display names (using correct function name)
-    if (typeof updateCircleDisplay === 'function') {
-        updateCircleDisplay();
-    }
+                    // Update RTL direction
+                    const rtlLanguages = ['ar', 'he'];
+                    if (window.i18n && rtlLanguages.includes(window.i18n.currentLanguage)) {
+                        document.body.setAttribute('dir', 'rtl');
+                    } else {
+                        document.body.setAttribute('dir', 'ltr');
+                    }
 
-    // Update display names from feed-updates.js
-    if (typeof updateCircleDisplays === 'function') {
-        updateCircleDisplays();
-    }
+                    // ONLY update translations, DO NOT reload data from server
+                    // This preserves any pending UI changes (like privacy dropdown changes)
 
-    // Update privacy dropdown translations
-    if (typeof updatePrivacyDropdownTranslations === 'function') {
-        updatePrivacyDropdownTranslations();
-    }
+                    // Update display names from feed-updates.js
+                    if (typeof updateCircleDisplays === 'function') {
+                        updateCircleDisplays();
+                    }
 
-    // Re-render UI with new translations WITHOUT reloading data from server
-    // This prevents the infinite loop caused by loadCircles() triggering syncLanguageWithBackend()
-    if (typeof renderCirclesUI === 'function') {
-        renderCirclesUI();
-    }
-});
+                    // Update privacy dropdown translations (if it exists)
+                    if (typeof updatePrivacyDropdownTranslations === 'function') {
+                        updatePrivacyDropdownTranslations();
+                    }
+
+                    // DO NOT call updateCircleDisplay() or loadCircles() or renderCirclesUI()
+                    // as these reload data from server and override pending changes
+                }, 100); // 100ms debounce
+            });
         });
     </script>
 </body>
