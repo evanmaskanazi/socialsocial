@@ -55,13 +55,23 @@ function updateCircleDisplays() {
             const text = option.textContent.trim();
             const i18nKey = option.getAttribute('data-i18n');
 
-            // If option has data-i18n attribute, use translation
+          // If option has data-i18n attribute, use translation
             if (i18nKey && window.i18n && window.i18n.translate) {
                 const translation = window.i18n.translate(i18nKey);
-                // Preserve emoji prefix if present
-                const emojiMatch = text.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🔒|🌍|👥|👨‍👩‍👧‍👦)\s*/u);
-                const emoji = emojiMatch ? emojiMatch[0] : '';
-                option.textContent = emoji + translation;
+                // Extract emoji ONLY from the option's VALUE attribute, not from existing text
+                let emoji = '';
+                if (value === 'private') {
+                    emoji = '🔒 ';
+                } else if (value === 'public' || value === 'general') {
+                    emoji = '🌐 ';
+                } else if (value === 'close_friends' || value === 'class_b') {
+                    emoji = '👥 ';
+                } else if (value === 'family' || value === 'class_a') {
+                    emoji = '👨‍👩‍👧‍👦 ';
+                }
+                // Remove any existing emoji from translation
+                const cleanTranslation = translation.replace(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🔒|🌐|👥|👨‍👩‍👧‍👦)\s*/u, '');
+                option.textContent = emoji + cleanTranslation;
             } else {
                 // Fallback: Map both by value AND by text
                 if (value === 'general' || value === 'public' || text === 'General') {
@@ -89,15 +99,27 @@ function updateCircleDisplays() {
 
     // Update all standalone dropdown options with data-i18n attributes
     // (This handles any dropdowns not caught by the selector above)
+  // Update all standalone dropdown options with data-i18n attributes
+    // (This handles any dropdowns not caught by the selector above)
     document.querySelectorAll('select option[data-i18n]').forEach(option => {
         const key = option.getAttribute('data-i18n');
+        const value = option.value;
         if (key && window.i18n && window.i18n.translate) {
             const translation = window.i18n.translate(key);
-            const currentText = option.textContent;
-            // Preserve emoji prefix if present
-            const emojiMatch = currentText.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🔒|🌍|👥|👨‍👩‍👧‍👦)\s*/u);
-            const emoji = emojiMatch ? emojiMatch[0] : '';
-            option.textContent = emoji + translation;
+            // Determine emoji based on VALUE, not existing text
+            let emoji = '';
+            if (value === 'private') {
+                emoji = '🔒 ';
+            } else if (value === 'public' || value === 'general') {
+                emoji = '🌐 ';
+            } else if (value === 'close_friends' || value === 'class_b') {
+                emoji = '👥 ';
+            } else if (value === 'family' || value === 'class_a') {
+                emoji = '👨‍👩‍👧‍👦 ';
+            }
+            // Remove any existing emoji from translation
+            const cleanTranslation = translation.replace(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🔒|🌐|👥|👨‍👩‍👧‍👦)\s*/u, '');
+            option.textContent = emoji + cleanTranslation;
         }
     });
 }

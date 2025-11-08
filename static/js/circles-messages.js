@@ -530,13 +530,30 @@ async function loadCircles() {
         const circles = await response.json();
 
         // If viewing another user's circles, update the privacy dropdown to show THEIR setting
-        if (viewingUserId && circles.viewer_circle_type) {
+       // If viewing another user's circles, show THEIR privacy setting
+        if (viewingUserId) {
             const privacySelect = document.getElementById('circlesPrivacySelect');
             if (privacySelect) {
                 // Disable the dropdown when viewing another user's circles
                 privacySelect.disabled = true;
-                // Set to the viewer's access level (what circle they're in)
-                privacySelect.value = circles.viewer_circle_type;
+
+                // Set dropdown to match what the VIEWED USER has their circles set to
+                // The backend tells us this via circles.private or the privacy level
+                if (circles.private) {
+                    privacySelect.value = 'private';
+                } else if (circles.viewer_circle_type) {
+                    // Use the target user's actual circles privacy level
+                    // The viewer_circle_type tells us what circle WE are in, not their privacy setting
+                    // We need to fetch their actual privacy setting
+                    fetch(`/api/circles/privacy?user_id=${viewingUserId}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.privacy) {
+                                privacySelect.value = data.privacy;
+                            }
+                        })
+                        .catch(err => console.error('Error fetching privacy setting:', err));
+                }
             }
         } else if (!viewingUserId) {
             // Re-enable dropdown when viewing own circles
@@ -554,8 +571,9 @@ async function loadCircles() {
         window.circlesData = circles;
 
         // Check if circles are private
+      // Check if circles are private
         if (circles.private) {
-            // Display privacy message for all circle types
+            // Display privacy message for all circle types - ALWAYS show the same message
             const publicMembers = document.getElementById('publicMembers');
             const classBMembers = document.getElementById('class_bMembers');
             const classAMembers = document.getElementById('class_aMembers');
@@ -566,9 +584,16 @@ async function loadCircles() {
                     <p data-i18n="circles.circles_private">${t('circles.circles_private', 'Circles set to private')}</p>
                 </div>`;
 
-            if (publicMembers) publicMembers.innerHTML = privateMessage;
-            if (classBMembers) classBMembers.innerHTML = privateMessage;
-            if (classAMembers) classAMembers.innerHTML = privateMessage;
+            // ALWAYS show private message regardless of whether circles have members or not
+            if (publicMembers) {
+                publicMembers.innerHTML = privateMessage;
+            }
+            if (classBMembers) {
+                classBMembers.innerHTML = privateMessage;
+            }
+            if (classAMembers) {
+                classAMembers.innerHTML = privateMessage;
+            }
 
             // Set counts to 0
             const publicCount = document.getElementById('publicCount');
