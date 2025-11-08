@@ -559,10 +559,10 @@ async function loadCircles() {
             const classBMembers = document.getElementById('class_bMembers');
             const classAMembers = document.getElementById('class_aMembers');
 
-            const privateMessage = `
+           const privateMessage = `
                 <div class="empty-state">
                     <div class="empty-state-icon">🔒</div>
-                    <p data-i18n="circles.circles_private">${t('circles.circles_private', 'Circles set to private')}</p>
+                    <p data-i18n="circles.circles_private">Circles set to private</p>
                 </div>`;
 
             // ALWAYS show private message regardless of whether circles have members or not
@@ -576,6 +576,11 @@ async function loadCircles() {
                 classAMembers.innerHTML = privateMessage;
             }
 
+            // RE-APPLY TRANSLATIONS after setting innerHTML
+            if (window.i18n && window.i18n.applyLanguage) {
+                window.i18n.applyLanguage();
+            }
+
             // Set counts to 0
             const publicCount = document.getElementById('publicCount');
             const classBCount = document.getElementById('class_bCount');
@@ -585,7 +590,6 @@ async function loadCircles() {
             if (classACount) classACount.textContent = '0';
 
             return;
-        }
 
         // Update display for Public - Backend NOW returns 'public'
         const publicMembers = document.getElementById('publicMembers');
