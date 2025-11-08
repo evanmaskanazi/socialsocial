@@ -200,6 +200,20 @@ if (window.i18n && window.i18n.applyLanguage) {
             if (loadingDiv) loadingDiv.style.display = 'none';
             console.log('Circles now visible');
 
+            // CRITICAL: Re-apply translations to ensure lock messages and dropdown are translated
+            if (window.i18n && window.i18n.applyLanguage) {
+                const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+                window.i18n.applyLanguage(currentLang);
+                console.log('Applied translations after circles loaded:', currentLang);
+            }
+
+            // Update privacy dropdown specifically
+            if (typeof updatePrivacyDropdownTranslations === 'function') {
+                updatePrivacyDropdownTranslations();
+            }
+
+            // Handle language changes
+
             // Handle language changes
        // Handle language changes
       // Handle language changes with debouncing to prevent flashing
@@ -222,6 +236,15 @@ if (window.i18n && window.i18n.applyLanguage) {
 
                     // ONLY update translations, DO NOT reload data from server
                     // This preserves any pending UI changes (like privacy dropdown changes)
+
+                // ONLY update translations, DO NOT reload data from server
+                    // This preserves any pending UI changes (like privacy dropdown changes)
+
+                    // CRITICAL: Apply language to ALL elements with data-i18n
+                    if (window.i18n && window.i18n.applyLanguage) {
+                        const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+                        window.i18n.applyLanguage(currentLang);
+                    }
 
                     // Update display names from feed-updates.js
                     if (typeof updateCircleDisplays === 'function') {
