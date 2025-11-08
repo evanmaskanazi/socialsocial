@@ -31,6 +31,7 @@ function getInternalName(displayName) {
 }
 
 // Update all dropdowns and displays
+// Update all dropdowns and displays
 function updateCircleDisplays() {
     console.log('Updating circle displays...');
 
@@ -44,7 +45,7 @@ function updateCircleDisplays() {
     });
 
     // Update all circle selectors in feed
-    document.querySelectorAll('.circle-selector, .visibility-selector, select[name="circle"], .privacy-select').forEach(selector => {
+    document.querySelectorAll('.circle-selector, .visibility-selector, select[name="circle"], .privacy-select, .visibility-select').forEach(selector => {
         // Store current value
         const currentValue = selector.value;
 
@@ -52,20 +53,30 @@ function updateCircleDisplays() {
         selector.querySelectorAll('option').forEach(option => {
             const value = option.value;
             const text = option.textContent.trim();
+            const i18nKey = option.getAttribute('data-i18n');
 
-            // Map both by value AND by text
-            if (value === 'general' || value === 'public' || text === 'General') {
-                option.textContent = 'Public';
-                option.value = 'public';
-            } else if (value === 'close_friends' || value === 'class_b' || text === 'Close Friends') {
-                option.textContent = 'Class B (Friends)';
-                option.value = 'class_b';
-            } else if (value === 'family' || value === 'class_a' || text === 'Family') {
-                option.textContent = 'Class A (Family)';
-                option.value = 'class_a';
-            } else if (value === 'private') {
-                option.textContent = 'Private';
-                option.value = 'private';
+            // If option has data-i18n attribute, use translation
+            if (i18nKey && window.i18n && window.i18n.translate) {
+                const translation = window.i18n.translate(i18nKey);
+                // Preserve emoji prefix if present
+                const emojiMatch = text.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🔒|🌍|👥|👨‍👩‍👧‍👦)\s*/u);
+                const emoji = emojiMatch ? emojiMatch[0] : '';
+                option.textContent = emoji + translation;
+            } else {
+                // Fallback: Map both by value AND by text
+                if (value === 'general' || value === 'public' || text === 'General') {
+                    option.textContent = 'Public';
+                    option.value = 'public';
+                } else if (value === 'close_friends' || value === 'class_b' || text === 'Close Friends') {
+                    option.textContent = 'Class B (Friends)';
+                    option.value = 'class_b';
+                } else if (value === 'family' || value === 'class_a' || text === 'Family') {
+                    option.textContent = 'Class A (Family)';
+                    option.value = 'class_a';
+                } else if (value === 'private') {
+                    option.textContent = 'Private';
+                    option.value = 'private';
+                }
             }
         });
 
@@ -74,6 +85,20 @@ function updateCircleDisplays() {
         else if (currentValue === 'close_friends') selector.value = 'class_b';
         else if (currentValue === 'family') selector.value = 'class_a';
         else selector.value = currentValue;
+    });
+
+    // Update all standalone dropdown options with data-i18n attributes
+    // (This handles any dropdowns not caught by the selector above)
+    document.querySelectorAll('select option[data-i18n]').forEach(option => {
+        const key = option.getAttribute('data-i18n');
+        if (key && window.i18n && window.i18n.translate) {
+            const translation = window.i18n.translate(key);
+            const currentText = option.textContent;
+            // Preserve emoji prefix if present
+            const emojiMatch = currentText.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|🔒|🌍|👥|👨‍👩‍👧‍👦)\s*/u);
+            const emoji = emojiMatch ? emojiMatch[0] : '';
+            option.textContent = emoji + translation;
+        }
     });
 }
 
