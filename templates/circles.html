@@ -32,16 +32,18 @@
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
     <script src="/static/js/i18n.js"></script>
-<script src="/static/js/circles-messages.js?v=2.0"></script>
-<script src="/static/js/feed-updates.js?v=2.0"></script>
+    <script src="/static/js/circles-messages.js?v=2.0"></script>
+    <script src="/static/js/feed-updates.js?v=2.1"></script>
 
     <script>
+        // SINGLE initialization flag to prevent race conditions
+        let pageInitialized = false;
+
         // Verify authentication before loading
         async function checkAuthentication() {
             try {
                 const response = await fetch('/api/auth/session');
                 if (response.status === 401) {
-                    // Not authenticated - redirect to login
                     window.location.href = '/';
                     return false;
                 }
@@ -58,13 +60,10 @@
                 const startTime = Date.now();
 
                 const checkPopulated = () => {
-                    // Check if any member containers have actual member content (not just empty state)
                     const publicMembers = document.getElementById('publicMembers');
                     const classBMembers = document.getElementById('class_bMembers');
                     const classAMembers = document.getElementById('class_aMembers');
 
-                    // Check if at least one circle has been populated with real data
-                    // (has member-item divs or has been set to private message)
                     const hasRealContent =
                         (publicMembers && (
                             publicMembers.querySelector('.member-item') ||
@@ -85,14 +84,12 @@
                         return;
                     }
 
-                    // Timeout check
                     if (Date.now() - startTime > maxWaitMs) {
                         console.warn('Timeout waiting for circles to populate');
                         resolve(false);
                         return;
                     }
 
-                    // Check again in 50ms
                     setTimeout(checkPopulated, 50);
                 };
 
@@ -100,83 +97,65 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('Circles page loading...');
-
-            // Check authentication first
-            const isAuthenticated = await checkAuthentication();
-            if (!isAuthenticated) {
+        // MAIN INITIALIZATION - runs exactly once
+        async function initializeCirclesPage() {
+            if (pageInitialized) {
+                console.log('Page already initialized, skipping...');
                 return;
             }
+            pageInitialized = true;
 
-            // Wait for i18n to load
+            console.log('Circles page initializing...');
+
+            // 1. Check authentication first
+            const isAuthenticated = await checkAuthentication();
+            if (!isAuthenticated) return;
+
+            // 2. Wait for i18n to load
             let waitCount = 0;
             while ((!window.i18n || !window.i18n.translations) && waitCount < 20) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 waitCount++;
             }
 
-            // Add circle translations if the function exists
+            // 3. Add circle translations if available
             if (typeof addCircleTranslations === 'function') {
                 addCircleTranslations();
             }
 
-            // Load the HTML structure FIRST (but keep it invisible with opacity: 0)
+            // 4. Load HTML structure (invisible)
             if (typeof circlesHTML !== 'undefined') {
                 document.getElementById('circlesContainer').innerHTML = circlesHTML;
-                console.log('Circles HTML loaded (invisible)');
+                console.log('Circles HTML loaded');
             } else {
                 console.error('circlesHTML not found');
                 return;
             }
 
-            // Apply translations
-          // Fetch user's language preference from backend first
-try {
-    const response = await fetch('/api/user/profile');
-    if (response.ok) {
-        const profile = await response.json();
-        if (profile.preferred_language && window.i18n && window.i18n.setLanguage) {
-            window.i18n.setLanguage(profile.preferred_language);
-        }
-    }
-} catch (error) {
-    console.log('Could not fetch user language preference');
-}
-
-// Apply translations
-// Fetch user's language preference from backend first
-try {
-    const response = await fetch('/api/user/profile');
-    if (response.ok) {
-        const profile = await response.json();
-        if (profile.preferred_language && window.i18n && window.i18n.setLanguage) {
-            window.i18n.setLanguage(profile.preferred_language);
-        }
-    }
-} catch (error) {
-    console.log('Could not fetch user language preference');
-}
-
-// Apply translations
-if (window.i18n && window.i18n.applyLanguage) {
-    const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
-    window.i18n.applyLanguage(currentLang);
-
-    // Set RTL direction for Arabic and Hebrew
-    const rtlLanguages = ['ar', 'he'];
-    if (rtlLanguages.includes(currentLang)) {
-        document.body.setAttribute('dir', 'rtl');
-    } else {
-        document.body.setAttribute('dir', 'ltr');
-    }
-}
-
-            if (typeof updateCircleDisplay === 'function') {
-                updateCircleDisplay();
+            // 5. Fetch and apply user's language preference
+            try {
+                const response = await fetch('/api/user/profile');
+                if (response.ok) {
+                    const profile = await response.json();
+                    if (profile.preferred_language && window.i18n && window.i18n.setLanguage) {
+                        await window.i18n.setLanguage(profile.preferred_language);
+                    }
+                }
+            } catch (error) {
+                console.log('Could not fetch user language preference');
             }
 
-            // Initialize circles (this will populate the invisible HTML)
+            // 6. Apply initial translations
+            if (window.i18n && window.i18n.applyLanguage) {
+                const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+                window.i18n.applyLanguage(currentLang);
+
+                // Set RTL direction
+                const rtlLanguages = ['ar', 'he'];
+                document.body.setAttribute('dir', rtlLanguages.includes(currentLang) ? 'rtl' : 'ltr');
+            }
+
+            // 7. Initialize circles data
             if (typeof initializeCircles === 'function') {
                 console.log('Calling initializeCircles');
                 initializeCircles();
@@ -185,83 +164,71 @@ if (window.i18n && window.i18n.applyLanguage) {
                 loadCircles();
             } else {
                 console.error('No circle initialization function found');
+                return;
             }
 
-            // Wait for the DOM to be populated with real data
-            console.log('Waiting for circles to be populated...');
+            // 8. Wait for circles to populate
+            console.log('Waiting for circles to populate...');
             await waitForCirclesPopulated(3000);
 
-            // NOW fade in the content (with fresh data already in place)
-            const container = document.getElementById('circlesContainer');
-            const loadingDiv = document.getElementById('loadingMessage');
-
-            container.style.opacity = '1';
-            if (loadingDiv) loadingDiv.style.display = 'none';
-            console.log('Circles now visible');
-
-            // CRITICAL: Re-apply translations to ensure lock messages and dropdown are translated
+            // 9. Apply translations ONE FINAL TIME (after data loaded)
             if (window.i18n && window.i18n.applyLanguage) {
                 const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
                 window.i18n.applyLanguage(currentLang);
-                console.log('Applied translations after circles loaded:', currentLang);
             }
 
-            // Update privacy dropdown specifically
+            // 10. Update circle displays (emojis + translations)
+            if (typeof updateCircleDisplay === 'function') {
+                updateCircleDisplay();
+            }
+            if (typeof updateCircleDisplays === 'function') {
+                updateCircleDisplays();
+            }
             if (typeof updatePrivacyDropdownTranslations === 'function') {
                 updatePrivacyDropdownTranslations();
             }
 
-            // Handle language changes
+            // 11. Make visible
+            const container = document.getElementById('circlesContainer');
+            const loadingDiv = document.getElementById('loadingMessage');
+            container.style.opacity = '1';
+            if (loadingDiv) loadingDiv.style.display = 'none';
 
-            // Handle language changes
-       // Handle language changes
-      // Handle language changes with debouncing to prevent flashing
-// Handle language changes with debouncing
-            let languageChangeTimeout;
-            window.addEventListener('languageChanged', (event) => {
-                // Debounce rapid language changes
-                clearTimeout(languageChangeTimeout);
+            console.log('Circles page fully initialized and visible');
+        }
 
-                languageChangeTimeout = setTimeout(() => {
-                    console.log('Language changed to:', event.detail?.language || window.i18n?.currentLanguage);
+        // Language change handler - SIMPLIFIED
+        window.addEventListener('languageChanged', (event) => {
+            if (!pageInitialized) return; // Don't handle until page is ready
 
-                    // Update RTL direction
-                    const rtlLanguages = ['ar', 'he'];
-                    if (window.i18n && rtlLanguages.includes(window.i18n.currentLanguage)) {
-                        document.body.setAttribute('dir', 'rtl');
-                    } else {
-                        document.body.setAttribute('dir', 'ltr');
-                    }
+            console.log('Language changed to:', event.detail?.language || window.i18n?.currentLanguage);
 
-                    // ONLY update translations, DO NOT reload data from server
-                    // This preserves any pending UI changes (like privacy dropdown changes)
+            // Update RTL direction
+            const rtlLanguages = ['ar', 'he'];
+            const newLang = event.detail?.language || window.i18n?.currentLanguage || 'en';
+            document.body.setAttribute('dir', rtlLanguages.includes(newLang) ? 'rtl' : 'ltr');
 
-                // ONLY update translations, DO NOT reload data from server
-                    // This preserves any pending UI changes (like privacy dropdown changes)
+            // Re-apply translations (WITHOUT reloading data)
+            if (window.i18n && window.i18n.applyLanguage) {
+                window.i18n.applyLanguage(newLang);
+            }
 
-                    // CRITICAL: Apply language to ALL elements with data-i18n
-                    if (window.i18n && window.i18n.applyLanguage) {
-                        const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
-                        window.i18n.applyLanguage(currentLang);
-                    }
-
-                    // Update display names from feed-updates.js
-                    if (typeof updateCircleDisplays === 'function') {
-                        updateCircleDisplays();
-                    }
-
-                    // Update privacy dropdown translations (if it exists)
-                    if (typeof updatePrivacyDropdownTranslations === 'function') {
-                        updatePrivacyDropdownTranslations();
-                    }
-
-                    // DO NOT call updateCircleDisplay() or loadCircles() or renderCirclesUI()
-                    // as these reload data from server and override pending changes
-                }, 100); // 100ms debounce
-            });
+            // Update displays
+            if (typeof updateCircleDisplays === 'function') {
+                updateCircleDisplays();
+            }
+            if (typeof updatePrivacyDropdownTranslations === 'function') {
+                updatePrivacyDropdownTranslations();
+            }
         });
+
+        // Start initialization when DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeCirclesPage);
+        } else {
+            // DOM already loaded
+            initializeCirclesPage();
+        }
     </script>
 </body>
-
-
 </html>
