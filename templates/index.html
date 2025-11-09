@@ -1724,30 +1724,29 @@
                       </div>
                   </div>
 
-                  <!-- City Selector Section -->
+                <!-- City Selector Section -->
                   <div class="city-selector-container" style="background: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                       <h3 style="color: #667eea; margin-bottom: 15px; font-size: 1.3rem;" data-i18n="home.location_settings">Location Settings</h3>
 
                       <div class="city-selector-wrapper" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
                           <label style="font-weight: 600; color: #4B5563; min-width: 120px;" data-i18n="home.select_city">Select City:</label>
-                          <select id="homeCitySelector" class="city-selector" style="flex: 1; min-width: 250px; padding: 12px; border: 2px solid #E5E7EB; border-radius: 10px; font-size: 16px;">
-                              <option value="Jerusalem, Israel">Jerusalem, Israel (UTC +2/+3)</option>
-                              <option value="Tel Aviv, Israel">Tel Aviv, Israel (UTC +2/+3)</option>
-                              <option value="Haifa, Israel">Haifa, Israel (UTC +2/+3)</option>
-                              <option value="New York, USA">New York, USA (UTC -5/-4)</option>
-                              <option value="London, UK">London, UK (UTC +0/+1)</option>
-                              <option value="Paris, France">Paris, France (UTC +1/+2)</option>
-                              <option value="Berlin, Germany">Berlin, Germany (UTC +1/+2)</option>
-                              <option value="Moscow, Russia">Moscow, Russia (UTC +3)</option>
-                              <option value="Dubai, UAE">Dubai, UAE (UTC +4)</option>
-                              <option value="Tokyo, Japan">Tokyo, Japan (UTC +9)</option>
-                              <option value="Sydney, Australia">Sydney, Australia (UTC +10/+11)</option>
+                        <select id="homeCitySelector" class="city-selector" style="flex: 1; min-width: 250px; padding: 12px; border: 2px solid #E5E7EB; border-radius: 10px; font-size: 16px;">
+                              <option value="Jerusalem, Israel" data-i18n="city.jerusalem">Jerusalem, Israel</option>
+                              <option value="Tel Aviv, Israel" data-i18n="city.telaviv">Tel Aviv, Israel</option>
+                              <option value="Haifa, Israel" data-i18n="city.haifa">Haifa, Israel</option>
+                              <option value="New York, USA" data-i18n="city.newyork">New York, USA</option>
+                              <option value="London, UK" data-i18n="city.london">London, UK</option>
+                              <option value="Paris, France" data-i18n="city.paris">Paris, France</option>
+                              <option value="Berlin, Germany" data-i18n="city.berlin">Berlin, Germany</option>
+                              <option value="Moscow, Russia" data-i18n="city.moscow">Moscow, Russia</option>
+                              <option value="Dubai, UAE" data-i18n="city.dubai">Dubai, UAE</option>
+                              <option value="Tokyo, Japan" data-i18n="city.tokyo">Tokyo, Japan</option>
+                              <option value="Sydney, Australia" data-i18n="city.sydney">Sydney, Australia</option>
                           </select>
                       </div>
 
                       <div class="city-time-display" id="homeCityTimeDisplay" style="font-size: 24px; font-weight: bold; color: var(--primary); text-align: center; padding: 15px; background: var(--light); border-radius: 10px;">
-                          <span data-i18n="home.current_time">Current Time:</span> <span id="homeCurrentTime">--:--:--</span><br>
-                          <small style="font-size: 16px; opacity: 0.8;"><span data-i18n="home.date">Date:</span> <span id="homeCurrentDate">----</span></small>
+                          <!-- Time will be displayed here -->
                       </div>
                   </div>
 
@@ -1804,9 +1803,9 @@
     <div class="city-selector-container">
         <div class="city-selector-wrapper">
             <label for="citySelector" style="font-weight: 600;" data-i18n="feed.select_city">Select City:</label>
-            <select id="citySelector" class="city-selector">
-                <option value="Jerusalem, Israel">Jerusalem, Israel</option>
-                <option value="Tokyo, Japan">Tokyo, Japan</option>
+        <select id="citySelector" class="city-selector">
+                <option value="Jerusalem, Israel" data-i18n="city.jerusalem">Jerusalem, Israel</option>
+                <option value="Tokyo, Japan" data-i18n="city.tokyo">Tokyo, Japan</option>
                 <option value="Delhi, India">Delhi, India</option>
                 <option value="Shanghai, China">Shanghai, China</option>
                 <option value="Mexico City, Mexico">Mexico City, Mexico</option>
@@ -1820,20 +1819,24 @@
                 <option value="Chongqing, China">Chongqing, China</option>
                 <option value="Kinshasa, DR Congo">Kinshasa, DR Congo</option>
                 <option value="New York City, USA">New York City, USA</option>
+                <option value="New York, USA" data-i18n="city.newyork">New York, USA</option>
                 <option value="Istanbul, Turkey">Istanbul, Turkey</option>
                 <option value="London, United Kingdom">London, United Kingdom</option>
-                <option value="Paris, France">Paris, France</option>
+                <option value="London, UK" data-i18n="city.london">London, UK</option>
+                <option value="Paris, France" data-i18n="city.paris">Paris, France</option>
                 <option value="Buenos Aires, Argentina">Buenos Aires, Argentina</option>
-                <option value="Moscow, Russia">Moscow, Russia</option>
+                <option value="Moscow, Russia" data-i18n="city.moscow">Moscow, Russia</option>
                 <option value="Seoul, South Korea">Seoul, South Korea</option>
                 <option value="Hong Kong, China">Hong Kong, China</option>
-                <option value="Dubai, UAE">Dubai, UAE</option>
-                <option value="Sydney, Australia">Sydney, Australia</option>
+                <option value="Dubai, UAE" data-i18n="city.dubai">Dubai, UAE</option>
+                <option value="Sydney, Australia" data-i18n="city.sydney">Sydney, Australia</option>
                 <option value="Singapore, Singapore">Singapore, Singapore</option>
                 <option value="Los Angeles, USA">Los Angeles, USA</option>
                 <option value="Chicago, USA">Chicago, USA</option>
+                <option value="Tel Aviv, Israel" data-i18n="city.telaviv">Tel Aviv, Israel</option>
+                <option value="Haifa, Israel" data-i18n="city.haifa">Haifa, Israel</option>
                 <option value="Melbourne, Australia">Melbourne, Australia</option>
-                <option value="Berlin, Germany">Berlin, Germany</option>
+                <option value="Berlin, Germany" data-i18n="city.berlin">Berlin, Germany</option>
                 <option value="Madrid, Spain">Madrid, Spain</option>
                 <option value="Rome, Italy">Rome, Italy</option>
                 <option value="Bangkok, Thailand">Bangkok, Thailand</option>
@@ -2268,7 +2271,7 @@
             const city = document.getElementById('citySelector').value;
             const offset = timezoneOffsets[city] || 0;
 
-            const now = new Date();
+        const now = new Date();
             const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
             const cityTime = new Date(utc + (3600000 * offset));
 
@@ -2286,15 +2289,32 @@
                 day: 'numeric'
             });
 
-            document.getElementById('cityTimeDisplay').innerHTML =
-                `${timeString}<br><span style="font-size: 16px;">${dateString}</span>`;
-        }
+            // Update both displays (feed page has cityTimeDisplay, home page has homeCityTimeDisplay)
+            const feedDisplay = document.getElementById('cityTimeDisplay');
+            const homeDisplay = document.getElementById('homeCityTimeDisplay');
 
-        async function loadUserCity() {
+            const timeHtml = `${timeString}<br><span style="font-size: 16px;">${dateString}</span>`;
+
+            if (feedDisplay) {
+                feedDisplay.innerHTML = timeHtml;
+            }
+            if (homeDisplay) {
+                homeDisplay.innerHTML = timeHtml;
+            }
+        }
+async function loadUserCity() {
             try {
                 const response = await apiCall('/user/city');
                 if (response && response.selected_city) {
-                    document.getElementById('citySelector').value = response.selected_city;
+                    const feedSelector = document.getElementById('citySelector');
+                    const homeSelector = document.getElementById('homeCitySelector');
+
+                    if (feedSelector) {
+                        feedSelector.value = response.selected_city;
+                    }
+                    if (homeSelector) {
+                        homeSelector.value = response.selected_city;
+                    }
                     updateCityTime();
                 }
             } catch (error) {
@@ -2554,7 +2574,7 @@
         initializeCalendar();
     }
 
-            // Initialize city selector event
+         // Initialize city selector event
             const citySelector = document.getElementById('citySelector');
             if (citySelector && !citySelector.hasAttribute('data-initialized')) {
                 citySelector.addEventListener('change', function() {
@@ -2566,6 +2586,17 @@
 
                 // Start time update interval
                 setInterval(updateCityTime, 1000);
+            }
+
+            // Initialize home city selector event
+            const homeCitySelector = document.getElementById('homeCitySelector');
+            if (homeCitySelector && !homeCitySelector.hasAttribute('data-initialized')) {
+                homeCitySelector.addEventListener('change', function() {
+                    const city = this.value;
+                    saveUserCity(city);
+                    updateCityTime();
+                });
+                homeCitySelector.setAttribute('data-initialized', 'true');
             }
             // Note: loadAlerts() now called from DOMContentLoaded after i18n check
         }
@@ -4708,11 +4739,11 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
 
             // Display each parameter with privacy handling
             const paramLabels = {
-                mood: '😊 Mood',
-                energy: '⚡ Energy',
-                sleep_quality: '😴 Sleep Quality',
-                physical_activity: '🏃 Physical Activity',
-                anxiety: '😰 Anxiety'
+                    mood: `😊 ${window.i18n ? window.i18n.translate('parameters.mood') : 'Mood'}`,
+                energy: `⚡ ${window.i18n ? window.i18n.translate('parameters.energy') : 'Energy'}`,
+                sleep_quality: `😴 ${window.i18n ? window.i18n.translate('parameters.sleep_quality') : 'Sleep Quality'}`,
+                physical_activity: `🏃 ${window.i18n ? window.i18n.translate('parameters.physical_activity') : 'Physical Activity'}`,
+                anxiety: `😰 ${window.i18n ? window.i18n.translate('parameters.anxiety') : 'Anxiety'}`
             };
 
             for (const [key, label] of Object.entries(paramLabels)) {
