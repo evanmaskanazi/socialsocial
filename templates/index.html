@@ -4705,10 +4705,16 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
     }
 
    // Format the date range display
+  // Format the date range display with current language
     const formatDate = (dateStr) => {
         const [year, month, day] = dateStr.split('-').map(Number);
         const date = new Date(year, month - 1, day);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        // Use current language from i18n if available
+        const locale = window.i18n && window.i18n.currentLanguage ?
+                      (window.i18n.currentLanguage === 'he' ? 'he-IL' :
+                       window.i18n.currentLanguage === 'ar' ? 'ar-SA' :
+                       window.i18n.currentLanguage === 'ru' ? 'ru-RU' : 'en-US') : 'en-US';
+        return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
     };
 
     // Build the parameters display for ALL entries
@@ -4724,7 +4730,12 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
             // Parse date string as local date to avoid timezone issues
             const [year, month, day] = param.date.split('-').map(Number);
             const date = new Date(year, month - 1, day);
-            const dateStr = date.toLocaleDateString('en-US', {
+         // Use current language from i18n if available
+            const locale = window.i18n && window.i18n.currentLanguage ?
+                          (window.i18n.currentLanguage === 'he' ? 'he-IL' :
+                           window.i18n.currentLanguage === 'ar' ? 'ar-SA' :
+                           window.i18n.currentLanguage === 'ru' ? 'ru-RU' : 'en-US') : 'en-US';
+            const dateStr = date.toLocaleDateString(locale, {
                 weekday: 'short',
                 month: 'short',
                 day: 'numeric',
@@ -4780,17 +4791,24 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
         parametersHtml += '</div>';
     }
 
+ // Get translations
+    const parametersText = window.i18n ? window.i18n.translate('parameters.title') : 'Parameters';
+    const showingDataText = window.i18n ? window.i18n.translate('parameters.showing_data') : 'Showing data from';
+    const toText = window.i18n ? window.i18n.translate('parameters.to') : 'to';
+    const entriesText = window.i18n ? window.i18n.translate('parameters.entries') : 'entries';
+    const entryText = window.i18n ? window.i18n.translate('parameters.entry') : 'entry';
+
     const modalHtml = `
         <div id="userParametersModal" class="modal" style="display: flex;">
             <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
                 <div class="modal-header">
-                    <h2>${escapeHtml(username)}'s Parameters</h2>
+                    <h2>${escapeHtml(username)}'s ${parametersText}</h2>
                     <span class="close" onclick="closeUserParametersModal()">&times;</span>
                 </div>
                 <div class="modal-body">
                     <p style="color: #666; margin-bottom: 20px;">
-                        Showing data from ${formatDate(startDate)} to ${formatDate(endDate)}
-                        <br><small>(${parameters.length} ${parameters.length === 1 ? 'entry' : 'entries'})</small>
+                        ${showingDataText} ${formatDate(startDate)} ${toText} ${formatDate(endDate)}
+                        <br><small>(${parameters.length} ${parameters.length === 1 ? entryText : entriesText})</small>
                     </p>
                     ${parametersHtml}
                 </div>
