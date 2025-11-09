@@ -2196,6 +2196,12 @@
         let feedSelectedDate = new Date();
         let feedCurrentMonth = new Date();
         let feedSavedDates = [];
+         let feedSavedDatesByVisibility = {
+            'general': [],
+            'close_friends': [],
+            'family': [],
+            'private': []
+        };
         // Global variables for calendar state
 
 
@@ -3165,17 +3171,22 @@ function sendFollowRequestFromInvite(userId) {
             updateFeedSelectedDateDisplay();
         }
 
-        async function loadFeedSavedDates(userId = null) {
-            try {
-                const endpoint = userId ? `/users/${userId}/feed/dates` : '/feed/dates';
-                const response = await apiCall(endpoint);
-                if (response) {
-                    feedSavedDates = Object.keys(response.dates || {});
-                }
-            } catch (error) {
-                console.error('Failed to load feed dates:', error);
+       async function loadFeedSavedDates(userId = null) {
+    try {
+        const endpoint = userId ? `/users/${userId}/feed/dates` : '/feed/dates';
+        const response = await apiCall(endpoint);
+        if (response) {
+            // Store dates organized by visibility
+            if (response.dates_by_visibility) {
+                feedSavedDatesByVisibility = response.dates_by_visibility;
             }
+            // For backward compatibility, keep the combined dates
+            feedSavedDates = Object.keys(response.dates || {});
         }
+    } catch (error) {
+        console.error('Failed to load feed dates:', error);
+    }
+}
 
         function renderFeedCalendar() {
             const year = feedCurrentMonth.getFullYear();
@@ -3211,6 +3222,27 @@ function sendFollowRequestFromInvite(userId) {
                 grid.appendChild(document.createElement('div'));
             }
 
+            // Get current visibility selection
+            const visibilitySelect = document.getElementById('visibilitySelect');
+            const currentVisibility = visibilitySelect ? visibilitySelect.value : 'general';
+
+            // Map visibility values
+            const visibilityMap = {
+                'general': 'general',
+                'public': 'general',
+                'close_friends': 'close_friends',
+                'class_b': 'close_friends',
+                'family': 'family',
+                'class_a': 'family',
+                'private': 'private'
+            };
+            const mappedVisibility = visibilityMap[currentVisibility] || 'general';
+
+            // Get dates for current visibility level
+            const visibilityDates = feedSavedDatesByVisibility && feedSavedDatesByVisibility[mappedVisibility]
+                ? feedSavedDatesByVisibility[mappedVisibility]
+                : [];
+
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayCell = document.createElement('div');
                 dayCell.className = 'feed-calendar-day';
@@ -3218,7 +3250,8 @@ function sendFollowRequestFromInvite(userId) {
 
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-                if (feedSavedDates.includes(dateStr)) {
+                // Only highlight dates that have content for the CURRENT visibility level
+                if (visibilityDates.includes(dateStr)) {
                     dayCell.classList.add('has-posts');
                 }
 
@@ -3344,7 +3377,7 @@ async function loadUserFeedForDate(userId, dateStr) {
             renderFeedCalendar();
         }
 
-     async function loadFeedForDate() {
+    async function loadFeedForDate() {
     const dateStr = feedSelectedDate.toISOString().split('T')[0];
     let visibility = document.getElementById('visibilitySelect').value;
 
@@ -3355,7 +3388,8 @@ async function loadUserFeedForDate(userId, dateStr) {
         'close_friends': 'close_friends',
         'class_b': 'close_friends',
         'family': 'family',
-        'class_a': 'family'
+        'class_a': 'family',
+        'private': 'private'  // ← ADDED: private support
     };
 
     visibility = visibilityMap[visibility] || visibility;
@@ -3363,19 +3397,23 @@ async function loadUserFeedForDate(userId, dateStr) {
     try {
         const response = await apiCall(`/feed/${dateStr}?visibility=${visibility}`);
 
-                if (response) {
-                    document.getElementById('postInput').value = response.content || '';
+        if (response) {
+            const content = response.content || '';
+            document.getElementById('postInput').value = content;
 
-                    if (response.content) {
-                        alert((window.i18n && window.i18n.t ? window.i18n.t('msg.loaded') : 'Loaded') + ` ${visibility.replace('_', ' ')} feed from ${dateStr}`);
-                    } else {
-                        alert((window.i18n && window.i18n.t ? window.i18n.t('feed.no_activity') : 'No activity') + ` for ${visibility.replace('_', ' ')} feed on this date`);
-                    }
-                }
-            } catch (error) {
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+            // Optional: Show console log instead of alerts
+            if (content) {
+                console.log(`Loaded ${visibility.replace('_', ' ')} content for ${dateStr}`);
+            } else {
+                console.log(`No ${visibility.replace('_', ' ')} content for ${dateStr}`);
             }
         }
+    } catch (error) {
+        console.error('Error loading feed:', error);
+        // Clear the input if there's an error
+        document.getElementById('postInput').value = '';
+    }
+}
 
         // Feed Functions
         async function loadFeed() {
@@ -3421,11 +3459,14 @@ async function loadUserFeedForDate(userId, dateStr) {
             return div;
         }
 
-        document.getElementById('postBtn').addEventListener('click', async () => {
+       document.getElementById('postBtn').addEventListener('click', async () => {
             const content = document.getElementById('postInput').value.trim();
             const visibility = document.getElementById('visibilitySelect').value;
 
-            if (!content) return;
+            if (!content) {
+                alert('Please enter some content before saving.');
+                return;
+            }
 
             try {
                 const dateStr = feedSelectedDate.toISOString().split('T')[0];
@@ -3436,13 +3477,24 @@ async function loadUserFeedForDate(userId, dateStr) {
                     date: dateStr
                 });
 
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ' successfully!');
-                loadFeedSavedDates();
+                const visibilityDisplay = visibility.replace('_', ' ').toUpperCase();
+                alert(`Saved successfully as ${visibilityDisplay}!`);
+                await loadFeedSavedDates();
                 renderFeedCalendar();
             } catch (error) {
                 alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         });
+
+  document.getElementById('visibilitySelect').addEventListener('change', async () => {
+            // Reload calendar to show correct highlighted dates for new visibility
+            await loadFeedSavedDates();
+            renderFeedCalendar();
+
+            // Reload content for current date with new visibility
+            await loadFeedForDate();
+        });
+
 
         // Profile Functions
 
