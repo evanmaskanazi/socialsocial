@@ -531,6 +531,14 @@ const translations = {
         'day.thu': 'Thu',
         'day.fri': 'Fri',
         'day.sat': 'Sat',
+         'day.sunday': 'Sunday',
+        'day.monday': 'Monday',
+        'day.tuesday': 'Tuesday',
+        'day.wednesday': 'Wednesday',
+        'day.thursday': 'Thursday',
+        'day.friday': 'Friday',
+        'day.saturday': 'Saturday',
+
 
         // Months
         'month.january': 'January',
@@ -1083,6 +1091,13 @@ const translations = {
         'day.thu': 'ה\'',
         'day.fri': 'ו\'',
         'day.sat': 'ש\'',
+            'day.sunday': 'ראשון',
+        'day.monday': 'שני',
+        'day.tuesday': 'שלישי',
+        'day.wednesday': 'רביעי',
+        'day.thursday': 'חמישי',
+        'day.friday': 'שישי',
+        'day.saturday': 'שבת',
 
         // Months
         'month.january': 'ינואר',
@@ -1634,13 +1649,22 @@ const translations = {
         'profile.updated': 'تم تحديث الملف الشخصي بنجاح!',
 
         // Days of week
-        'day.sun': 'الأحد',
-        'day.mon': 'الاثنين',
-        'day.tue': 'الثلاثاء',
-        'day.wed': 'الأربعاء',
-        'day.thu': 'الخميس',
-        'day.fri': 'الجمعة',
-        'day.sat': 'السبت',
+      'day.sun': 'ح',
+'day.mon': 'ن',
+'day.tue': 'ث',
+'day.wed': 'ر',
+'day.thu': 'خ',
+'day.fri': 'ج',
+'day.sat': 'س',
+
+// Days of week - full names
+'day.sunday': 'الأحد',
+'day.monday': 'الإثنين',
+'day.tuesday': 'الثلاثاء',
+'day.wednesday': 'الأربعاء',
+'day.thursday': 'الخميس',
+'day.friday': 'الجمعة',
+'day.saturday': 'السبت',
 
         // Months
         'month.january': 'يناير',
@@ -2197,6 +2221,13 @@ const translations = {
         'day.thu': 'Чт',
         'day.fri': 'Пт',
         'day.sat': 'Сб',
+          'day.sunday': 'Воскресенье',
+        'day.monday': 'Понедельник',
+        'day.tuesday': 'Вторник',
+        'day.wednesday': 'Среда',
+        'day.thursday': 'Четверг',
+        'day.friday': 'Пятница',
+        'day.saturday': 'Суббота',
 
         // Months
         'month.january': 'Январь',
