@@ -130,7 +130,7 @@ if (userId) {
             }
 
             // Wait a moment for scripts to fully load
-            setTimeout(() => {
+            setTimeout(async () => {
                 // Check if function exists
                 if (typeof initializeParameters !== 'function') {
                     showError('Error: initializeParameters function not found. Please refresh the page.');
@@ -252,7 +252,7 @@ if (userId) {
                     }
 
                     // Verify initialization worked
-                    setTimeout(() => {
+                    setTimeout(async () => {
                         const buttons = document.querySelectorAll('.rating-button');
                         console.log(`Initialization check: ${buttons.length} rating buttons created (expected: 20)`);
 
@@ -292,7 +292,7 @@ if (userId) {
             }
 
             // Reset counter after a delay
-            setTimeout(() => {
+            setTimeout(async () => {
                 languageUpdateCount = 0;
             }, 1000);
 
@@ -324,7 +324,7 @@ if (userId) {
                 console.error('Error updating language:', error);
             } finally {
                 // Reset flag after a small delay
-                setTimeout(() => {
+                setTimeout(async () => {
                     isUpdatingLanguage = false;
                 }, 100);
             }
