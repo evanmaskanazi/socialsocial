@@ -1,7 +1,10 @@
 // Circles and Messages Management System with i18n support
 // Complete Fixed Version with null safety and proper error handling
 
-
+// Translation helper
+const translateCircle = (key) => {
+    return window.i18n && window.i18n.translate ? window.i18n.translate(key) : key;
+};
 
 
 // Wait for i18n to be ready
@@ -1020,42 +1023,43 @@ function addCircleTranslations() {
 
 
 
-
 function updatePrivacyDropdownTranslations() {
     const privacySelect = document.getElementById('circlesPrivacySelect');
     if (!privacySelect) return;
 
-    const options = privacySelect.querySelectorAll('option');
-    options.forEach(option => {
+    const currentValue = privacySelect.value;
+
+    // Update each option with emoji + translation
+    privacySelect.querySelectorAll('option').forEach(option => {
         const value = option.value;
         const i18nKey = option.getAttribute('data-i18n');
 
-        if (i18nKey && window.i18n && window.i18n.t) {
+        if (i18nKey && window.i18n && window.i18n.translate) {
             // Get translation
-            const translation = t(i18nKey, option.textContent);
+            const translation = window.i18n.translate(i18nKey);
 
-            // Determine emoji based on value
-            let emoji = '';
-            if (value === 'private') {
-                emoji = '🔒 ';
-            } else if (value === 'public') {
-                emoji = '🌐 ';
-            } else if (value === 'class_b') {
-                emoji = '👥 ';
-            } else if (value === 'class_a') {
-                emoji = '👨‍👩‍👧‍👦 ';
-            }
-
-            // Remove any existing emoji from translation (same logic as feed-updates.js)
+            // Remove any existing emojis from translation
             const cleanTranslation = translation
-                .replace(/[\u{1F000}-\u{1FFFF}][\u{FE00}-\u{FE0F}\u{200D}\u{E0020}-\u{E007F}\u{1F000}-\u{1FFFF}]*/ug, '')
-                .replace(/[\u{2600}-\u{27BF}]/ug, '')
-                .replace(/^\s+/, '');
+                .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{200D}\u{FE0F}\u{FE0E}]/ug, '')
+                .replace(/\s+/g, ' ')
+                .trim();
 
-            // Set with emoji prefix
-            option.textContent = emoji + cleanTranslation;
+            // Emoji map
+            const emojiMap = {
+                'private': '🔒',
+                'public': '🌍',
+                'class_b': '👥',
+                'class_a': '👨‍👩‍👧‍👦'
+            };
+
+            // Add emoji based on value
+            const emoji = emojiMap[value] || '';
+            option.textContent = emoji ? cleanTranslation + ' ' + emoji : cleanTranslation;
         }
     });
+
+    // Restore the selected value
+    privacySelect.value = currentValue;
 }
 
 
