@@ -86,6 +86,16 @@ function updatePrivacy(categoryId, privacyLevel) {
 }
 
 // ESSENTIAL 5 PARAMETER CATEGORIES ONLY - ratings 1-4
+const CIRCLE_EMOJIS = {
+    'private': '🔒',
+    'public': '🌍',
+    'general': '🌍',
+    'class_b': '👥',
+    'close_friends': '👥',
+    'class_a': '👨‍👩‍👧‍👦',
+    'family': '👨‍👩‍👧‍👦'
+};
+
 const PARAMETER_CATEGORIES = [
     {
         id: 'mood',
@@ -466,20 +476,20 @@ function initializeParameters() {
                     <span class="parameter-description" data-i18n="${category.descriptionKey}">${category.descriptionKey}</span>
                 </div>
                 <div class="privacy-selector">
-              <select class="privacy-select"
+          <select class="privacy-select"
         data-category="${category.id}"
         onchange="updatePrivacy('${category.id}', this.value)">
     <option value="private" data-i18n="privacy.private" ${privacy === 'private' ? 'selected' : ''}>
-        🔒 Private
+        Private
     </option>
     <option value="class_a" data-i18n="privacy.class_a" ${privacy === 'class_a' ? 'selected' : ''}>
-        👨‍👩‍👧‍👦 Class A (Family)
+        Class A (Family)
     </option>
     <option value="class_b" data-i18n="privacy.class_b" ${privacy === 'class_b' ? 'selected' : ''}>
-        👥 Class B (Friends)
+        Class B (Friends)
     </option>
     <option value="public" data-i18n="privacy.public" ${privacy === 'public' ? 'selected' : ''}>
-        🌍 Public
+        Public
     </option>
 </select>
                 </div>
@@ -553,7 +563,10 @@ function initializeParameters() {
         window.i18n.applyLanguage();
     }
 
-    console.log('Parameters system initialized successfully with language selector and 5 categories');
+   console.log('Parameters system initialized successfully with language selector and 5 categories');
+
+    // Apply emojis to privacy selectors after a brief delay
+    setTimeout(applyEmojisToPrivacySelectors, 150);
 }
 
 // Setup language selector
@@ -1684,6 +1697,29 @@ function goToHome() {
     }
 }
 
+
+// Apply emojis to privacy dropdowns
+function applyEmojisToPrivacySelectors() {
+    document.querySelectorAll('.privacy-select').forEach(selector => {
+        const currentValue = selector.value;
+
+        selector.querySelectorAll('option').forEach(option => {
+            const value = option.value;
+            let text = option.textContent;
+
+            // Remove any existing emojis
+            text = text.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{200D}\u{FE0F}\u{FE0E}]/ug, '').trim();
+
+            // Add single emoji
+            const emoji = CIRCLE_EMOJIS[value] || '';
+            option.textContent = emoji ? emoji + ' ' + text : text;
+        });
+
+        selector.value = currentValue;
+    });
+}
+
+
 // Update translations dynamically
 function updateTranslations() {
     if (!window.i18n) return;
@@ -1861,9 +1897,10 @@ function findPeopleToFollow() {
 }
 
 
-
-
-
+// Listen for language changes and reapply emojis
+window.addEventListener('languageChanged', () => {
+    setTimeout(applyEmojisToPrivacySelectors, 50);
+});
 
 // Initialize on DOM ready (with safety checks)
 if (document.readyState === 'loading') {
@@ -1897,5 +1934,6 @@ window.copyInviteLink = copyInviteLink;
 window.closeInviteCTA = closeInviteCTA;
 window.showInviteTab = showInviteTab;
 window.findPeopleToFollow = findPeopleToFollow;
+window.applyEmojisToPrivacySelectors = applyEmojisToPrivacySelectors;
 
 console.log('Parameters-social.js loaded - FIXED VERSION with calendar display and no auto-loading');
