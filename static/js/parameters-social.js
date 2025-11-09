@@ -575,13 +575,26 @@ function setupLanguageSelector() {
     if (!selector) return;
 
     // Get current language, defaulting to 'en' if nothing is set
-    let currentLang = window.i18n?.getCurrentLanguage?.() || localStorage.getItem('userLanguage');
+   // Get current language from multiple sources - check selectedLanguage FIRST, then userLanguage
+let currentLang = window.i18n?.getCurrentLanguage?.() ||
+                 localStorage.getItem('selectedLanguage') ||  // ← Check this FIRST!
+                 localStorage.getItem('userLanguage');
 
-    // If no language is set anywhere, default to English
-    if (!currentLang || currentLang === '') {
+// Only set default if BOTH selectedLanguage and userLanguage are empty
+if (!currentLang || currentLang === '') {
+    const hasSelectedLanguage = localStorage.getItem('selectedLanguage');
+    const hasUserLanguage = localStorage.getItem('userLanguage');
+
+    // Only set defaults if both are truly empty
+    if (!hasSelectedLanguage && !hasUserLanguage) {
         currentLang = 'en';
+        localStorage.setItem('selectedLanguage', 'en');
         localStorage.setItem('userLanguage', 'en');
+    } else {
+        // Use whichever exists (don't overwrite!)
+        currentLang = hasSelectedLanguage || hasUserLanguage || 'en';
     }
+}
 
     // Set the selector value
     selector.value = currentLang;
