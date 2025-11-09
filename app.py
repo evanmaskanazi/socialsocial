@@ -4284,27 +4284,40 @@ def save_feed_entry():
 @app.route('/api/feed/<date_str>')
 @login_required
 def load_feed_by_date(date_str):
-    """Load feed entry for a specific date and visibility"""
+    """Load feed entry for a specific date and visibility with hierarchical support"""
     try:
         user_id = session['user_id']
         visibility = request.args.get('visibility', 'general')
 
         # Map visibility to circle_id
         circle_map = {
-            'general': 1,
-            'close_friends': 2,
-            'family': 3,
+            'general': 1,    # public
+            'close_friends': 2,  # class_b
+            'family': 3,     # class_a
             'private': None
         }
-        circle_id = circle_map.get(visibility)
+        requested_circle_id = circle_map.get(visibility)
 
-        # Get the post for this date and visibility
-        post = Post.query.filter_by(
-            user_id=user_id,
-            circle_id=circle_id
-        ).filter(
+        # Determine which circle_ids to search based on hierarchy
+        # When viewing a lower privacy level, also show posts from higher privacy levels
+        if requested_circle_id == 1:  # public/general
+            # When viewing public, also show class_b and class_a posts (hierarchical)
+            searchable_circle_ids = [1, 2, 3]
+        elif requested_circle_id == 2:  # class_b/close_friends
+            # When viewing class_b, also show class_a posts
+            searchable_circle_ids = [2, 3]
+        elif requested_circle_id == 3:  # class_a/family
+            # When viewing class_a, only show class_a posts
+            searchable_circle_ids = [3]
+        else:  # private
+            searchable_circle_ids = [None]
+
+        # Get the post for this date that matches any of the searchable visibility levels
+        # Order by circle_id desc to prefer more restrictive posts (class_a > class_b > public)
+        post = Post.query.filter_by(user_id=user_id).filter(
+            Post.circle_id.in_(searchable_circle_ids),
             db.func.date(Post.created_at) == date_str
-        ).first()
+        ).order_by(Post.circle_id.desc()).first()
 
         if post:
             return jsonify({
