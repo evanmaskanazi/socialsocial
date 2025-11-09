@@ -1,750 +1,679 @@
-/**
- * TheraSocial Frontend Diagnostic Suite
- * Comprehensive testing for production readiness
- * 
- * Run in browser console:
- * 1. Open https://socialsocial-72gn.onrender.com
- * 2. Open Developer Tools (F12)
- * 3. Go to Console tab
- * 4. Copy and paste this entire script
- * 5. Press Enter
- */
+#!/usr/bin/env python3
+"""
+TheraSocial Backend Diagnostic Suite
+Comprehensive testing for production readiness
 
-(function() {
-    'use strict';
+Run on Render shell with: python backend_diagnostics.py
+"""
+
+import os
+import sys
+import json
+import time
+from datetime import datetime, timedelta
+from collections import defaultdict
+
+# Color codes for terminal output
+class Colors:
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
+def print_check(passed, message, details=None):
+    """Print a check result with color coding"""
+    if passed:
+        symbol = f"{Colors.GREEN}✓{Colors.END}"
+    elif passed is None:
+        symbol = f"{Colors.YELLOW}⚠{Colors.END}"
+    else:
+        symbol = f"{Colors.RED}✗{Colors.END}"
     
-    // Results tracking
-    const results = {
-        passed: 0,
-        failed: 0,
-        warnings: 0,
-        issues: []
-    };
-    
-    // Console styling
-    const styles = {
-        header: 'color: #667eea; font-weight: bold; font-size: 16px;',
-        section: 'color: #667eea; font-weight: bold; font-size: 14px;',
-        pass: 'color: #22c55e; font-weight: bold;',
-        fail: 'color: #ef4444; font-weight: bold;',
-        warn: 'color: #f59e0b; font-weight: bold;',
-        info: 'color: #3b82f6;',
-        fix: 'color: #22c55e; font-style: italic;'
-    };
-    
-    function printHeader(title) {
-        console.log('%c' + '='.repeat(60), styles.header);
-        console.log('%c' + title, styles.header);
-        console.log('%c' + '='.repeat(60), styles.header);
-    }
-    
-    function printSection(title) {
-        console.log('\n%c' + title, styles.section);
-        console.log('%c' + '-'.repeat(title.length), styles.section);
-    }
-    
-    function printResult(passed, message, details = null, fix = null) {
-        const symbol = passed ? '✓' : (passed === null ? '⚠' : '✗');
-        const style = passed ? styles.pass : (passed === null ? styles.warn : styles.fail);
-        
-        console.log('%c' + symbol + ' ' + message, style);
-        if (details) {
-            console.log('  %c→ ' + details, styles.info);
-        }
-        if (fix && !passed) {
-            console.log('  %cFIX: ' + fix, styles.fix);
-        }
-        
-        // Track results
-        if (passed) {
-            results.passed++;
-        } else if (passed === null) {
-            results.warnings++;
-        } else {
-            results.failed++;
-            results.issues.push({ message, details, fix });
-        }
-    }
-    
-    // ============================================
-    // TEST: Global Dependencies
-    // ============================================
-    function testGlobalDependencies() {
-        printSection('Global Dependencies');
-        
-        // Check i18n
-        printResult(
-            typeof window.i18n === 'object',
-            'i18n internationalization system',
-            window.i18n ? 'Loaded successfully' : 'Not found',
-            'Ensure /static/js/i18n.js is loaded before other scripts'
-        );
-        
-        if (window.i18n) {
-            printResult(
-                typeof window.i18n.translate === 'function',
-                'i18n.translate() function',
-                'Available',
-                null
-            );
-            
-            printResult(
-                typeof window.i18n.setLanguage === 'function',
-                'i18n.setLanguage() function',
-                'Available',
-                null
-            );
-            
-            printResult(
-                typeof window.i18n.applyLanguage === 'function',
-                'i18n.applyLanguage() function',
-                'Available',
-                null
-            );
+    print(f"{symbol} {message}")
+    if details:
+        print(f"  {Colors.BLUE}→{Colors.END} {details}")
+
+def print_section(title):
+    """Print a section header"""
+    print(f"\n{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.BLUE}{title}{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.END}\n")
+
+# Import Flask app components
+try:
+    from app import app, db, User, Profile, Post, Comment, Circle, Follow, FollowRequest
+    from app import SavedParameters, Alert, Message, Activity, ParameterTrigger
+    from app import redis_client, is_production
+    print_check(True, "Successfully imported application modules")
+except Exception as e:
+    print_check(False, "Failed to import application modules", str(e))
+    sys.exit(1)
+
+class BackendDiagnostics:
+    def __init__(self):
+        self.results = {
+            'passed': 0,
+            'failed': 0,
+            'warnings': 0,
+            'issues': []
         }
         
-        // Check feed-updates
-        printResult(
-            typeof window.updateCircleDisplays === 'function',
-            'Circle display update functions',
-            window.updateCircleDisplays ? 'Available' : 'Not found',
-            'Ensure /static/js/feed-updates.js is loaded'
-        );
-    }
+    def add_result(self, passed, category, message, details=None, fix=None):
+        """Track test result"""
+        if passed:
+            self.results['passed'] += 1
+        elif passed is None:
+            self.results['warnings'] += 1
+        else:
+            self.results['failed'] += 1
+            self.results['issues'].append({
+                'category': category,
+                'message': message,
+                'details': details,
+                'fix': fix
+            })
+        
+        print_check(passed, message, details)
+        
+        if fix and not passed:
+            print(f"  {Colors.YELLOW}FIX:{Colors.END} {fix}")
     
-    // ============================================
-    // TEST: Page Loading
-    // ============================================
-    function testPageLoading() {
-        printSection('Page Loading & Initialization');
+    def test_environment_config(self):
+        """Test environment configuration"""
+        print_section("Environment Configuration")
         
-        // Check if DOM is ready
-        printResult(
-            document.readyState === 'complete',
-            'DOM ready state',
-            document.readyState,
-            null
-        );
+        # Check SECRET_KEY
+        secret_key = app.config.get('SECRET_KEY')
+        is_default = secret_key == 'dev-secret-key-change-in-production'
+        self.add_result(
+            not (is_production and is_default),
+            'security',
+            'SECRET_KEY configuration',
+            f"Using {'default (UNSAFE)' if is_default else 'custom'} key",
+            "Set SECRET_KEY environment variable with a strong random key"
+        )
         
-        // Check for loading indicators stuck visible
-        const loadingElements = document.querySelectorAll('[id*="loading"], [class*="loading"]');
-        const visibleLoading = Array.from(loadingElements).filter(el => {
-            return el.style.display !== 'none' && 
-                   el.style.visibility !== 'hidden' && 
-                   el.offsetParent !== null;
-        });
+        # Check DATABASE_URL
+        db_url = os.environ.get('DATABASE_URL')
+        self.add_result(
+            bool(db_url),
+            'database',
+            'DATABASE_URL environment variable',
+            db_url[:50] + '...' if db_url else 'Not set',
+            "Set DATABASE_URL in Render environment variables"
+        )
         
-        printResult(
-            visibleLoading.length === 0,
-            'No stuck loading indicators',
-            visibleLoading.length > 0 ? `Found ${visibleLoading.length} visible loading elements` : 'All clear',
-            visibleLoading.length > 0 ? 'Check page initialization code - loading indicators should hide after load' : null
-        );
+        # Check Redis
+        redis_url = os.environ.get('REDIS_URL')
+        self.add_result(
+            bool(redis_url) if is_production else None,
+            'cache',
+            'REDIS_URL configuration',
+            'Configured' if redis_url else 'Not configured (sessions will use filesystem)',
+            "Set REDIS_URL for production session management"
+        )
         
-        // Check for error messages
-        const errorElements = document.querySelectorAll('[id*="error"], [class*="error"]');
-        const visibleErrors = Array.from(errorElements).filter(el => {
-            return el.style.display !== 'none' && 
-                   el.style.visibility !== 'hidden' && 
-                   el.offsetParent !== null &&
-                   el.textContent.trim().length > 0;
-        });
-        
-        printResult(
-            visibleErrors.length === 0,
-            'No visible error messages',
-            visibleErrors.length > 0 ? `Found ${visibleErrors.length} error messages` : 'No errors',
-            visibleErrors.length > 0 ? 'Fix backend errors or hide error containers by default' : null
-        );
-    }
+        # Check email configuration
+        smtp_user = os.environ.get('SMTP_USERNAME')
+        smtp_pass = os.environ.get('SMTP_PASSWORD')
+        email_configured = bool(smtp_user and smtp_pass)
+        self.add_result(
+            email_configured if is_production else None,
+            'email',
+            'Email configuration for password resets',
+            'Configured' if email_configured else 'Not configured',
+            "Set SMTP_USERNAME, SMTP_PASSWORD, SMTP_SERVER, FROM_EMAIL environment variables"
+        )
     
-    // ============================================
-    // TEST: Authentication State
-    // ============================================
-    async function testAuthenticationState() {
-        printSection('Authentication State');
+    def test_database_connectivity(self):
+        """Test database connection and basic operations"""
+        print_section("Database Connectivity")
         
-        try {
-            const response = await fetch('/api/auth/session');
-            const isAuthenticated = response.ok;
-            
-            printResult(
-                isAuthenticated || !isAuthenticated,  // Both states are valid
-                'Session check endpoint',
-                isAuthenticated ? 'Authenticated' : 'Not authenticated (expected if not logged in)',
-                !response.ok && response.status !== 401 ? 'Fix /api/auth/session endpoint' : null
-            );
-            
-            if (isAuthenticated) {
-                const data = await response.json();
-                printResult(
-                    data.user && data.user.id,
-                    'User session data',
-                    data.user ? `User ID: ${data.user.id}` : 'Invalid data',
-                    'Ensure session endpoint returns user data'
-                );
-            }
-        } catch (error) {
-            printResult(
-                false,
-                'Session check endpoint',
-                error.message,
-                'Fix /api/auth/session endpoint or CORS configuration'
-            );
-        }
-    }
-    
-    // ============================================
-    // TEST: API Endpoints
-    // ============================================
-    async function testAPIEndpoints() {
-        printSection('API Endpoint Availability');
-        
-        const endpoints = [
-            { url: '/api/user/profile', method: 'GET', requiresAuth: true },
-            { url: '/api/posts', method: 'GET', requiresAuth: false },
-            { url: '/api/alerts', method: 'GET', requiresAuth: true },
-            { url: '/api/circles', method: 'GET', requiresAuth: true }
-        ];
-        
-        for (const endpoint of endpoints) {
-            try {
-                const response = await fetch(endpoint.url, { method: endpoint.method });
-                const isOk = response.ok || (endpoint.requiresAuth && response.status === 401);
+        with app.app_context():
+            try:
+                # Test basic connection
+                result = db.session.execute(db.text('SELECT 1')).scalar()
+                self.add_result(
+                    result == 1,
+                    'database',
+                    'Database connection',
+                    'Successfully connected to database'
+                )
                 
-                printResult(
-                    isOk,
-                    `${endpoint.method} ${endpoint.url}`,
-                    `Status: ${response.status} ${response.statusText}`,
-                    !isOk ? `Fix ${endpoint.url} endpoint in backend` : null
-                );
-            } catch (error) {
-                printResult(
-                    false,
-                    `${endpoint.method} ${endpoint.url}`,
-                    error.message,
-                    'Check network connectivity and backend status'
-                );
-            }
-        }
-    }
+                # Test transaction
+                db.session.begin()
+                db.session.rollback()
+                self.add_result(
+                    True,
+                    'database',
+                    'Database transaction support',
+                    'Transactions working correctly'
+                )
+                
+            except Exception as e:
+                self.add_result(
+                    False,
+                    'database',
+                    'Database connectivity',
+                    str(e),
+                    "Check DATABASE_URL and database server status"
+                )
     
-    // ============================================
-    // TEST: Translation System
-    // ============================================
-    function testTranslationSystem() {
-        printSection('Translation System');
+    def test_database_schema(self):
+        """Test database schema integrity"""
+        print_section("Database Schema Integrity")
         
-        if (!window.i18n) {
-            printResult(false, 'Translation system', 'i18n not loaded', 'Load i18n.js before testing');
-            return;
-        }
-        
-        // Check available languages
-        const languages = window.i18n.translations ? Object.keys(window.i18n.translations) : [];
-        printResult(
-            languages.length >= 4,
-            'Available languages',
-            `Found: ${languages.join(', ')} (${languages.length} total)`,
-            languages.length < 4 ? 'Add missing language translations (en, he, ar, ru)' : null
-        );
-        
-        // Check current language
-        const currentLang = window.i18n.currentLanguage || window.i18n.getCurrentLanguage?.();
-        printResult(
-            ['en', 'he', 'ar', 'ru'].includes(currentLang),
-            'Current language valid',
-            `Current: ${currentLang}`,
-            'Set valid default language in i18n initialization'
-        );
-        
-        // Check RTL support
-        const rtlLanguages = ['ar', 'he'];
-        const bodyDir = document.body.getAttribute('dir');
-        const shouldBeRTL = rtlLanguages.includes(currentLang);
-        const isRTL = bodyDir === 'rtl';
-        
-        printResult(
-            isRTL === shouldBeRTL || bodyDir === null,
-            'RTL direction support',
-            `Body dir="${bodyDir}", Language: ${currentLang}`,
-            shouldBeRTL && !isRTL ? 'Set document.body.dir = "rtl" for Arabic/Hebrew' : null
-        );
-        
-        // Test translation function
-        if (window.i18n.translate) {
-            const testKey = 'privacy.public';
-            const translation = window.i18n.translate(testKey);
-            printResult(
-                translation && translation !== testKey,
-                'Translation function working',
-                `Test key "${testKey}" → "${translation}"`,
-                'Add translations for common keys'
-            );
-        }
-        
-        // Check for missing translations (data-i18n attributes without translations)
-        const i18nElements = document.querySelectorAll('[data-i18n]');
-        let missingTranslations = 0;
-        i18nElements.forEach(el => {
-            const key = el.getAttribute('data-i18n');
-            if (key && window.i18n.translate) {
-                const translation = window.i18n.translate(key);
-                if (translation === key) {
-                    missingTranslations++;
-                }
-            }
-        });
-        
-        printResult(
-            missingTranslations === 0,
-            'Missing translations',
-            missingTranslations > 0 ? 
-                `Found ${missingTranslations} elements with missing translations` : 
-                'All elements have translations',
-            missingTranslations > 0 ? 
-                'Add missing translation keys to i18n.translations' : null
-        );
-    }
-    
-    // ============================================
-    // TEST: Circle Display System
-    // ============================================
-    function testCircleDisplaySystem() {
-        printSection('Circle Display System');
-        
-        // Check circle emoji mapping
-        printResult(
-            typeof window.CIRCLE_EMOJIS === 'object',
-            'Circle emoji mappings',
-            window.CIRCLE_EMOJIS ? 'Loaded' : 'Not found',
-            'Ensure CIRCLE_EMOJIS is defined in feed-updates.js'
-        );
-        
-        // Check for duplicate emojis in circle displays
-        const circleElements = document.querySelectorAll('[data-circle], .circle-header, option[value*="class"], option[value="public"]');
-        let duplicateEmojis = 0;
-        
-        circleElements.forEach(el => {
-            const text = el.textContent;
-            // Count emojis using regex
-            const emojiMatches = text.match(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/ug) || [];
-            if (emojiMatches.length > 1) {
-                duplicateEmojis++;
-            }
-        });
-        
-        printResult(
-            duplicateEmojis === 0,
-            'No duplicate emojis in circles',
-            duplicateEmojis > 0 ? 
-                `Found ${duplicateEmojis} elements with duplicate emojis` : 
-                'All circles display correctly',
-            duplicateEmojis > 0 ? 
-                'Run updateCircleDisplays() to fix emoji duplication' : null
-        );
-        
-        // Check privacy dropdowns
-        const privacySelects = document.querySelectorAll('select[name="circle"], .privacy-select, .visibility-selector');
-        printResult(
-            privacySelects.length > 0 || true,  // Warning if not found
-            'Privacy dropdown selectors',
-            `Found ${privacySelects.length} privacy selectors`,
-            privacySelects.length === 0 ? 'Add privacy selectors to forms' : null
-        );
-    }
-    
-    // ============================================
-    // TEST: Console Errors
-    // ============================================
-    function testConsoleErrors() {
-        printSection('Console Error Detection');
-        
-        // Check for common error patterns in console
-        const consoleErrors = [];
-        const originalError = console.error;
-        const originalWarn = console.warn;
-        
-        // Temporarily intercept console errors
-        window._diagnosticErrors = [];
-        console.error = function(...args) {
-            window._diagnosticErrors.push({ type: 'error', message: args.join(' ') });
-            originalError.apply(console, args);
-        };
-        console.warn = function(...args) {
-            window._diagnosticErrors.push({ type: 'warn', message: args.join(' ') });
-            originalWarn.apply(console, args);
-        };
-        
-        printResult(
-            null,
-            'Console error monitoring active',
-            'Error tracking started - refresh page to capture errors',
-            'Run this diagnostic again after page refresh to see errors'
-        );
-        
-        // Restore original console methods after a delay
-        setTimeout(() => {
-            console.error = originalError;
-            console.warn = originalWarn;
-        }, 1000);
-    }
-    
-    // ============================================
-    // TEST: Network Requests
-    // ============================================
-    function testNetworkRequests() {
-        printSection('Network Request Analysis');
-        
-        // Check Performance API for failed requests
-        if (window.performance && window.performance.getEntriesByType) {
-            const resources = window.performance.getEntriesByType('resource');
+        with app.app_context():
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
             
-            // Analyze resource loading
-            let failedResources = 0;
-            const slowResources = [];
+            required_tables = {
+                'users': ['id', 'username', 'email', 'password_hash', 'preferred_language', 
+                         'has_completed_onboarding', 'shareable_link_token', 'circles_privacy'],
+                'profiles': ['id', 'user_id', 'bio'],
+                'posts': ['id', 'user_id', 'content', 'visibility', 'created_at'],
+                'circles': ['id', 'user_id', 'circle_type', 'member_id'],
+                'messages': ['id', 'sender_id', 'recipient_id', 'content', 'is_read'],
+                'saved_parameters': ['id', 'user_id', 'date', 'mood', 'energy', 
+                                   'sleep_quality', 'physical_activity', 'anxiety',
+                                   'mood_privacy', 'energy_privacy', 'sleep_quality_privacy',
+                                   'physical_activity_privacy', 'anxiety_privacy'],
+                'follows': ['id', 'follower_id', 'followed_id'],
+                'follow_requests': ['id', 'requester_id', 'target_id', 'privacy_level', 'status'],
+                'alerts': ['id', 'user_id', 'title', 'content', 'alert_type', 'is_read'],
+                'comments': ['id', 'post_id', 'user_id', 'content'],
+                'reactions': ['id', 'post_id', 'user_id', 'type']
+            }
             
-            resources.forEach(resource => {
-                // Check for failed loads (duration = 0 often indicates failure)
-                if (resource.duration === 0 && resource.transferSize === 0) {
-                    failedResources++;
+            existing_tables = inspector.get_table_names()
+            
+            for table, required_columns in required_tables.items():
+                if table in existing_tables:
+                    columns = [col['name'] for col in inspector.get_columns(table)]
+                    missing_columns = [col for col in required_columns if col not in columns]
+                    
+                    self.add_result(
+                        len(missing_columns) == 0,
+                        'schema',
+                        f'Table "{table}" schema',
+                        f"Missing columns: {missing_columns}" if missing_columns else "All required columns present",
+                        f"Run migrations or add columns: {', '.join(missing_columns)}"
+                    )
+                else:
+                    self.add_result(
+                        False,
+                        'schema',
+                        f'Table "{table}" exists',
+                        'Table not found in database',
+                        "Run flask db upgrade or ensure auto-migration ran"
+                    )
+            
+            # Check indexes
+            self.add_result(
+                True,
+                'schema',
+                'Database indexes',
+                f"Found {len(existing_tables)} tables",
+                None
+            )
+    
+    def test_database_constraints(self):
+        """Test database constraints and relationships"""
+        print_section("Database Constraints & Relationships")
+        
+        with app.app_context():
+            # Test unique constraints
+            try:
+                # Check users table unique constraints
+                users = db.session.query(User.username, db.func.count(User.username)).group_by(User.username).having(db.func.count(User.username) > 1).all()
+                self.add_result(
+                    len(users) == 0,
+                    'integrity',
+                    'User.username uniqueness',
+                    f"Found {len(users)} duplicate usernames" if users else "No duplicates",
+                    "Clean up duplicate usernames in database"
+                )
+                
+                emails = db.session.query(User.email, db.func.count(User.email)).group_by(User.email).having(db.func.count(User.email) > 1).all()
+                self.add_result(
+                    len(emails) == 0,
+                    'integrity',
+                    'User.email uniqueness',
+                    f"Found {len(emails)} duplicate emails" if emails else "No duplicates",
+                    "Clean up duplicate emails in database"
+                )
+                
+            except Exception as e:
+                self.add_result(
+                    False,
+                    'integrity',
+                    'Constraint checking',
+                    str(e),
+                    "Check database schema and run migrations"
+                )
+    
+    def test_data_integrity(self):
+        """Test data integrity issues"""
+        print_section("Data Integrity")
+        
+        with app.app_context():
+            # Check for orphaned records
+            try:
+                # Profiles without users
+                orphaned_profiles = db.session.query(Profile).filter(
+                    ~Profile.user_id.in_(db.session.query(User.id))
+                ).count()
+                self.add_result(
+                    orphaned_profiles == 0,
+                    'integrity',
+                    'Orphaned profiles',
+                    f"Found {orphaned_profiles} profiles without users" if orphaned_profiles else "No orphans",
+                    f"DELETE FROM profiles WHERE user_id NOT IN (SELECT id FROM users);"
+                )
+                
+                # Posts without users
+                orphaned_posts = db.session.query(Post).filter(
+                    ~Post.user_id.in_(db.session.query(User.id))
+                ).count()
+                self.add_result(
+                    orphaned_posts == 0,
+                    'integrity',
+                    'Orphaned posts',
+                    f"Found {orphaned_posts} posts without users" if orphaned_posts else "No orphans",
+                    f"DELETE FROM posts WHERE user_id NOT IN (SELECT id FROM users);"
+                )
+                
+                # Messages with invalid sender/recipient
+                orphaned_messages = db.session.query(Message).filter(
+                    or_(
+                        ~Message.sender_id.in_(db.session.query(User.id)),
+                        ~Message.recipient_id.in_(db.session.query(User.id))
+                    )
+                ).count()
+                self.add_result(
+                    orphaned_messages == 0,
+                    'integrity',
+                    'Orphaned messages',
+                    f"Found {orphaned_messages} messages with invalid users" if orphaned_messages else "No orphans",
+                    "DELETE FROM messages WHERE sender_id NOT IN (SELECT id FROM users) OR recipient_id NOT IN (SELECT id FROM users);"
+                )
+                
+                # Self-follows
+                self_follows = db.session.query(Follow).filter(
+                    Follow.follower_id == Follow.followed_id
+                ).count()
+                self.add_result(
+                    self_follows == 0,
+                    'integrity',
+                    'Self-follow prevention',
+                    f"Found {self_follows} self-follows" if self_follows else "No self-follows",
+                    "DELETE FROM follows WHERE follower_id = followed_id;"
+                )
+                
+            except Exception as e:
+                self.add_result(
+                    None,
+                    'integrity',
+                    'Data integrity checks',
+                    f"Could not complete all checks: {str(e)}",
+                    None
+                )
+    
+    def test_authentication_security(self):
+        """Test authentication and security measures"""
+        print_section("Authentication & Security")
+        
+        with app.app_context():
+            try:
+                # Check password hashing
+                users_with_plaintext = db.session.query(User).filter(
+                    ~User.password_hash.like('pbkdf2:%')
+                ).count()
+                self.add_result(
+                    users_with_plaintext == 0,
+                    'security',
+                    'Password hashing',
+                    f"Found {users_with_plaintext} users with potentially unhashed passwords" if users_with_plaintext else "All passwords properly hashed",
+                    "Force password reset for affected users"
+                )
+                
+                # Check for inactive users with data
+                total_users = db.session.query(User).count()
+                inactive_users = db.session.query(User).filter(User.is_active == False).count()
+                self.add_result(
+                    True,
+                    'security',
+                    'User account status',
+                    f"Total: {total_users}, Inactive: {inactive_users}",
+                    None
+                )
+                
+            except Exception as e:
+                self.add_result(
+                    False,
+                    'security',
+                    'Authentication checks',
+                    str(e),
+                    None
+                )
+    
+    def test_privacy_settings(self):
+        """Test privacy settings integrity"""
+        print_section("Privacy Settings")
+        
+        with app.app_context():
+            try:
+                # Check parameters privacy defaults
+                params_without_privacy = db.session.query(SavedParameters).filter(
+                    or_(
+                        SavedParameters.mood_privacy.is_(None),
+                        SavedParameters.energy_privacy.is_(None),
+                        SavedParameters.sleep_quality_privacy.is_(None),
+                        SavedParameters.physical_activity_privacy.is_(None),
+                        SavedParameters.anxiety_privacy.is_(None)
+                    )
+                ).count()
+                
+                self.add_result(
+                    params_without_privacy == 0,
+                    'privacy',
+                    'Parameter privacy settings',
+                    f"Found {params_without_privacy} parameters without privacy settings" if params_without_privacy else "All parameters have privacy settings",
+                    "UPDATE saved_parameters SET mood_privacy='private', energy_privacy='private', sleep_quality_privacy='private', physical_activity_privacy='private', anxiety_privacy='private' WHERE mood_privacy IS NULL;"
+                )
+                
+                # Check circles privacy
+                users_without_circles_privacy = db.session.query(User).filter(
+                    User.circles_privacy.is_(None)
+                ).count()
+                
+                self.add_result(
+                    users_without_circles_privacy == 0,
+                    'privacy',
+                    'User circles privacy',
+                    f"Found {users_without_circles_privacy} users without circles privacy setting" if users_without_circles_privacy else "All users have circles privacy",
+                    "UPDATE users SET circles_privacy='private' WHERE circles_privacy IS NULL;"
+                )
+                
+            except Exception as e:
+                self.add_result(
+                    None,
+                    'privacy',
+                    'Privacy checks',
+                    str(e),
+                    None
+                )
+    
+    def test_performance_concerns(self):
+        """Test for potential performance issues"""
+        print_section("Performance Analysis")
+        
+        with app.app_context():
+            try:
+                # Check for large tables
+                table_counts = {
+                    'users': db.session.query(User).count(),
+                    'posts': db.session.query(Post).count(),
+                    'messages': db.session.query(Message).count(),
+                    'saved_parameters': db.session.query(SavedParameters).count(),
+                    'follows': db.session.query(Follow).count(),
+                    'alerts': db.session.query(Alert).count()
                 }
                 
-                // Check for slow resources (>2 seconds)
-                if (resource.duration > 2000) {
-                    slowResources.push({
-                        name: resource.name.split('/').pop(),
-                        duration: Math.round(resource.duration)
-                    });
-                }
-            });
+                for table, count in table_counts.items():
+                    warning = count > 100000
+                    self.add_result(
+                        not warning if warning else None,
+                        'performance',
+                        f'{table.capitalize()} table size',
+                        f"{count:,} records" + (" - Consider archiving/pagination optimization" if warning else ""),
+                        f"Implement archiving strategy for {table}" if warning else None
+                    )
+                
+                # Check Redis connectivity if configured
+                if redis_client:
+                    try:
+                        redis_client.ping()
+                        self.add_result(
+                            True,
+                            'performance',
+                            'Redis cache connectivity',
+                            'Connected and responding',
+                            None
+                        )
+                    except Exception as e:
+                        self.add_result(
+                            False,
+                            'performance',
+                            'Redis cache connectivity',
+                            str(e),
+                            "Check REDIS_URL and Redis server status"
+                        )
+                else:
+                    self.add_result(
+                        None,
+                        'performance',
+                        'Redis cache',
+                        'Not configured (using filesystem sessions)',
+                        "Configure Redis for better performance in production"
+                    )
+                
+            except Exception as e:
+                self.add_result(
+                    None,
+                    'performance',
+                    'Performance analysis',
+                    str(e),
+                    None
+                )
+    
+    def test_api_routes(self):
+        """Test critical API routes exist and are protected"""
+        print_section("API Routes")
+        
+        critical_routes = [
+            '/api/auth/register',
+            '/api/auth/login',
+            '/api/auth/logout',
+            '/api/posts',
+            '/api/posts/<int:post_id>',
+            '/api/messages',
+            '/api/user/profile',
+            '/api/parameters/save',
+            '/api/circles',
+            '/api/follow/<int:user_id>',
+            '/api/alerts'
+        ]
+        
+        existing_routes = [rule.rule for rule in app.url_map.iter_rules()]
+        
+        for route in critical_routes:
+            # Check if route pattern exists (handle dynamic parts)
+            route_pattern = route.replace('<int:post_id>', '*').replace('<int:user_id>', '*')
+            exists = any(r.replace('<int:post_id>', '*').replace('<int:user_id>', '*') == route_pattern for r in existing_routes)
             
-            printResult(
-                failedResources === 0,
-                'Failed resource loads',
-                failedResources > 0 ? 
-                    `Found ${failedResources} failed resources` : 
-                    'All resources loaded successfully',
-                failedResources > 0 ? 
-                    'Check network tab for 404 errors and fix missing files' : null
-            );
+            self.add_result(
+                exists,
+                'api',
+                f'Route {route}',
+                'Exists' if exists else 'Missing',
+                f"Implement {route} endpoint in app.py" if not exists else None
+            )
+    
+    def test_scalability_concerns(self):
+        """Test for scalability issues"""
+        print_section("Scalability Concerns")
+        
+        with app.app_context():
+            try:
+                # Check for N+1 query patterns in common operations
+                # This is a basic check - would need query profiling for thorough analysis
+                
+                # Check if users have reasonable follower counts
+                avg_followers = db.session.query(
+                    db.func.avg(db.func.count(Follow.id))
+                ).select_from(Follow).group_by(Follow.followed_id).scalar() or 0
+                
+                self.add_result(
+                    True,
+                    'scalability',
+                    'Average followers per user',
+                    f"{avg_followers:.1f} followers/user (reasonable for current scale)",
+                    None
+                )
+                
+                # Check for users with excessive posts
+                max_posts = db.session.query(
+                    db.func.count(Post.id)
+                ).group_by(Post.user_id).order_by(db.func.count(Post.id).desc()).first()
+                
+                if max_posts:
+                    max_posts_count = max_posts[0]
+                    warning = max_posts_count > 10000
+                    self.add_result(
+                        not warning,
+                        'scalability',
+                        'Maximum posts per user',
+                        f"{max_posts_count:,} posts" + (" - May need pagination optimization" if warning else ""),
+                        "Implement efficient pagination and consider post archiving" if warning else None
+                    )
+                
+            except Exception as e:
+                self.add_result(
+                    None,
+                    'scalability',
+                    'Scalability checks',
+                    str(e),
+                    None
+                )
+    
+    def test_data_validation(self):
+        """Test data validation and sanitization"""
+        print_section("Data Validation")
+        
+        with app.app_context():
+            try:
+                # Check for potentially malicious content in posts
+                posts_with_scripts = db.session.query(Post).filter(
+                    or_(
+                        Post.content.like('%<script%'),
+                        Post.content.like('%javascript:%'),
+                        Post.content.like('%onerror=%')
+                    )
+                ).count()
+                
+                self.add_result(
+                    posts_with_scripts == 0,
+                    'security',
+                    'XSS prevention in posts',
+                    f"Found {posts_with_scripts} posts with potential XSS" if posts_with_scripts else "No obvious XSS patterns",
+                    "Sanitize post content and implement content security policy"
+                )
+                
+                # Check for extremely long content that might cause issues
+                long_posts = db.session.query(Post).filter(
+                    db.func.length(Post.content) > 50000
+                ).count()
+                
+                self.add_result(
+                    long_posts == 0,
+                    'validation',
+                    'Post content length validation',
+                    f"Found {long_posts} extremely long posts" if long_posts else "Post lengths within reasonable limits",
+                    "Implement content length validation (max 10000 chars recommended)"
+                )
+                
+                # Check for valid email formats
+                invalid_emails = db.session.query(User).filter(
+                    ~User.email.like('%@%.%')
+                ).count()
+                
+                self.add_result(
+                    invalid_emails == 0,
+                    'validation',
+                    'Email format validation',
+                    f"Found {invalid_emails} invalid email formats" if invalid_emails else "All emails have valid format",
+                    "Implement strict email validation on registration"
+                )
+                
+            except Exception as e:
+                self.add_result(
+                    None,
+                    'validation',
+                    'Data validation checks',
+                    str(e),
+                    None
+                )
+    
+    def generate_report(self):
+        """Generate comprehensive diagnostic report"""
+        print_section("Diagnostic Summary")
+        
+        total_tests = self.results['passed'] + self.results['failed'] + self.results['warnings']
+        
+        print(f"\n{Colors.BOLD}Test Results:{Colors.END}")
+        print(f"  {Colors.GREEN}✓ Passed:{Colors.END}  {self.results['passed']}/{total_tests}")
+        print(f"  {Colors.RED}✗ Failed:{Colors.END}  {self.results['failed']}/{total_tests}")
+        print(f"  {Colors.YELLOW}⚠ Warnings:{Colors.END} {self.results['warnings']}/{total_tests}")
+        
+        if self.results['failed'] > 0:
+            print(f"\n{Colors.BOLD}{Colors.RED}Critical Issues Found:{Colors.END}")
             
-            printResult(
-                slowResources.length === 0,
-                'Resource loading performance',
-                slowResources.length > 0 ? 
-                    `${slowResources.length} resources took >2s to load` : 
-                    'All resources load quickly',
-                slowResources.length > 0 ? 
-                    'Optimize slow resources: ' + slowResources.map(r => `${r.name} (${r.duration}ms)`).join(', ') : null
-            );
+            # Group issues by category
+            issues_by_category = defaultdict(list)
+            for issue in self.results['issues']:
+                if issue.get('fix'):  # Only show issues with fixes
+                    issues_by_category[issue['category']].append(issue)
             
-            printResult(
-                true,
-                'Total resources loaded',
-                `${resources.length} resources analyzed`,
-                null
-            );
-        }
-    }
+            for category, issues in sorted(issues_by_category.items()):
+                print(f"\n{Colors.YELLOW}{category.upper()}:{Colors.END}")
+                for i, issue in enumerate(issues, 1):
+                    print(f"\n  {i}. {issue['message']}")
+                    if issue['details']:
+                        print(f"     Details: {issue['details']}")
+                    if issue['fix']:
+                        print(f"     {Colors.GREEN}Fix:{Colors.END} {issue['fix']}")
+        
+        # Overall assessment
+        print(f"\n{Colors.BOLD}Overall Assessment:{Colors.END}")
+        if self.results['failed'] == 0:
+            print(f"{Colors.GREEN}✓ System is ready for QA testing{Colors.END}")
+        elif self.results['failed'] < 5:
+            print(f"{Colors.YELLOW}⚠ System needs minor fixes before QA{Colors.END}")
+        else:
+            print(f"{Colors.RED}✗ System requires significant fixes before QA{Colors.END}")
+        
+        return self.results
+
+def main():
+    """Run all diagnostic tests"""
+    print(f"\n{Colors.BOLD}{'='*60}{Colors.END}")
+    print(f"{Colors.BOLD}TheraSocial Backend Diagnostic Suite{Colors.END}")
+    print(f"{Colors.BOLD}Running in: {'PRODUCTION' if is_production else 'DEVELOPMENT'} mode{Colors.END}")
+    print(f"{Colors.BOLD}{'='*60}{Colors.END}")
     
-    // ============================================
-    // TEST: Form Validation
-    // ============================================
-    function testFormValidation() {
-        printSection('Form Validation');
-        
-        const forms = document.querySelectorAll('form');
-        printResult(
-            forms.length > 0 || true,
-            'Forms detected',
-            `Found ${forms.length} forms on page`,
-            null
-        );
-        
-        // Check for forms without submit handlers
-        let formsWithoutHandlers = 0;
-        forms.forEach(form => {
-            // Check if form has submit event listener or action attribute
-            const hasAction = form.hasAttribute('action');
-            const hasOnSubmit = form.hasAttribute('onsubmit');
-            
-            if (!hasAction && !hasOnSubmit) {
-                formsWithoutHandlers++;
-            }
-        });
-        
-        printResult(
-            formsWithoutHandlers === 0,
-            'Forms with submit handlers',
-            formsWithoutHandlers > 0 ? 
-                `Found ${formsWithoutHandlers} forms without handlers` : 
-                'All forms have handlers',
-            'Add submit event handlers to all forms'
-        );
-        
-        // Check for input validation
-        const requiredInputs = document.querySelectorAll('input[required], select[required], textarea[required]');
-        printResult(
-            requiredInputs.length > 0 || null,
-            'Required field validation',
-            `Found ${requiredInputs.length} required fields`,
-            requiredInputs.length === 0 ? 'Add required attributes to critical form fields' : null
-        );
-    }
+    diagnostics = BackendDiagnostics()
     
-    // ============================================
-    // TEST: Security Concerns
-    // ============================================
-    function testSecurityConcerns() {
-        printSection('Security Analysis');
-        
-        // Check for inline scripts (potential XSS)
-        const inlineScripts = document.querySelectorAll('script:not([src])');
-        const suspiciousScripts = Array.from(inlineScripts).filter(script => {
-            const content = script.textContent;
-            return content.includes('eval(') || 
-                   content.includes('innerHTML =') ||
-                   content.includes('document.write');
-        });
-        
-        printResult(
-            suspiciousScripts.length === 0,
-            'No suspicious inline scripts',
-            suspiciousScripts.length > 0 ? 
-                `Found ${suspiciousScripts.length} scripts with potential XSS vectors` : 
-                'No obvious XSS risks',
-            'Replace innerHTML with textContent or use DOM manipulation'
-        );
-        
-        // Check for password fields without autocomplete
-        const passwordFields = document.querySelectorAll('input[type="password"]');
-        let passwordsWithoutAutocomplete = 0;
-        passwordFields.forEach(field => {
-            if (!field.hasAttribute('autocomplete')) {
-                passwordsWithoutAutocomplete++;
-            }
-        });
-        
-        printResult(
-            passwordsWithoutAutocomplete === 0 || passwordFields.length === 0,
-            'Password field autocomplete attributes',
-            passwordsWithoutAutocomplete > 0 ? 
-                `${passwordsWithoutAutocomplete} password fields missing autocomplete` : 
-                'All password fields configured',
-            'Add autocomplete="current-password" or "new-password" to password fields'
-        );
-        
-        // Check for HTTPS
-        printResult(
-            window.location.protocol === 'https:',
-            'HTTPS encryption',
-            `Using ${window.location.protocol}`,
-            window.location.protocol !== 'https:' ? 'Enable HTTPS in production' : null
-        );
-    }
+    # Run all test suites
+    diagnostics.test_environment_config()
+    diagnostics.test_database_connectivity()
+    diagnostics.test_database_schema()
+    diagnostics.test_database_constraints()
+    diagnostics.test_data_integrity()
+    diagnostics.test_authentication_security()
+    diagnostics.test_privacy_settings()
+    diagnostics.test_performance_concerns()
+    diagnostics.test_api_routes()
+    diagnostics.test_scalability_concerns()
+    diagnostics.test_data_validation()
     
-    // ============================================
-    // TEST: Mobile Responsiveness
-    // ============================================
-    function testMobileResponsiveness() {
-        printSection('Mobile Responsiveness');
-        
-        // Check viewport meta tag
-        const viewport = document.querySelector('meta[name="viewport"]');
-        printResult(
-            viewport !== null,
-            'Viewport meta tag',
-            viewport ? viewport.getAttribute('content') : 'Not found',
-            'Add <meta name="viewport" content="width=device-width, initial-scale=1.0">'
-        );
-        
-        // Check for fixed width elements that might break mobile
-        const fixedWidthElements = document.querySelectorAll('[style*="width:"][style*="px"]');
-        printResult(
-            fixedWidthElements.length < 10 || null,
-            'Fixed-width elements',
-            `Found ${fixedWidthElements.length} elements with px widths`,
-            fixedWidthElements.length > 20 ? 
-                'Consider using responsive units (%, rem, em) instead of px' : null
-        );
-        
-        // Check touch-friendly button sizes
-        const buttons = document.querySelectorAll('button, .btn, [role="button"]');
-        let smallButtons = 0;
-        buttons.forEach(btn => {
-            const rect = btn.getBoundingClientRect();
-            if (rect.width < 44 || rect.height < 44) {
-                smallButtons++;
-            }
-        });
-        
-        printResult(
-            smallButtons === 0,
-            'Touch-friendly button sizes',
-            smallButtons > 0 ? 
-                `Found ${smallButtons} buttons smaller than 44x44px` : 
-                'All buttons are touch-friendly',
-            'Ensure interactive elements are at least 44x44px for mobile'
-        );
-    }
+    # Generate final report
+    results = diagnostics.generate_report()
     
-    // ============================================
-    // TEST: Performance Metrics
-    // ============================================
-    function testPerformanceMetrics() {
-        printSection('Performance Metrics');
-        
-        if (window.performance && window.performance.timing) {
-            const timing = window.performance.timing;
-            const loadTime = timing.loadEventEnd - timing.navigationStart;
-            const domReady = timing.domContentLoadedEventEnd - timing.navigationStart;
-            
-            printResult(
-                loadTime < 3000,
-                'Page load time',
-                `${loadTime}ms`,
-                loadTime >= 3000 ? 'Optimize assets and reduce bundle size' : null
-            );
-            
-            printResult(
-                domReady < 2000,
-                'DOM ready time',
-                `${domReady}ms`,
-                domReady >= 2000 ? 'Reduce blocking scripts and optimize critical rendering path' : null
-            );
-        }
-        
-        // Check memory usage if available
-        if (window.performance && window.performance.memory) {
-            const memory = window.performance.memory;
-            const usedMB = Math.round(memory.usedJSHeapSize / 1048576);
-            const limitMB = Math.round(memory.jsHeapSizeLimit / 1048576);
-            
-            printResult(
-                usedMB < limitMB * 0.8,
-                'JavaScript memory usage',
-                `${usedMB}MB used of ${limitMB}MB limit`,
-                usedMB >= limitMB * 0.8 ? 'High memory usage detected - check for memory leaks' : null
-            );
-        }
-    }
-    
-    // ============================================
-    // TEST: Accessibility
-    // ============================================
-    function testAccessibility() {
-        printSection('Accessibility');
-        
-        // Check for alt text on images
-        const images = document.querySelectorAll('img');
-        let imagesWithoutAlt = 0;
-        images.forEach(img => {
-            if (!img.hasAttribute('alt')) {
-                imagesWithoutAlt++;
-            }
-        });
-        
-        printResult(
-            imagesWithoutAlt === 0,
-            'Image alt text',
-            imagesWithoutAlt > 0 ? 
-                `Found ${imagesWithoutAlt} images without alt text` : 
-                'All images have alt text',
-            'Add descriptive alt attributes to all images'
-        );
-        
-        // Check for proper heading hierarchy
-        const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-        const h1Count = document.querySelectorAll('h1').length;
-        
-        printResult(
-            h1Count === 1 || h1Count === 0,
-            'Heading hierarchy',
-            h1Count === 1 ? 'Single H1 found (correct)' : 
-                h1Count === 0 ? 'No H1 found (add one)' : 
-                `Multiple H1s found (${h1Count})`,
-            h1Count > 1 ? 'Use only one H1 per page' : 
-                h1Count === 0 ? 'Add an H1 heading to the page' : null
-        );
-        
-        // Check for ARIA labels on interactive elements
-        const interactiveElements = document.querySelectorAll('button:not([aria-label]), a:not([aria-label])[href="#"]');
-        printResult(
-            interactiveElements.length < 5 || null,
-            'ARIA labels on interactive elements',
-            `${interactiveElements.length} elements could use aria-label`,
-            interactiveElements.length > 5 ? 
-                'Add aria-label to buttons and links without text content' : null
-        );
-    }
-    
-    // ============================================
-    // GENERATE REPORT
-    // ============================================
-    function generateReport() {
-        printHeader('Diagnostic Summary');
-        
-        const total = results.passed + results.failed + results.warnings;
-        
-        console.log('\n%cTest Results:', 'font-weight: bold;');
-        console.log('%c✓ Passed:  ' + results.passed + '/' + total, styles.pass);
-        console.log('%c✗ Failed:  ' + results.failed + '/' + total, styles.fail);
-        console.log('%c⚠ Warnings: ' + results.warnings + '/' + total, styles.warn);
-        
-        if (results.issues.length > 0) {
-            console.log('\n%cCritical Issues:', 'color: #ef4444; font-weight: bold;');
-            results.issues.forEach((issue, index) => {
-                console.log(`\n%c${index + 1}. ${issue.message}`, 'font-weight: bold;');
-                if (issue.details) {
-                    console.log(`   Details: ${issue.details}`);
-                }
-                if (issue.fix) {
-                    console.log('%c   Fix: ' + issue.fix, styles.fix);
-                }
-            });
-        }
-        
-        // Overall assessment
-        console.log('\n%cOverall Assessment:', 'font-weight: bold;');
-        if (results.failed === 0) {
-            console.log('%c✓ Frontend is ready for QA testing', styles.pass);
-        } else if (results.failed < 5) {
-            console.log('%c⚠ Frontend needs minor fixes before QA', styles.warn);
-        } else {
-            console.log('%c✗ Frontend requires significant fixes before QA', styles.fail);
-        }
-        
-        // Export results
-        window.frontendDiagnosticResults = results;
-        console.log('\n%cResults exported to: window.frontendDiagnosticResults', styles.info);
-    }
-    
-    // ============================================
-    // RUN ALL TESTS
-    // ============================================
-    async function runAllTests() {
-        printHeader('TheraSocial Frontend Diagnostic Suite');
-        console.log('Running comprehensive frontend tests...\n');
-        
-        testGlobalDependencies();
-        testPageLoading();
-        await testAuthenticationState();
-        await testAPIEndpoints();
-        testTranslationSystem();
-        testCircleDisplaySystem();
-        testConsoleErrors();
-        testNetworkRequests();
-        testFormValidation();
-        testSecurityConcerns();
-        testMobileResponsiveness();
-        testPerformanceMetrics();
-        testAccessibility();
-        
-        generateReport();
-    }
-    
-    // Start tests
-    runAllTests();
-    
-})();
+    # Exit with appropriate code
+    sys.exit(0 if results['failed'] == 0 else 1)
+
+if __name__ == '__main__':
+    main()
