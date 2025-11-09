@@ -136,14 +136,42 @@ if (userId) {
                     showError('Error: initializeParameters function not found. Please refresh the page.');
                     console.error('initializeParameters not found');
 
-                    // Try again after another delay
-                    setTimeout(() => {
+             // Try again after another delay
+                    setTimeout(async () => {  // ← ADDED 'async' HERE
                         if (typeof initializeParameters === 'function') {
                             console.log('Function now available, initializing...');
                             try {
-                                initializeParameters();
+                                // ===== FETCH LANGUAGE PREFERENCE FIRST =====
+                                console.log('[Parameters-Delayed] Fetching language preference...');
+                                try {
+                                    // Check localStorage first
+                                    const savedLang = localStorage.getItem('selectedLanguage');
+                                    if (savedLang && window.i18n && window.i18n.setLanguage) {
+                                        console.log('[Parameters-Delayed] Setting language from localStorage:', savedLang);
+                                        await window.i18n.setLanguage(savedLang);
+                                    }
 
-                                // Apply translations if available
+                                    // Then fetch from backend to sync
+                                    const profileResponse = await fetch('/api/user/profile');
+                                    if (profileResponse.ok) {
+                                        const profile = await profileResponse.json();
+                                        if (profile.preferred_language && window.i18n && window.i18n.setLanguage) {
+                                            // Only update if different from localStorage
+                                            if (profile.preferred_language !== savedLang) {
+                                                console.log('[Parameters-Delayed] Syncing language from backend:', profile.preferred_language);
+                                                await window.i18n.setLanguage(profile.preferred_language);
+                                            }
+                                        }
+                                    }
+                                } catch (langError) {
+                                    console.log('[Parameters-Delayed] Could not fetch language preference:', langError);
+                                }
+                                // ===== END LANGUAGE FETCH =====
+
+                                initializeParameters();
+                                console.log('Parameters initialized successfully');
+
+                                // Apply initial translations
                                 if (window.i18n && window.i18n.applyLanguage) {
                                     window.i18n.applyLanguage();
                                 }
@@ -157,10 +185,11 @@ if (userId) {
                                         document.body.setAttribute('dir', 'ltr');
                                     }
                                 }
+
                                 // Apply feed updates
-                    if (typeof updateCircleDisplays === 'function') {
-                        updateCircleDisplays();
-                    }
+                                if (typeof updateCircleDisplays === 'function') {
+                                    updateCircleDisplays();
+                                }
                             } catch (error) {
                                 console.error('Delayed initialization error:', error);
                             }
@@ -170,11 +199,39 @@ if (userId) {
                 }
 
                 // Initialize parameters for current user only
+              // Initialize parameters for current user only
                 try {
+                    // ===== LANGUAGE PREFERENCE LOADING (ADDED) =====
+                    // Fetch and apply user's language preference BEFORE initializing
+                    try {
+                        // First check localStorage
+                        const savedLang = localStorage.getItem('selectedLanguage');
+                        if (savedLang && window.i18n && window.i18n.setLanguage) {
+                            console.log('[Parameters] Setting language from localStorage:', savedLang);
+                            await window.i18n.setLanguage(savedLang);
+                        }
+
+                        // Then fetch from backend to sync
+                        const profileResponse = await fetch('/api/user/profile');
+                        if (profileResponse.ok) {
+                            const profile = await profileResponse.json();
+                            if (profile.preferred_language && window.i18n && window.i18n.setLanguage) {
+                                // Only update if different from localStorage
+                                if (profile.preferred_language !== savedLang) {
+                                    console.log('[Parameters] Syncing language from backend:', profile.preferred_language);
+                                    await window.i18n.setLanguage(profile.preferred_language);
+                                }
+                            }
+                        }
+                    } catch (langError) {
+                        console.log('[Parameters] Could not fetch language preference, using default');
+                    }
+                    // ===== END LANGUAGE LOADING =====
+
                     initializeParameters();
                     console.log('Parameters initialized successfully');
 
-                    // Apply initial translations
+                    // Apply initial translations (now redundant but harmless)
                     if (window.i18n && window.i18n.applyLanguage) {
                         window.i18n.applyLanguage();
                     }
