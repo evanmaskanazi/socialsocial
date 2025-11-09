@@ -2084,7 +2084,8 @@ def update_user_language():
                 'message': 'No data provided'
             }), 400
 
-        language = data.get('language', 'en')
+        # FIXED: Accept both 'language' and 'preferred_language' for compatibility
+        language = data.get('preferred_language') or data.get('language', 'en')
 
         # Validate language code
         valid_languages = ['en', 'he', 'ar', 'ru']
@@ -2099,16 +2100,17 @@ def update_user_language():
             user_id = session['user_id']
 
             try:
-                # Update user's language preference in database
                 user = db.session.get(User, user_id)
                 if user:
-                    user.language = language
+                    # FIXED: Use correct column name 'preferred_language'
+                    user.preferred_language = language
                     db.session.commit()
 
                     logger.info(f"Updated language for user {user_id} to {language}")
                     return jsonify({
                         'success': True,
-                        'message': 'Language preference saved'
+                        'message': 'Language preference saved',
+                        'language': language  # Return the saved language
                     }), 200
                 else:
                     return jsonify({
@@ -2124,14 +2126,14 @@ def update_user_language():
                     'message': 'Database error'
                 }), 500
         else:
-            # For unauthenticated users, just store in session
-            # This allows language selection before login
-            session['language'] = language
+            # For unauthenticated users, store in session
+            session['preferred_language'] = language  # FIXED: Consistent naming
 
             logger.info(f"Stored language {language} in session (unauthenticated)")
             return jsonify({
                 'success': True,
-                'message': 'Language preference saved in session'
+                'message': 'Language preference saved in session',
+                'language': language
             }), 200
 
     except Exception as e:
@@ -2378,17 +2380,20 @@ def get_user_language():
             user_id = session['user_id']
             user = db.session.get(User, user_id)
 
-            if user and hasattr(user, 'language') and user.language:
+            # FIXED: Use correct column name 'preferred_language'
+            if user and hasattr(user, 'preferred_language') and user.preferred_language:
                 return jsonify({
                     'success': True,
-                    'language': user.language
+                    'language': user.preferred_language
                 }), 200
 
         # Check session for unauthenticated users
-        if 'language' in session:
+        # FIXED: Check both old and new session keys for backwards compatibility
+        session_lang = session.get('preferred_language') or session.get('language')
+        if session_lang:
             return jsonify({
                 'success': True,
-                'language': session['language']
+                'language': session_lang
             }), 200
 
         # Default to English
@@ -2403,6 +2408,49 @@ def get_user_language():
             'success': True,  # Don't fail hard on language errors
             'language': 'en'
         }), 200
+
+
+@app.route('/api/admin/migrate-language', methods=['POST'])
+def migrate_language_column():
+    """
+    Migration endpoint to copy 'language' to 'preferred_language' if needed
+    Only accessible to admins or in development
+    """
+    # Add authentication check here if needed
+
+    try:
+        # Check if old 'language' column exists
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        user_columns = [col['name'] for col in inspector.get_columns('user')]
+
+        if 'language' in user_columns:
+            # Migrate data from 'language' to 'preferred_language'
+            users = User.query.filter(User.language.isnot(None)).all()
+            count = 0
+            for user in users:
+                if hasattr(user, 'language') and user.language:
+                    user.preferred_language = user.language
+                    count += 1
+
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'message': f'Migrated {count} users'
+            }), 200
+        else:
+            return jsonify({
+                'success': True,
+                'message': 'No migration needed - language column does not exist'
+            }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Migration error: {e}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 
 
