@@ -2553,13 +2553,15 @@ def get_user_posts(user_id):
             circle_user_id=current_user_id
         ).first()
 
-        # Determine which circle IDs current user can see
+        # Determine which circle IDs current user can see (hierarchical)
         visible_circle_ids = [1]  # Everyone can see general/public (circle_id=1)
         if membership:
             if membership.circle_type in ['class_a', 'family']:
-                visible_circle_ids.extend([2, 3])  # Can see close_friends (2) and family (3)
+                # Class A members can see public (1), class_b (2), and class_a (3)
+                visible_circle_ids = [1, 2, 3]
             elif membership.circle_type in ['class_b', 'close_friends']:
-                visible_circle_ids.append(2)  # Can see close_friends (2)
+                # Class B members can see public (1) and class_b (2)
+                visible_circle_ids = [1, 2]
 
         # Get posts filtered by visible circles
         posts = Post.query.filter(
@@ -4066,13 +4068,15 @@ def get_user_feed_dates(user_id):
             circle_user_id=current_user_id
         ).first()
 
-        # Determine which circle IDs current user can see
+        # Determine which circle IDs current user can see (hierarchical)
         visible_circle_ids = [1]  # Everyone can see general/public (circle_id=1)
         if membership:
             if membership.circle_type == 'class_a' or membership.circle_type == 'family':
-                visible_circle_ids.extend([2, 3])  # Can see close_friends (2) and family (3)
+                # Class A members can see public (1), class_b (2), and class_a (3)
+                visible_circle_ids = [1, 2, 3]
             elif membership.circle_type == 'class_b' or membership.circle_type == 'close_friends':
-                visible_circle_ids.append(2)  # Can see close_friends (2)
+                # Class B members can see public (1) and class_b (2)
+                visible_circle_ids = [1, 2]
 
         # Get posts filtered by visible circles
         posts = db.session.query(
@@ -4166,12 +4170,15 @@ def get_user_feed_by_date(user_id, date):
         ).first()
 
         # Determine which circle IDs current user can see
+        # Determine which circle IDs current user can see (hierarchical)
         visible_circle_ids = [1]  # Everyone can see general/public (circle_id=1)
         if membership:
             if membership.circle_type in ['class_a', 'family']:
-                visible_circle_ids.extend([2, 3])  # Can see close_friends (2) and family (3)
+                # Class A members can see public (1), class_b (2), and class_a (3)
+                visible_circle_ids = [1, 2, 3]
             elif membership.circle_type in ['class_b', 'close_friends']:
-                visible_circle_ids.append(2)  # Can see close_friends (2)
+                # Class B members can see public (1) and class_b (2)
+                visible_circle_ids = [1, 2]
 
         # Get posts filtered by visible circles for that date
         posts = Post.query.filter(
@@ -4207,12 +4214,10 @@ def get_user_feed_by_date(user_id, date):
         return jsonify({'error': str(e)}), 500
 
 
-
-
 @app.route('/api/posts', methods=['POST'])
 @login_required
 def save_feed_entry():
-    """Save/update feed entry for a specific date and visibility"""
+    """Save/update feed entry for a specific date and visibility with hierarchical support"""
     try:
         data = request.get_json()
         user_id = session['user_id']
@@ -4225,30 +4230,37 @@ def save_feed_entry():
         if not content:
             return jsonify({'error': 'Content is required'}), 400
 
-        # Map visibility to circle_id (you may need to adjust based on your circles table)
+        # Map visibility to circle_id
         circle_map = {
-            'general': 1,
-            'close_friends': 2,
-            'family': 3,
+            'general': 1,  # public
+            'close_friends': 2,  # class_b
+            'family': 3,  # class_a
             'private': None
         }
-        circle_id = circle_map.get(visibility)
+        selected_circle_id = circle_map.get(visibility)
 
-        # Check if there's already a post for this date and visibility
-        existing_post = Post.query.filter_by(
-            user_id=user_id,
-            circle_id=circle_id
-        ).filter(
+        # Determine which circle_ids should see this post (hierarchical)
+        # If posting to public (1), everyone can see it
+        # If posting to class_b (2), class_b and class_a can see it
+        # If posting to class_a (3), only class_a can see it
+        # If private (None), only user can see it
+
+        if selected_circle_id == 1:  # public/general
+            circle_ids_to_save = [1, 2, 3]  # Visible to all circles
+        elif selected_circle_id == 2:  # class_b/close_friends
+            circle_ids_to_save = [2, 3]  # Visible to class_b and class_a
+        elif selected_circle_id == 3:  # class_a/family
+            circle_ids_to_save = [3]  # Visible only to class_a
+        else:  # private
+            circle_ids_to_save = [None]  # Only visible to user
+
+        # Delete any existing posts for this date first
+        Post.query.filter_by(user_id=user_id).filter(
             db.func.date(Post.created_at) == post_date
-        ).first()
+        ).delete()
 
-        if existing_post:
-            # Update existing post
-            existing_post.content = content
-            existing_post.updated_at = datetime.utcnow()
-            message = f'Feed updated for {visibility.replace("_", " ")} on {post_date}'
-        else:
-            # Create new post
+        # Create posts for each applicable circle
+        for circle_id in circle_ids_to_save:
             new_post = Post(
                 user_id=user_id,
                 content=content,
@@ -4258,10 +4270,10 @@ def save_feed_entry():
                 is_published=True
             )
             db.session.add(new_post)
-            message = f'Feed saved for {visibility.replace("_", " ")} on {post_date}'
 
         db.session.commit()
-        return jsonify({'success': True, 'message': message})
+        visibility_display = visibility.replace("_", " ").title()
+        return jsonify({'success': True, 'message': f'Feed saved for {visibility_display} on {post_date}'})
 
     except Exception as e:
         logger.error(f"Feed save error: {e}")
