@@ -3981,47 +3981,53 @@ def get_hierarchical_parameters(view_user_id):
         return jsonify({'error': 'Failed to load parameters'}), 500
 
 
-
 @app.route('/api/feed/dates')
 @login_required
 def get_feed_saved_dates():
-    """Get all dates that have feed entries with visibility info"""
+    """Get all dates with feed entries, organized by visibility level"""
     try:
         user_id = session['user_id']
 
-        # Get all posts grouped by date and circle
-        posts = db.session.query(
-            db.func.date(Post.created_at).label('date'),
-            Post.circle_id
-        ).filter_by(
-            user_id=user_id
-        ).group_by(
-            db.func.date(Post.created_at),
-            Post.circle_id
-        ).all()
+        # Get all posts for this user
+        posts = Post.query.filter_by(user_id=user_id).all()
 
-        # Organize by date with visibility info
-        dates_with_visibility = {}
-        circle_to_visibility = {
-            1: 'public',  # was 'general'
-            2: 'class_b',  # was 'close_friends'
-            3: 'class_a',  # was 'family'
-            None: 'private'
+        # Organize dates by circle_id
+        dates_by_circle = {
+            1: [],  # public/general
+            2: [],  # close_friends/class_b
+            3: [],  # family/class_a
+            None: []  # private
         }
 
         for post in posts:
-            date_str = post.date.strftime('%Y-%m-%d')
-            if date_str not in dates_with_visibility:
-                dates_with_visibility[date_str] = []
+            date_str = post.created_at.strftime('%Y-%m-%d')
+            if post.circle_id not in dates_by_circle:
+                dates_by_circle[post.circle_id] = []
+            if date_str not in dates_by_circle[post.circle_id]:
+                dates_by_circle[post.circle_id].append(date_str)
 
-            visibility = circle_to_visibility.get(post.circle_id, 'general')
-            dates_with_visibility[date_str].append(visibility)
+        # Map circle_ids to visibility names
+        visibility_dates = {
+            'general': dates_by_circle[1],
+            'close_friends': dates_by_circle[2],
+            'family': dates_by_circle[3],
+            'private': dates_by_circle[None]
+        }
 
-        return jsonify({'dates': dates_with_visibility})
+        # For backward compatibility, also return combined dates
+        all_dates = set()
+        for dates in dates_by_circle.values():
+            all_dates.update(dates)
+
+        # FIX: Return BOTH combined dates AND dates separated by visibility
+        return jsonify({
+            'dates': {date: True for date in all_dates},
+            'dates_by_visibility': visibility_dates  # ← NEW: Needed for frontend
+        })
 
     except Exception as e:
-        logger.error(f"Get feed dates error: {e}")
-        return jsonify({'dates': {}})
+        logger.error(f"Error fetching feed dates: {e}")
+        return jsonify({'dates': {}, 'dates_by_visibility': {}})
 
 
 @app.route('/api/users/<int:user_id>/feed/dates')
@@ -4217,7 +4223,7 @@ def get_user_feed_by_date(user_id, date):
 @app.route('/api/posts', methods=['POST'])
 @login_required
 def save_feed_entry():
-    """Save/update feed entry for a specific date and visibility with hierarchical support"""
+    """Save/update feed entry for a specific date and visibility with STRICT permissions"""
     try:
         data = request.get_json()
         user_id = session['user_id']
@@ -4239,37 +4245,28 @@ def save_feed_entry():
         }
         selected_circle_id = circle_map.get(visibility)
 
-        # Determine which circle_ids should see this post (hierarchical)
-        # If posting to public (1), everyone can see it
-        # If posting to class_b (2), class_b and class_a can see it
-        # If posting to class_a (3), only class_a can see it
-        # If private (None), only user can see it
-
-        if selected_circle_id == 1:  # public/general
-            circle_ids_to_save = [1, 2, 3]  # Visible to all circles
-        elif selected_circle_id == 2:  # class_b/close_friends
-            circle_ids_to_save = [2, 3]  # Visible to class_b and class_a
-        elif selected_circle_id == 3:  # class_a/family
-            circle_ids_to_save = [3]  # Visible only to class_a
-        else:  # private
-            circle_ids_to_save = [None]  # Only visible to user
+        # FIX: Each visibility level should only save to its OWN circle_id
+        # No hierarchical saving - strict separation
+        # Public (1) -> only circle_id 1
+        # Class B (2) -> only circle_id 2
+        # Class A (3) -> only circle_id 3
+        # Private (None) -> only circle_id None
 
         # Delete any existing posts for this date first
         Post.query.filter_by(user_id=user_id).filter(
             db.func.date(Post.created_at) == post_date
         ).delete()
 
-        # Create posts for each applicable circle
-        for circle_id in circle_ids_to_save:
-            new_post = Post(
-                user_id=user_id,
-                content=content,
-                circle_id=circle_id,
-                created_at=datetime.strptime(post_date, '%Y-%m-%d'),
-                updated_at=datetime.utcnow(),
-                is_published=True
-            )
-            db.session.add(new_post)
+        # Create a SINGLE post with the selected circle_id
+        new_post = Post(
+            user_id=user_id,
+            content=content,
+            circle_id=selected_circle_id,  # Only the selected circle_id
+            created_at=datetime.strptime(post_date, '%Y-%m-%d'),
+            updated_at=datetime.utcnow(),
+            is_published=True
+        )
+        db.session.add(new_post)
 
         db.session.commit()
         visibility_display = visibility.replace("_", " ").title()
@@ -4284,40 +4281,30 @@ def save_feed_entry():
 @app.route('/api/feed/<date_str>')
 @login_required
 def load_feed_by_date(date_str):
-    """Load feed entry for a specific date and visibility with hierarchical support"""
+    """Load feed entry for a specific date and visibility with STRICT matching"""
     try:
         user_id = session['user_id']
         visibility = request.args.get('visibility', 'general')
 
         # Map visibility to circle_id
         circle_map = {
-            'general': 1,    # public
+            'general': 1,  # public
             'close_friends': 2,  # class_b
-            'family': 3,     # class_a
+            'family': 3,  # class_a
             'private': None
         }
         requested_circle_id = circle_map.get(visibility)
 
-        # Determine which circle_ids to search based on hierarchy
-        # When viewing a lower privacy level, also show posts from higher privacy levels
-        if requested_circle_id == 1:  # public/general
-            # When viewing public, also show class_b and class_a posts (hierarchical)
-            searchable_circle_ids = [1, 2, 3]
-        elif requested_circle_id == 2:  # class_b/close_friends
-            # When viewing class_b, also show class_a posts
-            searchable_circle_ids = [2, 3]
-        elif requested_circle_id == 3:  # class_a/family
-            # When viewing class_a, only show class_a posts
-            searchable_circle_ids = [3]
-        else:  # private
-            searchable_circle_ids = [None]
+        # FIX: Only search for posts with the EXACT circle_id requested
+        # No hierarchical searching - strict matching
 
-        # Get the post for this date that matches any of the searchable visibility levels
-        # Order by circle_id desc to prefer more restrictive posts (class_a > class_b > public)
-        post = Post.query.filter_by(user_id=user_id).filter(
-            Post.circle_id.in_(searchable_circle_ids),
+        # Get the post for this date that matches ONLY the requested circle_id
+        post = Post.query.filter_by(
+            user_id=user_id,
+            circle_id=requested_circle_id  # Exact match only
+        ).filter(
             db.func.date(Post.created_at) == date_str
-        ).order_by(Post.circle_id.desc()).first()
+        ).first()
 
         if post:
             return jsonify({
