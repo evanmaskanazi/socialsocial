@@ -152,6 +152,12 @@ const translations = {
         'alerts.mark_read': 'Mark as read',
         'alerts.clear_all': 'Clear all',
         'alerts.welcome_title': 'Welcome to TheraSocial!',
+        'alerts.started_following': '{username} started following you',
+'alerts.new_follower': 'You have a new follower!',
+'alerts.accepted_request': '{username} accepted your follow request',
+'alerts.follow_request': '{username} wants to follow you',
+'alerts.new_post': '{username} created a new post',
+'alerts.new_comment': '{username} commented on your post',
 'alerts.welcome_message': 'Your account has been created successfully. Start by updating your profile.',
 
         // Circles page
@@ -953,7 +959,12 @@ const translations = {
         'alerts.clear_all': 'נקה הכל',
         'alerts.welcome_title': 'ברוכים הבאים ל-TheraSocial!',
 'alerts.welcome_message': 'חשבונך נוצר בהצלחה. התחל בעדכון הפרופיל שלך.',
-
+'alerts.started_following': '{username} התחיל/ה לעקוב אחריך',
+'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
+'alerts.accepted_request': '{username} אישר/ה את בקשת המעקב שלך',
+'alerts.follow_request': '{username} רוצה לעקוב אחריך',
+'alerts.new_post': '{username} יצר/ה פוסט חדש',
+'alerts.new_comment': '{username} הגיב/ה על הפוסט שלך',
         // Circles page
         'circles.title': 'המעגלים שלי',
         'circles.subtitle': 'ארגן את הקשרים שלך לקבוצות משמעותיות',
@@ -1513,7 +1524,12 @@ const translations = {
         'alerts.clear_all': 'مسح الكل',
         'alerts.welcome_title': 'مرحبًا بك في TheraSocial!',
 'alerts.welcome_message': 'تم إنشاء حسابك بنجاح. ابدأ بتحديث ملفك الشخصي.',
-
+'alerts.started_following': '{username} بدأ بمتابعتك',
+'alerts.new_follower': 'لديك متابع جديد!',
+'alerts.accepted_request': '{username} قبل طلب المتابعة الخاص بك',
+'alerts.follow_request': '{username} يريد متابعتك',
+'alerts.new_post': '{username} أنشأ منشوراً جديداً',
+'alerts.new_comment': '{username} علّق على منشورك',
 
         // Circles page
         'circles.title': 'دوائري',
@@ -2077,7 +2093,12 @@ const translations = {
         'alerts.clear_all': 'Очистить всё',
         'alerts.welcome_title': 'Добро пожаловать в TheraSocial!',
 'alerts.welcome_message': 'Ваш аккаунт успешно создан. Начните с обновления вашего профиля.',
-
+'alerts.started_following': '{username} начал/а следить за вами',
+'alerts.new_follower': 'У вас новый подписчик!',
+'alerts.accepted_request': '{username} принял/а ваш запрос на подписку',
+'alerts.follow_request': '{username} хочет следить за вами',
+'alerts.new_post': '{username} создал/а новый пост',
+'alerts.new_comment': '{username} прокомментировал/а ваш пост',
 
         // Circles page
         'circles.title': 'Мои круги',
