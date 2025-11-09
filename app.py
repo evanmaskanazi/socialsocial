@@ -5022,64 +5022,79 @@ def get_followers():
 @app.route('/api/recommendations')
 @login_required
 def get_recommendations():
-    """Get follow recommendations based on city and circles"""
+    """Get follow recommendations prioritizing same city, then common connections"""
     try:
         user_id = session.get('user_id')
         user = db.session.get(User, user_id)
 
+        if not user:
+            return jsonify({'recommendations': []}), 200
+
         recommendations = []
+        seen_ids = set()
 
-        # Get users in same city
-        same_city_users = User.query.filter(
-            User.selected_city == user.selected_city,
-            User.id != user_id,
-            User.is_active == True
-        ).limit(10).all()
+        # PRIORITY 1: Users in same city (only if user has selected a city)
+        if user.selected_city:
+            same_city_users = User.query.filter(
+                User.selected_city == user.selected_city,
+                User.id != user_id,
+                User.is_active == True
+            ).limit(15).all()
 
-        # Get users from circles
-        circle_users = db.session.execute(
-            select(Circle.circle_user_id).filter_by(user_id=user_id)
-        ).scalars().all()
-
-        # Get friends of friends
-        for circle_user_id in circle_users:
-            their_circles = db.session.execute(
-                select(Circle.circle_user_id).filter_by(
-                    user_id=circle_user_id
-                ).filter(Circle.circle_user_id != user_id)
-            ).scalars().all()
-
-            for potential_id in their_circles[:5]:
-                potential_user = db.session.get(User, potential_id)
-                if potential_user and not user.is_following(potential_user):
+            for city_user in same_city_users:
+                if not user.is_following(city_user) and city_user.id not in seen_ids:
+                    seen_ids.add(city_user.id)
                     recommendations.append({
-                        'id': potential_user.id,
-                        'username': potential_user.username,
-                        'email': potential_user.email,
-                        'selected_city': potential_user.selected_city,
-                        'reason': 'Friend of friend'
+                        'id': city_user.id,
+                        'username': city_user.username,
+                        'email': city_user.email,
+                        'selected_city': city_user.selected_city,
+                        'reason': 'Same city'
                     })
 
-        # Add same city users
-        for city_user in same_city_users:
-            if not user.is_following(city_user):
-                recommendations.append({
-                    'id': city_user.id,
-                    'username': city_user.username,
-                    'email': city_user.email,
-                    'selected_city': city_user.selected_city,
-                    'reason': 'Same city'
-                })
+        # PRIORITY 2: Friends of friends (only if not enough same-city users)
+        if len(recommendations) < 20:
+            # Get users from circles
+            circle_users = db.session.execute(
+                select(Circle.circle_user_id).filter_by(user_id=user_id)
+            ).scalars().all()
 
-        # Remove duplicates and limit
-        seen = set()
-        unique_recommendations = []
-        for rec in recommendations:
-            if rec['id'] not in seen:
-                seen.add(rec['id'])
-                unique_recommendations.append(rec)
+            # Get friends of friends
+            for circle_user_id in circle_users:
+                if len(recommendations) >= 20:
+                    break
 
-        return jsonify({'recommendations': unique_recommendations[:20]})
+                their_circles = db.session.execute(
+                    select(Circle.circle_user_id).filter_by(
+                        user_id=circle_user_id
+                    ).filter(Circle.circle_user_id != user_id)
+                ).scalars().all()
+
+                for potential_id in their_circles[:5]:
+                    if len(recommendations) >= 20:
+                        break
+
+                    if potential_id in seen_ids:
+                        continue
+
+                    potential_user = db.session.get(User, potential_id)
+                    if potential_user and not user.is_following(potential_user):
+                        seen_ids.add(potential_user.id)
+
+                        # Check if also same city for enhanced reason
+                        reason = 'Friend of friend'
+                        if potential_user.selected_city == user.selected_city:
+                            reason = 'Same city & friend of friend'
+
+                        recommendations.append({
+                            'id': potential_user.id,
+                            'username': potential_user.username,
+                            'email': potential_user.email,
+                            'selected_city': potential_user.selected_city,
+                            'reason': reason
+                        })
+
+        return jsonify({'recommendations': recommendations[:20]})
 
     except Exception as e:
         logger.error(f"Get recommendations error: {str(e)}")
