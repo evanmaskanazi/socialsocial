@@ -2626,7 +2626,59 @@ async function loadUserCity() {
                 });
                 homeCitySelector.setAttribute('data-initialized', 'true');
             }
-            // Note: loadAlerts() now called from DOMContentLoaded after i18n check
+
+
+    async function loadUserLanguage() {
+        try {
+            console.log('[Dashboard] Loading user language preference...');
+            const response = await fetch(`${API_URL}/user/profile`);
+
+            if (response.ok) {
+                const profile = await response.json();
+                const savedLang = profile.preferred_language || 'en';
+
+                console.log('[Dashboard] User preferred language:', savedLang);
+
+                // Update localStorage
+                localStorage.setItem('selectedLanguage', savedLang);
+
+                // Apply language using i18n
+                if (window.i18n && window.i18n.setLanguage) {
+                    await window.i18n.setLanguage(savedLang);
+                    console.log('[Dashboard] Language applied:', savedLang);
+                } else {
+                    console.warn('[Dashboard] i18n not available, setting manually');
+                    window.i18n.currentLanguage = savedLang;
+                    if (window.i18n && window.i18n.applyLanguage) {
+                        window.i18n.applyLanguage();
+                    }
+                }
+
+                // Update language selector to match
+                const langSelector = document.getElementById('languageSelector');
+                if (langSelector) {
+                    langSelector.value = savedLang;
+                }
+
+                // Set RTL for Hebrew/Arabic
+                const rtlLanguages = ['ar', 'he'];
+                if (rtlLanguages.includes(savedLang)) {
+                    document.body.setAttribute('dir', 'rtl');
+                } else {
+                    document.body.setAttribute('dir', 'ltr');
+                }
+            } else {
+                console.warn('[Dashboard] Could not fetch user profile');
+            }
+        } catch (error) {
+            console.error('[Dashboard] Error loading language:', error);
+        }
+    }
+
+loadUserLanguage();
+
+
+           // Note: loadAlerts() now called from DOMContentLoaded after i18n check
         }
 
        // Auth navigation functions
