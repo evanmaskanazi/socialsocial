@@ -2294,7 +2294,16 @@
     const dateString = `${dayName}, ${monthName} ${dayNumber}, ${year}`;
 
     // FIXED: Translate city name
-    const cityKey = city.toLowerCase().replace(/[, ]/g, '_').replace(/'/g, '').replace(/é/g, 'e').replace(/ã/g, 'a').replace(/ç/g, 'c');
+    // FIXED: Translate city name - handle comma+space correctly
+    const cityKey = city.toLowerCase()
+        .replace(/,\s*/g, '_')   // Comma + optional spaces → single underscore
+        .replace(/\s+/g, '_')    // Remaining spaces → underscores
+        .replace(/'+/g, '')      // Remove apostrophes
+        .replace(/é/g, 'e')      // Special character replacements
+        .replace(/ã/g, 'a')
+        .replace(/õ/g, 'o')
+        .replace(/ç/g, 'c')
+        .replace(/_+/g, '_');    // Multiple underscores → single underscore
     const translatedCity = t(`city.${cityKey}`) || city;
 
     // Update both displays (feed page has cityTimeDisplay, home page has homeCityTimeDisplay)
