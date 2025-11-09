@@ -5385,26 +5385,46 @@ function addBackToFollowingButton(viewId) {
                                     title = translatedBase;
                                 }
                             }
-                        } catch (e) {
-                            // Not JSON, handle as plain string
-                            if (title.startsWith('alerts.') || title.startsWith('invite.')) {
-                                title = translateKey(title);
-                            }
-                            // Handle legacy "New message from" format (old alerts in DB)
-                            else if (title.startsWith('New message from ')) {
-                                const username = title.replace('New message from ', '');
-                                title = `${translateKey('alerts.new_message_from')} ${username}`;
-                            }
-
-                              else if (title === 'New Follow Request') {
-                                title = translateKey('invite.alert_title') || 'New Invitation';
-                            }
-                        }
+                      } catch (e) {
+    // Not JSON, handle as plain string
+    if (title.startsWith('alerts.') || title.startsWith('invite.')) {
+        title = translateKey(title);
+    }
+    // Handle legacy "New message from" format (old alerts in DB)
+    else if (title.startsWith('New message from ')) {
+        const username = title.replace('New message from ', '');
+        title = `${translateKey('alerts.new_message_from')} ${username}`;
+    }
+    // Handle "started following you" pattern from backend
+    else if (title.includes('started following you')) {
+        const username = title.split(' started following you')[0];
+        const template = translateKey('alerts.started_following');
+        title = template.replace('{username}', username);
+    }
+    // Handle "accepted your follow request" pattern
+    else if (title.includes('accepted your follow request')) {
+        const username = title.split(' accepted your follow request')[0];
+        const template = translateKey('alerts.accepted_request');
+        title = template.replace('{username}', username);
+    }
+    // Handle "wants to follow you" pattern
+    else if (title.includes('wants to follow you')) {
+        const username = title.split(' wants to follow you')[0];
+        const template = translateKey('alerts.follow_request');
+        title = template.replace('{username}', username);
+    }
+    else if (title === 'New Follow Request') {
+        title = translateKey('invite.alert_title') || 'New Invitation';
+    }
+}
 
                         // Translate content if it's a key
                         if (content.startsWith('alerts.')) {
                             content = translateKey(content);
                         }
+                        else if (content === 'You have a new follower!' || content === 'You have a new follower') {
+    content = translateKey('alerts.new_follower');
+}
                         else if (content.includes('|')) {
                             const [username, i18nKey] = content.split('|');
                             const template = translateKey(i18nKey) || 'has invited you to follow them';
