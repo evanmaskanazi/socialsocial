@@ -1730,18 +1730,51 @@
 
                       <div class="city-selector-wrapper" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
                           <label style="font-weight: 600; color: #4B5563; min-width: 120px;" data-i18n="home.select_city">Select City:</label>
-                        <select id="homeCitySelector" class="city-selector" style="flex: 1; min-width: 250px; padding: 12px; border: 2px solid #E5E7EB; border-radius: 10px; font-size: 16px;">
+                     <select id="homeCitySelector" class="city-selector" style="flex: 1; min-width: 250px; padding: 12px; border: 2px solid #E5E7EB; border-radius: 10px; font-size: 16px;">
                               <option value="Jerusalem, Israel" data-i18n="city.jerusalem">Jerusalem, Israel</option>
                               <option value="Tel Aviv, Israel" data-i18n="city.telaviv">Tel Aviv, Israel</option>
                               <option value="Haifa, Israel" data-i18n="city.haifa">Haifa, Israel</option>
+                              <option value="Tokyo, Japan" data-i18n="city.tokyo">Tokyo, Japan</option>
+                              <option value="Delhi, India">Delhi, India</option>
+                              <option value="Shanghai, China">Shanghai, China</option>
+                              <option value="Mexico City, Mexico">Mexico City, Mexico</option>
+                              <option value="São Paulo, Brazil">São Paulo, Brazil</option>
+                              <option value="Cairo, Egypt">Cairo, Egypt</option>
+                              <option value="Dhaka, Bangladesh">Dhaka, Bangladesh</option>
+                              <option value="Beijing, China">Beijing, China</option>
+                              <option value="Mumbai, India">Mumbai, India</option>
+                              <option value="Osaka, Japan">Osaka, Japan</option>
+                              <option value="Karachi, Pakistan">Karachi, Pakistan</option>
+                              <option value="Chongqing, China">Chongqing, China</option>
+                              <option value="Kinshasa, DR Congo">Kinshasa, DR Congo</option>
+                              <option value="New York City, USA">New York City, USA</option>
                               <option value="New York, USA" data-i18n="city.newyork">New York, USA</option>
+                              <option value="Istanbul, Turkey">Istanbul, Turkey</option>
+                              <option value="London, United Kingdom">London, United Kingdom</option>
                               <option value="London, UK" data-i18n="city.london">London, UK</option>
                               <option value="Paris, France" data-i18n="city.paris">Paris, France</option>
-                              <option value="Berlin, Germany" data-i18n="city.berlin">Berlin, Germany</option>
+                              <option value="Buenos Aires, Argentina">Buenos Aires, Argentina</option>
                               <option value="Moscow, Russia" data-i18n="city.moscow">Moscow, Russia</option>
+                              <option value="Seoul, South Korea">Seoul, South Korea</option>
+                              <option value="Hong Kong, China">Hong Kong, China</option>
                               <option value="Dubai, UAE" data-i18n="city.dubai">Dubai, UAE</option>
-                              <option value="Tokyo, Japan" data-i18n="city.tokyo">Tokyo, Japan</option>
                               <option value="Sydney, Australia" data-i18n="city.sydney">Sydney, Australia</option>
+                              <option value="Singapore, Singapore">Singapore, Singapore</option>
+                              <option value="Los Angeles, USA">Los Angeles, USA</option>
+                              <option value="Chicago, USA">Chicago, USA</option>
+                              <option value="Melbourne, Australia">Melbourne, Australia</option>
+                              <option value="Berlin, Germany" data-i18n="city.berlin">Berlin, Germany</option>
+                              <option value="Madrid, Spain">Madrid, Spain</option>
+                              <option value="Rome, Italy">Rome, Italy</option>
+                              <option value="Bangkok, Thailand">Bangkok, Thailand</option>
+                              <option value="Jakarta, Indonesia">Jakarta, Indonesia</option>
+                              <option value="Tehran, Iran">Tehran, Iran</option>
+                              <option value="Lagos, Nigeria">Lagos, Nigeria</option>
+                              <option value="Rio de Janeiro, Brazil">Rio de Janeiro, Brazil</option>
+                              <option value="Vancouver, Canada">Vancouver, Canada</option>
+                              <option value="Amsterdam, Netherlands">Amsterdam, Netherlands</option>
+                              <option value="Washington, USA">Washington, USA</option>
+                              <option value="Houston, USA">Houston, USA</option>
                           </select>
                       </div>
 
@@ -1799,61 +1832,7 @@
               <!-- Feed View - Date-Based Journal -->
 <!-- Feed View - Date-Based Journal -->
 <div id="feedView" class="view">
-    <!-- City Selector and Time Display -->
-    <div class="city-selector-container">
-        <div class="city-selector-wrapper">
-            <label for="citySelector" style="font-weight: 600;" data-i18n="feed.select_city">Select City:</label>
-        <select id="citySelector" class="city-selector">
-                <option value="Jerusalem, Israel" data-i18n="city.jerusalem">Jerusalem, Israel</option>
-                <option value="Tokyo, Japan" data-i18n="city.tokyo">Tokyo, Japan</option>
-                <option value="Delhi, India">Delhi, India</option>
-                <option value="Shanghai, China">Shanghai, China</option>
-                <option value="Mexico City, Mexico">Mexico City, Mexico</option>
-                <option value="São Paulo, Brazil">São Paulo, Brazil</option>
-                <option value="Cairo, Egypt">Cairo, Egypt</option>
-                <option value="Dhaka, Bangladesh">Dhaka, Bangladesh</option>
-                <option value="Beijing, China">Beijing, China</option>
-                <option value="Mumbai, India">Mumbai, India</option>
-                <option value="Osaka, Japan">Osaka, Japan</option>
-                <option value="Karachi, Pakistan">Karachi, Pakistan</option>
-                <option value="Chongqing, China">Chongqing, China</option>
-                <option value="Kinshasa, DR Congo">Kinshasa, DR Congo</option>
-                <option value="New York City, USA">New York City, USA</option>
-                <option value="New York, USA" data-i18n="city.newyork">New York, USA</option>
-                <option value="Istanbul, Turkey">Istanbul, Turkey</option>
-                <option value="London, United Kingdom">London, United Kingdom</option>
-                <option value="London, UK" data-i18n="city.london">London, UK</option>
-                <option value="Paris, France" data-i18n="city.paris">Paris, France</option>
-                <option value="Buenos Aires, Argentina">Buenos Aires, Argentina</option>
-                <option value="Moscow, Russia" data-i18n="city.moscow">Moscow, Russia</option>
-                <option value="Seoul, South Korea">Seoul, South Korea</option>
-                <option value="Hong Kong, China">Hong Kong, China</option>
-                <option value="Dubai, UAE" data-i18n="city.dubai">Dubai, UAE</option>
-                <option value="Sydney, Australia" data-i18n="city.sydney">Sydney, Australia</option>
-                <option value="Singapore, Singapore">Singapore, Singapore</option>
-                <option value="Los Angeles, USA">Los Angeles, USA</option>
-                <option value="Chicago, USA">Chicago, USA</option>
-                <option value="Tel Aviv, Israel" data-i18n="city.telaviv">Tel Aviv, Israel</option>
-                <option value="Haifa, Israel" data-i18n="city.haifa">Haifa, Israel</option>
-                <option value="Melbourne, Australia">Melbourne, Australia</option>
-                <option value="Berlin, Germany" data-i18n="city.berlin">Berlin, Germany</option>
-                <option value="Madrid, Spain">Madrid, Spain</option>
-                <option value="Rome, Italy">Rome, Italy</option>
-                <option value="Bangkok, Thailand">Bangkok, Thailand</option>
-                <option value="Jakarta, Indonesia">Jakarta, Indonesia</option>
-                <option value="Tehran, Iran">Tehran, Iran</option>
-                <option value="Lagos, Nigeria">Lagos, Nigeria</option>
-                <option value="Rio de Janeiro, Brazil">Rio de Janeiro, Brazil</option>
-                <option value="Vancouver, Canada">Vancouver, Canada</option>
-                <option value="Amsterdam, Netherlands">Amsterdam, Netherlands</option>
-                <option value="Washington, USA">Washington, USA</option>
-                <option value="Houston, USA">Houston, USA</option>
-            </select>
-        </div>
-        <div class="city-time-display" id="cityTimeDisplay">
-            <!-- Time will be displayed here -->
-        </div>
-    </div>
+   <!-- City selector removed - now only in Home page -->
 
     <h2 style="margin-bottom: 20px;" data-i18n="feed.title">Your Feed Journal</h2>
     <p style="color: var(--gray); margin-bottom: 20px;" data-i18n="feed.subtitle">Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.</p>
@@ -2575,18 +2554,9 @@ async function loadUserCity() {
     }
 
          // Initialize city selector event
-            const citySelector = document.getElementById('citySelector');
-            if (citySelector && !citySelector.hasAttribute('data-initialized')) {
-                citySelector.addEventListener('change', function() {
-                    const city = this.value;
-                    saveUserCity(city);
-                    updateCityTime();
-                });
-                citySelector.setAttribute('data-initialized', 'true');
-
-                // Start time update interval
-                setInterval(updateCityTime, 1000);
-            }
+       // City selector removed from feed page - time updates handled by home page selector only
+            // Start time update interval for any displayed time
+            setInterval(updateCityTime, 1000);
 
             // Initialize home city selector event
             const homeCitySelector = document.getElementById('homeCitySelector');
