@@ -2246,60 +2246,78 @@
             'Houston, USA': -6
         };
 
-        function updateCityTime() {
-            const city = document.getElementById('citySelector').value;
-            const offset = timezoneOffsets[city] || 0;
+     function updateCityTime() {
+    // FIXED: Check if citySelector exists before accessing
+    const citySelector = document.getElementById('citySelector');
+    const homeCitySelector = document.getElementById('homeCitySelector');
 
-        const now = new Date();
-            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-            const cityTime = new Date(utc + (3600000 * offset));
+    // Use whichever selector is available
+    const activeSelector = citySelector || homeCitySelector;
 
-            const timeString = cityTime.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            });
+    if (!activeSelector) {
+        // No selector available, skip update
+        return;
+    }
 
-            const dateString = cityTime.toLocaleDateString([], {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+    const city = activeSelector.value;
+    const offset = timezoneOffsets[city] || 0;
 
-            // Update both displays (feed page has cityTimeDisplay, home page has homeCityTimeDisplay)
-            const feedDisplay = document.getElementById('cityTimeDisplay');
-            const homeDisplay = document.getElementById('homeCityTimeDisplay');
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const cityTime = new Date(utc + (3600000 * offset));
 
-            const timeHtml = `${timeString}<br><span style="font-size: 16px;">${dateString}</span>`;
+    const timeString = cityTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    });
 
-            if (feedDisplay) {
-                feedDisplay.innerHTML = timeHtml;
-            }
-            if (homeDisplay) {
-                homeDisplay.innerHTML = timeHtml;
-            }
-        }
+    const dateString = cityTime.toLocaleDateString([], {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    // Update both displays (feed page has cityTimeDisplay, home page has homeCityTimeDisplay)
+    const feedDisplay = document.getElementById('cityTimeDisplay');
+    const homeDisplay = document.getElementById('homeCityTimeDisplay');
+
+    const timeHtml = `${timeString}<br><span style="font-size: 16px;">${dateString}</span>`;
+
+    if (feedDisplay) {
+        feedDisplay.innerHTML = timeHtml;
+    }
+    if (homeDisplay) {
+        homeDisplay.innerHTML = timeHtml;
+    }
+}
+
+
 async function loadUserCity() {
-            try {
-                const response = await apiCall('/user/city');
-                if (response && response.selected_city) {
-                    const feedSelector = document.getElementById('citySelector');
-                    const homeSelector = document.getElementById('homeCitySelector');
+    try {
+        const response = await apiCall('/user/city');
+        if (response && response.selected_city) {
+            const feedSelector = document.getElementById('citySelector');
+            const homeSelector = document.getElementById('homeCitySelector');
 
-                    if (feedSelector) {
-                        feedSelector.value = response.selected_city;
-                    }
-                    if (homeSelector) {
-                        homeSelector.value = response.selected_city;
-                    }
-                    updateCityTime();
-                }
-            } catch (error) {
-                console.error('Error loading city:', error);
+            if (feedSelector) {
+                feedSelector.value = response.selected_city;
+            }
+            if (homeSelector) {
+                homeSelector.value = response.selected_city;
+            }
+
+            // FIXED: Only update time if at least one selector exists
+            if (feedSelector || homeSelector) {
+                updateCityTime();
             }
         }
+    } catch (error) {
+        console.error('Error loading city:', error);
+    }
+}
 
         async function saveUserCity(city) {
             try {
@@ -2544,19 +2562,27 @@ async function loadUserCity() {
         currentUserId = currentUser.id; // Ensure user ID is set
     }
 
-    initFeedCalendar();
+  initFeedCalendar();
     loadUserCity();
-    updateCityTime();
+
+    // FIXED: Only call updateCityTime if selector exists
+    setTimeout(() => {
+        const citySelector = document.getElementById('citySelector');
+        const homeCitySelector = document.getElementById('homeCitySelector');
+        if (citySelector || homeCitySelector) {
+            updateCityTime();
+            // Start time update interval only if we have a selector
+            setInterval(updateCityTime, 1000);
+        }
+    }, 100);
 
     // Initialize parameter calendar
     if (typeof initializeCalendar === 'function') {
         initializeCalendar();
     }
 
-         // Initialize city selector event
-       // City selector removed from feed page - time updates handled by home page selector only
-            // Start time update interval for any displayed time
-            setInterval(updateCityTime, 1000);
+    // Initialize city selector event
+    // City selector removed from feed page - time updates handled by home page selector only
 
             // Initialize home city selector event
             const homeCitySelector = document.getElementById('homeCitySelector');
