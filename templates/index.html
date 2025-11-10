@@ -5443,7 +5443,7 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
                 <button class="btn btn-secondary" onclick="document.getElementById('addTriggerModal').remove()">
                     Cancel
                 </button>
-                <button class="btn btn-primary" onclick="createTriggerForUser(${targetUserId})">
+                <button class="btn btn-primary" onclick="createTriggerForUser(${targetUserId}, '${targetUsername}')">
                     Create Trigger
                 </button>
             </div>
@@ -5453,7 +5453,7 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
     document.body.appendChild(modal);
 }
 
-async function createTriggerForUser(targetId) {
+async function createTriggerForUser(targetId, targetUsername) {
     const parameter = document.getElementById('triggerParameter').value;
     const operator = document.getElementById('triggerOperator').value;
     const threshold = document.getElementById('triggerThreshold').value;
@@ -5461,15 +5461,12 @@ async function createTriggerForUser(targetId) {
 
     try {
         const body = {
-            target_id: parseInt(targetId),
-            parameter: parameter,
-            operator: operator,
-            threshold: parseInt(threshold)
+            watched_id: parseInt(targetId),  // Changed from target_id
+            parameter_name: parameter,       // Changed from parameter
+            condition: operator,              // Changed from operator
+            value: parseInt(threshold),      // Changed from threshold
+            consecutive_days: days ? parseInt(days) : 1  // Changed from days, default to 1
         };
-
-        if (days) {
-            body.days = parseInt(days);
-        }
 
         const response = await fetch('/api/triggers', {
             method: 'POST',
@@ -5484,17 +5481,18 @@ async function createTriggerForUser(targetId) {
 
         showNotification('Trigger created successfully', 'success');
         document.getElementById('addTriggerModal').remove();
-        // Reload triggers in the modal
-        loadTriggersForUser(targetId);
+        // Reload triggers in the modal with username
+        loadTriggersForUser(targetId, targetUsername);
     } catch (error) {
         console.error('Error creating trigger:', error);
         showNotification('Failed to create trigger', 'error');
     }
 }
 
-async function loadTriggersForUser(userId) {
+async function loadTriggersForUser(userId, username) {
     try {
-        const response = await fetch(`/api/triggers?target_id=${userId}`, {
+        // Get all triggers where current user is watching
+        const response = await fetch('/api/triggers', {
             credentials: 'include'
         });
 
@@ -5505,15 +5503,25 @@ async function loadTriggersForUser(userId) {
 
         if (!container) return;
 
-        if (!data.triggers || data.triggers.length === 0) {
+        // Filter triggers for this specific user by username
+        const userTriggers = data.triggers ? data.triggers.filter(t => {
+            return t.watched_user === username;
+        }) : [];
+
+        if (userTriggers.length === 0) {
             container.innerHTML = '<p style="color: #666; font-size: 0.9rem;">No triggers set for this user</p>';
             return;
         }
 
-        container.innerHTML = data.triggers.map(trigger => `
+        container.innerHTML = userTriggers.map(trigger => `
             <div style="padding: 10px; background: white; border-radius: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <span>${trigger.parameter}: ${trigger.operator} ${trigger.threshold}</span>
-                <button class="btn btn-danger" onclick="deleteTrigger(${trigger.id}); setTimeout(() => loadTriggersForUser(${userId}), 500);"
+                <span>
+                    ${trigger.parameter || trigger.parameter_name}:
+                    ${trigger.condition}
+                    ${trigger.value}
+                    ${trigger.consecutive_days ? ` (${trigger.consecutive_days} days)` : ''}
+                </span>
+                <button class="btn btn-danger" onclick="deleteTrigger(${trigger.id}); setTimeout(() => loadTriggersForUser(${userId}, '${username}'), 500);"
                         style="padding: 4px 8px; font-size: 0.8rem;">
                     Remove
                 </button>
@@ -5969,7 +5977,7 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
 
     // Load triggers if viewing another user
     if (userId && userId !== currentUserId) {
-        setTimeout(() => loadTriggersForUser(userId), 100);
+        setTimeout(() => loadTriggersForUser(userId, username), 100);
     }
 
 
