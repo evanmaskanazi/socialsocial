@@ -613,7 +613,8 @@ if (!currentLang || currentLang === '') {
         const newLang = this.value;
 
         // Save to localStorage
-        localStorage.setItem('userLanguage', newLang);
+        localStorage.setItem('selectedLanguage', newLang);
+localStorage.setItem('userLanguage', newLang);
 
         // Update i18n if available
         if (window.i18n && window.i18n.setLanguage) {
