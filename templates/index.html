@@ -5796,7 +5796,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         // Listen for language changes
   // Listen for language changes
-   window.addEventListener('languageChanged', () => {
+ window.addEventListener('languageChanged', () => {
+    // Update language selector to match current language
+    const langSelector = document.getElementById('languageSelector');
+    if (langSelector && window.i18n && window.i18n.currentLanguage) {
+        langSelector.value = window.i18n.currentLanguage;
+    }
+
     if (document.getElementById('feedView').classList.contains('hidden') === false) {
         renderFeedCalendar();
         updateFeedSelectedDateDisplay();
