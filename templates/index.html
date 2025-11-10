@@ -1427,20 +1427,40 @@
     <div id="authContainer" class="auth-container">
         <div class="auth-card fade-in">
             <h2 class="auth-title" id="authTitle" data-i18n="auth.welcome">Welcome Back</h2>
-            <form id="authForm">
+          <form id="authForm">
                 <div class="form-group">
                     <label class="form-label" data-i18n="auth.email">Email</label>
                     <input type="email" class="form-input" id="emailInput" autocomplete="email" required>
                 </div>
-                <div class="form-group">
+
+                <!-- Magic Link Option for signup -->
+                <div id="magicLinkOption" style="display: none;">
+                    <button type="button" class="magic-link-btn" onclick="requestMagicLink()" data-i18n="auth.magic_link">
+                        Send me a magic link to sign in
+                    </button>
+                    <div class="auth-divider">
+                        <span data-i18n="auth.or">OR</span>
+                    </div>
+                </div>
+
+                <div class="form-group" id="passwordGroup">
                     <label class="form-label" data-i18n="auth.password">Password</label>
-                    <input type="password" class="form-input" id="passwordInput" autocomplete="current-password" required>
+                    <input type="password" class="form-input" id="passwordInput" autocomplete="current-password">
                 </div>
+
+                <!-- Username field for conventional signup (can be left blank) -->
                 <div class="form-group" id="usernameGroup" style="display: none;">
-                    <label class="form-label" data-i18n="auth.username">Username</label>
-                    <input type="text" class="form-input" id="usernameInput" autocomplete="username" data-i18n="auth.username_placeholder" placeholder="Choose a username">
+                    <label class="form-label">
+                        <span data-i18n="auth.username">Username</span>
+                        <span style="color: #666; font-size: 12px;" data-i18n="username.optional">(optional)</span>
+                    </label>
+                    <input type="text" class="form-input" id="usernameInput" autocomplete="username"
+                           data-i18n-placeholder="username.blank_for_email"
+                           placeholder="Leave blank to use email prefix">
+                    <small style="color: #666;" id="emailPrefixHint"></small>
                 </div>
-         <button type="submit" class="btn btn-primary" id="authSubmit" data-i18n="btn.signin">Sign In</button>
+
+                <button type="submit" class="btn btn-primary" id="authSubmit" data-i18n="btn.signin">Sign In</button>
             </form>
             <p style="text-align: center; margin-top: 15px;">
                 <a href="#" id="forgotPasswordLink" style="color: var(--primary); font-size: 14px;" data-i18n="auth.forgot_password" onclick="showForgotPassword(); return false;">Forgot Your Password?</a>
@@ -1492,6 +1512,131 @@
             </form>
         </div>
     </div>
+
+
+<!-- Consent Modal with integrated username option -->
+<div id="consentModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <h2 data-i18n="consent.title">Welcome to TheraSocial</h2>
+        <p data-i18n="consent.subtitle">Please review and accept our terms to continue</p>
+
+        <!-- Optional Username Field -->
+        <div class="form-group" style="margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+            <label class="form-label">
+                <span data-i18n="auth.username">Username</span>
+                <span style="color: #666; font-size: 14px;" data-i18n="username.optional">(optional)</span>
+            </label>
+            <input type="text" id="consentUsername" class="form-input"
+                   placeholder="Leave blank to use your email prefix"
+                   data-i18n-placeholder="username.blank_for_email">
+            <small id="suggestedUsername" style="color: #666; display: block; margin-top: 5px;"></small>
+        </div>
+
+        <!-- Consent checkboxes -->
+        <div class="consent-items" style="margin: 20px 0;">
+            <label class="consent-item">
+                <input type="checkbox" id="emailUpdates">
+                <span data-i18n="consent.email_updates">I want to receive email updates about new features</span>
+            </label>
+
+            <label class="consent-item">
+                <input type="checkbox" id="privacyAccepted" required>
+                <span data-i18n="consent.privacy">I accept the privacy policy and understand my data will be protected</span>
+            </label>
+
+            <label class="consent-item">
+                <input type="checkbox" id="researchData">
+                <span data-i18n="consent.research">I agree to share de-identified data for platform improvement</span>
+            </label>
+
+            <label class="consent-item">
+                <input type="checkbox" id="teamDeclaration" required>
+                <span data-i18n="consent.team">I understand this is a good-faith community platform</span>
+            </label>
+
+            <label class="consent-item">
+                <input type="checkbox" id="responsibleUse" required>
+                <span data-i18n="consent.responsible">I will use this platform responsibly and respectfully</span>
+            </label>
+
+            <label class="consent-item">
+                <input type="checkbox" id="waiverClaims" required>
+                <span data-i18n="consent.waiver">I understand and accept the terms of service</span>
+            </label>
+        </div>
+
+        <div class="consent-actions">
+            <button type="button" class="btn btn-primary" onclick="submitConsent()" data-i18n="consent.accept">Accept and Continue</button>
+            <p style="color: red; display: none;" id="consentError" data-i18n="consent.error">Please accept all required terms</p>
+        </div>
+    </div>
+</div>
+
+<!-- Styles for modals -->
+<style>
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 10% auto;
+        padding: 30px;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 500px;
+    }
+    .consent-item {
+        display: block;
+        margin: 15px 0;
+        cursor: pointer;
+    }
+    .consent-item input {
+        margin-right: 10px;
+    }
+    .auth-divider {
+        text-align: center;
+        margin: 20px 0;
+        position: relative;
+    }
+    .auth-divider:before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #e0e0e0;
+    }
+    .auth-divider span {
+        background: white;
+        padding: 0 15px;
+        position: relative;
+        color: #666;
+    }
+    .magic-link-btn {
+        width: 100%;
+        padding: 12px;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        color: #374151;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .magic-link-btn:hover {
+        background: #e5e7eb;
+    }
+</style>
+
 
     <!-- About Page -->
     <div id="aboutPage" class="container hidden">
@@ -2434,70 +2579,103 @@ async function loadUserCity() {
         }
 
         // Auth Functions
-        document.getElementById('toggleAuth').addEventListener('click', (e) => {
+     // Toggle between login and signup
+        document.getElementById('toggleAuth').addEventListener('click', function(e) {
             e.preventDefault();
-            isLoginMode = !isLoginMode;
+            const isLoginMode = authTitle.textContent.includes('Welcome Back');
 
             if (isLoginMode) {
-                document.getElementById('authTitle').setAttribute('data-i18n', 'auth.welcome');
-                document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signin');
-                document.getElementById('usernameGroup').style.display = 'none';
-                document.getElementById('toggleAuth').setAttribute('data-i18n', 'auth.toggle_signup');
-            } else {
-                document.getElementById('authTitle').setAttribute('data-i18n', 'auth.create');
-                document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signup');
+                // Switch to signup mode
+                authTitle.setAttribute('data-i18n', 'auth.create_account');
+                authTitle.textContent = 'Create Account';
                 document.getElementById('usernameGroup').style.display = 'block';
-                document.getElementById('toggleAuth').setAttribute('data-i18n', 'auth.toggle_signin');
-            }
-
-            if (window.i18n && window.i18n.applyLanguage) {
-                window.i18n.applyLanguage();
+                document.getElementById('magicLinkOption').style.display = 'block';
+                document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signup');
+                document.getElementById('authSubmit').textContent = 'Sign Up';
+                this.setAttribute('data-i18n', 'auth.toggle_signin');
+                this.textContent = 'Already have an account? Sign in';
+                // Update email hint when switching to signup
+                updateEmailPrefixHint();
+            } else {
+                // Switch to login mode
+                authTitle.setAttribute('data-i18n', 'auth.welcome');
+                authTitle.textContent = 'Welcome Back';
+                document.getElementById('usernameGroup').style.display = 'none';
+                document.getElementById('magicLinkOption').style.display = 'none';
+                document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signin');
+                document.getElementById('authSubmit').textContent = 'Sign In';
+                this.setAttribute('data-i18n', 'auth.toggle_signup');
+                this.textContent = "Don't have an account? Sign up";
             }
         });
 
-        document.getElementById('authForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+  document.getElementById('authForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
-            const username = document.getElementById('usernameInput').value;
+        const email = document.getElementById('emailInput').value;
+        const password = document.getElementById('passwordInput').value;
+        const usernameInput = document.getElementById('usernameInput').value;
 
-            try {
-                const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
-                const body = { email, password };
+        // Handle username - can be blank, will use email prefix
+        let username = usernameInput ? usernameInput.trim() : '';
+        if (!username && !isLoginMode) {
+            username = email.split('@')[0];
+        }
 
+        try {
+            const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
+            const body = { email, password };
+
+            if (!isLoginMode) {
+                body.username = username; // Will be email prefix if left blank
+                // Send current language selection
+                body.preferred_language = window.i18n && window.i18n.getCurrentLanguage ?
+                    window.i18n.getCurrentLanguage() : 'en';
+            }
+            const response = await apiCall(endpoint, 'POST', body);
+
+            if (response && response.success) {
+                currentUser = response.user;
+                currentUserId = response.user.id; // Store the user ID
+
+                // Check if new user needs consent
                 if (!isLoginMode) {
-                    body.username = username || email.split('@')[0];
-                    // Send current language selection
-                    body.preferred_language = window.i18n && window.i18n.getCurrentLanguage ?
-                        window.i18n.getCurrentLanguage() : 'en';
+                    // For new signups, check if consent is needed
+                    const consentCheck = await fetch('/api/auth/session');
+                    const sessionData = await consentCheck.json();
+                    if (sessionData.authenticated) {
+                        // Check if user has accepted consent
+                        const consentResponse = await fetch('/api/user/consent-status');
+                        const consentData = await consentResponse.json();
+                        if (!consentData.has_consent) {
+                            showConsentModal();
+                            return; // Don't show dashboard yet
+                        }
+                    }
                 }
-                const response = await apiCall(endpoint, 'POST', body);
 
-              if (response && response.success) {
-    currentUser = response.user;
-    currentUserId = response.user.id; // Store the user ID
-    showDashboard();
-                }
-            } catch (error) {
-                alert(error.message);
+                showDashboard();
             }
-        });
+        } catch (error) {
+            alert(error.message);
+        }
+    });
 
 
 // Forgot Password form
-        document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+   document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-            const email = document.getElementById('forgotEmail').value;
+    const email = document.getElementById('forgotEmail').value;
+    const language = document.getElementById('languageSelector').value;
 
-            try {
-                const response = await fetch(`${API_URL}/auth/forgot-password`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ email })
-                });
+    try {
+        const response = await fetch(`${API_URL}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, language })
+        });
 
                 const data = await response.json();
 
@@ -2581,6 +2759,171 @@ async function loadUserCity() {
             document.getElementById('authContainer').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'none';
         }
+
+
+
+
+
+// Magic Link and Consent Functions with Email-Based Username Support
+
+// Show email prefix hint for username field
+function updateEmailPrefixHint() {
+    const email = document.getElementById('emailInput').value;
+    const hint = document.getElementById('emailPrefixHint');
+    const suggestedUsername = document.getElementById('suggestedUsername');
+
+    if (email && email.includes('@')) {
+        const prefix = email.split('@')[0];
+        if (hint) {
+            hint.textContent = `If blank, username will be: ${prefix}`;
+        }
+        if (suggestedUsername) {
+            suggestedUsername.textContent = `If blank, username will be: ${prefix}`;
+        }
+    }
+}
+
+// Add event listener for email input
+document.getElementById('emailInput')?.addEventListener('input', updateEmailPrefixHint);
+
+// Request magic link
+async function requestMagicLink() {
+    const email = document.getElementById('emailInput').value;
+    const language = document.getElementById('languageSelector').value;
+
+    if (!email) {
+        showNotification('Please enter your email', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/auth/request-magic-link', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email, language})
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showNotification('Magic link sent! Check your email', 'success');
+            document.getElementById('authForm').reset();
+        } else {
+            showNotification(data.error || 'Failed to send magic link', 'error');
+        }
+    } catch (error) {
+        showNotification('Network error', 'error');
+    }
+}
+
+// Check for magic token on page load
+async function checkMagicToken() {
+    const params = new URLSearchParams(window.location.search);
+    const magicToken = params.get('magic_token');
+
+    if (magicToken) {
+        try {
+            const response = await fetch('/api/auth/verify-magic-link', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({token: magicToken})
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                // Clear token from URL
+                window.history.replaceState({}, document.title, "/");
+
+                // Store user email for username suggestion
+                if (data.user && data.user.email) {
+                    sessionStorage.setItem('userEmail', data.user.email);
+                }
+                if (data.suggested_username) {
+                    sessionStorage.setItem('suggestedUsername', data.suggested_username);
+                }
+
+                // Go straight to consent (username is optional there)
+                if (data.needs_consent) {
+                    showConsentModal();
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                showNotification(data.error || 'Invalid or expired link', 'error');
+            }
+        } catch (error) {
+            showNotification('Verification failed', 'error');
+        }
+    }
+}
+
+// Show consent modal with optional username
+function showConsentModal() {
+    const email = sessionStorage.getItem('userEmail');
+    const suggested = sessionStorage.getItem('suggestedUsername');
+
+    if (suggested || email) {
+        const prefix = suggested || email.split('@')[0];
+        const suggestedElem = document.getElementById('suggestedUsername');
+        if (suggestedElem) {
+            suggestedElem.textContent = `If blank, username will be: ${prefix}`;
+        }
+        const usernameInput = document.getElementById('consentUsername');
+        if (usernameInput) {
+            usernameInput.placeholder = `Leave blank for: ${prefix}`;
+        }
+    }
+
+    document.getElementById('consentModal').style.display = 'flex';
+}
+
+// Submit consent with optional username
+async function submitConsent() {
+    const username = document.getElementById('consentUsername').value.trim(); // Can be empty
+
+    const consent = {
+        username: username, // Empty string is valid - backend will use email prefix
+        email_updates: document.getElementById('emailUpdates').checked,
+        privacy_accepted: document.getElementById('privacyAccepted').checked,
+        research_data: document.getElementById('researchData').checked,
+        team_declaration: document.getElementById('teamDeclaration').checked,
+        responsible_use: document.getElementById('responsibleUse').checked,
+        waiver_claims: document.getElementById('waiverClaims').checked,
+        language: document.getElementById('languageSelector').value
+    };
+
+    // Check required consents
+    const required = ['privacy_accepted', 'team_declaration', 'responsible_use', 'waiver_claims'];
+    const allAccepted = required.every(field => consent[field]);
+
+    if (!allAccepted) {
+        document.getElementById('consentError').style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/auth/save-consent', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(consent)
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            document.getElementById('consentModal').style.display = 'none';
+            sessionStorage.removeItem('userEmail');
+            sessionStorage.removeItem('suggestedUsername');
+            window.location.reload();
+        } else {
+            document.getElementById('consentError').textContent = data.error;
+            document.getElementById('consentError').style.display = 'block';
+        }
+    } catch (error) {
+        document.getElementById('consentError').textContent = 'Failed to save consent';
+        document.getElementById('consentError').style.display = 'block';
+    }
+}
+
+
 
         // Dashboard Functions
   function showDashboard() {
@@ -5769,6 +6112,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.history.replaceState({}, document.title, window.location.pathname);
         return; // Don't proceed with normal login check
     }
+
+    // Check for magic link token
+    checkMagicToken();
 
     // Wait for i18n to be ready (max 1 second)
     let i18nReady = false;
