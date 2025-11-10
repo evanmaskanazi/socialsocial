@@ -5736,13 +5736,18 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Set up language selector event listener
  // Set up language selector event listener
+// Set up language selector event listener
 const langSelector = document.getElementById('languageSelector');
 if (langSelector) {
     langSelector.addEventListener('change', function() {
-        // Check if this is a programmatic change (not user-initiated)
-        if (window._updatingSelectorProgrammatically === true) {
-            console.log('[Language Selector] Ignoring programmatic change');
-            return;
+        // Use a more reliable check - see if the change matches current i18n language
+        // If selector value already matches i18n, this was likely programmatic
+        if (window.i18n && window.i18n.currentLanguage === this.value) {
+            // Check if we're in the middle of a programmatic update
+            if (window._updatingSelectorProgrammatically === true) {
+                console.log('[Language Selector] Ignoring programmatic change');
+                return;
+            }
         }
 
         // This is a user-initiated change
