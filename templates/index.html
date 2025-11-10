@@ -2262,6 +2262,21 @@
         <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="following.your_following">People You Follow</h3>
         <div id="followingList"></div>
     </div>
+
+ <!-- ============= ADD TRIGGERS SECTION HERE ============= -->
+    <!-- Triggers Section - Add this RIGHT AFTER the Following List div above -->
+    <div id="triggersSection" style="margin-top: 30px; background: white; padding: 20px; border-radius: 15px;">
+        <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="triggers.title">Wellness Triggers</h3>
+        <p style="color: var(--gray); margin-bottom: 15px;" data-i18n="triggers.description">Set alerts when someone you follow shows concerning parameter patterns</p>
+
+        <div id="triggersList" style="margin-bottom: 20px;">
+            <!-- Triggers will load here -->
+        </div>
+
+        <button class="btn btn-primary" onclick="showAddTriggerModal()" data-i18n="triggers.add">Add Trigger</button>
+    </div>
+    <!-- ============= END TRIGGERS SECTION ============= -->
+
 </div>
 
 <!-- Followers View -->
@@ -4902,7 +4917,8 @@ async function loadParametersForDate(dateStr) {
 
 
 // Following/Followers Functions
-    async function loadFollowing() {
+  // Following/Followers Functions
+async function loadFollowing() {
     try {
         // Load people user is following
         const followingResponse = await fetch('/api/following', {
@@ -5003,6 +5019,12 @@ async function loadParametersForDate(dateStr) {
                 recommendedContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No recommendations available. Try updating your city in your profile!</p>';
             }
         }
+
+        // NEW: Load triggers when following page loads
+        if (document.getElementById('triggersSection')) {
+            loadTriggers();
+        }
+
     } catch (error) {
         console.error('Error loading following:', error);
         showNotification('Failed to load following', 'error');
@@ -5167,6 +5189,221 @@ async function followUser(userId, note = '', trigger = false) {
         return false;
     }
 }
+
+
+
+// ========== TRIGGER FUNCTIONS - START ==========
+// Place these AFTER followUser function, BEFORE searchUsersToFollow function
+
+async function loadTriggers() {
+    try {
+        const response = await fetch('/api/triggers', {
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to load triggers');
+
+        const data = await response.json();
+        const container = document.getElementById('triggersList');
+
+        if (!container) return; // Safety check
+
+        if (!data.triggers || data.triggers.length === 0) {
+            container.innerHTML = '<p style="color: var(--gray);">No triggers set yet</p>';
+            return;
+        }
+
+        container.innerHTML = data.triggers.map(trigger => `
+            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${trigger.target_username}</strong>
+                        <span style="color: var(--gray); margin-left: 10px;">
+                            ${trigger.parameter}: ${trigger.operator} ${trigger.threshold}
+                        </span>
+                    </div>
+                    <button class="btn btn-danger" onclick="deleteTrigger(${trigger.id})"
+                            style="padding: 5px 10px; font-size: 12px;">
+                        Remove
+                    </button>
+                </div>
+                ${trigger.days ? `<small style="color: var(--gray);">For ${trigger.days} days</small>` : ''}
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading triggers:', error);
+    }
+}
+
+async function deleteTrigger(triggerId) {
+    if (!confirm('Remove this trigger?')) return;
+
+    try {
+        const response = await fetch(`/api/triggers/${triggerId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete trigger');
+
+        showNotification('Trigger removed', 'success');
+        loadTriggers();
+    } catch (error) {
+        console.error('Error deleting trigger:', error);
+        showNotification('Failed to remove trigger', 'error');
+    }
+}
+
+function showAddTriggerModal() {
+    // Create modal - ensuring it doesn't conflict with other modals
+    const existingModal = document.getElementById('addTriggerModal');
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'addTriggerModal';
+    modal.className = 'modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+
+    modal.innerHTML = `
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
+            <h3>Add Wellness Trigger</h3>
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 5px;">User to monitor:</label>
+                <select id="triggerUserId" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 5px;">Parameter:</label>
+                <select id="triggerParameter" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="mood">Mood</option>
+                    <option value="sleep_quality">Sleep Quality</option>
+                    <option value="physical_activity">Physical Activity</option>
+                    <option value="anxiety">Anxiety</option>
+                    <option value="energy">Energy</option>
+                </select>
+            </div>
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 5px;">Alert when:</label>
+                <select id="triggerOperator" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="less_than">Less than</option>
+                    <option value="greater_than">Greater than</option>
+                    <option value="equals">Equals</option>
+                </select>
+            </div>
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 5px;">Value (1-4):</label>
+                <input type="number" id="triggerThreshold" min="1" max="4" value="2"
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 5px;">For how many days (optional):</label>
+                <input type="number" id="triggerDays" min="1" max="30"
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                       placeholder="Leave blank for single occurrence">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="document.getElementById('addTriggerModal').remove()">
+                    Cancel
+                </button>
+                <button class="btn btn-primary" onclick="createTrigger()">
+                    Create Trigger
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Load following list for the select
+    loadFollowingForTriggers();
+}
+
+async function loadFollowingForTriggers() {
+    try {
+        const response = await fetch('/api/following', {
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to load following');
+
+        const data = await response.json();
+        const select = document.getElementById('triggerUserId');
+
+        if (!select) return;
+
+        if (data.following && data.following.length > 0) {
+            select.innerHTML = '<option value="">Select a user...</option>' +
+                data.following.map(user =>
+                    `<option value="${user.id}">${user.username}</option>`
+                ).join('');
+        } else {
+            select.innerHTML = '<option value="">No users followed</option>';
+        }
+    } catch (error) {
+        console.error('Error loading following for triggers:', error);
+    }
+}
+
+async function createTrigger() {
+    const targetId = document.getElementById('triggerUserId').value;
+    const parameter = document.getElementById('triggerParameter').value;
+    const operator = document.getElementById('triggerOperator').value;
+    const threshold = document.getElementById('triggerThreshold').value;
+    const days = document.getElementById('triggerDays').value;
+
+    if (!targetId) {
+        alert('Please select a user');
+        return;
+    }
+
+    try {
+        const body = {
+            target_id: parseInt(targetId),
+            parameter: parameter,
+            operator: operator,
+            threshold: parseInt(threshold)
+        };
+
+        if (days) {
+            body.days = parseInt(days);
+        }
+
+        const response = await fetch('/api/triggers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body),
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to create trigger');
+
+        showNotification('Trigger created successfully', 'success');
+        document.getElementById('addTriggerModal').remove();
+        loadTriggers();
+    } catch (error) {
+        console.error('Error creating trigger:', error);
+        showNotification('Failed to create trigger', 'error');
+    }
+}
+
+// ========== TRIGGER FUNCTIONS - END ==========
+
+
+
 
 
 async function followUserWithNote(userId, username) {
