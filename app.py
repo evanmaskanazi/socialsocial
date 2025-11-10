@@ -5258,7 +5258,7 @@ def set_parameter_triggers(user_id):
 @app.route('/api/parameters/check-triggers', methods=['GET'])
 @login_required
 def check_parameter_triggers():
-    """Check for parameter alerts based on trigger settings - N CONSECUTIVE DAYS (dynamic)"""
+    """Check for parameter alerts - supports BOTH old and new schemas, finds ALL occurrences"""
     try:
         watcher_id = session.get('user_id')
         triggers = db.session.execute(
@@ -5266,7 +5266,23 @@ def check_parameter_triggers():
         ).scalars().all()
 
         alerts = []
+        alerts_created = 0
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+
+        # Helper function to convert values to numbers (for OLD schema)
+        def to_number(val):
+            if val is None:
+                return None
+            if isinstance(val, (int, float)):
+                return float(val)
+            if isinstance(val, str):
+                if val.lower() in ['private', 'hidden', 'none']:
+                    return None
+                try:
+                    return float(val)
+                except ValueError:
+                    return None
+            return None
 
         for trigger in triggers:
             # Skip if no consecutive_days setting
@@ -5277,7 +5293,7 @@ def check_parameter_triggers():
                 select(SavedParameters).filter(
                     SavedParameters.user_id == trigger.watched_id,
                     SavedParameters.date >= thirty_days_ago
-                ).order_by(SavedParameters.date.asc())  # Changed to ascending for easier consecutive checking
+                ).order_by(SavedParameters.date.asc())
             ).scalars().all()
 
             # Need at least as many days as the trigger requires
@@ -5285,174 +5301,302 @@ def check_parameter_triggers():
                 continue
 
             watched_user = db.session.get(User, trigger.watched_id)
+            if not watched_user:
+                continue
 
-            # Helper function to check consecutive days
-            def check_consecutive_pattern(param_attr, condition_func, alert_level_func):
+            # ===== DETERMINE WHICH SCHEMA THIS TRIGGER USES =====
+            has_new_schema = any([
+                trigger.mood_alert,
+                trigger.energy_alert,
+                trigger.sleep_alert,
+                trigger.physical_alert,
+                trigger.anxiety_alert
+            ])
+
+            has_old_schema = trigger.parameter_name is not None
+
+            # ===== NEW SCHEMA CODE (EXISTING) =====
+            if has_new_schema:
+                # Helper function to check consecutive days - FINDS ALL OCCURRENCES
+                def check_consecutive_pattern(param_attr, condition_func, alert_level_func):
+                    found_patterns = []
+                    consecutive_count = 0
+                    consecutive_values = []
+                    consecutive_dates = []
+                    last_date = None
+
+                    for param in parameters:
+                        param_value = getattr(param, param_attr, None)
+
+                        if param_value is not None and condition_func(param_value):
+                            # Check if consecutive
+                            if last_date is None or (param.date - last_date).days == 1:
+                                consecutive_count += 1
+                                consecutive_values.append(param_value)
+                                consecutive_dates.append(param.date)
+                                last_date = param.date
+
+                                # Check if we hit the required consecutive days
+                                if consecutive_count >= trigger.consecutive_days:
+                                    pattern = {
+                                        'level': alert_level_func(consecutive_values[-trigger.consecutive_days:]),
+                                        'user': watched_user.username,
+                                        'parameter': param_attr,
+                                        'dates': [d.isoformat() for d in consecutive_dates[-trigger.consecutive_days:]],
+                                        'values': consecutive_values[-trigger.consecutive_days:],
+                                        'consecutive_days': consecutive_count
+                                    }
+                                    found_patterns.append(pattern)
+                                    # ✅ RESET to find more patterns
+                                    consecutive_count = 0
+                                    consecutive_values = []
+                                    consecutive_dates = []
+                                    last_date = None
+                            else:
+                                # Reset if not consecutive
+                                consecutive_count = 1
+                                consecutive_values = [param_value]
+                                consecutive_dates = [param.date]
+                                last_date = param.date
+                        else:
+                            # Reset if condition not met
+                            consecutive_count = 0
+                            consecutive_values = []
+                            consecutive_dates = []
+                            last_date = None
+
+                    return found_patterns
+
+                # Check mood triggers (lower is worse)
+                if trigger.mood_alert:
+                    def mood_condition(val):
+                        return val <= 2
+
+                    def mood_level(vals):
+                        avg = sum(vals) / len(vals)
+                        if avg == 1:
+                            return 'critical'
+                        elif avg <= 1.5:
+                            return 'high'
+                        else:
+                            return 'warning'
+
+                    results = check_consecutive_pattern('mood', mood_condition, mood_level)
+                    alerts.extend(results)
+
+                # Check energy triggers (lower is worse)
+                if trigger.energy_alert:
+                    def energy_condition(val):
+                        return val <= 2
+
+                    def energy_level(vals):
+                        avg = sum(vals) / len(vals)
+                        if avg == 1:
+                            return 'critical'
+                        elif avg <= 1.5:
+                            return 'high'
+                        else:
+                            return 'warning'
+
+                    results = check_consecutive_pattern('energy_level', energy_condition, energy_level)
+                    alerts.extend(results)
+
+                # Check sleep quality triggers (lower is worse)
+                if trigger.sleep_alert:
+                    def sleep_condition(val):
+                        return val <= 2
+
+                    def sleep_level(vals):
+                        avg = sum(vals) / len(vals)
+                        if avg == 1:
+                            return 'critical'
+                        elif avg <= 1.5:
+                            return 'high'
+                        else:
+                            return 'warning'
+
+                    results = check_consecutive_pattern('sleep_quality', sleep_condition, sleep_level)
+                    alerts.extend(results)
+
+                # Check physical activity triggers (lower is worse)
+                if trigger.physical_alert:
+                    def physical_condition(val):
+                        return val <= 2
+
+                    def physical_level(vals):
+                        avg = sum(vals) / len(vals)
+                        if avg == 1:
+                            return 'critical'
+                        elif avg <= 1.5:
+                            return 'high'
+                        else:
+                            return 'warning'
+
+                    results = check_consecutive_pattern('physical_activity', physical_condition, physical_level)
+                    alerts.extend(results)
+
+                # Check anxiety triggers (higher is worse)
+                if trigger.anxiety_alert:
+                    def anxiety_condition(val):
+                        return val >= 3
+
+                    def anxiety_level(vals):
+                        avg = sum(vals) / len(vals)
+                        if avg == 4:
+                            return 'critical'
+                        elif avg >= 3.5:
+                            return 'high'
+                        else:
+                            return 'warning'
+
+                    results = check_consecutive_pattern('anxiety', anxiety_condition, anxiety_level)
+                    alerts.extend(results)
+
+            # ===== OLD SCHEMA CODE (NEW ADDITION) =====
+            elif has_old_schema:
+                param_name = trigger.parameter_name
+                condition = trigger.trigger_condition
+                threshold = trigger.trigger_value
+
+                # Map parameter name to model attribute
+                param_mapping = {
+                    'mood': 'mood',
+                    'anxiety': 'anxiety',
+                    'sleep_quality': 'sleep_quality',
+                    'physical_activity': 'physical_activity',
+                    'energy': 'energy_level'
+                }
+
+                param_attr = param_mapping.get(param_name)
+                if not param_attr:
+                    continue
+
+                # Create condition function
+                if condition == 'less_than':
+                    def condition_func(val, t=threshold):
+                        num = to_number(val)
+                        return num is not None and num < t
+
+                    condition_text = f"less than {threshold}"
+                elif condition == 'greater_than':
+                    def condition_func(val, t=threshold):
+                        num = to_number(val)
+                        return num is not None and num > t
+
+                    condition_text = f"greater than {threshold}"
+                elif condition == 'equals':
+                    def condition_func(val, t=threshold):
+                        num = to_number(val)
+                        return num is not None and num == t
+
+                    condition_text = f"equal to {threshold}"
+                else:
+                    continue
+
+                # Find ALL consecutive patterns
                 consecutive_count = 0
-                consecutive_values = []
-                consecutive_dates = []
                 last_date = None
+                streak_start = None
 
                 for param in parameters:
                     param_value = getattr(param, param_attr, None)
 
-                    if param_value is not None and condition_func(param_value):
-                        # Check if consecutive
+                    if condition_func(param_value):
+                        # Condition met
                         if last_date is None or (param.date - last_date).days == 1:
+                            if consecutive_count == 0:
+                                streak_start = param.date
                             consecutive_count += 1
-                            consecutive_values.append(param_value)
-                            consecutive_dates.append(param.date)
                             last_date = param.date
 
-                            # Check if we hit the required consecutive days
-                            if consecutive_count >= trigger.consecutive_days:
-                                return {
-                                    'level': alert_level_func(consecutive_values[-trigger.consecutive_days:]),
+                            # Check if we completed a pattern
+                            if consecutive_count == trigger.consecutive_days:
+                                # Add to alerts list for OLD schema format
+                                alert_data = {
                                     'user': watched_user.username,
-                                    'parameter': param_attr,
-                                    'dates': [d.isoformat() for d in consecutive_dates[-trigger.consecutive_days:]],
-                                    'values': consecutive_values[-trigger.consecutive_days:],
-                                    'consecutive_days': consecutive_count
+                                    'parameter': param_name,
+                                    'consecutive_days': consecutive_count,
+                                    'end_date': param.date,
+                                    'condition_text': condition_text,
+                                    'is_old_schema': True  # Flag for later processing
                                 }
+                                alerts.append(alert_data)
+
+                                # Reset to find more patterns
+                                consecutive_count = 0
+                                last_date = None
+                                streak_start = None
                         else:
-                            # Reset if not consecutive
+                            # Not consecutive
                             consecutive_count = 1
-                            consecutive_values = [param_value]
-                            consecutive_dates = [param.date]
+                            streak_start = param.date
                             last_date = param.date
                     else:
-                        # Reset if condition not met
+                        # Condition not met
                         consecutive_count = 0
-                        consecutive_values = []
-                        consecutive_dates = []
                         last_date = None
+                        streak_start = None
 
-                return None
-
-            # Check mood triggers (lower is worse)
-            if trigger.mood_alert:
-                def mood_condition(val):
-                    return val <= 2
-
-                def mood_level(vals):
-                    avg = sum(vals) / len(vals)
-                    if avg == 1:
-                        return 'critical'
-                    elif avg <= 1.5:
-                        return 'high'
-                    else:
-                        return 'warning'
-
-                result = check_consecutive_pattern('mood', mood_condition, mood_level)
-                if result:
-                    alerts.append(result)
-
-            # Check energy triggers (lower is worse)
-            if trigger.energy_alert:
-                def energy_condition(val):
-                    return val <= 2
-
-                def energy_level(vals):
-                    avg = sum(vals) / len(vals)
-                    if avg == 1:
-                        return 'critical'
-                    elif avg <= 1.5:
-                        return 'high'
-                    else:
-                        return 'warning'
-
-                result = check_consecutive_pattern('energy', energy_condition, energy_level)
-                if result:
-                    alerts.append(result)
-
-            # Check sleep quality triggers (lower is worse)
-            if trigger.sleep_alert:
-                def sleep_condition(val):
-                    return val <= 2
-
-                def sleep_level(vals):
-                    avg = sum(vals) / len(vals)
-                    if avg == 1:
-                        return 'critical'
-                    elif avg <= 1.5:
-                        return 'high'
-                    else:
-                        return 'warning'
-
-                result = check_consecutive_pattern('sleep_quality', sleep_condition, sleep_level)
-                if result:
-                    alerts.append(result)
-
-            # Check physical activity triggers (lower is worse)
-            if trigger.physical_alert:
-                def physical_condition(val):
-                    return val <= 2
-
-                def physical_level(vals):
-                    avg = sum(vals) / len(vals)
-                    if avg == 1:
-                        return 'critical'
-                    elif avg <= 1.5:
-                        return 'high'
-                    else:
-                        return 'warning'
-
-                result = check_consecutive_pattern('physical_activity', physical_condition, physical_level)
-                if result:
-                    alerts.append(result)
-
-            # Check anxiety triggers (higher is worse)
-            if trigger.anxiety_alert:
-                def anxiety_condition(val):
-                    return val >= 3
-
-                def anxiety_level(vals):
-                    avg = sum(vals) / len(vals)
-                    if avg == 4:
-                        return 'critical'
-                    elif avg >= 3.5:
-                        return 'high'
-                    else:
-                        return 'warning'
-
-                result = check_consecutive_pattern('anxiety', anxiety_condition, anxiety_level)
-                if result:
-                    alerts.append(result)
-
-        # Create Alert objects for any detected patterns
+        # ===== CREATE ALERT OBJECTS =====
         for alert_data in alerts:
-            # Check if we've already created this alert recently
-            existing = Alert.query.filter(
-                Alert.user_id == watcher_id,
-                Alert.alert_type == 'trigger',
-                Alert.content.like(f"%{alert_data['user']}%{alert_data['parameter']}%"),
-                Alert.created_at >= datetime.utcnow() - timedelta(days=7)
-            ).first()
+            # Check if OLD schema alert
+            if alert_data.get('is_old_schema'):
+                # OLD schema format
+                end_date_str = alert_data['end_date'].strftime('%b %d')
 
-            if not existing:
-                alert = Alert(
-                    user_id=watcher_id,
-                    title=f"Parameter Alert: {alert_data['user']}",
-                    content=f"{alert_data['user']}'s {alert_data['parameter']} has been concerning for {alert_data['consecutive_days']} consecutive days",
-                    alert_type='trigger'
-                )
-                db.session.add(alert)
+                # Check if we've already created this alert recently
+                existing = Alert.query.filter(
+                    Alert.user_id == watcher_id,
+                    Alert.alert_type == 'trigger',
+                    Alert.content.like(f"%{alert_data['user']}%{alert_data['parameter']}%ending {end_date_str}%"),
+                    Alert.created_at >= datetime.utcnow() - timedelta(days=7)
+                ).first()
+
+                if not existing:
+                    alert = Alert(
+                        user_id=watcher_id,
+                        title=f"Wellness Alert for {alert_data['user']}",
+                        content=f"{alert_data['user']}'s {alert_data['parameter']} has been {alert_data['condition_text']} for {alert_data['consecutive_days']} consecutive days (ending {end_date_str})",
+                        alert_type='trigger'
+                    )
+                    db.session.add(alert)
+                    alerts_created += 1
+            else:
+                # NEW schema format (existing code)
+                existing = Alert.query.filter(
+                    Alert.user_id == watcher_id,
+                    Alert.alert_type == 'trigger',
+                    Alert.content.like(f"%{alert_data['user']}%{alert_data['parameter']}%"),
+                    Alert.created_at >= datetime.utcnow() - timedelta(days=7)
+                ).first()
+
+                if not existing:
+                    alert = Alert(
+                        user_id=watcher_id,
+                        title=f"Parameter Alert: {alert_data['user']}",
+                        content=f"{alert_data['user']}'s {alert_data['parameter']} has been concerning for {alert_data['consecutive_days']} consecutive days",
+                        alert_type='trigger'
+                    )
+                    db.session.add(alert)
+                    alerts_created += 1
 
         db.session.commit()
 
         return jsonify({
             'success': True,
             'alerts': alerts,
-            'count': len(alerts)
+            'count': alerts_created
         })
 
     except Exception as e:
         logger.error(f"Check triggers error: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({
             'success': False,
             'error': str(e),
-            'alerts': []
+            'alerts': [],
+            'count': 0
         })
 
 
