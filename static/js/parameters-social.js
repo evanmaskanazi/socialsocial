@@ -2171,28 +2171,178 @@ function displayUserParameters(data, userId, username) {
     html += '</div>';
     content.innerHTML = html;
 
-
-      // ADD THIS ENTIRE BLOCK RIGHT HERE (after line 2040):
-    // Add follow button if viewing another user's parameters
+    // Add trigger settings if viewing another user's parameters that we follow
     const currentUserId = parseInt(localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     if (userId && userId !== currentUserId) {
-        const followBtnContainer = document.createElement('div');
-        followBtnContainer.style.cssText = 'text-align: center; margin: 1.5rem 0; padding-top: 1rem; border-top: 1px solid #eee;';
-
-        const followBtn = document.createElement('button');
-        followBtn.className = 'btn-primary';
-        followBtn.innerHTML = '➕ Follow User';
-        followBtn.style.cssText = 'padding: 0.75rem 2rem; font-size: 16px; background: #6B46C1; color: white; border: none; border-radius: 25px; cursor: pointer;';
-        followBtn.onclick = () => followFromParameters(userId, username);
-
-        followBtnContainer.appendChild(followBtn);
-        content.appendChild(followBtnContainer);
+        // Check if we follow this user
+        fetch('/api/following')
+            .then(response => response.json())
+            .then(followingData => {
+                const isFollowing = followingData.following?.some(u => u.id === userId);
+                if (isFollowing) {
+                    addTriggerSettings(content, userId, username);
+                }
+            })
+            .catch(error => console.error('Error checking follow status:', error));
     }
-
-
-
 }
 
+// Add function to create trigger settings UI
+function addTriggerSettings(container, userId, username) {
+    const triggerContainer = document.createElement('div');
+    triggerContainer.className = 'trigger-settings-container';
+    triggerContainer.style.cssText = `
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    `;
+
+    const title = document.createElement('h3');
+    title.textContent = 'Alert Triggers';
+    title.style.cssText = 'margin: 0 0 15px 0; color: #495057;';
+    triggerContainer.appendChild(title);
+
+    const description = document.createElement('p');
+    description.textContent = `Set up alerts for ${username}'s parameters. You'll be notified when values are concerning for 2 consecutive days.`;
+    description.style.cssText = 'color: #6c757d; margin-bottom: 20px; font-size: 14px;';
+    triggerContainer.appendChild(description);
+
+    // Parameter trigger settings
+    const parameters = [
+        { name: 'mood', label: 'Mood', icon: '😊',
+          thresholds: { yellow: [2,2], orange: [[1,2],[2,1]], red: [1,1] } },
+        { name: 'energy', label: 'Energy', icon: '⚡',
+          thresholds: { yellow: [2,2], orange: [[1,2],[2,1]], red: [1,1] } },
+        { name: 'sleep_quality', label: 'Sleep Quality', icon: '😴',
+          thresholds: { yellow: [2,2], orange: [[1,2],[2,1]], red: [1,1] } },
+        { name: 'physical_activity', label: 'Physical Activity', icon: '🏃',
+          thresholds: { yellow: [2,2], orange: [[1,2],[2,1]], red: [1,1] } },
+        { name: 'anxiety', label: 'Anxiety', icon: '😰',
+          thresholds: { yellow: [3,3], orange: [[3,4],[4,3]], red: [4,4] } }
+    ];
+
+    // Load existing triggers
+    fetch(`/api/triggers/${userId}`)
+        .then(response => response.json())
+        .then(triggers => {
+            const triggersForm = document.createElement('div');
+
+            parameters.forEach(param => {
+                const paramRow = document.createElement('div');
+                paramRow.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    padding: 10px;
+                    border-bottom: 1px solid #e9ecef;
+                `;
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `trigger-${param.name}`;
+                checkbox.checked = triggers[param.name + '_alert'] || false;
+                checkbox.style.cssText = 'margin-right: 10px;';
+
+                const label = document.createElement('label');
+                label.htmlFor = `trigger-${param.name}`;
+                label.style.cssText = `
+                    flex: 1;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                `;
+                label.innerHTML = `
+                    <span style="font-size: 20px; margin-right: 10px;">${param.icon}</span>
+                    <span style="font-weight: 500;">${param.label}</span>
+                `;
+
+                const thresholdInfo = document.createElement('div');
+                thresholdInfo.style.cssText = `
+                    font-size: 12px;
+                    color: #6c757d;
+                    margin-left: auto;
+                `;
+
+                if (param.name === 'anxiety') {
+                    thresholdInfo.innerHTML = `
+                        <span style="color: #ffc107;">●</span> 3 for 2 days |
+                        <span style="color: #ff9800;">●</span> 3/4 or 4/3 |
+                        <span style="color: #f44336;">●</span> 4 for 2 days
+                    `;
+                } else {
+                    thresholdInfo.innerHTML = `
+                        <span style="color: #ffc107;">●</span> 2 for 2 days |
+                        <span style="color: #ff9800;">●</span> 1/2 or 2/1 |
+                        <span style="color: #f44336;">●</span> 1 for 2 days
+                    `;
+                }
+
+                paramRow.appendChild(checkbox);
+                paramRow.appendChild(label);
+                paramRow.appendChild(thresholdInfo);
+                triggersForm.appendChild(paramRow);
+            });
+
+            // Save button
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save Trigger Settings';
+            saveButton.className = 'btn btn-primary';
+            saveButton.style.cssText = `
+                margin-top: 20px;
+                padding: 10px 20px;
+                background: #6B46C1;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: 500;
+            `;
+
+            saveButton.onclick = () => {
+                const triggerSettings = {};
+                parameters.forEach(param => {
+                    const checkbox = document.getElementById(`trigger-${param.name}`);
+                    triggerSettings[param.name + '_alert'] = checkbox.checked;
+                });
+
+                fetch(`/api/triggers/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(triggerSettings)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert('Trigger settings saved successfully!');
+                    } else {
+                        alert('Error saving trigger settings');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving triggers:', error);
+                    alert('Error saving trigger settings');
+                });
+            };
+
+            triggersForm.appendChild(saveButton);
+            triggerContainer.appendChild(triggersForm);
+        })
+        .catch(error => {
+            console.error('Error loading triggers:', error);
+            triggerContainer.innerHTML += '<p style="color: red;">Error loading trigger settings</p>';
+        });
+
+    // Insert after the title but before the parameters
+    const h2Title = container.querySelector('h2');
+    if (h2Title && h2Title.nextSibling) {
+        container.insertBefore(triggerContainer, h2Title.nextSibling);
+    } else {
+        container.appendChild(triggerContainer);
+    }
+}
 function getParameterIcon(paramName) {
     const icons = {
         'mood': '😊',
