@@ -66,30 +66,26 @@
     <div id="errorMessage"></div>
     <div id="parametersContainer"></div>
 
-<!-- ADD THIS INTERCEPTOR HERE - BEFORE any external scripts -->
-    <script>
-    console.log('🔍 [EARLY INTERCEPTOR] Installing...');
-    console.log('   Current selectedLanguage:', localStorage.getItem('selectedLanguage'));
-    console.log('   Current userLanguage:', localStorage.getItem('userLanguage'));
+<!-- Silent safety interceptor - only alerts on problems -->
+<script>
+const _originalSetItem = Storage.prototype.setItem;
+Storage.prototype.setItem = function(key, value) {
+    // Only intercept language-related keys
+    if (key === 'selectedLanguage' || key === 'userLanguage') {
+        const oldValue = localStorage.getItem(key);
 
-    const _originalSetItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function(key, value) {
-        if (key === 'selectedLanguage' || key === 'userLanguage') {
-            const oldValue = localStorage.getItem(key);
-            console.log(`🔴 [INTERCEPTED] localStorage.setItem('${key}', '${value}')`);
-            console.log(`   Old: '${oldValue}' → New: '${value}'`);
-            console.trace('   Called from:');
-
-            // BLOCK any he→en changes
-            if (oldValue === 'he' && value === 'en') {
-                console.error('❌ BLOCKED: Keeping Hebrew!');
-                return; // Don't change it!
-            }
+        // Only block and alert if trying to reset Hebrew to English
+        if (oldValue === 'he' && value === 'en') {
+            console.error('❌ BLOCKED: Attempt to reset Hebrew → English detected!');
+            console.error(`   Key: ${key}`);
+            console.error(`   Attempted change: 'he' → 'en'`);
+            console.trace('   Source of reset attempt:');
+            return; // Block the change
         }
-        return _originalSetItem.apply(this, arguments);
-    };
-    console.log('✅ [EARLY INTERCEPTOR] Installed!');
-    </script>
+    }
+    return _originalSetItem.apply(this, arguments);
+};
+</script>
 
 
 
