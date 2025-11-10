@@ -5592,7 +5592,151 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
     const modal = document.getElementById('userParametersModal');
-    console.log('[DEBUG] Modal element:', modal ? 'found' : 'NOT FOUND');
+    console.log('[DEBUG] Modal element:', modal ? 'found' : 'not found');
+
+// ADD ALL THIS CODE RIGHT HERE - Trigger settings for followed users
+const currentUserId = parseInt(localStorage.getItem('userId') || sessionStorage.getItem('userId'));
+console.log('[DEBUG] Checking triggers - currentUserId:', currentUserId, 'viewingUserId:', userId);
+
+if (userId && userId !== currentUserId) {
+    console.log('[DEBUG] Different user - checking if we follow them...');
+
+    fetch('/api/following')
+        .then(response => response.json())
+        .then(followingData => {
+            const isFollowing = followingData.following?.some(u => u.id === userId);
+            console.log('[DEBUG] Following user?', isFollowing);
+
+            if (isFollowing) {
+                console.log('[DEBUG] We follow this user - adding trigger settings');
+                const modalContent = document.querySelector('.user-params-content');
+
+                if (modalContent) {
+                    // Create trigger container
+                    const triggerContainer = document.createElement('div');
+                    triggerContainer.className = 'trigger-settings-container';
+                    triggerContainer.style.cssText = `
+                        background: #f8f9fa;
+                        border: 1px solid #dee2e6;
+                        border-radius: 8px;
+                        padding: 20px;
+                        margin: 20px 0;
+                    `;
+
+                    triggerContainer.innerHTML = `
+                        <h3 style="margin: 0 0 15px 0; color: #495057;">Alert Triggers</h3>
+                        <p style="color: #6c757d; margin-bottom: 20px; font-size: 14px;">
+                            Set up alerts for ${username}'s parameters. You'll be notified when values are concerning for 2 consecutive days.
+                        </p>
+                        <div id="trigger-form">
+                            <div style="padding: 10px; text-align: center; color: #666;">
+                                Loading trigger settings...
+                            </div>
+                        </div>
+                    `;
+
+                    // Insert after the h2 title
+                    const h2 = modalContent.querySelector('h2');
+                    if (h2 && h2.nextSibling) {
+                        h2.parentNode.insertBefore(triggerContainer, h2.nextSibling);
+                    } else {
+                        modalContent.appendChild(triggerContainer);
+                    }
+
+                    // Load trigger settings
+                    fetch(`/api/triggers/${userId}`)
+                        .then(response => response.json())
+                        .then(triggers => {
+                            console.log('[DEBUG] Loaded triggers:', triggers);
+
+                            const parameters = [
+                                { name: 'mood', label: 'Mood', icon: '😊' },
+                                { name: 'energy', label: 'Energy', icon: '⚡' },
+                                { name: 'sleep_quality', label: 'Sleep Quality', icon: '😴' },
+                                { name: 'physical_activity', label: 'Physical Activity', icon: '🏃' },
+                                { name: 'anxiety', label: 'Anxiety', icon: '😰' }
+                            ];
+
+                            let formHTML = '';
+                            parameters.forEach(param => {
+                                const isChecked = triggers[param.name + '_alert'] ? 'checked' : '';
+                                const thresholds = param.name === 'anxiety'
+                                    ? '<span style="color: #ffc107;">●</span> 3 for 2 days | <span style="color: #ff9800;">●</span> 3/4 or 4/3 | <span style="color: #f44336;">●</span> 4 for 2 days'
+                                    : '<span style="color: #ffc107;">●</span> 2 for 2 days | <span style="color: #ff9800;">●</span> 1/2 or 2/1 | <span style="color: #f44336;">●</span> 1 for 2 days';
+
+                                formHTML += `
+                                    <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e9ecef;">
+                                        <input type="checkbox" id="trigger-${param.name}" ${isChecked} style="margin-right: 10px;">
+                                        <label for="trigger-${param.name}" style="flex: 1; cursor: pointer; display: flex; align-items: center;">
+                                            <span style="font-size: 20px; margin-right: 10px;">${param.icon}</span>
+                                            <span style="font-weight: 500;">${param.label}</span>
+                                        </label>
+                                        <div style="font-size: 12px; color: #6c757d;">${thresholds}</div>
+                                    </div>
+                                `;
+                            });
+
+                            formHTML += `
+                                <button id="saveTriggers" style="margin-top: 20px; padding: 10px 20px; background: #6B46C1; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 500;">
+                                    Save Trigger Settings
+                                </button>
+                            `;
+
+                            document.getElementById('trigger-form').innerHTML = formHTML;
+
+                            // Add save handler
+                            document.getElementById('saveTriggers').onclick = function() {
+                                const triggerSettings = {};
+                                parameters.forEach(param => {
+                                    const checkbox = document.getElementById(`trigger-${param.name}`);
+                                    triggerSettings[param.name + '_alert'] = checkbox.checked;
+                                });
+
+                                console.log('[DEBUG] Saving triggers:', triggerSettings);
+
+                                fetch(`/api/triggers/${userId}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(triggerSettings)
+                                })
+                                .then(response => response.json())
+                                .then(result => {
+                                    if (result.success) {
+                                        alert('Trigger settings saved successfully!');
+                                    } else {
+                                        alert('Error saving trigger settings');
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('[DEBUG] Error saving triggers:', error);
+                                    alert('Error saving trigger settings');
+                                });
+                            };
+                        })
+                        .catch(error => {
+                            console.error('[DEBUG] Error loading triggers:', error);
+                            document.getElementById('trigger-form').innerHTML = `
+                                <p style="color: red;">Error loading trigger settings. The feature may not be available yet.</p>
+                            `;
+                        });
+                } else {
+                    console.error('[DEBUG] Modal content not found!');
+                }
+            } else {
+                console.log('[DEBUG] We do not follow this user - no triggers shown');
+            }
+        })
+        .catch(error => {
+            console.error('[DEBUG] Error checking follow status:', error);
+        });
+} else {
+    console.log('[DEBUG] Viewing own parameters - no triggers needed');
+}
+// END OF TRIGGER CODE
+
+// Continue with existing code...
+if (modal) {
+
 
     if (modal) {
         modal.addEventListener('click', (e) => {
