@@ -95,7 +95,6 @@ if REDIS_URL:
 db = SQLAlchemy(app)
 migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite
 
-
 CORS(app, supports_credentials=True)
 Session(app)
 
@@ -105,7 +104,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('thera_social')
-
 
 # Email configuration for password reset
 import smtplib
@@ -423,6 +421,7 @@ def ensure_saved_parameters_schema():
         logger.error(f"Error ensuring saved_parameters schema: {str(e)}")
         # Don't raise - allow app to start even if this fails
 
+
 # Initialize Redis client (optional, for caching)
 try:
     redis_client = redis.from_url(REDIS_URL) if REDIS_URL else None
@@ -443,7 +442,6 @@ def parse_date_as_local(date_string):
     except ValueError:
         # Fallback for other formats
         return datetime.fromisoformat(date_string.split('T')[0]).date()
-
 
 
 def get_db():
@@ -481,6 +479,7 @@ def get_db():
 
 def auto_migrate_database():
     """Automatically update database schema on startup"""
+    logger.info("Starting auto_migrate_database...")
     with app.app_context():
         try:
             # Create all tables first
@@ -685,7 +684,8 @@ def auto_migrate_database():
                         if col not in columns:
                             logger.info(f"Adding {col} column to parameter_triggers table...")
                             if is_postgres:
-                                conn.execute(text(f"ALTER TABLE parameter_triggers ADD COLUMN {col} BOOLEAN DEFAULT FALSE"))
+                                conn.execute(
+                                    text(f"ALTER TABLE parameter_triggers ADD COLUMN {col} BOOLEAN DEFAULT FALSE"))
                             else:
                                 conn.execute(text(f"ALTER TABLE parameter_triggers ADD COLUMN {col} INTEGER DEFAULT 0"))
                             conn.commit()
@@ -699,10 +699,6 @@ def auto_migrate_database():
 
 # Call auto-migration on startup
 auto_migrate_database()
-
-
-
-
 
 
 # =====================
@@ -1049,8 +1045,6 @@ class FollowRequest(db.Model):
     __table_args__ = (db.UniqueConstraint('requester_id', 'target_id', name='unique_follow_request'),)
 
 
-
-
 class NotificationSettings(db.Model):
     __tablename__ = 'notification_settings'
     id = db.Column(db.Integer, primary_key=True)
@@ -1137,9 +1131,6 @@ def ensure_database_schema():
 
     except Exception as e:
         logger.error(f"Database schema check error: {str(e)}")
-
-
-
 
 
 # =====================
@@ -1663,9 +1654,6 @@ def fix_all_schema_issues():
             except Exception as e:
                 logger.warning(f"Could not add selected_city column to users table: {e}")
 
-
-
-
             logger.info("✓ All schema fixes complete")
 
     except Exception as e:
@@ -1842,11 +1830,6 @@ def create_test_follows():
         db.session.rollback()
 
 
-
-
-
-
-
 def create_parameters_table():
     """Create parameters table if it doesn't exist with correct schema"""
     try:
@@ -1935,6 +1918,7 @@ def create_parameters_table():
                 conn.close()
         except:
             pass
+
 
 def create_admin_user():
     """Create default admin user if it doesn't exist"""
@@ -2299,6 +2283,7 @@ def get_onboarding_status():
         'was_dismissed': user.onboarding_dismissed
     })
 
+
 @app.route('/api/onboarding/complete', methods=['POST'])
 @login_required
 def complete_onboarding():
@@ -2306,6 +2291,7 @@ def complete_onboarding():
     user.has_completed_onboarding = True
     db.session.commit()
     return jsonify({'message': 'Onboarding completed'}), 200
+
 
 @app.route('/api/onboarding/dismiss', methods=['POST'])
 @login_required
@@ -2866,6 +2852,7 @@ def reset_password():
         db.session.rollback()
         return jsonify({'error': 'Failed to reset password'}), 500
 
+
 @app.route('/api/user/language', methods=['GET'])
 def get_user_language():
     """Get user's language preference"""
@@ -2948,7 +2935,6 @@ def migrate_language_column():
         }), 500
 
 
-
 @app.route('/api/profile', methods=['GET', 'PUT'])
 @login_required
 def profile():
@@ -3011,12 +2997,6 @@ def profile():
 
         db.session.commit()
         return jsonify({'success': True, 'message': 'Profile updated'})
-
-
-
-
-
-
 
 
 @app.route('/api/users/<int:user_id>/profile', methods=['GET'])
@@ -4139,8 +4119,6 @@ def migrate_circle_names():
         db.session.rollback()
 
 
-
-
 @app.route('/api/circles/membership/<int:check_user_id>', methods=['GET'])
 @login_required
 def check_circle_membership(check_user_id):
@@ -4343,6 +4321,7 @@ def update_circles_privacy():
         logger.error(f"Update circles privacy error: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to update privacy'}), 500
+
 
 # =====================
 # FEED & POSTS ROUTES
@@ -4868,6 +4847,7 @@ def load_feed_by_date(date_str):
         logger.error(f"Load feed error: {e}")
         return jsonify({'error': 'Failed to load feed'}), 500
 
+
 # =====================
 # PARAMETERS ROUTES (Therapy Companion)
 # =====================
@@ -5319,8 +5299,6 @@ def check_parameter_triggers():
         return jsonify({'error': 'Failed to check triggers'}), 500
 
 
-
-
 def calculate_streak(params):
     """Calculate consecutive days streak"""
     if not params:
@@ -5445,7 +5423,6 @@ def update_activity(date_str):
         return jsonify({'error': 'Failed to update activity'}), 500
 
 
-
 @app.route('/api/activity/dates')
 @login_required
 def get_activity_dates():
@@ -5460,7 +5437,6 @@ def get_activity_dates():
     except Exception as e:
         logger.error(f"Get activity dates error: {str(e)}")
         return jsonify({'dates': []})
-
 
 
 # =====================
@@ -5789,7 +5765,6 @@ def get_user_parameters_for_triggers(user_id):
         return jsonify({'error': 'Failed to load parameters'}), 500
 
 
-
 @app.route('/api/follow/<int:user_id>', methods=['POST'])
 @login_required
 def follow_user_with_note(user_id):
@@ -5828,8 +5803,6 @@ def follow_user_with_note(user_id):
         db.session.rollback()
         logger.error(f"Error following user with note: {e}")
         return jsonify({'error': str(e)}), 500
-
-
 
 
 @app.route('/api/followers')
@@ -6197,6 +6170,7 @@ def get_user_feed(user_id, date_str):
         logger.error(f"Get user feed error: {str(e)}")
         return jsonify({'error': 'Failed to get feed'}), 500
 
+
 @app.route('/api/user/<int:user_id>/parameters/<date_str>')
 @login_required
 def get_user_parameters_by_date(user_id, date_str):
@@ -6429,7 +6403,6 @@ def get_profile_by_token(token):
     return jsonify({'display_name': user.username, 'id': user.id})
 
 
-
 # =====================
 # ERROR HANDLERS
 # =====================
@@ -6567,7 +6540,7 @@ if __name__ == '__main__':
     # Initialize database
     init_database()
     migrate_circle_names()
-    #data time
+    # data time
 
     # Get port from environment
     port = int(os.environ.get('PORT', 5000))
