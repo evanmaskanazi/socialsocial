@@ -1951,3 +1951,327 @@ window.findPeopleToFollow = findPeopleToFollow;
 window.applyEmojisToPrivacySelectors = applyEmojisToPrivacySelectors;
 
 console.log('Parameters-social.js loaded - FIXED VERSION with calendar display and no auto-loading');
+// ===================
+// PARAMETER TRIGGERS MANAGEMENT SYSTEM
+// ===================
+
+// State for triggers
+let currentTriggers = {};
+let parameterAlerts = [];
+
+// View user parameters function
+window.viewUserParameters = function(userId, username) {
+    // Create modal to display user's parameters
+    const modalHtml = `
+        <div id="userParametersModal" class="modal" style="display: block; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
+            <div class="modal-content" style="background: white; margin: 5% auto; padding: 30px; width: 90%; max-width: 800px; border-radius: 20px; max-height: 80vh; overflow-y: auto;">
+                <span class="close" onclick="closeUserParametersModal()" style="float: right; font-size: 28px; cursor: pointer;">&times;</span>
+                <h2 data-i18n="parameters.view_user">${username}'s Parameters</h2>
+                <div id="userParametersContent">Loading...</div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Load user's parameters
+    fetch(`/api/parameters/user/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            displayUserParameters(data, userId, username);
+            // Add trigger controls after loading parameters
+            setTimeout(() => {
+                addTriggerControls(userId, username);
+            }, 500);
+        })
+        .catch(error => {
+            console.error('Error loading user parameters:', error);
+            document.getElementById('userParametersContent').innerHTML =
+                '<p style="color: red;">Error loading parameters</p>';
+        });
+}
+
+function displayUserParameters(data, userId, username) {
+    const content = document.getElementById('userParametersContent');
+    if (!content) return;
+
+    if (!data.parameters || data.parameters.length === 0) {
+        content.innerHTML = '<p>No parameters available for this user.</p>';
+        return;
+    }
+
+    let html = '<div class="parameters-history" style="margin-top: 20px;">';
+
+    // Group parameters by date
+    const paramsByDate = {};
+    data.parameters.forEach(param => {
+        const date = new Date(param.date).toLocaleDateString();
+        if (!paramsByDate[date]) {
+            paramsByDate[date] = [];
+        }
+        paramsByDate[date].push(param);
+    });
+
+    // Display parameters organized by date
+    Object.entries(paramsByDate).forEach(([date, params]) => {
+        html += `
+            <div style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 10px;">
+                <h4 style="color: #2d3436; margin-bottom: 10px;">${date}</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+        `;
+
+        params.forEach(param => {
+            const icon = getParameterIcon(param.parameter_name);
+            const value = param.value || 'N/A';
+            const color = getValueColor(param.parameter_name, value);
+
+            html += `
+                <div style="padding: 10px; background: white; border-radius: 8px; border-left: 3px solid ${color};">
+                    <div style="font-size: 12px; color: #666;">${icon} ${param.parameter_name}</div>
+                    <div style="font-size: 18px; font-weight: bold; color: ${color};">${value}/4</div>
+                </div>
+            `;
+        });
+
+        html += '</div></div>';
+    });
+
+    html += '</div>';
+    content.innerHTML = html;
+}
+
+function getParameterIcon(paramName) {
+    const icons = {
+        'mood': '😊',
+        'energy': '⚡',
+        'sleep_quality': '😴',
+        'physical_activity': '🏃',
+        'anxiety': '😰'
+    };
+    return icons[paramName] || '📊';
+}
+
+function getValueColor(paramName, value) {
+    const val = parseInt(value);
+    if (paramName === 'anxiety') {
+        // For anxiety, high is bad
+        if (val >= 3) return '#ff4444';
+        if (val === 2) return '#ff8800';
+        return '#44ff44';
+    } else {
+        // For others, low is bad
+        if (val <= 2) return '#ff4444';
+        if (val === 3) return '#ff8800';
+        return '#44ff44';
+    }
+}
+
+window.closeUserParametersModal = function() {
+    const modal = document.getElementById('userParametersModal');
+    if (modal) modal.remove();
+}
+
+// Add trigger controls to the modal
+function addTriggerControls(userId, username) {
+    const triggerHtml = `
+        <div class="trigger-controls" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <h4 data-i18n="triggers.set">Set Alert Triggers</h4>
+            <p style="font-size: 14px; color: #666;">
+                Get alerts when ${username}'s parameters are concerning
+            </p>
+
+            <div class="trigger-options" style="margin: 15px 0;">
+                <label style="display: block; margin: 8px 0;">
+                    <input type="checkbox" id="moodTrigger" onchange="updateTrigger('mood')">
+                    <span data-i18n="triggers.mood">Mood Alert</span>
+                    <small style="color: #999;"> (Low: 1-2)</small>
+                </label>
+
+                <label style="display: block; margin: 8px 0;">
+                    <input type="checkbox" id="energyTrigger" onchange="updateTrigger('energy')">
+                    <span data-i18n="triggers.energy">Energy Alert</span>
+                    <small style="color: #999;"> (Low: 1-2)</small>
+                </label>
+
+                <label style="display: block; margin: 8px 0;">
+                    <input type="checkbox" id="sleepTrigger" onchange="updateTrigger('sleep')">
+                    <span data-i18n="triggers.sleep">Sleep Quality Alert</span>
+                    <small style="color: #999;"> (Low: 1-2)</small>
+                </label>
+
+                <label style="display: block; margin: 8px 0;">
+                    <input type="checkbox" id="physicalTrigger" onchange="updateTrigger('physical')">
+                    <span data-i18n="triggers.physical">Physical Activity Alert</span>
+                    <small style="color: #999;"> (Low: 1-2)</small>
+                </label>
+
+                <label style="display: block; margin: 8px 0;">
+                    <input type="checkbox" id="anxietyTrigger" onchange="updateTrigger('anxiety')">
+                    <span data-i18n="triggers.anxiety">Anxiety Alert</span>
+                    <small style="color: #999;"> (High: 3-4)</small>
+                </label>
+            </div>
+
+            <button onclick="saveTriggers(${userId})" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer;">
+                Save Trigger Settings
+            </button>
+        </div>
+    `;
+
+    // Find where to insert triggers in the modal
+    const content = document.getElementById('userParametersContent');
+    if (content) {
+        // Insert at the top of the content
+        content.insertAdjacentHTML('afterbegin', triggerHtml);
+    }
+
+    loadTriggers(userId);
+}
+
+async function loadTriggers(userId) {
+    try {
+        const response = await fetch(`/api/parameters/triggers/${userId}`);
+        const data = await response.json();
+
+        currentTriggers = data;
+
+        if (document.getElementById('moodTrigger')) {
+            document.getElementById('moodTrigger').checked = data.mood_alert || false;
+            document.getElementById('energyTrigger').checked = data.energy_alert || false;
+            document.getElementById('sleepTrigger').checked = data.sleep_alert || false;
+            document.getElementById('physicalTrigger').checked = data.physical_alert || false;
+            document.getElementById('anxietyTrigger').checked = data.anxiety_alert || false;
+        }
+
+    } catch (error) {
+        console.error('Failed to load triggers:', error);
+    }
+}
+
+window.updateTrigger = function(param) {
+    const checkbox = document.getElementById(param + 'Trigger');
+    if (checkbox) {
+        currentTriggers[param + '_alert'] = checkbox.checked;
+    }
+}
+
+window.saveTriggers = async function(userId) {
+    try {
+        const response = await fetch(`/api/parameters/triggers/${userId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                mood_alert: document.getElementById('moodTrigger')?.checked || false,
+                energy_alert: document.getElementById('energyTrigger')?.checked || false,
+                sleep_alert: document.getElementById('sleepTrigger')?.checked || false,
+                physical_alert: document.getElementById('physicalTrigger')?.checked || false,
+                anxiety_alert: document.getElementById('anxietyTrigger')?.checked || false
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            window.showMessage('Trigger settings saved', 'success');
+        } else {
+            window.showMessage(data.error || 'Failed to save triggers', 'error');
+        }
+
+    } catch (error) {
+        console.error('Failed to save triggers:', error);
+        window.showMessage('Failed to save triggers', 'error');
+    }
+}
+
+async function checkParameterAlerts() {
+    try {
+        const response = await fetch('/api/parameters/check-triggers');
+        const data = await response.json();
+
+        if (data.alerts && data.alerts.length > 0) {
+            displayParameterAlerts(data.alerts);
+        }
+
+    } catch (error) {
+        console.error('Failed to check alerts:', error);
+    }
+}
+
+function displayParameterAlerts(alerts) {
+    let alertContainer = document.getElementById('parameterAlerts');
+    if (!alertContainer) {
+        alertContainer = document.createElement('div');
+        alertContainer.id = 'parameterAlerts';
+        alertContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 1000; max-width: 350px;';
+        document.body.appendChild(alertContainer);
+    }
+
+    alerts.forEach(alert => {
+        const alertDiv = document.createElement('div');
+        const bgColor = alert.level === 'critical' ? '#ff4444' :
+                        alert.level === 'high' ? '#ff8800' : '#ffcc00';
+
+        alertDiv.style.cssText = `
+            background: ${bgColor};
+            color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease;
+        `;
+
+        alertDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong>${alert.level.toUpperCase()} ALERT</strong>
+                <button onclick="this.parentElement.parentElement.remove()"
+                        style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
+            </div>
+            <div style="margin-top: 8px;">
+                <strong>${alert.user}</strong> - ${alert.parameter}
+            </div>
+            <div style="font-size: 12px; margin-top: 5px;">
+                Dates: ${alert.dates[0]} and ${alert.dates[1]}<br>
+                Values: ${alert.values.join(', ')}
+            </div>
+        `;
+
+        document.getElementById('parameterAlerts').appendChild(alertDiv);
+
+        // Auto-remove after 30 seconds
+        setTimeout(() => alertDiv.remove(), 30000);
+    });
+}
+
+// Add CSS animation for alerts
+if (!document.getElementById('parameterAlertsStyles')) {
+    const style = document.createElement('style');
+    style.id = 'parameterAlertsStyles';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Check for alerts periodically (every minute)
+setInterval(checkParameterAlerts, 60000);
+
+// Check on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(checkParameterAlerts, 2000);
+});
+
+// Export trigger functions
+window.viewUserParameters = viewUserParameters;
+window.closeUserParametersModal = closeUserParametersModal;
+window.checkParameterAlerts = checkParameterAlerts;
+
+console.log('Parameters-social.js UPDATED with user monitoring and trigger system');

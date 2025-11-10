@@ -1734,3 +1734,205 @@ if (window.i18n && window.i18n.applyLanguage) {
 
 
 });
+// ===================
+// NEW FOLLOWING SECTION WITH USER SEARCH - ADDED FEATURES
+// ===================
+
+// Update/Add the updateFollowingSection function
+function updateFollowingSection() {
+    const followingSection = document.getElementById('followingSection');
+    if (!followingSection) return;
+
+    fetch('/api/following')
+        .then(response => response.json())
+        .then(data => {
+            let html = '<h2 data-i18n="following.title">Following</h2>';
+
+            if (data.following && data.following.length > 0) {
+                html += '<div class="following-list">';
+                data.following.forEach(user => {
+                    html += `<div class="user-card" data-user-id="${user.id}">
+                        <div class="user-name">${escapeHtml(user.username)}</div>
+                        ${user.note ? `<div class="user-note">${escapeHtml(user.note)}</div>` : ''}
+                        <button onclick="unfollowUser(${user.id})" class="btn btn-secondary">Unfollow</button>
+                    </div>`;
+                });
+                html += '</div>';
+            } else {
+                html += '<p>You are not following anyone yet.</p>';
+            }
+
+            followingSection.innerHTML = html;
+
+            // Add search functionality after updating section
+            setTimeout(() => {
+                addUserSearchToFollowing();
+            }, 100);
+        })
+        .catch(error => {
+            console.error('Error loading following list:', error);
+            followingSection.innerHTML = '<h2>Following</h2><p>Error loading following list</p>';
+        });
+}
+
+// Add User Search Functionality to Following Section
+function addUserSearchToFollowing() {
+    const followingSection = document.getElementById('followingSection');
+    if (!followingSection) return;
+
+    // Check if search container already exists
+    if (document.getElementById('userSearchContainer')) return;
+
+    const searchHtml = `
+        <div id="userSearchContainer" class="user-search-container" style="margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+            <h3 data-i18n="follow.search_users">Search users to follow</h3>
+            <div style="display: flex; gap: 10px; margin: 10px 0;">
+                <input type="text" id="followSearchInput"
+                       placeholder="Enter username or email"
+                       data-i18n-placeholder="follow.search_placeholder"
+                       style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <button onclick="searchUsersToFollow()" class="btn btn-primary" style="padding: 8px 16px;">
+                    🔍 Search
+                </button>
+            </div>
+            <div id="followSearchResults" style="margin-top: 15px;"></div>
+        </div>
+    `;
+
+    // Insert after the h2 title
+    const title = followingSection.querySelector('h2');
+    if (title) {
+        title.insertAdjacentHTML('afterend', searchHtml);
+    }
+}
+
+async function searchUsersToFollow() {
+    const query = document.getElementById('followSearchInput').value.trim();
+    if (query.length < 2) {
+        showNotification('Please enter at least 2 characters', 'warning');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        const resultsDiv = document.getElementById('followSearchResults');
+        if (!data.users || data.users.length === 0) {
+            resultsDiv.innerHTML = '<p>No users found</p>';
+            return;
+        }
+
+        let html = '<div class="search-results-list">';
+        data.users.forEach(user => {
+            html += `
+                <div class="user-card" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; margin: 5px 0; border-radius: 8px;">
+                    <div>
+                        <strong>${escapeHtml(user.username)}</strong><br>
+                        <small style="color: #666;">${escapeHtml(user.email)}</small>
+                    </div>
+                    ${user.is_following ?
+                        '<span style="color: green;">Following ✓</span>' :
+                        `<button onclick="followWithNote(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding: 6px 12px;">Follow</button>`
+                    }
+                </div>
+            `;
+        });
+        html += '</div>';
+        resultsDiv.innerHTML = html;
+
+    } catch (error) {
+        console.error('Search error:', error);
+        showNotification('Search failed', 'error');
+    }
+}
+
+function followWithNote(userId, username) {
+    const note = prompt(`Add a note for ${username} (optional, max 300 characters):`);
+
+    fetch(`/api/follow/${userId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({note: note || ''})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`You are now following ${username}`, 'success');
+            // Refresh search results if visible
+            const searchInput = document.getElementById('followSearchInput');
+            if (searchInput && searchInput.value) {
+                searchUsersToFollow();
+            }
+            updateFollowingSection(); // Refresh following list
+        } else {
+            showNotification(data.error || 'Failed to follow user', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Follow error:', error);
+        showNotification('Failed to follow user', 'error');
+    });
+}
+
+function unfollowUser(userId) {
+    if (!confirm('Are you sure you want to unfollow this user?')) return;
+
+    fetch(`/api/unfollow/${userId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('User unfollowed', 'success');
+            updateFollowingSection();
+        } else {
+            showNotification(data.error || 'Failed to unfollow user', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Unfollow error:', error);
+        showNotification('Failed to unfollow user', 'error');
+    });
+}
+
+// Update existing follow buttons to include note option
+function updateFollowButtons() {
+    const followButtons = document.querySelectorAll('.follow-btn');
+    followButtons.forEach(button => {
+        if (!button.hasAttribute('data-note-enabled')) {
+            button.setAttribute('data-note-enabled', 'true');
+            const userId = button.getAttribute('data-user-id');
+            const username = button.parentElement.querySelector('.user-name')?.textContent || 'this user';
+            button.onclick = function() {
+                followWithNote(userId, username);
+            };
+        }
+    });
+}
+
+// Export the new functions
+window.updateFollowingSection = updateFollowingSection;
+window.addUserSearchToFollowing = addUserSearchToFollowing;
+window.searchUsersToFollow = searchUsersToFollow;
+window.followWithNote = followWithNote;
+window.unfollowUser = unfollowUser;
+window.updateFollowButtons = updateFollowButtons;
+
+// Add initialization for new features
+const originalDOMContentLoaded = document.addEventListener;
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for following section and initialize if present
+    setTimeout(() => {
+        if (document.getElementById('followingSection')) {
+            updateFollowingSection();
+            // Initialize follow buttons after a delay
+            setTimeout(() => {
+                updateFollowButtons();
+            }, 500);
+        }
+    }, 1000);
+});
+
+console.log('Circles-messages.js UPDATED with following features');
