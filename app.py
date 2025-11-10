@@ -637,7 +637,7 @@ def auto_migrate_database():
                         conn.commit()
                         logger.info("✓ Added follow_note column to follows table")
 
-                # Create parameter_triggers table
+                # Create or update parameter_triggers table
                 if 'parameter_triggers' not in inspector.get_table_names():
                     logger.info("Creating parameter_triggers table...")
                     if is_postgres:
@@ -674,6 +674,22 @@ def auto_migrate_database():
                         """))
                     conn.commit()
                     logger.info("✓ Created parameter_triggers table")
+                else:
+                    # Table exists, check for missing columns
+                    columns = [col['name'] for col in inspector.get_columns('parameter_triggers')]
+
+                    alert_columns = ['mood_alert', 'energy_alert', 'sleep_alert',
+                                     'physical_alert', 'anxiety_alert']
+
+                    for col in alert_columns:
+                        if col not in columns:
+                            logger.info(f"Adding {col} column to parameter_triggers table...")
+                            if is_postgres:
+                                conn.execute(text(f"ALTER TABLE parameter_triggers ADD COLUMN {col} BOOLEAN DEFAULT FALSE"))
+                            else:
+                                conn.execute(text(f"ALTER TABLE parameter_triggers ADD COLUMN {col} INTEGER DEFAULT 0"))
+                            conn.commit()
+                            logger.info(f"✓ Added {col} column to parameter_triggers table")
 
                 logger.info("Database auto-migration completed successfully")
 
@@ -4595,7 +4611,7 @@ def get_user_feed_dates(user_id):
             return jsonify({'dates': dates_with_visibility})
 
         # Check circle membership
-            # Check circle membership
+        # Check circle membership
         membership = Circle.query.filter_by(
             user_id=user_id,
             circle_user_id=current_user_id
@@ -5016,25 +5032,46 @@ def save_parameters():
 
 def process_parameter_triggers(user_id, params):
     """Check triggers when parameters are saved"""
-    triggers = ParameterTrigger.query.filter_by(
-        watched_id=user_id,
-        is_active=True
-    ).all()
+    try:
+        # Find all triggers where someone is watching this user
+        triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
 
-    for trigger in triggers:
-        param_value = getattr(params, trigger.parameter_name, None)
-        if param_value and trigger.check_trigger(param_value):
-            # Create alert
-            alert = Alert(
-                user_id=trigger.watcher_id,
-                title=f"Parameter Alert",
-                content=f"Trigger fired for {trigger.parameter_name}",
-                alert_type='trigger'
-            )
-            db.session.add(alert)
-            trigger.last_triggered = datetime.utcnow()
+        for trigger in triggers:
+            # Check each parameter type that has an alert set
+            alerts_to_create = []
 
-    db.session.commit()
+            if trigger.mood_alert and params.mood is not None and params.mood <= 2:
+                alerts_to_create.append(('mood', params.mood))
+
+            if trigger.energy_alert and params.energy is not None and params.energy <= 2:
+                alerts_to_create.append(('energy', params.energy))
+
+            if trigger.sleep_alert and params.sleep_quality is not None and params.sleep_quality <= 2:
+                alerts_to_create.append(('sleep quality', params.sleep_quality))
+
+            if trigger.physical_alert and params.physical_activity is not None and params.physical_activity <= 2:
+                alerts_to_create.append(('physical activity', params.physical_activity))
+
+            if trigger.anxiety_alert and params.anxiety is not None and params.anxiety >= 3:
+                alerts_to_create.append(('anxiety', params.anxiety))
+
+            # Create alerts for triggered parameters
+            for param_name, param_value in alerts_to_create:
+                watched_user = User.query.get(user_id)
+                alert = Alert(
+                    user_id=trigger.watcher_id,
+                    title=f"Wellness Alert for {watched_user.username}",
+                    content=f"{watched_user.username}'s {param_name} is at concerning level ({param_value}/4)",
+                    alert_type='trigger'
+                )
+                db.session.add(alert)
+
+        # Commit only if we're not in a nested transaction
+        if alerts_to_create:
+            db.session.commit()
+    except Exception as e:
+        logger.error(f"Error processing parameter triggers: {str(e)}")
+        # Don't re-raise as this is a non-critical function
 
 
 @app.route('/api/parameters/dates', methods=['GET'])
