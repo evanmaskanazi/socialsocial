@@ -3515,7 +3515,7 @@ def get_alerts():
         alerts_stmt = select(Alert).filter_by(
             user_id=user_id,
             is_read=False
-        ).order_by(desc(Alert.created_at)).limit(10)
+        ).order_by(desc(Alert.created_at)).limit(50)
 
         alerts = db.session.execute(alerts_stmt).scalars().all()
 
