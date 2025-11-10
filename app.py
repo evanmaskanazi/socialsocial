@@ -110,10 +110,68 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 
-def send_password_reset_email(user_email, reset_token):
-    """Send password reset email"""
+def get_email_translations(language='en'):
+    """Get email translations based on language"""
+    translations = {
+        'en': {
+            'subject': 'TheraSocial - Password Reset Request',
+            'hello': 'Hello',
+            'request_text': 'You requested to reset your password for TheraSocial.',
+            'click_button': 'Click the button below to reset your password:',
+            'button_text': 'Reset Password',
+            'copy_link': 'Or copy and paste this link into your browser:',
+            'expire_text': 'This link will expire in 1 hour.',
+            'ignore_text': 'If you did not request this reset, please ignore this email.',
+            'regards': 'Best regards',
+            'team': 'TheraSocial Team'
+        },
+        'he': {
+            'subject': 'TheraSocial - בקשת איפוס סיסמה',
+            'hello': 'שלום',
+            'request_text': 'ביקשת לאפס את הסיסמה שלך עבור TheraSocial.',
+            'click_button': 'לחץ על הכפתור למטה כדי לאפס את הסיסמה:',
+            'button_text': 'איפוס סיסמה',
+            'copy_link': 'או העתק והדבק את הקישור הזה בדפדפן שלך:',
+            'expire_text': 'קישור זה יפוג תוך שעה.',
+            'ignore_text': 'אם לא ביקשת איפוס זה, אנא התעלם מאימייל זה.',
+            'regards': 'בברכה',
+            'team': 'צוות TheraSocial'
+        },
+        'ar': {
+            'subject': 'TheraSocial - طلب إعادة تعيين كلمة المرور',
+            'hello': 'مرحبا',
+            'request_text': 'لقد طلبت إعادة تعيين كلمة المرور الخاصة بك لـ TheraSocial.',
+            'click_button': 'انقر على الزر أدناه لإعادة تعيين كلمة المرور:',
+            'button_text': 'إعادة تعيين كلمة المرور',
+            'copy_link': 'أو انسخ والصق هذا الرابط في المتصفح:',
+            'expire_text': 'ستنتهي صلاحية هذا الرابط خلال ساعة واحدة.',
+            'ignore_text': 'إذا لم تطلب إعادة التعيين، يرجى تجاهل هذا البريد.',
+            'regards': 'مع أطيب التحيات',
+            'team': 'فريق TheraSocial'
+        },
+        'ru': {
+            'subject': 'TheraSocial - Запрос на сброс пароля',
+            'hello': 'Здравствуйте',
+            'request_text': 'Вы запросили сброс пароля для TheraSocial.',
+            'click_button': 'Нажмите кнопку ниже, чтобы сбросить пароль:',
+            'button_text': 'Сбросить пароль',
+            'copy_link': 'Или скопируйте эту ссылку в ваш браузер:',
+            'expire_text': 'Эта ссылка истечет через 1 час.',
+            'ignore_text': 'Если вы не запрашивали сброс, проигнорируйте это письмо.',
+            'regards': 'С наилучшими пожеланиями',
+            'team': 'Команда TheraSocial'
+        }
+    }
+    return translations.get(language, translations['en'])
+
+
+def send_password_reset_email(user_email, reset_token, user_language='en'):
+    """Send password reset email in user's preferred language"""
     try:
-        # Configure your email settings here
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        import smtplib
+
         SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
         SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
         SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
@@ -121,93 +179,165 @@ def send_password_reset_email(user_email, reset_token):
         FROM_EMAIL = os.environ.get('FROM_EMAIL', SMTP_USERNAME)
 
         if not SMTP_USERNAME or not SMTP_PASSWORD:
-            logger.warning("Email configuration not set, skipping email send")
+            logger.warning("Email configuration not set")
             return False
 
-        # Create reset link
+        t = get_email_translations(user_language)
         reset_link = f"{os.environ.get('APP_URL', 'http://localhost:5000')}?reset_token={reset_token}"
 
-        # Create email message
+        is_rtl = user_language in ['he', 'ar']
+        text_dir = 'rtl' if is_rtl else 'ltr'
+        text_align = 'right' if is_rtl else 'left'
+
         message = MIMEMultipart('alternative')
-        message['Subject'] = 'TheraSocial - Password Reset Request'
+        message['Subject'] = t['subject']
         message['From'] = FROM_EMAIL
         message['To'] = user_email
 
-        # Create HTML and text versions
-        text_content = f"""
-        Hello,
-
-        You requested to reset your password for TheraSocial.
-
-        Click the link below to reset your password:
-        {reset_link}
-
-        This link will expire in 1 hour.
-
-        If you did not request this reset, please ignore this email.
-
-        Best regards,
-        TheraSocial Team
-        """
-
         html_content = f"""
         <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <body style="font-family: Arial; direction: {text_dir}; text-align: {text_align};">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #667eea;">Password Reset Request</h2>
-                <p>Hello,</p>
-                <p>You requested to reset your password for TheraSocial.</p>
-                <p>Click the button below to reset your password:</p>
+                <h2 style="color: #667eea;">{t['subject'].replace('TheraSocial - ', '')}</h2>
+                <p>{t['hello']},</p>
+                <p>{t['request_text']}</p>
+                <p>{t['click_button']}</p>
                 <p style="text-align: center; margin: 30px 0;">
-                    <a href="{reset_link}" 
-                       style="background: #667eea; color: white; padding: 12px 30px; 
-                              text-decoration: none; border-radius: 5px; display: inline-block;">
-                        Reset Password
+                    <a href="{reset_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                        {t['button_text']}
                     </a>
                 </p>
-                <p>Or copy and paste this link into your browser:</p>
+                <p>{t['copy_link']}</p>
                 <p style="word-break: break-all; color: #667eea;">{reset_link}</p>
-                <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
-                <p style="color: #666; font-size: 14px;">
-                    If you did not request this reset, please ignore this email.
-                </p>
+                <p style="color: #666;">{t['expire_text']}</p>
+                <p style="color: #666;">{t['ignore_text']}</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                <p style="color: #999; font-size: 12px;">
-                    Best regards,<br>
-                    TheraSocial Team
+                <p style="color: #999;">
+                    {t['regards']},<br>{t['team']}
                 </p>
             </div>
         </body>
         </html>
         """
 
-        part1 = MIMEText(text_content, 'plain')
-        part2 = MIMEText(html_content, 'html')
+        text_content = f"""
+        {t['hello']},
+        {t['request_text']}
+        {t['click_button']}
+        {reset_link}
+        {t['expire_text']}
+        {t['ignore_text']}
+        {t['regards']},
+        {t['team']}
+        """
+
+        part1 = MIMEText(text_content, 'plain', 'utf-8')
+        part2 = MIMEText(html_content, 'html', 'utf-8')
         message.attach(part1)
         message.attach(part2)
 
-        # Send email with proper TLS context
         import ssl
         context = ssl.create_default_context()
-
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.ehlo()  # Identify ourselves to the SMTP server
-            server.starttls(context=context)  # Enable TLS with proper context
-            server.ehlo()  # Re-identify after TLS
-
-            # Use app password (not regular password)
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(message)
 
-        logger.info(f"Password reset email sent to {user_email}")
+        logger.info(f"Password reset email sent in {user_language}")
         return True
 
-    except smtplib.SMTPAuthenticationError as e:
-        logger.error(
-            f"SMTP Authentication failed - Please verify: 1) Using App Password (not regular password) 2) 2-Step Verification enabled 3) Less secure app access if needed. Error: {e}")
-        return False
     except Exception as e:
         logger.error(f"Failed to send password reset email: {e}")
+        return False
+
+
+def send_magic_link_email(user_email, magic_token, user_language='en'):
+    """Send magic link login email"""
+    try:
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        import smtplib
+
+        SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+        SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+        SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
+        SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+        FROM_EMAIL = os.environ.get('FROM_EMAIL', SMTP_USERNAME)
+
+        if not SMTP_USERNAME or not SMTP_PASSWORD:
+            return False
+
+        translations = {
+            'en': {
+                'subject': 'TheraSocial - Magic Link Sign In',
+                'hello': 'Hello',
+                'request_text': 'Click the link below to sign in to TheraSocial:',
+                'button_text': 'Sign In',
+                'expire_text': 'This link will expire in 15 minutes.',
+                'ignore_text': 'If you did not request this, please ignore this email.'
+            },
+            'he': {
+                'subject': 'TheraSocial - התחברות בקישור קסם',
+                'hello': 'שלום',
+                'request_text': 'לחץ על הקישור למטה כדי להתחבר:',
+                'button_text': 'התחבר',
+                'expire_text': 'קישור זה יפוג תוך 15 דקות.',
+                'ignore_text': 'אם לא ביקשת זאת, התעלם מאימייל זה.'
+            },
+            'ar': {
+                'subject': 'TheraSocial - تسجيل الدخول بالرابط السحري',
+                'hello': 'مرحبا',
+                'request_text': 'انقر على الرابط أدناه لتسجيل الدخول:',
+                'button_text': 'تسجيل الدخول',
+                'expire_text': 'ستنتهي صلاحية هذا الرابط خلال 15 دقيقة.',
+                'ignore_text': 'إذا لم تطلب هذا، تجاهل هذا البريد.'
+            },
+            'ru': {
+                'subject': 'TheraSocial - Вход по волшебной ссылке',
+                'hello': 'Здравствуйте',
+                'request_text': 'Нажмите на ссылку ниже для входа:',
+                'button_text': 'Войти',
+                'expire_text': 'Эта ссылка истечет через 15 минут.',
+                'ignore_text': 'Если вы не запрашивали это, проигнорируйте.'
+            }
+        }
+
+        t = translations.get(user_language, translations['en'])
+        magic_link = f"{os.environ.get('APP_URL', 'http://localhost:5000')}?magic_token={magic_token}"
+
+        message = MIMEMultipart('alternative')
+        message['Subject'] = t['subject']
+        message['From'] = FROM_EMAIL
+        message['To'] = user_email
+
+        html_content = f"""<html><body>
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2>{t['subject']}</h2>
+                <p>{t['hello']},</p>
+                <p>{t['request_text']}</p>
+                <a href="{magic_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                    {t['button_text']}
+                </a>
+                <p>{t['expire_text']}</p>
+                <p>{t['ignore_text']}</p>
+            </div>
+        </body></html>"""
+
+        part = MIMEText(html_content, 'html', 'utf-8')
+        message.attach(part)
+
+        import ssl
+        context = ssl.create_default_context()
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls(context=context)
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(message)
+
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send magic link: {e}")
         return False
 
 
@@ -429,6 +559,119 @@ def auto_migrate_database():
                     conn.commit()
                     logger.info("✓ Created password_reset_tokens table")
 
+                # Create magic_login_tokens table
+                if 'magic_login_tokens' not in inspector.get_table_names():
+                    logger.info("Creating magic_login_tokens table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE magic_login_tokens (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                token VARCHAR(100) UNIQUE NOT NULL,
+                                expires_at TIMESTAMP NOT NULL,
+                                used BOOLEAN DEFAULT FALSE,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE magic_login_tokens (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL,
+                                token VARCHAR(100) UNIQUE NOT NULL,
+                                expires_at TIMESTAMP NOT NULL,
+                                used INTEGER DEFAULT 0,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ Created magic_login_tokens table")
+
+                # Create user_consents table
+                if 'user_consents' not in inspector.get_table_names():
+                    logger.info("Creating user_consents table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE user_consents (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                email_updates BOOLEAN DEFAULT FALSE,
+                                privacy_accepted BOOLEAN DEFAULT FALSE,
+                                research_data BOOLEAN DEFAULT FALSE,
+                                team_declaration BOOLEAN DEFAULT FALSE,
+                                responsible_use BOOLEAN DEFAULT FALSE,
+                                waiver_claims BOOLEAN DEFAULT FALSE,
+                                consent_language VARCHAR(5) DEFAULT 'en',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE user_consents (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL,
+                                email_updates INTEGER DEFAULT 0,
+                                privacy_accepted INTEGER DEFAULT 0,
+                                research_data INTEGER DEFAULT 0,
+                                team_declaration INTEGER DEFAULT 0,
+                                responsible_use INTEGER DEFAULT 0,
+                                waiver_claims INTEGER DEFAULT 0,
+                                consent_language VARCHAR(5) DEFAULT 'en',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ Created user_consents table")
+
+                # Add follow_note column to follows table
+                if 'follows' in inspector.get_table_names():
+                    columns = [col['name'] for col in inspector.get_columns('follows')]
+                    if 'follow_note' not in columns:
+                        logger.info("Adding follow_note column to follows table...")
+                        conn.execute(text("ALTER TABLE follows ADD COLUMN follow_note VARCHAR(300)"))
+                        conn.commit()
+                        logger.info("✓ Added follow_note column to follows table")
+
+                # Create parameter_triggers table
+                if 'parameter_triggers' not in inspector.get_table_names():
+                    logger.info("Creating parameter_triggers table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE parameter_triggers (
+                                id SERIAL PRIMARY KEY,
+                                watcher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                watched_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                mood_alert BOOLEAN DEFAULT FALSE,
+                                energy_alert BOOLEAN DEFAULT FALSE,
+                                sleep_alert BOOLEAN DEFAULT FALSE,
+                                physical_alert BOOLEAN DEFAULT FALSE,
+                                anxiety_alert BOOLEAN DEFAULT FALSE,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(watcher_id, watched_id)
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE parameter_triggers (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                watcher_id INTEGER NOT NULL,
+                                watched_id INTEGER NOT NULL,
+                                mood_alert INTEGER DEFAULT 0,
+                                energy_alert INTEGER DEFAULT 0,
+                                sleep_alert INTEGER DEFAULT 0,
+                                physical_alert INTEGER DEFAULT 0,
+                                anxiety_alert INTEGER DEFAULT 0,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(watcher_id) REFERENCES users(id) ON DELETE CASCADE,
+                                FOREIGN KEY(watched_id) REFERENCES users(id) ON DELETE CASCADE,
+                                UNIQUE(watcher_id, watched_id)
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ Created parameter_triggers table")
+
                 logger.info("Database auto-migration completed successfully")
 
         except Exception as e:
@@ -484,10 +727,10 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
     # KEEP THESE METHODS - THEY'RE ESSENTIAL!
-    def follow(self, user):
-        """Follow another user"""
+    def follow(self, user, note=None):
+        """Follow another user with optional note"""
         if not self.is_following(user):
-            follow = Follow(follower_id=self.id, followed_id=user.id)
+            follow = Follow(follower_id=self.id, followed_id=user.id, follow_note=note)
             db.session.add(follow)
 
     def unfollow(self, user):
@@ -535,8 +778,48 @@ class PasswordResetToken(db.Model):
     user = db.relationship('User', backref='reset_tokens')
 
 
+class MagicLoginToken(db.Model):
+    __tablename__ = 'magic_login_tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    token = db.Column(db.String(100), unique=True, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_relation = db.relationship('User', backref='magic_tokens')
 
 
+class UserConsent(db.Model):
+    __tablename__ = 'user_consents'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    email_updates = db.Column(db.Boolean, default=False)
+    privacy_accepted = db.Column(db.Boolean, default=False)
+    research_data = db.Column(db.Boolean, default=False)
+    team_declaration = db.Column(db.Boolean, default=False)
+    responsible_use = db.Column(db.Boolean, default=False)
+    waiver_claims = db.Column(db.Boolean, default=False)
+    consent_language = db.Column(db.String(5), default='en')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_relation = db.relationship('User', backref='consent', uselist=False)
+
+
+class ParameterTrigger(db.Model):
+    __tablename__ = 'parameter_triggers'
+    id = db.Column(db.Integer, primary_key=True)
+    watcher_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    watched_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    mood_alert = db.Column(db.Boolean, default=False)
+    energy_alert = db.Column(db.Boolean, default=False)
+    sleep_alert = db.Column(db.Boolean, default=False)
+    physical_alert = db.Column(db.Boolean, default=False)
+    anxiety_alert = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    watcher = db.relationship('User', foreign_keys=[watcher_id], backref='watching_triggers')
+    watched = db.relationship('User', foreign_keys=[watched_id], backref='watched_by_triggers')
+
+    __table_args__ = (db.UniqueConstraint('watcher_id', 'watched_id', name='unique_trigger'),)
 
 
 class Profile(db.Model):
@@ -721,14 +1004,13 @@ class Follow(db.Model):
     __tablename__ = 'follows'
     id = db.Column(db.Integer, primary_key=True)
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # ← CHANGE THIS
+    followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    follow_note = db.Column(db.String(300))  # New field for follow notes
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     follower = db.relationship('User', foreign_keys=[follower_id], backref='following')
     followed = db.relationship('User', foreign_keys=[followed_id], backref='followers')
 
-    # Ensure a user can't follow the same person twice
     __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id', name='unique_follow'),)
 
 
@@ -2224,6 +2506,234 @@ def change_password():
         return jsonify({'error': 'Failed to change password'}), 500
 
 
+@app.route('/api/auth/request-magic-link', methods=['POST'])
+@rate_limit(max_attempts=5, window_minutes=15)
+def request_magic_link():
+    """Request magic link for email-only login"""
+    try:
+        data = request.json
+        email = data.get('email', '').strip().lower()
+        language = data.get('language', 'en')
+
+        if not email:
+            return jsonify({'error': 'Email required'}), 400
+
+        user = db.session.execute(
+            select(User).filter_by(email=email)
+        ).scalar_one_or_none()
+
+        if not user:
+            import secrets
+            # Extract username from email (part before @)
+            email_username = email.split('@')[0]
+
+            # Check if this username is taken
+            existing = db.session.execute(
+                select(User).filter_by(username=email_username)
+            ).scalar_one_or_none()
+
+            # If taken, add random suffix
+            if existing:
+                temp_username = f"{email_username}_{secrets.token_hex(4)}"
+            else:
+                temp_username = email_username
+
+            user = User(
+                username=temp_username,
+                email=email,
+                preferred_language=language
+            )
+            user.set_password(secrets.token_urlsafe(32))
+            db.session.add(user)
+            db.session.flush()
+
+            profile = Profile(user_id=user.id)
+            db.session.add(profile)
+
+        import secrets
+        magic_token = secrets.token_urlsafe(32)
+        expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+        token_record = MagicLoginToken(
+            user_id=user.id,
+            token=magic_token,
+            expires_at=expires_at
+        )
+        db.session.add(token_record)
+        db.session.commit()
+
+        user_language = user.preferred_language or language
+        send_magic_link_email(user.email, magic_token, user_language)
+
+        return jsonify({'success': True, 'message': 'Magic link sent'}), 200
+
+    except Exception as e:
+        logger.error(f"Magic link error: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to send magic link'}), 500
+
+
+@app.route('/api/auth/verify-magic-link', methods=['POST'])
+def verify_magic_link():
+    """Verify magic link and log user in"""
+    try:
+        data = request.json
+        magic_token = data.get('token', '')
+
+        if not magic_token:
+            return jsonify({'error': 'Token required'}), 400
+
+        token_record = db.session.execute(
+            select(MagicLoginToken).filter_by(
+                token=magic_token,
+                used=False
+            )
+        ).scalar_one_or_none()
+
+        if not token_record or token_record.expires_at < datetime.utcnow():
+            return jsonify({'error': 'Invalid or expired token'}), 400
+
+        token_record.used = True
+        user = db.session.get(User, token_record.user_id)
+
+        # Check if username needs confirmation (not if it's from email)
+        email_prefix = user.email.split('@')[0]
+        needs_username = False  # Don't force username change if it matches email
+
+        consent = db.session.execute(
+            select(UserConsent).filter_by(user_id=user.id)
+        ).scalar_one_or_none()
+        needs_consent = consent is None
+
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+
+        session['user_id'] = user.id
+        session['username'] = user.username
+        session['role'] = user.role
+        session.permanent = True
+
+        return jsonify({
+            'success': True,
+            'needs_username': needs_username,
+            'needs_consent': needs_consent,
+            'user': user.to_dict(),
+            'suggested_username': email_prefix  # Send suggestion to frontend
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Magic link verification error: {e}")
+        return jsonify({'error': 'Verification failed'}), 500
+
+
+@app.route('/api/auth/set-username', methods=['POST'])
+@login_required
+def set_username():
+    """Set username for magic link users (optional)"""
+    try:
+        data = request.json
+        new_username = data.get('username', '').strip()
+        skip_username = data.get('skip', False)
+
+        user = db.session.get(User, session['user_id'])
+
+        # If skipping, keep the email-based username
+        if skip_username:
+            # Username already set from email, just return success
+            return jsonify({'success': True, 'username': user.username}), 200
+
+        if not new_username:
+            # If blank, use email prefix
+            new_username = user.email.split('@')[0]
+
+        # Validate username
+        if not validate_username(new_username):
+            return jsonify({'error': 'Invalid username format'}), 400
+
+        # Check if username taken (excluding current user)
+        existing = db.session.execute(
+            select(User).filter(
+                User.username == new_username,
+                User.id != user.id
+            )
+        ).scalar_one_or_none()
+
+        if existing:
+            return jsonify({'error': 'Username already taken'}), 400
+
+        user.username = new_username
+        session['username'] = new_username
+        db.session.commit()
+
+        return jsonify({'success': True, 'username': new_username}), 200
+
+    except Exception as e:
+        logger.error(f"Set username error: {e}")
+        return jsonify({'error': 'Failed to set username'}), 500
+
+
+@app.route('/api/auth/save-consent', methods=['POST'])
+@login_required
+def save_consent():
+    """Save user consent preferences with optional username"""
+    try:
+        data = request.json
+
+        # Handle username if provided with consent
+        username = data.get('username', '').strip()
+        if username:
+            user = db.session.get(User, session['user_id'])
+
+            # If blank, use email prefix
+            if not username:
+                username = user.email.split('@')[0]
+
+            # Check if username is available
+            existing = db.session.execute(
+                select(User).filter(
+                    User.username == username,
+                    User.id != user.id
+                )
+            ).scalar_one_or_none()
+
+            if not existing:
+                user.username = username
+                session['username'] = username
+
+        # Check if consent already exists
+        consent = db.session.execute(
+            select(UserConsent).filter_by(user_id=session['user_id'])
+        ).scalar_one_or_none()
+
+        if not consent:
+            consent = UserConsent(user_id=session['user_id'])
+            db.session.add(consent)
+
+        # Update consent fields
+        consent.email_updates = data.get('email_updates', False)
+        consent.privacy_accepted = data.get('privacy_accepted', False)
+        consent.research_data = data.get('research_data', False)
+        consent.team_declaration = data.get('team_declaration', False)
+        consent.responsible_use = data.get('responsible_use', False)
+        consent.waiver_claims = data.get('waiver_claims', False)
+        consent.consent_language = data.get('language', 'en')
+
+        # All required consents must be true
+        required = ['privacy_accepted', 'team_declaration', 'responsible_use', 'waiver_claims']
+        all_accepted = all(data.get(field, False) for field in required)
+
+        if not all_accepted:
+            return jsonify({'error': 'All required consents must be accepted'}), 400
+
+        db.session.commit()
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        logger.error(f"Save consent error: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to save consent'}), 500
+
+
 @app.route('/api/user/delete-account', methods=['POST'])
 @login_required
 def delete_account():
@@ -2259,20 +2769,19 @@ def delete_account():
 @app.route('/api/auth/forgot-password', methods=['POST'])
 @rate_limit(max_attempts=5, window_minutes=60)
 def forgot_password():
-    """Request password reset"""
+    """Request password reset with language support"""
     try:
         data = request.json
         email = data.get('email', '').strip().lower()
+        language = data.get('language', 'en')
 
         if not email:
             return jsonify({'error': 'Email required'}), 400
 
-        # Find user
         user = db.session.execute(
             select(User).filter_by(email=email)
         ).scalar_one_or_none()
 
-        # Always return success to prevent email enumeration
         if not user:
             logger.info(f"Password reset requested for non-existent email: {email}")
             return jsonify({
@@ -2280,12 +2789,10 @@ def forgot_password():
                 'message': 'If an account exists with that email, a reset link has been sent'
             }), 200
 
-        # Generate reset token
         import secrets
         reset_token = secrets.token_urlsafe(32)
         expires_at = datetime.utcnow() + timedelta(hours=1)
 
-        # Save token to database
         token_record = PasswordResetToken(
             user_id=user.id,
             token=reset_token,
@@ -2294,13 +2801,8 @@ def forgot_password():
         db.session.add(token_record)
         db.session.commit()
 
-        # Send reset email
-        email_sent = send_password_reset_email(user.email, reset_token)
-
-        if not email_sent:
-            logger.warning(f"Failed to send reset email to {email}, but token created")
-
-        logger.info(f"Password reset requested for user {user.id}")
+        user_language = user.preferred_language or language
+        email_sent = send_password_reset_email(user.email, reset_token, user_language)
 
         return jsonify({
             'success': True,
@@ -4619,6 +5121,192 @@ def get_insights():
         return jsonify({'message': 'Failed to get insights'})
 
 
+@app.route('/api/parameters/triggers/<int:user_id>', methods=['GET'])
+@login_required
+def get_parameter_triggers(user_id):
+    """Get trigger settings for a user being watched"""
+    try:
+        watcher_id = session.get('user_id')
+        trigger = db.session.execute(
+            select(ParameterTrigger).filter_by(
+                watcher_id=watcher_id,
+                watched_id=user_id
+            )
+        ).scalar_one_or_none()
+
+        if trigger:
+            return jsonify({
+                'mood_alert': trigger.mood_alert,
+                'energy_alert': trigger.energy_alert,
+                'sleep_alert': trigger.sleep_alert,
+                'physical_alert': trigger.physical_alert,
+                'anxiety_alert': trigger.anxiety_alert
+            })
+        else:
+            return jsonify({
+                'mood_alert': False,
+                'energy_alert': False,
+                'sleep_alert': False,
+                'physical_alert': False,
+                'anxiety_alert': False
+            })
+
+    except Exception as e:
+        logger.error(f"Get triggers error: {e}")
+        return jsonify({'error': 'Failed to get triggers'}), 500
+
+
+@app.route('/api/parameters/triggers/<int:user_id>', methods=['POST'])
+@login_required
+def set_parameter_triggers(user_id):
+    """Set trigger alerts for a user being watched"""
+    try:
+        watcher_id = session.get('user_id')
+        data = request.json
+
+        follow = db.session.execute(
+            select(Follow).filter_by(
+                follower_id=watcher_id,
+                followed_id=user_id
+            )
+        ).scalar_one_or_none()
+
+        if not follow:
+            return jsonify({'error': 'You must be following this user'}), 400
+
+        trigger = db.session.execute(
+            select(ParameterTrigger).filter_by(
+                watcher_id=watcher_id,
+                watched_id=user_id
+            )
+        ).scalar_one_or_none()
+
+        if not trigger:
+            trigger = ParameterTrigger(
+                watcher_id=watcher_id,
+                watched_id=user_id
+            )
+            db.session.add(trigger)
+
+        trigger.mood_alert = data.get('mood_alert', False)
+        trigger.energy_alert = data.get('energy_alert', False)
+        trigger.sleep_alert = data.get('sleep_alert', False)
+        trigger.physical_alert = data.get('physical_alert', False)
+        trigger.anxiety_alert = data.get('anxiety_alert', False)
+
+        db.session.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"Set triggers error: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to set triggers'}), 500
+
+
+@app.route('/api/parameters/check-triggers', methods=['GET'])
+@login_required
+def check_parameter_triggers():
+    """Check for parameter alerts based on trigger settings"""
+    try:
+        watcher_id = session.get('user_id')
+        triggers = db.session.execute(
+            select(ParameterTrigger).filter_by(watcher_id=watcher_id)
+        ).scalars().all()
+
+        alerts = []
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+
+        for trigger in triggers:
+            parameters = db.session.execute(
+                select(SavedParameters).filter(
+                    SavedParameters.user_id == trigger.watched_id,
+                    SavedParameters.date >= thirty_days_ago
+                ).order_by(SavedParameters.date.desc())
+            ).scalars().all()
+
+            if len(parameters) < 2:
+                continue
+
+            watched_user = db.session.get(User, trigger.watched_id)
+
+            # Check mood triggers
+            if trigger.mood_alert:
+                for i in range(len(parameters) - 1):
+                    today = parameters[i]
+                    yesterday = parameters[i + 1]
+
+                    if today.mood == 1 and yesterday.mood == 1:
+                        alerts.append({
+                            'level': 'critical',
+                            'user': watched_user.username,
+                            'parameter': 'mood',
+                            'dates': [today.date.isoformat(), yesterday.date.isoformat()],
+                            'values': [1, 1]
+                        })
+                        break
+                    elif (today.mood == 1 and yesterday.mood == 2) or (today.mood == 2 and yesterday.mood == 1):
+                        alerts.append({
+                            'level': 'high',
+                            'user': watched_user.username,
+                            'parameter': 'mood',
+                            'dates': [today.date.isoformat(), yesterday.date.isoformat()],
+                            'values': [today.mood, yesterday.mood]
+                        })
+                        break
+                    elif today.mood == 2 and yesterday.mood == 2:
+                        alerts.append({
+                            'level': 'warning',
+                            'user': watched_user.username,
+                            'parameter': 'mood',
+                            'dates': [today.date.isoformat(), yesterday.date.isoformat()],
+                            'values': [2, 2]
+                        })
+                        break
+
+            # Check anxiety triggers (reversed - high is bad)
+            if trigger.anxiety_alert:
+                for i in range(len(parameters) - 1):
+                    today = parameters[i]
+                    yesterday = parameters[i + 1]
+
+                    if today.anxiety == 4 and yesterday.anxiety == 4:
+                        alerts.append({
+                            'level': 'critical',
+                            'user': watched_user.username,
+                            'parameter': 'anxiety',
+                            'dates': [today.date.isoformat(), yesterday.date.isoformat()],
+                            'values': [4, 4]
+                        })
+                        break
+                    elif (today.anxiety == 4 and yesterday.anxiety == 3) or (
+                            today.anxiety == 3 and yesterday.anxiety == 4):
+                        alerts.append({
+                            'level': 'high',
+                            'user': watched_user.username,
+                            'parameter': 'anxiety',
+                            'dates': [today.date.isoformat(), yesterday.date.isoformat()],
+                            'values': [today.anxiety, yesterday.anxiety]
+                        })
+                        break
+                    elif today.anxiety == 3 and yesterday.anxiety == 3:
+                        alerts.append({
+                            'level': 'warning',
+                            'user': watched_user.username,
+                            'parameter': 'anxiety',
+                            'dates': [today.date.isoformat(), yesterday.date.isoformat()],
+                            'values': [3, 3]
+                        })
+                        break
+
+        return jsonify({'alerts': alerts})
+
+    except Exception as e:
+        logger.error(f"Check triggers error: {e}")
+        return jsonify({'error': 'Failed to check triggers'}), 500
+
+
+
+
 def calculate_streak(params):
     """Calculate consecutive days streak"""
     if not params:
@@ -4943,11 +5631,14 @@ def user_city():
 @app.route('/api/follow/<int:user_id>', methods=['POST'])
 @login_required
 def follow_user(user_id):
-    """Follow another user"""
+    """Follow another user with optional note"""
     try:
         current_user_id = session.get('user_id')
         current_user = db.session.get(User, current_user_id)
         user_to_follow = db.session.get(User, user_id)
+
+        data = request.get_json() or {}
+        follow_note = data.get('note', '').strip()[:300] if data else ''
 
         if not user_to_follow:
             return jsonify({'error': 'User not found'}), 404
@@ -4955,19 +5646,31 @@ def follow_user(user_id):
         if current_user_id == user_id:
             return jsonify({'error': 'Cannot follow yourself'}), 400
 
-        current_user.follow(user_to_follow)
+        current_user.follow(user_to_follow, note=follow_note)
         db.session.commit()
 
-        # Create alert for followed user
+        alert_content = 'You have a new follower!'
+        if follow_note:
+            alert_content += f' They said: "{follow_note}"'
+
         alert = Alert(
             user_id=user_id,
             title=f'{current_user.username} started following you',
-            content='You have a new follower!',
+            content=alert_content,
             alert_type='info'
         )
         db.session.add(alert)
-        db.session.commit()
 
+        if follow_note:
+            message = Message(
+                sender_id=current_user_id,
+                recipient_id=user_id,
+                content=f"Follow note: {follow_note}",
+                message_type='follow_note'
+            )
+            db.session.add(message)
+
+        db.session.commit()
         return jsonify({'success': True, 'message': 'User followed'})
 
     except Exception as e:
