@@ -5170,6 +5170,9 @@ async function followUser(userId, note = '', trigger = false) {
 
 
 async function followUserWithNote(userId, username) {
+    // Ensure username is safe
+    username = username || 'User';
+
     // Create modal for follow options
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
@@ -5186,35 +5189,51 @@ async function followUserWithNote(userId, username) {
         z-index: 10000;
     `;
 
-    modal.innerHTML = `
-        <div class="modal-content" style="
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        ">
-            <h3 style="margin-top: 0;">Follow ${username}</h3>
-            <div style="margin: 1rem 0;">
-                <label style="display: block; margin-bottom: 0.5rem;">Add a note (optional):</label>
-                <textarea id="followNote" style="
-                    width: 100%;
-                    min-height: 80px;
-                    padding: 0.5rem;
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
-                    resize: vertical;
-                " placeholder="Say something nice..."></textarea>
-            </div>
-            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
-                <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-                <button class="btn-primary" onclick="confirmFollowUser(${userId}, '${username}')">Follow</button>
-            </div>
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    modalContent.style.cssText = `
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    `;
+
+    modalContent.innerHTML = `
+        <h3 style="margin-top: 0;">Follow ${username}</h3>
+        <div style="margin: 1rem 0;">
+            <label style="display: block; margin-bottom: 0.5rem;">Add a note (optional):</label>
+            <textarea id="followNote" style="
+                width: 100%;
+                min-height: 80px;
+                padding: 0.5rem;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                resize: vertical;
+            " placeholder="Say something nice..."></textarea>
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+            <button class="btn-secondary" id="cancelFollowBtn">Cancel</button>
+            <button class="btn-primary" id="confirmFollowBtn">Follow</button>
         </div>
     `;
 
+    modal.appendChild(modalContent);
     document.body.appendChild(modal);
+
+    // Add event listeners using addEventListener instead of onclick
+    document.getElementById('cancelFollowBtn').addEventListener('click', () => {
+        modal.remove();
+    });
+
+    document.getElementById('confirmFollowBtn').addEventListener('click', async () => {
+        const note = document.getElementById('followNote')?.value || '';
+        const success = await followUser(userId, note, false);
+        if (success) {
+            modal.remove();
+        }
+    });
 
     // Close on background click
     modal.addEventListener('click', (e) => {
