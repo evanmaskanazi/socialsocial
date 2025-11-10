@@ -5735,14 +5735,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Set up language selector event listener
-    const langSelector = document.getElementById('languageSelector');
-    if (langSelector) {
-        langSelector.addEventListener('change', function() {
-            if (window.i18n && window.i18n.setLanguage) {
-                window.i18n.setLanguage(this.value);
-            }
-        });
-    }
+   const langSelector = document.getElementById('languageSelector');
+if (langSelector) {
+    langSelector.addEventListener('change', function() {
+        // Ignore programmatic changes (only respond to user clicks)
+        if (this.dataset.programmaticChange === 'true') {
+            return;
+        }
+
+        if (window.i18n && window.i18n.setLanguage) {
+            window.i18n.setLanguage(this.value);
+        }
+    });
+}
 
     try {
         const response = await fetch(`${API_URL}/auth/session`, {
@@ -5797,10 +5802,22 @@ window.addEventListener('DOMContentLoaded', async () => {
         // Listen for language changes
   // Listen for language changes
  window.addEventListener('languageChanged', () => {
-    // Update language selector to match current language
+    // Update language selector to match current language WITHOUT triggering change event
     const langSelector = document.getElementById('languageSelector');
     if (langSelector && window.i18n && window.i18n.currentLanguage) {
-        langSelector.value = window.i18n.currentLanguage;
+        // Check if selector needs updating
+        if (langSelector.value !== window.i18n.currentLanguage) {
+            // Create a flag to prevent the change handler from running
+            langSelector.dataset.programmaticChange = 'true';
+
+            // Update the selector value
+            langSelector.value = window.i18n.currentLanguage;
+
+            // Remove the flag after a brief delay
+            setTimeout(() => {
+                delete langSelector.dataset.programmaticChange;
+            }, 10);
+        }
     }
 
     if (document.getElementById('feedView').classList.contains('hidden') === false) {
