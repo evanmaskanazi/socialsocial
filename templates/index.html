@@ -72,6 +72,34 @@
     transform: scale(1.05);
 }
 
+.follow-note-btn {
+    background: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.follow-note-btn:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+}
+
+.follow-actions-container {
+    display: flex;
+    gap: 4px;
+    align-items: stretch;
+    flex-direction: column;
+}
+
+[dir="rtl"] .follow-actions-container {
+    flex-direction: column-reverse;
+}
+
 .unfollow-btn {
     background: var(--light);
     color: var(--gray);
@@ -4982,15 +5010,20 @@ async function loadFollowing() {
                     <div class="user-card">
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
                             ${user.username.charAt(0).toUpperCase()}
-                        </div>
+                      </div>
                         <div class="user-info">
                             <div class="user-name">${user.username}</div>
                             <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${user.reason}</div>` : ''}
                         </div>
-                        <button class="btn-primary follow-btn" data-user-id="${user.id}">
-                            Follow
-                        </button>
+                        <div class="follow-actions-container" style="min-width: 120px;">
+                            <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 10px;">
+                                ${window.i18n ? window.i18n.t('follow') : 'Follow'}
+                            </button>
+                            <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${user.username}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;">
+                                ${window.i18n ? window.i18n.t('with_note') : '+ Note'}
+                            </button>
+                        </div>
                     </div>
                 `).join('');
 
@@ -5000,6 +5033,15 @@ async function loadFollowing() {
                         const userId = btn.dataset.userId;
                         await followUser(parseInt(userId));
                         loadFollowing();
+                    });
+                });
+
+                // Add follow with note handlers
+                recommendedContainer.querySelectorAll('.follow-note-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const userId = btn.dataset.userId;
+                        const username = btn.dataset.username;
+                        await followUserWithNote(parseInt(userId), username);
                     });
                 });
             } else {
@@ -5509,21 +5551,40 @@ async function loadTriggersForUser(userId, username) {
         }) : [];
 
         if (userTriggers.length === 0) {
-            container.innerHTML = '<p style="color: #666; font-size: 0.9rem;">No triggers set for this user</p>';
+            const noTriggersText = window.i18n ? window.i18n.t('trigger_no_triggers') : 'No triggers set for this user';
+            container.innerHTML = `<p style="color: #666; font-size: 0.9rem;">${noTriggersText}</p>`;
             return;
         }
+
+        // Helper function to translate trigger text
+        function translateTrigger(trigger) {
+            // Translate parameter name
+            const paramKey = `trigger_parameter_${trigger.parameter || trigger.parameter_name}`;
+            const paramText = window.i18n ? window.i18n.t(paramKey) : (trigger.parameter || trigger.parameter_name);
+
+            // Translate condition
+            const conditionKey = `trigger_condition_${trigger.condition}`;
+            const conditionText = window.i18n ? window.i18n.t(conditionKey) : trigger.condition;
+
+            // Translate days
+            const daysKey = 'trigger_days_format';
+            const daysText = trigger.consecutive_days ?
+                (window.i18n ? window.i18n.t(daysKey).replace('{count}', trigger.consecutive_days) : `${trigger.consecutive_days} days`)
+                : '';
+
+            return `${paramText}: ${conditionText} ${trigger.value}${daysText ? ` (${daysText})` : ''}`;
+        }
+
+        const removeText = window.i18n ? window.i18n.t('trigger_remove') : 'Remove';
 
         container.innerHTML = userTriggers.map(trigger => `
             <div style="padding: 10px; background: white; border-radius: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                 <span>
-                    ${trigger.parameter || trigger.parameter_name}:
-                    ${trigger.condition}
-                    ${trigger.value}
-                    ${trigger.consecutive_days ? ` (${trigger.consecutive_days} days)` : ''}
+                    ${translateTrigger(trigger)}
                 </span>
                 <button class="btn btn-danger" onclick="deleteTrigger(${trigger.id}); setTimeout(() => loadTriggersForUser(${userId}, '${username}'), 500);"
                         style="padding: 4px 8px; font-size: 0.8rem;">
-                    Remove
+                    ${removeText}
                 </button>
             </div>
         `).join('');
@@ -5950,14 +6011,18 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
 
                     <!-- Triggers Section (only shown if following this user) -->
                     ${userId && userId !== currentUserId ? `
-                    <div id="triggersSection" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h3 style="color: var(--primary); margin: 0 0 10px 0; font-size: 1.1rem;">Set Alert Triggers</h3>
-                        <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 15px;">Get notified when ${escapeHtml(username)}'s wellness parameters are concerning</p>
+            <div id="triggersSection" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h3 style="color: var(--primary); margin: 0 0 10px 0; font-size: 1.1rem;">
+                            ${window.i18n ? window.i18n.t('trigger_set_alert') : 'Set Alert Triggers'}
+                        </h3>
+                        <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 15px;">
+                            ${window.i18n ? window.i18n.t('trigger_get_notified').replace('{username}', escapeHtml(username)) : `Get notified when ${escapeHtml(username)}'s wellness parameters are concerning`}
+                        </p>
                         <div id="modalTriggersList" style="margin-bottom: 10px;">
                             <p style="color: #666;">Loading triggers...</p>
                         </div>
                         <button class="btn btn-primary" onclick="showAddTriggerModalForUser(${userId}, '${escapeHtml(username)}')" style="padding: 8px 16px; font-size: 0.9rem;">
-                            Add Trigger
+                            ${window.i18n ? window.i18n.t('trigger_add') : 'Add Trigger'}
                         </button>
                     </div>
                     ` : ''}
@@ -6536,6 +6601,32 @@ function addBackToFollowingButton(viewId) {
             }
         }
 
+
+
+// Call this when user logs in or navigates to main page
+async function checkAndLoadTriggerAlerts() {
+    try {
+        // First check for any trigger alerts
+        const response = await fetch('/api/parameters/check-triggers', {
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log(`Checked triggers: ${data.count} alerts found`);
+        }
+
+        // Then load all alerts (including newly created trigger alerts)
+        if (typeof loadAlerts === 'function') {
+            await loadAlerts();
+        }
+    } catch (error) {
+        console.error('Error checking trigger alerts:', error);
+    }
+}
+
+
+
         // Helper function for translations - place this RIGHT AFTER loadAlerts()
         function translateKey(key) {
             if (window.i18n && window.i18n.translate) {
@@ -6810,7 +6901,7 @@ if (langSelector) {
                 currentUser = data.user;
                 showDashboard();
                 // Load alerts AFTER dashboard is shown and i18n is ready
-                await loadAlerts();
+                await checkAndLoadTriggerAlerts();
             } else {
                 showAuthContainer();
             }
