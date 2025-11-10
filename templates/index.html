@@ -2628,24 +2628,72 @@ async function loadUserCity() {
             }
 
 
-    async function loadUserLanguage() {
-        try {
-            console.log('[Dashboard] Loading user language preference...');
-            const response = await fetch(`${API_URL}/user/profile`);
+   async function loadUserLanguage() {
+    try {
+        console.log('[Dashboard] Loading user language preference...');
 
-            if (response.ok) {
-                const profile = await response.json();
-                const savedLang = profile.preferred_language || 'en';
+        // Check if user just set a language (localStorage has recent value)
+        const currentLocalLang = localStorage.getItem('selectedLanguage');
 
-                console.log('[Dashboard] User preferred language:', savedLang);
+        const response = await fetch(`${API_URL}/user/profile`);
 
-                // Update localStorage
+        if (response.ok) {
+            const profile = await response.json();
+            const backendLang = profile.preferred_language || 'en';
+
+            console.log('[Dashboard] Backend language:', backendLang);
+            console.log('[Dashboard] Current localStorage:', currentLocalLang);
+
+            // CRITICAL: If localStorage has Hebrew but backend has English,
+            // trust localStorage (user just changed it) and update backend
+            if (currentLocalLang && currentLocalLang !== backendLang) {
+                console.log('[Dashboard] localStorage differs from backend - using localStorage and updating backend');
+
+                // Use the localStorage value
+                const savedLang = currentLocalLang;
+
+                // Update backend to match
+                fetch(`${API_URL}/user/language`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preferred_language: savedLang })
+                }).catch(err => console.error('Failed to sync language to backend:', err));
+
+                // Apply language using i18n
+                if (window.i18n && window.i18n.setLanguage) {
+                    await window.i18n.setLanguage(savedLang);
+                    console.log('[Dashboard] Language applied from localStorage:', savedLang);
+                }
+
+                // Update language selector to match
+                const langSelector = document.getElementById('languageSelector');
+                if (langSelector) {
+                    // Set flag to prevent triggering change event
+                    window._updatingSelectorProgrammatically = true;
+                    langSelector.value = savedLang;
+                    window._updatingSelectorProgrammatically = false;
+                }
+
+                // Set RTL for Hebrew/Arabic
+                const rtlLanguages = ['ar', 'he'];
+                if (rtlLanguages.includes(savedLang)) {
+                    document.body.setAttribute('dir', 'rtl');
+                } else {
+                    document.body.setAttribute('dir', 'ltr');
+                }
+            } else {
+                // Backend and localStorage match (or localStorage empty) - use backend
+                const savedLang = backendLang;
+
+                console.log('[Dashboard] Using backend language:', savedLang);
+
+                // Update localStorage to match backend
                 localStorage.setItem('selectedLanguage', savedLang);
 
                 // Apply language using i18n
                 if (window.i18n && window.i18n.setLanguage) {
                     await window.i18n.setLanguage(savedLang);
-                    console.log('[Dashboard] Language applied:', savedLang);
+                    console.log('[Dashboard] Language applied from backend:', savedLang);
                 } else {
                     console.warn('[Dashboard] i18n not available, setting manually');
                     window.i18n.currentLanguage = savedLang;
@@ -2657,7 +2705,10 @@ async function loadUserCity() {
                 // Update language selector to match
                 const langSelector = document.getElementById('languageSelector');
                 if (langSelector) {
+                    // Set flag to prevent triggering change event
+                    window._updatingSelectorProgrammatically = true;
                     langSelector.value = savedLang;
+                    window._updatingSelectorProgrammatically = false;
                 }
 
                 // Set RTL for Hebrew/Arabic
@@ -2667,13 +2718,14 @@ async function loadUserCity() {
                 } else {
                     document.body.setAttribute('dir', 'ltr');
                 }
-            } else {
-                console.warn('[Dashboard] Could not fetch user profile');
             }
-        } catch (error) {
-            console.error('[Dashboard] Error loading language:', error);
+        } else {
+            console.warn('[Dashboard] Could not fetch user profile');
         }
+    } catch (error) {
+        console.error('[Dashboard] Error loading language:', error);
     }
+}
 
 loadUserLanguage();
 
