@@ -1030,32 +1030,6 @@ class FollowRequest(db.Model):
     __table_args__ = (db.UniqueConstraint('requester_id', 'target_id', name='unique_follow_request'),)
 
 
-class ParameterTrigger(db.Model):
-    __tablename__ = 'parameter_triggers'
-    id = db.Column(db.Integer, primary_key=True)
-    watcher_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    watched_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    parameter_name = db.Column(db.String(50), nullable=False)
-    trigger_condition = db.Column(db.String(20), nullable=False)
-    trigger_value = db.Column(db.Integer, nullable=False)
-    consecutive_days = db.Column(db.Integer)
-    is_active = db.Column(db.Boolean, default=True)
-    last_triggered = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    watcher = db.relationship('User', foreign_keys=[watcher_id], backref='watching_triggers')
-    watched = db.relationship('User', foreign_keys=[watched_id], backref='watched_triggers')
-
-    def check_trigger(self, parameter_value):
-        if not self.is_active:
-            return False
-        if self.trigger_condition == 'below':
-            return parameter_value < self.trigger_value
-        elif self.trigger_condition == 'above':
-            return parameter_value > self.trigger_value
-        elif self.trigger_condition == 'equals':
-            return parameter_value == self.trigger_value
-        return False
 
 
 class NotificationSettings(db.Model):
