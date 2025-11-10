@@ -605,7 +605,7 @@ if (!currentLang || currentLang === '') {
             selector.value = 'en';
         }
         // Trigger a change event to update display
-        selector.dispatchEvent(new Event('change', { bubbles: false }));
+     //   selector.dispatchEvent(new Event('change', { bubbles: false }));
     }, 10);
 
     // Handle language change
