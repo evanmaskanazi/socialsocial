@@ -1411,7 +1411,139 @@ async function fetchAllParameterDates() {
 }
 
 
+// Function to handle following from parameters view with trigger option
+function followFromParameters(userId, username) {
+    // Create modal for follow with trigger option
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
 
+    modal.innerHTML = `
+        <div class="modal-content" style="
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        ">
+            <h3 style="margin-top: 0;">Follow ${username}'s Parameters</h3>
+
+            <div style="margin: 1.5rem 0;">
+                <label style="
+                    display: flex;
+                    align-items: center;
+                    padding: 0.75rem;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    cursor: pointer;
+                ">
+                    <input type="checkbox" id="followTrigger" style="
+                        width: 20px;
+                        height: 20px;
+                        margin-right: 0.75rem;
+                        cursor: pointer;
+                    " checked>
+                    <div>
+                        <div style="font-weight: 500;">Get parameter alerts</div>
+                        <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;">
+                            Receive notifications when their parameters trigger
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <div style="margin: 1.5rem 0;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
+                    Add a note (optional):
+                </label>
+                <textarea id="followNote" style="
+                    width: 100%;
+                    min-height: 80px;
+                    padding: 0.75rem;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    resize: vertical;
+                " placeholder="Let them know why you're following..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
+                    Cancel
+                </button>
+                <button class="btn-primary" onclick="confirmFollowWithParameters(${userId}, '${username}')">
+                    Follow
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+async function confirmFollowWithParameters(userId, username) {
+    const trigger = document.getElementById('followTrigger')?.checked || false;
+    const note = document.getElementById('followNote')?.value || '';
+
+    try {
+        const response = await fetch(`/api/follow/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                note: note,
+                trigger: trigger
+            }),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            document.querySelector('.modal-overlay')?.remove();
+
+            // Show success notification
+            if (window.showNotification) {
+                const message = trigger
+                    ? `Following ${username} with parameter alerts enabled`
+                    : `Following ${username}`;
+                window.showNotification(message, 'success');
+            } else {
+                alert(`Successfully followed ${username}`);
+            }
+
+            // Refresh following list if available
+            if (typeof loadFollowing === 'function') {
+                loadFollowing();
+            }
+        } else {
+            throw new Error('Failed to follow user');
+        }
+    } catch (error) {
+        console.error('Error following user:', error);
+        if (window.showNotification) {
+            window.showNotification('Failed to follow user', 'error');
+        } else {
+            alert('Failed to follow user');
+        }
+    }
+}
 
 
 
@@ -2038,6 +2170,27 @@ function displayUserParameters(data, userId, username) {
 
     html += '</div>';
     content.innerHTML = html;
+
+
+      // ADD THIS ENTIRE BLOCK RIGHT HERE (after line 2040):
+    // Add follow button if viewing another user's parameters
+    const currentUserId = parseInt(localStorage.getItem('userId') || sessionStorage.getItem('userId'));
+    if (userId && userId !== currentUserId) {
+        const followBtnContainer = document.createElement('div');
+        followBtnContainer.style.cssText = 'text-align: center; margin: 1.5rem 0; padding-top: 1rem; border-top: 1px solid #eee;';
+
+        const followBtn = document.createElement('button');
+        followBtn.className = 'btn-primary';
+        followBtn.innerHTML = '➕ Follow User';
+        followBtn.style.cssText = 'padding: 0.75rem 2rem; font-size: 16px; background: #6B46C1; color: white; border: none; border-radius: 25px; cursor: pointer;';
+        followBtn.onclick = () => followFromParameters(userId, username);
+
+        followBtnContainer.appendChild(followBtn);
+        content.appendChild(followBtnContainer);
+    }
+
+
+
 }
 
 function getParameterIcon(paramName) {
