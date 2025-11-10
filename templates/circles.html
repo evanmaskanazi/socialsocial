@@ -133,17 +133,39 @@
             }
 
             // 5. Fetch and apply user's language preference
-            try {
-                const response = await fetch('/api/user/profile');
-                if (response.ok) {
-                    const profile = await response.json();
-                    if (profile.preferred_language && window.i18n && window.i18n.setLanguage) {
-                        await window.i18n.setLanguage(profile.preferred_language);
-                    }
-                }
-            } catch (error) {
-                console.log('Could not fetch user language preference');
+          // 5. Fetch and apply user's language preference
+try {
+    // Check localStorage first
+    const localLang = localStorage.getItem('selectedLanguage');
+    console.log('[Circles] localStorage language:', localLang);
+
+    const response = await fetch('/api/user/profile');
+    if (response.ok) {
+        const profile = await response.json();
+        const backendLang = profile.preferred_language;
+        console.log('[Circles] Backend language:', backendLang);
+
+        // Prefer localStorage over backend (user may have just changed it)
+        const langToUse = localLang || backendLang || 'en';
+        console.log('[Circles] Using language:', langToUse);
+
+        if (window.i18n && window.i18n.setLanguage) {
+            await window.i18n.setLanguage(langToUse);
+
+            // If localStorage differs from backend, sync backend
+            if (localLang && localLang !== backendLang) {
+                console.log('[Circles] Syncing language to backend');
+                fetch('/api/user/language', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preferred_language: localLang })
+                }).catch(err => console.error('Failed to sync language:', err));
             }
+        }
+    }
+} catch (error) {
+    console.log('Could not fetch user language preference');
+}
 
             // 6. Apply initial translations
             if (window.i18n && window.i18n.applyLanguage) {
