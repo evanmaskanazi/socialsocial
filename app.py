@@ -93,7 +93,46 @@ if REDIS_URL:
 
 # Initialize extensions
 db = SQLAlchemy(app)
-migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite compatibility
+migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite
+
+
+# Auto-migrate database on startup
+def auto_migrate():
+    """Auto-create missing columns"""
+    with app.app_context():
+        try:
+            from sqlalchemy import inspect, text
+
+            db.create_all()  # Create all tables
+
+            inspector = inspect(db.engine)
+
+            # Check follows table for follow_note column
+            if 'follows' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('follows')]
+                if 'follow_note' not in columns:
+                    with db.engine.connect() as conn:
+                        conn.execute(text('ALTER TABLE follows ADD COLUMN follow_note VARCHAR(300)'))
+                        conn.commit()
+                    logger.info("Added follow_note column to follows table")
+
+            # Check parameter_triggers table
+            if 'parameter_triggers' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('parameter_triggers')]
+                for col in ['mood_alert', 'energy_alert', 'sleep_alert', 'physical_alert', 'anxiety_alert']:
+                    if col not in columns:
+                        with db.engine.connect() as conn:
+                            conn.execute(text(f'ALTER TABLE parameter_triggers ADD COLUMN {col} BOOLEAN DEFAULT FALSE'))
+                            conn.commit()
+                        logger.info(f"Added {col} column to parameter_triggers")
+
+        except Exception as e:
+            logger.error(f"Auto-migration error: {e}")
+
+
+# Call this AFTER the app context is set up (around line 700)
+# Add this line after the `with app.app_context():` block that creates tables
+auto_migrate()
 CORS(app, supports_credentials=True)
 Session(app)
 
@@ -4977,7 +5016,7 @@ def save_parameters():
         db.session.commit()
 
         # Check triggers
-        check_parameter_triggers(user_id, params)
+        process_parameter_triggers(user_id, params)
 
         import random
         encouragements = [
@@ -5011,7 +5050,7 @@ def save_parameters():
         return jsonify({'error': 'Failed to save parameters'}), 500
 
 
-def check_parameter_triggers(user_id, params):
+def process_parameter_triggers(user_id, params):
     """Check triggers when parameters are saved"""
     triggers = ParameterTrigger.query.filter_by(
         watched_id=user_id,
@@ -5682,16 +5721,19 @@ def get_following():
     """Get list of users the current user is following"""
     try:
         user_id = session.get('user_id')
-        user = db.session.get(User, user_id)
+
+        # Get follows directly from Follow model
+        follows = Follow.query.filter_by(follower_id=user_id).all()
 
         following = []
-        for follow in user.following:
+        for follow in follows:
             followed_user = db.session.get(User, follow.followed_id)
             if followed_user:
                 following.append({
                     'id': followed_user.id,
                     'username': followed_user.username,
                     'email': followed_user.email,
+                    'note': follow.follow_note,  # ADD THIS FIELD
                     'selected_city': followed_user.selected_city,
                     'created_at': follow.created_at.isoformat()
                 })
@@ -5701,6 +5743,92 @@ def get_following():
     except Exception as e:
         logger.error(f"Get following error: {str(e)}")
         return jsonify({'error': 'Failed to get following'}), 500
+
+
+@app.route('/api/parameters/user/<int:user_id>', methods=['GET'])
+@login_required
+def get_user_parameters_for_triggers(user_id):
+    """Get parameters for viewing in trigger modal"""
+    try:
+        viewer_id = session.get('user_id')
+
+        # Check if following
+        if viewer_id != user_id:
+            follow = Follow.query.filter_by(
+                follower_id=viewer_id,
+                followed_id=user_id
+            ).first()
+            if not follow:
+                return jsonify({'error': 'Not authorized'}), 403
+
+        # Get last 30 days
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+
+        parameters = SavedParameters.query.filter(
+            SavedParameters.user_id == user_id,
+            SavedParameters.date >= thirty_days_ago
+        ).order_by(SavedParameters.date.desc()).all()
+
+        result = {'parameters': []}
+        for param in parameters:
+            # Add each parameter as separate entry
+            for param_name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
+                value = getattr(param, param_name, None)
+                if value:
+                    result['parameters'].append({
+                        'date': param.date.isoformat() if hasattr(param.date, 'isoformat') else str(param.date),
+                        'parameter_name': param_name,
+                        'value': value
+                    })
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.error(f"Error getting user parameters: {e}")
+        return jsonify({'error': 'Failed to load parameters'}), 500
+
+
+
+@app.route('/api/follow/<int:user_id>', methods=['POST'])
+@login_required
+def follow_user_with_note(user_id):
+    """Follow a user with optional note"""
+    try:
+        follower_id = session.get('user_id')
+        data = request.json or {}
+        note = data.get('note', '')[:300]
+
+        if follower_id == user_id:
+            return jsonify({'error': 'Cannot follow yourself'}), 400
+
+        # Check if already following
+        existing = Follow.query.filter_by(
+            follower_id=follower_id,
+            followed_id=user_id
+        ).first()
+
+        if existing:
+            existing.follow_note = note
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Note updated'}), 200
+
+        # Create new follow
+        follow = Follow(
+            follower_id=follower_id,
+            followed_id=user_id,
+            follow_note=note
+        )
+        db.session.add(follow)
+        db.session.commit()
+
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error following user with note: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 
 
 @app.route('/api/followers')
