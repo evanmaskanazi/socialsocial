@@ -5592,11 +5592,7 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
     const modal = document.getElementById('userParametersModal');
-    console.log('[DEBUG] Modal element:', modal ? 'found' : 'not found');
-
-// Continue with existing code...
-if (modal) {
-
+    console.log('[DEBUG] Modal element:', modal ? 'found' : 'NOT FOUND');
 
     if (modal) {
         modal.addEventListener('click', (e) => {
