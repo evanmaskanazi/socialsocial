@@ -96,43 +96,6 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite
 
 
-# Auto-migrate database on startup
-def auto_migrate():
-    """Auto-create missing columns"""
-    with app.app_context():
-        try:
-            from sqlalchemy import inspect, text
-
-            db.create_all()  # Create all tables
-
-            inspector = inspect(db.engine)
-
-            # Check follows table for follow_note column
-            if 'follows' in inspector.get_table_names():
-                columns = [col['name'] for col in inspector.get_columns('follows')]
-                if 'follow_note' not in columns:
-                    with db.engine.connect() as conn:
-                        conn.execute(text('ALTER TABLE follows ADD COLUMN follow_note VARCHAR(300)'))
-                        conn.commit()
-                    logger.info("Added follow_note column to follows table")
-
-            # Check parameter_triggers table
-            if 'parameter_triggers' in inspector.get_table_names():
-                columns = [col['name'] for col in inspector.get_columns('parameter_triggers')]
-                for col in ['mood_alert', 'energy_alert', 'sleep_alert', 'physical_alert', 'anxiety_alert']:
-                    if col not in columns:
-                        with db.engine.connect() as conn:
-                            conn.execute(text(f'ALTER TABLE parameter_triggers ADD COLUMN {col} BOOLEAN DEFAULT FALSE'))
-                            conn.commit()
-                        logger.info(f"Added {col} column to parameter_triggers")
-
-        except Exception as e:
-            logger.error(f"Auto-migration error: {e}")
-
-
-# Call this AFTER the app context is set up (around line 700)
-# Add this line after the `with app.app_context():` block that creates tables
-auto_migrate()
 CORS(app, supports_credentials=True)
 Session(app)
 
@@ -142,6 +105,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('thera_social')
+
 
 # Email configuration for password reset
 import smtplib
