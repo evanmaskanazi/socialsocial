@@ -824,11 +824,22 @@ class ParameterTrigger(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     watcher_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     watched_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    # New style columns (what you actually use)
     mood_alert = db.Column(db.Boolean, default=False)
     energy_alert = db.Column(db.Boolean, default=False)
     sleep_alert = db.Column(db.Boolean, default=False)
     physical_alert = db.Column(db.Boolean, default=False)
     anxiety_alert = db.Column(db.Boolean, default=False)
+
+    # Old style columns (keep for compatibility with existing DB)
+    parameter_name = db.Column(db.String(50), nullable=True)
+    trigger_condition = db.Column(db.String(50), nullable=True)
+    trigger_value = db.Column(db.Float, nullable=True)
+    consecutive_days = db.Column(db.Integer, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    last_triggered = db.Column(db.DateTime, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     watcher = db.relationship('User', foreign_keys=[watcher_id], backref='watching_triggers')
