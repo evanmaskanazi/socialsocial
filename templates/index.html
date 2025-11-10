@@ -992,18 +992,29 @@
             overflow-y: auto;
         }
 
-        .alert-item {
-            padding: 12px;
-            background: var(--light);
-            border-radius: 10px;
-            margin-bottom: 10px;
-            border-left: 4px solid var(--warning);
-        }
+      .alert-item {
+    padding: 12px;
+    background: var(--light);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--warning);
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.3s;
+    position: relative;
+}
 
-        [dir="rtl"] .alert-item {
-            border-left: none;
-            border-right: 4px solid var(--warning);
-        }
+.alert-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.alert-item:hover .alert-dismiss {
+    opacity: 1 !important;
+}
+
+[dir="rtl"] .alert-item {
+    border-left: none;
+    border-right: 4px solid var(--warning);
+}
 
         .alert-item.high {
             border-left-color: var(--danger);
@@ -6511,8 +6522,10 @@ function addBackToFollowingButton(viewId) {
 
 
 
+// ========== UPDATED loadAlerts() WITH CLICK-TO-DISMISS ==========
+// Replace your existing loadAlerts() function with this version
 
-   async function loadAlerts() {
+async function loadAlerts() {
     try {
         console.log('🔄 loadAlerts called');
         const response = await apiCall('/alerts');
@@ -6556,7 +6569,6 @@ function addBackToFollowingButton(viewId) {
                     // Not JSON, handle as plain string
                     if (title.startsWith('alerts.') || title.startsWith('invite.')) {
                         const translated = translateKey(title);
-                        // ✅ ADDED: Fallback if translation missing
                         if (!translated || translated === title) {
                             if (title === 'invite.alert_title') {
                                 title = 'New Invitation';
@@ -6594,7 +6606,6 @@ function addBackToFollowingButton(viewId) {
                 // ===== HANDLE CONTENT =====
                 if (content.startsWith('alerts.')) {
                     const translated = translateKey(content);
-                    // ✅ ADDED: Fallback if translation missing
                     if (!translated || translated === content) {
                         content = content.replace('alerts.', '').replace(/_/g, ' ');
                     } else {
@@ -6604,7 +6615,6 @@ function addBackToFollowingButton(viewId) {
                 else if (content === 'You have a new follower!' || content === 'You have a new follower') {
                     content = translateKey('alerts.new_follower');
                 }
-                // ✅ ADDED: Better pipe handling with type check
                 else if (content && typeof content === 'string' && content.includes('|')) {
                     const parts = content.split('|');
                     if (parts.length === 2) {
@@ -6617,7 +6627,6 @@ function addBackToFollowingButton(viewId) {
                     content = translateKey('invite.legacy_alert_content') || 'Someone has invited you to follow them';
                 }
 
-                // ✅ ADDED: Ensure title and content are not empty
                 if (!title || title.trim() === '') {
                     title = 'Notification';
                 }
@@ -6625,15 +6634,18 @@ function addBackToFollowingButton(viewId) {
                     content = 'You have a new notification';
                 }
 
+                // ✅ ONLY CHANGE FROM OLD VERSION: Added data-alert-id, onclick, and dismiss button
                 return `
-                    <div class="alert-item ${alert.type || 'info'}">
+                    <div class="alert-item ${alert.type || 'info'}"
+                         data-alert-id="${alert.id}"
+                         onclick="dismissAlert(${alert.id}, this)">
                         <strong>${escapeHtml(title)}</strong><br>
                         <small>${escapeHtml(content)}</small>
+                        <span class="alert-dismiss" style="position: absolute; top: 8px; right: 8px; opacity: 0.3; font-size: 1.2rem; transition: opacity 0.2s;">×</span>
                     </div>
                 `;
             } catch (alertError) {
                 console.error(`❌ Error rendering alert ${index}:`, alertError, alert);
-                // ✅ ADDED: Fallback for broken alerts
                 return `
                     <div class="alert-item info">
                         <strong>Notification</strong><br>
@@ -6650,7 +6662,6 @@ function addBackToFollowingButton(viewId) {
         console.error('❌ Failed to load alerts:', error);
         console.error('Error stack:', error.stack);
 
-        // ✅ ADDED: Show error in UI
         const container = document.getElementById('alertsList');
         if (container) {
             container.innerHTML = '<p style="color: red;">Error loading alerts. Please refresh the page.</p>';
@@ -6658,7 +6669,43 @@ function addBackToFollowingButton(viewId) {
     }
 }
 
-// ========== AUTO-REFRESH ALERTS ==========
+// ✅ NEW FUNCTION: Add this right after loadAlerts()
+async function dismissAlert(alertId, element) {
+    try {
+        // Fade out animation
+        element.style.opacity = '0.5';
+
+        // Mark as read in backend
+        const response = await fetch(`/api/alerts/${alertId}/read`, {
+            method: 'PUT',
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            // Remove from DOM with animation
+            element.style.opacity = '0';
+            setTimeout(() => {
+                element.remove();
+
+                // If no alerts left, show "no alerts" message
+                const container = document.getElementById('alertsList');
+                if (container && container.children.length === 0) {
+                    const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
+                    container.innerHTML = `<p style="color: var(--gray);">${noAlertsText}</p>`;
+                }
+            }, 300);
+        } else {
+            // Restore if failed
+            element.style.opacity = '1';
+            console.error('Failed to dismiss alert');
+        }
+    } catch (error) {
+        console.error('Error dismissing alert:', error);
+        element.style.opacity = '1';
+    }
+}
+
+// ========== AUTO-REFRESH ALERTS (KEEP THIS - NO CHANGES) ==========
 // Poll for new alerts every 30 seconds when page is visible
 let alertPollInterval = setInterval(async () => {
     if (document.visibilityState === 'visible' && typeof loadAlerts === 'function') {
