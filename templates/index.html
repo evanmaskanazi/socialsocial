@@ -2194,6 +2194,63 @@
 <div id="followingView" class="view hidden">
     <h2 style="margin-bottom: 20px;" data-i18n="following.title">Following</h2>
 
+    <!-- ADD THIS SEARCH BAR HERE (right after the H2, before Recommendations Section) -->
+    <div style="margin: 20px 0;">
+        <div style="position: relative; max-width: 600px; margin: 0 auto;">
+            <input type="text"
+                id="followSearchInput"
+                placeholder="Search users to follow..."
+                style="
+                    width: 100%;
+                    padding: 12px 45px 12px 20px;
+                    border: none;
+                    border-radius: 25px;
+                    font-size: 16px;
+                    background: white;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                "
+                onkeypress="if(event.key==='Enter') searchUsersToFollow()"
+            >
+            <button onclick="searchUsersToFollow()" style="
+                position: absolute;
+                right: 5px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: none;
+                background: #6B46C1;
+                color: white;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">
+                🔍
+            </button>
+        </div>
+
+        <!-- Search Results Container -->
+        <div id="followSearchResults" style="
+            display: none;
+            background: white;
+            border-radius: 12px;
+            margin-top: 1rem;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        "></div>
+    </div>
+    <!-- END OF SEARCH BAR ADDITION -->
+
+
+
+
+
+
     <!-- Recommendations Section -->
     <div style="margin-bottom: 30px;">
         <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="following.recommendations">Recommended for You</h3>
@@ -5079,25 +5136,200 @@ async function loadUserFollowers(userId) {
 
 
 
-
-
-async function followUser(userId) {
+async function followUser(userId, note = '', trigger = false) {
     try {
+        // Always send a JSON body
+        const body = {};
+        if (note) body.note = note;
+        if (trigger) body.trigger = trigger;
+
         const response = await fetch(`/api/follow/${userId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
+            body: JSON.stringify(body),  // Always send JSON body
             credentials: 'include'
         });
 
         if (!response.ok) throw new Error('Failed to follow user');
         showNotification('Successfully followed user', 'success');
+
+        // Refresh following list if visible
+        if (typeof loadFollowing === 'function') {
+            await loadFollowing();
+        }
+
+        return true;
     } catch (error) {
         console.error('Error following user:', error);
         showNotification('Failed to follow user', 'error');
+        return false;
     }
 }
+
+
+async function followUserWithNote(userId, username) {
+    // Create modal for follow options
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+
+    modal.innerHTML = `
+        <div class="modal-content" style="
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        ">
+            <h3 style="margin-top: 0;">Follow ${username}</h3>
+            <div style="margin: 1rem 0;">
+                <label style="display: block; margin-bottom: 0.5rem;">Add a note (optional):</label>
+                <textarea id="followNote" style="
+                    width: 100%;
+                    min-height: 80px;
+                    padding: 0.5rem;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    resize: vertical;
+                " placeholder="Say something nice..."></textarea>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                <button class="btn-primary" onclick="confirmFollowUser(${userId}, '${username}')">Follow</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+async function confirmFollowUser(userId, username) {
+    const note = document.getElementById('followNote')?.value || '';
+    const modal = document.querySelector('.modal-overlay');
+
+    const success = await followUser(userId, note, false);
+    if (success && modal) {
+        modal.remove();
+    }
+}
+
+
+
+
+
+async function searchUsersToFollow() {
+    const searchInput = document.getElementById('followSearchInput');
+    const resultsContainer = document.getElementById('followSearchResults');
+    const query = searchInput.value.trim();
+
+    if (!query || query.length < 2) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/users/search?q=' + encodeURIComponent(query), {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+
+        const data = await response.json();
+        const users = data.users || [];
+
+        if (users.length === 0) {
+            resultsContainer.innerHTML = `
+                <p style="text-align: center; color: #999; padding: 1rem;">
+                    No users found matching "${query}"
+                </p>
+            `;
+            resultsContainer.style.display = 'block';
+            return;
+        }
+
+        // Display search results
+        resultsContainer.innerHTML = users.map(user => `
+            <div class="user-search-result" style="
+                display: flex;
+                align-items: center;
+                padding: 0.75rem;
+                border-bottom: 1px solid #eee;
+                cursor: pointer;
+                transition: background 0.2s;
+            " onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='white'">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background: ${user.avatar_url || '#6B46C1'};
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    margin-right: 1rem;
+                ">
+                    ${user.username.charAt(0).toUpperCase()}
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 500;">${user.username}</div>
+                    ${user.bio ? `<div style="font-size: 0.875rem; color: #666;">${user.bio.slice(0, 50)}...</div>` : ''}
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); followUser(${user.id}); this.disabled=true; this.textContent='Following'">
+                        Follow
+                    </button>
+                    <button class="btn-primary btn-sm" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')">
+                        Follow with Note
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        resultsContainer.style.display = 'block';
+
+    } catch (error) {
+        console.error('Search error:', error);
+        resultsContainer.innerHTML = `
+            <p style="text-align: center; color: #e74c3c; padding: 1rem;">
+                Search failed. Please try again.
+            </p>
+        `;
+        resultsContainer.style.display = 'block';
+    }
+}
+
+// Clear search results when clicking outside
+document.addEventListener('click', (e) => {
+    const searchContainer = document.getElementById('followSearchResults');
+    const searchInput = document.getElementById('followSearchInput');
+    if (searchContainer && !searchContainer.contains(e.target) && e.target !== searchInput) {
+        searchContainer.style.display = 'none';
+    }
+});
+
+
 
 async function unfollowUser(userId) {
     try {
