@@ -7,6 +7,7 @@ Auto-migrates on startup for seamless deployment
 
 import os
 import sys
+import traceback
 import json
 import uuid
 import redis
@@ -5628,18 +5629,19 @@ def user_city():
 # =====================
 # FOLLOWING/FOLLOWERS ROUTES
 # =====================
-
 @app.route('/api/follow/<int:user_id>', methods=['POST'])
 @login_required
 def follow_user(user_id):
-    """Follow another user with optional note"""
+    """Follow another user with optional note and trigger"""
     try:
         current_user_id = session.get('user_id')
         current_user = db.session.get(User, current_user_id)
         user_to_follow = db.session.get(User, user_id)
 
-        data = request.get_json() or {}
+        # Use get_json(silent=True) to handle missing JSON body
+        data = request.get_json(silent=True) or {}
         follow_note = data.get('note', '').strip()[:300] if data else ''
+        follow_trigger = data.get('trigger', False) if data else False
 
         if not user_to_follow:
             return jsonify({'error': 'User not found'}), 404
@@ -5647,12 +5649,40 @@ def follow_user(user_id):
         if current_user_id == user_id:
             return jsonify({'error': 'Cannot follow yourself'}), 400
 
+        # Check if already following
+        existing = Follow.query.filter_by(
+            follower_id=current_user_id,
+            followed_id=user_id
+        ).first()
+
+        if existing:
+            # Update existing follow
+            existing.follow_note = follow_note
+            # Add trigger support if your Follow model has this field
+            if hasattr(existing, 'follow_trigger'):
+                existing.follow_trigger = follow_trigger
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Follow updated'}), 200
+
+        # Create new follow
         current_user.follow(user_to_follow, note=follow_note)
+
+        # If you have a follow_trigger column, update it here:
+        # follow = Follow.query.filter_by(
+        #     follower_id=current_user_id,
+        #     followed_id=user_id
+        # ).first()
+        # if follow and hasattr(follow, 'follow_trigger'):
+        #     follow.follow_trigger = follow_trigger
+
         db.session.commit()
 
+        # Create alert for followed user
         alert_content = 'You have a new follower!'
         if follow_note:
             alert_content += f' They said: "{follow_note}"'
+        if follow_trigger:
+            alert_content += ' (Following your parameters)'
 
         alert = Alert(
             user_id=user_id,
@@ -5676,6 +5706,7 @@ def follow_user(user_id):
 
     except Exception as e:
         logger.error(f"Follow error: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({'error': 'Failed to follow user'}), 500
 
@@ -5776,44 +5807,6 @@ def get_user_parameters_for_triggers(user_id):
         return jsonify({'error': 'Failed to load parameters'}), 500
 
 
-@app.route('/api/follow/<int:user_id>', methods=['POST'])
-@login_required
-def follow_user_with_note(user_id):
-    """Follow a user with optional note"""
-    try:
-        follower_id = session.get('user_id')
-        data = request.json or {}
-        note = data.get('note', '')[:300]
-
-        if follower_id == user_id:
-            return jsonify({'error': 'Cannot follow yourself'}), 400
-
-        # Check if already following
-        existing = Follow.query.filter_by(
-            follower_id=follower_id,
-            followed_id=user_id
-        ).first()
-
-        if existing:
-            existing.follow_note = note
-            db.session.commit()
-            return jsonify({'success': True, 'message': 'Note updated'}), 200
-
-        # Create new follow
-        follow = Follow(
-            follower_id=follower_id,
-            followed_id=user_id,
-            follow_note=note
-        )
-        db.session.add(follow)
-        db.session.commit()
-
-        return jsonify({'success': True}), 200
-
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error following user with note: {e}")
-        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/followers')
