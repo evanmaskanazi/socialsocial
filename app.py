@@ -5696,8 +5696,7 @@ def follow_user(user_id):
             message = Message(
                 sender_id=current_user_id,
                 recipient_id=user_id,
-                content=f"Follow note: {follow_note}",
-                message_type='follow_note'
+                content=f"Follow note: {follow_note}"
             )
             db.session.add(message)
 
