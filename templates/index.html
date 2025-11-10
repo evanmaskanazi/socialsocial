@@ -2263,19 +2263,6 @@
         <div id="followingList"></div>
     </div>
 
- <!-- ============= ADD TRIGGERS SECTION HERE ============= -->
-    <!-- Triggers Section - Add this RIGHT AFTER the Following List div above -->
-    <div id="triggersSection" style="margin-top: 30px; background: white; padding: 20px; border-radius: 15px;">
-        <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="triggers.title">Wellness Triggers</h3>
-        <p style="color: var(--gray); margin-bottom: 15px;" data-i18n="triggers.description">Set alerts when someone you follow shows concerning parameter patterns</p>
-
-        <div id="triggersList" style="margin-bottom: 20px;">
-            <!-- Triggers will load here -->
-        </div>
-
-        <button class="btn btn-primary" onclick="showAddTriggerModal()" data-i18n="triggers.add">Add Trigger</button>
-    </div>
-    <!-- ============= END TRIGGERS SECTION ============= -->
 
 </div>
 
@@ -5020,10 +5007,7 @@ async function loadFollowing() {
             }
         }
 
-        // NEW: Load triggers when following page loads
-        if (document.getElementById('triggersSection')) {
-            loadTriggers();
-        }
+
 
     } catch (error) {
         console.error('Error loading following:', error);
@@ -5397,6 +5381,146 @@ async function createTrigger() {
     } catch (error) {
         console.error('Error creating trigger:', error);
         showNotification('Failed to create trigger', 'error');
+    }
+}
+
+
+// Function to show trigger modal for a specific user
+async function showAddTriggerModalForUser(targetUserId, targetUsername) {
+    // Create modal for this specific user
+    const existingModal = document.getElementById('addTriggerModal');
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'addTriggerModal';
+    modal.className = 'modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    `;
+
+    modal.innerHTML = `
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
+            <h3>Add Trigger for ${targetUsername}</h3>
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 5px;">Parameter:</label>
+                <select id="triggerParameter" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="mood">Mood</option>
+                    <option value="sleep_quality">Sleep Quality</option>
+                    <option value="physical_activity">Physical Activity</option>
+                    <option value="anxiety">Anxiety</option>
+                    <option value="energy">Energy</option>
+                </select>
+            </div>
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 5px;">Alert when:</label>
+                <select id="triggerOperator" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="less_than">Less than</option>
+                    <option value="greater_than">Greater than</option>
+                    <option value="equals">Equals</option>
+                </select>
+            </div>
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 5px;">Value (1-4):</label>
+                <input type="number" id="triggerThreshold" min="1" max="4" value="2"
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 5px;">For how many days (optional):</label>
+                <input type="number" id="triggerDays" min="1" max="30"
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                       placeholder="Leave blank for single occurrence">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="document.getElementById('addTriggerModal').remove()">
+                    Cancel
+                </button>
+                <button class="btn btn-primary" onclick="createTriggerForUser(${targetUserId})">
+                    Create Trigger
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+}
+
+async function createTriggerForUser(targetId) {
+    const parameter = document.getElementById('triggerParameter').value;
+    const operator = document.getElementById('triggerOperator').value;
+    const threshold = document.getElementById('triggerThreshold').value;
+    const days = document.getElementById('triggerDays').value;
+
+    try {
+        const body = {
+            target_id: parseInt(targetId),
+            parameter: parameter,
+            operator: operator,
+            threshold: parseInt(threshold)
+        };
+
+        if (days) {
+            body.days = parseInt(days);
+        }
+
+        const response = await fetch('/api/triggers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body),
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to create trigger');
+
+        showNotification('Trigger created successfully', 'success');
+        document.getElementById('addTriggerModal').remove();
+        // Reload triggers in the modal
+        loadTriggersForUser(targetId);
+    } catch (error) {
+        console.error('Error creating trigger:', error);
+        showNotification('Failed to create trigger', 'error');
+    }
+}
+
+async function loadTriggersForUser(userId) {
+    try {
+        const response = await fetch(`/api/triggers?target_id=${userId}`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to load triggers');
+
+        const data = await response.json();
+        const container = document.getElementById('modalTriggersList');
+
+        if (!container) return;
+
+        if (!data.triggers || data.triggers.length === 0) {
+            container.innerHTML = '<p style="color: #666; font-size: 0.9rem;">No triggers set for this user</p>';
+            return;
+        }
+
+        container.innerHTML = data.triggers.map(trigger => `
+            <div style="padding: 10px; background: white; border-radius: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span>${trigger.parameter}: ${trigger.operator} ${trigger.threshold}</span>
+                <button class="btn btn-danger" onclick="deleteTrigger(${trigger.id}); setTimeout(() => loadTriggersForUser(${userId}), 500);"
+                        style="padding: 4px 8px; font-size: 0.8rem;">
+                    Remove
+                </button>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading triggers:', error);
     }
 }
 
@@ -5815,6 +5939,21 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                     <span class="close" onclick="closeUserParametersModal()">&times;</span>
                 </div>
                 <div class="modal-body">
+
+                    <!-- Triggers Section (only shown if following this user) -->
+                    ${userId && userId !== currentUserId ? `
+                    <div id="triggersSection" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h3 style="color: var(--primary); margin: 0 0 10px 0; font-size: 1.1rem;">Set Alert Triggers</h3>
+                        <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 15px;">Get notified when ${escapeHtml(username)}'s wellness parameters are concerning</p>
+                        <div id="modalTriggersList" style="margin-bottom: 10px;">
+                            <p style="color: #666;">Loading triggers...</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="showAddTriggerModalForUser(${userId}, '${escapeHtml(username)}')" style="padding: 8px 16px; font-size: 0.9rem;">
+                            Add Trigger
+                        </button>
+                    </div>
+                    ` : ''}
+
                     <p style="color: #666; margin-bottom: 20px;">
                         ${showingDataText} ${formatDate(startDate)} ${toText} ${formatDate(endDate)}
                         <br><small>(${parameters.length} ${parameters.length === 1 ? entryText : entriesText})</small>
@@ -5827,6 +5966,12 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
 
     console.log('[DEBUG] Inserting modal HTML');
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Load triggers if viewing another user
+    if (userId && userId !== currentUserId) {
+        setTimeout(() => loadTriggersForUser(userId), 100);
+    }
+
 
     const modal = document.getElementById('userParametersModal');
     console.log('[DEBUG] Modal element:', modal ? 'found' : 'NOT FOUND');
