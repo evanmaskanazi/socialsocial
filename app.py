@@ -5682,7 +5682,7 @@ def check_parameter_triggers():
                             return 'warning'
 
                     # ✅ MODIFIED: Pass privacy_attr parameter
-                    results = check_consecutive_pattern('energy_level', 'energy_privacy', energy_condition,
+                    results = check_consecutive_pattern('energy', 'energy_privacy', energy_condition,
                                                         energy_level)
                     alerts.extend(results)
 
