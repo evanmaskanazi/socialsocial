@@ -5754,7 +5754,7 @@ def check_parameter_triggers():
                     'anxiety': ('anxiety', 'anxiety_privacy'),
                     'sleep_quality': ('sleep_quality', 'sleep_quality_privacy'),
                     'physical_activity': ('physical_activity', 'physical_activity_privacy'),
-                    'energy': ('energy_level', 'energy_privacy')
+                    'energy': ('energy', 'energy_privacy')
                 }
 
                 if param_name not in param_mapping:
