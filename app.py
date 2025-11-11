@@ -1196,6 +1196,13 @@ def init_database():
             db.session.commit()
             logger.info("Database connection verified")
 
+            # Run one-time cleanup of stale trigger alerts
+            try:
+                removed = cleanup_all_stale_trigger_alerts()
+                logger.info(f"Startup cleanup: Removed {removed} stale trigger alerts")
+            except Exception as cleanup_err:
+                logger.warning(f"Cleanup warning (non-critical): {cleanup_err}")
+
         except Exception as e:
             logger.error(f"Database initialization error: {e}")
             # Try to create tables as fallback
@@ -4990,6 +4997,9 @@ def save_parameters():
         # Check triggers
         process_parameter_triggers(user_id, params)
 
+        # Cleanup stale trigger alerts based on new privacy settings
+        cleanup_stale_trigger_alerts_for_user(user_id)
+
         import random
         encouragements = [
             "Great job tracking your wellness today! 🌟",
@@ -5110,6 +5120,219 @@ def process_parameter_triggers(user_id, params):
     except Exception as e:
         logger.error(f"Error processing parameter triggers: {str(e)}")
         db.session.rollback()
+
+
+def cleanup_stale_trigger_alerts_for_user(affected_user_id):
+    """
+    Automatically clean up trigger alerts that are no longer valid due to privacy changes.
+    This runs whenever parameters are saved to ensure alerts respect current privacy settings.
+
+    Args:
+        affected_user_id: The user whose parameters were just updated
+    """
+    try:
+        # Helper function to check privacy permissions
+        def can_see_parameter(param_privacy, watcher_circle):
+            """Check if watcher can see this parameter based on privacy and circle level"""
+            if param_privacy == 'private':
+                return False
+            elif param_privacy == 'class_a':
+                return watcher_circle == 'class_a'
+            elif param_privacy == 'class_b':
+                return watcher_circle in ['class_b', 'class_a']
+            elif param_privacy == 'public':
+                return True
+            return False
+
+        # Get the user who was just updated
+        affected_user = User.query.get(affected_user_id)
+        if not affected_user:
+            return
+
+        # Find all watchers who have triggers for this user
+        triggers = ParameterTrigger.query.filter_by(watched_id=affected_user_id).all()
+
+        for trigger in triggers:
+            watcher_id = trigger.watcher_id
+
+            # Get watcher's circle level
+            watcher_circle = get_watcher_circle_level(affected_user_id, watcher_id)
+
+            if not watcher_circle:
+                # Watcher not in any circle - remove all their alerts for this user
+                alerts_to_remove = Alert.query.filter(
+                    Alert.user_id == watcher_id,
+                    Alert.alert_type == 'trigger',
+                    Alert.content.like(f"%{affected_user.username}%")
+                ).all()
+
+                for alert in alerts_to_remove:
+                    db.session.delete(alert)
+                    logger.info(f"Removed alert {alert.id}: watcher {watcher_id} not in any circle of user {affected_user_id}")
+                continue
+
+            # Get current privacy settings for this user
+            recent_param = SavedParameters.query.filter_by(
+                user_id=affected_user_id
+            ).order_by(SavedParameters.date.desc()).first()
+
+            if not recent_param:
+                continue
+
+            # Check each parameter type's privacy
+            param_keywords = {
+                'mood': 'mood_privacy',
+                'anxiety': 'anxiety_privacy',
+                'sleep_quality': 'sleep_quality_privacy',
+                'sleep quality': 'sleep_quality_privacy',
+                'physical_activity': 'physical_activity_privacy',
+                'physical activity': 'physical_activity_privacy',
+                'energy': 'energy_privacy'
+            }
+
+            # Get all trigger alerts for this watcher about this user
+            watcher_alerts = Alert.query.filter(
+                Alert.user_id == watcher_id,
+                Alert.alert_type == 'trigger',
+                Alert.content.like(f"%{affected_user.username}%")
+            ).all()
+
+            for alert in watcher_alerts:
+                content = alert.content or ""
+
+                # Find which parameter this alert is about
+                privacy_attr = None
+                for keyword, privacy_field in param_keywords.items():
+                    if keyword in content.lower():
+                        privacy_attr = privacy_field
+                        break
+
+                if not privacy_attr:
+                    continue
+
+                # Get current privacy setting for this parameter
+                param_privacy = getattr(recent_param, privacy_attr, 'private')
+
+                # Check if watcher should still see this alert
+                if not can_see_parameter(param_privacy, watcher_circle):
+                    db.session.delete(alert)
+                    logger.info(f"Auto-cleanup: Removed alert {alert.id} for watcher {watcher_id} - {param_privacy} vs {watcher_circle}")
+
+        db.session.commit()
+        logger.info(f"Auto-cleanup completed for user {affected_user_id}")
+
+    except Exception as e:
+        logger.error(f"Error in automatic cleanup: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+
+
+def cleanup_all_stale_trigger_alerts():
+    """
+    One-time cleanup function to remove all existing stale trigger alerts.
+    This should run on app startup after deployment to clean up historical alerts.
+    """
+    try:
+        logger.info("Starting global trigger alerts cleanup...")
+
+        # Helper function to check privacy permissions
+        def can_see_parameter(param_privacy, watcher_circle):
+            """Check if watcher can see this parameter based on privacy and circle level"""
+            if param_privacy == 'private':
+                return False
+            elif param_privacy == 'class_a':
+                return watcher_circle == 'class_a'
+            elif param_privacy == 'class_b':
+                return watcher_circle in ['class_b', 'class_a']
+            elif param_privacy == 'public':
+                return True
+            return False
+
+        # Get all trigger alerts
+        all_trigger_alerts = Alert.query.filter_by(alert_type='trigger').all()
+
+        total_checked = len(all_trigger_alerts)
+        removed_count = 0
+        kept_count = 0
+
+        param_keywords = {
+            'mood': 'mood_privacy',
+            'anxiety': 'anxiety_privacy',
+            'sleep_quality': 'sleep_quality_privacy',
+            'sleep quality': 'sleep_quality_privacy',
+            'physical_activity': 'physical_activity_privacy',
+            'physical activity': 'physical_activity_privacy',
+            'energy': 'energy_privacy'
+        }
+
+        for alert in all_trigger_alerts:
+            watcher_id = alert.user_id
+            content = alert.content or ""
+
+            # Parse username from content
+            if "'s " not in content:
+                kept_count += 1
+                continue
+
+            username = content.split("'s ")[0]
+            watched_user = User.query.filter_by(username=username).first()
+
+            if not watched_user:
+                kept_count += 1
+                continue
+
+            watched_id = watched_user.id
+
+            # Get watcher's circle level
+            watcher_circle = get_watcher_circle_level(watched_id, watcher_id)
+
+            if not watcher_circle:
+                # Watcher not in any circle - remove alert
+                db.session.delete(alert)
+                removed_count += 1
+                logger.info(f"Global cleanup: Removed alert {alert.id} - watcher {watcher_id} not in circles")
+                continue
+
+            # Find which parameter this alert is about
+            privacy_attr = None
+            for keyword, privacy_field in param_keywords.items():
+                if keyword in content.lower():
+                    privacy_attr = privacy_field
+                    break
+
+            if not privacy_attr:
+                kept_count += 1
+                continue
+
+            # Get current privacy settings
+            recent_param = SavedParameters.query.filter_by(
+                user_id=watched_id
+            ).order_by(SavedParameters.date.desc()).first()
+
+            if not recent_param:
+                kept_count += 1
+                continue
+
+            param_privacy = getattr(recent_param, privacy_attr, 'private')
+
+            # Check if watcher should see this alert
+            if not can_see_parameter(param_privacy, watcher_circle):
+                db.session.delete(alert)
+                removed_count += 1
+                logger.info(f"Global cleanup: Removed alert {alert.id} - privacy violation ({param_privacy} vs {watcher_circle})")
+            else:
+                kept_count += 1
+
+        db.session.commit()
+
+        logger.info(f"Global cleanup completed: Checked {total_checked}, Removed {removed_count}, Kept {kept_count}")
+        return removed_count
+
+    except Exception as e:
+        logger.error(f"Error in global cleanup: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+        return 0
 
 
 @app.route('/api/parameters/dates', methods=['GET'])
