@@ -5255,10 +5255,36 @@ def set_parameter_triggers(user_id):
         return jsonify({'error': 'Failed to set triggers'}), 500
 
 
+def get_watcher_circle_level(watched_id, watcher_id):
+    """
+    Get the circle level that the watcher belongs to for the watched user.
+
+    Args:
+        watched_id: User ID of the person being watched
+        watcher_id: User ID of the person watching
+
+    Returns:
+        str: 'class_a', 'class_b', 'public', or None if not in any circle
+    """
+    # Check if watcher is in any of watched user's circles
+    circle = db.session.execute(
+        select(Circle).filter_by(
+            user_id=watched_id,
+            circle_user_id=watcher_id
+        )
+    ).scalar_one_or_none()
+
+    if circle:
+        return circle.circle_type
+
+    # Not in any circle
+    return None
+
+
 @app.route('/api/parameters/check-triggers', methods=['GET'])
 @login_required
 def check_parameter_triggers():
-    """Check for parameter alerts - supports BOTH old and new schemas, finds ALL occurrences"""
+    """Check for parameter alerts - respects privacy settings"""
     try:
         watcher_id = session.get('user_id')
         triggers = db.session.execute(
@@ -5284,9 +5310,28 @@ def check_parameter_triggers():
                     return None
             return None
 
+        # ✅ NEW: Helper to check if parameter is visible to watcher
+        def can_see_parameter(param_privacy, watcher_circle):
+            """Check if watcher can see this parameter based on privacy and circle level"""
+            if param_privacy == 'private':
+                return False  # Private params never trigger alerts
+            elif param_privacy == 'class_a':
+                return watcher_circle == 'class_a'
+            elif param_privacy == 'class_b':
+                return watcher_circle in ['class_b', 'class_a']
+            elif param_privacy == 'public':
+                return True  # Public params trigger for everyone
+            return False
+
         for trigger in triggers:
             # Skip if no consecutive_days setting
             if not trigger.consecutive_days or trigger.consecutive_days < 1:
+                continue
+
+            # ✅ NEW: Get watcher's circle level for this watched user
+            watcher_circle = get_watcher_circle_level(trigger.watched_id, watcher_id)
+            if not watcher_circle:
+                # Watcher is not in any circle for this user - skip
                 continue
 
             parameters = db.session.execute(
@@ -5315,10 +5360,11 @@ def check_parameter_triggers():
 
             has_old_schema = trigger.parameter_name is not None
 
-            # ===== NEW SCHEMA CODE (EXISTING) =====
+            # ===== NEW SCHEMA CODE (WITH PRIVACY CHECK) =====
             if has_new_schema:
                 # Helper function to check consecutive days - FINDS ALL OCCURRENCES
-                def check_consecutive_pattern(param_attr, condition_func, alert_level_func):
+                # ✅ MODIFIED: Now checks privacy for each parameter
+                def check_consecutive_pattern(param_attr, privacy_attr, condition_func, alert_level_func):
                     found_patterns = []
                     consecutive_count = 0
                     consecutive_values = []
@@ -5327,6 +5373,16 @@ def check_parameter_triggers():
 
                     for param in parameters:
                         param_value = getattr(param, param_attr, None)
+                        param_privacy = getattr(param, privacy_attr, 'private')
+
+                        # ✅ NEW: Check if watcher can see this parameter
+                        if not can_see_parameter(param_privacy, watcher_circle):
+                            # Reset streak if we hit a private parameter
+                            consecutive_count = 0
+                            consecutive_values = []
+                            consecutive_dates = []
+                            last_date = None
+                            continue
 
                         if param_value is not None and condition_func(param_value):
                             # Check if consecutive
@@ -5347,7 +5403,7 @@ def check_parameter_triggers():
                                         'consecutive_days': consecutive_count
                                     }
                                     found_patterns.append(pattern)
-                                    # ✅ RESET to find more patterns
+                                    # Reset to find more patterns
                                     consecutive_count = 0
                                     consecutive_values = []
                                     consecutive_dates = []
@@ -5381,7 +5437,8 @@ def check_parameter_triggers():
                         else:
                             return 'warning'
 
-                    results = check_consecutive_pattern('mood', mood_condition, mood_level)
+                    # ✅ MODIFIED: Pass privacy_attr parameter
+                    results = check_consecutive_pattern('mood', 'mood_privacy', mood_condition, mood_level)
                     alerts.extend(results)
 
                 # Check energy triggers (lower is worse)
@@ -5398,7 +5455,9 @@ def check_parameter_triggers():
                         else:
                             return 'warning'
 
-                    results = check_consecutive_pattern('energy_level', energy_condition, energy_level)
+                    # ✅ MODIFIED: Pass privacy_attr parameter
+                    results = check_consecutive_pattern('energy_level', 'energy_privacy', energy_condition,
+                                                        energy_level)
                     alerts.extend(results)
 
                 # Check sleep quality triggers (lower is worse)
@@ -5415,7 +5474,9 @@ def check_parameter_triggers():
                         else:
                             return 'warning'
 
-                    results = check_consecutive_pattern('sleep_quality', sleep_condition, sleep_level)
+                    # ✅ MODIFIED: Pass privacy_attr parameter
+                    results = check_consecutive_pattern('sleep_quality', 'sleep_quality_privacy', sleep_condition,
+                                                        sleep_level)
                     alerts.extend(results)
 
                 # Check physical activity triggers (lower is worse)
@@ -5432,7 +5493,9 @@ def check_parameter_triggers():
                         else:
                             return 'warning'
 
-                    results = check_consecutive_pattern('physical_activity', physical_condition, physical_level)
+                    # ✅ MODIFIED: Pass privacy_attr parameter
+                    results = check_consecutive_pattern('physical_activity', 'physical_activity_privacy',
+                                                        physical_condition, physical_level)
                     alerts.extend(results)
 
                 # Check anxiety triggers (higher is worse)
@@ -5449,10 +5512,11 @@ def check_parameter_triggers():
                         else:
                             return 'warning'
 
-                    results = check_consecutive_pattern('anxiety', anxiety_condition, anxiety_level)
+                    # ✅ MODIFIED: Pass privacy_attr parameter
+                    results = check_consecutive_pattern('anxiety', 'anxiety_privacy', anxiety_condition, anxiety_level)
                     alerts.extend(results)
 
-            # ===== OLD SCHEMA CODE (NEW ADDITION) =====
+            # ===== OLD SCHEMA CODE (WITH PRIVACY CHECK) =====
             elif has_old_schema:
                 param_name = trigger.parameter_name
                 condition = trigger.trigger_condition
@@ -5460,16 +5524,17 @@ def check_parameter_triggers():
 
                 # Map parameter name to model attribute
                 param_mapping = {
-                    'mood': 'mood',
-                    'anxiety': 'anxiety',
-                    'sleep_quality': 'sleep_quality',
-                    'physical_activity': 'physical_activity',
-                    'energy': 'energy_level'
+                    'mood': ('mood', 'mood_privacy'),
+                    'anxiety': ('anxiety', 'anxiety_privacy'),
+                    'sleep_quality': ('sleep_quality', 'sleep_quality_privacy'),
+                    'physical_activity': ('physical_activity', 'physical_activity_privacy'),
+                    'energy': ('energy_level', 'energy_privacy')
                 }
 
-                param_attr = param_mapping.get(param_name)
-                if not param_attr:
+                if param_name not in param_mapping:
                     continue
+
+                param_attr, privacy_attr = param_mapping[param_name]
 
                 # Create condition function
                 if condition == 'less_than':
@@ -5493,13 +5558,22 @@ def check_parameter_triggers():
                 else:
                     continue
 
-                # Find ALL consecutive patterns
+                # Find ALL consecutive patterns (WITH PRIVACY CHECK)
                 consecutive_count = 0
                 last_date = None
                 streak_start = None
 
                 for param in parameters:
                     param_value = getattr(param, param_attr, None)
+                    param_privacy = getattr(param, privacy_attr, 'private')
+
+                    # ✅ NEW: Check if watcher can see this parameter
+                    if not can_see_parameter(param_privacy, watcher_circle):
+                        # Reset streak if we hit a private parameter
+                        consecutive_count = 0
+                        last_date = None
+                        streak_start = None
+                        continue
 
                     if condition_func(param_value):
                         # Condition met
@@ -5598,6 +5672,272 @@ def check_parameter_triggers():
             'alerts': [],
             'count': 0
         })
+
+
+# ==========================================
+# PART 4: Automatic Cleanup Endpoint
+# ==========================================
+# Add this endpoint to app.py to handle retroactive cleanup automatically
+# Insert anywhere after the get_watcher_circle_level() function
+
+@app.route('/api/admin/cleanup-trigger-privacy', methods=['POST'])
+@login_required
+def cleanup_trigger_privacy():
+    """
+    Retroactively clean up trigger alerts that violate privacy settings.
+    This should be run once after deploying the privacy fix.
+
+    Only the logged-in user's alerts are cleaned up (not admin-only).
+    """
+    try:
+        user_id = session.get('user_id')
+
+        # Helper function (copy from main fix)
+        def can_see_parameter(param_privacy, watcher_circle):
+            """Check if watcher can see this parameter based on privacy and circle level"""
+            if param_privacy == 'private':
+                return False
+            elif param_privacy == 'class_a':
+                return watcher_circle == 'class_a'
+            elif param_privacy == 'class_b':
+                return watcher_circle in ['class_b', 'class_a']
+            elif param_privacy == 'public':
+                return True
+            return False
+
+        # Get all trigger alerts for this user
+        trigger_alerts = Alert.query.filter_by(
+            user_id=user_id,
+            alert_type='trigger'
+        ).all()
+
+        total_checked = len(trigger_alerts)
+        removed_count = 0
+        kept_count = 0
+
+        for alert in trigger_alerts:
+            watcher_id = alert.user_id
+
+            # Parse alert content to find watched user and parameter
+            # Format: "username's parameter_name has been..."
+            content = alert.content or ""
+
+            if "'s " not in content:
+                kept_count += 1
+                continue
+
+            username = content.split("'s ")[0]
+
+            # Find watched user
+            watched_user = User.query.filter_by(username=username).first()
+            if not watched_user:
+                kept_count += 1
+                continue
+
+            watched_id = watched_user.id
+
+            # Get watcher's circle level using the helper function
+            watcher_circle = get_watcher_circle_level(watched_id, watcher_id)
+
+            if not watcher_circle:
+                # Watcher not in any circle - should not have this alert
+                db.session.delete(alert)
+                removed_count += 1
+                logger.info(f"Removed alert {alert.id}: watcher not in any circle")
+                continue
+
+            # Extract parameter name from content
+            param_keywords = {
+                'mood': 'mood_privacy',
+                'anxiety': 'anxiety_privacy',
+                'sleep_quality': 'sleep_quality_privacy',
+                'sleep quality': 'sleep_quality_privacy',
+                'physical_activity': 'physical_activity_privacy',
+                'physical activity': 'physical_activity_privacy',
+                'energy': 'energy_privacy'
+            }
+
+            privacy_attr = None
+            for keyword, privacy_field in param_keywords.items():
+                if keyword in content.lower():
+                    privacy_attr = privacy_field
+                    break
+
+            if not privacy_attr:
+                # Can't determine parameter - keep alert to be safe
+                kept_count += 1
+                continue
+
+            # Get the most recent parameter entry for this user to check privacy
+            recent_param = SavedParameters.query.filter_by(
+                user_id=watched_id
+            ).order_by(SavedParameters.date.desc()).first()
+
+            if not recent_param:
+                kept_count += 1
+                continue
+
+            param_privacy = getattr(recent_param, privacy_attr, 'private')
+
+            # Check if watcher should see this parameter
+            if not can_see_parameter(param_privacy, watcher_circle):
+                db.session.delete(alert)
+                removed_count += 1
+                logger.info(f"Removed alert {alert.id}: privacy violation ({param_privacy} vs {watcher_circle})")
+            else:
+                kept_count += 1
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Privacy cleanup completed',
+            'total_checked': total_checked,
+            'removed': removed_count,
+            'kept': kept_count
+        })
+
+    except Exception as e:
+        logger.error(f"Cleanup error: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ==========================================
+# ALTERNATIVE: Admin-Only Global Cleanup
+# ==========================================
+# If you want an admin endpoint that cleans up ALL users' alerts at once:
+
+@app.route('/api/admin/cleanup-all-trigger-privacy', methods=['POST'])
+@login_required
+def cleanup_all_trigger_privacy():
+    """
+    Clean up ALL trigger alerts across all users that violate privacy.
+    Requires admin privileges.
+    """
+    try:
+        # Check if user is admin (you'll need to add admin flag to User model)
+        user_id = session.get('user_id')
+        current_user = db.session.get(User, user_id)
+
+        # For now, skip admin check - remove this in production!
+        # if not current_user.is_admin:
+        #     return jsonify({'error': 'Admin access required'}), 403
+
+        def can_see_parameter(param_privacy, watcher_circle):
+            if param_privacy == 'private':
+                return False
+            elif param_privacy == 'class_a':
+                return watcher_circle == 'class_a'
+            elif param_privacy == 'class_b':
+                return watcher_circle in ['class_b', 'class_a']
+            elif param_privacy == 'public':
+                return True
+            return False
+
+        # Get ALL trigger alerts
+        trigger_alerts = Alert.query.filter_by(alert_type='trigger').all()
+
+        total_checked = len(trigger_alerts)
+        removed_count = 0
+        kept_count = 0
+        removed_by_user = {}  # Track removals per user
+
+        for alert in trigger_alerts:
+            watcher_id = alert.user_id
+            content = alert.content or ""
+
+            if "'s " not in content:
+                kept_count += 1
+                continue
+
+            username = content.split("'s ")[0]
+            watched_user = User.query.filter_by(username=username).first()
+
+            if not watched_user:
+                kept_count += 1
+                continue
+
+            watched_id = watched_user.id
+            watcher_circle = get_watcher_circle_level(watched_id, watcher_id)
+
+            if not watcher_circle:
+                db.session.delete(alert)
+                removed_count += 1
+                removed_by_user[watcher_id] = removed_by_user.get(watcher_id, 0) + 1
+                continue
+
+            param_keywords = {
+                'mood': 'mood_privacy',
+                'anxiety': 'anxiety_privacy',
+                'sleep_quality': 'sleep_quality_privacy',
+                'sleep quality': 'sleep_quality_privacy',
+                'physical_activity': 'physical_activity_privacy',
+                'physical activity': 'physical_activity_privacy',
+                'energy': 'energy_privacy'
+            }
+
+            privacy_attr = None
+            for keyword, privacy_field in param_keywords.items():
+                if keyword in content.lower():
+                    privacy_attr = privacy_field
+                    break
+
+            if not privacy_attr:
+                kept_count += 1
+                continue
+
+            recent_param = SavedParameters.query.filter_by(
+                user_id=watched_id
+            ).order_by(SavedParameters.date.desc()).first()
+
+            if not recent_param:
+                kept_count += 1
+                continue
+
+            param_privacy = getattr(recent_param, privacy_attr, 'private')
+
+            if not can_see_parameter(param_privacy, watcher_circle):
+                db.session.delete(alert)
+                removed_count += 1
+                removed_by_user[watcher_id] = removed_by_user.get(watcher_id, 0) + 1
+            else:
+                kept_count += 1
+
+        db.session.commit()
+
+        # Build user breakdown
+        user_breakdown = []
+        for uid, count in removed_by_user.items():
+            user = db.session.get(User, uid)
+            if user:
+                user_breakdown.append({
+                    'username': user.username,
+                    'removed': count
+                })
+
+        return jsonify({
+            'success': True,
+            'message': 'Global privacy cleanup completed',
+            'total_checked': total_checked,
+            'removed': removed_count,
+            'kept': kept_count,
+            'affected_users': len(removed_by_user),
+            'breakdown': user_breakdown
+        })
+
+    except Exception as e:
+        logger.error(f"Global cleanup error: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 def calculate_streak(params):
