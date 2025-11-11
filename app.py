@@ -5168,13 +5168,14 @@ def cleanup_stale_trigger_alerts_for_user(affected_user_id):
 
                 for alert in alerts_to_remove:
                     db.session.delete(alert)
-                    logger.info(f"Removed alert {alert.id}: watcher {watcher_id} not in any circle of user {affected_user_id}")
+                    logger.info(
+                        f"Removed alert {alert.id}: watcher {watcher_id} not in any circle of user {affected_user_id}")
                 continue
 
             # Get current privacy settings for this user
             recent_param = SavedParameters.query.filter_by(
                 user_id=affected_user_id
-            ).order_by(SavedParameters.date.desc()).first()
+            ).order_by(SavedParameters.updated_at.desc()).first()
 
             if not recent_param:
                 continue
@@ -5216,7 +5217,8 @@ def cleanup_stale_trigger_alerts_for_user(affected_user_id):
                 # Check if watcher should still see this alert
                 if not can_see_parameter(param_privacy, watcher_circle):
                     db.session.delete(alert)
-                    logger.info(f"Auto-cleanup: Removed alert {alert.id} for watcher {watcher_id} - {param_privacy} vs {watcher_circle}")
+                    logger.info(
+                        f"Auto-cleanup: Removed alert {alert.id} for watcher {watcher_id} - {param_privacy} vs {watcher_circle}")
 
         db.session.commit()
         logger.info(f"Auto-cleanup completed for user {affected_user_id}")
@@ -5307,7 +5309,7 @@ def cleanup_all_stale_trigger_alerts():
             # Get current privacy settings
             recent_param = SavedParameters.query.filter_by(
                 user_id=watched_id
-            ).order_by(SavedParameters.date.desc()).first()
+            ).order_by(SavedParameters.updated_at.desc()).first()
 
             if not recent_param:
                 kept_count += 1
@@ -5319,7 +5321,8 @@ def cleanup_all_stale_trigger_alerts():
             if not can_see_parameter(param_privacy, watcher_circle):
                 db.session.delete(alert)
                 removed_count += 1
-                logger.info(f"Global cleanup: Removed alert {alert.id} - privacy violation ({param_privacy} vs {watcher_circle})")
+                logger.info(
+                    f"Global cleanup: Removed alert {alert.id} - privacy violation ({param_privacy} vs {watcher_circle})")
             else:
                 kept_count += 1
 
@@ -5994,7 +5997,7 @@ def cleanup_trigger_privacy():
             # Get the most recent parameter entry for this user to check privacy
             recent_param = SavedParameters.query.filter_by(
                 user_id=watched_id
-            ).order_by(SavedParameters.date.desc()).first()
+            ).order_by(SavedParameters.updated_at.desc()).first()
 
             if not recent_param:
                 kept_count += 1
@@ -6116,7 +6119,7 @@ def cleanup_all_trigger_privacy():
 
             recent_param = SavedParameters.query.filter_by(
                 user_id=watched_id
-            ).order_by(SavedParameters.date.desc()).first()
+            ).order_by(SavedParameters.updated_at.desc()).first()
 
             if not recent_param:
                 kept_count += 1
@@ -6662,8 +6665,6 @@ def get_user_parameters_for_triggers(user_id):
     except Exception as e:
         logger.error(f"Error getting user parameters: {e}")
         return jsonify({'error': 'Failed to load parameters'}), 500
-
-
 
 
 @app.route('/api/followers')
