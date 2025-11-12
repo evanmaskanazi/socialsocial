@@ -845,18 +845,7 @@ function initializeCircles() {
     });
 }
 
-// Export for use in other files
-if (typeof window !== 'undefined') {
-    window.loadCircles = loadCircles;
-    window.initializeCircles = initializeCircles;
-    window.searchUsers = searchUsers;
-    window.addToCircle = addToCircle;
-    window.updatePrivacyDropdownTranslations = updatePrivacyDropdownTranslations;
-    window.removeFromCircle = removeFromCircle;
-}
-
-
-
+// Update all circle displays with current data
 function updateCirclesDisplay() {
     // Use the correct keys from backend
     if (window.circlesData) {
@@ -866,6 +855,7 @@ function updateCirclesDisplay() {
     }
 }
 
+// Update individual circle display
 function updateCircleDisplay(circleType, members, containerId, countId) {
     const container = document.getElementById(containerId);
     const count = document.getElementById(countId);
@@ -897,6 +887,16 @@ function updateCircleDisplay(circleType, members, containerId, countId) {
     }
 }
 
+// Export for use in other files
+if (typeof window !== 'undefined') {
+    window.loadCircles = loadCircles;
+    window.initializeCircles = initializeCircles;
+    window.searchUsers = searchUsers;
+    window.addToCircle = addToCircle;
+    window.updatePrivacyDropdownTranslations = updatePrivacyDropdownTranslations;
+    window.removeFromCircle = removeFromCircle;
+    window.updateCirclesDisplay = updateCirclesDisplay;  // Export the display update function
+}
 
 
 async function addToCircle(userId, circleType, username) {
