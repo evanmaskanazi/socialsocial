@@ -32,7 +32,7 @@
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
     <script src="/static/js/i18n.js"></script>
-    <script src="/static/js/circles-messages.js?v=6.0"></script>
+    <script src="/static/js/circles-messages.js?v=7.0"></script>
     <script src="/static/js/feed-updates.js?v=3.0"></script>
 
     <script>
@@ -199,15 +199,21 @@ try {
                 window.i18n.applyLanguage(currentLang);
             }
 
-            // 10. Update circle displays (emojis + translations)
-            if (typeof updateCircleDisplay === 'function') {
-                updateCircleDisplay();
+            // 10. Update circle displays (member lists)
+            if (typeof updateCirclesDisplay === 'function') {
+                updateCirclesDisplay();
             }
-            if (typeof updateCircleDisplays === 'function') {
-                updateCircleDisplays();
-            }
+
+            // Update privacy dropdown translations
             if (typeof updatePrivacyDropdownTranslations === 'function') {
                 updatePrivacyDropdownTranslations();
+            }
+
+            // Force re-translation of ALL data-i18n elements (including circle titles)
+            if (window.i18n && window.i18n.applyLanguage) {
+                const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+                console.log('Final translation pass for language:', currentLang);
+                window.i18n.applyLanguage(currentLang);
             }
 
             // 11. Make visible
@@ -235,9 +241,9 @@ try {
                 window.i18n.applyLanguage(newLang);
             }
 
-            // Update displays
-            if (typeof updateCircleDisplays === 'function') {
-                updateCircleDisplays();
+            // Update circle displays and privacy dropdowns
+            if (typeof updateCirclesDisplay === 'function') {
+                updateCirclesDisplay();
             }
             if (typeof updatePrivacyDropdownTranslations === 'function') {
                 updatePrivacyDropdownTranslations();
