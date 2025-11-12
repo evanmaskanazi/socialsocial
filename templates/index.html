@@ -2394,7 +2394,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=4.0"></script>
+   <script src="/static/js/circles-messages.js?v=5.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -4368,7 +4368,7 @@ function showNotification(message, type = 'info') {
 
             // Show add/remove functionality for own circles
             showCircleEditControls();
-            
+
             // Load and show privacy settings for own circles
             await loadCirclesPrivacy();
             const visibilityContainer = document.getElementById('circleVisibilityContainer');
@@ -4402,7 +4402,7 @@ async function loadCirclesPrivacy() {
         const response = await fetch('/api/circles/privacy', {
             credentials: 'include'
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             const privacySelect = document.getElementById('circleVisibility');
@@ -4420,9 +4420,9 @@ async function updateCirclesPrivacy() {
     try {
         const privacySelect = document.getElementById('circleVisibility');
         if (!privacySelect) return;
-        
+
         const privacyLevel = privacySelect.value;
-        
+
         const response = await fetch('/api/circles/privacy', {
             method: 'POST',
             headers: {
@@ -4433,7 +4433,7 @@ async function updateCirclesPrivacy() {
                 privacy_level: privacyLevel
             })
         });
-        
+
         if (response.ok) {
             showNotification('Privacy settings updated successfully', 'success');
         } else {
@@ -6737,6 +6737,10 @@ async function loadUserCircles(userId) {
         const userSearch = document.querySelector('#circlesView .user-search');
         if (userSearch) userSearch.style.display = 'none';
 
+        // Hide the privacy selector (can't change their privacy settings)
+        const privacySection = document.querySelector('#circlesView .circle-privacy-section');
+        if (privacySection) privacySection.style.display = 'none';
+
         // FIXED: Add back button FIRST (before hiding other buttons)
         console.log('[DEBUG] Adding back to following button to circlesView');
         addBackToFollowingButton('circlesView');
@@ -6760,35 +6764,73 @@ async function loadUserCircles(userId) {
         }
 
         // Display the three circle types with their members
-        const generalContainer = document.getElementById('generalMembers');
-        const closeFriendsContainer = document.getElementById('closeFriendsMembers');
-        const familyContainer = document.getElementById('familyMembers');
-        const generalCount = document.getElementById('generalCount');
-        const closeFriendsCount = document.getElementById('closeFriendsCount');
-        const familyCount = document.getElementById('familyCount');
+        const generalContainer = document.getElementById('generalMembers') || document.getElementById('publicMembers');
+        const closeFriendsContainer = document.getElementById('closeFriendsMembers') || document.getElementById('class_bMembers');
+        const familyContainer = document.getElementById('familyMembers') || document.getElementById('class_aMembers');
+        const generalCount = document.getElementById('generalCount') || document.getElementById('publicCount');
+        const closeFriendsCount = document.getElementById('closeFriendsCount') || document.getElementById('class_bCount');
+        const familyCount = document.getElementById('familyCount') || document.getElementById('class_aCount');
 
-        // FIXED: Backend now returns {general: [...], close_friends: [...], family: [...]}
-        // Convert to the format this function expects
-         const generalCircle = {members: data.public || []};
-        const closeFriendsCircle = {members: data.class_b || []};
-        const familyCircle = {members: data.class_a || []};
+        // Check visibility settings returned from backend
+        // Backend should return: { public: [], class_b: [], class_a: [], visibility: {public: 'public', class_b: 'class_b', class_a: 'private'}, can_view: {public: true, class_b: true, class_a: false} }
+        const visibility = data.visibility || {};
+        const canView = data.can_view || {};
 
-        // Helper function to display members read-only (UNCHANGED)
-        function displayMembersReadOnly(container, countElement, circle) {
+        // Helper function to create "no permission" message with yellow lock
+        function createNoPermissionMessage() {
+            const t = (key, fallback) => {
+                return window.i18n && window.i18n.translate ? window.i18n.translate(key) : fallback;
+            };
+
+            return `
+                <div class="empty-state">
+                    <div class="empty-state-icon" style="font-size: 4em;">🔒</div>
+                    <p data-i18n="circles.no_permission" style="color: #8898aa; margin-top: 1em;">${t('circles.no_permission', 'You don\'t have permission to view these circles')}</p>
+                </div>`;
+        }
+
+        // Helper function to display members read-only OR no-permission message
+        function displayCircleWithPermission(container, countElement, members, hasPermission, circleType) {
             if (!container || !countElement) return;
 
-            const members = circle && circle.members ? circle.members : [];
+            if (!hasPermission) {
+                // User doesn't have permission - show yellow lock
+                container.innerHTML = createNoPermissionMessage();
+                countElement.textContent = '0';
+
+                // Apply translations if i18n is available
+                if (window.i18n && window.i18n.applyLanguage) {
+                    const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+                    window.i18n.applyLanguage(currentLang);
+                }
+                return;
+            }
+
+            // User has permission - show members
             countElement.textContent = members.length;
 
             if (members.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--gray);">No members yet</p>';
+                const t = (key, fallback) => {
+                    return window.i18n && window.i18n.translate ? window.i18n.translate(key) : fallback;
+                };
+
+                // Show appropriate empty state icon based on circle type
+                let emptyIcon = '👥';
+                if (circleType === 'class_b' || circleType === 'close_friends') emptyIcon = '❤️';
+                if (circleType === 'class_a' || circleType === 'family') emptyIcon = '👨‍👩‍👧‍👦';
+
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">${emptyIcon}</div>
+                        <p style="color: #8898aa;">${t('circles.no_members', 'No members yet')}</p>
+                    </div>`;
             } else {
                 container.innerHTML = members.map(member => `
                     <div class="member-item" style="display: flex; align-items: center; padding: 0.75rem; background: white; border-radius: 8px; margin-bottom: 0.5rem;">
                         <div class="member-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: 600;">
-                            ${member.username ? member.username[0].toUpperCase() : 'U'}
+                            ${member.username ? member.username[0].toUpperCase() : member.display_name ? member.display_name[0].toUpperCase() : 'U'}
                         </div>
-                        <span style="font-weight: 500;">${member.username || 'Unknown'}</span>
+                        <span style="font-weight: 500;">${member.username || member.display_name || 'Unknown'}</span>
                     </div>
                 `).join('');
             }
@@ -6797,9 +6839,30 @@ async function loadUserCircles(userId) {
             container.querySelectorAll('button').forEach(btn => btn.remove());
         }
 
-        displayMembersReadOnly(generalContainer, generalCount, generalCircle);
-        displayMembersReadOnly(closeFriendsContainer, closeFriendsCount, closeFriendsCircle);
-        displayMembersReadOnly(familyContainer, familyCount, familyCircle);
+        // Display circles based on permissions
+        displayCircleWithPermission(
+            generalContainer,
+            generalCount,
+            data.public || [],
+            canView.public !== false, // Default to true if not specified
+            'public'
+        );
+
+        displayCircleWithPermission(
+            closeFriendsContainer,
+            closeFriendsCount,
+            data.class_b || [],
+            canView.class_b !== false, // Default to true if not specified
+            'class_b'
+        );
+
+        displayCircleWithPermission(
+            familyContainer,
+            familyCount,
+            data.class_a || [],
+            canView.class_a !== false, // Default to true if not specified
+            'class_a'
+        );
 
     } catch (error) {
         console.error('Error loading user circles:', error);
