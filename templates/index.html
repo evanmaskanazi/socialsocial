@@ -3348,12 +3348,16 @@ function handleCirclesClick(event) {
 
 
 
- function showView(viewName) {
-    // Only reset viewing mode when navigating to views that should go back to own account
+function showView(viewName) {
+    // NEW BEHAVIOR: When viewing another user, Home button returns to current user's account
+    // All other tabs (feed, profile, circles, following, followers) show the viewed user's data
+
+    // Reset viewing mode ONLY when clicking Home (to go back to own account)
     // Maintain viewing mode for: profile, feed, circles, parameters, tracking, following, followers
     const viewsToMaintainUser = ['profile', 'feed', 'circles', 'parameters', 'tracking', 'following', 'followers'];
 
     if (!viewsToMaintainUser.includes(viewName)) {
+        // User clicked Home or another reset view - go back to own account
         if (viewingUserId !== null) {
             viewingUserId = null;
             updateMessagesNavVisibility();
@@ -3387,7 +3391,11 @@ function handleCirclesClick(event) {
                     btn.style.display = '';
                 }
             });
-            // Remove back button if exists
+
+            // Remove ALL back to following buttons from all views
+            document.querySelectorAll('.back-to-following-btn').forEach(btn => btn.remove());
+
+            // Remove back button if exists (legacy code - covered by above)
             const backBtn = document.querySelector('.back-to-following-btn');
             if (backBtn) backBtn.remove();
 
@@ -4262,7 +4270,7 @@ function showNotification(message, type = 'info') {
         });
 
         // Circles Functions
-    async function loadCircles() {
+  async function loadCircles() {
     try {
         let response;
 
@@ -4287,6 +4295,19 @@ function showNotification(message, type = 'info') {
             hideCircleEditControls();
         } else {
             // Load own circles (editable)
+
+            // Ensure we're loading current user's circles
+            const header = document.querySelector('#circlesView h2');
+            if (header) {
+                header.textContent = 'Circles';
+            }
+
+            // Remove any existing back buttons (we're in our own circles view now)
+            const existingBackBtn = document.querySelector('#circlesView .back-to-following-btn');
+            if (existingBackBtn) {
+                existingBackBtn.remove();
+            }
+
             response = await apiCall('/circles');
             if (!response) return;
 
@@ -5115,6 +5136,18 @@ async function loadParametersForDate(dateStr) {
   // Following/Followers Functions
 async function loadFollowing() {
     try {
+        // Ensure we're loading current user's following (not viewing another user)
+        const header = document.querySelector('#followingView h2');
+        if (header) {
+            header.textContent = 'Following';
+        }
+
+        // Remove any existing back buttons (we're in our own following view now)
+        const existingBackBtn = document.querySelector('#followingView .back-to-following-btn');
+        if (existingBackBtn) {
+            existingBackBtn.remove();
+        }
+
         // Load people user is following
         const followingResponse = await fetch('/api/following', {
             headers: {
@@ -5277,8 +5310,20 @@ async function loadUserFollowing(userId) {
 
 
 
-    async function loadFollowers() {
+ async function loadFollowers() {
     try {
+        // Ensure we're loading current user's followers (not viewing another user)
+        const header = document.querySelector('#followersView h2');
+        if (header) {
+            header.textContent = 'Followers';
+        }
+
+        // Remove any existing back buttons (we're in our own followers view now)
+        const existingBackBtn = document.querySelector('#followersView .back-to-following-btn');
+        if (existingBackBtn) {
+            existingBackBtn.remove();
+        }
+
         const response = await fetch('/api/followers', {
             headers: {
                 'Content-Type': 'application/json'
@@ -6646,7 +6691,8 @@ function addBackToFollowingButton(viewId) {
     backButton.className = 'btn-secondary back-to-following-btn';
     backButton.textContent = '← Back to Following';
     backButton.style.marginBottom = '1rem';
-    backButton.onclick = () => {
+  backButton.onclick = () => {
+        // CRITICAL: Reset viewingUserId BEFORE calling showView
         viewingUserId = null;
 
         // Re-enable profile fields if in profile view
@@ -6671,9 +6717,6 @@ function addBackToFollowingButton(viewId) {
             if (saveButton) {
                 saveButton.style.display = '';
             }
-
-            // Reload current user's profile data
-            loadProfile();
         }
 
         // Show all edit buttons again
@@ -6684,7 +6727,8 @@ function addBackToFollowingButton(viewId) {
         document.querySelectorAll('form, .post-creation, .parameter-inputs').forEach(form => {
             form.style.display = '';
         });
-        // Reset headers
+
+        // Reset headers to default (will be updated by load functions)
         const profileHeader = document.querySelector('#profileView h2');
         if (profileHeader) profileHeader.textContent = 'Profile';
         const feedHeader = document.querySelector('#feedView h2');
@@ -6693,8 +6737,22 @@ function addBackToFollowingButton(viewId) {
         if (circlesHeader) circlesHeader.textContent = 'Circles';
         const parametersHeader = document.querySelector('#parametersView h2, #trackingView h2');
         if (parametersHeader) parametersHeader.textContent = 'Wellness Parameters';
+        const followingHeader = document.querySelector('#followingView h2');
+        if (followingHeader) followingHeader.textContent = 'Following';
+        const followersHeader = document.querySelector('#followersView h2');
+        if (followersHeader) followersHeader.textContent = 'Followers';
 
+        // Remove all back to following buttons from all views
+        document.querySelectorAll('.back-to-following-btn').forEach(btn => btn.remove());
+
+        // Show messages nav visibility (restore own account view)
+        updateMessagesNavVisibility();
+
+        // Navigate to following view and load current user's following list
         showView('following');
+
+        // Force reload of current user's following data
+        loadFollowing();
     };
 
     view.insertBefore(backButton, view.firstChild);
