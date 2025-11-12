@@ -213,6 +213,9 @@ const translations = {
 'circles.visibility_class_a': 'Class A (Family) 👨‍👩‍👧‍👦',
 'circles.visibility_private': 'Private 🔒',
 'circles.no_permission': 'You don\'t have permission to view this circle',
+'circles.title_public': 'Public',
+'circles.title_class_b': 'Class B (Friends)',
+'circles.title_class_a': 'Class A (Family)',
 
         'circles.title': 'My Circles',
         'circles.subtitle': 'Organize your connections into meaningful groups',
@@ -1178,6 +1181,9 @@ const translations = {
 'circles.circles_private': 'מעגלים מוגדרים כפרטיים',
 'circles.privacy_updated': 'הגדרת הפרטיות עודכנה',
 'error.updating_privacy': 'שגיאה בעדכון הפרטיות',
+'circles.title_public': 'ציבורי',
+'circles.title_class_b': 'מחלקה ב\' (חברים)',
+'circles.title_class_a': 'מחלקה א\' (משפחה)',
 
 
         // Messages page
@@ -1835,6 +1841,9 @@ const translations = {
         'circles.remove_confirm': 'إزالة هذا المستخدم من الدائرة؟',
         'circles.user_removed': 'تمت إزالة المستخدم من الدائرة',
         'circles.add_to': 'أضف إلى الدائرة...',
+        'circles.title_public': 'عام',
+'circles.title_class_b': 'الفئة ب (الأصدقاء)',
+'circles.title_class_a': 'الفئة أ (العائلة)',
 'circles.remove': 'إزالة',
 'circles.no_users': 'لم يتم العثور على مستخدمين',
 // In the 'ar' translations object:
@@ -2495,6 +2504,9 @@ const translations = {
         'circles.remove_confirm': 'Удалить этого пользователя из круга?',
         'circles.user_removed': 'Пользователь удалён из круга',
         'circles.add_to': 'Добавить в круг...',
+        'circles.title_public': 'Публичный',
+'circles.title_class_b': 'Класс Б (Друзья)',
+'circles.title_class_a': 'Класс А (Семья)',
 'circles.remove': 'Удалить',
 'circles.no_users': 'Пользователи не найдены',
 // In the 'ru' translations object:

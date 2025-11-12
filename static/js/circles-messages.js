@@ -387,7 +387,7 @@ window.circlesHTML = `
         <div class="circle-card" data-circle="general">
             <div class="circle-header">
                 <span class="circle-icon">👥</span>
-                <span class="circle-title" data-i18n="circles.public">Public</span>
+                <span class="circle-title" data-i18n="circles.title_public">Public</span>
                 <span class="circle-count" id="publicCount">0</span>
             </div>
             <div class="circle-members" id="publicMembers">
@@ -401,7 +401,7 @@ window.circlesHTML = `
         <div class="circle-card" data-circle="close_friends">
             <div class="circle-header">
                 <span class="circle-icon">❤️</span>
-                <span class="circle-title" data-i18n="circles.class_b">Class B (Friends)</span>
+                <span class="circle-title" data-i18n="circles.title_class_b">Class B (Friends)</span>
                 <span class="circle-count" id="class_bCount">0</span>
             </div>
             <div class="circle-members" id="class_bMembers">
@@ -415,7 +415,7 @@ window.circlesHTML = `
         <div class="circle-card" data-circle="family">
         <div class="circle-header">
                 <span class="circle-icon">👨‍👩‍👧‍👦</span>
-                <span class="circle-title" data-i18n="circles.class_a">Class A (Family)</span>
+                <span class="circle-title" data-i18n="circles.title_class_a">Class A (Family)</span>
                 <span class="circle-count" id="class_aCount">0</span>
             </div>
             <div class="circle-members" id="class_aMembers">
