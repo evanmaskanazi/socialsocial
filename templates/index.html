@@ -2394,7 +2394,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=5.0"></script>
+   <script src="/static/js/circles-messages.js?v=6.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -6839,12 +6839,16 @@ async function loadUserCircles(userId) {
             container.querySelectorAll('button').forEach(btn => btn.remove());
         }
 
-        // Display circles based on permissions
+      // Display circles based on permissions - strict checking
+        const hasPublicAccess = canView && canView.public === true;
+        const hasClassBAccess = canView && canView.class_b === true;
+        const hasClassAAccess = canView && canView.class_a === true;
+
         displayCircleWithPermission(
             generalContainer,
             generalCount,
             data.public || [],
-            canView.public !== false, // Default to true if not specified
+            hasPublicAccess,
             'public'
         );
 
@@ -6852,7 +6856,7 @@ async function loadUserCircles(userId) {
             closeFriendsContainer,
             closeFriendsCount,
             data.class_b || [],
-            canView.class_b !== false, // Default to true if not specified
+            hasClassBAccess,
             'class_b'
         );
 
@@ -6860,7 +6864,7 @@ async function loadUserCircles(userId) {
             familyContainer,
             familyCount,
             data.class_a || [],
-            canView.class_a !== false, // Default to true if not specified
+            hasClassAAccess,
             'class_a'
         );
 
