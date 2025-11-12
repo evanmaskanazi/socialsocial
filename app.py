@@ -3199,6 +3199,9 @@ def get_user_circles(user_id):
         if not is_following and user_id != current_user_id:
             return jsonify({'error': 'Must be following user to view circles'}), 403
 
+        # Initialize viewer_circle_type
+        viewer_circle_type = None
+
         # Check circles privacy settings if viewing another user's circles
         if user_id != current_user_id:
             target_user = db.session.get(User, user_id)
@@ -3215,7 +3218,6 @@ def get_user_circles(user_id):
                 )
             ).scalars().first()
 
-            viewer_circle_type = None
             if viewer_circle:
                 type_mapping_check = {
                     'general': 'public',
@@ -3227,7 +3229,7 @@ def get_user_circles(user_id):
                 }
                 viewer_circle_type = type_mapping_check.get(viewer_circle.circle_type, 'public')
 
-            # Apply privacy filtering
+            # Apply privacy filtering - OLD BEHAVIOR (all or nothing)
             if privacy_level == 'private':
                 return jsonify({
                     'private': True,
@@ -3235,6 +3237,7 @@ def get_user_circles(user_id):
                     'public': [],
                     'class_b': [],
                     'class_a': [],
+                    'can_view': {'public': False, 'class_b': False, 'class_a': False},
                     'viewer_circle_type': viewer_circle_type
                 })
 
@@ -3245,6 +3248,7 @@ def get_user_circles(user_id):
                     'public': [],
                     'class_b': [],
                     'class_a': [],
+                    'can_view': {'public': False, 'class_b': False, 'class_a': False},
                     'viewer_circle_type': viewer_circle_type
                 })
 
@@ -3255,6 +3259,7 @@ def get_user_circles(user_id):
                     'public': [],
                     'class_b': [],
                     'class_a': [],
+                    'can_view': {'public': False, 'class_b': False, 'class_a': False},
                     'viewer_circle_type': viewer_circle_type
                 })
 
@@ -3292,6 +3297,21 @@ def get_user_circles(user_id):
                 circle_type = type_mapping.get(circle.circle_type, circle.circle_type)
                 if circle_type in result:
                     result[circle_type].append(user_info)
+
+        # Add permission flags for frontend
+        # When viewing another user's circles, determine what the viewer can see
+        can_view = {
+            'public': True,
+            'class_b': True,
+            'class_a': True
+        }
+
+        # If viewing another user (not self), we already checked privacy above
+        # If we got here, user has permission to see everything
+        # (privacy checks already returned early with can_view: False if no access)
+
+        result['can_view'] = can_view
+        result['viewer_circle_type'] = viewer_circle_type
 
         return jsonify(result)
 
