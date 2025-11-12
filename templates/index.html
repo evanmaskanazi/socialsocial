@@ -2102,6 +2102,27 @@
                 <div id="circlesView" class="view hidden">
                     <h2 style="margin-bottom: 20px;" data-i18n="circles.title">Your Circles</h2>
 
+                    <!-- Circle Visibility Setting -->
+                    <div id="circleVisibilityContainer" style="margin-bottom: 20px; text-align: center;">
+                        <label for="circleVisibility" style="display: block; margin-bottom: 10px; font-weight: 600; color: var(--dark);">
+                            <span data-i18n="circles.visibility_label">Circle Visibility</span>
+                        </label>
+                        <select id="circleVisibility" style="
+                            padding: 10px 15px;
+                            border-radius: 8px;
+                            border: 2px solid var(--primary);
+                            background: white;
+                            font-size: 16px;
+                            cursor: pointer;
+                            min-width: 200px;
+                        " onchange="updateCirclesPrivacy()">
+                            <option value="private" data-i18n="circles.visibility_private">Private 🔒</option>
+                            <option value="public" data-i18n="circles.visibility_public">Public 🌍</option>
+                            <option value="class_b" data-i18n="circles.visibility_class_b">Class B (Friends) ❤️</option>
+                            <option value="class_a" data-i18n="circles.visibility_class_a">Class A (Family) 👨‍👩‍👧‍👦</option>
+                        </select>
+                    </div>
+
                     <div class="user-search">
                         <input type="text" class="search-input" id="userSearchInput" data-i18n="circles.search_placeholder" placeholder="Search users to add to circles..." onkeyup="searchUsers()">
                         <div class="search-results" id="searchResults"></div>
@@ -4347,6 +4368,13 @@ function showNotification(message, type = 'info') {
 
             // Show add/remove functionality for own circles
             showCircleEditControls();
+            
+            // Load and show privacy settings for own circles
+            await loadCirclesPrivacy();
+            const visibilityContainer = document.getElementById('circleVisibilityContainer');
+            if (visibilityContainer) {
+                visibilityContainer.style.display = 'block';
+            }
         }
 
         // Handle both old and new data structures
@@ -4367,12 +4395,63 @@ function showNotification(message, type = 'info') {
     } catch (error) {
         console.error('Failed to load circles:', error);
     }
+
+// Load circles privacy setting
+async function loadCirclesPrivacy() {
+    try {
+        const response = await fetch('/api/circles/privacy', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const privacySelect = document.getElementById('circleVisibility');
+            if (privacySelect) {
+                privacySelect.value = data.privacy || data.circles_privacy || 'private';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load circles privacy:', error);
+    }
+}
+
+// Update circles privacy setting
+async function updateCirclesPrivacy() {
+    try {
+        const privacySelect = document.getElementById('circleVisibility');
+        if (!privacySelect) return;
+        
+        const privacyLevel = privacySelect.value;
+        
+        const response = await fetch('/api/circles/privacy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                privacy_level: privacyLevel
+            })
+        });
+        
+        if (response.ok) {
+            showNotification('Privacy settings updated successfully', 'success');
+        } else {
+            showNotification('Failed to update privacy settings', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to update circles privacy:', error);
+        showNotification('Failed to update privacy settings', 'error');
+    }
+}
+
 }
 
  function hideCircleEditControls() {
     // Hide search box and add buttons
     const searchBox = document.getElementById('userSearchInput');
     const searchResults = document.getElementById('searchResults');
+    const visibilityContainer = document.getElementById('circleVisibilityContainer');
 
     if (searchBox) {
         searchBox.style.display = 'none';
@@ -4380,6 +4459,9 @@ function showNotification(message, type = 'info') {
     }
     if (searchResults) {
         searchResults.style.display = 'none';
+    }
+    if (visibilityContainer) {
+        visibilityContainer.style.display = 'none';
     }
 
     // Hide all remove buttons
