@@ -3349,6 +3349,7 @@ function handleCirclesClick(event) {
 
 
 function showView(viewName) {
+    console.log('[DEBUG] showView called:', viewName, 'viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
     // NEW BEHAVIOR: When viewing another user, Home button returns to current user's account
     // All other tabs (feed, profile, circles, following, followers) show the viewed user's data
 
@@ -6476,7 +6477,8 @@ async function loadUserFeed(userId) {
         const isOwnFeed = sessionData.user_id === userId;
 
         // Load the calendar for this user
-        window.viewingUserId = userId;
+        // Don't set window.viewingUserId here - use the global viewingUserId variable instead
+        // window.viewingUserId = userId;
         window.currentUserId = sessionData.user_id;
         initFeedCalendar(isOwnFeed ? null : userId);
 
@@ -6692,8 +6694,10 @@ function addBackToFollowingButton(viewId) {
     backButton.textContent = '← Back to Following';
     backButton.style.marginBottom = '1rem';
   backButton.onclick = () => {
+        console.log('[DEBUG] Back to Following clicked, resetting viewingUserId');
         // CRITICAL: Reset viewingUserId BEFORE calling showView
         viewingUserId = null;
+        window.viewingUserId = null;
 
         // Re-enable profile fields if in profile view
         if (viewId === 'profileView') {
