@@ -2971,7 +2971,13 @@ def profile():
             db.session.add(profile)
             db.session.commit()
 
+        # FIXED: Get username from User table to return in response
+        user = db.session.execute(
+            select(User).filter_by(id=user_id)
+        ).scalar_one_or_none()
+
         return jsonify({
+            'username': user.username if user else '',  # FIXED: Added username field
             'bio': profile.bio or '',
             'interests': profile.interests or '',
             'occupation': profile.occupation or '',
