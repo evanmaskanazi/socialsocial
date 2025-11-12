@@ -277,7 +277,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'Hello',
                 'request_text': 'Click the link below to sign in to TheraSocial:',
                 'button_text': 'Sign In',
-                'expire_text': 'This link will expire in 15 minutes.',
+                'expire_text': 'This link will expire in 5 years or until a new one is generated',
                 'ignore_text': 'If you did not request this, please ignore this email.'
             },
             'he': {
@@ -285,7 +285,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'שלום',
                 'request_text': 'לחץ על הקישור למטה כדי להתחבר:',
                 'button_text': 'התחבר',
-                'expire_text': 'קישור זה יפוג תוך 15 דקות.',
+                'expire_text': 'קישור זה יפוג תוקפו בעוד 5 שנים או עד שייווצר קישור חדש',
                 'ignore_text': 'אם לא ביקשת זאת, התעלם מאימייל זה.'
             },
             'ar': {
@@ -293,7 +293,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'مرحبا',
                 'request_text': 'انقر على الرابط أدناه لتسجيل الدخول:',
                 'button_text': 'تسجيل الدخول',
-                'expire_text': 'ستنتهي صلاحية هذا الرابط خلال 15 دقيقة.',
+                'expire_text': 'سينتهي هذا الرابط خلال 5 سنوات أو حتى يتم إنشاء رابط جديد',
                 'ignore_text': 'إذا لم تطلب هذا، تجاهل هذا البريد.'
             },
             'ru': {
@@ -301,7 +301,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'Здравствуйте',
                 'request_text': 'Нажмите на ссылку ниже для входа:',
                 'button_text': 'Войти',
-                'expire_text': 'Эта ссылка истечет через 15 минут.',
+                'expire_text': 'Эта ссылка истечет через 5 лет или пока не будет создана новая.',
                 'ignore_text': 'Если вы не запрашивали это, проигнорируйте.'
             }
         }
@@ -2550,7 +2550,7 @@ def request_magic_link():
 
         import secrets
         magic_token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(minutes=15)
+        expires_at = datetime.utcnow() + timedelta(days=1825)
 
         token_record = MagicLoginToken(
             user_id=user.id,
@@ -4817,6 +4817,169 @@ def save_feed_entry():
         logger.error(f"Feed save error: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to save feed'}), 500
+
+
+@app.route('/api/posts/<int:post_id>/like', methods=['POST'])
+@login_required
+def like_post(post_id):
+    """Toggle like on a post"""
+    try:
+        user_id = session.get('user_id')
+
+        # Check if post exists and user has access
+        post = db.session.get(Post, post_id)
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+
+        # Check if user already liked this post
+        existing_reaction = db.session.execute(
+            select(Reaction).filter_by(
+                post_id=post_id,
+                user_id=user_id,
+                type='like'
+            )
+        ).scalar_one_or_none()
+
+        if existing_reaction:
+            # Unlike - remove the reaction
+            db.session.delete(existing_reaction)
+            db.session.commit()
+
+            # Get updated count
+            likes_count = db.session.execute(
+                select(func.count(Reaction.id)).filter_by(
+                    post_id=post_id,
+                    type='like'
+                )
+            ).scalar()
+
+            return jsonify({
+                'success': True,
+                'liked': False,
+                'likes_count': likes_count
+            }), 200
+        else:
+            # Like - add the reaction
+            new_reaction = Reaction(
+                post_id=post_id,
+                user_id=user_id,
+                type='like'
+            )
+            db.session.add(new_reaction)
+            db.session.commit()
+
+            # Get updated count
+            likes_count = db.session.execute(
+                select(func.count(Reaction.id)).filter_by(
+                    post_id=post_id,
+                    type='like'
+                )
+            ).scalar()
+
+            return jsonify({
+                'success': True,
+                'liked': True,
+                'likes_count': likes_count
+            }), 200
+
+    except Exception as e:
+        logger.error(f"Error toggling like: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to toggle like'}), 500
+
+
+@app.route('/api/posts/<int:post_id>/comments', methods=['GET'])
+@login_required
+def get_post_comments(post_id):
+    """Get all comments for a post"""
+    try:
+        # Check if post exists
+        post = db.session.get(Post, post_id)
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+
+        # Get comments with author information
+        comments = db.session.execute(
+            select(Comment).filter_by(post_id=post_id).order_by(Comment.created_at.asc())
+        ).scalars().all()
+
+        comments_data = []
+        for comment in comments:
+            author = db.session.get(User, comment.user_id)
+            comments_data.append({
+                'id': comment.id,
+                'content': comment.content,
+                'created_at': comment.created_at.isoformat(),
+                'author': {
+                    'id': author.id,
+                    'username': author.username
+                }
+            })
+
+        return jsonify({'comments': comments_data}), 200
+
+    except Exception as e:
+        logger.error(f"Error getting comments: {e}")
+        return jsonify({'error': 'Failed to load comments'}), 500
+
+
+@app.route('/api/posts/<int:post_id>/comments', methods=['POST'])
+@login_required
+def add_comment(post_id):
+    """Add a comment to a post"""
+    try:
+        user_id = session.get('user_id')
+        data = request.json
+        content = data.get('content', '').strip()
+
+        if not content:
+            return jsonify({'error': 'Comment content required'}), 400
+
+        # Check if post exists
+        post = db.session.get(Post, post_id)
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+
+        # Create new comment
+        new_comment = Comment(
+            post_id=post_id,
+            user_id=user_id,
+            content=sanitize_input(content)
+        )
+        db.session.add(new_comment)
+        db.session.commit()
+
+        # Get author information
+        author = db.session.get(User, user_id)
+
+        # Get updated comment count
+        comments_count = db.session.execute(
+            select(func.count(Comment.id)).filter_by(post_id=post_id)
+        ).scalar()
+
+        return jsonify({
+            'success': True,
+            'comment': {
+                'id': new_comment.id,
+                'content': new_comment.content,
+                'created_at': new_comment.created_at.isoformat(),
+                'author': {
+                    'id': author.id,
+                    'username': author.username
+                }
+            },
+            'comments_count': comments_count
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error adding comment: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to add comment'}), 500
+
+
+
+
+
 
 
 @app.route('/api/feed/<date_str>')
