@@ -2583,15 +2583,16 @@ def verify_magic_link():
 
         token_record = db.session.execute(
             select(MagicLoginToken).filter_by(
-                token=magic_token,
-                used=False
+                token=magic_token
+                # Removed: used=False check - allow unlimited use
             )
         ).scalar_one_or_none()
 
         if not token_record or token_record.expires_at < datetime.utcnow():
             return jsonify({'error': 'Invalid or expired token'}), 400
 
-        token_record.used = True
+        # DO NOT mark as used - allow unlimited clicks until new token generated
+        # token_record.used = True  # COMMENTED OUT
         user = db.session.get(User, token_record.user_id)
 
         # Check if username needs confirmation (not if it's from email)
