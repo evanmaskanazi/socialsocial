@@ -3237,8 +3237,16 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 
   switch(view) {
                     case 'home':
-                        // Initialize home view
-                        initializeHomeView();
+                        // FIXED: If viewing another user, show their feed instead of static home
+                        // Static home page isn't user-specific, so redirect to their feed
+                        if (viewingUserId !== null && viewingUserId !== currentUserId) {
+                            console.log('[DEBUG] Home clicked while viewing user:', viewingUserId, '- loading their feed');
+                            loadUserFeed(viewingUserId);
+                        } else {
+                            // Initialize home view for own account
+                            console.log('[DEBUG] Home clicked - showing static home page');
+                            initializeHomeView();
+                        }
                         break;
                     case 'feed':
                         // Check if viewing another user
@@ -3333,16 +3341,11 @@ function handleCirclesClick(event) {
         event.preventDefault();
     }
 
-  console.log('[DEBUG] handleCirclesClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+    console.log('[DEBUG] handleCirclesClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
 
-    // Redirect to circles page with user_id if viewing someone else's profile
-    if (viewingUserId && viewingUserId !== currentUserId) {
-        console.log('[DEBUG] Redirecting to /circles with user_id:', viewingUserId);
-        window.location.href = `/circles?user_id=${viewingUserId}`;
-    } else {
-        console.log('[DEBUG] Redirecting to own /circles');
-        window.location.href = '/circles';
-    }
+    // FIXED: Use showView to stay on same page and maintain back button functionality
+    // Don't redirect to /circles page - stay on index.html so back button works
+    showView('circles');
 }
 
 
@@ -3353,9 +3356,10 @@ function showView(viewName) {
     // NEW BEHAVIOR: When viewing another user, Home button returns to current user's account
     // All other tabs (feed, profile, circles, following, followers) show the viewed user's data
 
-    // Reset viewing mode ONLY when clicking Home (to go back to own account)
-    // Maintain viewing mode for: profile, feed, circles, parameters, tracking, following, followers
-    const viewsToMaintainUser = ['profile', 'feed', 'circles', 'parameters', 'tracking', 'following', 'followers'];
+    // Reset viewing mode ONLY when explicitly going back (not maintained for any standard nav)
+    // Maintain viewing mode for: home, profile, feed, circles, parameters, tracking, following, followers
+    // This means when viewing another user, navigating to these views keeps you viewing that user
+    const viewsToMaintainUser = ['home', 'profile', 'feed', 'circles', 'parameters', 'tracking', 'following', 'followers'];
 
     if (!viewsToMaintainUser.includes(viewName)) {
         // User clicked Home or another reset view - go back to own account
@@ -4239,9 +4243,38 @@ function showNotification(message, type = 'info') {
 
        async function loadProfile() {
             viewingUserId = null; // Reset when viewing own profile
+            console.log('[DEBUG] loadProfile called - loading current user profile');
             try {
                 const response = await apiCall('/profile');
                 if (!response) return;
+
+                console.log('[DEBUG] Profile response:', response);
+
+                // FIXED: Update profile header with username
+                const profileHeader = document.querySelector('#profileView h2');
+                if (profileHeader) {
+                    if (response.username) {
+                        profileHeader.textContent = `${response.username}'s Profile`;
+                        console.log('[DEBUG] Set profile header to:', response.username);
+                    } else {
+                        profileHeader.textContent = 'My Profile';
+                        console.log('[DEBUG] Set profile header to: My Profile (no username)');
+                    }
+                }
+
+                // FIXED: Update profile avatar and username display elements
+                const profileAvatar = document.getElementById('profileAvatar');
+                const profileUsername = document.getElementById('profileUsername');
+                if (response.username) {
+                    if (profileAvatar) {
+                        profileAvatar.textContent = response.username.charAt(0).toUpperCase();
+                        console.log('[DEBUG] Set profile avatar to:', response.username.charAt(0));
+                    }
+                    if (profileUsername) {
+                        profileUsername.textContent = response.username;
+                        console.log('[DEBUG] Set profile username to:', response.username);
+                    }
+                }
 
                 document.getElementById('profileBio').value = response.bio || '';
                 document.getElementById('profileInterests').value = response.interests || '';
@@ -6622,12 +6655,27 @@ async function loadUserCircles(userId) {
         const userSearch = document.querySelector('#circlesView .user-search');
         if (userSearch) userSearch.style.display = 'none';
 
-        // Hide all buttons (add, remove, etc)
+        // FIXED: Add back button FIRST (before hiding other buttons)
+        console.log('[DEBUG] Adding back to following button to circlesView');
+        addBackToFollowingButton('circlesView');
+
+        // NOW hide all OTHER buttons (add, remove, etc) but NOT the back button
+        console.log('[DEBUG] Hiding other buttons in circlesView');
         document.querySelectorAll('#circlesView button').forEach(btn => {
             if (!btn.classList.contains('back-to-following-btn')) {
                 btn.style.display = 'none';
             }
         });
+
+        // FIXED: Explicitly ensure back button is visible and properly styled
+        const backBtn = document.querySelector('#circlesView .back-to-following-btn');
+        if (backBtn) {
+            backBtn.style.display = 'block';
+            backBtn.style.visibility = 'visible';
+            console.log('[DEBUG] Back button made explicitly visible');
+        } else {
+            console.error('[ERROR] Back button not found after creation!');
+        }
 
         // Display the three circle types with their members
         const generalContainer = document.getElementById('generalMembers');
@@ -6670,9 +6718,6 @@ async function loadUserCircles(userId) {
         displayMembersReadOnly(generalContainer, generalCount, generalCircle);
         displayMembersReadOnly(closeFriendsContainer, closeFriendsCount, closeFriendsCircle);
         displayMembersReadOnly(familyContainer, familyCount, familyCircle);
-
-        // Add back button
-        addBackToFollowingButton('circlesView');
 
     } catch (error) {
         console.error('Error loading user circles:', error);
