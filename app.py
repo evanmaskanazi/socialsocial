@@ -3078,16 +3078,41 @@ def get_user_posts(user_id):
         # If viewing own posts, return all
         if user_id == current_user_id:
             posts = Post.query.filter_by(user_id=user_id).order_by(Post.created_at.desc()).all()
-            return jsonify({
-                'posts': [{
+
+            # Calculate likes and comments for each post
+            posts_data = []
+            for post in posts:
+                # Count likes from Reaction table
+                likes_count = db.session.execute(
+                    select(func.count(Reaction.id)).filter_by(post_id=post.id, type='like')
+                ).scalar() or 0
+
+                # Count comments
+                comments_count = db.session.execute(
+                    select(func.count(Comment.id)).filter_by(post_id=post.id)
+                ).scalar() or 0
+
+                # Check if current user liked this post
+                user_liked = db.session.execute(
+                    select(Reaction).filter_by(
+                        post_id=post.id,
+                        user_id=current_user_id,
+                        type='like'
+                    )
+                ).scalar_one_or_none() is not None
+
+                posts_data.append({
                     'id': post.id,
                     'content': post.content,
                     'created_at': post.created_at.isoformat() if post.created_at else None,
-                    'likes': post.likes or 0,
+                    'likes_count': likes_count,
+                    'comments_count': comments_count,
+                    'user_liked': user_liked,
                     'circle_id': post.circle_id,
                     'visibility': post.visibility
-                } for post in posts]
-            })
+                })
+
+            return jsonify({'posts': posts_data})
 
         # Check circle membership for viewing other users' posts
         membership = Circle.query.filter_by(
@@ -3111,16 +3136,40 @@ def get_user_posts(user_id):
             Post.circle_id.in_(visible_circle_ids)
         ).order_by(Post.created_at.desc()).all()
 
-        return jsonify({
-            'posts': [{
+        # Calculate likes and comments for each post
+        posts_data = []
+        for post in posts:
+            # Count likes from Reaction table
+            likes_count = db.session.execute(
+                select(func.count(Reaction.id)).filter_by(post_id=post.id, type='like')
+            ).scalar() or 0
+
+            # Count comments
+            comments_count = db.session.execute(
+                select(func.count(Comment.id)).filter_by(post_id=post.id)
+            ).scalar() or 0
+
+            # Check if current user liked this post
+            user_liked = db.session.execute(
+                select(Reaction).filter_by(
+                    post_id=post.id,
+                    user_id=current_user_id,
+                    type='like'
+                )
+            ).scalar_one_or_none() is not None
+
+            posts_data.append({
                 'id': post.id,
                 'content': post.content,
                 'created_at': post.created_at.isoformat() if post.created_at else None,
-                'likes': post.likes or 0,
+                'likes_count': likes_count,
+                'comments_count': comments_count,
+                'user_liked': user_liked,
                 'circle_id': post.circle_id,
                 'visibility': post.visibility
-            } for post in posts]
-        })
+            })
+
+        return jsonify({'posts': posts_data})
 
     except Exception as e:
         logger.error(f"Error getting user posts: {e}")
@@ -4676,6 +4725,7 @@ def get_user_feed_by_date(user_id, date):
         end_datetime = datetime.combine(feed_date, datetime.max.time())
 
         # If viewing own posts, return all for that date
+        # If viewing own posts, return all for that date
         if user_id == current_user_id:
             posts = Post.query.filter(
                 Post.user_id == user_id,
@@ -4690,16 +4740,40 @@ def get_user_feed_by_date(user_id, date):
                 None: 'private'
             }
 
-            return jsonify({
-                'posts': [{
+            # Calculate likes and comments for each post
+            posts_data = []
+            for post in posts:
+                # Count likes from Reaction table
+                likes_count = db.session.execute(
+                    select(func.count(Reaction.id)).filter_by(post_id=post.id, type='like')
+                ).scalar() or 0
+
+                # Count comments
+                comments_count = db.session.execute(
+                    select(func.count(Comment.id)).filter_by(post_id=post.id)
+                ).scalar() or 0
+
+                # Check if current user liked this post
+                user_liked = db.session.execute(
+                    select(Reaction).filter_by(
+                        post_id=post.id,
+                        user_id=current_user_id,
+                        type='like'
+                    )
+                ).scalar_one_or_none() is not None
+
+                posts_data.append({
                     'id': post.id,
                     'content': post.content,
                     'created_at': post.created_at.isoformat() if post.created_at else None,
                     'circle_id': post.circle_id,
-                    'likes': post.likes or 0,
+                    'likes_count': likes_count,
+                    'comments_count': comments_count,
+                    'user_liked': user_liked,
                     'visibility': post.visibility
-                } for post in posts]
-            })
+                })
+
+            return jsonify({'posts': posts_data})
 
         # Check if following this user
         is_following = Follow.query.filter_by(
@@ -4745,16 +4819,40 @@ def get_user_feed_by_date(user_id, date):
             None: 'private'
         }
 
-        return jsonify({
-            'posts': [{
+        # Calculate likes and comments for each post
+        posts_data = []
+        for post in posts:
+            # Count likes from Reaction table
+            likes_count = db.session.execute(
+                select(func.count(Reaction.id)).filter_by(post_id=post.id, type='like')
+            ).scalar() or 0
+
+            # Count comments
+            comments_count = db.session.execute(
+                select(func.count(Comment.id)).filter_by(post_id=post.id)
+            ).scalar() or 0
+
+            # Check if current user liked this post
+            user_liked = db.session.execute(
+                select(Reaction).filter_by(
+                    post_id=post.id,
+                    user_id=current_user_id,
+                    type='like'
+                )
+            ).scalar_one_or_none() is not None
+
+            posts_data.append({
                 'id': post.id,
                 'content': post.content,
                 'created_at': post.created_at.isoformat() if post.created_at else None,
                 'circle_id': post.circle_id,
-                'likes': post.likes or 0,
+                'likes_count': likes_count,
+                'comments_count': comments_count,
+                'user_liked': user_liked,
                 'visibility': post.visibility
-            } for post in posts]
-        })
+            })
+
+        return jsonify({'posts': posts_data})
 
     except Exception as e:
         logger.error(f"Error getting user feed by date: {e}")
