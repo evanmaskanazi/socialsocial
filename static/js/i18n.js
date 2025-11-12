@@ -216,7 +216,7 @@ const translations = {
 'circles.title_public': 'Public',
 'circles.title_class_b': 'Class B (Friends)',
 'circles.title_class_a': 'Class A (Family)',
-
+'circles.your_access_level': 'Your Level of Access',
         'circles.title': 'My Circles',
         'circles.subtitle': 'Organize your connections into meaningful groups',
         'circles.search_placeholder': 'Search users by name or email...',
@@ -1158,6 +1158,7 @@ const translations = {
 'circles.visibility_public': 'ציבורי 🌍',
 'circles.visibility_class_b': 'מחלקה ב\' (חברים קרובים) 👥',
 'circles.visibility_class_a': 'מחלקה א\' (משפחה) 👨‍👩‍👧‍👦',
+'circles.your_access_level': 'רמת הגישה שלך',
 'circles.visibility_private': 'פרטי 🔒',
 'circles.no_permission': 'אין לך הרשאה לצפות במעגל זה',
        'circles.title': 'המעגלים שלי',
@@ -1825,6 +1826,7 @@ const translations = {
 'circles.visibility_public': 'عام 🌍',
 'circles.visibility_class_b': 'الفئة ب (الأصدقاء المقربين) 👥',
 'circles.visibility_class_a': 'الفئة أ (العائلة) 👨‍👩‍👧‍👦',
+'circles.your_access_level': 'مستوى وصولك',
 'circles.visibility_private': 'خاص 🔒',
 'circles.no_permission': 'ليس لديك إذن لعرض هذه الدائرة',
         'circles.title': 'دوائري',
@@ -2507,6 +2509,7 @@ const translations = {
         'circles.title_public': 'Публичный',
 'circles.title_class_b': 'Класс Б (Друзья)',
 'circles.title_class_a': 'Класс А (Семья)',
+'circles.your_access_level': 'Ваш уровень доступа',
 'circles.remove': 'Удалить',
 'circles.no_users': 'Пользователи не найдены',
 // In the 'ru' translations object:

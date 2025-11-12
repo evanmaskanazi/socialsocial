@@ -366,16 +366,16 @@ window.circlesHTML = `
             </select>
         </div>
 
-        <!-- Circle Privacy Selector -->
-        <div class="circle-privacy-section">
-            <label data-i18n="circles.privacy_label">Circle Visibility</label>
-           <select id="circlesPrivacySelect" class="privacy-select" onchange="updateCirclesPrivacy(this.value)">
-                <option value="public" data-i18n="privacy.public">Public</option>
-                <option value="class_b" data-i18n="privacy.class_b">Class B (Close Friends)</option>
-                <option value="class_a" data-i18n="privacy.class_a">Class A (Family)</option>
-                <option value="private" data-i18n="privacy.private">Private</option>
-            </select>
-        </div>
+      <!-- Circle Privacy Selector -->
+<div class="circle-privacy-section" id="circlesPrivacySelector" style="display: none;">
+    <label data-i18n="circles.privacy_label">Circle Visibility</label>
+    <select id="circlesPrivacySelect" class="privacy-select" onchange="updateCirclesPrivacy(this.value)">
+        <option value="public" data-i18n="privacy.public">Public</option>
+        <option value="class_b" data-i18n="privacy.class_b">Class B (Close Friends)</option>
+        <option value="class_a" data-i18n="privacy.class_a">Class A (Family)</option>
+        <option value="private" data-i18n="privacy.private">Private</option>
+    </select>
+</div>
 
         <div class="user-search">
         <input type="text" class="search-input" id="userSearchInput" data-i18n="circles.search_placeholder" placeholder="Search users...">
@@ -592,7 +592,7 @@ if (window.i18n && window.i18n.applyLanguage) {
 
             return;
 }
-        // Update display for Public - Backend NOW returns 'public'
+      // Update display for Public - Backend NOW returns 'public'
         const publicMembers = document.getElementById('publicMembers');
         if (publicMembers) {
             if (circles.public && circles.public.length > 0) {
@@ -605,7 +605,7 @@ if (window.i18n && window.i18n.applyLanguage) {
                 publicMembers.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">👥</div>
-                        <p>No members yet</p>
+                        <p data-i18n="circles.no_members">No members yet</p>
                     </div>`;
             }
             document.getElementById('publicCount').textContent = circles.public.length || 0;
@@ -624,7 +624,7 @@ if (window.i18n && window.i18n.applyLanguage) {
                 classBMembers.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">❤️</div>
-                        <p>No members yet</p>
+                        <p data-i18n="circles.no_members">No members yet</p>
                     </div>`;
             }
             document.getElementById('class_bCount').textContent = circles.class_b.length || 0;
@@ -643,10 +643,16 @@ if (window.i18n && window.i18n.applyLanguage) {
                 classAMembers.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">👨‍👩‍👧‍👦</div>
-                        <p>No members yet</p>
+                        <p data-i18n="circles.no_members">No members yet</p>
                     </div>`;
             }
             document.getElementById('class_aCount').textContent = circles.class_a.length || 0;
+        }
+
+        // Re-apply translations after modifying DOM
+        if (window.i18n && window.i18n.applyLanguage) {
+            const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+            window.i18n.applyLanguage(currentLang);
         }
 
     } catch (error) {
@@ -823,15 +829,22 @@ async function searchUsers() {
 
 
 // Initialize circles
-function initializeCircles() {
+// Initialize circles
+async function initializeCircles() {
     console.log('Initializing circles...');
     // Get user_id from URL if viewing another user's circles
     const urlParams = new URLSearchParams(window.location.search);
     const viewingUserId = urlParams.get('user_id');
 
     // Load circles privacy setting (with optional user_id)
-    loadCirclesPrivacy(viewingUserId);
-    loadCircles();
+    await loadCirclesPrivacy(viewingUserId);
+    await loadCircles();
+
+    // Re-apply translations after circles are loaded
+    if (window.i18n && window.i18n.applyLanguage) {
+        const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+        window.i18n.applyLanguage(currentLang);
+    }
 
     // Close search results when clicking outside
     document.addEventListener('click', (e) => {
@@ -855,6 +868,7 @@ function updateCirclesDisplay() {
     }
 }
 
+// Update individual circle display
 // Update individual circle display
 function updateCircleDisplay(circleType, members, containerId, countId) {
     const container = document.getElementById(containerId);
@@ -884,6 +898,12 @@ function updateCircleDisplay(circleType, members, containerId, countId) {
                 </div>
             `;
         }).filter(html => html).join('');
+    }
+
+    // Re-apply translations after DOM modification
+    if (window.i18n && window.i18n.applyLanguage) {
+        const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+        window.i18n.applyLanguage(currentLang);
     }
 }
 
@@ -972,6 +992,7 @@ function addCircleTranslations() {
             'circles.title_public': 'Public',
 'circles.title_class_b': 'Class B (Friends)',
 'circles.title_class_a': 'Class A (Family)',
+'circles.your_access_level': 'Your Level of Access',
             'privacy.public': 'Public',
             'privacy.class_b': 'Class B (Close Friends)',
             'privacy.class_a': 'Class A (Family)',
@@ -995,6 +1016,7 @@ function addCircleTranslations() {
             'circles.visibility_public': 'ציבורי',
             'circles.visibility_class_b': 'מחלקה ב\' (חברים קרובים)',
             'circles.visibility_class_a': 'מחלקה א\' (משפחה)',
+            'circles.your_access_level': 'רמת הגישה שלך',
             'circles.title_public': 'ציבורי',
 'circles.title_class_b': 'מחלקה ב\' (חברים)',
 'circles.title_class_a': 'מחלקה א\' (משפחה)',
@@ -1024,6 +1046,7 @@ function addCircleTranslations() {
             'circles.title_public': 'عام',
 'circles.title_class_b': 'الفئة ب (الأصدقاء)',
 'circles.title_class_a': 'الفئة أ (العائلة)',
+'circles.your_access_level': 'مستوى وصولك',
             'privacy.public': 'عام',
             'privacy.class_b': 'الفئة ب (الأصدقاء المقربين)',
             'privacy.class_a': 'الفئة أ (العائلة)',
@@ -1048,6 +1071,7 @@ function addCircleTranslations() {
             'circles.visibility_public': 'Публичный',
             'circles.visibility_class_b': 'Класс Б (Близкие друзья)',
             'circles.visibility_class_a': 'Класс А (Семья)',
+            'circles.your_access_level': 'Ваш уровень доступа',
             'circles.title_public': 'Публичный',
 'circles.title_class_b': 'Класс Б (Друзья)',
 'circles.title_class_a': 'Класс А (Семья)',
@@ -1688,11 +1712,23 @@ async function loadCirclesPrivacy(viewingUserId = null) {
             const data = await response.json();
             const privacyLevel = data.privacy || data.circles_privacy || 'private';
 
+            // Control visibility of entire privacy selector section
+            const privacySelector = document.getElementById('circlesPrivacySelector');
             const selector = document.getElementById('circlesPrivacySelect');
+
+            if (privacySelector) {
+                // Only show privacy selector if viewing own circles
+                if (viewingUserId) {
+                    privacySelector.style.display = 'none';
+                    console.log('[loadCirclesPrivacy] Hidden privacy selector (viewing another user)');
+                } else {
+                    privacySelector.style.display = 'block';
+                    console.log('[loadCirclesPrivacy] Showing privacy selector (own circles)');
+                }
+            }
+
             if (selector) {
                 selector.value = privacyLevel;
-                // Disable if viewing another user, enable if viewing own
-                selector.disabled = viewingUserId ? true : false;
             }
         }
     } catch (error) {
