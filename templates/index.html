@@ -4325,7 +4325,110 @@ function showNotification(message, type = 'info') {
         });
 
         // Circles Functions
-  async function loadCircles() {
+ // FIXED: Move loadCirclesPrivacy and updateCirclesPrivacy OUTSIDE of loadCircles()
+// These need to be at global scope to properly access viewingUserId
+
+// Load circles privacy setting
+async function loadCirclesPrivacy() {
+    try {
+        // Determine which user's privacy to load
+        const targetUserId = viewingUserId || currentUserId;
+        const isViewingOwnCircles = !viewingUserId || viewingUserId === currentUserId;
+
+        // Build URL with user_id parameter if viewing another user
+        const url = isViewingOwnCircles
+            ? '/api/circles/privacy'
+            : `/api/circles/privacy?user_id=${targetUserId}`;
+
+        console.log('[Privacy] Loading privacy for user:', targetUserId, 'isOwn:', isViewingOwnCircles);
+
+        const response = await fetch(url, {
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[Privacy] Received privacy data:', data);
+
+            const privacySelect = document.getElementById('circleVisibility');
+            if (privacySelect) {
+                // Set the privacy value (use circles_privacy or privacy)
+                const privacyValue = data.circles_privacy || data.privacy || 'class_a';
+                privacySelect.value = privacyValue;
+
+                if (isViewingOwnCircles) {
+                    // Viewing own circles - enable editing
+                    privacySelect.disabled = false;
+                    privacySelect.style.cursor = 'pointer';
+                    privacySelect.style.opacity = '1';
+                    privacySelect.title = '';
+                    console.log('[Privacy] Own circles - editable, value:', privacyValue);
+                } else {
+                    // Viewing another user's circles - show their setting but disable editing
+                    privacySelect.disabled = true;
+                    privacySelect.style.cursor = 'not-allowed';
+                    privacySelect.style.opacity = '0.6';
+                    privacySelect.title = "You cannot change another user's privacy settings";
+                    console.log('[Privacy] Other user circles - read-only, value:', privacyValue);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load circles privacy:', error);
+    }
+}
+
+// Update circles privacy setting
+async function updateCirclesPrivacy(passedValue) {
+    try {
+        // Accept parameter OR get from element
+        let privacyLevel = passedValue;
+
+        if (!privacyLevel) {
+            const privacySelect = document.getElementById('circleVisibility');
+            if (!privacySelect) {
+                console.error('Privacy select element not found');
+                return;
+            }
+            privacyLevel = privacySelect.value;
+        }
+
+        console.log('Updating privacy to:', privacyLevel);
+
+        if (!privacyLevel) {
+            console.error('No privacy level selected');
+            showNotification('Please select a privacy level', 'error');
+            return;
+        }
+
+        const response = await fetch('/api/circles/privacy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                privacy_level: privacyLevel,
+                privacy: privacyLevel,
+                circles_privacy: privacyLevel
+            })
+        });
+
+        if (response.ok) {
+            showNotification('Privacy settings updated successfully', 'success');
+        } else {
+            const errorData = await response.json();
+            console.error('Privacy update failed:', errorData);
+            showNotification('Failed to update privacy settings', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to update circles privacy:', error);
+        showNotification('Failed to update privacy settings', 'error');
+    }
+}
+
+// Now loadCircles() - with the nested functions removed
+async function loadCircles() {
     try {
         let response;
 
@@ -4395,106 +4498,6 @@ function showNotification(message, type = 'info') {
     } catch (error) {
         console.error('Failed to load circles:', error);
     }
-
-// Load circles privacy setting
-async function loadCirclesPrivacy() {
-    try {
-        // Determine which user's privacy to load
-        const targetUserId = viewingUserId || currentUserId;
-        const isViewingOwnCircles = !viewingUserId || viewingUserId === currentUserId;
-
-        // Build URL with user_id parameter if viewing another user
-        const url = isViewingOwnCircles
-            ? '/api/circles/privacy'
-            : `/api/circles/privacy?user_id=${targetUserId}`;
-
-        console.log('[Privacy] Loading privacy for user:', targetUserId, 'isOwn:', isViewingOwnCircles);
-
-        const response = await fetch(url, {
-            credentials: 'include'
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            console.log('[Privacy] Received privacy data:', data);
-
-            const privacySelect = document.getElementById('circleVisibility');
-            if (privacySelect) {
-                // Set the privacy value (use circles_privacy or privacy)
-                const privacyValue = data.circles_privacy || data.privacy || 'class_a';
-                privacySelect.value = privacyValue;
-
-                if (isViewingOwnCircles) {
-                    // Viewing own circles - enable editing
-                    privacySelect.disabled = false;
-                    privacySelect.style.cursor = 'pointer';
-                    privacySelect.style.opacity = '1';
-                    privacySelect.title = '';
-                    console.log('[Privacy] Own circles - editable, value:', privacyValue);
-                } else {
-                    // Viewing another user's circles - show their setting but disable editing
-                    privacySelect.disabled = true;
-                    privacySelect.style.cursor = 'not-allowed';
-                    privacySelect.style.opacity = '0.6';
-                    privacySelect.title = "You cannot change another user's privacy settings";
-                    console.log('[Privacy] Other user circles - read-only, value:', privacyValue);
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Failed to load circles privacy:', error);
-    }
-}
-
-// Update circles privacy setting
-async function updateCirclesPrivacy(passedValue) {
-    try {
-        // Accept parameter OR get from element
-        let privacyLevel = passedValue;
-
-        if (!privacyLevel) {
-            const privacySelect = document.getElementById('circleVisibility');
-            if (!privacySelect) {
-                console.error('Privacy select element not found');
-                return;
-            }
-            privacyLevel = privacySelect.value;
-        }
-
-        console.log('Updating privacy to:', privacyLevel); // Debug log
-
-        if (!privacyLevel) {
-            console.error('No privacy level selected');
-            showNotification('Please select a privacy level', 'error');
-            return;
-        }
-
-        const response = await fetch('/api/circles/privacy', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                privacy_level: privacyLevel,
-                privacy: privacyLevel,  // Send both for compatibility
-                circles_privacy: privacyLevel
-            })
-        });
-
-        if (response.ok) {
-            showNotification('Privacy settings updated successfully', 'success');
-        } else {
-            const errorData = await response.json();
-            console.error('Privacy update failed:', errorData);
-            showNotification('Failed to update privacy settings', 'error');
-        }
-    } catch (error) {
-        console.error('Failed to update circles privacy:', error);
-        showNotification('Failed to update privacy settings', 'error');
-    }
-}
-
 }
 
  function hideCircleEditControls() {
@@ -6789,7 +6792,7 @@ async function loadUserCircles(userId) {
 
         // Load and display the other user's privacy setting (read-only)
         await loadCirclesPrivacy();
-        
+
         // Ensure privacy dropdown container is visible
         const visibilityContainer = document.getElementById('circleVisibilityContainer');
         if (visibilityContainer) {
