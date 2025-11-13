@@ -6787,55 +6787,59 @@ async function loadUserCircles(userId) {
         const userSearch = document.querySelector('#circlesView .user-search');
         if (userSearch) userSearch.style.display = 'none';
 
-        // Hide the privacy selector (can't change their privacy settings)
-        // Hide the privacy selector (can't change their privacy settings)
-const privacySection = document.querySelector('#circlesView .circle-privacy-section');
-if (privacySection) privacySection.style.display = 'none';
+        // Load and display the other user's privacy setting (read-only)
+        await loadCirclesPrivacy();
+        
+        // Ensure privacy dropdown container is visible
+        const visibilityContainer = document.getElementById('circleVisibilityContainer');
+        if (visibilityContainer) {
+            visibilityContainer.style.display = 'block';
+        }
 
-// Show viewer's access level in a read-only display
-const circlesContainer = document.querySelector('#circlesView .circles-container') ||
-                         document.querySelector('#circlesView');
-if (circlesContainer && data.viewer_circle_type) {
-    // REMOVE ANY EXISTING INDICATORS TO PREVENT DUPLICATES
-    const existingIndicators = document.querySelectorAll('.viewer-access-indicator');
-    existingIndicators.forEach(indicator => indicator.remove());
+        // Show viewer's access level in a read-only display
+        const circlesContainer = document.querySelector('#circlesView .circles-container') ||
+                                 document.querySelector('#circlesView');
+        if (circlesContainer && data.viewer_circle_type) {
+            // REMOVE ANY EXISTING INDICATORS TO PREVENT DUPLICATES
+            const existingIndicators = document.querySelectorAll('.viewer-access-indicator');
+            existingIndicators.forEach(indicator => indicator.remove());
 
-    // Create read-only visibility indicator
-    const visibilityIndicator = document.createElement('div');
-    visibilityIndicator.className = 'viewer-access-indicator';
-    visibilityIndicator.style.cssText = 'max-width: 600px; margin: 0 auto 30px; padding: 15px 20px; background: #f0f8ff; border-radius: 10px; text-align: center; border: 2px solid #667eea;';
+            // Create read-only visibility indicator
+            const visibilityIndicator = document.createElement('div');
+            visibilityIndicator.className = 'viewer-access-indicator';
+            visibilityIndicator.style.cssText = 'max-width: 600px; margin: 0 auto 30px; padding: 15px 20px; background: #f0f8ff; border-radius: 10px; text-align: center; border: 2px solid #667eea;';
 
-    const t = (key, fallback) => {
-        return window.i18n && window.i18n.translate ? window.i18n.translate(key) : fallback;
-    };
+            const t = (key, fallback) => {
+                return window.i18n && window.i18n.translate ? window.i18n.translate(key) : fallback;
+            };
 
-    let accessLevelText = '';
-    let accessIcon = '';
+            let accessLevelText = '';
+            let accessIcon = '';
 
-    if (data.viewer_circle_type === 'class_a') {
-        accessLevelText = t('circles.title_class_a', 'Class A (Family)');
-        accessIcon = '👨‍👩‍👧‍👦';
-    } else if (data.viewer_circle_type === 'class_b') {
-        accessLevelText = t('circles.title_class_b', 'Class B (Friends)');
-        accessIcon = '❤️';
-    } else {
-        accessLevelText = t('circles.title_public', 'Public');
-        accessIcon = '👥';
-    }
+            if (data.viewer_circle_type === 'class_a') {
+                accessLevelText = t('circles.title_class_a', 'Class A (Family)');
+                accessIcon = '👨‍👩‍👧‍👦';
+            } else if (data.viewer_circle_type === 'class_b') {
+                accessLevelText = t('circles.title_class_b', 'Class B (Friends)');
+                accessIcon = '❤️';
+            } else {
+                accessLevelText = t('circles.title_public', 'Public');
+                accessIcon = '👥';
+            }
 
-    visibilityIndicator.innerHTML = `
-        <strong style="color: #667eea;">${t('circles.your_access_level', 'Your Access Level')}:</strong>
-        <span style="font-size: 1.2em;">${accessIcon} ${accessLevelText}</span>
-    `;
+            visibilityIndicator.innerHTML = `
+                <strong style="color: #667eea;">${t('circles.your_access_level', 'Your Access Level')}:</strong>
+                <span style="font-size: 1.2em;">${accessIcon} ${accessLevelText}</span>
+            `;
 
-    // Insert at the top of circles view, after the header
-    const header = circlesContainer.querySelector('h1, h2') || circlesContainer.firstChild;
-    if (header && header.nextSibling) {
-        circlesContainer.insertBefore(visibilityIndicator, header.nextSibling);
-    } else if (header) {
-        header.parentNode.insertBefore(visibilityIndicator, header.nextSibling);
-    }
-}
+            // Insert at the top of circles view, after the header
+            const header = circlesContainer.querySelector('h1, h2') || circlesContainer.firstChild;
+            if (header && header.nextSibling) {
+                circlesContainer.insertBefore(visibilityIndicator, header.nextSibling);
+            } else if (header) {
+                header.parentNode.insertBefore(visibilityIndicator, header.nextSibling);
+            }
+        }
 
         // FIXED: Add back button FIRST (before hiding other buttons)
         console.log('[DEBUG] Adding back to following button to circlesView');
