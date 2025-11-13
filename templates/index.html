@@ -2115,7 +2115,7 @@
                             font-size: 16px;
                             cursor: pointer;
                             min-width: 200px;
-                        " onchange="updateCirclesPrivacy(this.value)">
+                        " onchange="(function(el){ console.log('Privacy dropdown changed to:', el.value); updateCirclesPrivacy(el.value); })(this)">
                             <option value="private" data-i18n="circles.visibility_private">Private 🔒</option>
                             <option value="public" data-i18n="circles.visibility_public">Public 🌍</option>
                             <option value="class_b" data-i18n="circles.visibility_class_b">Class B (Friends) ❤️</option>
