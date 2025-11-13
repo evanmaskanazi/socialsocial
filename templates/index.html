@@ -2115,7 +2115,7 @@
                             font-size: 16px;
                             cursor: pointer;
                             min-width: 200px;
-                        " onchange="updateCirclesPrivacy()">
+                        " onchange="updateCirclesPrivacy(this.value)">
                             <option value="private" data-i18n="circles.visibility_private">Private 🔒</option>
                             <option value="public" data-i18n="circles.visibility_public">Public 🌍</option>
                             <option value="class_b" data-i18n="circles.visibility_class_b">Class B (Friends) ❤️</option>
@@ -4433,16 +4433,20 @@ async function loadCirclesPrivacy() {
 }
 
 // Update circles privacy setting
-async function updateCirclesPrivacy() {
+async function updateCirclesPrivacy(passedValue) {
     try {
-        // FIXED: Use correct element ID
-        const privacySelect = document.getElementById('circleVisibility');
-        if (!privacySelect) {
-            console.error('Privacy select element not found');
-            return;
+        // Accept parameter OR get from element
+        let privacyLevel = passedValue;
+
+        if (!privacyLevel) {
+            const privacySelect = document.getElementById('circleVisibility');
+            if (!privacySelect) {
+                console.error('Privacy select element not found');
+                return;
+            }
+            privacyLevel = privacySelect.value;
         }
 
-        const privacyLevel = privacySelect.value;
         console.log('Updating privacy to:', privacyLevel); // Debug log
 
         if (!privacyLevel) {
