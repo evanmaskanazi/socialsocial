@@ -4399,31 +4399,45 @@ function showNotification(message, type = 'info') {
 // Load circles privacy setting
 async function loadCirclesPrivacy() {
     try {
-        const response = await fetch('/api/circles/privacy', {
+        // Determine which user's privacy to load
+        const targetUserId = viewingUserId || currentUserId;
+        const isViewingOwnCircles = !viewingUserId || viewingUserId === currentUserId;
+
+        // Build URL with user_id parameter if viewing another user
+        const url = isViewingOwnCircles
+            ? '/api/circles/privacy'
+            : `/api/circles/privacy?user_id=${targetUserId}`;
+
+        console.log('[Privacy] Loading privacy for user:', targetUserId, 'isOwn:', isViewingOwnCircles);
+
+        const response = await fetch(url, {
             credentials: 'include'
         });
 
         if (response.ok) {
             const data = await response.json();
+            console.log('[Privacy] Received privacy data:', data);
+
             const privacySelect = document.getElementById('circleVisibility');
-           if (privacySelect) {
-                // Determine if viewing own circles or another user's
-                const isViewingOwnCircles = !viewingUserId || viewingUserId === currentUserId;
+            if (privacySelect) {
+                // Set the privacy value (use circles_privacy or privacy)
+                const privacyValue = data.circles_privacy || data.privacy || 'class_a';
+                privacySelect.value = privacyValue;
 
                 if (isViewingOwnCircles) {
                     // Viewing own circles - enable editing
-                    privacySelect.value = data.privacy || data.circles_privacy || 'class_a';
                     privacySelect.disabled = false;
                     privacySelect.style.cursor = 'pointer';
                     privacySelect.style.opacity = '1';
                     privacySelect.title = '';
+                    console.log('[Privacy] Own circles - editable, value:', privacyValue);
                 } else {
                     // Viewing another user's circles - show their setting but disable editing
-                    privacySelect.value = data.circles_privacy || 'class_a';
                     privacySelect.disabled = true;
                     privacySelect.style.cursor = 'not-allowed';
                     privacySelect.style.opacity = '0.6';
                     privacySelect.title = "You cannot change another user's privacy settings";
+                    console.log('[Privacy] Other user circles - read-only, value:', privacyValue);
                 }
             }
         }
