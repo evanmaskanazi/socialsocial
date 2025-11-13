@@ -4436,7 +4436,7 @@ async function loadCirclesPrivacy() {
 async function updateCirclesPrivacy() {
     try {
         // FIXED: Use correct element ID
-        const privacySelect = document.getElementById('circlesPrivacySelect');
+        const privacySelect = document.getElementById('circleVisibility');
         if (!privacySelect) {
             console.error('Privacy select element not found');
             return;
@@ -4444,6 +4444,12 @@ async function updateCirclesPrivacy() {
 
         const privacyLevel = privacySelect.value;
         console.log('Updating privacy to:', privacyLevel); // Debug log
+
+        if (!privacyLevel) {
+            console.error('No privacy level selected');
+            showNotification('Please select a privacy level', 'error');
+            return;
+        }
 
         const response = await fetch('/api/circles/privacy', {
             method: 'POST',
