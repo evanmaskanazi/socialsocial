@@ -2131,7 +2131,7 @@
                     <div class="circles-container">
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title">💥 Public</span>
+                                <span class="circle-title" data-i18n="circles.title_public">💥 Public</span>
                                 <span class="circle-count" id="generalCount">0</span>
                             </div>
                             <div class="circle-members" id="generalMembers">
@@ -2141,7 +2141,7 @@
 
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title">❤️ Class B (Friends)</span>
+                                <span class="circle-title" data-i18n="circles.title_class_b">❤️ Class B (Friends)</span>
                                 <span class="circle-count" id="closeFriendsCount">0</span>
                             </div>
                             <div class="circle-members" id="closeFriendsMembers">
@@ -2151,7 +2151,7 @@
 
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title">👨‍👩‍👧‍👦 Class A (Family)</span>
+                                <span class="circle-title" data-i18n="circles.title_class_a">👨‍👩‍👧‍👦 Class A (Family)</span>
                                 <span class="circle-count" id="familyCount">0</span>
                             </div>
                             <div class="circle-members" id="familyMembers">
@@ -4406,8 +4406,25 @@ async function loadCirclesPrivacy() {
         if (response.ok) {
             const data = await response.json();
             const privacySelect = document.getElementById('circleVisibility');
-            if (privacySelect) {
-                privacySelect.value = data.privacy || data.circles_privacy || 'private';
+           if (privacySelect) {
+                // Determine if viewing own circles or another user's
+                const isViewingOwnCircles = !viewingUserId || viewingUserId === currentUserId;
+
+                if (isViewingOwnCircles) {
+                    // Viewing own circles - enable editing
+                    privacySelect.value = data.privacy || data.circles_privacy || 'class_a';
+                    privacySelect.disabled = false;
+                    privacySelect.style.cursor = 'pointer';
+                    privacySelect.style.opacity = '1';
+                    privacySelect.title = '';
+                } else {
+                    // Viewing another user's circles - show their setting but disable editing
+                    privacySelect.value = data.circles_privacy || 'class_a';
+                    privacySelect.disabled = true;
+                    privacySelect.style.cursor = 'not-allowed';
+                    privacySelect.style.opacity = '0.6';
+                    privacySelect.title = "You cannot change another user's privacy settings";
+                }
             }
         }
     } catch (error) {
@@ -4418,10 +4435,15 @@ async function loadCirclesPrivacy() {
 // Update circles privacy setting
 async function updateCirclesPrivacy() {
     try {
-        const privacySelect = document.getElementById('circleVisibility');
-        if (!privacySelect) return;
+        // FIXED: Use correct element ID
+        const privacySelect = document.getElementById('circlesPrivacySelect');
+        if (!privacySelect) {
+            console.error('Privacy select element not found');
+            return;
+        }
 
         const privacyLevel = privacySelect.value;
+        console.log('Updating privacy to:', privacyLevel); // Debug log
 
         const response = await fetch('/api/circles/privacy', {
             method: 'POST',
@@ -4430,13 +4452,17 @@ async function updateCirclesPrivacy() {
             },
             credentials: 'include',
             body: JSON.stringify({
-                privacy_level: privacyLevel
+                privacy_level: privacyLevel,
+                privacy: privacyLevel,  // Send both for compatibility
+                circles_privacy: privacyLevel
             })
         });
 
         if (response.ok) {
             showNotification('Privacy settings updated successfully', 'success');
         } else {
+            const errorData = await response.json();
+            console.error('Privacy update failed:', errorData);
             showNotification('Failed to update privacy settings', 'error');
         }
     } catch (error) {
@@ -6746,6 +6772,10 @@ if (privacySection) privacySection.style.display = 'none';
 const circlesContainer = document.querySelector('#circlesView .circles-container') ||
                          document.querySelector('#circlesView');
 if (circlesContainer && data.viewer_circle_type) {
+    // REMOVE ANY EXISTING INDICATORS TO PREVENT DUPLICATES
+    const existingIndicators = document.querySelectorAll('.viewer-access-indicator');
+    existingIndicators.forEach(indicator => indicator.remove());
+
     // Create read-only visibility indicator
     const visibilityIndicator = document.createElement('div');
     visibilityIndicator.className = 'viewer-access-indicator';
