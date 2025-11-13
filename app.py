@@ -4394,12 +4394,13 @@ def update_circles_privacy():
         user_id = session.get('user_id')
         data = request.get_json()
 
-        privacy_level = data.get('privacy_level')
+        # Accept either 'privacy_level', 'privacy', or 'circles_privacy' from frontend
+        privacy_level = data.get('privacy_level') or data.get('privacy') or data.get('circles_privacy')
 
         # Validate privacy level
-        if privacy_level not in ['public', 'class_b', 'class_a', 'private']:
+        if not privacy_level or privacy_level not in ['public', 'class_b', 'class_a', 'private']:
+            logger.error(f"Invalid privacy level received: {privacy_level}, data: {data}")
             return jsonify({'error': 'Invalid privacy level'}), 400
-
         user = db.session.get(User, user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
