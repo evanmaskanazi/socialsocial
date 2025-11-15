@@ -3231,7 +3231,7 @@ loadUserLanguage();
 
 
 // Sidebar Navigation
-document.querySelectorAll('.sidebar-item').forEach(item => {
+ddocument.querySelectorAll('.sidebar-item').forEach(item => {
     item.addEventListener('click', (e) => {
         // Skip this handler if the tracking/parameters item was clicked
         // (it has its own onclick handler)
@@ -3246,6 +3246,14 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
         document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
 
         const view = item.dataset.view;
+
+        // Reset viewing context for main navigation views
+        if (['feed', 'home', 'profile', 'following', 'followers', 'messages', 'circles', 'parameters', 'tracking', 'invite'].includes(view)) {
+            console.log('[NAV] Resetting viewingUserId for main nav:', view);
+            viewingUserId = null;
+            window.viewingUserId = null;
+        }
+
         document.getElementById(`${view}View`).classList.remove('hidden');
 
         // Update mobile nav active state
@@ -5352,9 +5360,9 @@ async function loadFollowing() {
                             <div class="user-name">${user.username}</div>
                             <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
                         </div>
-                        <button class="btn-secondary unfollow-btn" data-user-id="${user.id}">
-                            Unfollow
-                        </button>
+                        <button class="btn-secondary unfollow-btn" data-user-id="${user.id}" data-i18n="following.unfollow">
+                                ${pt('following.unfollow') || 'Unfollow'}
+                            </button>
                     </div>
                 `).join('');
 
@@ -5399,8 +5407,8 @@ async function loadFollowing() {
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${user.reason}</div>` : ''}
                         </div>
                         <div class="follow-actions-container" style="min-width: 120px;">
-                            <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 10px;">
-                                ${window.i18n ? window.i18n.t('follow') : 'Follow'}
+                           <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 10px;" data-i18n="following.follow">
+                                ${pt('following.follow') || 'Follow'}
                             </button>
                             <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${user.username}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;">
                                 ${window.i18n ? window.i18n.t('with_note') : '+ Note'}
@@ -5515,7 +5523,7 @@ async function loadUserFollowing(userId) {
                             <div class="user-name">${user.username}</div>
                             <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
                         </div>
-                        ${user.is_following_back ? '<span style="color: var(--success); font-size: 0.875rem;">Following back</span>' : ''}
+                        ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.875rem;" data-i18n="following.following_back">${pt('following.following_back') || 'Following back'}</span>` : ''}
                     </div>
                 `).join('');
 
@@ -6143,7 +6151,8 @@ async function searchUsersToFollow() {
                     <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); followUser(${user.id}); this.disabled=true; this.textContent='Following'">
                         Follow
                     </button>
-                    <button class="btn-primary btn-sm" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')">
+                   <button class="btn-primary btn-sm" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')" data-i18n="following.with_note">
+                                ${pt('following.with_note') || 'Follow with Note'}
                         Follow with Note
                     </button>
                 </div>
