@@ -31,6 +31,8 @@ from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, and_, or_, desc, func, inspect, text
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Email, To, Content
 
 import mimetypes
 
@@ -278,13 +280,21 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
         {t['team']}
         """
 
-        msg = Message(
-            subject=t['subject'],
-            recipients=[user_email],
-            body=text_content,
-            html=html_content,
-            sender=app.config['MAIL_DEFAULT_SENDER']
-        )
+        try:
+            message = Mail(
+                from_email=Email(app.config['MAIL_DEFAULT_SENDER']),
+                to_emails=To(user_email),
+                subject=t['subject'],
+                plain_text_content=Content("text/plain", text_content),
+                html_content=Content("text/html", html_content)
+            )
+
+            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
+            response = sg.send(message)
+            logging.info(f'Password reset email sent to {user_email}')
+        except Exception as e:
+            logging.error(f'Failed to send password reset email: {str(e)}')
+            raise
 
         mail.send(msg)
         logger.info(f"Password reset email sent to {user_email} in {user_language}")
@@ -349,12 +359,20 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
             </div>
         </body></html>"""
 
-        msg = Message(
-            subject=t['subject'],
-            recipients=[user_email],
-            html=html_content,
-            sender=app.config['MAIL_DEFAULT_SENDER']
-        )
+        try:
+            message = Mail(
+                from_email=Email(app.config['MAIL_DEFAULT_SENDER']),
+                to_emails=To(user_email),
+                subject=t['subject'],
+                html_content=Content("text/html", html_content)
+            )
+
+            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
+            response = sg.send(message)
+            logging.info(f'Magic link email sent to {user_email}')
+        except Exception as e:
+            logging.error(f'Failed to send magic link email: {str(e)}')
+            raise
 
         mail.send(msg)
         logger.info(f"Magic link email sent to {user_email} in {user_language}")
