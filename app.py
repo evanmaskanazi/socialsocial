@@ -15,6 +15,7 @@ import logging
 from datetime import datetime, timedelta
 from functools import wraps
 import time
+from collections import defaultdict
 
 # Cache busting timestamp - updates on every app restart
 CACHE_BUST_VERSION = str(int(time.time()))
@@ -72,9 +73,11 @@ if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
 # SQLAlchemy configuration
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 10,
+    'pool_size': 20,  # Increased from 10
+    'max_overflow': 30,  # Allow temporary overflow connections
     'pool_recycle': 3600,
     'pool_pre_ping': True,
+    'pool_timeout': 30,  # Wait up to 30 seconds for connection
 }
 
 # Session configuration
@@ -99,6 +102,54 @@ migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite
 CORS(app, supports_credentials=True)
 Session(app)
 
+# =====================
+# RATE LIMITING
+# =====================
+
+# Simple in-memory rate limiter (use Redis in production for distributed systems)
+rate_limit_store = defaultdict(list)
+
+
+def check_rate_limit(user_id, max_requests=100, window=60):
+    """
+    Check if user has exceeded rate limit
+    max_requests: maximum requests allowed
+    window: time window in seconds
+    """
+    now = time.time()
+    user_requests = rate_limit_store[user_id]
+
+    # Remove old requests outside window
+    user_requests[:] = [req_time for req_time in user_requests if now - req_time < window]
+
+    if len(user_requests) >= max_requests:
+        return False, len(user_requests)
+
+    user_requests.append(now)
+    return True, len(user_requests)
+
+
+def rate_limit_endpoint(max_requests=100, window=60):
+    """
+    Decorator for rate limiting endpoints
+    Usage: @rate_limit_endpoint(max_requests=60, window=60)
+    """
+
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            user_id = session.get('user_id')
+            if user_id:
+                allowed, count = check_rate_limit(user_id, max_requests, window)
+                if not allowed:
+                    return jsonify({'error': 'Rate limit exceeded', 'retry_after': window}), 429
+            return f(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator
+
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO if is_production else logging.DEBUG,
@@ -110,6 +161,19 @@ logger = logging.getLogger('thera_social')
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from flask_mail import Mail, Message
+
+# Flask-Mail configuration for SendGrid
+app.config['MAIL_SERVER'] = os.environ.get('SMTP_SERVER', 'smtp.sendgrid.net')
+app.config['MAIL_PORT'] = int(os.environ.get('SMTP_PORT', 587))
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USERNAME'] = os.environ.get('SMTP_USERNAME', 'apikey')
+app.config['MAIL_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('FROM_EMAIL', 'evanmax@outlook.com')
+
+# Initialize Flask-Mail
+mail = Mail(app)
 
 
 def get_email_translations(language='en'):
@@ -168,33 +232,14 @@ def get_email_translations(language='en'):
 
 
 def send_password_reset_email(user_email, reset_token, user_language='en'):
-    """Send password reset email in user's preferred language"""
+    """Send password reset email in user's preferred language using Flask-Mail"""
     try:
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-        import smtplib
-
-        SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
-        SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
-        SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
-        SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
-        FROM_EMAIL = os.environ.get('FROM_EMAIL', SMTP_USERNAME)
-
-        if not SMTP_USERNAME or not SMTP_PASSWORD:
-            logger.warning("Email configuration not set")
-            return False
-
         t = get_email_translations(user_language)
         reset_link = f"{os.environ.get('APP_URL', 'http://localhost:5000')}?reset_token={reset_token}"
 
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
-
-        message = MIMEMultipart('alternative')
-        message['Subject'] = t['subject']
-        message['From'] = FROM_EMAIL
-        message['To'] = user_email
 
         html_content = f"""
         <html>
@@ -233,21 +278,16 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
         {t['team']}
         """
 
-        part1 = MIMEText(text_content, 'plain', 'utf-8')
-        part2 = MIMEText(html_content, 'html', 'utf-8')
-        message.attach(part1)
-        message.attach(part2)
+        msg = Message(
+            subject=t['subject'],
+            recipients=[user_email],
+            body=text_content,
+            html=html_content,
+            sender=app.config['MAIL_DEFAULT_SENDER']
+        )
 
-        import ssl
-        context = ssl.create_default_context()
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.ehlo()
-            server.starttls(context=context)
-            server.ehlo()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(message)
-
-        logger.info(f"Password reset email sent in {user_language}")
+        mail.send(msg)
+        logger.info(f"Password reset email sent to {user_email} in {user_language}")
         return True
 
     except Exception as e:
@@ -256,21 +296,8 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
 
 
 def send_magic_link_email(user_email, magic_token, user_language='en'):
-    """Send magic link login email"""
+    """Send magic link login email using Flask-Mail"""
     try:
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-        import smtplib
-
-        SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
-        SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
-        SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
-        SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
-        FROM_EMAIL = os.environ.get('FROM_EMAIL', SMTP_USERNAME)
-
-        if not SMTP_USERNAME or not SMTP_PASSWORD:
-            return False
-
         translations = {
             'en': {
                 'subject': 'TheraSocial - Magic Link Sign In',
@@ -309,11 +336,6 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
         t = translations.get(user_language, translations['en'])
         magic_link = f"{os.environ.get('APP_URL', 'http://localhost:5000')}?magic_token={magic_token}"
 
-        message = MIMEMultipart('alternative')
-        message['Subject'] = t['subject']
-        message['From'] = FROM_EMAIL
-        message['To'] = user_email
-
         html_content = f"""<html><body>
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                 <h2>{t['subject']}</h2>
@@ -327,19 +349,19 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
             </div>
         </body></html>"""
 
-        part = MIMEText(html_content, 'html', 'utf-8')
-        message.attach(part)
+        msg = Message(
+            subject=t['subject'],
+            recipients=[user_email],
+            html=html_content,
+            sender=app.config['MAIL_DEFAULT_SENDER']
+        )
 
-        import ssl
-        context = ssl.create_default_context()
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls(context=context)
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(message)
-
+        mail.send(msg)
+        logger.info(f"Magic link email sent to {user_email} in {user_language}")
         return True
+
     except Exception as e:
-        logger.error(f"Failed to send magic link: {e}")
+        logger.error(f"Failed to send magic link email: {e}")
         return False
 
 
@@ -720,7 +742,7 @@ class User(db.Model):
     onboarding_dismissed = db.Column(db.Boolean, default=False)
     shareable_link_token = db.Column(db.String(100), unique=True)
     circles_privacy = db.Column(db.String(20), default='private')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
 
@@ -4425,10 +4447,24 @@ def update_circles_privacy():
 
 @app.route('/api/feed', methods=['GET'])
 @login_required
+@rate_limit_endpoint(max_requests=60, window=60)  # 60 requests per minute
 def get_feed():
-    """Get user feed"""
+    """Get user feed with caching"""
     try:
         user_id = session['user_id']
+        page = request.args.get('page', 1, type=int)
+
+        # Try cache first
+        cache_key = f'feed:{user_id}:{page}'
+        if REDIS_URL:
+            try:
+                r = redis.from_url(REDIS_URL)
+                cached_feed = r.get(cache_key)
+                if cached_feed:
+                    logger.debug(f'Cache hit for feed:{user_id}:{page}')
+                    return jsonify(json.loads(cached_feed))
+            except Exception as e:
+                logger.warning(f'Cache read failed: {e}')
 
         # Get users in circles - SQLAlchemy 2.0 style
         circles_stmt = select(Circle).filter_by(user_id=user_id)
@@ -4467,7 +4503,18 @@ def get_feed():
                 'created_at': post.created_at.isoformat()
             })
 
-        return jsonify({'posts': feed})
+        result = {'posts': feed}
+
+        # Cache result for 5 minutes
+        if REDIS_URL:
+            try:
+                r = redis.from_url(REDIS_URL)
+                r.setex(cache_key, 300, json.dumps(result))
+                logger.debug(f'Cached feed:{user_id}:{page}')
+            except Exception as e:
+                logger.warning(f'Cache write failed: {e}')
+
+        return jsonify(result)
 
     except Exception as e:
         logger.error(f"Feed error: {str(e)}")
@@ -5101,11 +5148,6 @@ def add_comment(post_id):
         logger.error(f"Error adding comment: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to add comment'}), 500
-
-
-
-
-
 
 
 @app.route('/api/feed/<date_str>')
@@ -6885,13 +6927,25 @@ def unfollow_user(user_id):
 
 @app.route('/api/following')
 @login_required
+@rate_limit_endpoint(max_requests=60, window=60)  # 60 requests per minute
 def get_following():
-    """Get list of users the current user is following"""
+    """Get list of users the current user is following with pagination"""
     try:
         user_id = session.get('user_id')
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
 
-        # Get follows directly from Follow model
-        follows = Follow.query.filter_by(follower_id=user_id).all()
+        # Limit per_page to prevent abuse
+        per_page = min(per_page, 100)
+
+        # Get total count for pagination
+        total = db.session.execute(
+            select(func.count()).select_from(Follow).filter_by(follower_id=user_id)
+        ).scalar()
+
+        # Get follows directly from Follow model with pagination
+        follows_query = select(Follow).filter_by(follower_id=user_id).limit(per_page).offset((page - 1) * per_page)
+        follows = db.session.execute(follows_query).scalars().all()
 
         following = []
         for follow in follows:
@@ -6906,7 +6960,13 @@ def get_following():
                     'created_at': follow.created_at.isoformat()
                 })
 
-        return jsonify({'following': following})
+        return jsonify({
+            'following': following,
+            'page': page,
+            'per_page': per_page,
+            'total': total,
+            'pages': (total + per_page - 1) // per_page
+        })
 
     except Exception as e:
         logger.error(f"Get following error: {str(e)}")
@@ -6958,14 +7018,29 @@ def get_user_parameters_for_triggers(user_id):
 
 @app.route('/api/followers')
 @login_required
+@rate_limit_endpoint(max_requests=60, window=60)  # 60 requests per minute
 def get_followers():
-    """Get list of users following the current user"""
+    """Get list of users following the current user with pagination"""
     try:
         user_id = session.get('user_id')
         user = db.session.get(User, user_id)
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+
+        # Limit per_page to prevent abuse
+        per_page = min(per_page, 100)
+
+        # Get total count
+        total = db.session.execute(
+            select(func.count()).select_from(Follow).filter_by(followed_id=user_id)
+        ).scalar()
+
+        # Get followers with pagination
+        follows_query = select(Follow).filter_by(followed_id=user_id).limit(per_page).offset((page - 1) * per_page)
+        follows = db.session.execute(follows_query).scalars().all()
 
         followers = []
-        for follow in user.followers:
+        for follow in follows:
             follower_user = db.session.get(User, follow.follower_id)
             if follower_user:
                 followers.append({
@@ -6977,7 +7052,13 @@ def get_followers():
                     'is_following_back': user.is_following(follower_user)
                 })
 
-        return jsonify({'followers': followers})
+        return jsonify({
+            'followers': followers,
+            'page': page,
+            'per_page': per_page,
+            'total': total,
+            'pages': (total + per_page - 1) // per_page
+        })
 
     except Exception as e:
         logger.error(f"Get followers error: {str(e)}")
