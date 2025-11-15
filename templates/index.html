@@ -3233,7 +3233,7 @@ loadUserLanguage();
 
 
 // Sidebar Navigation
-ddocument.querySelectorAll('.sidebar-item').forEach(item => {
+document.querySelectorAll('.sidebar-item').forEach(item => {
     item.addEventListener('click', (e) => {
         // Skip this handler if the tracking/parameters item was clicked
         // (it has its own onclick handler)
@@ -7080,6 +7080,10 @@ function addBackToFollowingButton(viewId) {
 async function loadAlerts() {
     try {
         console.log('🔄 loadAlerts called');
+       if (!currentUser || !currentUser.id) {
+    console.log('🔄 No user logged in, skipping alerts load');
+    return;
+}
         const response = await apiCall('/alerts');
         if (!response) {
             console.error('❌ No response from /api/alerts');
