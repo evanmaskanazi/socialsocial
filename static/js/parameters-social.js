@@ -173,7 +173,23 @@ const addParameterTranslations = () => {
 'privacy.class_b': 'Class B (Close Friends)',
 'privacy.class_a': 'Class A (Family)',
 'privacy.private': 'Private',
-                'error.loading': 'Error loading parameters'
+                'error.loading': 'Error loading parameters',
+                // Common UI elements
+                'common.back_to_following': '← Back to Following',
+                'common.monday': 'Mon',
+                'common.tuesday': 'Tue',
+                'common.wednesday': 'Wed',
+                'common.thursday': 'Thu',
+                'common.friday': 'Fri',
+                'common.saturday': 'Sat',
+                'common.sunday': 'Sun',
+                'common.today': 'Today',
+                'following.your_level_of_access': 'Your Level of Access:',
+                'following.view_full_profile': 'View Full Profile',
+                'following.circles': 'Circles',
+                'alerts.wellness_alert': 'Wellness Alert for',
+                'alerts.mood_low': '\'s mood has been less than 3.0 for 3 consecutive days',
+                'alerts.energy_low': '\'s energy has been less than 3.0 for 3 consecutive days'
             });
         }
 
@@ -208,7 +224,23 @@ const addParameterTranslations = () => {
 'privacy.class_b': 'מחלקה ב\' (חברים קרובים)',
 'privacy.class_a': 'מחלקה א\' (משפחה)',
 'privacy.private': 'פרטי',
-                'error.loading': 'שגיאה בטעינת פרמטרים'
+                'error.loading': 'שגיאה בטעינת פרמטרים',
+                // Common UI elements
+                'common.back_to_following': '→ חזרה למעקב',
+                'common.monday': 'ב\'',
+                'common.tuesday': 'ג\'',
+                'common.wednesday': 'ד\'',
+                'common.thursday': 'ה\'',
+                'common.friday': 'ו\'',
+                'common.saturday': 'ש\'',
+                'common.sunday': 'א\'',
+                'common.today': 'היום',
+                'following.your_level_of_access': ':רמת הגישה שלך',
+                'following.view_full_profile': 'צפה בפרופיל המלא',
+                'following.circles': 'מעגלים',
+                'alerts.wellness_alert': 'התראת בריאות עבור',
+                'alerts.mood_low': 'מצב הרוח היה נמוך מ-3.0 במשך 3 ימים רצופים',
+                'alerts.energy_low': 'האנרגיה הייתה נמוכה מ-3.0 במשך 3 ימים רצופים'
             });
         }
 
@@ -243,7 +275,23 @@ const addParameterTranslations = () => {
 'privacy.class_b': 'الفئة ب (الأصدقاء المقربون)',
 'privacy.class_a': 'الفئة أ (العائلة)',
 'privacy.private': 'خاص',
-                'error.loading': 'خطأ في تحميل المعاملات'
+                'error.loading': 'خطأ في تحميل المعاملات',
+                // Common UI elements
+                'common.back_to_following': '→ العودة إلى المتابعة',
+                'common.monday': 'الاثنين',
+                'common.tuesday': 'الثلاثاء',
+                'common.wednesday': 'الأربعاء',
+                'common.thursday': 'الخميس',
+                'common.friday': 'الجمعة',
+                'common.saturday': 'السبت',
+                'common.sunday': 'الأحد',
+                'common.today': 'اليوم',
+                'following.your_level_of_access': ':مستوى وصولك',
+                'following.view_full_profile': 'عرض الملف الشخصي الكامل',
+                'following.circles': 'الدوائر',
+                'alerts.wellness_alert': 'تنبيه العافية لـ',
+                'alerts.mood_low': 'كان المزاج أقل من 3.0 لمدة 3 أيام متتالية',
+                'alerts.energy_low': 'كانت الطاقة أقل من 3.0 لمدة 3 أيام متتالية'
             });
         }
 
@@ -278,7 +326,23 @@ const addParameterTranslations = () => {
 'privacy.class_b': 'Класс Б (Близкие друзья)',
 'privacy.class_a': 'Класс А (Семья)',
 'privacy.private': 'Приватный',
-                'error.loading': 'Ошибка загрузки параметров'
+                'error.loading': 'Ошибка загрузки параметров',
+                // Common UI elements
+                'common.back_to_following': '← Назад к подпискам',
+                'common.monday': 'Пн',
+                'common.tuesday': 'Вт',
+                'common.wednesday': 'Ср',
+                'common.thursday': 'Чт',
+                'common.friday': 'Пт',
+                'common.saturday': 'Сб',
+                'common.sunday': 'Вс',
+                'common.today': 'Сегодня',
+                'following.your_level_of_access': 'Ваш уровень доступа:',
+                'following.view_full_profile': 'Просмотреть полный профиль',
+                'following.circles': 'Круги',
+                'alerts.wellness_alert': 'Предупреждение о здоровье для',
+                'alerts.mood_low': 'настроение было ниже 3.0 в течение 3 дней подряд',
+                'alerts.energy_low': 'энергия была ниже 3.0 в течение 3 дней подряд'
             });
         }
 
@@ -1186,12 +1250,20 @@ function updateCalendar() {
     // Clear calendar
     calendarGrid.innerHTML = '';
 
-    // Add day headers
-    const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // Add day headers with translations
+    const dayHeaders = [
+        {key: 'common.sunday', fallback: 'Sun'},
+        {key: 'common.monday', fallback: 'Mon'},
+        {key: 'common.tuesday', fallback: 'Tue'},
+        {key: 'common.wednesday', fallback: 'Wed'},
+        {key: 'common.thursday', fallback: 'Thu'},
+        {key: 'common.friday', fallback: 'Fri'},
+        {key: 'common.saturday', fallback: 'Sat'}
+    ];
     dayHeaders.forEach(day => {
         const header = document.createElement('div');
         header.className = 'calendar-header';
-        header.textContent = day;
+        header.textContent = pt(day.key) || day.fallback;
         header.style.fontWeight = 'bold';
         header.style.fontSize = '0.9em';
         calendarGrid.appendChild(header);
