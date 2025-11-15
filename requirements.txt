@@ -27,6 +27,7 @@ python-dotenv==1.0.0
 numpy==1.24.4
 gunicorn==21.2.0
 werkzeug==2.3.7
+sendgrid==6.11.0
 
 # Email support (optional)
 Flask-Mail==0.9.1
