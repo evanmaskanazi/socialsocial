@@ -1533,7 +1533,8 @@
         <div class="auth-card fade-in">
             <h2 class="auth-title" data-i18n="auth.set_new_password">Set New Password</h2>
             <p style="text-align: center; color: var(--gray); margin-bottom: 20px;" data-i18n="auth.enter_new_password">Enter your new password below.</p>
-            <form id="resetPasswordForm">
+            <form id="resetPasswordForm" autocomplete="off">
+    <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true">
                 <input type="hidden" id="resetToken">
                <div class="form-group">
                     <label class="form-label" data-i18n="auth.new_password">New Password</label>
@@ -1816,7 +1817,7 @@
     <!-- Mobile Navigation Bar -->
     <nav class="mobile-nav">
         <ul class="mobile-nav-menu">
-            <li class="mobile-nav-item active" data-view="feed" onclick="showView('feed')">
+            <li class="mobile-nav-item active" data-view="feed" onclick="viewingUserId=null; window.viewingUserId=null; showView('feed')">
                 <span class="mobile-nav-icon">🏠</span>
                 <span class="mobile-nav-label" data-i18n="menu.feed">Feed</span>
             </li>
@@ -1859,7 +1860,7 @@
                     <li class="sidebar-item active" data-view="home" data-i18n="menu.home">
                         🏠 Home
                     </li>
-                    <li class="sidebar-item" data-view="feed" data-i18n="menu.feed" onclick="showView('feed')">
+                    <li class="sidebar-item" data-view="feed" data-i18n="menu.feed" onclick="viewingUserId=null; window.viewingUserId=null; showView('feed')">
                         📱 Feed
                     </li>
                     <li class="sidebar-item" data-view="profile" data-i18n="menu.profile">
@@ -1974,7 +1975,8 @@
                       <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
                       <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
 
-                      <form id="changePasswordForm" onsubmit="updatePassword(); return false;">
+                      <form id="changePasswordForm" onsubmit="updatePassword(); return false;" autocomplete="off">
+    <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true">
                           <div style="display: grid; gap: 15px;">
                               <div>
                                   <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
@@ -3525,7 +3527,7 @@ function showView(viewName) {
         switch(viewName) {
             case 'feed':
                 viewingUserId = null; // Reset viewing user when returning to own feed
-                restoreFeedEditMode(); // Restore editable mode
+           //     restoreFeedEditMode(); // Restore editable mode
                 initFeedCalendar();
                 break;
             case 'profile':
@@ -4838,7 +4840,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
             container.innerHTML = response.messages.map(msg => {
                 // Safely check if sender exists and get ID
                 const senderId = msg.sender && msg.sender.id ? msg.sender.id : null;
-                currentUserId = currentUser && currentUser.id ? currentUser.id : null;  // Remove 'const' - just assign to existing variable
+                currentUserId = currentUser?.id || null; // Remove 'const' - just assign to existing variable
                 const isOwn = senderId === currentUserId;
                 const content = msg.content || '';
                 const senderPrefix = isOwn ? youText : (msg.sender && msg.sender.username ? msg.sender.username : 'Unknown');
