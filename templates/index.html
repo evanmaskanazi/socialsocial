@@ -3236,7 +3236,7 @@ loadUserLanguage();
 
 // Sidebar Navigation
 document.querySelectorAll('.sidebar-item').forEach(item => {
-    item.addEventListener('click', (e) => {
+    item.addEventListener('click', async (e) => {
         // Skip this handler if the tracking/parameters item was clicked
         // (it has its own onclick handler)
         if (item.dataset.view === 'tracking') {
