@@ -245,26 +245,41 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
         text_align = 'right' if is_rtl else 'left'
 
         html_content = f"""
+        <!DOCTYPE html>
         <html>
-        <body style="font-family: Arial; direction: {text_dir}; text-align: {text_align};">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #667eea;">{t['subject'].replace('TheraSocial - ', '')}</h2>
-                <p>{t['hello']},</p>
-                <p>{t['request_text']}</p>
-                <p>{t['click_button']}</p>
-                <p style="text-align: center; margin: 30px 0;">
-                    <a href="{reset_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                        {t['button_text']}
-                    </a>
-                </p>
-                <p>{t['copy_link']}</p>
-                <p style="word-break: break-all; color: #667eea;">{reset_link}</p>
-                <p style="color: #666;">{t['expire_text']}</p>
-                <p style="color: #666;">{t['ignore_text']}</p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                <p style="color: #999;">
-                    {t['regards']},<br>{t['team']}
-                </p>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="background: #667eea; padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">TheraSocial</h1>
+                </div>
+                <div style="padding: 40px 30px;">
+                    <h2 style="color: #333; margin-top: 0;">{t['subject'].replace('TheraSocial - ', '')}</h2>
+                    <p style="color: #666; line-height: 1.6;">{t['hello']},</p>
+                    <p style="color: #666; line-height: 1.6;">{t['request_text']}</p>
+                    <p style="color: #666; line-height: 1.6;">{t['click_button']}</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{reset_link}" style="background: #667eea; color: white; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                            {t['button_text']}
+                        </a>
+                    </div>
+                    <p style="color: #666; font-size: 14px; line-height: 1.6;">{t['copy_link']}</p>
+                    <p style="word-break: break-all; color: #667eea; background: #f8f9fa; padding: 12px; border-radius: 4px; font-size: 12px;">{reset_link}</p>
+                    <p style="color: #999; font-size: 13px; margin-top: 30px;">{t['expire_text']}</p>
+                    <p style="color: #999; font-size: 13px;">{t['ignore_text']}</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 20px 30px; border-top: 1px solid #eee;">
+                    <p style="color: #999; font-size: 12px; margin: 0;">
+                        {t['regards']},<br>{t['team']}
+                    </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 15px; line-height: 1.5;">
+                        This email was sent because a password reset was requested for your TheraSocial account.
+                        <br>If you did not request this, you can safely ignore this email.
+                    </p>
+                </div>
             </div>
         </body>
         </html>
