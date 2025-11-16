@@ -282,11 +282,11 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
 
         try:
             message = Mail(
-                from_email=Email(app.config['MAIL_DEFAULT_SENDER']),
-                to_emails=To(user_email),
+                from_email=app.config['MAIL_DEFAULT_SENDER'],
+                to_emails=user_email,
                 subject=t['subject'],
-                plain_text_content=Content("text/plain", text_content),
-                html_content=Content("text/html", html_content)
+                plain_text_content=text_content,
+                html_content=html_content
             )
 
             sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
@@ -296,7 +296,6 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
             logging.error(f'Failed to send password reset email: {str(e)}')
             raise
 
-        mail.send(msg)
         logger.info(f"Password reset email sent to {user_email} in {user_language}")
         return True
 
@@ -361,10 +360,10 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
 
         try:
             message = Mail(
-                from_email=Email(app.config['MAIL_DEFAULT_SENDER']),
-                to_emails=To(user_email),
+                from_email=app.config['MAIL_DEFAULT_SENDER'],
+                to_emails=user_email,
                 subject=t['subject'],
-                html_content=Content("text/html", html_content)
+                html_content=html_content
             )
 
             sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
@@ -374,7 +373,6 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
             logging.error(f'Failed to send magic link email: {str(e)}')
             raise
 
-        mail.send(msg)
         logger.info(f"Magic link email sent to {user_email} in {user_language}")
         return True
 
