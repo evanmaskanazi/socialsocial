@@ -3247,10 +3247,11 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 
         document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
 
-        const view = item.dataset.view;
+       const view = item.dataset.view;
 
-        // Reset viewing context for main navigation views
-        if (['feed', 'home', 'profile', 'following', 'followers', 'messages', 'circles', 'parameters', 'tracking', 'invite'].includes(view)) {
+        // Reset viewing context ONLY for following, followers, messages, and invite
+        // Keep viewingUserId for feed, profile, circles, parameters, tracking so user can navigate between viewed user's data
+        if (['following', 'followers', 'messages', 'invite'].includes(view)) {
             console.log('[NAV] Resetting viewingUserId for main nav:', view);
             viewingUserId = null;
             window.viewingUserId = null;
@@ -3279,11 +3280,13 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             initializeHomeView();
                         }
                         break;
-                    case 'feed':
+                  case 'feed':
                         // Check if viewing another user
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
+                            console.log('[DEBUG] Feed view - loading feed for user:', viewingUserId);
                             loadUserFeed(viewingUserId);
                         } else {
+                            console.log('[DEBUG] Feed view - loading own feed');
                             initFeedCalendar();
                         }
                         break;
@@ -3384,13 +3387,13 @@ function handleCirclesClick(event) {
 
 function showView(viewName) {
     console.log('[DEBUG] showView called:', viewName, 'viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
-    // NEW BEHAVIOR: When viewing another user, Home button returns to current user's account
-    // All other tabs (feed, profile, circles, following, followers) show the viewed user's data
+    // NEW BEHAVIOR: When viewing another user, profile/feed/circles/parameters/tracking maintain viewing context
+    // Following/followers/messages/home/invite reset to current user's account
 
-    // Reset viewing mode ONLY when explicitly going back (not maintained for any standard nav)
-    // Maintain viewing mode for: home, profile, feed, circles, parameters, tracking, following, followers
+    // Maintain viewing mode for: profile, feed, circles, parameters, tracking
     // This means when viewing another user, navigating to these views keeps you viewing that user
-    const viewsToMaintainUser = ['home', 'profile', 'feed', 'circles', 'parameters', 'tracking', 'following', 'followers'];
+    // Reset viewing mode for: following, followers, messages, home, invite (return to own account)
+    const viewsToMaintainUser = ['profile', 'feed', 'circles', 'parameters', 'tracking'];
 
     if (!viewsToMaintainUser.includes(viewName)) {
         // User clicked Home or another reset view - go back to own account
@@ -4443,75 +4446,211 @@ async function updateCirclesPrivacy(passedValue) {
 }
 
 // Now loadCircles() - with the nested functions removed
-async function loadCircles() {
+async function loadUserCircles(userId) {
     try {
-        let response;
+        const response = await fetch(`/api/users/${userId}/circles`, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
 
-        // Check if viewing another user's circles
-        if (viewingUserId !== null && viewingUserId !== currentUserId) {
-            // Load another user's circles (read-only)
-            response = await fetch(`/api/users/${viewingUserId}/circles`, {
-                credentials: 'include'
-            });
+        if (!response.ok) {
+            if (response.status === 403) {
+                showNotification('You must follow this user to view their circles', 'error');
+                showView('following');
+                return;
+            }
+            throw new Error('Failed to load circles');
+        }
 
-            if (!response.ok) {
-                if (response.status === 403) {
-                    showNotification('You must follow this user to view their circles', 'error');
-                    return;
+        const data = await response.json();
+
+        // Get username for header
+        const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+        let username = 'User';
+        if (profileResponse.ok) {
+            const user = await profileResponse.json();
+            username = user.username;
+            const circlesHeader = document.querySelector('#circlesView h2');
+            if (circlesHeader) circlesHeader.textContent = `${username}'s Circles`;
+        }
+
+        // Hide the user search bar completely (can't add people to their circles)
+        const userSearch = document.querySelector('#circlesView .user-search');
+        if (userSearch) userSearch.style.display = 'none';
+
+        // CHECK IF CIRCLES ARE PRIVATE AND USER DOESN'T HAVE ACCESS
+        if (data.private === true || (data.message && data.message.includes('private'))) {
+            // Show privacy restriction message with proper context
+            const circlesContainer = document.querySelector('#circlesView .circles-container');
+            if (circlesContainer) {
+                // Clear existing content
+                circlesContainer.innerHTML = '';
+
+                // Create a centered message explaining the restriction
+                const restrictionMessage = document.createElement('div');
+                restrictionMessage.style.cssText = 'max-width: 600px; margin: 2rem auto; padding: 2rem; background: #fff3cd; border-radius: 15px; text-align: center; border: 2px solid #ffc107;';
+
+                const t = (key, fallback) => {
+                    return window.i18n && window.i18n.translate ? window.i18n.translate(key) : fallback;
+                };
+
+                let userPrivacyText = '';
+                let userPrivacyIcon = '';
+                let viewerAccessText = '';
+                let viewerAccessIcon = '';
+
+                // Get user's privacy setting
+                if (data.user_privacy === 'private') {
+                    userPrivacyText = t('circles.visibility_private', 'Private');
+                    userPrivacyIcon = '🔒';
+                } else if (data.user_privacy === 'class_a') {
+                    userPrivacyText = t('circles.title_class_a', 'Class A (Family)');
+                    userPrivacyIcon = '👨‍👩‍👧‍👦';
+                } else if (data.user_privacy === 'class_b') {
+                    userPrivacyText = t('circles.title_class_b', 'Class B (Friends)');
+                    userPrivacyIcon = '❤️';
+                } else {
+                    userPrivacyText = t('circles.visibility_public', 'Public');
+                    userPrivacyIcon = '👥';
                 }
-                throw new Error('Failed to load user circles');
+
+                // Get viewer's access level
+                if (data.viewer_circle_type === 'class_a') {
+                    viewerAccessText = t('circles.title_class_a', 'Class A (Family)');
+                    viewerAccessIcon = '👨‍👩‍👧‍👦';
+                } else if (data.viewer_circle_type === 'class_b') {
+                    viewerAccessText = t('circles.title_class_b', 'Class B (Friends)');
+                    viewerAccessIcon = '❤️';
+                } else {
+                    viewerAccessText = t('circles.title_public', 'Public');
+                    viewerAccessIcon = '👥';
+                }
+
+                restrictionMessage.innerHTML = `
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+                    <h3 style="color: #856404; margin-bottom: 1rem;">${t('circles.restricted_access', 'Restricted Access')}</h3>
+                    <p style="font-size: 1.1rem; margin-bottom: 1.5rem; color: #333;">
+                        ${username}'s ${t('circles.circles_visibility', 'circles visibility')} ${t('common.is_set_to', 'is set to')}:
+                        <strong style="color: #667eea;">${userPrivacyIcon} ${userPrivacyText}</strong>
+                    </p>
+                    <p style="font-size: 1.1rem; margin-bottom: 1.5rem; color: #333;">
+                        ${t('circles.your_access_level', 'Your access level')}:
+                        <strong style="color: #667eea;">${viewerAccessIcon} ${viewerAccessText}</strong>
+                    </p>
+                    <p style="color: #856404;">
+                        ${t('circles.insufficient_access', 'You do not have permission to view these circles. The user would need to add you to a higher access level.')}
+                    </p>
+                `;
+
+                circlesContainer.appendChild(restrictionMessage);
             }
 
-            response = await response.json();
-
-            // Hide add/remove functionality when viewing another user
-            hideCircleEditControls();
-        } else {
-            // Load own circles (editable)
-
-            // Ensure we're loading current user's circles
-            const header = document.querySelector('#circlesView h2');
-            if (header) {
-                header.textContent = 'Circles';
-            }
-
-            // Remove any existing back buttons (we're in our own circles view now)
-            const existingBackBtn = document.querySelector('#circlesView .back-to-following-btn');
-            if (existingBackBtn) {
-                existingBackBtn.remove();
-            }
-
-            response = await apiCall('/circles');
-            if (!response) return;
-
-            // Show add/remove functionality for own circles
-            showCircleEditControls();
-
-            // Load and show privacy settings for own circles
-            await loadCirclesPrivacy();
+            // Hide privacy dropdown container
             const visibilityContainer = document.getElementById('circleVisibilityContainer');
             if (visibilityContainer) {
-                visibilityContainer.style.display = 'block';
+                visibilityContainer.style.display = 'none';
+            }
+
+            // Add back button
+            addBackToFollowingButton('circlesView');
+
+            return; // Exit early - don't try to display circles
+        }
+
+        // NORMAL FLOW - User has access to circles
+        // Load and display the other user's privacy setting (read-only)
+        if (data.user_privacy) {
+            const privacySelect = document.getElementById('circleVisibility');
+            if (privacySelect) {
+                privacySelect.value = data.user_privacy;
+                privacySelect.disabled = true;
+                privacySelect.style.cursor = 'not-allowed';
+                privacySelect.style.opacity = '0.6';
+                const privacyLabels = {
+                    'private': 'Private 🔒',
+                    'class_a': 'Class A (Family) 👨‍👩‍👧‍👦',
+                    'class_b': 'Class B (Friends) ❤️',
+                    'public': 'Public 👥'
+                };
+                privacySelect.title = `This user's circles are ${privacyLabels[data.user_privacy] || data.user_privacy}`;
             }
         }
 
-        // Handle both old and new data structures
-        let generalMembers = response.general || response.public || [];
-        let closeFriendsMembers = response.close_friends || response.class_b || [];
-        let familyMembers = response.family || response.class_a || [];
-
-        // If circles object exists, use it (new structure)
-        if (response.circles) {
-            generalMembers = response.circles.general || response.circles.public || [];
-            closeFriendsMembers = response.circles.close_friends || response.circles.class_b || [];
-            familyMembers = response.circles.family || response.circles.class_a || [];
+        // Ensure privacy dropdown container is visible
+        const visibilityContainer = document.getElementById('circleVisibilityContainer');
+        if (visibilityContainer) {
+            visibilityContainer.style.display = 'block';
         }
+
+        // Show viewer's access level in a read-only display
+        const circlesContainer = document.querySelector('#circlesView .circles-container') ||
+                                 document.querySelector('#circlesView');
+        if (circlesContainer && data.viewer_circle_type) {
+            // REMOVE ANY EXISTING INDICATORS TO PREVENT DUPLICATES
+            const existingIndicators = document.querySelectorAll('.viewer-access-indicator');
+            existingIndicators.forEach(indicator => indicator.remove());
+
+            // Create read-only visibility indicator
+            const visibilityIndicator = document.createElement('div');
+            visibilityIndicator.className = 'viewer-access-indicator';
+            visibilityIndicator.style.cssText = 'max-width: 600px; margin: 0 auto 30px; padding: 15px 20px; background: #f0f8ff; border-radius: 10px; text-align: center; border: 2px solid #667eea;';
+
+            const t = (key, fallback) => {
+                return window.i18n && window.i18n.translate ? window.i18n.translate(key) : fallback;
+            };
+
+            let accessLevelText = '';
+            let accessIcon = '';
+
+            if (data.viewer_circle_type === 'class_a') {
+                accessLevelText = t('circles.title_class_a', 'Class A (Family)');
+                accessIcon = '👨‍👩‍👧‍👦';
+            } else if (data.viewer_circle_type === 'class_b') {
+                accessLevelText = t('circles.title_class_b', 'Class B (Friends)');
+                accessIcon = '❤️';
+            } else {
+                accessLevelText = t('circles.title_public', 'Public');
+                accessIcon = '👥';
+            }
+
+            visibilityIndicator.innerHTML = `
+                <strong style="color: #667eea;">${t('circles.your_access_level', 'Your Access Level')}:</strong>
+                <span style="font-size: 1.2em;">${accessIcon} ${accessLevelText}</span>
+            `;
+
+            // Insert at the top of circles view, after the header
+            const header = circlesContainer.querySelector('h1, h2') || circlesContainer.firstChild;
+            if (header && header.nextSibling) {
+                circlesContainer.insertBefore(visibilityIndicator, header.nextSibling);
+            } else if (header) {
+                header.parentNode.insertBefore(visibilityIndicator, header.nextSibling);
+            }
+        }
+
+        // Add back button
+        addBackToFollowingButton('circlesView');
+
+        // Hide all edit buttons (add, remove, etc)
+        document.querySelectorAll('#circlesView button').forEach(btn => {
+            if (!btn.classList.contains('back-to-following-btn')) {
+                btn.style.display = 'none';
+            }
+        });
+
+        // Display circles that user CAN see
+        const generalMembers = data.public || [];
+        const closeFriendsMembers = data.class_b || [];
+        const familyMembers = data.class_a || [];
 
         updateCircleDisplay('general', generalMembers);
         updateCircleDisplay('close_friends', closeFriendsMembers);
         updateCircleDisplay('family', familyMembers);
+
     } catch (error) {
-        console.error('Failed to load circles:', error);
+        console.error('Error loading user circles:', error);
+        showNotification('Failed to load user circles', 'error');
     }
 }
 
@@ -5418,7 +5557,7 @@ async function loadFollowing() {
                                 ${pt('following.follow') || 'Follow'}
                             </button>
                             <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${user.username}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;">
-                                ${window.i18n ? window.i18n.t('with_note') : '+ Note'}
+                                ${pt('following.with_note') || '+ Note'}
                             </button>
                         </div>
                     </div>
@@ -6765,7 +6904,15 @@ async function loadUserFeed(userId) {
         }
 
         // Add back button
-        addBackToFollowingButton('feedView');
+        // Add back button if not already present
+        const existingBackBtn = document.querySelector('#feedView .back-to-following-btn');
+        if (!existingBackBtn) {
+            addBackToFollowingButton('feedView');
+        } else {
+            // Ensure it's visible
+            existingBackBtn.style.display = 'block';
+            existingBackBtn.style.visibility = 'visible';
+        }
 
     } catch (error) {
         console.error('Error loading user feed:', error);
