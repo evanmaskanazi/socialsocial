@@ -3476,6 +3476,11 @@ function showView(viewName) {
     }
 
     // Load view content - check if viewing another user
+    // Ensure currentUserId is set from currentUser before comparison
+    if (!currentUserId && currentUser && currentUser.id) {
+        currentUserId = currentUser.id;
+    }
+
     if (viewingUserId !== null && viewingUserId !== currentUserId) {
         // Viewing another user's profile
         switch(viewName) {
@@ -3526,8 +3531,8 @@ function showView(viewName) {
         // Viewing own profile
         switch(viewName) {
             case 'feed':
-                viewingUserId = null; // Reset viewing user when returning to own feed
-           //     restoreFeedEditMode(); // Restore editable mode
+                // viewingUserId is maintained - dont reset it
+           // restoreFeedEditMode(); // Restore editable mode
                 initFeedCalendar();
                 break;
             case 'profile':
@@ -6155,7 +6160,6 @@ async function searchUsersToFollow() {
                     </button>
                    <button class="btn-primary btn-sm" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')" data-i18n="following.with_note">
                                 ${pt('following.with_note') || 'Follow with Note'}
-                        Follow with Note
                     </button>
                 </div>
             </div>
@@ -6801,9 +6805,27 @@ async function loadUserCircles(userId) {
         const userSearch = document.querySelector('#circlesView .user-search');
         if (userSearch) userSearch.style.display = 'none';
 
-        // Load and display the other user's privacy setting (read-only)
-        await loadCirclesPrivacy();
 
+        // Load and display the other user's privacy setting (read-only)
+        // Show the VIEWED user's actual setting, not the current user's
+        if (data.user_privacy) {
+            const privacySelect = document.getElementById('circleVisibility');
+            if (privacySelect) {
+                privacySelect.value = data.user_privacy;
+                privacySelect.disabled = true;
+                privacySelect.style.cursor = 'not-allowed';
+                privacySelect.style.opacity = '0.6';
+                const privacyLabels = {
+                    'private': 'Private 🔒',
+                    'class_a': 'Class A (Family) 👨‍👩‍👧‍👦',
+                    'class_b': 'Class B (Friends) ❤️',
+                    'public': 'Public 👥'
+                };
+                privacySelect.title = `This user's circles are ${privacyLabels[data.user_privacy] || data.user_privacy}`;
+            }
+        } else {
+            await loadCirclesPrivacy();
+        }
         // Ensure privacy dropdown container is visible
         const visibilityContainer = document.getElementById('circleVisibilityContainer');
         if (visibilityContainer) {
