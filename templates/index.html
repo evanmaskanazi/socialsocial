@@ -3055,7 +3055,9 @@ async function submitConsent() {
     if (currentUser && currentUser.username) {
         document.getElementById('profileAvatar').textContent = currentUser.username[0].toUpperCase();
         document.getElementById('profileUsername').textContent = currentUser.username;
+
         currentUserId = currentUser.id; // Ensure user ID is set
+        console.log('[DEBUG] Page load - set currentUserId to:', currentUserId);
     }
 
   initFeedCalendar();
@@ -3280,9 +3282,22 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             initializeHomeView();
                         }
                         break;
-                case 'feed':
+             case 'feed':
                         // Check if viewing another user
                         console.log('[DEBUG] Feed case - viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+
+                        // CRITICAL: Ensure currentUserId is set
+                        if (!currentUserId) {
+                            console.error('[ERROR] currentUserId is not set! This should never happen.');
+                            // Try to recover by fetching session
+                            const sessionResp = await fetch('/api/auth/session', {credentials: 'include'});
+                            if (sessionResp.ok) {
+                                const sessData = await sessionResp.json();
+                                currentUserId = sessData.user_id;
+                                console.log('[DEBUG] Recovered currentUserId:', currentUserId);
+                            }
+                        }
+
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
                             console.log('[DEBUG] Feed view - loading feed for user:', viewingUserId);
                             loadUserFeed(viewingUserId);
@@ -6469,10 +6484,12 @@ async function viewUserProfile(userId) {
         viewingUserId = userId;
 
         // Get current user ID from session or local storage
-        const sessionResponse = await fetch('/api/profile', {credentials: 'include'});
+      const sessionResponse = await fetch('/api/profile', {credentials: 'include'});
         if (sessionResponse.ok) {
             const sessionData = await sessionResponse.json();
-            currentUserId = sessionData.id || sessionData.user_id;
+            console.log('[DEBUG] viewUserProfile - currentUserId:', currentUserId, 'session user:', sessionData.id);
+            // DON'T overwrite currentUserId - it's already set at page load
+            // currentUserId = sessionData.id || sessionData.user_id;
         }
 
         // Show profile view first
@@ -6920,9 +6937,14 @@ async function loadUserFeed(userId) {
         // Don't set window.viewingUserId here - use the global viewingUserId variable instead
         // window.viewingUserId = userId;
         // Keep viewingUserId set to the user we're viewing
-        console.log('[DEBUG] loadUserFeed - maintaining viewingUserId:', userId);
-        window.currentUserId = sessionData.user_id;
-        currentUserId = sessionData.user_id;
+       console.log('[DEBUG] loadUserFeed - maintaining viewingUserId:', userId);
+        console.log('[DEBUG] loadUserFeed - currentUserId should already be set to:', currentUserId);
+        console.log('[DEBUG] loadUserFeed - session user_id is:', sessionData.user_id);
+
+        // DON'T overwrite currentUserId here - it should already be set from page load
+        // window.currentUserId = sessionData.user_id;
+        // currentUserId = sessionData.user_id;
+
         initFeedCalendar(isOwnFeed ? null : userId);
 
         const response = await fetch(`/api/users/${userId}/posts`, {
