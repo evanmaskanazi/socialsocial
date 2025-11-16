@@ -4965,7 +4965,6 @@ function showCircleEditControls() {
 }
 
 
-
 function updateCircleDisplay(type, members) {
     let containerId, countId, displayLabel;
 
@@ -5002,24 +5001,21 @@ function updateCircleDisplay(type, members) {
             // Get translation function - try both t() and translate() methods
             const t = (window.i18n && window.i18n.t) ? window.i18n.t.bind(window.i18n) :
                       (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) :
-                      (key, fallback) => fallback;
+                      (key) => key;
 
             const emoji = type === 'general' ? '💥' :
                          type === 'close_friends' ? '❤️' : '👨‍👩‍👧‍👦';
 
-            let translationKey, fallbackText;
+            let translationKey;
             if (type === 'general') {
                 translationKey = 'circles.title_public';
-                fallbackText = 'Public';
             } else if (type === 'close_friends') {
                 translationKey = 'circles.title_class_b';
-                fallbackText = 'Class B (Friends)';
             } else {
                 translationKey = 'circles.title_class_a';
-                fallbackText = 'Class A (Family)';
             }
 
-            const translatedText = t(translationKey, fallbackText);
+            const translatedText = t(translationKey);
             headerElement.textContent = `${emoji} ${translatedText}`;
 
             // Debug logging to track what's being set
@@ -5032,9 +5028,9 @@ function updateCircleDisplay(type, members) {
         // Get translation function for empty state
         const t = (window.i18n && window.i18n.t) ? window.i18n.t.bind(window.i18n) :
                   (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) :
-                  (key, fallback) => fallback;
+                  (key) => key;
 
-        container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${t('circles.no_members', 'No members yet')}</p>`;
+        container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${t('circles.no_members')}</p>`;
     } else {
         // Check if viewing another user's circles (read-only mode)
         const isReadOnly = viewingUserId !== null && viewingUserId !== currentUserId;
@@ -5042,13 +5038,13 @@ function updateCircleDisplay(type, members) {
         // Get translation function for Remove button
         const t = (window.i18n && window.i18n.t) ? window.i18n.t.bind(window.i18n) :
                   (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) :
-                  (key, fallback) => fallback;
+                  (key) => key;
 
         container.innerHTML = members.map(member => `
             <div class="member-item">
                 <div class="member-avatar">${member.username[0].toUpperCase()}</div>
                 <span class="member-name">${member.username}</span>
-                ${!isReadOnly ? `<button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${t('circles.remove', 'Remove')}</button>` : ''}
+                ${!isReadOnly ? `<button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${t('circles.remove')}</button>` : ''}
             </div>
         `).join('');
     }
