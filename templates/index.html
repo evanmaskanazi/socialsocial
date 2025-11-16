@@ -3278,7 +3278,11 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             loadUserFeed(viewingUserId);
                         } else {
                             // Initialize home view for own account
-                            console.log('[DEBUG] Home clicked - showing static home page');
+                            // Initialize home view for own account
+                            console.log('[DEBUG] Home clicked - showing static home page, resetting viewingUserId');
+                            viewingUserId = null;
+                            window.viewingUserId = null;
+                            initializeHomeView();
                             initializeHomeView();
                         }
                         break;
@@ -3296,7 +3300,7 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             viewingUserId = null;  // Explicitly reset
                             window.viewingUserId = null;
                             initFeedCalendar();
-                            loadFeed(); 
+                            loadFeed();
                         }
                         break;
                     case 'profile':
@@ -3304,6 +3308,8 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
                             loadUserProfileView(viewingUserId);
                         } else {
+                            viewingUserId = null;  // Reset when viewing own profile
+                            window.viewingUserId = null;
                             loadProfile();
                         }
                         break;
@@ -3315,6 +3321,9 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             loadUserCircles(viewingUserId);
                         } else {
                             console.log('[DEBUG] Loading own circles');
+                            console.log('[DEBUG] Loading own circles, resetting viewingUserId');
+                            viewingUserId = null;
+                            window.viewingUserId = null;
                             loadCircles();
                         }
                         break;
@@ -3329,6 +3338,8 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
                             loadUserFollowing(viewingUserId);
                         } else {
+                            viewingUserId = null;  // Reset when viewing own following
+                            window.viewingUserId = null;
                             loadFollowing();
                         }
                         break;
@@ -3337,6 +3348,8 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
                             loadUserFollowers(viewingUserId);
                         } else {
+                            viewingUserId = null;  // Reset when viewing own followers
+                            window.viewingUserId = null;
                             loadFollowers();
                         }
                         break;
@@ -4208,7 +4221,7 @@ document.addEventListener('click', function(e) {
                 const response = await apiCall('/feed');
                 if (!response) return;
 
-                const feedContainer = document.getElementById('feedPosts');
+                const feedContainer = document.getElementById('feedPostsContainer');
                 feedContainer.innerHTML = '';
 
                 if (response.posts && response.posts.length > 0) {
