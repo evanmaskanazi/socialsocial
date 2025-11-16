@@ -3286,17 +3286,7 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                         // Check if viewing another user
                         console.log('[DEBUG] Feed case - viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
 
-                        // CRITICAL: Ensure currentUserId is set
-                        if (!currentUserId) {
-                            console.error('[ERROR] currentUserId is not set! This should never happen.');
-                            // Try to recover by fetching session
-                            const sessionResp = await fetch('/api/auth/session', {credentials: 'include'});
-                            if (sessionResp.ok) {
-                                const sessData = await sessionResp.json();
-                                currentUserId = sessData.user_id;
-                                console.log('[DEBUG] Recovered currentUserId:', currentUserId);
-                            }
-                        }
+                  
 
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
                             console.log('[DEBUG] Feed view - loading feed for user:', viewingUserId);
