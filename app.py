@@ -163,9 +163,10 @@ logger = logging.getLogger('thera_social')
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask_mail import Mail, Message
+# NOTE: Using SendGrid API directly, not Flask-Mail
+# from flask_mail import Mail, Message  # REMOVED - conflicts with SendGrid
 
-# Flask-Mail configuration for SendGrid
+# Flask-Mail configuration for SendGrid (kept for reference but not using Flask-Mail)
 app.config['MAIL_SERVER'] = os.environ.get('SMTP_SERVER', 'smtp.sendgrid.net')
 app.config['MAIL_PORT'] = int(os.environ.get('SMTP_PORT', 587))
 app.config['MAIL_USE_TLS'] = True
@@ -174,8 +175,8 @@ app.config['MAIL_USERNAME'] = os.environ.get('SMTP_USERNAME', 'apikey')
 app.config['MAIL_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('FROM_EMAIL', 'evanmax@outlook.com')
 
-# Initialize Flask-Mail
-mail = Mail(app)
+# Initialize Flask-Mail (DISABLED - using SendGrid API directly)
+# mail = Mail(app)
 
 
 def get_email_translations(language='en'):
