@@ -2782,7 +2782,7 @@ function getCurrentLanguage() {
 }
 
 function setLanguage(lang) {
-this.currentLanguage = lang;
+
     localStorage.setItem('selectedLanguage', lang);
     applyLanguage(lang);
 
