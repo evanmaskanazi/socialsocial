@@ -1817,7 +1817,7 @@
     <!-- Mobile Navigation Bar -->
     <nav class="mobile-nav">
         <ul class="mobile-nav-menu">
-            <li class="mobile-nav-item active" data-view="feed" onclick="viewingUserId=null; window.viewingUserId=null; showView('feed')">
+            <li class="mobile-nav-item active" data-view="feed">
                 <span class="mobile-nav-icon">🏠</span>
                 <span class="mobile-nav-label" data-i18n="menu.feed">Feed</span>
             </li>
@@ -1860,7 +1860,7 @@
                     <li class="sidebar-item active" data-view="home" data-i18n="menu.home">
                         🏠 Home
                     </li>
-                    <li class="sidebar-item" data-view="feed" data-i18n="menu.feed" onclick="viewingUserId=null; window.viewingUserId=null; showView('feed')">
+                    <li class="sidebar-item" data-view="feed" data-i18n="menu.feed">
                         📱 Feed
                     </li>
                     <li class="sidebar-item" data-view="profile" data-i18n="menu.profile">
@@ -3247,7 +3247,7 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 
         document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
 
-       const view = item.dataset.view;
+      const view = item.dataset.view;
 
         // Reset viewing context ONLY for following, followers, messages, and invite
         // Keep viewingUserId for feed, profile, circles, parameters, tracking so user can navigate between viewed user's data
@@ -6298,7 +6298,7 @@ async function searchUsersToFollow() {
                         Follow
                     </button>
                    <button class="btn-primary btn-sm" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')" data-i18n="following.with_note">
-                                ${pt('following.with_note') || 'Follow with Note'}
+                                ${window.i18n && window.i18n.translate ? window.i18n.translate('following.with_note') : '+ Note'}
                     </button>
                 </div>
             </div>
