@@ -4608,6 +4608,20 @@ async function loadCircles() {
     try {
         console.log('[DEBUG] loadCircles called - loading own circles');
 
+        // CRITICAL FIX: Ensure language is set BEFORE displaying circles
+        if (!window.i18n || !window.i18n.currentLanguage) {
+            console.log('[loadCircles] ⚠️ i18n.currentLanguage not set! Initializing from localStorage...');
+            const storedLang = localStorage.getItem('selectedLanguage') || 'en';
+            if (window.i18n && window.i18n.setLanguage) {
+                await window.i18n.setLanguage(storedLang);
+                console.log('[loadCircles] ✅ Language initialized to:', storedLang);
+            } else {
+                console.error('[loadCircles] ❌ i18n.setLanguage not available!');
+            }
+        } else {
+            console.log('[loadCircles] ✅ Current language already set:', window.i18n.currentLanguage);
+        }
+
         // CRITICAL: Reset viewingUserId when loading own circles
         viewingUserId = null;
         window.viewingUserId = null;
@@ -4674,9 +4688,13 @@ async function loadCircles() {
 
         console.log('[DEBUG] Members - Public:', generalMembers.length, 'Class B:', closeFriendsMembers.length, 'Class A:', familyMembers.length);
 
+        // Update displays - language should now be properly set
+        console.log('[loadCircles] About to update circle displays with language:', window.i18n?.currentLanguage);
         updateCircleDisplay('general', generalMembers);
         updateCircleDisplay('close_friends', closeFriendsMembers);
         updateCircleDisplay('family', familyMembers);
+
+        console.log('[loadCircles] Circle displays updated');
     } catch (error) {
         console.error('Failed to load circles:', error);
         showNotification(window.i18n && window.i18n.translate ? window.i18n.translate('circles.load_failed') : 'Failed to load circles', 'error');
@@ -4688,6 +4706,20 @@ async function loadCircles() {
 // Now loadCircles() - with the nested functions removed
 async function loadUserCircles(userId) {
     try {
+        // CRITICAL FIX: Ensure language is set BEFORE displaying circles
+        if (!window.i18n || !window.i18n.currentLanguage) {
+            console.log('[loadUserCircles] ⚠️ i18n.currentLanguage not set! Initializing from localStorage...');
+            const storedLang = localStorage.getItem('selectedLanguage') || 'en';
+            if (window.i18n && window.i18n.setLanguage) {
+                await window.i18n.setLanguage(storedLang);
+                console.log('[loadUserCircles] ✅ Language initialized to:', storedLang);
+            } else {
+                console.error('[loadUserCircles] ❌ i18n.setLanguage not available!');
+            }
+        } else {
+            console.log('[loadUserCircles] ✅ Current language already set:', window.i18n.currentLanguage);
+        }
+
         const response = await fetch(`/api/users/${userId}/circles`, {
             headers: {
                 'Content-Type': 'application/json'
