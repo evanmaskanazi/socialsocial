@@ -133,39 +133,22 @@
                 return;
             }
 
-            // 5. Fetch and apply user's language preference
-            try {
-                // Check localStorage first
-                const localLang = localStorage.getItem('selectedLanguage');
-                console.log('[Circles] localStorage language:', localLang);
+         // 5. Apply user's language preference from localStorage
+// Note: We only read from localStorage to avoid race conditions with the main dashboard
+// The main dashboard handles syncing language with the backend
+try {
+    const localLang = localStorage.getItem('selectedLanguage');
+    console.log('[Circles] Using localStorage language (no backend sync):', localLang);
 
-                const response = await fetch('/api/user/profile');
-                if (response.ok) {
-                    const profile = await response.json();
-                    const backendLang = profile.preferred_language;
-                    console.log('[Circles] Backend language:', backendLang);
+    const langToUse = localLang || 'en';
 
-                    // Prefer localStorage over backend (user may have just changed it)
-                    const langToUse = localLang || backendLang || 'en';
-                    console.log('[Circles] Using language:', langToUse);
-
-                    if (window.i18n && window.i18n.setLanguage) {
-                        await window.i18n.setLanguage(langToUse);
-
-                        // If localStorage differs from backend, sync backend
-                        if (localLang && localLang !== backendLang) {
-                            console.log('[Circles] Syncing language to backend');
-                            fetch('/api/user/language', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ preferred_language: localLang })
-                            }).catch(err => console.error('Failed to sync language:', err));
-                        }
-                    }
-                }
-            } catch (error) {
-                console.log('Could not fetch user language preference');
-            }
+    if (window.i18n && window.i18n.setLanguage) {
+        await window.i18n.setLanguage(langToUse);
+        console.log('[Circles] Language set to:', langToUse);
+    }
+} catch (error) {
+    console.log('[Circles] Error setting language:', error);
+}
 
             // 6. Apply initial translations
             if (window.i18n && window.i18n.applyLanguage) {
