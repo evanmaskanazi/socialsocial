@@ -3286,7 +3286,7 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                         // Check if viewing another user
                         console.log('[DEBUG] Feed case - viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
 
-                  
+
 
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
                             console.log('[DEBUG] Feed view - loading feed for user:', viewingUserId);
@@ -3296,6 +3296,7 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             viewingUserId = null;  // Explicitly reset
                             window.viewingUserId = null;
                             initFeedCalendar();
+                            loadFeed(); 
                         }
                         break;
                     case 'profile':
