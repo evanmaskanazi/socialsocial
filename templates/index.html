@@ -7811,29 +7811,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.warn('i18n not loaded in time, using fallback');
     }
 
-    // Set up language selector event listener
- // Set up language selector event listener
-// Set up language selector event listener
-const langSelector = document.getElementById('languageSelector');
-if (langSelector) {
-    langSelector.addEventListener('change', function() {
-        // Use a more reliable check - see if the change matches current i18n language
-        // If selector value already matches i18n, this was likely programmatic
-        if (window.i18n && window.i18n.currentLanguage === this.value) {
-            // Check if we're in the middle of a programmatic update
-            if (window._updatingSelectorProgrammatically === true) {
-                console.log('[Language Selector] Ignoring programmatic change');
-                return;
-            }
-        }
-
-        // This is a user-initiated change
-        console.log('[Language Selector] User changed language to:', this.value);
-        if (window.i18n && window.i18n.setLanguage) {
-            window.i18n.setLanguage(this.value);
-        }
-    });
-}
 
     try {
         const response = await fetch(`${API_URL}/auth/session`, {
@@ -7886,45 +7863,13 @@ if (langSelector) {
             }
         }, 15000);
 
-        // Listen for language changes
-  // Listen for language changes
- window.addEventListener('languageChanged', () => {
-    // Update language selector to match current language WITHOUT triggering language change
-    const langSelector = document.getElementById('languageSelector');
-    if (langSelector && window.i18n && window.i18n.currentLanguage) {
-        // Only update if different to avoid unnecessary operations
-        if (langSelector.value !== window.i18n.currentLanguage) {
-            // Set global flag to indicate this is a programmatic change
-            window._updatingSelectorProgrammatically = true;
-
-            // Update the selector value
-            langSelector.value = window.i18n.currentLanguage;
-
-            // Clear flag immediately (synchronously, before change event fires)
-            window._updatingSelectorProgrammatically = false;
-        }
-    }
-
-    if (document.getElementById('feedView').classList.contains('hidden') === false) {
-        renderFeedCalendar();
-        updateFeedSelectedDateDisplay();
-    }
-    if (document.getElementById('trackingView').classList.contains('hidden') === false) {
-        renderCalendar();
-        updateSelectedDateDisplay();
-    }
-    // Reload alerts to apply new translations
-    if (currentUser) {
-        loadAlerts().catch(() => {});
-    }
-    // Reload conversations to apply new translations
-    if (document.getElementById('messagesView') && !document.getElementById('messagesView').classList.contains('hidden')) {
-        loadConversations();
-        if (currentRecipient && currentRecipient.id) {
-            loadMessages(currentRecipient.id, currentRecipient.username);
-        }
-    }
-});
+        // Listen for language changes to reload dynamic content
+        window.addEventListener('languageChanged', () => {
+            // Reload alerts and other dynamic content if user is logged in
+            if (currentUser) {
+                loadAlerts().catch(() => {});
+            }
+        });
  </script>
 
 <script>
