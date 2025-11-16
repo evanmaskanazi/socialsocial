@@ -655,6 +655,8 @@ if (window.i18n && window.i18n.applyLanguage) {
             window.i18n.applyLanguage(currentLang);
         }
 
+        updateCircleTitles();
+
     } catch (error) {
         console.error('Error loading circles:', error);
         if (window.showMessage) {
@@ -866,6 +868,8 @@ function updateCirclesDisplay() {
         updateCircleDisplay('class_b', window.circlesData.class_b, 'class_bMembers', 'class_bCount');
         updateCircleDisplay('class_a', window.circlesData.class_a, 'class_aMembers', 'class_aCount');
     }
+
+    updateCircleTitles();
 }
 
 // Update individual circle display
@@ -917,6 +921,35 @@ if (typeof window !== 'undefined') {
     window.removeFromCircle = removeFromCircle;
     window.updateCirclesDisplay = updateCirclesDisplay;  // Export the display update function
 }
+
+
+
+// Force update circle title translations
+function updateCircleTitles() {
+    if (!window.i18n || !window.i18n.translate) return;
+
+    const t = window.i18n.translate;
+
+    // Update Public circle title
+    const publicTitle = document.querySelector('[data-circle="general"] .circle-title');
+    if (publicTitle) {
+        publicTitle.textContent = t('circles.title_public', 'Public');
+    }
+
+    // Update Class B circle title
+    const classBTitle = document.querySelector('[data-circle="close_friends"] .circle-title');
+    if (classBTitle) {
+        classBTitle.textContent = t('circles.title_class_b', 'Class B (Friends)');
+    }
+
+    // Update Class A circle title
+    const classATitle = document.querySelector('[data-circle="family"] .circle-title');
+    if (classATitle) {
+        classATitle.textContent = t('circles.title_class_a', 'Class A (Family)');
+    }
+}
+
+
 
 
 async function addToCircle(userId, circleType, username) {
