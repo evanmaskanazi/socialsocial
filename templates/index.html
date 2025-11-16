@@ -3778,15 +3778,26 @@ function sendFollowRequestFromInvite(userId) {
 
 
         // Feed Calendar Functions
-     function initFeedCalendar(userId = null) {
+    function initFeedCalendar(userId = null) {
+            console.log('[DEBUG] initFeedCalendar called with userId:', userId);
+
+            // CRITICAL: If userId is null, we're viewing OWN feed
+            // Reset viewingUserId to ensure consistency
+            if (userId === null) {
+                console.log('[DEBUG] initFeedCalendar - resetting viewingUserId');
+                viewingUserId = null;
+                window.viewingUserId = null;
+            }
+
             loadFeedSavedDates(userId);
             renderFeedCalendar();
             updateFeedSelectedDateDisplay();
         }
 
-       async function loadFeedSavedDates(userId = null) {
+      async function loadFeedSavedDates(userId = null) {
     try {
         const endpoint = userId ? `/users/${userId}/feed/dates` : '/feed/dates';
+        console.log('[DEBUG] loadFeedSavedDates - userId:', userId, 'endpoint:', endpoint);
         const response = await apiCall(endpoint);
         if (response) {
             // Store dates organized by visibility
@@ -5610,11 +5621,16 @@ async function loadFollowing() {
 
                 // Add click handlers to view profiles
               // Add click handlers to view profiles
-                followingContainer.querySelectorAll('.user-card').forEach(card => {
+             followingContainer.querySelectorAll('.user-card').forEach(card => {
                     card.addEventListener('click', (e) => {
-                        if (!e.target.classList.contains('unfollow-btn')) {
+                        // Prevent accidental clicks on the card itself
+                        // Only allow clicks on the actual card content, not margins
+                        if (!e.target.classList.contains('unfollow-btn') &&
+                            (e.target.classList.contains('user-card') ||
+                             e.target.closest('.user-card'))) {
                             const userId = parseInt(card.dataset.userId);
                             console.log('[DEBUG] User card clicked, setting viewingUserId to:', userId);
+                            console.log('[DEBUG] Click target:', e.target.className, 'at position:', e.clientX, e.clientY);
                             viewUserProfile(userId);
                         }
                     });
