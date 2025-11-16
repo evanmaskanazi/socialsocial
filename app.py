@@ -517,7 +517,6 @@ def get_db():
     else:
         raise ValueError(f"Unsupported database type: {db_uri}")
 
-
 def auto_migrate_database():
     """Automatically update database schema on startup"""
     logger.info("Starting auto_migrate_database...")
@@ -766,6 +765,25 @@ def auto_migrate_database():
                             logger.info(f"✓ Cleaned up {rows_updated} posts with invalid circle_id")
                     except Exception as e:
                         logger.warning(f"Posts cleanup skipped: {e}")
+
+                    # Migrate old posts to use visibility field instead of circle_id
+                    try:
+                        result = conn.execute(text("""
+                            UPDATE posts 
+                            SET visibility = CASE 
+                                WHEN circle_id = 1 THEN 'general'
+                                WHEN circle_id = 2 THEN 'close_friends'
+                                WHEN circle_id = 3 THEN 'family'
+                                ELSE 'private'
+                            END
+                            WHERE visibility IS NULL OR visibility = ''
+                        """))
+                        conn.commit()
+                        rows_updated = result.rowcount
+                        if rows_updated > 0:
+                            logger.info(f"✓ Migrated {rows_updated} posts to use visibility field")
+                    except Exception as e:
+                        logger.warning(f"Posts visibility migration skipped: {e}")
 
                 logger.info("Database auto-migration completed successfully")
 
@@ -5189,7 +5207,6 @@ def add_comment(post_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to add comment'}), 500
 
-
 @app.route('/api/feed/<date_str>')
 @login_required
 def load_feed_by_date(date_str):
@@ -5198,22 +5215,10 @@ def load_feed_by_date(date_str):
         user_id = session['user_id']
         visibility = request.args.get('visibility', 'general')
 
-        # Map visibility to circle_id
-        circle_map = {
-            'general': 1,  # public
-            'close_friends': 2,  # class_b
-            'family': 3,  # class_a
-            'private': None
-        }
-        requested_circle_id = circle_map.get(visibility)
-
-        # FIX: Only search for posts with the EXACT circle_id requested
-        # No hierarchical searching - strict matching
-
-        # Get the post for this date that matches ONLY the requested circle_id
+        # Get the post for this date that matches the requested visibility
         post = Post.query.filter_by(
             user_id=user_id,
-            circle_id=requested_circle_id  # Exact match only
+            visibility=visibility  # Match by visibility field, not circle_id
         ).filter(
             db.func.date(Post.created_at) == date_str
         ).first()
