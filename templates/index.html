@@ -3280,13 +3280,16 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             initializeHomeView();
                         }
                         break;
-                  case 'feed':
+                case 'feed':
                         // Check if viewing another user
+                        console.log('[DEBUG] Feed case - viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
                             console.log('[DEBUG] Feed view - loading feed for user:', viewingUserId);
                             loadUserFeed(viewingUserId);
                         } else {
-                            console.log('[DEBUG] Feed view - loading own feed');
+                            console.log('[DEBUG] Feed view - loading own feed, resetting viewingUserId');
+                            viewingUserId = null;  // Explicitly reset
+                            window.viewingUserId = null;
                             initFeedCalendar();
                         }
                         break;
@@ -5466,6 +5469,12 @@ async function loadFollowing() {
         }
 
         // Remove any existing back buttons (we're in our own following view now)
+       // CRITICAL: Ensure we're back to viewing own account
+        viewingUserId = null;
+        window.viewingUserId = null;
+        console.log('[DEBUG] loadFollowing - reset viewingUserId to null');
+
+        // Remove any existing back buttons (we're in our own following view now)
         const existingBackBtn = document.querySelector('#followingView .back-to-following-btn');
         if (existingBackBtn) {
             existingBackBtn.remove();
@@ -5513,11 +5522,13 @@ async function loadFollowing() {
                 `).join('');
 
                 // Add click handlers to view profiles
+              // Add click handlers to view profiles
                 followingContainer.querySelectorAll('.user-card').forEach(card => {
                     card.addEventListener('click', (e) => {
                         if (!e.target.classList.contains('unfollow-btn')) {
-                            const userId = card.dataset.userId;
-                            viewUserProfile(parseInt(userId));
+                            const userId = parseInt(card.dataset.userId);
+                            console.log('[DEBUG] User card clicked, setting viewingUserId to:', userId);
+                            viewUserProfile(userId);
                         }
                     });
                 });
@@ -5556,8 +5567,8 @@ async function loadFollowing() {
                            <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 10px;" data-i18n="following.follow">
                                 ${pt('following.follow') || 'Follow'}
                             </button>
-                            <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${user.username}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;">
-                                ${pt('following.with_note') || '+ Note'}
+                           <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${user.username}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;" data-i18n="following.with_note">
+                                ${window.i18n && window.i18n.t ? window.i18n.t('following.with_note') : '+ Note'}
                             </button>
                         </div>
                     </div>
@@ -5674,10 +5685,12 @@ async function loadUserFollowing(userId) {
                 `).join('');
 
                 // Add click handlers to view profiles
+               // Add click handlers to view profiles
                 followersContainer.querySelectorAll('.user-card').forEach(card => {
                     card.addEventListener('click', () => {
-                        const userId = card.dataset.userId;
-                        viewUserProfile(parseInt(userId));
+                        const userId = parseInt(card.dataset.userId);
+                        console.log('[DEBUG] Follower card clicked, setting viewingUserId to:', userId);
+                        viewUserProfile(userId);
                     });
                 });
             } else {
@@ -6801,7 +6814,10 @@ async function loadUserFeed(userId) {
         // Load the calendar for this user
         // Don't set window.viewingUserId here - use the global viewingUserId variable instead
         // window.viewingUserId = userId;
+        // Keep viewingUserId set to the user we're viewing
+        console.log('[DEBUG] loadUserFeed - maintaining viewingUserId:', userId);
         window.currentUserId = sessionData.user_id;
+        currentUserId = sessionData.user_id;
         initFeedCalendar(isOwnFeed ? null : userId);
 
         const response = await fetch(`/api/users/${userId}/posts`, {
@@ -7753,6 +7769,7 @@ if (langSelector) {
             const data = await response.json();
             if (data && data.authenticated) {
                 currentUser = data.user;
+                currentUserId = data.user.id;
                 showDashboard();
                 // Load alerts AFTER dashboard is shown and i18n is ready
                 await checkAndLoadTriggerAlerts();
