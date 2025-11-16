@@ -4934,7 +4934,6 @@ function showCircleEditControls() {
 
 
 
-
 function updateCircleDisplay(type, members) {
     let containerId, countId, displayLabel;
 
@@ -4963,43 +4962,61 @@ function updateCircleDisplay(type, members) {
 
     count.textContent = members.length;
 
-    // Update the circle header to show the correct label
+    // Update the circle header to show the correct label using translations
     const circleSection = container.closest('.circle-card');
     if (circleSection) {
         const headerElement = circleSection.querySelector('.circle-title');
-      if (headerElement) {
-    // Use translation keys instead of hardcoded English text
-    const t = window.i18n && window.i18n.translate ? window.i18n.translate : (key, fallback) => fallback;
-    const emoji = type === 'general' ? '💥' :
-                 type === 'close_friends' ? '❤️' : '👨‍👩‍👧‍👦';
+        if (headerElement) {
+            // Get translation function - try both t() and translate() methods
+            const t = (window.i18n && window.i18n.t) ? window.i18n.t.bind(window.i18n) :
+                      (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) :
+                      (key, fallback) => fallback;
 
-    let translationKey, fallbackText;
-    if (type === 'general') {
-        translationKey = 'circles.title_public';
-        fallbackText = 'Public';
-    } else if (type === 'close_friends') {
-        translationKey = 'circles.title_class_b';
-        fallbackText = 'Class B (Friends)';
-    } else {
-        translationKey = 'circles.title_class_a';
-        fallbackText = 'Class A (Family)';
+            const emoji = type === 'general' ? '💥' :
+                         type === 'close_friends' ? '❤️' : '👨‍👩‍👧‍👦';
+
+            let translationKey, fallbackText;
+            if (type === 'general') {
+                translationKey = 'circles.title_public';
+                fallbackText = 'Public';
+            } else if (type === 'close_friends') {
+                translationKey = 'circles.title_class_b';
+                fallbackText = 'Class B (Friends)';
+            } else {
+                translationKey = 'circles.title_class_a';
+                fallbackText = 'Class A (Family)';
+            }
+
+            const translatedText = t(translationKey, fallbackText);
+            headerElement.textContent = `${emoji} ${translatedText}`;
+
+            // Debug logging to track what's being set
+            console.log(`[Circle Title Update] ${type}: "${emoji} ${translatedText}" (current lang: ${window.i18n?.currentLanguage || 'unknown'})`);
+        }
     }
 
-    headerElement.textContent = `${emoji} ${t(translationKey, fallbackText)}`;
-}
-    }
-
+    // Update member list or show empty state
     if (members.length === 0) {
-        container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${(window.i18n && window.i18n.t ? window.i18n.t('circles.no_members') : 'No members yet')}</p>`;
+        // Get translation function for empty state
+        const t = (window.i18n && window.i18n.t) ? window.i18n.t.bind(window.i18n) :
+                  (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) :
+                  (key, fallback) => fallback;
+
+        container.innerHTML = `<p style="text-align: center; color: var(--gray);" data-i18n="circles.no_members">${t('circles.no_members', 'No members yet')}</p>`;
     } else {
         // Check if viewing another user's circles (read-only mode)
         const isReadOnly = viewingUserId !== null && viewingUserId !== currentUserId;
+
+        // Get translation function for Remove button
+        const t = (window.i18n && window.i18n.t) ? window.i18n.t.bind(window.i18n) :
+                  (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) :
+                  (key, fallback) => fallback;
 
         container.innerHTML = members.map(member => `
             <div class="member-item">
                 <div class="member-avatar">${member.username[0].toUpperCase()}</div>
                 <span class="member-name">${member.username}</span>
-                ${!isReadOnly ? `<button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${(window.i18n && window.i18n.t ? window.i18n.t('circles.remove') : 'Remove')}</button>` : ''}
+                ${!isReadOnly ? `<button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${t('circles.remove', 'Remove')}</button>` : ''}
             </div>
         `).join('');
     }
