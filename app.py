@@ -5022,6 +5022,18 @@ def like_post(post_id):
             db.session.delete(existing_reaction)
             db.session.commit()
 
+            # Invalidate feed cache for the post owner
+            if REDIS_URL:
+                try:
+                    r = redis.from_url(REDIS_URL)
+                    # Clear all pages of the post owner's feed
+                    pattern = f'feed:{post.user_id}:*'
+                    for key in r.scan_iter(match=pattern):
+                        r.delete(key)
+                    logger.debug(f'Invalidated feed cache for user {post.user_id}')
+                except Exception as e:
+                    logger.warning(f'Feed cache invalidation failed: {e}')
+
             # Get updated count
             likes_count = db.session.execute(
                 select(func.count(Reaction.id)).filter_by(
@@ -5044,6 +5056,18 @@ def like_post(post_id):
             )
             db.session.add(new_reaction)
             db.session.commit()
+
+            # Invalidate feed cache for the post owner
+            if REDIS_URL:
+                try:
+                    r = redis.from_url(REDIS_URL)
+                    # Clear all pages of the post owner's feed
+                    pattern = f'feed:{post.user_id}:*'
+                    for key in r.scan_iter(match=pattern):
+                        r.delete(key)
+                    logger.debug(f'Invalidated feed cache for user {post.user_id}')
+                except Exception as e:
+                    logger.warning(f'Feed cache invalidation failed: {e}')
 
             # Get updated count
             likes_count = db.session.execute(
@@ -5125,6 +5149,18 @@ def add_comment(post_id):
         )
         db.session.add(new_comment)
         db.session.commit()
+
+        # Invalidate feed cache for the post owner
+        if REDIS_URL:
+            try:
+                r = redis.from_url(REDIS_URL)
+                # Clear all pages of the post owner's feed
+                pattern = f'feed:{post.user_id}:*'
+                for key in r.scan_iter(match=pattern):
+                    r.delete(key)
+                logger.debug(f'Invalidated feed cache for user {post.user_id}')
+            except Exception as e:
+                logger.warning(f'Feed cache invalidation failed: {e}')
 
         # Get author information
         author = db.session.get(User, user_id)
