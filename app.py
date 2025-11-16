@@ -732,6 +732,41 @@ def auto_migrate_database():
                             conn.commit()
                             logger.info(f"✓ Added {col} column to parameter_triggers table")
 
+                # Auto-migration: Remove posts circle_id foreign key constraint
+                if 'posts' in inspector.get_table_names():
+                    try:
+                        # Check if the constraint exists (PostgreSQL only)
+                        if is_postgres:
+                            result = conn.execute(text("""
+                                SELECT constraint_name 
+                                FROM information_schema.table_constraints 
+                                WHERE table_name = 'posts' 
+                                AND constraint_name = 'posts_circle_id_fkey'
+                            """))
+
+                            if result.fetchone():
+                                logger.info("Removing posts_circle_id_fkey constraint...")
+                                conn.execute(text('ALTER TABLE posts DROP CONSTRAINT posts_circle_id_fkey'))
+                                conn.commit()
+                                logger.info("✓ Removed posts_circle_id_fkey constraint")
+                    except Exception as e:
+                        logger.warning(f"Posts constraint removal skipped: {e}")
+
+                    # Clean up posts with invalid circle_id
+                    try:
+                        result = conn.execute(text("""
+                            UPDATE posts 
+                            SET circle_id = NULL 
+                            WHERE circle_id IS NOT NULL 
+                            AND circle_id NOT IN (SELECT id FROM circles)
+                        """))
+                        conn.commit()
+                        rows_updated = result.rowcount
+                        if rows_updated > 0:
+                            logger.info(f"✓ Cleaned up {rows_updated} posts with invalid circle_id")
+                    except Exception as e:
+                        logger.warning(f"Posts cleanup skipped: {e}")
+
                 logger.info("Database auto-migration completed successfully")
 
         except Exception as e:
@@ -911,7 +946,7 @@ class Post(db.Model):
     content = db.Column(db.Text, nullable=False)
     image_url = db.Column(db.String(500))
     likes = db.Column(db.Integer, default=0)
-    circle_id = db.Column(db.Integer, db.ForeignKey('circles.id'))
+    circle_id = db.Column(db.Integer, nullable=True)
     visibility = db.Column(db.String(50), default='general')
     is_published = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -4951,7 +4986,6 @@ def get_user_feed_by_date(user_id, date):
         logger.error(f"Error getting user feed by date: {e}")
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/api/posts', methods=['POST'])
 @login_required
 def save_feed_entry():
@@ -4968,32 +5002,20 @@ def save_feed_entry():
         if not content:
             return jsonify({'error': 'Content is required'}), 400
 
-        # Map visibility to circle_id
-        circle_map = {
-            'general': 1,  # public
-            'close_friends': 2,  # class_b
-            'family': 3,  # class_a
-            'private': None
-        }
-        selected_circle_id = circle_map.get(visibility)
-
-        # FIX: Each visibility level should only save to its OWN circle_id
-        # No hierarchical saving - strict separation
-        # Public (1) -> only circle_id 1
-        # Class B (2) -> only circle_id 2
-        # Class A (3) -> only circle_id 3
-        # Private (None) -> only circle_id None
+        # REMOVED: Map visibility to circle_id - no longer needed
+        # We now use visibility field directly instead of circle_id
 
         # Delete any existing posts for this date first
         Post.query.filter_by(user_id=user_id).filter(
             db.func.date(Post.created_at) == post_date
         ).delete()
 
-        # Create a SINGLE post with the selected circle_id
+        # Create a SINGLE post with visibility field
         new_post = Post(
             user_id=user_id,
             content=content,
-            circle_id=selected_circle_id,  # Only the selected circle_id
+            circle_id=None,  # CHANGED: Always None, use visibility instead
+            visibility=visibility,  # ADDED: Store visibility directly
             created_at=datetime.strptime(post_date, '%Y-%m-%d'),
             updated_at=datetime.utcnow(),
             is_published=True
