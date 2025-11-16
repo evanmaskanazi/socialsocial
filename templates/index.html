@@ -4967,12 +4967,26 @@ function updateCircleDisplay(type, members) {
     const circleSection = container.closest('.circle-card');
     if (circleSection) {
         const headerElement = circleSection.querySelector('.circle-title');
-        if (headerElement) {
-            // Update the label text while keeping the emoji
-            const emoji = type === 'general' ? '💥' :
-                         type === 'close_friends' ? '❤️' : '👨‍👩‍👧‍👦';
-            headerElement.textContent = `${emoji} ${displayLabel}`;
-        }
+      if (headerElement) {
+    // Use translation keys instead of hardcoded English text
+    const t = window.i18n && window.i18n.translate ? window.i18n.translate : (key, fallback) => fallback;
+    const emoji = type === 'general' ? '💥' :
+                 type === 'close_friends' ? '❤️' : '👨‍👩‍👧‍👦';
+
+    let translationKey, fallbackText;
+    if (type === 'general') {
+        translationKey = 'circles.title_public';
+        fallbackText = 'Public';
+    } else if (type === 'close_friends') {
+        translationKey = 'circles.title_class_b';
+        fallbackText = 'Class B (Friends)';
+    } else {
+        translationKey = 'circles.title_class_a';
+        fallbackText = 'Class A (Family)';
+    }
+
+    headerElement.textContent = `${emoji} ${t(translationKey, fallbackText)}`;
+}
     }
 
     if (members.length === 0) {
