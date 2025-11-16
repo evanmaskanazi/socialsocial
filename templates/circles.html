@@ -38,6 +38,7 @@
     <script>
         // SINGLE initialization flag to prevent race conditions
         let pageInitialized = false;
+        let isUpdatingLanguage = false; // Prevent concurrent language updates
 
         // Verify authentication before loading
         async function checkAuthentication() {
@@ -133,39 +134,38 @@
             }
 
             // 5. Fetch and apply user's language preference
-          // 5. Fetch and apply user's language preference
-try {
-    // Check localStorage first
-    const localLang = localStorage.getItem('selectedLanguage');
-    console.log('[Circles] localStorage language:', localLang);
+            try {
+                // Check localStorage first
+                const localLang = localStorage.getItem('selectedLanguage');
+                console.log('[Circles] localStorage language:', localLang);
 
-    const response = await fetch('/api/user/profile');
-    if (response.ok) {
-        const profile = await response.json();
-        const backendLang = profile.preferred_language;
-        console.log('[Circles] Backend language:', backendLang);
+                const response = await fetch('/api/user/profile');
+                if (response.ok) {
+                    const profile = await response.json();
+                    const backendLang = profile.preferred_language;
+                    console.log('[Circles] Backend language:', backendLang);
 
-        // Prefer localStorage over backend (user may have just changed it)
-        const langToUse = localLang || backendLang || 'en';
-        console.log('[Circles] Using language:', langToUse);
+                    // Prefer localStorage over backend (user may have just changed it)
+                    const langToUse = localLang || backendLang || 'en';
+                    console.log('[Circles] Using language:', langToUse);
 
-        if (window.i18n && window.i18n.setLanguage) {
-            await window.i18n.setLanguage(langToUse);
+                    if (window.i18n && window.i18n.setLanguage) {
+                        await window.i18n.setLanguage(langToUse);
 
-            // If localStorage differs from backend, sync backend
-            if (localLang && localLang !== backendLang) {
-                console.log('[Circles] Syncing language to backend');
-                fetch('/api/user/language', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ preferred_language: localLang })
-                }).catch(err => console.error('Failed to sync language:', err));
+                        // If localStorage differs from backend, sync backend
+                        if (localLang && localLang !== backendLang) {
+                            console.log('[Circles] Syncing language to backend');
+                            fetch('/api/user/language', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ preferred_language: localLang })
+                            }).catch(err => console.error('Failed to sync language:', err));
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log('Could not fetch user language preference');
             }
-        }
-    }
-} catch (error) {
-    console.log('Could not fetch user language preference');
-}
 
             // 6. Apply initial translations
             if (window.i18n && window.i18n.applyLanguage) {
@@ -193,7 +193,7 @@ try {
             console.log('Waiting for circles to populate...');
             await waitForCirclesPopulated(3000);
 
-            // 9. Apply translations ONE FINAL TIME (after data loaded)
+            // 9. Apply translations (after data loaded)
             if (window.i18n && window.i18n.applyLanguage) {
                 const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
                 window.i18n.applyLanguage(currentLang);
@@ -204,19 +204,21 @@ try {
                 updateCirclesDisplay();
             }
 
-            // Update privacy dropdown translations
+            // 11. Update privacy dropdown translations
             if (typeof updatePrivacyDropdownTranslations === 'function') {
                 updatePrivacyDropdownTranslations();
             }
 
-            // Force re-translation of ALL data-i18n elements (including circle titles)
-            if (window.i18n && window.i18n.applyLanguage) {
-                const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
-                console.log('Final translation pass for language:', currentLang);
-                window.i18n.applyLanguage(currentLang);
+            // 12. Force-update circle titles as FINAL step (with delay to ensure all other translations complete)
+            // This fixes the race condition where applyLanguage() was overwriting manual title updates
+            if (typeof updateCircleTitles === 'function') {
+                setTimeout(() => {
+                    updateCircleTitles();
+                    console.log('[Circles] Final circle titles update complete');
+                }, 100);
             }
 
-            // 11. Make visible
+            // 13. Make visible
             const container = document.getElementById('circlesContainer');
             const loadingDiv = document.getElementById('loadingMessage');
             container.style.opacity = '1';
@@ -225,28 +227,48 @@ try {
             console.log('Circles page fully initialized and visible');
         }
 
-        // Language change handler - SIMPLIFIED
-        window.addEventListener('languageChanged', (event) => {
+        // Language change handler - FIXED to prevent race conditions
+        window.addEventListener('languageChanged', async (event) => {
             if (!pageInitialized) return; // Don't handle until page is ready
 
-            console.log('Language changed to:', event.detail?.language || window.i18n?.currentLanguage);
-
-            // Update RTL direction
-            const rtlLanguages = ['ar', 'he'];
-            const newLang = event.detail?.language || window.i18n?.currentLanguage || 'en';
-            document.body.setAttribute('dir', rtlLanguages.includes(newLang) ? 'rtl' : 'ltr');
-
-            // Re-apply translations (WITHOUT reloading data)
-            if (window.i18n && window.i18n.applyLanguage) {
-                window.i18n.applyLanguage(newLang);
+            // Prevent concurrent language updates
+            if (isUpdatingLanguage) {
+                console.log('[Circles] Language update already in progress, skipping...');
+                return;
             }
 
-            // Update circle displays and privacy dropdowns
-            if (typeof updateCirclesDisplay === 'function') {
-                updateCirclesDisplay();
-            }
-            if (typeof updatePrivacyDropdownTranslations === 'function') {
-                updatePrivacyDropdownTranslations();
+            isUpdatingLanguage = true;
+
+            try {
+                console.log('Language changed to:', event.detail?.language || window.i18n?.currentLanguage);
+
+                // Update RTL direction
+                const rtlLanguages = ['ar', 'he'];
+                const newLang = event.detail?.language || window.i18n?.currentLanguage || 'en';
+                document.body.setAttribute('dir', rtlLanguages.includes(newLang) ? 'rtl' : 'ltr');
+
+                // Re-apply translations to all data-i18n elements
+                if (window.i18n && window.i18n.applyLanguage) {
+                    window.i18n.applyLanguage(newLang);
+                }
+
+                // Update privacy dropdown
+                if (typeof updatePrivacyDropdownTranslations === 'function') {
+                    updatePrivacyDropdownTranslations();
+                }
+
+                // Force-update circle titles AFTER all other translations (with delay)
+                if (typeof updateCircleTitles === 'function') {
+                    setTimeout(() => {
+                        updateCircleTitles();
+                        console.log('[Circles] Circle titles updated after language change');
+                    }, 100);
+                }
+            } finally {
+                // Reset flag after a delay to allow for async operations
+                setTimeout(() => {
+                    isUpdatingLanguage = false;
+                }, 300);
             }
         });
 
