@@ -3290,8 +3290,6 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                         // Check if viewing another user
                         console.log('[DEBUG] Feed case - viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
 
-
-
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
                             console.log('[DEBUG] Feed view - loading feed for user:', viewingUserId);
                             loadUserFeed(viewingUserId);
@@ -3299,6 +3297,39 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             console.log('[DEBUG] Feed view - loading own feed, resetting viewingUserId');
                             viewingUserId = null;  // Explicitly reset
                             window.viewingUserId = null;
+
+                            // CRITICAL: Restore ALL post creation UI elements
+                            console.log('[DEBUG] Restoring post creation UI');
+                            const postInput = document.getElementById('postInput');
+                            const visibilitySelect = document.getElementById('visibilitySelect');
+                            const saveBtn = document.getElementById('postBtn');
+                            const postForm = document.querySelector('.post-form');
+                            const feedHeader = document.querySelector('#feedView h2');
+
+                            if (postInput) {
+                                postInput.style.display = '';
+                                console.log('[DEBUG] Restored postInput');
+                            }
+                            if (visibilitySelect) {
+                                visibilitySelect.style.display = '';
+                                console.log('[DEBUG] Restored visibilitySelect');
+                            }
+                            if (saveBtn) {
+                                saveBtn.style.display = '';
+                                console.log('[DEBUG] Restored saveBtn');
+                            }
+                            if (postForm) {
+                                postForm.style.display = '';
+                                console.log('[DEBUG] Restored postForm div');
+                            }
+                            if (feedHeader) {
+                                feedHeader.setAttribute('data-i18n', 'feed.title');
+                                if (typeof translatePage === 'function') {
+                                    translatePage(currentLanguage);
+                                }
+                                console.log('[DEBUG] Restored feedHeader');
+                            }
+
                             initFeedCalendar();
                             loadFeed();
                         }
@@ -3474,7 +3505,7 @@ function showView(viewName) {
             if (parametersHeader) parametersHeader.textContent = 'Wellness Parameters';
 
             // Show input forms again
-            document.querySelectorAll('form, .post-creation, .parameter-inputs').forEach(form => {
+            document.querySelectorAll('form, .post-form, .post-creation, .parameter-inputs').forEach(form => {
                 form.style.display = '';
             });
         }
@@ -3559,9 +3590,28 @@ function showView(viewName) {
         // Viewing own profile
         switch(viewName) {
             case 'feed':
-                // viewingUserId is maintained - dont reset it
-           // restoreFeedEditMode(); // Restore editable mode
+                // Reset viewingUserId and restore UI when viewing own feed
+                viewingUserId = null;
+                window.viewingUserId = null;
+
+                // Restore post creation UI
+                const postInput = document.getElementById('postInput');
+                const visibilitySelect = document.getElementById('visibilitySelect');
+                const saveBtn = document.getElementById('postBtn');
+                const feedHeader = document.querySelector('#feedView h2');
+
+                if (postInput) postInput.style.display = '';
+                if (visibilitySelect) visibilitySelect.style.display = '';
+                if (saveBtn) saveBtn.style.display = '';
+                if (feedHeader) {
+                    feedHeader.setAttribute('data-i18n', 'feed.title');
+                    if (typeof translatePage === 'function') {
+                        translatePage(currentLanguage);
+                    }
+                }
+
                 initFeedCalendar();
+                loadFeed();
                 break;
             case 'profile':
                 loadProfile();
@@ -7151,7 +7201,7 @@ function addBackToFollowingButton(viewId) {
             btn.style.display = '';
         });
         // Show post forms again
-        document.querySelectorAll('form, .post-creation, .parameter-inputs').forEach(form => {
+        document.querySelectorAll('form, .post-form, .post-creation, .parameter-inputs').forEach(form => {
             form.style.display = '';
         });
 
