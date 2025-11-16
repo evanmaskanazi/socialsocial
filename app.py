@@ -4510,7 +4510,6 @@ def update_circles_privacy():
 # =====================
 # FEED & POSTS ROUTES
 # =====================
-
 @app.route('/api/feed', methods=['GET'])
 @login_required
 @rate_limit_endpoint(max_requests=60, window=60)  # 60 requests per minute
@@ -4532,15 +4531,9 @@ def get_feed():
             except Exception as e:
                 logger.warning(f'Cache read failed: {e}')
 
-        # Get users in circles - SQLAlchemy 2.0 style
-        circles_stmt = select(Circle).filter_by(user_id=user_id)
-        circle_users = db.session.execute(circles_stmt).scalars().all()
-        circle_user_ids = [c.circle_user_id for c in circle_users]
-        circle_user_ids.append(user_id)  # Include own posts
-
-        # Get posts - SQLAlchemy 2.0 style
+        # Get ONLY own posts for Feed page
         posts_stmt = select(Post).filter(
-            Post.user_id.in_(circle_user_ids),
+            Post.user_id == user_id,
             Post.is_published == True
         ).order_by(desc(Post.created_at)).limit(50)
 
