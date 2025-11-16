@@ -2777,12 +2777,16 @@ function detectBrowserLanguage() {
 }
 
 function getCurrentLanguage() {
-    // Priority: 1. Stored preference, 2. Browser language, 3. Default English
+    // Priority: 1. Cached value, 2. Stored preference, 3. Browser language, 4. Default English
+    if (window.i18n && window.i18n.currentLanguage) {
+        return window.i18n.currentLanguage;
+    }
     return localStorage.getItem('selectedLanguage') || detectBrowserLanguage();
 }
 
 function setLanguage(lang) {
-
+    // CRITICAL: Set cached language value - this will be used by getCurrentLanguage()
+    this.currentLanguage = lang;
     localStorage.setItem('selectedLanguage', lang);
     applyLanguage(lang);
 
