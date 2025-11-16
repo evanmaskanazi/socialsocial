@@ -7864,40 +7864,27 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         }, 15000);
 
-        // Listen for language changes
-  // Listen for language changes
- window.addEventListener('languageChanged', () => {
-    // Listen for language changes to reload dynamic content
-window.addEventListener('languageChanged', () => {
-    // Reload alerts and other dynamic content if user is logged in
-    if (currentUser) {
-        loadAlerts().catch(() => {});
-    }
-});
-            // Update the selector value
-            langSelector.value = window.i18n.currentLanguage;
+        // Listen for language changes to reload dynamic content
+        window.addEventListener('languageChanged', () => {
+            // Refresh calendars if visible
+            if (document.getElementById('feedView').classList.contains('hidden') === false) {
+                renderFeedCalendar();
+                updateFeedSelectedDateDisplay();
+            }
+            if (document.getElementById('trackingView').classList.contains('hidden') === false) {
+                renderCalendar();
+                updateSelectedDateDisplay();
+            }
 
-            // Clear flag immediately (synchronously, before change event fires)
-            window._updatingSelectorProgrammatically = false;
-        }
-    }
+            // Reload alerts to apply new translations
+            if (currentUser) {
+                loadAlerts().catch(() => {});
+            }
 
-    if (document.getElementById('feedView').classList.contains('hidden') === false) {
-        renderFeedCalendar();
-        updateFeedSelectedDateDisplay();
-    }
-    if (document.getElementById('trackingView').classList.contains('hidden') === false) {
-        renderCalendar();
-        updateSelectedDateDisplay();
-    }
-    // Reload alerts to apply new translations
-    if (currentUser) {
-        loadAlerts().catch(() => {});
-    }
-    // Reload conversations to apply new translations
-    if (document.getElementById('messagesView') && !document.getElementById('messagesView').classList.contains('hidden')) {
-        loadConversations();
-        if (currentRecipient && currentRecipient.id) {
+            // Reload conversations to apply new translations
+            if (document.getElementById('messagesView') && !document.getElementById('messagesView').classList.contains('hidden')) {
+                loadConversations();
+                if (currentRecipient && currentRecipient.id) {
             loadMessages(currentRecipient.id, currentRecipient.username);
         }
     }
