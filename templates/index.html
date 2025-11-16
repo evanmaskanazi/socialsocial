@@ -3806,6 +3806,23 @@ function sendFollowRequestFromInvite(userId) {
                 console.log('[DEBUG] initFeedCalendar - resetting viewingUserId');
                 viewingUserId = null;
                 window.viewingUserId = null;
+
+                // Restore post creation UI when viewing own feed
+                const postInput = document.getElementById('postInput');
+                const visibilitySelect = document.getElementById('visibilitySelect');
+                const saveBtn = document.getElementById('postBtn');
+                const feedHeader = document.querySelector('#feedView h2');
+
+                if (postInput) postInput.style.display = '';
+                if (visibilitySelect) visibilitySelect.style.display = '';
+                if (saveBtn) saveBtn.style.display = '';
+                if (feedHeader) {
+                    feedHeader.setAttribute('data-i18n', 'feed.title');
+                    // Re-translate if translation function exists
+                    if (typeof translatePage === 'function') {
+                        translatePage(currentLanguage);
+                    }
+                }
             }
 
             loadFeedSavedDates(userId);
@@ -4218,6 +4235,22 @@ document.addEventListener('click', function(e) {
         // Feed Functions
         async function loadFeed() {
             try {
+                // Restore post creation UI when viewing own feed
+                const postInput = document.getElementById('postInput');
+                const visibilitySelect = document.getElementById('visibilitySelect');
+                const saveBtn = document.getElementById('postBtn');
+                const feedHeader = document.querySelector('#feedView h2');
+
+                if (postInput) postInput.style.display = '';
+                if (visibilitySelect) visibilitySelect.style.display = '';
+                if (saveBtn) saveBtn.style.display = '';
+                if (feedHeader) feedHeader.setAttribute('data-i18n', 'feed.title');
+
+                // Re-translate the header in case it was changed
+                if (typeof translatePage === 'function') {
+                    translatePage(currentLanguage);
+                }
+
                 const response = await apiCall('/feed');
                 if (!response) return;
 
