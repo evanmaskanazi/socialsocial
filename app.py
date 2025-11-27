@@ -3619,7 +3619,7 @@ def search_users():
         query = request.args.get('q', '').strip().lower()
         logger.info(f"🔍 Search request: query='{query}'")
 
-        if not query or len(query) < 2:
+        if not query or len(query) < 1:
             logger.info(f"❌ Query too short: length={len(query)}")
             return jsonify({'users': []})
 
@@ -5769,6 +5769,169 @@ def get_insights():
     except Exception as e:
         logger.error(f"Get insights error: {str(e)}")
         return jsonify({'message': 'Failed to get insights'})
+
+
+@app.route('/api/parameters/today-status')
+@login_required
+def get_today_status():
+    """Check if user has a diary entry for today"""
+    try:
+        user_id = session['user_id']
+        today = datetime.now().date()
+        
+        # Check if entry exists for today
+        params_stmt = select(SavedParameters).filter(
+            SavedParameters.user_id == user_id,
+            SavedParameters.date == today
+        )
+        entry = db.session.execute(params_stmt).scalar_one_or_none()
+        
+        return jsonify({
+            'has_entry_today': entry is not None,
+            'date': today.isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Today status error: {str(e)}")
+        return jsonify({'has_entry_today': False, 'error': str(e)})
+
+
+@app.route('/api/parameters/progress')
+@login_required
+def get_progress():
+    """Get progress data for charts"""
+    try:
+        user_id = session['user_id']
+        days = request.args.get('days', 7, type=int)
+        
+        # Limit to reasonable ranges
+        if days > 365:
+            days = 365
+        
+        start_date = datetime.now().date() - timedelta(days=days)
+        
+        # Get parameters for the period
+        params_stmt = select(SavedParameters).filter(
+            SavedParameters.user_id == user_id,
+            SavedParameters.date >= start_date
+        ).order_by(SavedParameters.date)
+        params = db.session.execute(params_stmt).scalars().all()
+        
+        # Map mood strings to numbers
+        mood_map = {
+            'terrible': 1, 'bad': 2, 'poor': 3, 'low': 4,
+            'okay': 5, 'neutral': 5, 'fine': 5,
+            'good': 7, 'great': 8, 'excellent': 9, 'amazing': 10
+        }
+        
+        # Map energy strings to numbers
+        energy_map = {
+            'exhausted': 1, 'very low': 2, 'low': 3,
+            'moderate': 5, 'normal': 5,
+            'high': 7, 'very high': 9, 'energetic': 8
+        }
+        
+        # Map exercise to activity level
+        exercise_map = {
+            'none': 1, 'light': 3, 'moderate': 5, 'intense': 8, 'extreme': 10
+        }
+        
+        dates = []
+        mood_data = []
+        energy_data = []
+        sleep_data = []
+        activity_data = []
+        
+        for p in params:
+            dates.append(p.date.strftime('%m/%d'))
+            
+            # Convert mood
+            mood_val = None
+            if p.mood:
+                mood_lower = p.mood.lower()
+                mood_val = mood_map.get(mood_lower, 5)
+            mood_data.append(mood_val)
+            
+            # Convert energy
+            energy_val = None
+            if p.energy:
+                energy_lower = p.energy.lower()
+                energy_val = energy_map.get(energy_lower, 5)
+            energy_data.append(energy_val)
+            
+            # Sleep hours (direct)
+            sleep_data.append(p.sleep_hours if p.sleep_hours else None)
+            
+            # Exercise to activity
+            activity_val = None
+            if p.exercise:
+                exercise_lower = p.exercise.lower()
+                activity_val = exercise_map.get(exercise_lower, 5)
+            activity_data.append(activity_val)
+        
+        # Calculate averages
+        valid_moods = [m for m in mood_data if m is not None]
+        valid_energy = [e for e in energy_data if e is not None]
+        valid_sleep = [s for s in sleep_data if s is not None]
+        valid_activity = [a for a in activity_data if a is not None]
+        
+        avg_mood = sum(valid_moods) / len(valid_moods) if valid_moods else None
+        avg_energy = sum(valid_energy) / len(valid_energy) if valid_energy else None
+        avg_sleep = sum(valid_sleep) / len(valid_sleep) if valid_sleep else None
+        avg_activity = sum(valid_activity) / len(valid_activity) if valid_activity else None
+        
+        # Generate insights
+        insights = generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, len(params))
+        
+        return jsonify({
+            'dates': dates,
+            'mood': mood_data,
+            'energy': energy_data,
+            'sleep': sleep_data,
+            'activity': activity_data,
+            'totalCheckins': len(params),
+            'avgMood': avg_mood,
+            'avgEnergy': avg_energy,
+            'avgSleep': avg_sleep,
+            'avgActivity': avg_activity,
+            'insights': insights
+        })
+        
+    except Exception as e:
+        logger.error(f"Progress data error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, total_entries):
+    """Generate personalized insights based on averages"""
+    insights = []
+    
+    if total_entries == 0:
+        return "Start tracking your daily wellness to receive personalized insights!"
+    
+    if total_entries < 7:
+        insights.append(f"You've logged {total_entries} entries. Keep tracking daily for better insights!")
+    
+    if avg_sleep is not None:
+        if avg_sleep < 6:
+            insights.append("Your average sleep is below 6 hours. Consider prioritizing rest.")
+        elif avg_sleep >= 7 and avg_sleep <= 9:
+            insights.append("Great job maintaining healthy sleep habits!")
+    
+    if avg_mood is not None:
+        if avg_mood >= 7:
+            insights.append("Your mood has been generally positive. Keep up the good work!")
+        elif avg_mood < 5:
+            insights.append("Your mood has been lower than usual. Consider activities that boost your wellbeing.")
+    
+    if avg_energy is not None and avg_sleep is not None:
+        if avg_energy < 5 and avg_sleep < 7:
+            insights.append("Low energy might be linked to insufficient sleep.")
+    
+    if not insights:
+        insights.append("You're making progress! Continue tracking for more detailed insights.")
+    
+    return " ".join(insights)
 
 
 @app.route('/api/parameters/triggers/<int:user_id>', methods=['GET'])
