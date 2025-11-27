@@ -1465,6 +1465,10 @@
     <!-- Auth Container -->
     <div id="authContainer" class="auth-container">
         <div class="auth-card fade-in">
+            <!-- FIX #1: Login Error Message -->
+            <div id="loginErrorMessage" class="login-error-message" style="display: none; background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; color: #dc2626; text-align: center; font-weight: 500;">
+                <span data-i18n="auth.invalid_credentials">You have entered an invalid username or password</span>
+            </div>
             <h2 class="auth-title" id="authTitle" data-i18n="auth.welcome">Welcome Back</h2>
           <form id="authForm">
                 <div class="form-group">
@@ -2161,7 +2165,7 @@
                         " onchange="(function(el){ console.log('Privacy dropdown changed to:', el.value); updateCirclesPrivacy(el.value); })(this)">
                             <option value="private" data-i18n="circles.visibility_private">Private 🔒</option>
                             <option value="public" data-i18n="circles.visibility_public">Public 🌍</option>
-                            <option value="class_b" data-i18n="circles.visibility_class_b">Close Friends ❤️</option>
+                            <option value="class_b" data-i18n="circles.visibility_class_b">Close Friends 👥</option>
                             <option value="class_a" data-i18n="circles.visibility_class_a">Family 👨‍👩‍👧‍👦</option>
                         </select>
                     </div>
@@ -2184,7 +2188,7 @@
 
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title" data-i18n="circles.title_class_b">❤️ Close Friends</span>
+                                <span class="circle-title" data-i18n="circles.title_class_b">👥 Close Friends</span>
                                 <span class="circle-count" id="closeFriendsCount">0</span>
                             </div>
                             <div class="circle-members" id="closeFriendsMembers">
@@ -2756,6 +2760,10 @@ async function loadUserCity() {
 
   document.getElementById('authForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // FIX #1: Hide any previous error message
+        const loginError = document.getElementById('loginErrorMessage');
+        if (loginError) loginError.style.display = 'none';
 
         const email = document.getElementById('emailInput').value;
         const password = document.getElementById('passwordInput').value;
@@ -2799,10 +2807,33 @@ async function loadUserCity() {
                     }
                 }
 
-                showDashboard();
+                // FIX #5: Check if user needs to fill diary before showing dashboard
+                const needsDiary = await checkAndRedirectToDiary();
+                if (!needsDiary) {
+                    showDashboard();
+                }
             }
         } catch (error) {
-            alert(error.message);
+            // FIX #1: Show translated login error message instead of alert
+            if (loginError && isLoginMode) {
+                // Update text based on current language
+                const lang = localStorage.getItem('selectedLanguage') || 'en';
+                const errorTexts = {
+                    'en': 'You have entered an invalid username or password',
+                    'he': 'הזנת שם משתמש או סיסמה לא תקינים',
+                    'ar': 'لقد أدخلت اسم مستخدم أو كلمة مرور غير صالحة',
+                    'ru': 'Вы ввели неверное имя пользователя или пароль'
+                };
+                const errorSpan = loginError.querySelector('span');
+                if (errorSpan) {
+                    errorSpan.textContent = errorTexts[lang] || errorTexts['en'];
+                }
+                loginError.style.display = 'block';
+                // Auto-hide after 5 seconds
+                setTimeout(() => { loginError.style.display = 'none'; }, 5000);
+            } else {
+                alert(error.message);
+            }
         }
     });
 
@@ -4806,10 +4837,10 @@ async function loadUserCircles(userId) {
                     userPrivacyIcon = '👨‍👩‍👧‍👦';
                 } else if (data.user_privacy === 'class_b') {
                     userPrivacyText = t('circles.title_class_b', 'Close Friends');
-                    userPrivacyIcon = '❤️';
+                    userPrivacyIcon = '👥';
                 } else {
                     userPrivacyText = t('circles.visibility_public', 'Public');
-                    userPrivacyIcon = '👥';
+                    userPrivacyIcon = '🌍';
                 }
 
                 // Get viewer's access level
@@ -4818,10 +4849,10 @@ async function loadUserCircles(userId) {
                     viewerAccessIcon = '👨‍👩‍👧‍👦';
                 } else if (data.viewer_circle_type === 'class_b') {
                     viewerAccessText = t('circles.title_class_b', 'Close Friends');
-                    viewerAccessIcon = '❤️';
+                    viewerAccessIcon = '👥';
                 } else {
                     viewerAccessText = t('circles.title_public', 'Public');
-                    viewerAccessIcon = '👥';
+                    viewerAccessIcon = '🌍';
                 }
 
                 restrictionMessage.innerHTML = `
@@ -4867,8 +4898,8 @@ async function loadUserCircles(userId) {
                 const privacyLabels = {
                     'private': 'Private 🔒',
                     'class_a': 'Family 👨‍👩‍👧‍👦',
-                    'class_b': 'Close Friends ❤️',
-                    'public': 'Public 👥'
+                    'class_b': 'Close Friends 👥',
+                    'public': 'Public 🌍'
                 };
                 privacySelect.title = `This user's circles are ${privacyLabels[data.user_privacy] || data.user_privacy}`;
             }
@@ -4905,10 +4936,10 @@ async function loadUserCircles(userId) {
                 accessIcon = '👨‍👩‍👧‍👦';
             } else if (data.viewer_circle_type === 'class_b') {
                 accessLevelText = t('circles.title_class_b', 'Close Friends');
-                accessIcon = '❤️';
+                accessIcon = '👥';
             } else {
                 accessLevelText = t('circles.title_public', 'Public');
-                accessIcon = '👥';
+                accessIcon = '🌍';
             }
 
             visibilityIndicator.innerHTML = `
@@ -7950,7 +7981,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// ===== INSTANT SEARCH FUNCTION =====
+// ===== FIX #6: INSTANT SEARCH FUNCTION FOR FOLLOWING PAGE =====
+// Now works like the Circles search - uses same API endpoint
 let searchDebounceTimer = null;
 
 async function searchUsersToFollowInstant(query) {
@@ -7970,39 +8002,52 @@ async function searchUsersToFollowInstant(query) {
         return;
     }
     
-    // Debounce: wait 200ms before searching
+    // Debounce: wait 200ms before searching (same as circles)
     searchDebounceTimer = setTimeout(async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/users/search?q=${encodeURIComponent(query.trim())}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            // FIX #6: Use apiCall which handles auth properly, same as circles search
+            const response = await apiCall(`/users/search?q=${encodeURIComponent(query.trim())}`);
             
-            if (!response.ok) throw new Error('Search failed');
+            if (!response) {
+                throw new Error('Search failed');
+            }
             
-            const data = await response.json();
-            
-            // Check if response is an array (valid users list)
-            const users = Array.isArray(data) ? data : [];
+            // FIX #6: Handle response format - check for users array or direct array
+            const users = response.users || (Array.isArray(response) ? response : []);
             
             if (resultsContainer) {
                 if (users.length === 0) {
-                    resultsContainer.innerHTML = '<p style="text-align: center; color: #6B7280;">No users found</p>';
+                    // FIX #6: Translated "No users found" message
+                    const noUsersText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('following.no_users') : 'No users found';
+                    resultsContainer.innerHTML = `<p style="text-align: center; color: #6B7280; padding: 15px;">${noUsersText}</p>`;
                 } else {
+                    // FIX #6: Show results with Follow and +Note buttons like circles
+                    const followText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('following.follow') : 'Follow';
+                    const withNoteText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('following.with_note') : '+ Note';
+                    
                     resultsContainer.innerHTML = users.map(user => `
-                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #E5E7EB;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                        <div class="search-result-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
                                     ${user.username.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <strong>${user.username}</strong>
-                                    ${user.bio ? `<p style="font-size: 12px; color: #6B7280; margin: 0;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</p>` : ''}
+                                    <strong style="display: block;">${user.username}</strong>
+                                    <small style="color: #6B7280;">${user.selected_city || user.city || ''}</small>
+                                    ${user.bio ? `<br><small style="color: #9CA3AF; font-style: italic;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</small>` : ''}
                                 </div>
                             </div>
-                            <button onclick="followUser('${user.username}')" class="btn btn-primary" style="padding: 6px 16px; font-size: 14px;">
-                                Follow
-                            </button>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <button onclick="followUserFromSearch(${user.id})" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; width: auto;">
+                                    ${followText}
+                                </button>
+                                <button onclick="followUserWithNoteFromSearch(${user.id}, '${user.username}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto;">
+                                    ${withNoteText}
+                                </button>
+                            </div>
                         </div>
                     `).join('');
                 }
@@ -8011,15 +8056,56 @@ async function searchUsersToFollowInstant(query) {
         } catch (error) {
             console.error('Search error:', error);
             if (resultsContainer) {
-                resultsContainer.innerHTML = '<p style="text-align: center; color: #EF4444;">Search failed. Please try again.</p>';
+                resultsContainer.innerHTML = '<p style="text-align: center; color: #EF4444; padding: 15px;">Search failed. Please try again.</p>';
                 resultsContainer.style.display = 'block';
             }
         }
     }, 200);
 }
 
-// Make function globally available
+// FIX #6: Helper function to follow user from search results
+async function followUserFromSearch(userId) {
+    try {
+        await apiCall(`/follow/${userId}`, 'POST', {});
+        showNotification('Successfully followed user', 'success');
+        
+        // Clear search and reload following
+        document.getElementById('followSearchInput').value = '';
+        document.getElementById('followSearchResults').style.display = 'none';
+        
+        if (typeof loadFollowing === 'function') {
+            await loadFollowing();
+        }
+    } catch (error) {
+        showNotification('Failed to follow user', 'error');
+    }
+}
+
+// FIX #6: Helper function to follow user with note from search results  
+async function followUserWithNoteFromSearch(userId, username) {
+    const note = prompt(`Add a note for ${username} (optional):`);
+    if (note !== null) {
+        try {
+            await apiCall(`/follow/${userId}`, 'POST', { note: note });
+            showNotification('Successfully followed user with note', 'success');
+            
+            // Clear search and reload following
+            document.getElementById('followSearchInput').value = '';
+            document.getElementById('followSearchResults').style.display = 'none';
+            
+            if (typeof loadFollowing === 'function') {
+                await loadFollowing();
+            }
+        } catch (error) {
+            showNotification('Failed to follow user', 'error');
+        }
+    }
+}
+
+// Make functions globally available
 window.searchUsersToFollowInstant = searchUsersToFollowInstant;
+window.followUserFromSearch = followUserFromSearch;
+window.followUserWithNoteFromSearch = followUserWithNoteFromSearch;
 
 // ===== PROGRESS CHART FUNCTIONS =====
 let progressChartInstance = null;
@@ -8060,36 +8146,59 @@ function renderProgressChart(data) {
         progressChartInstance.destroy();
     }
     
-    // Prepare data
+    // FIX #2: Get translated labels based on current language
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+    const chartLabels = {
+        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: 'Anxiety' },
+        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: 'חרדה' },
+        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: 'القلق' },
+        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: 'Тревога' }
+    };
+    const labels_t = chartLabels[lang] || chartLabels['en'];
+    
+    // Prepare data - FIX #2: Include Anxiety as 5th parameter
     const labels = data.dates || [];
     const datasets = [
         {
-            label: 'Mood',
+            label: labels_t.mood,
             data: data.mood || [],
             borderColor: '#667eea',
             backgroundColor: 'rgba(102, 126, 234, 0.1)',
-            tension: 0.3
+            tension: 0.3,
+            fill: false
         },
         {
-            label: 'Energy',
+            label: labels_t.energy,
             data: data.energy || [],
             borderColor: '#48BB78',
             backgroundColor: 'rgba(72, 187, 120, 0.1)',
-            tension: 0.3
+            tension: 0.3,
+            fill: false
         },
         {
-            label: 'Sleep',
+            label: labels_t.sleep,
             data: data.sleep || [],
             borderColor: '#9F7AEA',
             backgroundColor: 'rgba(159, 122, 234, 0.1)',
-            tension: 0.3
+            tension: 0.3,
+            fill: false
         },
         {
-            label: 'Activity',
+            label: labels_t.activity,
             data: data.activity || [],
             borderColor: '#F6AD55',
             backgroundColor: 'rgba(246, 173, 85, 0.1)',
-            tension: 0.3
+            tension: 0.3,
+            fill: false
+        },
+        // FIX #2: Added Anxiety as 5th parameter
+        {
+            label: labels_t.anxiety,
+            data: data.anxiety || [],
+            borderColor: '#FC8181',
+            backgroundColor: 'rgba(252, 129, 129, 0.1)',
+            tension: 0.3,
+            fill: false
         }
     ];
     
@@ -8106,8 +8215,12 @@ function renderProgressChart(data) {
             },
             scales: {
                 y: {
-                    beginAtZero: true,
-                    max: 10
+                    // FIX #2: Scale from 1 to 5 (not 0 to 10)
+                    min: 1,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1
+                    }
                 }
             }
         }
@@ -8116,9 +8229,22 @@ function renderProgressChart(data) {
 
 function updateInsights(data) {
     const insightsEl = document.getElementById('insightsContent');
-    if (!insightsEl || !data.insights) return;
+    if (!insightsEl) return;
     
-    insightsEl.textContent = data.insights || 'Keep tracking to receive personalized insights!';
+    // FIX #2: Translated "Start tracking" message
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+    const startTrackingTexts = {
+        'en': 'Start tracking your wellness to see insights here!',
+        'he': 'התחל לעקוב אחר הבריאות שלך כדי לראות תובנות כאן!',
+        'ar': 'ابدأ بتتبع صحتك لرؤية الرؤى هنا!',
+        'ru': 'Начните отслеживать свое здоровье, чтобы увидеть здесь статистику!'
+    };
+    
+    if (data.insights) {
+        insightsEl.textContent = data.insights;
+    } else {
+        insightsEl.textContent = startTrackingTexts[lang] || startTrackingTexts['en'];
+    }
 }
 
 function updateCheckinSummary(data) {
@@ -8135,11 +8261,8 @@ function updateCheckinSummary(data) {
     if (activityEl) activityEl.textContent = data.avgActivity ? data.avgActivity.toFixed(1) : '-';
 }
 
-// ===== AUTO-REDIRECT TO DIARY ON LOGIN =====
+// ===== FIX #5: AUTO-REDIRECT TO DIARY ON LOGIN =====
 async function checkAndRedirectToDiary() {
-    const token = localStorage.getItem('token');
-    if (!token) return false;
-    
     // Don't redirect if already on parameters page
     if (window.location.pathname === '/parameters') {
         return false;
@@ -8147,14 +8270,15 @@ async function checkAndRedirectToDiary() {
     
     try {
         const response = await fetch('/api/parameters/today-status', {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include'
         });
         
         if (!response.ok) return false;
         
         const data = await response.json();
         
-        if (!data.has_entry_today) {
+        // FIX #5: Check if ALL required fields are filled (mood, energy, sleep, activity, anxiety)
+        if (!data.has_complete_entry_today) {
             // Redirect to the /parameters URL
             window.location.href = '/parameters';
             return true;
