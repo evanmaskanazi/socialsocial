@@ -209,13 +209,11 @@ const translations = {
         // Circles page
        'circles.visibility_label': 'Circle Visibility',
 'circles.visibility_public': 'Public 🌍',
-'circles.visibility_class_b': 'Class B (Close Friends) 👥',
-'circles.visibility_class_a': 'Class A (Family) 👨‍👩‍👧‍👦',
+
 'circles.visibility_private': 'Private 🔒',
 'circles.no_permission': 'You don\'t have permission to view this circle',
 'circles.title_public': 'Public',
-'circles.title_class_b': 'Class B (Friends)',
-'circles.title_class_a': 'Class A (Family)',
+
 'circles.your_access_level': 'Your Level of Access',
 'circles.restricted_access': 'Restricted Access',
 'circles.circles_visibility': 'circles visibility',
@@ -238,8 +236,7 @@ const translations = {
         'circles.add_to': 'Add to circle...',
         'circles.visibility_label': 'Circle Visibility',
 'circles.visibility_public': 'Public 🌍',
-'circles.visibility_class_b': 'Class B (Close Friends) 👥',
-'circles.visibility_class_a': 'Class A (Family) 👨‍👩‍👧‍👦',
+
 'circles.visibility_private': 'Private 🔒',
 'circles.no_permission': 'You don\'t have permission to view this circle',
 
@@ -376,8 +373,7 @@ const translations = {
     'circles.title': 'My Circles',
             'circles.search_placeholder': 'Search users to add to circles...',
             'circles.public': 'Public',
-            'circles.class_b': 'Class B (Close Friends)',
-            'circles.class_a': 'Class A (Family)',
+
             'circles.members': 'Members',
             'circles.no_members': 'No members in this circle yet',
             'circles.add_to_circle': 'Add to Circle',
@@ -389,8 +385,7 @@ const translations = {
 
             // Privacy levels (for parameters - aligned with circles)
             'privacy.public': '🌍 Public',
-'privacy.class_b': '👥 Class B (Close Friends)',
-'privacy.class_a': '👨‍👩‍👧‍👦 Class A (Family)',
+
 'privacy.private': '🔒 Private',
             'invite.alert_title': 'New Invitation',
 'invite.alert_content': '{username} has invited you to follow them',
@@ -1253,8 +1248,7 @@ const translations = {
         // Circles page
    'circles.visibility_label': 'נראות מעגלים',
 'circles.visibility_public': 'ציבורי 🌍',
-'circles.visibility_class_b': 'מחלקה ב\' (חברים קרובים) 👥',
-'circles.visibility_class_a': 'מחלקה א\' (משפחה) 👨‍👩‍👧‍👦',
+
 'circles.your_access_level': 'רמת הגישה שלך',
 'circles.visibility_private': 'פרטי 🔒',
 'circles.no_permission': 'אין לך הרשאה לצפות במעגל זה',
@@ -1285,8 +1279,7 @@ const translations = {
 'circles.privacy_updated': 'הגדרת הפרטיות עודכנה',
 'error.updating_privacy': 'שגיאה בעדכון הפרטיות',
 'circles.title_public': 'ציבורי',
-'circles.title_class_b': 'מחלקה ב\' (חברים)',
-'circles.title_class_a': 'מחלקה א\' (משפחה)',
+
 
 
         // Messages page
@@ -1330,8 +1323,7 @@ const translations = {
           'circles.title': 'המעגלים שלי',
             'circles.search_placeholder': 'חפש משתמשים להוספה למעגלים...',
             'circles.public': 'ציבורי',
-            'circles.class_b': 'מחלקה ב\' (חברים קרובים)',
-            'circles.class_a': 'מחלקה א\' (משפחה)',
+
             'circles.members': 'חברים',
             'circles.no_members': 'אין חברים במעגל זה עדיין',
             'circles.add_to_circle': 'הוסף למעגל',
@@ -1343,8 +1335,7 @@ const translations = {
 
             // Privacy levels (for parameters - aligned with circles)
             'privacy.public': '🌍 ציבורי',
-'privacy.class_b': '👥 מחלקה ב\' (חברים קרובים)',
-'privacy.class_a': '👨‍👩‍👧‍👦 מחלקה א\' (משפחה)',
+
 'privacy.private': '🔒 פרטי',
 
         // Parameters page
@@ -1971,8 +1962,7 @@ const translations = {
         // Circles page
      'circles.visibility_label': 'رؤية الدوائر',
 'circles.visibility_public': 'عام 🌍',
-'circles.visibility_class_b': 'الفئة ب (الأصدقاء المقربين) 👥',
-'circles.visibility_class_a': 'الفئة أ (العائلة) 👨‍👩‍👧‍👦',
+
 'circles.your_access_level': 'مستوى وصولك',
 'circles.visibility_private': 'خاص 🔒',
 'circles.no_permission': 'ليس لديك إذن لعرض هذه الدائرة',
@@ -1996,8 +1986,7 @@ const translations = {
         'circles.user_removed': 'تمت إزالة المستخدم من الدائرة',
         'circles.add_to': 'أضف إلى الدائرة...',
         'circles.title_public': 'عام',
-'circles.title_class_b': 'الفئة ب (الأصدقاء)',
-'circles.title_class_a': 'الفئة أ (العائلة)',
+
 'circles.remove': 'إزالة',
 'circles.no_users': 'لم يتم العثور على مستخدمين',
 // In the 'ar' translations object:
@@ -2073,8 +2062,7 @@ const translations = {
          'circles.title': 'دوائري',
             'circles.search_placeholder': 'ابحث عن المستخدمين لإضافتهم إلى الدوائر...',
             'circles.public': 'عام',
-            'circles.class_b': 'الفئة ب (الأصدقاء المقربون)',
-            'circles.class_a': 'الفئة أ (العائلة)',
+
             'circles.members': 'الأعضاء',
             'circles.no_members': 'لا يوجد أعضاء في هذه الدائرة بعد',
             'circles.add_to_circle': 'أضف إلى الدائرة',
@@ -2086,8 +2074,7 @@ const translations = {
 
             // Privacy levels (for parameters - aligned with circles)
            'privacy.public': '🌍 عام',
-'privacy.class_b': '👥 الفئة ب (الأصدقاء المقربون)',
-'privacy.class_a': '👨‍👩‍👧‍👦 الفئة أ (العائلة)',
+
 'privacy.private': '🔒 خاص',
 
 
@@ -2689,8 +2676,7 @@ const translations = {
         // Circles page
   'circles.visibility_label': 'Видимость кругов',
 'circles.visibility_public': 'Публичный 🌍',
-'circles.visibility_class_b': 'Класс Б (Близкие друзья) 👥',
-'circles.visibility_class_a': 'Класс А (Семья) 👨‍👩‍👧‍👦',
+
 'circles.visibility_private': 'Приватный 🔒',
 'circles.no_permission': 'У вас нет разрешения на просмотр этого круга',
         'circles.title': 'Мои круги',
@@ -2713,8 +2699,7 @@ const translations = {
         'circles.user_removed': 'Пользователь удалён из круга',
         'circles.add_to': 'Добавить в круг...',
         'circles.title_public': 'Публичный',
-'circles.title_class_b': 'Класс Б (Друзья)',
-'circles.title_class_a': 'Класс А (Семья)',
+
 'circles.your_access_level': 'Ваш уровень доступа',
 'circles.remove': 'Удалить',
 'circles.no_users': 'Пользователи не найдены',
@@ -2764,8 +2749,8 @@ const translations = {
          'circles.title': 'Мои круги',
             'circles.search_placeholder': 'Искать пользователей для добавления в круги...',
             'circles.public': 'Публичный',
-            'circles.class_b': 'Класс Б (Близкие друзья)',
-            'circles.class_a': 'Класс А (Семья)',
+
+
             'circles.members': 'Участники',
             'circles.no_members': 'В этом круге пока нет участников',
             'circles.add_to_circle': 'Добавить в круг',
@@ -2777,8 +2762,7 @@ const translations = {
 
             // Privacy levels (for parameters - aligned with circles)
             'privacy.public': '🌍 Публичный',
-'privacy.class_b': '👥 Класс Б (Близкие друзья)',
-'privacy.class_a': '👨‍👩‍👧‍👦 Класс А (Семья)',
+
 'privacy.private': '🔒 Приватный',
 
         // Parameters page
