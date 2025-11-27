@@ -1835,7 +1835,7 @@
             </li>
             <li class="mobile-nav-item" data-view="tracking" onclick="handleParametersClick(event)">
     <span class="mobile-nav-icon">📊</span>
-    <span class="mobile-nav-label" data-i18n="menu.parameters">Parameters</span>
+    <span class="mobile-nav-label" data-i18n="menu.diary">Parameters</span>
 </li>
 <li class="mobile-nav-item" data-view="following" onclick="showView('following')">
     <span class="mobile-nav-icon">➕</span>
@@ -1873,7 +1873,7 @@
                         💬 Messages
                     </li>
                    <li class="sidebar-item" data-view="tracking" onclick="handleParametersClick(event)" style="cursor: pointer;">
-    📊 <span data-i18n="menu.parameters">Parameters</span>
+    📔 <span data-i18n="menu.diary">Diary</span>
 </li>
 
 <li class="sidebar-item" data-view="following" data-i18n="menu.following">
@@ -1968,51 +1968,45 @@
                       </div>
                   </div>
 
-                  <!-- Change Password Section -->
-                  <div class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.change_password">Change Password</h3>
-
-                      <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
-                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
-
-                      <form id="changePasswordForm" onsubmit="updatePassword(); return false;" autocomplete="off">
-    <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true">
-                          <div style="display: grid; gap: 15px;">
-                              <div>
-                                  <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
-                                  <input type="password" id="currentPassword" name="current_password" autocomplete="current-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
-                              </div>
-
-                              <div>
-                                  <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
-                                  <input type="password" id="newPassword" name="new_password" autocomplete="new-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
-                              </div>
-
-                              <div>
-                                  <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
-                                  <input type="password" id="confirmNewPassword" name="confirm_password" autocomplete="new-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
-                              </div>
-
-                              <button type="submit" class="btn btn-primary" style="padding: 12px 24px; font-size: 16px; font-weight: 600;" data-i18n="home.update_password">Update Password</button>
-                          </div>
-                      </form>
-                  </div>
-
-                  <!-- Account Deletion Section -->
-                  <div class="settings-section" style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                      <h3 style="color: #EF4444; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.account_deletion">Account Deletion</h3>
-
-                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.deletion_warning">Request deletion of your account and all associated data</p>
-
-                      <div style="background: #FEF3C7; border: 2px solid #F59E0B; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
-                          <span style="font-size: 24px;">⚠️</span>
-                          <div>
-                              <p style="color: #92400E; font-weight: 600; margin-bottom: 5px;" data-i18n="home.deletion_permanent">This action cannot be undone</p>
-                              <p style="color: #92400E; font-size: 14px;" data-i18n="home.deletion_permanent_detail">All your data will be permanently deleted.</p>
-                          </div>
+                  <!-- Progress Chart Section -->
+                  <div id="progressChartSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                      <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="progress.title">Your Progress</h3>
+                      
+                      <div style="text-align: center; margin-bottom: 20px;">
+                          <label data-i18n="progress.view_progress" style="font-weight: 600; margin-right: 10px;">View Progress:</label>
+                          <select id="progressTimeRange" onchange="updateProgressChart()" style="padding: 10px 15px; border-radius: 8px; border: 2px solid #E5E7EB; font-size: 16px;">
+                              <option value="7" data-i18n="progress.last_7_days">Last 7 days</option>
+                              <option value="30" data-i18n="progress.last_30_days">Last 30 days</option>
+                              <option value="90" data-i18n="progress.last_90_days">Last 90 days</option>
+                              <option value="365" data-i18n="progress.last_year">Last year</option>
+                          </select>
+                          <button onclick="updateProgressChart()" class="btn btn-secondary" style="margin-left: 10px; padding: 10px 20px;" data-i18n="progress.update">Update</button>
                       </div>
 
-                      <button onclick="requestAccountDeletion()" class="btn" style="background: #EF4444; color: white; padding: 12px 24px; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer;" data-i18n="home.delete_account">Delete Account</button>
+                      <!-- Progress Chart Container -->
+                      <div style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                          <canvas id="progressChart" style="width: 100%; height: 300px;"></canvas>
+                      </div>
+
+                      <!-- Personalized Insights -->
+                      <div id="personalizedInsights" style="background: linear-gradient(135deg, #667eea11 0%, #764ba211 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #667eea;">
+                          <h4 style="margin-bottom: 10px; color: #667eea;" data-i18n="progress.insights_title">Personalized Insights</h4>
+                          <p id="insightsContent" style="color: #4B5563;">
+                              <span data-i18n="progress.loading_insights">Loading insights...</span>
+                          </p>
+                      </div>
+
+                      <!-- Daily Check-in Summary -->
+                      <div id="dailyCheckinSummary" style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #E5E7EB;">
+                          <h4 style="margin-bottom: 15px; color: #374151;" data-i18n="progress.daily_checkin">Daily Check-in Summary</h4>
+                          <div id="checkinStats" style="display: grid; gap: 10px;">
+                              <p><span data-i18n="progress.total_checkins">Total check-ins:</span> <strong id="totalCheckins">0</strong></p>
+                              <p><span data-i18n="progress.avg_mood">Average mood rating:</span> <strong id="avgMood">-</strong></p>
+                              <p><span data-i18n="progress.avg_energy">Average energy level:</span> <strong id="avgEnergy">-</strong></p>
+                              <p><span data-i18n="progress.avg_sleep">Average sleep quality:</span> <strong id="avgSleep">-</strong></p>
+                              <p><span data-i18n="progress.avg_activity">Average activity level:</span> <strong id="avgActivity">-</strong></p>
+                          </div>
+                      </div>
                   </div>
               </div>
               <!-- Feed View - Date-Based Journal -->
@@ -2042,8 +2036,8 @@
         <div class="post-actions">
  <select class="visibility-select" id="visibilitySelect">
                 <option value="general" data-i18n="privacy.public">Public</option>
-                <option value="close_friends" data-i18n="privacy.class_b">Class B (Friends)</option>
-                <option value="family" data-i18n="privacy.class_a">Class A (Family)</option>
+                <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
+                <option value="family" data-i18n="privacy.class_a">Family</option>
                 <option value="private" data-i18n="privacy.private" selected>Private</option>
             </select>
             <div style="display: flex; gap: 10px;">
@@ -2098,6 +2092,53 @@
                             <button class="btn btn-primary" style="width: 200px;" id="updateProfileBtn" data-i18n="profile.save">Save Profile</button>
                         </div>
                     </div>
+
+                    <!-- Change Password Section -->
+                    <div class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-top: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.change_password">Change Password</h3>
+
+                        <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
+                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
+
+                        <form id="changePasswordForm" onsubmit="updatePassword(); return false;" autocomplete="off">
+                            <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true">
+                            <div style="display: grid; gap: 15px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
+                                    <input type="password" id="currentPassword" name="current_password" autocomplete="current-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
+                                </div>
+
+                                <div>
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
+                                    <input type="password" id="newPassword" name="new_password" autocomplete="new-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
+                                </div>
+
+                                <div>
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
+                                    <input type="password" id="confirmNewPassword" name="confirm_password" autocomplete="new-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" style="padding: 12px 24px; font-size: 16px; font-weight: 600;" data-i18n="home.update_password">Update Password</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Account Deletion Section -->
+                    <div class="settings-section" style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <h3 style="color: #EF4444; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.account_deletion">Account Deletion</h3>
+
+                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.deletion_warning">Request deletion of your account and all associated data</p>
+
+                        <div style="background: #FEF3C7; border: 2px solid #F59E0B; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
+                            <span style="font-size: 24px;">⚠️</span>
+                            <div>
+                                <p style="color: #92400E; font-weight: 600; margin-bottom: 5px;" data-i18n="home.deletion_permanent">This action cannot be undone</p>
+                                <p style="color: #92400E; font-size: 14px;" data-i18n="home.deletion_permanent_detail">All your data will be permanently deleted.</p>
+                            </div>
+                        </div>
+
+                        <button onclick="requestAccountDeletion()" class="btn" style="background: #EF4444; color: white; padding: 12px 24px; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer;" data-i18n="home.delete_account">Delete Account</button>
+                    </div>
                 </div>
 
                 <!-- Circles View (Enhanced) -->
@@ -2120,8 +2161,8 @@
                         " onchange="(function(el){ console.log('Privacy dropdown changed to:', el.value); updateCirclesPrivacy(el.value); })(this)">
                             <option value="private" data-i18n="circles.visibility_private">Private 🔒</option>
                             <option value="public" data-i18n="circles.visibility_public">Public 🌍</option>
-                            <option value="class_b" data-i18n="circles.visibility_class_b">Class B (Friends) ❤️</option>
-                            <option value="class_a" data-i18n="circles.visibility_class_a">Class A (Family) 👨‍👩‍👧‍👦</option>
+                            <option value="class_b" data-i18n="circles.visibility_class_b">Close Friends ❤️</option>
+                            <option value="class_a" data-i18n="circles.visibility_class_a">Family 👨‍👩‍👧‍👦</option>
                         </select>
                     </div>
 
@@ -2143,7 +2184,7 @@
 
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title" data-i18n="circles.title_class_b">❤️ Class B (Friends)</span>
+                                <span class="circle-title" data-i18n="circles.title_class_b">❤️ Close Friends</span>
                                 <span class="circle-count" id="closeFriendsCount">0</span>
                             </div>
                             <div class="circle-members" id="closeFriendsMembers">
@@ -2153,7 +2194,7 @@
 
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title" data-i18n="circles.title_class_a">👨‍👩‍👧‍👦 Class A (Family)</span>
+                                <span class="circle-title" data-i18n="circles.title_class_a">👨‍👩‍👧‍👦 Family</span>
                                 <span class="circle-count" id="familyCount">0</span>
                             </div>
                             <div class="circle-members" id="familyMembers">
@@ -2264,33 +2305,15 @@
                 placeholder="Search users to follow..."
                 style="
                     width: 100%;
-                    padding: 12px 45px 12px 20px;
+                    padding: 12px 20px;
                     border: none;
                     border-radius: 25px;
                     font-size: 16px;
                     background: white;
                     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
                 "
-                onkeypress="if(event.key==='Enter') searchUsersToFollow()"
+                oninput="searchUsersToFollowInstant(this.value)"
             >
-            <button onclick="searchUsersToFollow()" style="
-                position: absolute;
-                right: 5px;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                border: none;
-                background: #6B46C1;
-                color: white;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            ">
-                🔍
-            </button>
         </div>
 
         <!-- Search Results Container -->
@@ -2385,6 +2408,7 @@
         </div>
     </div>
     <script src="/static/js/i18n.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Global variables needed by parameters-social.js - MUST be declared first
     let selectedDate = new Date();
@@ -2396,7 +2420,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=9.0"></script>
+   <script src="/static/js/circles-messages.js?v=10.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -2541,7 +2565,7 @@
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        hour12: true
+        hour12: false
     });
 
     // FIXED: Use i18n for date formatting instead of toLocaleDateString
@@ -4020,11 +4044,11 @@ async function loadUserFeedForDate(userId, dateStr) {
 
         const circleNames = {
             1: 'Public',
-            2: 'Class B (Friends)',
-            3: 'Class A (Family)',
+            2: 'Close Friends',
+            3: 'Family',
             'general': 'Public',
-            'close_friends': 'Class B (Friends)',
-            'family': 'Class A (Family)',
+            'close_friends': 'Close Friends',
+            'family': 'Family',
             'private': 'Private'
         };
 
@@ -4778,10 +4802,10 @@ async function loadUserCircles(userId) {
                     userPrivacyText = t('circles.visibility_private', 'Private');
                     userPrivacyIcon = '🔒';
                 } else if (data.user_privacy === 'class_a') {
-                    userPrivacyText = t('circles.title_class_a', 'Class A (Family)');
+                    userPrivacyText = t('circles.title_class_a', 'Family');
                     userPrivacyIcon = '👨‍👩‍👧‍👦';
                 } else if (data.user_privacy === 'class_b') {
-                    userPrivacyText = t('circles.title_class_b', 'Class B (Friends)');
+                    userPrivacyText = t('circles.title_class_b', 'Close Friends');
                     userPrivacyIcon = '❤️';
                 } else {
                     userPrivacyText = t('circles.visibility_public', 'Public');
@@ -4790,10 +4814,10 @@ async function loadUserCircles(userId) {
 
                 // Get viewer's access level
                 if (data.viewer_circle_type === 'class_a') {
-                    viewerAccessText = t('circles.title_class_a', 'Class A (Family)');
+                    viewerAccessText = t('circles.title_class_a', 'Family');
                     viewerAccessIcon = '👨‍👩‍👧‍👦';
                 } else if (data.viewer_circle_type === 'class_b') {
-                    viewerAccessText = t('circles.title_class_b', 'Class B (Friends)');
+                    viewerAccessText = t('circles.title_class_b', 'Close Friends');
                     viewerAccessIcon = '❤️';
                 } else {
                     viewerAccessText = t('circles.title_public', 'Public');
@@ -4842,8 +4866,8 @@ async function loadUserCircles(userId) {
                 privacySelect.style.opacity = '0.6';
                 const privacyLabels = {
                     'private': 'Private 🔒',
-                    'class_a': 'Class A (Family) 👨‍👩‍👧‍👦',
-                    'class_b': 'Class B (Friends) ❤️',
+                    'class_a': 'Family 👨‍👩‍👧‍👦',
+                    'class_b': 'Close Friends ❤️',
                     'public': 'Public 👥'
                 };
                 privacySelect.title = `This user's circles are ${privacyLabels[data.user_privacy] || data.user_privacy}`;
@@ -4877,10 +4901,10 @@ async function loadUserCircles(userId) {
             let accessIcon = '';
 
             if (data.viewer_circle_type === 'class_a') {
-                accessLevelText = t('circles.title_class_a', 'Class A (Family)');
+                accessLevelText = t('circles.title_class_a', 'Family');
                 accessIcon = '👨‍👩‍👧‍👦';
             } else if (data.viewer_circle_type === 'class_b') {
-                accessLevelText = t('circles.title_class_b', 'Class B (Friends)');
+                accessLevelText = t('circles.title_class_b', 'Close Friends');
                 accessIcon = '❤️';
             } else {
                 accessLevelText = t('circles.title_public', 'Public');
@@ -4976,11 +5000,11 @@ function updateCircleDisplay(type, members) {
     } else if (type === 'close_friends') {
         containerId = 'closeFriendsMembers';
         countId = 'closeFriendsCount';
-        displayLabel = 'Class B (Friends)';
+        displayLabel = 'Close Friends';
     } else {
         containerId = 'familyMembers';
         countId = 'familyCount';
-        displayLabel = 'Class A (Family)';
+        displayLabel = 'Family';
     }
 
     const container = document.getElementById(containerId);
@@ -5080,8 +5104,8 @@ function updateCircleDisplay(type, members) {
                            <select onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
     <option value="">${(window.i18n && window.i18n.t ? window.i18n.t('circles.add_to') : 'Add to circle...')}</option>
    <option value="general" data-i18n="privacy.public">Public</option>
-    <option value="close_friends" data-i18n="privacy.class_b">Class B (Friends)</option>
-    <option value="family" data-i18n="privacy.class_a">Class A (Family)</option>
+    <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
+    <option value="family" data-i18n="privacy.class_a">Family</option>
 </select>
                         </div>
                     `).join('');
@@ -5104,8 +5128,8 @@ function updateCircleDisplay(type, members) {
 
                 const circleLabels = {
     'general': 'Public',
-    'close_friends': 'Class B (Friends)',
-    'family': 'Class A (Family)'
+    'close_friends': 'Close Friends',
+    'family': 'Family'
 };
 alert(`${username} added to ${circleLabels[circleType]} circle!`);
                 loadCircles();
@@ -7189,11 +7213,11 @@ async function loadUserFeed(userId) {
 
         const circleNames = {
             1: 'Public',
-            2: 'Class B (Friends)',
-            3: 'Class A (Family)',
+            2: 'Close Friends',
+            3: 'Family',
             'general': 'Public',
-            'close_friends': 'Class B (Friends)',
-            'family': 'Class A (Family)',
+            'close_friends': 'Close Friends',
+            'family': 'Family',
             'private': 'Private'
         };
 
@@ -7923,6 +7947,248 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 })();
+</script>
+
+<script>
+// ===== INSTANT SEARCH FUNCTION =====
+let searchDebounceTimer = null;
+
+async function searchUsersToFollowInstant(query) {
+    const resultsContainer = document.getElementById('followSearchResults');
+    
+    // Clear previous timer
+    if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+    }
+    
+    // If empty query, hide results
+    if (!query || query.trim().length < 1) {
+        if (resultsContainer) {
+            resultsContainer.style.display = 'none';
+            resultsContainer.innerHTML = '';
+        }
+        return;
+    }
+    
+    // Debounce: wait 200ms before searching
+    searchDebounceTimer = setTimeout(async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/users/search?q=${encodeURIComponent(query.trim())}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Search failed');
+            
+            const users = await response.json();
+            
+            if (resultsContainer) {
+                if (users.length === 0) {
+                    resultsContainer.innerHTML = '<p style="text-align: center; color: #6B7280;">No users found</p>';
+                } else {
+                    resultsContainer.innerHTML = users.map(user => `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #E5E7EB;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                    ${user.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <strong>${user.username}</strong>
+                                    ${user.bio ? `<p style="font-size: 12px; color: #6B7280; margin: 0;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</p>` : ''}
+                                </div>
+                            </div>
+                            <button onclick="followUser('${user.username}')" class="btn btn-primary" style="padding: 6px 16px; font-size: 14px;">
+                                Follow
+                            </button>
+                        </div>
+                    `).join('');
+                }
+                resultsContainer.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '<p style="text-align: center; color: #EF4444;">Search failed. Please try again.</p>';
+                resultsContainer.style.display = 'block';
+            }
+        }
+    }, 200);
+}
+
+// Make function globally available
+window.searchUsersToFollowInstant = searchUsersToFollowInstant;
+
+// ===== PROGRESS CHART FUNCTIONS =====
+let progressChartInstance = null;
+
+async function updateProgressChart() {
+    const days = document.getElementById('progressTimeRange')?.value || 7;
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`/api/parameters/progress?days=${days}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch progress data');
+        
+        const data = await response.json();
+        renderProgressChart(data);
+        updateInsights(data);
+        updateCheckinSummary(data);
+    } catch (error) {
+        console.error('Progress chart error:', error);
+        // Show placeholder if no data
+        const insightsEl = document.getElementById('insightsContent');
+        if (insightsEl) {
+            insightsEl.textContent = 'Start tracking your wellness to see insights here!';
+        }
+    }
+}
+
+function renderProgressChart(data) {
+    const canvas = document.getElementById('progressChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Destroy existing chart
+    if (progressChartInstance) {
+        progressChartInstance.destroy();
+    }
+    
+    // Prepare data
+    const labels = data.dates || [];
+    const datasets = [
+        {
+            label: 'Mood',
+            data: data.mood || [],
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.3
+        },
+        {
+            label: 'Energy',
+            data: data.energy || [],
+            borderColor: '#48BB78',
+            backgroundColor: 'rgba(72, 187, 120, 0.1)',
+            tension: 0.3
+        },
+        {
+            label: 'Sleep',
+            data: data.sleep || [],
+            borderColor: '#9F7AEA',
+            backgroundColor: 'rgba(159, 122, 234, 0.1)',
+            tension: 0.3
+        },
+        {
+            label: 'Activity',
+            data: data.activity || [],
+            borderColor: '#F6AD55',
+            backgroundColor: 'rgba(246, 173, 85, 0.1)',
+            tension: 0.3
+        }
+    ];
+    
+    progressChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 10
+                }
+            }
+        }
+    });
+}
+
+function updateInsights(data) {
+    const insightsEl = document.getElementById('insightsContent');
+    if (!insightsEl || !data.insights) return;
+    
+    insightsEl.textContent = data.insights || 'Keep tracking to receive personalized insights!';
+}
+
+function updateCheckinSummary(data) {
+    const totalEl = document.getElementById('totalCheckins');
+    const moodEl = document.getElementById('avgMood');
+    const energyEl = document.getElementById('avgEnergy');
+    const sleepEl = document.getElementById('avgSleep');
+    const activityEl = document.getElementById('avgActivity');
+    
+    if (totalEl) totalEl.textContent = data.totalCheckins || 0;
+    if (moodEl) moodEl.textContent = data.avgMood ? data.avgMood.toFixed(1) : '-';
+    if (energyEl) energyEl.textContent = data.avgEnergy ? data.avgEnergy.toFixed(1) : '-';
+    if (sleepEl) sleepEl.textContent = data.avgSleep ? data.avgSleep.toFixed(1) + ' hrs' : '-';
+    if (activityEl) activityEl.textContent = data.avgActivity ? data.avgActivity.toFixed(1) : '-';
+}
+
+// ===== AUTO-REDIRECT TO DIARY ON LOGIN =====
+async function checkAndRedirectToDiary() {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    
+    // Check if we've already checked today
+    const lastCheck = localStorage.getItem('diaryCheckDate');
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (lastCheck === today) {
+        return false; // Already checked today
+    }
+    
+    try {
+        const response = await fetch('/api/parameters/today-status', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) return false;
+        
+        const data = await response.json();
+        
+        // Mark that we checked today
+        localStorage.setItem('diaryCheckDate', today);
+        
+        if (!data.has_entry_today) {
+            // Redirect to diary/parameters view
+            if (typeof showView === 'function') {
+                showView('tracking');
+                return true;
+            }
+        }
+    } catch (error) {
+        console.error('Diary check error:', error);
+    }
+    
+    return false;
+}
+
+// Initialize progress chart on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Load progress chart when home view is active
+    setTimeout(() => {
+        if (document.getElementById('progressChart')) {
+            updateProgressChart();
+        }
+    }, 1000);
+    
+    // Check if user needs to fill diary
+    setTimeout(() => {
+        checkAndRedirectToDiary();
+    }, 500);
+});
+
+// Make functions globally available
+window.updateProgressChart = updateProgressChart;
+window.checkAndRedirectToDiary = checkAndRedirectToDiary;
 </script>
 
 </body>
