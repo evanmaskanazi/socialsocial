@@ -2420,7 +2420,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=10.0"></script>
+   <script src="/static/js/circles-messages.js?v=11.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -5077,7 +5077,7 @@ function updateCircleDisplay(type, members) {
         async function searchUsers() {
             const query = document.getElementById('userSearchInput').value;
 
-            if (query.length < 2) {
+            if (query.length < 1) {
                 document.getElementById('searchResults').classList.remove('active');
                 return;
             }
@@ -5159,7 +5159,7 @@ alert(`${username} added to ${circleLabels[circleType]} circle!`);
         async function searchUsersForMessage() {
             const query = document.getElementById('messageUserSearch').value;
 
-            if (query.length < 2) {
+            if (query.length < 1) {
                 document.getElementById('messageSearchResults').classList.remove('active');
                 return;
             }
@@ -6580,7 +6580,7 @@ async function searchUsersToFollow() {
     const resultsContainer = document.getElementById('followSearchResults');
     const query = searchInput.value.trim();
 
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
         resultsContainer.style.display = 'none';
         return;
     }
@@ -7980,7 +7980,10 @@ async function searchUsersToFollowInstant(query) {
             
             if (!response.ok) throw new Error('Search failed');
             
-            const users = await response.json();
+            const data = await response.json();
+            
+            // Check if response is an array (valid users list)
+            const users = Array.isArray(data) ? data : [];
             
             if (resultsContainer) {
                 if (users.length === 0) {
@@ -8137,12 +8140,9 @@ async function checkAndRedirectToDiary() {
     const token = localStorage.getItem('token');
     if (!token) return false;
     
-    // Check if we've already checked today
-    const lastCheck = localStorage.getItem('diaryCheckDate');
-    const today = new Date().toISOString().split('T')[0];
-    
-    if (lastCheck === today) {
-        return false; // Already checked today
+    // Don't redirect if already on parameters page
+    if (window.location.pathname === '/parameters') {
+        return false;
     }
     
     try {
@@ -8154,15 +8154,10 @@ async function checkAndRedirectToDiary() {
         
         const data = await response.json();
         
-        // Mark that we checked today
-        localStorage.setItem('diaryCheckDate', today);
-        
         if (!data.has_entry_today) {
-            // Redirect to diary/parameters view
-            if (typeof showView === 'function') {
-                showView('tracking');
-                return true;
-            }
+            // Redirect to the /parameters URL
+            window.location.href = '/parameters';
+            return true;
         }
     } catch (error) {
         console.error('Diary check error:', error);
@@ -8180,7 +8175,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 1000);
     
-    // Check if user needs to fill diary
+    // Check if user needs to fill diary - runs on every page load
     setTimeout(() => {
         checkAndRedirectToDiary();
     }, 500);
