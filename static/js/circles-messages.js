@@ -2030,12 +2030,12 @@ let followSearchDebounceTimer = null;
 
 async function searchUsersToFollowInstant(query) {
     const resultsContainer = document.getElementById('followSearchResults');
-    
+
     // Clear previous timer
     if (followSearchDebounceTimer) {
         clearTimeout(followSearchDebounceTimer);
     }
-    
+
     // If empty query, hide results
     if (!query || query.trim().length < 1) {
         if (resultsContainer) {
@@ -2044,7 +2044,7 @@ async function searchUsersToFollowInstant(query) {
         }
         return;
     }
-    
+
     // Debounce: wait 200ms before searching
     followSearchDebounceTimer = setTimeout(async () => {
         try {
@@ -2052,14 +2052,14 @@ async function searchUsersToFollowInstant(query) {
             const response = await fetch(`/api/users/search?q=${encodeURIComponent(query.trim())}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            
+
             if (!response.ok) throw new Error('Search failed');
-            
+
             const data = await response.json();
-            
+
             // Check if response is an array (valid users list)
             const users = Array.isArray(data) ? data : [];
-            
+
             if (resultsContainer) {
                 if (users.length === 0) {
                     resultsContainer.innerHTML = '<p style="text-align: center; color: #6B7280;">No users found</p>';
