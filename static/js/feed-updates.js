@@ -18,8 +18,8 @@ function getDisplayName(internalName) {
 function getInternalName(displayName) {
     const reverseMap = {
         'Public': 'public',
-        'Class B (Friends)': 'class_b',
-        'Class A (Family)': 'class_a',
+        'Close Friends': 'class_b',
+        'Family': 'class_a',
         'Private': 'private'
     };
     return reverseMap[displayName] || displayName;

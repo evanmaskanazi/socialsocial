@@ -372,7 +372,7 @@ window.circlesHTML = `
     <select id="circlesPrivacySelect" class="privacy-select" onchange="updateCirclesPrivacy(this.value)">
         <option value="public" data-i18n="privacy.public">Public</option>
         <option value="class_b" data-i18n="privacy.class_b">Class B (Close Friends)</option>
-        <option value="class_a" data-i18n="privacy.class_a">Class A (Family)</option>
+        <option value="class_a" data-i18n="privacy.class_a">Family</option>
         <option value="private" data-i18n="privacy.private">Private</option>
     </select>
 </div>
@@ -401,7 +401,7 @@ window.circlesHTML = `
         <div class="circle-card" data-circle="close_friends">
             <div class="circle-header">
                 <span class="circle-icon">❤️</span>
-                <span class="circle-title" data-i18n="circles.title_class_b">Class B (Friends)</span>
+                <span class="circle-title" data-i18n="circles.title_class_b">Close Friends</span>
                 <span class="circle-count" id="class_bCount">0</span>
             </div>
             <div class="circle-members" id="class_bMembers">
@@ -415,7 +415,7 @@ window.circlesHTML = `
         <div class="circle-card" data-circle="family">
         <div class="circle-header">
                 <span class="circle-icon">👨‍👩‍👧‍👦</span>
-                <span class="circle-title" data-i18n="circles.title_class_a">Class A (Family)</span>
+                <span class="circle-title" data-i18n="circles.title_class_a">Family</span>
                 <span class="circle-count" id="class_aCount">0</span>
             </div>
             <div class="circle-members" id="class_aMembers">
@@ -456,8 +456,8 @@ window.circlesHTML = `
 // Circles Data Storage - maps backend names to frontend display
 let circlesData = {
     general: [],      // Maps to "Public" display
-    close_friends: [], // Maps to "Class B (Friends)" display
-    family: []        // Maps to "Class A (Family)" display
+    close_friends: [], // Maps to "Close Friends" display
+    family: []        // Maps to "Family" display
 };
 
 
@@ -817,8 +817,8 @@ async function searchUsers() {
                     <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-left: 10px; flex-shrink: 0;">
                         <option value="">Add to circle...</option>
                         <option value="public" data-i18n="circles.public">Public</option>
-                        <option value="class_b" data-i18n="circles.class_b">Class B (Friends)</option>
-                        <option value="class_a" data-i18n="circles.class_a">Class A (Family)</option>
+                        <option value="class_b" data-i18n="circles.class_b">Close Friends</option>
+                        <option value="class_a" data-i18n="circles.class_a">Family</option>
                     </select>
                 `;
                 searchResults.appendChild(resultItem);
@@ -939,13 +939,13 @@ function updateCircleTitles() {
     // Update Class B circle title
     const classBTitle = document.querySelector('[data-circle="close_friends"] .circle-title');
     if (classBTitle) {
-        classBTitle.textContent = t('circles.title_class_b', 'Class B (Friends)');
+        classBTitle.textContent = t('circles.title_class_b', 'Close Friends');
     }
 
     // Update Class A circle title
     const classATitle = document.querySelector('[data-circle="family"] .circle-title');
     if (classATitle) {
-        classATitle.textContent = t('circles.title_class_a', 'Class A (Family)');
+        classATitle.textContent = t('circles.title_class_a', 'Family');
     }
 }
 
@@ -976,11 +976,11 @@ async function addToCircle(userId, circleType, username) {
        const circleNames = {
     'public': t('circles.public', 'Public'),
     'class_b': t('circles.class_b', 'Class B (Close Friends)'),
-    'class_a': t('circles.class_a', 'Class A (Family)'),
+    'class_a': t('circles.class_a', 'Family'),
     // Support old names for backwards compatibility
     'general': t('circles.public', 'Public'),
     'close_friends': t('circles.class_b', 'Class B (Close Friends)'),
-    'family': t('circles.class_a', 'Class A (Family)')
+    'family': t('circles.class_a', 'Family')
 };
 
         showNotification(
@@ -1009,8 +1009,8 @@ function addCircleTranslations() {
       // Update English translations
         Object.assign(window.i18n.translations.en, {
            'circles.public': 'Public',
-            'circles.class_b': 'Class B (Friends)',
-            'circles.class_a': 'Class A (Family)',
+            'circles.class_b': 'Close Friends',
+            'circles.class_a': 'Family',
             'circles.add_to_circle': 'Add to Circle',
             'circles.privacy_label': 'Circle Visibility',
             'circles.circles_private': 'Circles set to private',
@@ -1021,14 +1021,14 @@ function addCircleTranslations() {
             'circles.visibility_private': 'Private',
             'circles.visibility_public': 'Public',
             'circles.visibility_class_b': 'Class B (Close Friends)',
-            'circles.visibility_class_a': 'Class A (Family)',
+            'circles.visibility_class_a': 'Family',
             'circles.title_public': 'Public',
-'circles.title_class_b': 'Class B (Friends)',
-'circles.title_class_a': 'Class A (Family)',
+'circles.title_class_b': 'Close Friends',
+'circles.title_class_a': 'Family',
 'circles.your_access_level': 'Your Level of Access',
             'privacy.public': 'Public',
             'privacy.class_b': 'Class B (Close Friends)',
-            'privacy.class_a': 'Class A (Family)',
+            'privacy.class_a': 'Family',
             'privacy.private': 'Private'
         });
 
@@ -1922,7 +1922,7 @@ function addUserSearchToFollowing() {
 async function searchUsersToFollow() {
     const query = document.getElementById('followSearchInput').value.trim();
     if (query.length < 2) {
-        showNotification('Please enter at least 2 characters', 'warning');
+        showNotification('Please enter at least 1 character', 'warning');
         return;
     }
 
@@ -2025,10 +2025,76 @@ function updateFollowButtons() {
     });
 }
 
+// Instant search with debounce for following view
+let followSearchDebounceTimer = null;
+
+async function searchUsersToFollowInstant(query) {
+    const resultsContainer = document.getElementById('followSearchResults');
+    
+    // Clear previous timer
+    if (followSearchDebounceTimer) {
+        clearTimeout(followSearchDebounceTimer);
+    }
+    
+    // If empty query, hide results
+    if (!query || query.trim().length < 1) {
+        if (resultsContainer) {
+            resultsContainer.style.display = 'none';
+            resultsContainer.innerHTML = '';
+        }
+        return;
+    }
+    
+    // Debounce: wait 200ms before searching
+    followSearchDebounceTimer = setTimeout(async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/users/search?q=${encodeURIComponent(query.trim())}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Search failed');
+            
+            const users = await response.json();
+            
+            if (resultsContainer) {
+                if (users.length === 0) {
+                    resultsContainer.innerHTML = '<p style="text-align: center; color: #6B7280;">No users found</p>';
+                } else {
+                    resultsContainer.innerHTML = users.map(user => `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #E5E7EB;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                    ${user.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <strong>${user.username}</strong>
+                                    ${user.bio ? `<p style="font-size: 12px; color: #6B7280; margin: 0;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</p>` : ''}
+                                </div>
+                            </div>
+                            <button onclick="followUser('${user.username}')" class="btn btn-primary" style="padding: 6px 16px; font-size: 14px;">
+                                Follow
+                            </button>
+                        </div>
+                    `).join('');
+                }
+                resultsContainer.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '<p style="text-align: center; color: #EF4444;">Search failed. Please try again.</p>';
+                resultsContainer.style.display = 'block';
+            }
+        }
+    }, 200);
+}
+
 // Export the new functions
 window.updateFollowingSection = updateFollowingSection;
 window.addUserSearchToFollowing = addUserSearchToFollowing;
 window.searchUsersToFollow = searchUsersToFollow;
+window.searchUsersToFollowInstant = searchUsersToFollowInstant;
 window.followWithNote = followWithNote;
 window.unfollowUser = unfollowUser;
 window.updateFollowButtons = updateFollowButtons;

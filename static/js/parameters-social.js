@@ -170,8 +170,8 @@ const addParameterTranslations = () => {
                 'parameters.today_label': 'Today',
                 'error.saving': 'Error saving parameters',
                 'privacy.public': 'Public',
-'privacy.class_b': 'Class B (Close Friends)',
-'privacy.class_a': 'Class A (Family)',
+'privacy.class_b': 'Close Friends',
+'privacy.class_a': 'Family',
 'privacy.private': 'Private',
                 'error.loading': 'Error loading parameters',
                 // Common UI elements
@@ -547,10 +547,10 @@ function initializeParameters() {
         Private
     </option>
     <option value="class_a" data-i18n="privacy.class_a" ${privacy === 'class_a' ? 'selected' : ''}>
-        Class A (Family)
+        Family
     </option>
     <option value="class_b" data-i18n="privacy.class_b" ${privacy === 'class_b' ? 'selected' : ''}>
-        Class B (Friends)
+        Close Friends
     </option>
     <option value="public" data-i18n="privacy.public" ${privacy === 'public' ? 'selected' : ''}>
         Public
