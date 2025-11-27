@@ -145,7 +145,7 @@ const addParameterTranslations = () => {
         // English translations
         if (!window.i18n.translations.en['parameters.mood']) {
             Object.assign(window.i18n.translations.en, {
-                'parameters.title': 'Daily Parameters',
+                'parameters.title': 'Diary',
                 'parameters.select_date': 'Select Date',
                 'parameters.mood': 'Mood',
                 'parameters.mood_desc': 'Overall emotional state',
@@ -196,7 +196,7 @@ const addParameterTranslations = () => {
         // Hebrew translations
         if (!window.i18n.translations.he['parameters.mood']) {
             Object.assign(window.i18n.translations.he, {
-                'parameters.title': 'פרמטרים יומיים',
+                'parameters.title': 'יומן',
                 'parameters.select_date': 'בחר תאריך',
                 'parameters.mood': 'מצב רוח',
                 'parameters.mood_desc': 'מצב רגשי כללי',
@@ -221,8 +221,8 @@ const addParameterTranslations = () => {
                 'parameters.today_label': 'היום',
                 'error.saving': 'שגיאה בשמירת פרמטרים',
                 'privacy.public': 'ציבורי',
-'privacy.class_b': 'מחלקה ב\' (חברים קרובים)',
-'privacy.class_a': 'מחלקה א\' (משפחה)',
+'privacy.class_b': 'חברים קרובים',
+'privacy.class_a': 'משפחה',
 'privacy.private': 'פרטי',
                 'error.loading': 'שגיאה בטעינת פרמטרים',
                 // Common UI elements
@@ -247,7 +247,7 @@ const addParameterTranslations = () => {
         // Arabic translations
         if (!window.i18n.translations.ar['parameters.mood']) {
             Object.assign(window.i18n.translations.ar, {
-                'parameters.title': 'المعاملات اليومية',
+                'parameters.title': 'المذكرة',
                 'parameters.select_date': 'اختر التاريخ',
                 'parameters.mood': 'المزاج',
                 'parameters.mood_desc': 'الحالة العاطفية العامة',
@@ -272,8 +272,8 @@ const addParameterTranslations = () => {
                 'parameters.today_label': 'اليوم',
                 'error.saving': 'خطأ في حفظ المعاملات',
                 'privacy.public': 'عام',
-'privacy.class_b': 'الفئة ب (الأصدقاء المقربون)',
-'privacy.class_a': 'الفئة أ (العائلة)',
+'privacy.class_b': 'الأصدقاء المقربون',
+'privacy.class_a': 'العائلة',
 'privacy.private': 'خاص',
                 'error.loading': 'خطأ في تحميل المعاملات',
                 // Common UI elements
@@ -298,7 +298,7 @@ const addParameterTranslations = () => {
         // Russian translations
         if (!window.i18n.translations.ru['parameters.mood']) {
             Object.assign(window.i18n.translations.ru, {
-                'parameters.title': 'Ежедневные параметры',
+                'parameters.title': 'Дневник',
                 'parameters.select_date': 'Выберите дату',
                 'parameters.mood': 'Настроение',
                 'parameters.mood_desc': 'Общее эмоциональное состояние',
@@ -323,8 +323,8 @@ const addParameterTranslations = () => {
                 'parameters.today_label': 'Сегодня',
                 'error.saving': 'Ошибка сохранения параметров',
                 'privacy.public': 'Публичный',
-'privacy.class_b': 'Класс Б (Близкие друзья)',
-'privacy.class_a': 'Класс А (Семья)',
+'privacy.class_b': 'Близкие друзья',
+'privacy.class_a': 'Семья',
 'privacy.private': 'Приватный',
                 'error.loading': 'Ошибка загрузки параметров',
                 // Common UI elements
@@ -508,7 +508,7 @@ function initializeParameters() {
             </div>
 
             <div class="parameters-header">
-                <h1 data-i18n="parameters.title">Daily Parameters</h1>
+                <h1 data-i18n="parameters.title">Diary</h1>
             </div>
 
             <div id="messageContainer"></div>

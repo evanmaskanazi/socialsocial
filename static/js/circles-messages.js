@@ -371,7 +371,7 @@ window.circlesHTML = `
     <label data-i18n="circles.privacy_label">Circle Visibility</label>
     <select id="circlesPrivacySelect" class="privacy-select" onchange="updateCirclesPrivacy(this.value)">
         <option value="public" data-i18n="privacy.public">Public</option>
-        <option value="class_b" data-i18n="privacy.class_b">Class B (Close Friends)</option>
+        <option value="class_b" data-i18n="privacy.class_b">Close Friends</option>
         <option value="class_a" data-i18n="privacy.class_a">Family</option>
         <option value="private" data-i18n="privacy.private">Private</option>
     </select>
@@ -975,11 +975,11 @@ async function addToCircle(userId, circleType, username) {
 
        const circleNames = {
     'public': t('circles.public', 'Public'),
-    'class_b': t('circles.class_b', 'Class B (Close Friends)'),
+    'class_b': t('circles.class_b', 'Close Friends'),
     'class_a': t('circles.class_a', 'Family'),
     // Support old names for backwards compatibility
     'general': t('circles.public', 'Public'),
-    'close_friends': t('circles.class_b', 'Class B (Close Friends)'),
+    'close_friends': t('circles.class_b', 'Close Friends'),
     'family': t('circles.class_a', 'Family')
 };
 
@@ -1020,14 +1020,14 @@ function addCircleTranslations() {
             'circles.visibility_label': 'Who can see your circles',
             'circles.visibility_private': 'Private',
             'circles.visibility_public': 'Public',
-            'circles.visibility_class_b': 'Class B (Close Friends)',
+            'circles.visibility_class_b': 'Close Friends',
             'circles.visibility_class_a': 'Family',
             'circles.title_public': 'Public',
 'circles.title_class_b': 'Close Friends',
 'circles.title_class_a': 'Family',
 'circles.your_access_level': 'Your Level of Access',
             'privacy.public': 'Public',
-            'privacy.class_b': 'Class B (Close Friends)',
+            'privacy.class_b': 'Close Friends',
             'privacy.class_a': 'Family',
             'privacy.private': 'Private'
         });
@@ -1036,8 +1036,8 @@ function addCircleTranslations() {
       // Update Hebrew translations
         Object.assign(window.i18n.translations.he, {
             'circles.public': 'ציבורי',
-            'circles.class_b': 'מחלקה ב\' (חברים)',
-            'circles.class_a': 'מחלקה א\' (משפחה)',
+            'circles.class_b': 'חברים קרובים',
+            'circles.class_a': 'משפחה',
             'circles.add_to_circle': 'הוסף למעגל',
             'circles.privacy_label': 'נראות מעגלים',
             'circles.circles_private': 'מעגלים מוגדרים כפרטיים',
@@ -1047,15 +1047,15 @@ function addCircleTranslations() {
             'circles.visibility_label': 'מי יכול לראות את המעגלים שלך',
             'circles.visibility_private': 'פרטי',
             'circles.visibility_public': 'ציבורי',
-            'circles.visibility_class_b': 'מחלקה ב\' (חברים קרובים)',
-            'circles.visibility_class_a': 'מחלקה א\' (משפחה)',
+            'circles.visibility_class_b': 'חברים קרובים ❤️',
+            'circles.visibility_class_a': 'משפחה 👨‍👩‍👧‍👦',
             'circles.your_access_level': 'רמת הגישה שלך',
             'circles.title_public': 'ציבורי',
-'circles.title_class_b': 'מחלקה ב\' (חברים)',
-'circles.title_class_a': 'מחלקה א\' (משפחה)',
+'circles.title_class_b': 'חברים קרובים',
+'circles.title_class_a': 'משפחה',
             'privacy.public': 'ציבורי',
-            'privacy.class_b': 'מחלקה ב\' (חברים קרובים)',
-            'privacy.class_a': 'מחלקה א\' (משפחה)',
+            'privacy.class_b': 'חברים קרובים',
+            'privacy.class_a': 'משפחה',
             'privacy.private': 'פרטי'
         });
 
@@ -1063,8 +1063,8 @@ function addCircleTranslations() {
      // Update Arabic translations
         Object.assign(window.i18n.translations.ar, {
             'circles.public': 'عام',
-            'circles.class_b': 'الفئة ب (الأصدقاء)',
-            'circles.class_a': 'الفئة أ (العائلة)',
+            'circles.class_b': 'الأصدقاء المقربون',
+            'circles.class_a': 'العائلة',
             'circles.add_to_circle': 'أضف إلى الدائرة',
             'circles.privacy_label': 'رؤية الدوائر',
             'circles.circles_private': 'تم تعيين الدوائر كخاصة',
@@ -1074,15 +1074,15 @@ function addCircleTranslations() {
             'circles.visibility_label': 'من يمكنه رؤية دوائرك',
             'circles.visibility_private': 'خاص',
             'circles.visibility_public': 'عام',
-            'circles.visibility_class_b': 'الفئة ب (الأصدقاء المقربين)',
-            'circles.visibility_class_a': 'الفئة أ (العائلة)',
+            'circles.visibility_class_b': 'الأصدقاء المقربون ❤️',
+            'circles.visibility_class_a': 'العائلة 👨‍👩‍👧‍👦',
             'circles.title_public': 'عام',
-'circles.title_class_b': 'الفئة ب (الأصدقاء)',
-'circles.title_class_a': 'الفئة أ (العائلة)',
+'circles.title_class_b': 'الأصدقاء المقربون',
+'circles.title_class_a': 'العائلة',
 'circles.your_access_level': 'مستوى وصولك',
             'privacy.public': 'عام',
-            'privacy.class_b': 'الفئة ب (الأصدقاء المقربين)',
-            'privacy.class_a': 'الفئة أ (العائلة)',
+            'privacy.class_b': 'الأصدقاء المقربون',
+            'privacy.class_a': 'العائلة',
             'privacy.private': 'خاص'
         });
 
@@ -1091,8 +1091,8 @@ function addCircleTranslations() {
      // Update Russian translations
         Object.assign(window.i18n.translations.ru, {
              'circles.public': 'Публичный',
-            'circles.class_b': 'Класс Б (Друзья)',
-            'circles.class_a': 'Класс А (Семья)',
+            'circles.class_b': 'Близкие друзья',
+            'circles.class_a': 'Семья',
             'circles.add_to_circle': 'Добавить в круг',
             'circles.privacy_label': 'Видимость кругов',
             'circles.circles_private': 'Круги установлены как приватные',
@@ -1102,15 +1102,15 @@ function addCircleTranslations() {
             'circles.visibility_label': 'Кто может видеть ваши круги',
             'circles.visibility_private': 'Приватный',
             'circles.visibility_public': 'Публичный',
-            'circles.visibility_class_b': 'Класс Б (Близкие друзья)',
-            'circles.visibility_class_a': 'Класс А (Семья)',
+            'circles.visibility_class_b': 'Близкие друзья ❤️',
+            'circles.visibility_class_a': 'Семья 👨‍👩‍👧‍👦',
             'circles.your_access_level': 'Ваш уровень доступа',
             'circles.title_public': 'Публичный',
-'circles.title_class_b': 'Класс Б (Друзья)',
-'circles.title_class_a': 'Класс А (Семья)',
+'circles.title_class_b': 'Близкие друзья',
+'circles.title_class_a': 'Семья',
             'privacy.public': 'Публичный',
-            'privacy.class_b': 'Класс Б (Близкие друзья)',
-            'privacy.class_a': 'Класс А (Семья)',
+            'privacy.class_b': 'Близкие друзья',
+            'privacy.class_a': 'Семья',
             'privacy.private': 'Приватный'
         });
 
@@ -1921,7 +1921,7 @@ function addUserSearchToFollowing() {
 
 async function searchUsersToFollow() {
     const query = document.getElementById('followSearchInput').value.trim();
-    if (query.length < 2) {
+    if (query.length < 1) {
         showNotification('Please enter at least 1 character', 'warning');
         return;
     }
@@ -2055,7 +2055,10 @@ async function searchUsersToFollowInstant(query) {
             
             if (!response.ok) throw new Error('Search failed');
             
-            const users = await response.json();
+            const data = await response.json();
+            
+            // Check if response is an array (valid users list)
+            const users = Array.isArray(data) ? data : [];
             
             if (resultsContainer) {
                 if (users.length === 0) {
