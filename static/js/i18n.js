@@ -1303,7 +1303,7 @@ const translations = {
 'circles.circles_private': 'מעגלים מוגדרים כפרטיים',
 'circles.privacy_updated': 'הגדרת הפרטיות עודכנה',
 'error.updating_privacy': 'שגיאה בעדכון הפרטיות',
-'circles.title_public': 'ציבורי',
+'circles.title_public': 'ציבורי 🌍',
   'auth.invalid_credentials': 'הזנת שם משתמש או סיסמה לא תקינים',
 
         // Progress chart - FIX #2
@@ -2063,7 +2063,7 @@ const translations = {
         'circles.remove_confirm': 'إزالة هذا المستخدم من الدائرة؟',
         'circles.user_removed': 'تمت إزالة المستخدم من الدائرة',
         'circles.add_to': 'أضف إلى الدائرة...',
-        'circles.title_public': 'عام',
+        'circles.title_public': 'عام 🌍',
 
 'circles.remove': 'إزالة',
 'circles.no_users': 'لم يتم العثور على مستخدمين',
@@ -2801,7 +2801,7 @@ const translations = {
         'circles.remove_confirm': 'Удалить этого пользователя из круга?',
         'circles.user_removed': 'Пользователь удалён из круга',
         'circles.add_to': 'Добавить в круг...',
-        'circles.title_public': 'Публичный',
+        'circles.title_public': 'Публичный 🌍',
 
 'circles.your_access_level': 'Ваш уровень доступа',
 'circles.remove': 'Удалить',
