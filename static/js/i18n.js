@@ -12,7 +12,7 @@ const translations = {
         'menu.profile': 'Profile',
         'menu.circles': 'Circles',
         'menu.messages': 'Messages',
-        'menu.parameters': 'Parameters',
+        'menu.parameters': 'Diary',
         'menu.logout': 'Logout',
         'menu.invite': 'Invite',
             'parameters.positive1': "Amazing work! You're tracking your wellness journey beautifully! 💪",
@@ -79,7 +79,7 @@ const translations = {
         'triggers.physical': 'Physical Activity Alert',
         'triggers.anxiety': 'Anxiety Alert',
         'triggers.set': 'Set Alert Triggers',
-        'triggers.watching': 'Watching Parameters For',
+        'triggers.watching': 'Watching Diary For',
         'about.team_title': 'Our Team & Story',
 'auth.username_placeholder': 'Choose a username',
 'about.team_title': 'Our Team & Story',
@@ -169,9 +169,9 @@ const translations = {
         'calendar.9': 'October',
         'calendar.10': 'November',
         'calendar.11': 'December',
-        'parameters_title': 'Parameters',
+        'parameters_title': 'Diary',
 'set_alert_triggers': 'Set Alert Triggers',
-'alert_triggers_description': 'Get notified when {username}\'s wellness parameters are concerning',
+'alert_triggers_description': 'Get notified when {username}\'s wellness diary is concerning',
 'add_trigger': 'Add Trigger',
 'remove': 'Remove',
 'showing_data_from': 'Showing data from {start} to {end}',
@@ -212,7 +212,7 @@ const translations = {
 
 'circles.visibility_private': 'Private 🔒',
 'circles.no_permission': 'You don\'t have permission to view this circle',
-'circles.title_public': 'Public',
+'circles.title_public': 'Public 🌍',
 
 'circles.your_access_level': 'Your Level of Access',
 'circles.restricted_access': 'Restricted Access',
@@ -311,7 +311,7 @@ const translations = {
     'support.faq1_q': 'How do I reset my password?',
     'support.faq1_a': 'Click on "Forgot Password" on the login page. Enter your email address, and we\'ll send you instructions to reset your password.',
     'support.faq2_q': 'How do I track my therapy progress?',
-    'support.faq2_a': 'Go to the Progress tab in your dashboard. You can log daily parameters, set goals, and view your progress over time with visual charts and insights.',
+    'support.faq2_a': 'Go to the Progress tab in your dashboard. You can log daily diary, set goals, and view your progress over time with visual charts and insights.',
     'support.faq3_q': 'Is my data secure?',
     'support.faq3_a': 'Yes! We use industry-standard encryption to protect your data. All sensitive information is encrypted both in transit and at rest.',
     'support.faq4_q': 'How do I delete my account?',
@@ -350,13 +350,13 @@ const translations = {
     'about.privacy_title': 'Privacy First',
     'about.privacy_desc': 'The platform emphasizes private chat capabilities between users, prioritizing anonymity and safety.',
     'about.track_title': 'Track Progress',
-    'about.track_desc': 'Monitor your wellness journey with daily parameters and visual insights',
+    'about.track_desc': 'Monitor your wellness journey with daily diary and visual insights',
     'about.goals_title': 'Set Goals',
     'about.goals_desc': 'Create and track personal goals with milestone celebrations',
     'about.communication_title': 'Secure Communication',
     'about.communication_desc': 'Connect with your therapist through encrypted messaging',
     'about.checkin_title': 'Daily Check-ins',
-    'about.checkin_desc': 'Log your mood, energy, and other parameters to identify patterns',
+    'about.checkin_desc': 'Log your mood, energy, and other diary entries to identify patterns',
     'about.community_title': 'Community Support',
     'about.community_desc': 'Connect with others on similar journeys in a safe, moderated environment',
     'about.values_title': 'Our Values',
@@ -372,7 +372,7 @@ const translations = {
     'btn.back': 'Back to Home',
     'circles.title': 'My Circles',
             'circles.search_placeholder': 'Search users to add to circles...',
-            'circles.public': 'Public',
+            'circles.public': 'Public 🌍',
 
             'circles.members': 'Members',
             'circles.no_members': 'No members in this circle yet',
@@ -391,7 +391,7 @@ const translations = {
 'invite.alert_content': '{username} has invited you to follow them',
 
         // Parameters page
-        'parameters.title': 'Daily Parameters',
+        'parameters.title': 'Diary',
         'parameters.subtitle': 'Track your daily metrics',
         'parameters.select_date': 'Select Date',
         'parameters.selected_date': 'Selected Date',
@@ -409,11 +409,11 @@ const translations = {
         'parameters.energy_placeholder': 'Describe your energy level (e.g., Very Low, Low, Normal, High, Very High)',
         'parameters.notes': 'Notes',
         'parameters.notes_placeholder': 'Any additional notes or thoughts for today...',
-        'parameters.save': 'Save Parameters',
-        'parameters.load': 'Load Parameters',
+        'parameters.save': 'Save Diary',
+        'parameters.load': 'Load Diary',
         'parameters.clear': 'Clear',
-        'parameters.saved': 'Parameters saved successfully',
-        'parameters.loaded': 'Loaded parameters from',
+        'parameters.saved': 'Diary saved successfully',
+        'parameters.loaded': 'Loaded diary from',
         'menu.diary': 'Diary',
 'progress.title': 'Your Progress',
 'progress.view_progress': 'View Progress:',
@@ -430,8 +430,8 @@ const translations = {
 'progress.avg_energy': 'Average energy level:',
 'progress.avg_sleep': 'Average sleep quality:',
 'progress.avg_activity': 'Average activity level:',
-        'parameters.no_saved': 'No saved parameters for this date',
-        'parameters.cleared': 'Parameters cleared',
+        'parameters.no_saved': 'No saved diary for this date',
+        'parameters.cleared': 'Diary cleared',
         'parameters.today_label': 'Today',
         'parameters.energy': 'Energy',
 'parameters.energy_desc': 'Physical and mental energy levels',
@@ -461,19 +461,19 @@ const translations = {
 'trigger_condition_greater_than': 'greater than',
 'trigger_days_format': '{count} days',
 'trigger_set_alert': 'Set Alert Triggers',
-'trigger_get_notified': 'Get notified when {username}\'s wellness parameters are concerning',
+'trigger_get_notified': 'Get notified when {username}\'s wellness diary are concerning',
 'trigger_add': 'Add Trigger',
 'trigger_remove': 'Remove',
 'trigger_no_triggers': 'No triggers set for this user',
 // Circle labels (simplified)
-'circles.class_b': 'Close Friends',
-'circles.class_a': 'Family',
-'circles.visibility_class_b': 'Close Friends ❤️',
+'circles.class_b': 'Close Friends 👥',
+'circles.class_a': 'Family 👨‍👩‍👧‍👦',
+'circles.visibility_class_b': 'Close Friends 👥',
 'circles.visibility_class_a': 'Family 👨‍👩‍👧‍👦',
-'circles.title_class_b': 'Close Friends',
-'circles.title_class_a': 'Family',
-'privacy.class_b': 'Close Friends',
-'privacy.class_a': 'Family',
+'circles.title_class_b': 'Close Friends 👥',
+'circles.title_class_a': 'Family 👨‍👩‍👧‍👦',
+'privacy.class_b': 'Close Friends 👥',
+'privacy.class_a': 'Family 👨‍👩‍👧‍👦',
 
 // Parameters/Diary page title
 'parameters.title': 'Diary',
@@ -517,11 +517,11 @@ const translations = {
     'parameters.anxiety_desc': 'Level of anxiety experienced',
     'parameters.notes': 'Notes',
     'parameters.notes_placeholder': 'Additional thoughts for today...',
-    'parameters.save': 'Save Parameters',
-    'parameters.load': 'Load Parameters',
+    'parameters.save': 'Save Diary',
+    'parameters.load': 'Load Diary',
     'parameters.clear': 'Clear Form',
-    'parameters.saved': 'Parameters saved successfully!',
-    'parameters.loaded': 'Parameters loaded for',
+    'parameters.saved': 'Diary saved successfully!',
+    'parameters.loaded': 'Diary loaded for',
     'parameters.cleared': 'Form cleared',
     'parameters.no_saved': 'No saved parameters for this date',
     'invite.cta_title': 'Great job tracking your wellness!',
@@ -662,7 +662,35 @@ const translations = {
 'auth.password_reset_success': 'Password has been reset successfully',
 'auth.enter_email': 'Enter your email',
 'parameters.home': 'Home',
+'auth.invalid_credentials': 'You have entered an invalid username or password',
 
+        // Progress chart - FIX #2
+        'progress.start_tracking': 'Start tracking your wellness to see insights here!',
+        'parameters.mood': 'Mood',
+        'parameters.energy': 'Energy',
+        'parameters.sleep': 'Sleep',
+        'parameters.activity': 'Activity',
+        'parameters.anxiety': 'Anxiety',
+
+        // Requested translations - FIX #4
+        'about.checkin_desc': 'Log your mood, energy, and other diary entries to identify patterns',
+        'about.track_desc': 'Monitor your wellness journey with daily diary and visual insights',
+        'alert_triggers_description': "Get notified when {username}'s wellness diary is concerning",
+        'triggers.watching': 'Watching Diary For',
+        'parameters.title': 'Diary',
+        'parameters.save': 'Save Diary',
+        'parameters.load': 'Load Diary',
+        'parameters.saved': 'Diary saved successfully!',
+        'parameters.loaded': 'Diary loaded for',
+        'parameters.no_saved': 'No saved diary for this date',
+        'parameters.cleared': 'Diary cleared',
+        'trigger_get_notified': "Get notified when {username}'s wellness diary are concerning",
+
+        // Following search - FIX #6
+        'following.search_placeholder': 'Search users to follow...',
+        'following.no_users': 'No users found',
+        'following.follow': 'Follow',
+        'following.with_note': '+ Note',
 
 
 
@@ -766,13 +794,11 @@ const translations = {
     'parameters.anxiety_desc': 'רמת החרדה שחוויתי',
     'parameters.notes': 'הערות',
     'parameters.notes_placeholder': 'מחשבות נוספות להיום...',
-    'parameters.save': 'שמור פרמטרים',
-    'parameters.load': 'טען פרמטרים',
+
     'parameters.clear': 'נקה טופס',
-    'parameters.saved': 'הפרמטרים נשמרו בהצלחה!',
-    'parameters.loaded': 'פרמטרים נטענו עבור',
+
     'parameters.cleared': 'הטופס נוקה',
-    'parameters.no_saved': 'אין פרמטרים שמורים לתאריך זה',
+
     'parameters.today_label': 'היום',
     'parameters.energy': 'אנרגיה',
 'parameters.energy_desc': 'רמות אנרגיה פיזית ומנטלית',
@@ -795,7 +821,7 @@ const translations = {
         'following.circles': 'מעגלים',
 'followers.title': 'עוקבים',
 'auth.username': 'שם משתמש',
-'parameters.title': 'פרמטרים',
+
 'parameters.set_alert_triggers': 'הגדר התראות',
 'parameters.alert_triggers_description': 'קבל התראה כאשר פרמטרי הבריאות של {username} מדאיגים',
 'parameters.add_trigger': 'הוסף התראה',
@@ -877,7 +903,7 @@ const translations = {
         'triggers.physical': 'התראת פעילות גופנית',
         'triggers.anxiety': 'התראת חרדה',
         'triggers.set': 'הגדר התראות',
-        'triggers.watching': 'עוקב אחר פרמטרים עבור',
+
 
 
         'menu.diary': 'יומן',
@@ -900,12 +926,12 @@ const translations = {
 // Circle labels (simplified)
 'circles.class_b': 'חברים קרובים',
 'circles.class_a': 'משפחה',
-'circles.visibility_class_b': 'חברים קרובים ❤️',
+'circles.visibility_class_b': 'חברים קרובים 👥',
 'circles.visibility_class_a': 'משפחה 👨‍👩‍👧‍👦',
-'circles.title_class_b': 'חברים קרובים',
-'circles.title_class_a': 'משפחה',
-'privacy.class_b': 'חברים קרובים',
-'privacy.class_a': 'משפחה',
+'circles.title_class_b': 'חברים קרובים 👥',
+'circles.title_class_a': 'משפחה 👨‍👩‍👧‍👦',
+'privacy.class_b': 'חברים קרובים 👥',
+'privacy.class_a': 'משפחה 👨‍👩‍👧‍👦',
 'auth.username_placeholder': 'בחר שם משתמש',
 'about.team_title': 'הצוות והסיפור שלנו',
 'about.team_intro': 'הצוות העיקרי מאחורי הפלטפורמה הוא המנכ"ל בני ברנדשטטר והמנהל הטכנולוגי אוון אסקנזי.',
@@ -927,7 +953,7 @@ const translations = {
 'trigger_condition_greater_than': 'יותר מ',
 'trigger_days_format': '{count} ימים',
 'trigger_set_alert': 'הגדר התראות',
-'trigger_get_notified': 'קבל התראה כאשר פרמטרי הבריאות של {username} מדאיגים',
+
 'trigger_add': 'הוסף התראה',
 'trigger_remove': 'הסר',
 'trigger_no_triggers': 'אין התראות מוגדרות עבור משתמש זה',
@@ -999,14 +1025,13 @@ const translations = {
     'about.privacy_title': 'פרטיות קודם',
     'about.privacy_desc': 'הפלטפורמה מדגישה יכולות צ׳אט פרטיות בין משתמשים, תוך מתן עדיפות לאנונימיות ובטיחות',
     'about.track_title': 'מעקב התקדמות',
-    'about.track_desc': 'עקוב אחר מסע הבריאות שלך עם פרמטרים יומיים ותובנות ויזואליות',
+
     'about.goals_title': 'הגדר יעדים',
     'about.goals_desc': 'צור ועקוב אחר יעדים אישיים עם חגיגות אבני דרך',
     'about.communication_title': 'תקשורת מאובטחת',
     'about.communication_desc': 'התחבר למטפל שלך באמצעות הודעות מוצפנות',
     'about.checkin_title': 'צ׳ק-אין יומי',
-    'about.checkin_desc': 'רשום את מצב הרוח, האנרגיה ופרמטרים אחרים כדי לזהות דפוסים',
-    'about.community_title': 'תמיכה קהילתית',
+
     'about.community_desc': 'התחבר לאחרים במסעות דומים בסביבה בטוחה ומנוהלת',
     'about.values_title': 'הערכים שלנו',
     'about.value1_title': 'חמלה',
@@ -1099,7 +1124,7 @@ const translations = {
 'city.washington_usa': 'וושינגטון, ארה"ב',
 'city.houston_usa': 'יוסטון, ארה"ב',
         // Parameters modal
-        'parameters.title': 'פרמטרים',
+
         'parameters.showing_data': 'מציג נתונים מ',
         'parameters.to': 'עד',
         'parameters.entries': 'רשומות',
@@ -1279,7 +1304,35 @@ const translations = {
 'circles.privacy_updated': 'הגדרת הפרטיות עודכנה',
 'error.updating_privacy': 'שגיאה בעדכון הפרטיות',
 'circles.title_public': 'ציבורי',
+  'auth.invalid_credentials': 'הזנת שם משתמש או סיסמה לא תקינים',
 
+        // Progress chart - FIX #2
+        'progress.start_tracking': 'התחל לעקוב אחר הבריאות שלך כדי לראות תובנות כאן!',
+        'parameters.mood': 'מצב רוח',
+        'parameters.energy': 'אנרגיה',
+        'parameters.sleep': 'שינה',
+        'parameters.activity': 'פעילות',
+        'parameters.anxiety': 'חרדה',
+
+        // Requested translations - FIX #4
+        'about.checkin_desc': 'תעד את מצב הרוח, האנרגיה ורשומות יומן אחרות לזיהוי דפוסים',
+        'about.track_desc': 'עקוב אחר מסע הבריאות שלך עם יומן יומי ותובנות חזותיות',
+        'alert_triggers_description': 'קבל התראה כאשר יומן הבריאות של {username} מדאיג',
+        'triggers.watching': 'צופה ביומן עבור',
+        'parameters.title': 'יומן',
+        'parameters.save': 'שמור יומן',
+        'parameters.load': 'טען יומן',
+        'parameters.saved': 'היומן נשמר בהצלחה!',
+        'parameters.loaded': 'היומן נטען עבור',
+        'parameters.no_saved': 'אין יומן שמור לתאריך זה',
+        'parameters.cleared': 'היומן נוקה',
+        'trigger_get_notified': 'קבל התראה כאשר יומן הבריאות של {username} מדאיג',
+
+        // Following search - FIX #6
+        'following.search_placeholder': 'חפש משתמשים לעקוב...',
+        'following.no_users': 'לא נמצאו משתמשים',
+        'following.follow': 'עקוב',
+        'following.with_note': '+ הערה',
 
 
         // Messages page
@@ -1339,7 +1392,7 @@ const translations = {
 'privacy.private': '🔒 פרטי',
 
         // Parameters page
-        'parameters.title': 'פרמטרים יומיים',
+
         'parameters.subtitle': 'עקוב אחר המדדים היומיים שלך',
         'parameters.select_date': 'בחר תאריך',
         'parameters.selected_date': 'תאריך נבחר',
@@ -1357,12 +1410,9 @@ const translations = {
         'parameters.energy_placeholder': 'תאר את רמת האנרגיה שלך (למשל, נמוכה מאוד, נמוכה, רגילה, גבוהה, גבוהה מאוד)',
         'parameters.notes': 'הערות',
         'parameters.notes_placeholder': 'הערות או מחשבות נוספות להיום...',
-        'parameters.save': 'שמור פרמטרים',
-        'parameters.load': 'טען פרמטרים',
+
         'parameters.clear': 'נקה',
-        'parameters.saved': 'הפרמטרים נשמרו בהצלחה',
-        'parameters.loaded': 'נטענו פרמטרים מ',
-        'parameters.no_saved': 'אין פרמטרים שמורים לתאריך זה',
+
         'parameters.cleared': 'הפרמטרים נוקו',
 
 
@@ -1477,13 +1527,11 @@ const translations = {
     'parameters.anxiety_desc': 'مستوى القلق المُجرب',
     'parameters.notes': 'ملاحظات',
     'parameters.notes_placeholder': 'أفكار إضافية لليوم...',
-    'parameters.save': 'حفظ المعاملات',
-    'parameters.load': 'تحميل المعاملات',
+
     'parameters.clear': 'مسح النموذج',
-    'parameters.saved': 'تم حفظ المعاملات بنجاح!',
-    'parameters.loaded': 'تم تحميل المعاملات لـ',
+
     'parameters.cleared': 'تم مسح النموذج',
-    'parameters.no_saved': 'لا توجد معاملات محفوظة لهذا التاريخ',
+
     'parameters.today_label': 'اليوم',
     'parameters.energy': 'الطاقة',
 'parameters.energy_desc': 'مستويات الطاقة الجسدية والعقلية',
@@ -1505,7 +1553,7 @@ const translations = {
         'following.view_full_profile': 'عرض الملف الشخصي الكامل',
         'following.circles': 'الدوائر',
 'auth.username': 'اسم المستخدم',
-'parameters.title': 'المعايير',
+
 'parameters.set_alert_triggers': 'تعيين تنبيهات',
 'parameters.alert_triggers_description': 'احصل على إشعار عندما تكون معايير صحة {username} مقلقة',
 'parameters.add_trigger': 'إضافة تنبيه',
@@ -1557,7 +1605,7 @@ const translations = {
         'triggers.physical': 'تنبيه النشاط البدني',
         'triggers.anxiety': 'تنبيه القلق',
         'triggers.set': 'تعيين تنبيهات التحذير',
-        'triggers.watching': 'مراقبة المعاملات لـ',
+
 'auth.username_placeholder': 'اختر اسم مستخدم',
 'about.team_title': 'فريقنا وقصتنا',
 'about.team_intro': 'الفريق الأساسي وراء هذا المشروع هو الرئيس التنفيذي بيني براندشتاتر والمدير التقني إيفان أسكنازي.',
@@ -1637,12 +1685,42 @@ const translations = {
 // Circle labels (simplified)
 'circles.class_b': 'الأصدقاء المقربون',
 'circles.class_a': 'العائلة',
-'circles.visibility_class_b': 'الأصدقاء المقربون ❤️',
+'circles.visibility_class_b': 'الأصدقاء المقربون 👥',
 'circles.visibility_class_a': 'العائلة 👨‍👩‍👧‍👦',
-'circles.title_class_b': 'الأصدقاء المقربون',
-'circles.title_class_a': 'العائلة',
-'privacy.class_b': 'الأصدقاء المقربون',
-'privacy.class_a': 'العائلة',
+'circles.title_class_b': 'الأصدقاء المقربون 👥',
+'circles.title_class_a': 'العائلة  👨‍👩‍👧‍👦',
+'privacy.class_b': 'الأصدقاء المقربون 👥',
+'privacy.class_a': 'العائلة 👨‍👩‍👧‍👦',
+
+ 'auth.invalid_credentials': 'لقد أدخلت اسم مستخدم أو كلمة مرور غير صالحة',
+
+        // Progress chart - FIX #2
+        'progress.start_tracking': 'ابدأ بتتبع صحتك لرؤية الرؤى هنا!',
+        'parameters.mood': 'المزاج',
+        'parameters.energy': 'الطاقة',
+        'parameters.sleep': 'النوم',
+        'parameters.activity': 'النشاط',
+        'parameters.anxiety': 'القلق',
+
+        // Requested translations - FIX #4
+        'about.checkin_desc': 'سجل مزاجك وطاقتك وإدخالات المفكرة الأخرى لتحديد الأنماط',
+        'about.track_desc': 'راقب رحلة صحتك مع المفكرة اليومية والرؤى المرئية',
+        'alert_triggers_description': 'احصل على إشعار عندما تكون مفكرة صحة {username} مقلقة',
+        'triggers.watching': 'مراقبة المفكرة لـ',
+        'parameters.title': 'المفكرة',
+        'parameters.save': 'حفظ المفكرة',
+        'parameters.load': 'تحميل المفكرة',
+        'parameters.saved': 'تم حفظ المفكرة بنجاح!',
+        'parameters.loaded': 'تم تحميل المفكرة لـ',
+        'parameters.no_saved': 'لا توجد مفكرة محفوظة لهذا التاريخ',
+        'parameters.cleared': 'تم مسح المفكرة',
+        'trigger_get_notified': 'احصل على إشعار عندما تكون مفكرة صحة {username} مقلقة',
+
+        // Following search - FIX #6
+        'following.search_placeholder': 'ابحث عن مستخدمين للمتابعة...',
+        'following.no_users': 'لم يتم العثور على مستخدمين',
+        'following.follow': 'متابعة',
+        'following.with_note': '+ ملاحظة',
 
 'home.deletion_cancelled': 'تم إلغاء حذف الحساب',
 'home.account_deleted': 'تم حذف حسابك',
@@ -1691,7 +1769,7 @@ const translations = {
 'trigger_condition_greater_than': 'أكبر من',
 'trigger_days_format': '{count} أيام',
 'trigger_set_alert': 'تعيين تنبيهات',
-'trigger_get_notified': 'احصل على إشعار عندما تكون معايير صحة {username} مقلقة',
+
 'trigger_add': 'إضافة تنبيه',
 'trigger_remove': 'إزالة',
 'trigger_no_triggers': 'لم يتم تعيين تنبيهات لهذا المستخدم',
@@ -1742,7 +1820,7 @@ const translations = {
 'city.washington_usa': 'واشنطن، الولايات المتحدة',
 'city.houston_usa': 'هيوستن، الولايات المتحدة',
         // Parameters modal
-        'parameters.title': 'المعاملات',
+
         'parameters.showing_data': 'عرض البيانات من',
         'parameters.to': 'إلى',
         'parameters.entries': 'إدخالات',
@@ -1815,7 +1893,7 @@ const translations = {
     'about.privacy_title': 'الخصوصية أولاً',
     'about.privacy_desc': 'تركز المنصة على إمكانيات الدردشة الخاصة بين المستخدمين، مع إعطاء الأولوية لإخفاء الهوية والسلامة',
     'about.track_title': 'تتبع التقدم',
-    'about.track_desc': 'راقب رحلة العافية الخاصة بك مع المعاملات اليومية والرؤى المرئية',
+
     'about.goals_title': 'حدد الأهداف',
     'about.goals_desc': 'أنشئ وتتبع الأهداف الشخصية مع احتفالات الإنجاز',
     'about.communication_title': 'اتصال آمن',
@@ -2034,7 +2112,7 @@ const translations = {
         'mood.energetic': '🔥 نشيط',
 
         // Parameters page
-        'parameters.title': 'المعاملات اليومية',
+
         'parameters.subtitle': 'تتبع المقاييس اليومية الخاصة بك',
         'parameters.select_date': 'حدد التاريخ',
         'parameters.selected_date': 'التاريخ المحدد',
@@ -2052,12 +2130,9 @@ const translations = {
         'parameters.energy_placeholder': 'صف مستوى طاقتك (مثل: منخفض جدًا، منخفض، عادي، مرتفع، مرتفع جدًا)',
         'parameters.notes': 'ملاحظات',
         'parameters.notes_placeholder': 'أي ملاحظات أو أفكار إضافية لليوم...',
-        'parameters.save': 'حفظ المعاملات',
-        'parameters.load': 'تحميل المعاملات',
+
         'parameters.clear': 'مسح',
-        'parameters.saved': 'تم حفظ المعاملات بنجاح',
-        'parameters.loaded': 'تم تحميل المعاملات من',
-        'parameters.no_saved': 'لا توجد معاملات محفوظة لهذا التاريخ',
+
         'parameters.cleared': 'تم مسح المعاملات',
          'circles.title': 'دوائري',
             'circles.search_placeholder': 'ابحث عن المستخدمين لإضافتهم إلى الدوائر...',
@@ -2192,13 +2267,11 @@ const translations = {
     'parameters.anxiety_desc': 'Уровень испытанной тревожности',
     'parameters.notes': 'Заметки',
     'parameters.notes_placeholder': 'Дополнительные мысли на сегодня...',
-    'parameters.save': 'Сохранить параметры',
-    'parameters.load': 'Загрузить параметры',
+
     'parameters.clear': 'Очистить форму',
-    'parameters.saved': 'Параметры успешно сохранены!',
-    'parameters.loaded': 'Параметры загружены для',
+
     'parameters.cleared': 'Форма очищена',
-    'parameters.no_saved': 'Нет сохраненных параметров для этой даты',
+
     'parameters.today_label': 'Сегодня',
     'parameters.energy': 'Энергия',
 'parameters.energy_desc': 'Уровень физической и умственной энергии',
@@ -2261,15 +2334,15 @@ const translations = {
 // Circle labels (simplified)
 'circles.class_b': 'Близкие друзья',
 'circles.class_a': 'Семья',
-'circles.visibility_class_b': 'Близкие друзья ❤️',
+'circles.visibility_class_b': 'Близкие друзья 👥',
 'circles.visibility_class_a': 'Семья 👨‍👩‍👧‍👦',
-'circles.title_class_b': 'Близкие друзья',
-'circles.title_class_a': 'Семья',
-'privacy.class_b': 'Близкие друзья',
-'privacy.class_a': 'Семья',
+'circles.title_class_b': 'Близкие друзья 👥',
+'circles.title_class_a': 'Семья 👨‍👩‍👧‍👦',
+'privacy.class_b': 'Близкие друзья 👥',
+'privacy.class_a': 'Семья 👨‍👩‍👧‍👦',
 
 // Parameters/Diary page title
-'parameters.title': 'Дневник',
+
 
 
     'support.subject': 'Тема',
@@ -2317,7 +2390,7 @@ const translations = {
         'triggers.physical': 'Оповещение о физической активности',
         'triggers.anxiety': 'Оповещение о тревоге',
         'triggers.set': 'Установить триггеры оповещений',
-        'triggers.watching': 'Отслеживание параметров для',
+
 'auth.username_placeholder': 'Выберите имя пользователя',
 'about.team_title': 'Наша команда и история',
 'about.team_intro': 'Основная команда проекта - генеральный директор Бенни Брандштеттер и технический директор Эван Асканази.',
@@ -2380,7 +2453,7 @@ const translations = {
 'home.deletion_failed': 'Не удалось удалить аккаунт',
 'home.error_occurred': 'Произошла ошибка',
 'home.error_occurred': 'Произошла ошибка',
-'parameters.title': 'Параметры',
+
 'parameters.set_alert_triggers': 'Настроить оповещения',
 'parameters.alert_triggers_description': 'Получайте уведомления, когда параметры здоровья {username} вызывают беспокойство',
 'parameters.add_trigger': 'Добавить оповещение',
@@ -2427,7 +2500,7 @@ const translations = {
 'trigger_condition_greater_than': 'больше чем',
 'trigger_days_format': '{count} дней',
 'trigger_set_alert': 'Настроить оповещения',
-'trigger_get_notified': 'Получайте уведомления, когда параметры здоровья {username} вызывают беспокойство',
+
 'trigger_add': 'Добавить оповещение',
 'trigger_remove': 'Удалить',
 'trigger_no_triggers': 'Для этого пользователя не установлено оповещений',
@@ -2480,7 +2553,7 @@ const translations = {
 'city.washington_usa': 'Вашингтон, США',
 'city.houston_usa': 'Хьюстон, США',
 // Parameters modal
-        'parameters.title': 'Параметры',
+
         'parameters.showing_data': 'Показаны данные с',
         'parameters.to': 'по',
         'parameters.entries': 'записей',
@@ -2505,6 +2578,36 @@ const translations = {
 'auth.password_reset_success': 'Пароль успешно сброшен',
 'auth.enter_email': 'Введите вашу электронную почту',
 'parameters.home': 'Главная',
+
+   'auth.invalid_credentials': 'Вы ввели неверное имя пользователя или пароль',
+
+        // Progress chart - FIX #2
+        'progress.start_tracking': 'Начните отслеживать свое здоровье, чтобы увидеть здесь статистику!',
+        'parameters.mood': 'Настроение',
+        'parameters.energy': 'Энергия',
+        'parameters.sleep': 'Сон',
+        'parameters.activity': 'Активность',
+        'parameters.anxiety': 'Тревога',
+
+        // Requested translations - FIX #4
+        'about.checkin_desc': 'Записывайте настроение, энергию и другие записи дневника для выявления закономерностей',
+        'about.track_desc': 'Отслеживайте свой путь к здоровью с ежедневным дневником и визуальной аналитикой',
+        'alert_triggers_description': 'Получайте уведомления, когда дневник здоровья {username} вызывает беспокойство',
+        'triggers.watching': 'Отслеживание дневника для',
+        'parameters.title': 'Дневник',
+        'parameters.save': 'Сохранить дневник',
+        'parameters.load': 'Загрузить дневник',
+        'parameters.saved': 'Дневник успешно сохранен!',
+        'parameters.loaded': 'Дневник загружен для',
+        'parameters.no_saved': 'Нет сохраненного дневника для этой даты',
+        'parameters.cleared': 'Дневник очищен',
+        'trigger_get_notified': 'Получайте уведомления, когда дневник здоровья {username} вызывает беспокойство',
+
+        // Following search - FIX #6
+        'following.search_placeholder': 'Поиск пользователей для подписки...',
+        'following.no_users': 'Пользователи не найдены',
+        'following.follow': 'Подписаться',
+        'following.with_note': '+ Заметка',
     // About page
     'about.title': 'О TheraSocial',
     'about.subtitle': 'Ваш надежный спутник для терапевтической практики и личного пути к здоровью',
@@ -2514,7 +2617,7 @@ const translations = {
     'about.privacy_title': 'Конфиденциальность прежде всего',
     'about.privacy_desc': 'Платформа делает акцент на возможностях приватного чата между пользователями, уделяя приоритет анонимности и безопасности',
     'about.track_title': 'Отслеживание прогресса',
-    'about.track_desc': 'Следите за своим путешествием к здоровью с ежедневными параметрами и визуальной аналитикой',
+
     'about.goals_title': 'Ставьте цели',
     'about.goals_desc': 'Создавайте и отслеживайте личные цели с празднованием вех',
     'about.communication_title': 'Безопасная связь',
@@ -2766,7 +2869,7 @@ const translations = {
 'privacy.private': '🔒 Приватный',
 
         // Parameters page
-        'parameters.title': 'Ежедневные параметры',
+
         'parameters.subtitle': 'Отслеживайте свои ежедневные показатели',
         'parameters.select_date': 'Выберите дату',
         'parameters.selected_date': 'Выбранная дата',
@@ -2784,12 +2887,9 @@ const translations = {
         'parameters.energy_placeholder': 'Опишите уровень энергии (например, Очень низкий, Низкий, Нормальный, Высокий, Очень высокий)',
         'parameters.notes': 'Заметки',
         'parameters.notes_placeholder': 'Дополнительные заметки или мысли на сегодня...',
-        'parameters.save': 'Сохранить параметры',
-        'parameters.load': 'Загрузить параметры',
+
         'parameters.clear': 'Очистить',
-        'parameters.saved': 'Параметры успешно сохранены',
-        'parameters.loaded': 'Загружены параметры от',
-        'parameters.no_saved': 'Нет сохранённых параметров для этой даты',
+
         'parameters.cleared': 'Параметры очищены',
 
 
