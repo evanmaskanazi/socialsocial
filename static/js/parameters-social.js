@@ -96,6 +96,7 @@ const CIRCLE_EMOJIS = {
     'family': '👨‍👩‍👧‍👦'
 };
 
+// Diary entries use 1-4 scale (Fix #2 only affects the chart Y-axis, not entry values)
 const PARAMETER_CATEGORIES = [
     {
         id: 'mood',
