@@ -5058,8 +5058,8 @@ function updateCircleDisplay(type, members) {
                       (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) :
                       (key) => key;
 
-          //  const emoji = type === 'general' ? '💥' :
-                //         type === 'close_friends' ? '❤️' : '👨‍👩‍👧‍👦';
+            const emoji = type === 'general' ? '' :
+                        type === 'close_friends' ? '' : '';
 
             let translationKey;
             if (type === 'general') {
