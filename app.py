@@ -59,6 +59,15 @@ except ImportError as e:
     REPORTLAB_AVAILABLE = False
     print(f"WARNING: reportlab not available - PDF generation disabled: {e}")
 
+# WeasyPrint for better Unicode/RTL support (preferred method)
+try:
+    from weasyprint import HTML, CSS
+    WEASYPRINT_AVAILABLE = True
+    print("INFO: WeasyPrint available - using for PDF generation with full Unicode support")
+except ImportError as e:
+    WEASYPRINT_AVAILABLE = False
+    print(f"WARNING: weasyprint not available - falling back to reportlab: {e}")
+
 try:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -6162,21 +6171,29 @@ def get_report_translations(lang='en'):
             'date': 'Date',
             'day': 'Day',
             'checkin_time': 'Check-in Time',
-            'mood': 'Mood (1-4)',
+            'mood': 'Mood',
+            'mood_scale': '(1-4)',
             'mood_notes': 'Mood Notes',
-            'energy': 'Energy (1-4)',
+            'energy': 'Energy',
+            'energy_scale': '(1-4)',
             'energy_notes': 'Energy Notes',
-            'social': 'Social Activity (1-4)',
+            'social': 'Social Activity',
+            'social_scale': '(1-4)',
             'social_notes': 'Social Notes',
-            'sleep': 'Sleep Quality (1-4)',
+            'sleep': 'Sleep',
+            'sleep_scale': '(1-4)',
             'sleep_notes': 'Sleep Notes',
-            'anxiety': 'Anxiety Level (1-4)',
+            'anxiety': 'Anxiety',
+            'anxiety_scale': '(1-4)',
             'anxiety_notes': 'Anxiety Notes',
-            'motivation': 'Motivation (1-4)',
+            'motivation': 'Motivation',
+            'motivation_scale': '(1-4)',
             'motivation_notes': 'Motivation Notes',
-            'medication': 'Medication (1-4)',
+            'medication': 'Medication',
+            'medication_scale': '(1-4)',
             'medication_notes': 'Medication Notes',
-            'physical': 'Physical Activity (1-4)',
+            'physical': 'Activity',
+            'physical_scale': '(1-4)',
             'physical_notes': 'Physical Notes',
             'completion': 'Completion',
             'no_checkin': 'No Check-in',
@@ -6205,28 +6222,36 @@ def get_report_translations(lang='en'):
             'date': 'תאריך',
             'day': 'יום',
             'checkin_time': "זמן צ'ק-אין",
-            'mood': 'רמה רגשית (1-4)',
-            'mood_notes': 'רמה רגשית הערות',
-            'energy': 'אנרגיה (1-4)',
+            'mood': 'מצב רוח',
+            'mood_scale': '(1-4)',
+            'mood_notes': 'מצב רוח הערות',
+            'energy': 'אנרגיה',
+            'energy_scale': '(1-4)',
             'energy_notes': 'אנרגיה הערות',
-            'social': 'פעילות חברתית (1-4)',
+            'social': 'פעילות חברתית',
+            'social_scale': '(1-4)',
             'social_notes': 'פעילות חברתית הערות',
-            'sleep': 'איכות שינה (1-4)',
-            'sleep_notes': 'איכות שינה הערות',
-            'anxiety': 'רמת חרדה (1-4)',
-            'anxiety_notes': 'רמת חרדה הערות',
-            'motivation': 'מוטיבציה (1-4)',
+            'sleep': 'שינה',
+            'sleep_scale': '(1-4)',
+            'sleep_notes': 'שינה הערות',
+            'anxiety': 'חרדה',
+            'anxiety_scale': '(1-4)',
+            'anxiety_notes': 'חרדה הערות',
+            'motivation': 'מוטיבציה',
+            'motivation_scale': '(1-4)',
             'motivation_notes': 'מוטיבציה הערות',
-            'medication': 'תרופות (1-4)',
+            'medication': 'תרופות',
+            'medication_scale': '(1-4)',
             'medication_notes': 'תרופות הערות',
-            'physical': 'פעילות גופנית (1-4)',
+            'physical': 'פעילות',
+            'physical_scale': '(1-4)',
             'physical_notes': 'פעילות גופנית הערות',
             'completion': 'השלמה',
             'no_checkin': "אין צ'ק-אין",
             'weekly_summary': 'סיכום שבועי',
             'days_completed': 'ימים',
             'checkin_completion': "השלמת צ'ק-אין:",
-            'mood_level': 'רמה רגשית:',
+            'mood_level': 'מצב רוח:',
             'energy_level': 'אנרגיה:',
             'social_activity': 'פעילות חברתית:',
             'sleep_quality': 'איכות שינה:',
@@ -6235,7 +6260,7 @@ def get_report_translations(lang='en'):
             'medication_level': 'תרופות:',
             'physical_level': 'פעילות גופנית:',
             'good': 'טוב',
-            'needs_support': 'קוקז לתמיכה',
+            'needs_support': 'זקוק לתמיכה',
             'days': {
                 0: 'יום שני', 1: 'יום שלישי', 2: 'יום רביעי',
                 3: 'יום חמישי', 4: 'יום שישי', 5: 'שבת', 6: 'יום ראשון'
@@ -6248,21 +6273,29 @@ def get_report_translations(lang='en'):
             'date': 'التاريخ',
             'day': 'اليوم',
             'checkin_time': 'وقت التسجيل',
-            'mood': 'المزاج (1-4)',
+            'mood': 'المزاج',
+            'mood_scale': '(1-4)',
             'mood_notes': 'ملاحظات المزاج',
-            'energy': 'الطاقة (1-4)',
+            'energy': 'الطاقة',
+            'energy_scale': '(1-4)',
             'energy_notes': 'ملاحظات الطاقة',
-            'social': 'النشاط الاجتماعي (1-4)',
+            'social': 'النشاط الاجتماعي',
+            'social_scale': '(1-4)',
             'social_notes': 'ملاحظات اجتماعية',
-            'sleep': 'جودة النوم (1-4)',
+            'sleep': 'النوم',
+            'sleep_scale': '(1-4)',
             'sleep_notes': 'ملاحظات النوم',
-            'anxiety': 'مستوى القلق (1-4)',
+            'anxiety': 'القلق',
+            'anxiety_scale': '(1-4)',
             'anxiety_notes': 'ملاحظات القلق',
-            'motivation': 'التحفيز (1-4)',
+            'motivation': 'التحفيز',
+            'motivation_scale': '(1-4)',
             'motivation_notes': 'ملاحظات التحفيز',
-            'medication': 'الأدوية (1-4)',
+            'medication': 'الأدوية',
+            'medication_scale': '(1-4)',
             'medication_notes': 'ملاحظات الأدوية',
-            'physical': 'النشاط البدني (1-4)',
+            'physical': 'النشاط',
+            'physical_scale': '(1-4)',
             'physical_notes': 'ملاحظات النشاط',
             'completion': 'الإكمال',
             'no_checkin': 'لا يوجد تسجيل',
@@ -6291,21 +6324,29 @@ def get_report_translations(lang='en'):
             'date': 'Дата',
             'day': 'День',
             'checkin_time': 'Время отметки',
-            'mood': 'Настроение (1-4)',
+            'mood': 'Настроение',
+            'mood_scale': '(1-4)',
             'mood_notes': 'Заметки о настроении',
-            'energy': 'Энергия (1-4)',
+            'energy': 'Энергия',
+            'energy_scale': '(1-4)',
             'energy_notes': 'Заметки об энергии',
-            'social': 'Социальная активность (1-4)',
+            'social': 'Социальная активность',
+            'social_scale': '(1-4)',
             'social_notes': 'Социальные заметки',
-            'sleep': 'Качество сна (1-4)',
+            'sleep': 'Сон',
+            'sleep_scale': '(1-4)',
             'sleep_notes': 'Заметки о сне',
-            'anxiety': 'Уровень тревоги (1-4)',
+            'anxiety': 'Тревога',
+            'anxiety_scale': '(1-4)',
             'anxiety_notes': 'Заметки о тревоге',
-            'motivation': 'Мотивация (1-4)',
+            'motivation': 'Мотивация',
+            'motivation_scale': '(1-4)',
             'motivation_notes': 'Заметки о мотивации',
-            'medication': 'Лекарства (1-4)',
+            'medication': 'Лекарства',
+            'medication_scale': '(1-4)',
             'medication_notes': 'Заметки о лекарствах',
-            'physical': 'Физическая активность (1-4)',
+            'physical': 'Активность',
+            'physical_scale': '(1-4)',
             'physical_notes': 'Заметки об активности',
             'completion': 'Завершение',
             'no_checkin': 'Нет отметки',
@@ -6473,12 +6514,21 @@ def generate_excel_report():
         ws['A2'] = f"{t['week']} {week_num}, {year} ({months[start_date.month-1]} {start_date.day} - {months[end_date.month-1]} {end_date.day}, {year})"
         ws.merge_cells('A2:J2')
         
-        # Headers row
+        # Headers row - with label + scale format
+        mood_header = f"{t['mood']}\n{t.get('mood_scale', '(1-4)')}"
+        energy_header = f"{t['energy']}\n{t.get('energy_scale', '(1-4)')}"
+        social_header = f"{t['social']}\n{t.get('social_scale', '(1-4)')}"
+        sleep_header = f"{t['sleep']}\n{t.get('sleep_scale', '(1-4)')}"
+        anxiety_header = f"{t['anxiety']}\n{t.get('anxiety_scale', '(1-4)')}"
+        motivation_header = f"{t['motivation']}\n{t.get('motivation_scale', '(1-4)')}"
+        medication_header = f"{t['medication']}\n{t.get('medication_scale', '(1-4)')}"
+        physical_header = f"{t['physical']}\n{t.get('physical_scale', '(1-4)')}"
+        
         headers = [t['date'], t['day'], t['checkin_time'],
-                   t['mood'], t['mood_notes'], t['energy'], t['energy_notes'],
-                   t['social'], t['social_notes'], t['sleep'], t['sleep_notes'],
-                   t['anxiety'], t['anxiety_notes'], t['motivation'], t['motivation_notes'],
-                   t['medication'], t['medication_notes'], t['physical'], t['physical_notes'],
+                   mood_header, t['mood_notes'], energy_header, t['energy_notes'],
+                   social_header, t['social_notes'], sleep_header, t['sleep_notes'],
+                   anxiety_header, t['anxiety_notes'], motivation_header, t['motivation_notes'],
+                   medication_header, t['medication_notes'], physical_header, t['physical_notes'],
                    t['completion']]
         
         for col, header in enumerate(headers, 1):
@@ -6620,13 +6670,219 @@ def generate_excel_report():
 # PDF REPORT GENERATION
 # =====================
 
+def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, end_date):
+    """Generate PDF using WeasyPrint for full Unicode/RTL support"""
+    week_num = start_date.isocalendar()[1]
+    year = start_date.year
+    
+    month_names = {
+        'en': ['January', 'February', 'March', 'April', 'May', 'June',
+               'July', 'August', 'September', 'October', 'November', 'December'],
+        'he': ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+               'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
+        'ar': ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+               'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+        'ru': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+               'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+    }
+    months = month_names.get(lang, month_names['en'])
+    
+    # RTL direction for Hebrew/Arabic
+    direction = 'rtl' if lang in ['he', 'ar'] else 'ltr'
+    text_align = 'right' if lang in ['he', 'ar'] else 'left'
+    
+    def get_color_class(val, is_anxiety=False):
+        """Get CSS class for cell coloring"""
+        if val is None:
+            return ''
+        if is_anxiety:
+            # Anxiety: lower is better (1=green, 4=red)
+            if val == 1:
+                return 'bg-green'
+            elif val == 2:
+                return 'bg-yellow'
+            elif val == 3:
+                return 'bg-orange'
+            else:
+                return 'bg-red'
+        else:
+            # Others: higher is better (4=green, 1=red)
+            if val == 4:
+                return 'bg-green'
+            elif val == 3:
+                return 'bg-yellow'
+            elif val == 2:
+                return 'bg-orange'
+            else:
+                return 'bg-red'
+    
+    def format_avg(val, is_anxiety=False):
+        if val is None:
+            return '-'
+        rating = f'{val:.1f}/4'
+        if is_anxiety:
+            status = t['good'] if val <= 2.5 else t['needs_support']
+        else:
+            status = t['good'] if val >= 2.5 else t['needs_support']
+        return f'{rating} - {status}'
+    
+    # Build table rows
+    table_rows = ''
+    for day in week_data:
+        if day['has_checkin']:
+            table_rows += f'''
+            <tr>
+                <td>{day['date'].strftime('%Y-%m-%d')}</td>
+                <td>{t['days'].get(day['day_of_week'], '')}</td>
+                <td class="{get_color_class(day['mood'], False)}">{day['mood'] if day['mood'] else '-'}</td>
+                <td class="{get_color_class(day['energy'], False)}">{day['energy'] if day['energy'] else '-'}</td>
+                <td class="{get_color_class(day['sleep'], False)}">{day['sleep'] if day['sleep'] else '-'}</td>
+                <td class="{get_color_class(day['anxiety'], True)}">{day['anxiety'] if day['anxiety'] else '-'}</td>
+                <td class="{get_color_class(day['physical'], False)}">{day['physical'] if day['physical'] else '-'}</td>
+                <td class="bg-green">✓</td>
+            </tr>
+            '''
+        else:
+            table_rows += f'''
+            <tr>
+                <td>{day['date'].strftime('%Y-%m-%d')}</td>
+                <td>{t['days'].get(day['day_of_week'], '')}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td class="bg-red">{t['no_checkin']}</td>
+            </tr>
+            '''
+    
+    # HTML template with embedded fonts
+    html_content = f'''
+    <!DOCTYPE html>
+    <html dir="{direction}" lang="{lang}">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&display=swap');
+            
+            * {{
+                font-family: 'Noto Sans', 'Noto Sans Hebrew', 'Noto Sans Arabic', Arial, sans-serif;
+            }}
+            
+            body {{
+                direction: {direction};
+                text-align: {text_align};
+                padding: 20px;
+                font-size: 12px;
+                line-height: 1.4;
+            }}
+            
+            h1 {{
+                text-align: center;
+                font-size: 18px;
+                margin-bottom: 5px;
+            }}
+            
+            .week-info {{
+                text-align: center;
+                margin-bottom: 20px;
+                color: #666;
+            }}
+            
+            h2 {{
+                font-size: 14px;
+                margin-top: 20px;
+                margin-bottom: 10px;
+                border-bottom: 1px solid #ccc;
+                padding-bottom: 5px;
+            }}
+            
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }}
+            
+            th, td {{
+                border: 1px solid #333;
+                padding: 6px 4px;
+                text-align: center;
+                font-size: 10px;
+            }}
+            
+            th {{
+                background-color: #666;
+                color: white;
+                font-weight: bold;
+            }}
+            
+            th .scale {{
+                display: block;
+                font-size: 9px;
+                font-weight: normal;
+            }}
+            
+            .bg-green {{ background-color: #C8E6C9; }}
+            .bg-yellow {{ background-color: #FFF9C4; }}
+            .bg-orange {{ background-color: #FFE0B2; }}
+            .bg-red {{ background-color: #FFCDD2; }}
+            
+            .summary-item {{
+                margin: 5px 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>{t['title']} {user.email}</h1>
+        <div class="week-info">{t['week']} {week_num}, {year} ({months[start_date.month-1]} {start_date.day} - {months[end_date.month-1]} {end_date.day}, {year})</div>
+        
+        <h2>{t['daily_checkin']}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>{t['date']}</th>
+                    <th>{t['day']}</th>
+                    <th>{t['mood']}<span class="scale">{t.get('mood_scale', '(1-4)')}</span></th>
+                    <th>{t['energy']}<span class="scale">{t.get('energy_scale', '(1-4)')}</span></th>
+                    <th>{t['sleep']}<span class="scale">{t.get('sleep_scale', '(1-4)')}</span></th>
+                    <th>{t['anxiety']}<span class="scale">{t.get('anxiety_scale', '(1-4)')}</span></th>
+                    <th>{t['physical']}<span class="scale">{t.get('physical_scale', '(1-4)')}</span></th>
+                    <th>{t['completion']}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {table_rows}
+            </tbody>
+        </table>
+        
+        <h2>{t['weekly_summary']}</h2>
+        <div class="summary-item">{t['checkin_completion']} {summary['checkin_count']}/{summary['total_days']} {t['days_completed']} ({summary['completion_pct']:.0f}%)</div>
+        <div class="summary-item">{t['mood_level']} {format_avg(summary['avg_mood'])}</div>
+        <div class="summary-item">{t['energy_level']} {format_avg(summary['avg_energy'])}</div>
+        <div class="summary-item">{t['sleep_quality']} {format_avg(summary['avg_sleep'])}</div>
+        <div class="summary-item">{t['anxiety_level']} {format_avg(summary['avg_anxiety'], is_anxiety=True)}</div>
+        <div class="summary-item">{t['physical_level']} {format_avg(summary['avg_physical'])}</div>
+    </body>
+    </html>
+    '''
+    
+    # Generate PDF with WeasyPrint
+    output = io.BytesIO()
+    HTML(string=html_content).write_pdf(output)
+    output.seek(0)
+    
+    return output
+
+
 @app.route('/api/reports/pdf')
 @login_required
 def generate_pdf_report():
-    """Generate PDF report for past 7 days"""
-    if not REPORTLAB_AVAILABLE:
-        logger.error("PDF generation failed: reportlab not available")
-        return jsonify({'error': 'PDF generation not available - reportlab not installed'}), 500
+    """Generate PDF report for past 7 days - uses WeasyPrint if available, falls back to reportlab"""
+    
+    # Check if any PDF library is available
+    if not WEASYPRINT_AVAILABLE and not REPORTLAB_AVAILABLE:
+        logger.error("PDF generation failed: no PDF library available")
+        return jsonify({'error': 'PDF generation not available - install weasyprint or reportlab'}), 500
     
     try:
         user_id = session['user_id']
@@ -6637,154 +6893,173 @@ def generate_pdf_report():
         week_data, start_date, end_date = get_week_data(user_id)
         summary = calculate_summary(week_data)
         
-        week_num = start_date.isocalendar()[1]
-        year = start_date.year
-        
-        month_names = {
-            'en': ['January', 'February', 'March', 'April', 'May', 'June',
-                   'July', 'August', 'September', 'October', 'November', 'December'],
-            'he': ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-                   'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
-            'ar': ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-                   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
-            'ru': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-                   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
-        }
-        months = month_names.get(lang, month_names['en'])
-        
-        output = io.BytesIO()
-        doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-        
-        styles = getSampleStyleSheet()
-        
-        # For RTL languages
-        rtl_align = 'RIGHT' if lang in ['he', 'ar'] else 'LEFT'
-        
-        elements = []
-        
-        # Title
-        title_style = ParagraphStyle('Title', parent=styles['Title'], alignment=1)
-        elements.append(Paragraph(f"{t['title']} {user.email}", title_style))
-        
-        # Week info
-        week_info = f"{t['week']} {week_num}, {year} ({months[start_date.month-1]} {start_date.day} - {months[end_date.month-1]} {end_date.day}, {year})"
-        elements.append(Paragraph(week_info, styles['Normal']))
-        elements.append(Spacer(1, 20))
-        
-        # Daily Check-in header
-        elements.append(Paragraph(t['daily_checkin'], styles['Heading2']))
-        elements.append(Spacer(1, 10))
-        
-        # Table data
-        table_header = [t['date'], t['day'], t['mood'], t['energy'], t['sleep'], t['anxiety'], t['physical'], t['completion']]
-        table_data = [table_header]
-        
-        def get_pdf_color(val, is_anxiety=False):
-            """Get color for PDF cell"""
-            hex_color = get_value_color(val, is_anxiety)
-            if hex_color:
-                return HexColor('#' + hex_color)
-            return None
-        
-        cell_colors = []
-        
-        for day in week_data:
-            if day['has_checkin']:
-                row = [
-                    day['date'].strftime('%Y-%m-%d'),
-                    t['days'].get(day['day_of_week'], ''),
-                    str(day['mood']) if day['mood'] else '-',
-                    str(day['energy']) if day['energy'] else '-',
-                    str(day['sleep']) if day['sleep'] else '-',
-                    str(day['anxiety']) if day['anxiety'] else '-',
-                    str(day['physical']) if day['physical'] else '-',
-                    '✓'
-                ]
-                # Store colors for this row
-                row_colors = [
-                    None, None,
-                    get_pdf_color(day['mood'], False),
-                    get_pdf_color(day['energy'], False),
-                    get_pdf_color(day['sleep'], False),
-                    get_pdf_color(day['anxiety'], True),
-                    get_pdf_color(day['physical'], False),
-                    HexColor('#C8E6C9')
-                ]
-            else:
-                row = [
-                    day['date'].strftime('%Y-%m-%d'),
-                    t['days'].get(day['day_of_week'], ''),
-                    '-', '-', '-', '-', '-',
-                    t['no_checkin']
-                ]
-                row_colors = [None, None, None, None, None, None, None, HexColor('#FFCDD2')]
-            
-            table_data.append(row)
-            cell_colors.append(row_colors)
-        
-        # Create table
-        col_widths = [70, 80, 50, 50, 50, 50, 60, 70]
-        table = Table(table_data, colWidths=col_widths)
-        
-        # Table style
-        style_commands = [
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ]
-        
-        # Apply cell colors
-        for row_idx, row_colors in enumerate(cell_colors):
-            for col_idx, color in enumerate(row_colors):
-                if color:
-                    style_commands.append(('BACKGROUND', (col_idx, row_idx + 1), (col_idx, row_idx + 1), color))
-        
-        table.setStyle(TableStyle(style_commands))
-        elements.append(table)
-        elements.append(Spacer(1, 20))
-        
-        # Summary section
-        elements.append(Paragraph(t['weekly_summary'], styles['Heading2']))
-        elements.append(Spacer(1, 10))
-        
-        def format_avg(val, is_anxiety=False):
-            if val is None:
-                return '-'
-            rating = f'{val:.1f}/4'
-            if is_anxiety:
-                status = t['good'] if val <= 2.5 else t['needs_support']
-            else:
-                status = t['good'] if val >= 2.5 else t['needs_support']
-            return f'{rating} - {status}'
-        
-        summary_text = f"""
-        {t['checkin_completion']} {summary['checkin_count']}/{summary['total_days']} {t['days_completed']} ({summary['completion_pct']:.0f}%)
-        {t['mood_level']} {format_avg(summary['avg_mood'])}
-        {t['energy_level']} {format_avg(summary['avg_energy'])}
-        {t['sleep_quality']} {format_avg(summary['avg_sleep'])}
-        {t['anxiety_level']} {format_avg(summary['avg_anxiety'], is_anxiety=True)}
-        {t['physical_level']} {format_avg(summary['avg_physical'])}
-        """
-        
-        for line in summary_text.strip().split('\n'):
-            if line.strip():
-                elements.append(Paragraph(line.strip(), styles['Normal']))
-        
-        doc.build(elements)
-        output.seek(0)
-        
         filename = f'weekly_report_{start_date.strftime("%Y%m%d")}_{lang}.pdf'
         
-        return send_file(
-            output,
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=filename
-        )
+        # Try WeasyPrint first (better Unicode/RTL support)
+        if WEASYPRINT_AVAILABLE:
+            try:
+                logger.info(f"Generating PDF with WeasyPrint for lang={lang}")
+                output = generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, end_date)
+                return send_file(
+                    output,
+                    mimetype='application/pdf',
+                    as_attachment=True,
+                    download_name=filename
+                )
+            except Exception as e:
+                logger.warning(f"WeasyPrint failed, trying reportlab: {str(e)}")
+                if not REPORTLAB_AVAILABLE:
+                    raise
+        
+        # Fallback to reportlab
+        if REPORTLAB_AVAILABLE:
+            logger.info(f"Generating PDF with reportlab for lang={lang}")
+            
+            week_num = start_date.isocalendar()[1]
+            year = start_date.year
+            
+            month_names = {
+                'en': ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'],
+                'he': ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                       'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
+                'ar': ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                       'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+                'ru': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                       'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+            }
+            months = month_names.get(lang, month_names['en'])
+            
+            output = io.BytesIO()
+            doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+            
+            styles = getSampleStyleSheet()
+            elements = []
+            
+            # Title
+            title_style = ParagraphStyle('Title', parent=styles['Title'], alignment=1)
+            elements.append(Paragraph(f"{t['title']} {user.email}", title_style))
+            
+            # Week info
+            week_info = f"{t['week']} {week_num}, {year} ({months[start_date.month-1]} {start_date.day} - {months[end_date.month-1]} {end_date.day}, {year})"
+            elements.append(Paragraph(week_info, styles['Normal']))
+            elements.append(Spacer(1, 20))
+            
+            # Daily Check-in header
+            elements.append(Paragraph(t['daily_checkin'], styles['Heading2']))
+            elements.append(Spacer(1, 10))
+            
+            # Table header with label + scale on two lines
+            mood_header = f"{t['mood']}\n{t.get('mood_scale', '(1-4)')}"
+            energy_header = f"{t['energy']}\n{t.get('energy_scale', '(1-4)')}"
+            sleep_header = f"{t['sleep']}\n{t.get('sleep_scale', '(1-4)')}"
+            anxiety_header = f"{t['anxiety']}\n{t.get('anxiety_scale', '(1-4)')}"
+            physical_header = f"{t['physical']}\n{t.get('physical_scale', '(1-4)')}"
+            
+            table_header = [t['date'], t['day'], mood_header, energy_header, sleep_header, anxiety_header, physical_header, t['completion']]
+            table_data = [table_header]
+            
+            def get_pdf_color(val, is_anxiety=False):
+                hex_color = get_value_color(val, is_anxiety)
+                if hex_color:
+                    return HexColor('#' + hex_color)
+                return None
+            
+            cell_colors = []
+            
+            for day in week_data:
+                if day['has_checkin']:
+                    row = [
+                        day['date'].strftime('%Y-%m-%d'),
+                        t['days'].get(day['day_of_week'], ''),
+                        str(day['mood']) if day['mood'] else '-',
+                        str(day['energy']) if day['energy'] else '-',
+                        str(day['sleep']) if day['sleep'] else '-',
+                        str(day['anxiety']) if day['anxiety'] else '-',
+                        str(day['physical']) if day['physical'] else '-',
+                        '✓'
+                    ]
+                    row_colors = [
+                        None, None,
+                        get_pdf_color(day['mood'], False),
+                        get_pdf_color(day['energy'], False),
+                        get_pdf_color(day['sleep'], False),
+                        get_pdf_color(day['anxiety'], True),
+                        get_pdf_color(day['physical'], False),
+                        HexColor('#C8E6C9')
+                    ]
+                else:
+                    row = [
+                        day['date'].strftime('%Y-%m-%d'),
+                        t['days'].get(day['day_of_week'], ''),
+                        '-', '-', '-', '-', '-',
+                        t['no_checkin']
+                    ]
+                    row_colors = [None, None, None, None, None, None, None, HexColor('#FFCDD2')]
+                
+                table_data.append(row)
+                cell_colors.append(row_colors)
+            
+            col_widths = [70, 80, 50, 50, 50, 50, 60, 70]
+            table = Table(table_data, colWidths=col_widths)
+            
+            style_commands = [
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]
+            
+            for row_idx, row_colors in enumerate(cell_colors):
+                for col_idx, color in enumerate(row_colors):
+                    if color:
+                        style_commands.append(('BACKGROUND', (col_idx, row_idx + 1), (col_idx, row_idx + 1), color))
+            
+            table.setStyle(TableStyle(style_commands))
+            elements.append(table)
+            elements.append(Spacer(1, 20))
+            
+            # Summary section
+            elements.append(Paragraph(t['weekly_summary'], styles['Heading2']))
+            elements.append(Spacer(1, 10))
+            
+            def format_avg(val, is_anxiety=False):
+                if val is None:
+                    return '-'
+                rating = f'{val:.1f}/4'
+                if is_anxiety:
+                    status = t['good'] if val <= 2.5 else t['needs_support']
+                else:
+                    status = t['good'] if val >= 2.5 else t['needs_support']
+                return f'{rating} - {status}'
+            
+            summary_text = f"""
+            {t['checkin_completion']} {summary['checkin_count']}/{summary['total_days']} {t['days_completed']} ({summary['completion_pct']:.0f}%)
+            {t['mood_level']} {format_avg(summary['avg_mood'])}
+            {t['energy_level']} {format_avg(summary['avg_energy'])}
+            {t['sleep_quality']} {format_avg(summary['avg_sleep'])}
+            {t['anxiety_level']} {format_avg(summary['avg_anxiety'], is_anxiety=True)}
+            {t['physical_level']} {format_avg(summary['avg_physical'])}
+            """
+            
+            for line in summary_text.strip().split('\n'):
+                if line.strip():
+                    elements.append(Paragraph(line.strip(), styles['Normal']))
+            
+            doc.build(elements)
+            output.seek(0)
+            
+            return send_file(
+                output,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        return jsonify({'error': 'No PDF library available'}), 500
         
     except Exception as e:
         logger.error(f"PDF report error: {str(e)}")
