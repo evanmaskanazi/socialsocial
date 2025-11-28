@@ -5783,15 +5783,25 @@ def get_insights():
 @app.route('/api/parameters/today-status')
 @login_required
 def get_today_status():
-    """FIX #5: Check if user has a COMPLETE diary entry for today (all 5 fields filled)"""
+    """FIX #5: Check if user has a COMPLETE diary entry for today (all 5 fields filled)
+    
+    Accepts optional 'client_date' query param for timezone-aware checking.
+    """
     try:
         user_id = session['user_id']
-        today = datetime.now().date()
         
-        # Check if entry exists for today
+        # FIX: Accept client's local date to handle timezone differences
+        client_date = request.args.get('client_date')
+        
+        if client_date:
+            today_str = client_date
+        else:
+            today_str = datetime.now().date().isoformat()
+        
+        # FIX: Query using string comparison since date column is String type
         params_stmt = select(SavedParameters).filter(
             SavedParameters.user_id == user_id,
-            SavedParameters.date == today
+            SavedParameters.date == today_str  # String comparison
         )
         entry = db.session.execute(params_stmt).scalar_one_or_none()
         
@@ -5800,35 +5810,30 @@ def get_today_status():
                 'has_entry_today': False,
                 'has_complete_entry_today': False,
                 'missing_fields': ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'],
-                'date': today.isoformat()
+                'date': today_str
             })
         
         # FIX #5: Check which required fields are filled
         missing_fields = []
         
-        # Check mood (could be stored as mood or different column)
-        mood_val = getattr(entry, 'mood', None) or getattr(entry, 'mood_rating', None)
-        if not mood_val or mood_val == '' or mood_val == 0:
+        mood_val = getattr(entry, 'mood', None)
+        if not mood_val or mood_val == 0:
             missing_fields.append('mood')
         
-        # Check energy
-        energy_val = getattr(entry, 'energy', None) or getattr(entry, 'energy_rating', None)
-        if not energy_val or energy_val == '' or energy_val == 0:
+        energy_val = getattr(entry, 'energy', None)
+        if not energy_val or energy_val == 0:
             missing_fields.append('energy')
         
-        # Check sleep quality
-        sleep_val = getattr(entry, 'sleep_quality', None) or getattr(entry, 'sleep_hours', None)
-        if not sleep_val or sleep_val == '' or sleep_val == 0:
+        sleep_val = getattr(entry, 'sleep_quality', None)
+        if not sleep_val or sleep_val == 0:
             missing_fields.append('sleep_quality')
         
-        # Check physical activity
-        activity_val = getattr(entry, 'physical_activity', None) or getattr(entry, 'exercise', None)
-        if not activity_val or activity_val == '' or activity_val == 0:
+        activity_val = getattr(entry, 'physical_activity', None)
+        if not activity_val or activity_val == 0:
             missing_fields.append('physical_activity')
         
-        # Check anxiety
-        anxiety_val = getattr(entry, 'anxiety', None) or getattr(entry, 'anxiety_level', None)
-        if not anxiety_val or anxiety_val == '' or anxiety_val == 0:
+        anxiety_val = getattr(entry, 'anxiety', None)
+        if not anxiety_val or anxiety_val == 0:
             missing_fields.append('anxiety')
         
         has_complete = len(missing_fields) == 0
@@ -5837,7 +5842,7 @@ def get_today_status():
             'has_entry_today': True,
             'has_complete_entry_today': has_complete,
             'missing_fields': missing_fields,
-            'date': today.isoformat()
+            'date': today_str
         })
         
     except Exception as e:
@@ -5850,12 +5855,26 @@ def get_today_status():
 def should_redirect_to_diary():
     """
     FIX: Check if user should be redirected to diary page.
-    This only returns True ONCE per session after login.
+    This only returns True ONCE per session after login AND only if diary is incomplete.
     After the first check, the flag is cleared so users can navigate freely.
+    
+    Accepts optional 'client_date' query param for timezone-aware checking.
     """
     try:
         user_id = session['user_id']
-        today = datetime.now().date()
+        
+        # FIX: Accept client's local date to handle timezone differences
+        # Client sends their local date as YYYY-MM-DD string
+        client_date = request.args.get('client_date')
+        
+        if client_date:
+            # Use client's date (already a string in YYYY-MM-DD format)
+            today_str = client_date
+            logger.info(f"Using client date for diary check: {today_str}")
+        else:
+            # Fallback to server date as string
+            today_str = datetime.now().date().isoformat()
+            logger.info(f"Using server date for diary check: {today_str}")
         
         # Check if redirect is pending for this session
         redirect_pending = session.get('diary_redirect_pending', False)
@@ -5867,12 +5886,14 @@ def should_redirect_to_diary():
                 'reason': 'redirect_already_done'
             })
         
-        # Check if entry exists for today
+        # FIX: Query using string comparison since date column is String type
         params_stmt = select(SavedParameters).filter(
             SavedParameters.user_id == user_id,
-            SavedParameters.date == today
+            SavedParameters.date == today_str  # String comparison
         )
         entry = db.session.execute(params_stmt).scalar_one_or_none()
+        
+        logger.info(f"Diary check for user {user_id}, date {today_str}: entry found = {entry is not None}")
         
         if not entry:
             # No entry today - should redirect
@@ -5881,33 +5902,36 @@ def should_redirect_to_diary():
             return jsonify({
                 'should_redirect': True,
                 'reason': 'no_entry_today',
-                'date': today.isoformat()
+                'date': today_str
             })
         
         # Check which required fields are filled
         missing_fields = []
         
-        mood_val = getattr(entry, 'mood', None) or getattr(entry, 'mood_rating', None)
-        if not mood_val or mood_val == '' or mood_val == 0:
+        mood_val = getattr(entry, 'mood', None)
+        if not mood_val or mood_val == 0:
             missing_fields.append('mood')
         
-        energy_val = getattr(entry, 'energy', None) or getattr(entry, 'energy_rating', None)
-        if not energy_val or energy_val == '' or energy_val == 0:
+        energy_val = getattr(entry, 'energy', None)
+        if not energy_val or energy_val == 0:
             missing_fields.append('energy')
         
-        sleep_val = getattr(entry, 'sleep_quality', None) or getattr(entry, 'sleep_hours', None)
-        if not sleep_val or sleep_val == '' or sleep_val == 0:
+        sleep_val = getattr(entry, 'sleep_quality', None)
+        if not sleep_val or sleep_val == 0:
             missing_fields.append('sleep_quality')
         
-        activity_val = getattr(entry, 'physical_activity', None) or getattr(entry, 'exercise', None)
-        if not activity_val or activity_val == '' or activity_val == 0:
+        activity_val = getattr(entry, 'physical_activity', None)
+        if not activity_val or activity_val == 0:
             missing_fields.append('physical_activity')
         
-        anxiety_val = getattr(entry, 'anxiety', None) or getattr(entry, 'anxiety_level', None)
-        if not anxiety_val or anxiety_val == '' or anxiety_val == 0:
+        anxiety_val = getattr(entry, 'anxiety', None)
+        if not anxiety_val or anxiety_val == 0:
             missing_fields.append('anxiety')
         
         has_complete = len(missing_fields) == 0
+        
+        logger.info(f"Diary check for user {user_id}: complete={has_complete}, missing={missing_fields}")
+        logger.info(f"Entry values - mood:{mood_val}, energy:{energy_val}, sleep:{sleep_val}, activity:{activity_val}, anxiety:{anxiety_val}")
         
         # Clear the redirect flag regardless of completion status
         # (we only check once per session - user can navigate after this)
@@ -5917,11 +5941,21 @@ def should_redirect_to_diary():
             'should_redirect': not has_complete,
             'reason': 'incomplete_entry' if not has_complete else 'entry_complete',
             'missing_fields': missing_fields,
-            'date': today.isoformat()
+            'date': today_str,
+            'entry_found': True,
+            'values': {
+                'mood': mood_val,
+                'energy': energy_val,
+                'sleep_quality': sleep_val,
+                'physical_activity': activity_val,
+                'anxiety': anxiety_val
+            }
         })
         
     except Exception as e:
         logger.error(f"Should redirect check error: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         # On error, don't redirect (fail safe) and clear the flag
         session['diary_redirect_pending'] = False
         return jsonify({'should_redirect': False, 'reason': 'error', 'error': str(e)})
