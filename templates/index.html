@@ -2693,7 +2693,10 @@ async function loadUserCity() {
                 const response = await fetch(`${API_URL}${endpoint}`, options);
 
                 if (response.status === 401) {
-                    showAuthContainer();
+                    // Don't call showAuthContainer for login/register endpoints - let the form handle it
+                    if (!endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
+                        showAuthContainer();
+                    }
                     return null;
                 }
 
@@ -8400,8 +8403,14 @@ function generateExcelReport() {
     const lang = localStorage.getItem('selectedLanguage') || 'en';
     const downloadUrl = `/api/reports/excel?lang=${lang}`;
     
-    // Show loading indicator
-    showNotification(window.i18n ? window.i18n.translate('reports.generating') : 'Generating report...', 'info');
+    // Show download started notification
+    const downloadMessages = {
+        'en': 'Download started!',
+        'he': 'ההורדה החלה!',
+        'ar': 'بدأ التحميل!',
+        'ru': 'Загрузка началась!'
+    };
+    showNotification(downloadMessages[lang] || downloadMessages['en'], 'success');
     
     // Create a hidden link and click it to trigger download
     const link = document.createElement('a');
@@ -8410,18 +8419,20 @@ function generateExcelReport() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    setTimeout(() => {
-        showNotification(window.i18n ? window.i18n.translate('reports.download_started') : 'Download started!', 'success');
-    }, 1000);
 }
 
 function generatePdfReport() {
     const lang = localStorage.getItem('selectedLanguage') || 'en';
     const downloadUrl = `/api/reports/pdf?lang=${lang}`;
     
-    // Show loading indicator
-    showNotification(window.i18n ? window.i18n.translate('reports.generating') : 'Generating report...', 'info');
+    // Show download started notification
+    const downloadMessages = {
+        'en': 'Download started!',
+        'he': 'ההורדה החלה!',
+        'ar': 'بدأ التحميل!',
+        'ru': 'Загрузка началась!'
+    };
+    showNotification(downloadMessages[lang] || downloadMessages['en'], 'success');
     
     // Create a hidden link and click it to trigger download
     const link = document.createElement('a');
@@ -8430,10 +8441,6 @@ function generatePdfReport() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    setTimeout(() => {
-        showNotification(window.i18n ? window.i18n.translate('reports.download_started') : 'Download started!', 'success');
-    }, 1000);
 }
 
 async function prepareEmailReport() {
