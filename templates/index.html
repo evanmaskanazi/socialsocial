@@ -2829,6 +2829,25 @@ async function loadUserCity() {
                 if (!needsDiary) {
                     showDashboard();
                 }
+            } else {
+                // FIX #1: Handle login failure (apiCall returns null on 401 or error response)
+                if (isLoginMode) {
+                    // Show translated login error message
+                    const lang = localStorage.getItem('selectedLanguage') || 'en';
+                    const errorTexts = {
+                        'en': 'You have entered an invalid username or password',
+                        'he': 'הזנת שם משתמש או סיסמה לא תקינים',
+                        'ar': 'لقد أدخلت اسم مستخدم أو كلمة مرور غير صالحة',
+                        'ru': 'Вы ввели неверное имя пользователя или пароль'
+                    };
+                    const errorSpan = loginError.querySelector('span');
+                    if (errorSpan) {
+                        errorSpan.textContent = errorTexts[lang] || errorTexts['en'];
+                    }
+                    loginError.style.display = 'block';
+                    // Auto-hide after 5 seconds
+                    setTimeout(() => { loginError.style.display = 'none'; }, 5000);
+                }
             }
         } catch (error) {
             // FIX #1: Show translated login error message instead of alert
@@ -8282,7 +8301,7 @@ function updateCheckinSummary(data) {
     if (totalEl) totalEl.textContent = data.totalCheckins || 0;
     if (moodEl) moodEl.textContent = data.avgMood ? data.avgMood.toFixed(1) : '-';
     if (energyEl) energyEl.textContent = data.avgEnergy ? data.avgEnergy.toFixed(1) : '-';
-    if (sleepEl) sleepEl.textContent = data.avgSleep ? data.avgSleep.toFixed(1) + ' hrs' : '-';
+    if (sleepEl) sleepEl.textContent = data.avgSleep ? data.avgSleep.toFixed(1) : '-';
     if (activityEl) activityEl.textContent = data.avgActivity ? data.avgActivity.toFixed(1) : '-';
 }
 
