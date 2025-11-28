@@ -2011,6 +2011,23 @@
                               <p><span data-i18n="progress.avg_activity">Average activity level:</span> <strong id="avgActivity">-</strong></p>
                           </div>
                       </div>
+                      
+                      <!-- Report Generation Section -->
+                      <div id="reportGeneration" style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #E5E7EB; margin-top: 20px;">
+                          <h4 style="margin-bottom: 10px; color: #374151;" data-i18n="reports.title">Generate Report</h4>
+                          <p style="margin-bottom: 15px; color: #6B7280; font-size: 0.9rem;" data-i18n="reports.description">Generate a comprehensive report of your check-ins for the past 7 days.</p>
+                          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                              <button class="btn" style="background: #667eea; color: white;" onclick="generateExcelReport()" data-i18n="reports.excel">
+                                  Generate Excel Report
+                              </button>
+                              <button class="btn" style="background: #EC4899; color: white;" onclick="generatePdfReport()" data-i18n="reports.pdf">
+                                  Generate PDF Report
+                              </button>
+                              <button class="btn" style="background: #E5E7EB; color: #374151;" onclick="prepareEmailReport()" data-i18n="reports.email">
+                                  Prepare Email Report
+                              </button>
+                          </div>
+                      </div>
                   </div>
               </div>
               <!-- Feed View - Date-Based Journal -->
@@ -8357,6 +8374,102 @@ document.addEventListener('DOMContentLoaded', function() {
 window.updateProgressChart = updateProgressChart;
 window.checkAndRedirectToDiary = checkAndRedirectToDiary;
 window.clearDiaryRedirectCheck = clearDiaryRedirectCheck;
+
+// ===== REPORT GENERATION FUNCTIONS =====
+
+function generateExcelReport() {
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+    const downloadUrl = `/api/reports/excel?lang=${lang}`;
+    
+    // Show loading indicator
+    showNotification(window.i18n ? window.i18n.translate('reports.generating') : 'Generating report...', 'info');
+    
+    // Create a hidden link and click it to trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `weekly_report_${lang}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => {
+        showNotification(window.i18n ? window.i18n.translate('reports.download_started') : 'Download started!', 'success');
+    }, 1000);
+}
+
+function generatePdfReport() {
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+    const downloadUrl = `/api/reports/pdf?lang=${lang}`;
+    
+    // Show loading indicator
+    showNotification(window.i18n ? window.i18n.translate('reports.generating') : 'Generating report...', 'info');
+    
+    // Create a hidden link and click it to trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `weekly_report_${lang}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => {
+        showNotification(window.i18n ? window.i18n.translate('reports.download_started') : 'Download started!', 'success');
+    }, 1000);
+}
+
+async function prepareEmailReport() {
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+    
+    // Prompt for email address
+    const promptTexts = {
+        'en': 'Enter email address to send report to:',
+        'he': 'הזן כתובת אימייל לשליחת הדוח:',
+        'ar': 'أدخل عنوان البريد الإلكتروني لإرسال التقرير:',
+        'ru': 'Введите email для отправки отчета:'
+    };
+    
+    const email = prompt(promptTexts[lang] || promptTexts['en']);
+    if (!email) return;
+    
+    // Validate email
+    if (!email.includes('@')) {
+        showNotification(window.i18n ? window.i18n.translate('auth.invalid_email') : 'Invalid email address', 'error');
+        return;
+    }
+    
+    showNotification(window.i18n ? window.i18n.translate('reports.sending') : 'Sending report...', 'info');
+    
+    try {
+        const response = await fetch('/api/reports/email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, lang })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            const successTexts = {
+                'en': 'Report sent successfully!',
+                'he': 'הדוח נשלח בהצלחה!',
+                'ar': 'تم إرسال التقرير بنجاح!',
+                'ru': 'Отчет успешно отправлен!'
+            };
+            showNotification(successTexts[lang] || successTexts['en'], 'success');
+        } else {
+            showNotification(data.error || 'Failed to send report', 'error');
+        }
+    } catch (error) {
+        console.error('Email report error:', error);
+        showNotification('Failed to send report', 'error');
+    }
+}
+
+// Make report functions globally available
+window.generateExcelReport = generateExcelReport;
+window.generatePdfReport = generatePdfReport;
+window.prepareEmailReport = prepareEmailReport;
 </script>
 
 </body>
