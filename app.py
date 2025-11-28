@@ -55,20 +55,18 @@ try:
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib import colors
     REPORTLAB_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     REPORTLAB_AVAILABLE = False
-    logger = logging.getLogger('thera_social')
-    logger.warning("reportlab not available - PDF generation disabled")
+    print(f"WARNING: reportlab not available - PDF generation disabled: {e}")
 
 try:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
     OPENPYXL_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     OPENPYXL_AVAILABLE = False
-    logger = logging.getLogger('thera_social')
-    logger.warning("openpyxl not available - Excel generation disabled")
+    print(f"WARNING: openpyxl not available - Excel generation disabled: {e}")
 
 # Import security functions
 from security import (
@@ -6430,7 +6428,8 @@ def calculate_summary(week_data):
 def generate_excel_report():
     """Generate Excel report for past 7 days"""
     if not OPENPYXL_AVAILABLE:
-        return jsonify({'error': 'Excel generation not available'}), 500
+        logger.error("Excel generation failed: openpyxl not available")
+        return jsonify({'error': 'Excel generation not available - openpyxl not installed'}), 500
     
     try:
         user_id = session['user_id']
@@ -6626,7 +6625,8 @@ def generate_excel_report():
 def generate_pdf_report():
     """Generate PDF report for past 7 days"""
     if not REPORTLAB_AVAILABLE:
-        return jsonify({'error': 'PDF generation not available'}), 500
+        logger.error("PDF generation failed: reportlab not available")
+        return jsonify({'error': 'PDF generation not available - reportlab not installed'}), 500
     
     try:
         user_id = session['user_id']
