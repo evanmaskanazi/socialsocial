@@ -525,6 +525,27 @@ const translations = {
     'parameters.cleared': 'Form cleared',
     'parameters.no_saved': 'No saved parameters for this date',
     'invite.cta_title': 'Great job tracking your wellness!',
+        'reports.title': 'Generate Report',
+    'reports.description': 'Generate a comprehensive report of your check-ins for the past 7 days.',
+    'reports.excel': 'Generate Excel Report',
+    'reports.pdf': 'Generate PDF Report',
+    'reports.email': 'Prepare Email Report',
+    'reports.generating': 'Generating report...',
+    'reports.download_started': 'Download started!',
+    'reports.sending': 'Sending report...',
+    'reports.sent_success': 'Report sent successfully!',
+
+    // Chart labels (already in chartLabels object, but adding for completeness)
+    'chart.mood': 'Mood',
+    'chart.energy': 'Energy',
+    'chart.sleep': 'Sleep',
+    'chart.activity': 'Activity',
+    'chart.anxiety': 'Anxiety',
+
+    // Auth error (already implemented inline)
+    'auth.invalid_credentials': 'You have entered an invalid username or password',
+
+
 'invite.cta_subtitle': 'Share your journey with others:',
 'invite.copy_link': 'Copy Your Invite Link',
 'invite.invite_friends': 'Invite Friends',
@@ -794,7 +815,25 @@ const translations = {
     'parameters.anxiety_desc': 'רמת החרדה שחוויתי',
     'parameters.notes': 'הערות',
     'parameters.notes_placeholder': 'מחשבות נוספות להיום...',
+ 'reports.title': 'הפקת דוח',
+    'reports.description': "הפק דוח מקיף של הצ'ק-אין שלך ב-7 הימים האחרונים.",
+    'reports.excel': 'הפק דוח אקסל',
+    'reports.pdf': 'הפק דוח PDF',
+    'reports.email': 'הכן דוח לאימייל',
+    'reports.generating': 'מפיק דוח...',
+    'reports.download_started': 'ההורדה התחילה!',
+    'reports.sending': 'שולח דוח...',
+    'reports.sent_success': 'הדוח נשלח בהצלחה!',
 
+    // Chart labels
+    'chart.mood': 'מצב רוח',
+    'chart.energy': 'אנרגיה',
+    'chart.sleep': 'שינה',
+    'chart.activity': 'פעילות',
+    'chart.anxiety': 'חרדה',
+
+    // Auth error
+    'auth.invalid_credentials': 'הזנת שם משתמש או סיסמה לא תקינים',
     'parameters.clear': 'נקה טופס',
 
     'parameters.cleared': 'הטופס נוקה',
@@ -1578,6 +1617,26 @@ const translations = {
                 'common.sunday': 'الأحد',
                 'common.today': 'اليوم',
 
+                 'reports.title': 'إنشاء تقرير',
+    'reports.description': 'أنشئ تقريرًا شاملاً عن تسجيلات الدخول الخاصة بك خلال الأيام السبعة الماضية.',
+    'reports.excel': 'إنشاء تقرير إكسل',
+    'reports.pdf': 'إنشاء تقرير PDF',
+    'reports.email': 'إعداد تقرير بالبريد الإلكتروني',
+    'reports.generating': 'جارٍ إنشاء التقرير...',
+    'reports.download_started': 'بدأ التحميل!',
+    'reports.sending': 'جارٍ إرسال التقرير...',
+    'reports.sent_success': 'تم إرسال التقرير بنجاح!',
+
+    // Chart labels
+    'chart.mood': 'المزاج',
+    'chart.energy': 'الطاقة',
+    'chart.sleep': 'النوم',
+    'chart.activity': 'النشاط',
+    'chart.anxiety': 'القلق',
+
+    // Auth error
+    'auth.invalid_credentials': 'لقد أدخلت اسم مستخدم أو كلمة مرور غير صالحة',
+
         'username.optional': '(اختياري)',
         'username.blank_for_email': 'اتركه فارغًا لاستخدام بادئة البريد الإلكتروني',
         'auth.magic_link': 'أرسل لي رابط سحري لتسجيل الدخول',
@@ -2313,6 +2372,26 @@ const translations = {
     'support.contact_title': 'Отправьте нам сообщение',
     'support.name': 'Имя',
     'support.email_label': 'Электронная почта',
+
+    'reports.title': 'Создать отчет',
+    'reports.description': 'Создайте полный отчет о ваших отметках за последние 7 дней.',
+    'reports.excel': 'Создать отчет Excel',
+    'reports.pdf': 'Создать отчет PDF',
+    'reports.email': 'Подготовить отчет для email',
+    'reports.generating': 'Создание отчета...',
+    'reports.download_started': 'Загрузка началась!',
+    'reports.sending': 'Отправка отчета...',
+    'reports.sent_success': 'Отчет успешно отправлен!',
+
+    // Chart labels
+    'chart.mood': 'Настроение',
+    'chart.energy': 'Энергия',
+    'chart.sleep': 'Сон',
+    'chart.activity': 'Активность',
+    'chart.anxiety': 'Тревога',
+
+    // Auth error
+    'auth.invalid_credentials': 'Вы ввели неверное имя пользователя или пароль',
 
     'menu.diary': 'Дневник',
 'progress.title': 'Ваш прогресс',
