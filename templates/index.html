@@ -2927,6 +2927,14 @@ async function loadUserCity() {
             }
 
             currentUser = null;
+            
+            // FIX: Clear diary redirect check flag on logout
+            if (typeof clearDiaryRedirectCheck === 'function') {
+                clearDiaryRedirectCheck();
+            } else {
+                sessionStorage.removeItem('diary_redirect_checked');
+            }
+            
             showAuthContainer();
         });
 
@@ -8261,33 +8269,59 @@ function updateCheckinSummary(data) {
     if (activityEl) activityEl.textContent = data.avgActivity ? data.avgActivity.toFixed(1) : '-';
 }
 
-// ===== FIX #5: AUTO-REDIRECT TO DIARY ON LOGIN =====
+// ===== FIX #5: AUTO-REDIRECT TO DIARY ON LOGIN - FIXED TO RUN ONLY ONCE =====
 async function checkAndRedirectToDiary() {
     // Don't redirect if already on parameters page
     if (window.location.pathname === '/parameters') {
+        console.log('[DiaryCheck] Already on parameters page, skipping redirect check');
+        return false;
+    }
+    
+    // Check if we've already done the redirect check this session
+    // This prevents repeated redirects when navigating within the app
+    if (sessionStorage.getItem('diary_redirect_checked') === 'true') {
+        console.log('[DiaryCheck] Redirect already checked this session, skipping');
         return false;
     }
     
     try {
-        const response = await fetch('/api/parameters/today-status', {
+        // Use the new endpoint that tracks session-based redirect
+        const response = await fetch('/api/parameters/should-redirect-to-diary', {
             credentials: 'include'
         });
         
-        if (!response.ok) return false;
+        if (!response.ok) {
+            console.log('[DiaryCheck] API returned non-OK status:', response.status);
+            return false;
+        }
         
         const data = await response.json();
+        console.log('[DiaryCheck] Server response:', data);
         
-        // FIX #5: Check if ALL required fields are filled (mood, energy, sleep, activity, anxiety)
-        if (!data.has_complete_entry_today) {
-            // Redirect to the /parameters URL
+        // Mark that we've checked (so we don't check again on navigation)
+        sessionStorage.setItem('diary_redirect_checked', 'true');
+        
+        // FIX #5: Only redirect if server says we should
+        if (data.should_redirect) {
+            console.log('[DiaryCheck] Redirecting to diary page. Reason:', data.reason);
             window.location.href = '/parameters';
             return true;
+        } else {
+            console.log('[DiaryCheck] No redirect needed. Reason:', data.reason);
         }
     } catch (error) {
-        console.error('Diary check error:', error);
+        console.error('[DiaryCheck] Error:', error);
+        // On error, mark as checked so we don't keep retrying
+        sessionStorage.setItem('diary_redirect_checked', 'true');
     }
     
     return false;
+}
+
+// Function to clear the redirect check flag (call this when user logs out)
+function clearDiaryRedirectCheck() {
+    sessionStorage.removeItem('diary_redirect_checked');
+    console.log('[DiaryCheck] Redirect check flag cleared');
 }
 
 // Initialize progress chart on page load
@@ -8299,7 +8333,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 1000);
     
-    // Check if user needs to fill diary - runs on every page load
+    // Check if user needs to fill diary - runs ONCE per session after login
+    // The server-side flag ensures this only triggers once per login session
     setTimeout(() => {
         checkAndRedirectToDiary();
     }, 500);
@@ -8308,6 +8343,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Make functions globally available
 window.updateProgressChart = updateProgressChart;
 window.checkAndRedirectToDiary = checkAndRedirectToDiary;
+window.clearDiaryRedirectCheck = clearDiaryRedirectCheck;
 </script>
 
 </body>
