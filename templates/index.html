@@ -8285,8 +8285,17 @@ async function checkAndRedirectToDiary() {
     }
     
     try {
+        // FIX: Send client's local date to handle timezone differences
+        // This ensures we check against the user's actual local date, not server time
+        const today = new Date();
+        const clientDate = today.getFullYear() + '-' + 
+            String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+            String(today.getDate()).padStart(2, '0');
+        
+        console.log('[DiaryCheck] Client local date:', clientDate);
+        
         // Use the new endpoint that tracks session-based redirect
-        const response = await fetch('/api/parameters/should-redirect-to-diary', {
+        const response = await fetch(`/api/parameters/should-redirect-to-diary?client_date=${clientDate}`, {
             credentials: 'include'
         });
         
@@ -8301,13 +8310,17 @@ async function checkAndRedirectToDiary() {
         // Mark that we've checked (so we don't check again on navigation)
         sessionStorage.setItem('diary_redirect_checked', 'true');
         
-        // FIX #5: Only redirect if server says we should
+        // FIX #5: Only redirect if server says we should AND diary is incomplete
         if (data.should_redirect) {
             console.log('[DiaryCheck] Redirecting to diary page. Reason:', data.reason);
+            console.log('[DiaryCheck] Missing fields:', data.missing_fields);
             window.location.href = '/parameters';
             return true;
         } else {
             console.log('[DiaryCheck] No redirect needed. Reason:', data.reason);
+            if (data.values) {
+                console.log('[DiaryCheck] Current values:', data.values);
+            }
         }
     } catch (error) {
         console.error('[DiaryCheck] Error:', error);
