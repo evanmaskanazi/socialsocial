@@ -4256,14 +4256,19 @@ def mark_alert_read(alert_id):
 def notification_settings():
     """Get or update notification settings"""
     user_id = session.get('user_id')
+    logger.info(f"[NOTIFICATION DEBUG] ========================================")
+    logger.info(f"[NOTIFICATION DEBUG] /api/notification-settings called")
+    logger.info(f"[NOTIFICATION DEBUG] Method: {request.method}")
+    logger.info(f"[NOTIFICATION DEBUG] User ID: {user_id}")
     
     if request.method == 'GET':
         try:
+            logger.info(f"[NOTIFICATION DEBUG] GET - Querying NotificationSettings for user {user_id}")
             settings = NotificationSettings.query.filter_by(user_id=user_id).first()
             
             if not settings:
-                # Return defaults
-                return jsonify({
+                logger.info(f"[NOTIFICATION DEBUG] GET - No settings found, returning DEFAULTS")
+                default_response = {
                     'email_on_alert': False,
                     'email_daily_diary_reminder': False,
                     'email_on_new_message': True,
@@ -4271,9 +4276,16 @@ def notification_settings():
                     'parameter_triggers': True,
                     'daily_reminder': False,
                     'weekly_summary': False
-                })
+                }
+                logger.info(f"[NOTIFICATION DEBUG] GET - Returning: {default_response}")
+                return jsonify(default_response)
             
-            return jsonify({
+            logger.info(f"[NOTIFICATION DEBUG] GET - Settings FOUND for user {user_id}")
+            logger.info(f"[NOTIFICATION DEBUG] GET - Raw DB values:")
+            logger.info(f"[NOTIFICATION DEBUG]   email_on_alert: {settings.email_on_alert} (type: {type(settings.email_on_alert)})")
+            logger.info(f"[NOTIFICATION DEBUG]   email_daily_diary_reminder: {settings.email_daily_diary_reminder} (type: {type(settings.email_daily_diary_reminder)})")
+            
+            response_data = {
                 'email_on_alert': settings.email_on_alert or False,
                 'email_daily_diary_reminder': settings.email_daily_diary_reminder or False,
                 'email_on_new_message': settings.email_on_new_message if settings.email_on_new_message is not None else True,
@@ -4281,29 +4293,43 @@ def notification_settings():
                 'parameter_triggers': settings.parameter_triggers,
                 'daily_reminder': settings.daily_reminder,
                 'weekly_summary': settings.weekly_summary
-            })
+            }
+            logger.info(f"[NOTIFICATION DEBUG] GET - Returning: {response_data}")
+            logger.info(f"[NOTIFICATION DEBUG] ========================================")
+            return jsonify(response_data)
         except Exception as e:
-            logger.error(f"Get notification settings error: {str(e)}")
+            logger.error(f"[NOTIFICATION DEBUG] GET ERROR: {str(e)}")
+            logger.error(f"[NOTIFICATION DEBUG] Traceback: {traceback.format_exc()}")
             return jsonify({'error': 'Failed to get settings'}), 500
     
     elif request.method == 'PUT':
         try:
             data = request.get_json()
+            logger.info(f"[NOTIFICATION DEBUG] PUT - Received data: {data}")
+            
             user = db.session.get(User, user_id)
+            logger.info(f"[NOTIFICATION DEBUG] PUT - User found: {user is not None}")
             
             settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+            logger.info(f"[NOTIFICATION DEBUG] PUT - Existing settings found: {settings is not None}")
             
             if not settings:
+                logger.info(f"[NOTIFICATION DEBUG] PUT - Creating NEW NotificationSettings for user {user_id}")
                 settings = NotificationSettings(user_id=user_id)
                 db.session.add(settings)
             
             # Track if email_on_alert was just enabled
             was_email_on_alert_enabled = settings.email_on_alert
+            logger.info(f"[NOTIFICATION DEBUG] PUT - BEFORE update:")
+            logger.info(f"[NOTIFICATION DEBUG]   email_on_alert was: {was_email_on_alert_enabled}")
+            logger.info(f"[NOTIFICATION DEBUG]   email_daily_diary_reminder was: {settings.email_daily_diary_reminder}")
             
             # Update settings based on provided data
             if 'email_on_alert' in data:
+                logger.info(f"[NOTIFICATION DEBUG] PUT - Setting email_on_alert to: {data['email_on_alert']}")
                 settings.email_on_alert = data['email_on_alert']
             if 'email_daily_diary_reminder' in data:
+                logger.info(f"[NOTIFICATION DEBUG] PUT - Setting email_daily_diary_reminder to: {data['email_daily_diary_reminder']}")
                 settings.email_daily_diary_reminder = data['email_daily_diary_reminder']
             if 'email_on_new_message' in data:
                 settings.email_on_new_message = data['email_on_new_message']
@@ -4317,6 +4343,11 @@ def notification_settings():
                 settings.weekly_summary = data['weekly_summary']
             
             db.session.commit()
+            logger.info(f"[NOTIFICATION DEBUG] PUT - Committed to database")
+            logger.info(f"[NOTIFICATION DEBUG] PUT - AFTER update:")
+            logger.info(f"[NOTIFICATION DEBUG]   email_on_alert is now: {settings.email_on_alert}")
+            logger.info(f"[NOTIFICATION DEBUG]   email_daily_diary_reminder is now: {settings.email_daily_diary_reminder}")
+            logger.info(f"[NOTIFICATION DEBUG] ========================================")
             
             # If email_on_alert was just turned ON, send all existing unread alerts as emails
             emails_sent = 0
