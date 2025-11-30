@@ -766,6 +766,37 @@ const translations = {
         'success.saved': 'Saved successfully',
         'success.updated': 'Updated successfully',
         'success.deleted': 'Deleted successfully',
+         'circles.recommended_title': 'Recommended Users to Add to Circle',
+    'circles.add_to_circle': 'Add to Circle',
+    'circles.no_recommendations': 'No recommendations available',
+    'circles.reason_mutual': 'Mutual connection',
+    'circles.reason_mutual_city': 'Mutual connection & same city',
+    'circles.reason_same_city': 'Same city',
+    'circles.reason_following': 'You follow',
+    'circles.reason_default': 'Recommended',
+
+    // Notification Settings
+    'notifications.email_settings': 'Email Notifications',
+    'notifications.email_on_alert': 'Email me on new alerts',
+    'notifications.daily_diary_reminder': 'Daily diary reminder',
+    'notifications.setting_updated': 'Setting updated',
+
+    // New Message Email
+    'email.new_message_subject': 'TheraSocial - New Message from {sender}',
+    'email.new_message_preview': 'Message preview:',
+    'email.view_message': 'View Message',
+    'email.login_to_view': 'Log in to TheraSocial to view the full message and reply.',
+
+    // Alert Email
+    'email.new_alert_subject': 'TheraSocial - New Alert',
+    'email.new_alert': 'You have a new alert:',
+    'email.view_alerts': 'View Alerts',
+
+    // Daily Diary Reminder Email
+    'email.diary_reminder_subject': 'TheraSocial - Daily Wellness Check-in Reminder',
+    'email.diary_reminder': "Don't forget to log your wellness parameters for today!",
+    'email.fill_diary': 'Fill Out Daily Diary',
+    'email.unsubscribe_reminder': 'To stop receiving these reminders, turn off,
 
         // Message notifications
         'msg.loaded': 'Parameters loaded successfully',
@@ -1519,6 +1550,38 @@ const translations = {
         'success.saved': 'נשמר בהצלחה',
         'success.updated': 'עודכן בהצלחה',
         'success.deleted': 'נמחק בהצלחה',
+
+          'circles.recommended_title': 'משתמשים מומלצים להוספה למעגל',
+    'circles.add_to_circle': 'הוסף למעגל',
+    'circles.no_recommendations': 'אין המלצות זמינות',
+    'circles.reason_mutual': 'קשר הדדי',
+    'circles.reason_mutual_city': 'קשר הדדי ואותה עיר',
+    'circles.reason_same_city': 'אותה עיר',
+    'circles.reason_following': 'את/ה עוקב/ת',
+    'circles.reason_default': 'מומלץ',
+
+    // Notification Settings
+    'notifications.email_settings': 'הודעות אימייל',
+    'notifications.email_on_alert': 'שלח לי אימייל בהתראה חדשה',
+    'notifications.daily_diary_reminder': 'תזכורת יומית ליומן',
+    'notifications.setting_updated': 'ההגדרה עודכנה',
+
+    // New Message Email
+    'email.new_message_subject': 'TheraSocial - הודעה חדשה מ-{sender}',
+    'email.new_message_preview': 'תצוגה מקדימה:',
+    'email.view_message': 'צפה בהודעה',
+    'email.login_to_view': 'התחבר ל-TheraSocial כדי לצפות בהודעה המלאה ולהשיב.',
+
+    // Alert Email
+    'email.new_alert_subject': 'TheraSocial - התראה חדשה',
+    'email.new_alert': 'יש לך התראה חדשה:',
+    'email.view_alerts': 'צפה בהתראות',
+
+    // Daily Diary Reminder Email
+    'email.diary_reminder_subject': 'TheraSocial - תזכורת יומית למילוי יומן',
+    'email.diary_reminder': 'אל תשכח למלא את פרמטרי הבריאות שלך להיום!',
+    'email.fill_diary': 'מלא יומן יומי',
+    'email.unsubscribe_reminder': 'כדי להפסיק לקבל תזכורות אלה, כבה את התזכורות היומיות בהגדרות ההתראות שלך.',
 
         // Message notifications
         'msg.loaded': 'הפרמטרים נטענו בהצלחה',
@@ -2279,6 +2342,37 @@ const translations = {
         'success.saved': 'تم الحفظ بنجاح',
         'success.updated': 'تم التحديث بنجاح',
         'success.deleted': 'تم الحذف بنجاح',
+         'circles.recommended_title': 'مستخدمون موصى بهم للإضافة إلى الدائرة',
+    'circles.add_to_circle': 'إضافة إلى الدائرة',
+    'circles.no_recommendations': 'لا توجد توصيات متاحة',
+    'circles.reason_mutual': 'اتصال متبادل',
+    'circles.reason_mutual_city': 'اتصال متبادل ونفس المدينة',
+    'circles.reason_same_city': 'نفس المدينة',
+    'circles.reason_following': 'تتابعه',
+    'circles.reason_default': 'موصى به',
+
+    // Notification Settings
+    'notifications.email_settings': 'إشعارات البريد الإلكتروني',
+    'notifications.email_on_alert': 'أرسل لي بريدًا عند التنبيهات الجديدة',
+    'notifications.daily_diary_reminder': 'تذكير يومي باليومية',
+    'notifications.setting_updated': 'تم تحديث الإعداد',
+
+    // New Message Email
+    'email.new_message_subject': 'TheraSocial - رسالة جديدة من {sender}',
+    'email.new_message_preview': 'معاينة الرسالة:',
+    'email.view_message': 'عرض الرسالة',
+    'email.login_to_view': 'سجل الدخول إلى TheraSocial لعرض الرسالة الكاملة والرد.',
+
+    // Alert Email
+    'email.new_alert_subject': 'TheraSocial - تنبيه جديد',
+    'email.new_alert': 'لديك تنبيه جديد:',
+    'email.view_alerts': 'عرض التنبيهات',
+
+    // Daily Diary Reminder Email
+    'email.diary_reminder_subject': 'TheraSocial - تذكير يومي بملء اليومية',
+    'email.diary_reminder': 'لا تنس تسجيل معلومات صحتك لهذا اليوم!',
+    'email.fill_diary': 'ملء اليومية اليومية',
+    'email.unsubscribe_reminder': 'لإيقاف تلقي هذه التذكيرات، قم بإيقاف تشغيل التذكيرات اليومية في إعدادات التنبيهات.',
 
         // Message notifications
         'msg.loaded': 'تم تحميل المعاملات بنجاح',
@@ -3038,6 +3132,37 @@ const translations = {
         'success.saved': 'Успешно сохранено',
         'success.updated': 'Успешно обновлено',
         'success.deleted': 'Успешно удалено',
+          'circles.recommended_title': 'Рекомендуемые пользователи для добавления в круг',
+    'circles.add_to_circle': 'Добавить в круг',
+    'circles.no_recommendations': 'Нет доступных рекомендаций',
+    'circles.reason_mutual': 'Взаимная связь',
+    'circles.reason_mutual_city': 'Взаимная связь и тот же город',
+    'circles.reason_same_city': 'Тот же город',
+    'circles.reason_following': 'Вы подписаны',
+    'circles.reason_default': 'Рекомендовано',
+
+    // Notification Settings
+    'notifications.email_settings': 'Уведомления по email',
+    'notifications.email_on_alert': 'Уведомлять о новых оповещениях',
+    'notifications.daily_diary_reminder': 'Ежедневное напоминание о дневнике',
+    'notifications.setting_updated': 'Настройка обновлена',
+
+    // New Message Email
+    'email.new_message_subject': 'TheraSocial - Новое сообщение от {sender}',
+    'email.new_message_preview': 'Предварительный просмотр:',
+    'email.view_message': 'Просмотреть сообщение',
+    'email.login_to_view': 'Войдите в TheraSocial, чтобы прочитать полное сообщение и ответить.',
+
+    // Alert Email
+    'email.new_alert_subject': 'TheraSocial - Новое уведомление',
+    'email.new_alert': 'У вас новое уведомление:',
+    'email.view_alerts': 'Просмотреть уведомления',
+
+    // Daily Diary Reminder Email
+    'email.diary_reminder_subject': 'TheraSocial - Ежедневное напоминание о дневнике здоровья',
+    'email.diary_reminder': 'Не забудьте записать ваши показатели здоровья за сегодня!',
+    'email.fill_diary': 'Заполнить дневник',
+    'email.unsubscribe_reminder': 'Чтобы перестать получать эти напоминания, отключите ежедневные напоминания в настройках уведомлений.',
 
         // Message notifications
         'msg.loaded': 'Параметры успешно загружены',
