@@ -2438,19 +2438,27 @@
                     <!-- Email on Alert Toggle -->
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
-                        <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
-                            <input type="checkbox" id="emailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked)" style="opacity: 0; width: 0; height: 0;">
-                            <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px;"></span>
-                        </label>
+                        <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
+                            <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
+                            <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                                <input type="checkbox" id="emailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px;"></span>
+                            </label>
+                            <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
+                        </div>
                     </div>
                     
                     <!-- Daily Diary Reminder Toggle -->
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.daily_diary_reminder">Daily diary reminder</label>
-                        <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
-                            <input type="checkbox" id="dailyDiaryReminderToggle" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked)" style="opacity: 0; width: 0; height: 0;">
-                            <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px;"></span>
-                        </label>
+                        <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
+                            <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
+                            <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                                <input type="checkbox" id="dailyDiaryReminderToggle" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px;"></span>
+                            </label>
+                            <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
+                        </div>
                     </div>
                 </div>
                 
@@ -2462,10 +2470,10 @@
     
     <style>
     /* Toggle Switch Styles */
-    .toggle-switch input:checked + span {
-        background-color: var(--primary, #6B46C1);
+    .toggle-switch input:checked + .toggle-slider {
+        background-color: #3b82f6; /* Blue when ON */
     }
-    .toggle-switch span:before {
+    .toggle-switch .toggle-slider:before {
         content: "";
         position: absolute;
         height: 18px;
@@ -2476,10 +2484,41 @@
         transition: .3s;
         border-radius: 50%;
     }
-    .toggle-switch input:checked + span:before {
+    .toggle-switch input:checked + .toggle-slider:before {
         transform: translateX(20px);
     }
+    /* Highlight active label */
+    .toggle-container:has(input:checked) .toggle-on-label {
+        color: #3b82f6;
+        font-weight: 600;
+    }
+    .toggle-container:has(input:not(:checked)) .toggle-off-label {
+        color: #666;
+        font-weight: 600;
+    }
     </style>
+    
+    <script>
+    // Toggle label translations
+    function updateToggleLabels() {
+        const lang = localStorage.getItem('selectedLanguage') || 'en';
+        const labels = {
+            'en': { on: 'ON', off: 'OFF' },
+            'he': { on: 'פעיל', off: 'כבוי' },
+            'ar': { on: 'تشغيل', off: 'إيقاف' },
+            'ru': { on: 'ВКЛ', off: 'ВЫКЛ' }
+        };
+        const t = labels[lang] || labels['en'];
+        
+        document.querySelectorAll('.toggle-on-label').forEach(el => el.textContent = t.on);
+        document.querySelectorAll('.toggle-off-label').forEach(el => el.textContent = t.off);
+    }
+    
+    // Update labels on language change
+    window.addEventListener('languageChanged', updateToggleLabels);
+    // Initial update
+    document.addEventListener('DOMContentLoaded', updateToggleLabels);
+    </script>
     
     <script src="/static/js/i18n.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -2494,7 +2533,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=15.0"></script>
+   <script src="/static/js/circles-messages.js?v=12.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -5072,9 +5111,9 @@ function showCircleAddMenu(userId, username) {
     if (!choice) return;
     
     const circleMap = {
-        "1": "public",
-        "2": "class_b",
-        "3": "class_a"
+        "1": "general",
+        "2": "close_friends",
+        "3": "family"
     };
     
     const circleType = circleMap[choice.trim()];
@@ -5083,7 +5122,7 @@ function showCircleAddMenu(userId, username) {
         return;
     }
     
-    addToCircle(userId, circleType);
+    addToCircle(userId, circleType, username);
 }
 
 
