@@ -85,6 +85,65 @@ function updatePrivacy(categoryId, privacyLevel) {
     console.log('Privacy updated:', categoryId, privacyLevel);
 }
 
+// Tooltip functions
+function showTooltip(categoryId, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    // Get the translated tooltip text
+    const tooltipKey = `tooltip.${categoryId}`;
+    const tooltipText = pt(tooltipKey);
+
+    // Get the category info for the title
+    const category = PARAMETER_CATEGORIES.find(c => c.id === categoryId);
+    const categoryName = pt(category?.nameKey || categoryId);
+    const categoryEmoji = category?.emoji || '';
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'tooltip-modal';
+    modal.id = 'tooltipModal';
+    modal.innerHTML = `
+        <div class="tooltip-content">
+            <button class="tooltip-close" onclick="closeTooltip()">×</button>
+            <h3>${categoryEmoji} ${categoryName}</h3>
+            <p>${tooltipText}</p>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close on background click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeTooltip();
+        }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', handleTooltipEscape);
+}
+
+function closeTooltip() {
+    const modal = document.getElementById('tooltipModal');
+    if (modal) {
+        modal.remove();
+    }
+    document.removeEventListener('keydown', handleTooltipEscape);
+}
+
+function handleTooltipEscape(e) {
+    if (e.key === 'Escape') {
+        closeTooltip();
+    }
+}
+
+// Export tooltip functions
+window.showTooltip = showTooltip;
+window.closeTooltip = closeTooltip;
+
 // ESSENTIAL 5 PARAMETER CATEGORIES ONLY - ratings 1-4
 const CIRCLE_EMOJIS = {
     'private': '🔒',
@@ -190,7 +249,13 @@ const addParameterTranslations = () => {
                 'following.circles': 'Circles',
                 'alerts.wellness_alert': 'Wellness Alert for',
                 'alerts.mood_low': '\'s mood has been less than 3.0 for 3 consecutive days',
-                'alerts.energy_low': '\'s energy has been less than 3.0 for 3 consecutive days'
+                'alerts.energy_low': '\'s energy has been less than 3.0 for 3 consecutive days',
+                // Tooltip help texts
+                'tooltip.mood': 'How good or bad have you felt today?\n\n1 = Bad - Feeling down, sad, or low\n2 = Below average - Not your best, but managing\n3 = Okay - Reasonably stable or neutral\n4 = Good - Feeling positive, content, or upbeat\n\nRemember: Mood fluctuates naturally day to day. You\'re tracking patterns over time to understand yourself better, not judging individual days. Even difficult days provide valuable information.',
+                'tooltip.energy': 'This tracks your physical stamina and mental sharpness throughout the day.\n\n1 = Depleted - Exhausted, struggling to focus or complete basic tasks\n2 = Low - Tired and running on reserves, everything feels effortful\n3 = Moderate - Decent energy to get things done, can focus reasonably well, some fatigue by day\'s end\n4 = High - Energized and alert, easy to focus and accomplish tasks, feeling capable\n\nRemember: Low energy isn\'t laziness - it\'s information. Many factors affect energy (sleep, stress, nutrition, health). Tracking patterns helps you identify what supports or drains you.',
+                'tooltip.sleep_quality': 'This tracks how well you slept, not just how long. Quality matters as much as quantity, and one rough night doesn\'t define a pattern.\n\n1 = Poor - Barely slept or very disrupted, woke unrefreshed\n2 = Restless - Some sleep but frequently woke, still tired\n3 = Fair - Slept reasonably well with minor interruptions\n4 = Good - Slept soundly, woke feeling refreshed\n\nRemember: Sleep is affected by stress, environment, health, and many other factors. You\'re tracking patterns to understand what helps or hinders your rest, not to achieve perfect sleep every night.',
+                'tooltip.physical_activity': 'This scale captures your overall physical activity - considering both how long and how intensely you moved today.\n\n1 = Minimal - Rest day, very light movement, or brief activity (under 15 min)\n2 = Light - Short activity (15-30 min) at easy pace, OR longer gentle movement (Examples: short walk, stretching, light household tasks)\n3 = Moderate - 30-60 min of moderate activity OR shorter vigorous activity (Examples: brisk walk, active errands, standard workout)\n4 = Substantial - Extended activity (60+ min), high-intensity workout, OR multiple activity sessions\n\nRemember: This tracks your movement patterns, not your worth. Rest is essential. The goal is awareness and gradual progress, not perfection.',
+                'tooltip.anxiety': 'Anxiety is a normal human emotion that everyone experiences. This scale tracks how much anxiety interferes with your daily life, not whether you feel anxious at all.\n\n1 = Manageable - Feeling calm or any anxiety present doesn\'t interfere with activities\n2 = Noticeable - Some anxiety, but still able to do what you need to do\n3 = Challenging - Anxiety is making some activities difficult\n4 = Overwhelming - Anxiety is significantly interfering with daily functioning\n\nRemember: The goal isn\'t to eliminate all anxiety, but to keep it at levels where you can still engage with your life.'
             });
         }
 
@@ -241,7 +306,13 @@ const addParameterTranslations = () => {
                 'following.circles': 'מעגלים',
                 'alerts.wellness_alert': 'התראת בריאות עבור',
                 'alerts.mood_low': 'מצב הרוח היה נמוך מ-3.0 במשך 3 ימים רצופים',
-                'alerts.energy_low': 'האנרגיה הייתה נמוכה מ-3.0 במשך 3 ימים רצופים'
+                'alerts.energy_low': 'האנרגיה הייתה נמוכה מ-3.0 במשך 3 ימים רצופים',
+                // Tooltip help texts
+                'tooltip.mood': 'עד כמה הרגשת טוב או רע היום?\n\n1 = רע - מרגיש מדוכא, עצוב או שפל\n2 = מתחת לממוצע - לא במיטבך, אבל מתמודד\n3 = בסדר - יציב או נייטרלי באופן סביר\n4 = טוב - מרגיש חיובי, שבע רצון או אופטימי\n\nזכור: מצב הרוח משתנה באופן טבעי מיום ליום. אתה עוקב אחר דפוסים לאורך זמן כדי להבין את עצמך טוב יותר, לא שופט ימים בודדים. גם ימים קשים מספקים מידע חשוב.',
+                'tooltip.energy': 'זה עוקב אחר הסיבולת הפיזית והחדות המנטלית שלך לאורך היום.\n\n1 = מרוקן - מותש, מתקשה להתרכז או להשלים משימות בסיסיות\n2 = נמוך - עייף ורץ על רזרבות, הכל מרגיש מאמץ\n3 = בינוני - אנרגיה סבירה לעשות דברים, יכול להתרכז באופן סביר, קצת עייפות בסוף היום\n4 = גבוה - אנרגטי וערני, קל להתרכז ולהשיג משימות, מרגיש מסוגל\n\nזכור: אנרגיה נמוכה היא לא עצלות - זה מידע. גורמים רבים משפיעים על אנרגיה (שינה, מתח, תזונה, בריאות). מעקב אחר דפוסים עוזר לך לזהות מה תומך או מרוקן אותך.',
+                'tooltip.sleep_quality': 'זה עוקב אחר איך ישנת, לא רק כמה זמן. איכות חשובה לא פחות מכמות, ולילה קשה אחד לא מגדיר דפוס.\n\n1 = גרוע - כמעט לא ישנתי או שינה מופרעת מאוד, התעוררתי לא רענן\n2 = חסר מנוחה - קצת שינה אבל התעוררתי הרבה, עדיין עייף\n3 = סביר - ישנתי באופן סביר עם הפרעות קלות\n4 = טוב - ישנתי היטב, התעוררתי רענן\n\nזכור: שינה מושפעת ממתח, סביבה, בריאות וגורמים רבים אחרים. אתה עוקב אחר דפוסים כדי להבין מה עוזר או מפריע למנוחה שלך, לא להשיג שינה מושלמת כל לילה.',
+                'tooltip.physical_activity': 'סקאלה זו לוכדת את הפעילות הגופנית הכוללת שלך - בהתחשב גם בכמה זמן וגם באיזו עוצמה זזת היום.\n\n1 = מינימלי - יום מנוחה, תנועה קלה מאוד, או פעילות קצרה (פחות מ-15 דקות)\n2 = קל - פעילות קצרה (15-30 דקות) בקצב קל, או תנועה עדינה ארוכה יותר (דוגמאות: הליכה קצרה, מתיחות, משימות בית קלות)\n3 = בינוני - 30-60 דקות של פעילות בינונית או פעילות אינטנסיבית קצרה יותר (דוגמאות: הליכה מהירה, סידורים פעילים, אימון רגיל)\n4 = משמעותי - פעילות ממושכת (60+ דקות), אימון באינטנסיביות גבוהה, או מספר מפגשי פעילות\n\nזכור: זה עוקב אחר דפוסי התנועה שלך, לא הערך שלך. מנוחה חיונית. המטרה היא מודעות והתקדמות הדרגתית, לא שלמות.',
+                'tooltip.anxiety': 'חרדה היא רגש אנושי נורמלי שכולם חווים. סקאלה זו עוקבת אחר כמה חרדה מפריעה לחיי היומיום שלך, לא האם אתה מרגיש חרד בכלל.\n\n1 = ניתן לניהול - מרגיש רגוע או כל חרדה קיימת לא מפריעה לפעילויות\n2 = מורגש - קצת חרדה, אבל עדיין מסוגל לעשות מה שצריך\n3 = מאתגר - חרדה מקשה על חלק מהפעילויות\n4 = מציף - חרדה מפריעה משמעותית לתפקוד היומיומי\n\nזכור: המטרה אינה לחסל את כל החרדה, אלא לשמור עליה ברמות שבהן אתה עדיין יכול לעסוק בחיים שלך.'
             });
         }
 
@@ -292,7 +363,13 @@ const addParameterTranslations = () => {
                 'following.circles': 'الدوائر',
                 'alerts.wellness_alert': 'تنبيه العافية لـ',
                 'alerts.mood_low': 'كان المزاج أقل من 3.0 لمدة 3 أيام متتالية',
-                'alerts.energy_low': 'كانت الطاقة أقل من 3.0 لمدة 3 أيام متتالية'
+                'alerts.energy_low': 'كانت الطاقة أقل من 3.0 لمدة 3 أيام متتالية',
+                // Tooltip help texts
+                'tooltip.mood': 'كيف شعرت اليوم - جيد أم سيء؟\n\n1 = سيء - تشعر بالإحباط أو الحزن أو الانخفاض\n2 = أقل من المتوسط - لست في أفضل حالاتك، لكنك تتدبر أمرك\n3 = بخير - مستقر أو محايد بشكل معقول\n4 = جيد - تشعر بالإيجابية أو الرضا أو التفاؤل\n\nتذكر: المزاج يتقلب بشكل طبيعي من يوم لآخر. أنت تتتبع الأنماط بمرور الوقت لفهم نفسك بشكل أفضل، وليس للحكم على الأيام الفردية. حتى الأيام الصعبة توفر معلومات قيمة.',
+                'tooltip.energy': 'هذا يتتبع قدرتك البدنية وحدتك الذهنية طوال اليوم.\n\n1 = مستنفد - منهك، تكافح للتركيز أو إكمال المهام الأساسية\n2 = منخفض - متعب وتعمل على الاحتياطي، كل شيء يبدو مرهقاً\n3 = معتدل - طاقة جيدة لإنجاز الأمور، يمكنك التركيز بشكل معقول، بعض الإرهاق بنهاية اليوم\n4 = عالي - نشيط ومنتبه، سهل التركيز وإنجاز المهام، تشعر بالقدرة\n\nتذكر: الطاقة المنخفضة ليست كسلاً - إنها معلومات. عوامل كثيرة تؤثر على الطاقة (النوم، التوتر، التغذية، الصحة). تتبع الأنماط يساعدك على تحديد ما يدعمك أو يستنزفك.',
+                'tooltip.sleep_quality': 'هذا يتتبع مدى جودة نومك، وليس فقط المدة. الجودة مهمة بقدر الكمية، وليلة صعبة واحدة لا تحدد نمطاً.\n\n1 = سيء - بالكاد نمت أو نوم مضطرب جداً، استيقظت غير منتعش\n2 = مضطرب - بعض النوم لكن استيقظت كثيراً، لا زلت متعباً\n3 = مقبول - نمت بشكل معقول مع انقطاعات طفيفة\n4 = جيد - نمت بعمق، استيقظت منتعشاً\n\nتذكر: النوم يتأثر بالتوتر والبيئة والصحة وعوامل أخرى كثيرة. أنت تتتبع الأنماط لفهم ما يساعد أو يعيق راحتك، وليس لتحقيق نوم مثالي كل ليلة.',
+                'tooltip.physical_activity': 'هذا المقياس يلتقط نشاطك البدني الكلي - مع الأخذ بعين الاعتبار المدة والشدة.\n\n1 = الحد الأدنى - يوم راحة، حركة خفيفة جداً، أو نشاط قصير (أقل من 15 دقيقة)\n2 = خفيف - نشاط قصير (15-30 دقيقة) بوتيرة سهلة، أو حركة لطيفة أطول (أمثلة: مشي قصير، تمدد، مهام منزلية خفيفة)\n3 = معتدل - 30-60 دقيقة من النشاط المعتدل أو نشاط مكثف أقصر (أمثلة: مشي سريع، مهام نشطة، تمرين عادي)\n4 = كبير - نشاط ممتد (60+ دقيقة)، تمرين عالي الشدة، أو جلسات نشاط متعددة\n\nتذكر: هذا يتتبع أنماط حركتك، وليس قيمتك. الراحة ضرورية. الهدف هو الوعي والتقدم التدريجي، وليس الكمال.',
+                'tooltip.anxiety': 'القلق هو عاطفة إنسانية طبيعية يختبرها الجميع. هذا المقياس يتتبع مدى تدخل القلق في حياتك اليومية، وليس ما إذا كنت تشعر بالقلق على الإطلاق.\n\n1 = يمكن التحكم فيه - تشعر بالهدوء أو أي قلق موجود لا يتدخل في الأنشطة\n2 = ملحوظ - بعض القلق، لكن لا تزال قادراً على فعل ما تحتاجه\n3 = صعب - القلق يجعل بعض الأنشطة صعبة\n4 = طاغي - القلق يتدخل بشكل كبير في الأداء اليومي\n\nتذكر: الهدف ليس القضاء على كل القلق، بل الحفاظ عليه في مستويات حيث لا يزال بإمكانك الانخراط في حياتك.'
             });
         }
 
@@ -343,7 +420,13 @@ const addParameterTranslations = () => {
                 'following.circles': 'Круги',
                 'alerts.wellness_alert': 'Предупреждение о здоровье для',
                 'alerts.mood_low': 'настроение было ниже 3.0 в течение 3 дней подряд',
-                'alerts.energy_low': 'энергия была ниже 3.0 в течение 3 дней подряд'
+                'alerts.energy_low': 'энергия была ниже 3.0 в течение 3 дней подряд',
+                // Tooltip help texts
+                'tooltip.mood': 'Насколько хорошо или плохо вы себя чувствовали сегодня?\n\n1 = Плохо - Чувствуете себя подавленным, грустным или упавшим\n2 = Ниже среднего - Не в лучшей форме, но справляетесь\n3 = Нормально - Достаточно стабильное или нейтральное состояние\n4 = Хорошо - Чувствуете себя позитивно, довольным или оптимистичным\n\nПомните: Настроение естественно колеблется день ото дня. Вы отслеживаете закономерности со временем, чтобы лучше понять себя, а не осуждать отдельные дни. Даже трудные дни дают ценную информацию.',
+                'tooltip.energy': 'Это отслеживает вашу физическую выносливость и умственную остроту в течение дня.\n\n1 = Истощён - Измотан, трудно сосредоточиться или выполнить базовые задачи\n2 = Низкая - Устал и работаете на резервах, всё требует усилий\n3 = Умеренная - Достаточно энергии для выполнения дел, можете сносно концентрироваться, некоторая усталость к концу дня\n4 = Высокая - Энергичный и бодрый, легко сосредоточиться и выполнять задачи, чувствуете себя способным\n\nПомните: Низкая энергия - это не лень, это информация. Многие факторы влияют на энергию (сон, стресс, питание, здоровье). Отслеживание закономерностей помогает определить, что вас поддерживает или истощает.',
+                'tooltip.sleep_quality': 'Это отслеживает качество вашего сна, а не только продолжительность. Качество важно не меньше количества, и одна плохая ночь не определяет закономерность.\n\n1 = Плохо - Почти не спал или очень прерывистый сон, проснулся неотдохнувшим\n2 = Беспокойный - Немного поспал, но часто просыпался, всё ещё устал\n3 = Нормально - Спал достаточно хорошо с незначительными прерываниями\n4 = Хорошо - Спал крепко, проснулся отдохнувшим\n\nПомните: На сон влияют стресс, окружение, здоровье и многие другие факторы. Вы отслеживаете закономерности, чтобы понять, что помогает или мешает вашему отдыху, а не достичь идеального сна каждую ночь.',
+                'tooltip.physical_activity': 'Эта шкала фиксирует вашу общую физическую активность - учитывая как продолжительность, так и интенсивность.\n\n1 = Минимальная - День отдыха, очень лёгкое движение или короткая активность (менее 15 мин)\n2 = Лёгкая - Короткая активность (15-30 мин) в лёгком темпе ИЛИ более длительное мягкое движение (Примеры: короткая прогулка, растяжка, лёгкие домашние дела)\n3 = Умеренная - 30-60 мин умеренной активности ИЛИ более короткая интенсивная активность (Примеры: быстрая ходьба, активные дела, обычная тренировка)\n4 = Значительная - Продолжительная активность (60+ мин), высокоинтенсивная тренировка ИЛИ несколько сессий активности\n\nПомните: Это отслеживает ваши двигательные паттерны, а не вашу ценность. Отдых необходим. Цель - осознанность и постепенный прогресс, а не совершенство.',
+                'tooltip.anxiety': 'Тревога - это нормальная человеческая эмоция, которую испытывают все. Эта шкала отслеживает, насколько тревога мешает вашей повседневной жизни, а не испытываете ли вы тревогу вообще.\n\n1 = Управляемая - Чувствуете спокойствие или имеющаяся тревога не мешает деятельности\n2 = Заметная - Некоторая тревога, но всё ещё можете делать то, что нужно\n3 = Сложная - Тревога затрудняет некоторые виды деятельности\n4 = Подавляющая - Тревога значительно мешает повседневному функционированию\n\nПомните: Цель не в том, чтобы устранить всю тревогу, а в том, чтобы поддерживать её на уровне, при котором вы всё ещё можете жить своей жизнью.'
             });
         }
 
@@ -471,10 +554,11 @@ function initializeParameters() {
     // Initialize global variables
     window.selectedPrivacy = window.selectedPrivacy || {};
 
-    // Set default privacy to private for all parameters
+    // Set default privacy to public for all parameters (matches backend default)
+    // These will be overwritten when we auto-load today's saved data
     ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
         if (!window.selectedPrivacy[param]) {
-            window.selectedPrivacy[param] = 'private';
+            window.selectedPrivacy[param] = 'public';
         }
     });
 
@@ -531,13 +615,14 @@ function initializeParameters() {
                 <!-- Parameters Section - ONLY 5 CATEGORIES -->
                 <div class="parameters-section">
                   ${PARAMETER_CATEGORIES.map(category => {
-    const privacy = window.selectedPrivacy[category.id] || 'private';
+    const privacy = window.selectedPrivacy[category.id] || 'public';
     return `
         <div class="parameter-item">
             <div class="parameter-header">
                 <span class="parameter-emoji">${category.emoji}</span>
                 <div class="parameter-info">
                     <span class="parameter-name" data-i18n="${category.nameKey}">${category.nameKey}</span>
+                    <span class="tooltip-icon" data-tooltip-key="tooltip.${category.id}" onclick="showTooltip('${category.id}', event)" title="">ⓘ</span>
                     <span class="parameter-description" data-i18n="${category.descriptionKey}">${category.descriptionKey}</span>
                 </div>
                 <div class="privacy-selector">
@@ -603,6 +688,56 @@ function initializeParameters() {
 
     // Initialize calendar
     updateCalendar();
+
+    // Auto-load today's parameters (including privacy settings) from server
+    // This fixes the issue where privacy settings reset after browser cache clear
+    const todayStr = formatDate(new Date());
+    setTimeout(async () => {
+        try {
+            const response = await fetch(`/api/parameters?date=${todayStr}`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    console.log('Auto-loaded today\'s parameters:', result.data);
+                    
+                    // Load privacy settings from server
+                    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+                        const privacyKey = `${param}_privacy`;
+                        const privacyValue = result.data[privacyKey] || 'private';
+                        
+                        window.selectedPrivacy[param] = privacyValue;
+                        
+                        // Update the dropdown UI
+                        const selector = document.querySelector(`select[data-category="${param}"]`);
+                        if (selector) {
+                            selector.value = privacyValue;
+                        }
+                    });
+                    
+                    // Also load ratings if they exist
+                    if (result.data.parameters) {
+                        Object.keys(result.data.parameters).forEach(categoryId => {
+                            const value = result.data.parameters[categoryId];
+                            if (value) {
+                                selectRating(categoryId, value);
+                            }
+                        });
+                    }
+                    
+                    // Load notes
+                    const notesInput = document.getElementById('notesInput');
+                    if (notesInput && result.data.notes) {
+                        notesInput.value = result.data.notes;
+                    }
+                    
+                    // Apply emojis to reflect loaded privacy
+                    applyEmojisToPrivacySelectors();
+                }
+            }
+        } catch (error) {
+            console.log('No saved parameters for today, using defaults');
+        }
+    }, 200);
 
 
  //setTimeout(() => {
@@ -908,6 +1043,102 @@ function addParameterStyles() {
             font-weight: 600;
             font-size: 1.1em;
             color: #333;
+        }
+
+        .tooltip-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 8px;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+            font-style: normal;
+        }
+
+        .tooltip-icon:hover {
+            background: #764ba2;
+            transform: scale(1.1);
+        }
+
+        [dir="rtl"] .tooltip-icon {
+            margin-left: 0;
+            margin-right: 8px;
+        }
+
+        .tooltip-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .tooltip-content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .tooltip-content h3 {
+            margin: 0 0 15px 0;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tooltip-content p {
+            margin: 0;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-line;
+        }
+
+        .tooltip-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f0f0f0;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .tooltip-close:hover {
+            background: #e0e0e0;
+            transform: scale(1.1);
+        }
+
+        [dir="rtl"] .tooltip-close {
+            right: auto;
+            left: 15px;
         }
 
         .parameter-description {
