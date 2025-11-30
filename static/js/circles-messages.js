@@ -383,6 +383,12 @@ window.circlesHTML = `
         <div class="search-results" id="searchResults"></div>
     </div>
 
+    <!-- Recommended Users to Add to Circle Section -->
+    <div id="circleRecommendationsSection" style="max-width: 600px; margin: 0 auto 30px; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);">
+        <h3 style="color: #667eea; margin-bottom: 15px;" data-i18n="circles.recommended_title">Recommended Users to Add to Circle</h3>
+        <div id="circleRecommendationsList" style="max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
 <div class="circles-grid">
         <div class="circle-card" data-circle="general">
             <div class="circle-header">
@@ -657,6 +663,9 @@ if (window.i18n && window.i18n.applyLanguage) {
 
         updateCircleTitles();
 
+        // Load circle recommendations
+        loadCircleRecommendations();
+
     } catch (error) {
         console.error('Error loading circles:', error);
         if (window.showMessage) {
@@ -672,7 +681,110 @@ if (window.i18n && window.i18n.applyLanguage) {
 
 
 
+// Load recommended users to add to circles
+async function loadCircleRecommendations() {
+    try {
+        const recommendationsContainer = document.getElementById("circleRecommendationsList");
+        if (!recommendationsContainer) return;
 
+        const response = await fetch("/api/circles/recommendations");
+        if (!response.ok) {
+            console.error("Failed to load circle recommendations");
+            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!data.recommendations || data.recommendations.length === 0) {
+            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            if (window.i18n && window.i18n.applyLanguage) {
+                window.i18n.applyLanguage(window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en");
+            }
+            return;
+        }
+
+        let html = "";
+        data.recommendations.forEach(user => {
+            const reasonKey = user.reason_key || "circles.reason_default";
+            html += `
+                <div class="member-item" style="display: flex; align-items: center; gap: 15px; padding: 12px; border-radius: 10px; transition: background 0.2s; margin-bottom: 8px; background: #f8f9fa;">
+                    <div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        ${(user.username || "U")[0].toUpperCase()}
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <div style="font-weight: 600; color: #2d3436;">${user.username}</div>
+                        <div style="font-size: 12px; color: #8898aa;" data-i18n="${reasonKey}">${user.reason}</div>
+                        ${user.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${user.selected_city}</div>` : ""}
+                    </div>
+                    <button onclick="showCircleAddMenu(${user.id}, '${user.username}')" 
+                        style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
+                        onmouseover="this.style.transform='scale(1.05)'" 
+                        onmouseout="this.style.transform='scale(1)'">
+                        <span data-i18n="circles.add_to_circle">Add to Circle</span>
+                    </button>
+                </div>
+            `;
+        });
+
+        recommendationsContainer.innerHTML = html;
+
+        if (window.i18n && window.i18n.applyLanguage) {
+            const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en";
+            window.i18n.applyLanguage(currentLang);
+        }
+
+    } catch (error) {
+        console.error("Error loading circle recommendations:", error);
+    }
+}
+
+// Show menu to select which circle to add user to
+function showCircleAddMenu(userId, username) {
+    const currentLang = window.i18n && window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en";
+    
+    const labels = {
+        "en": { public: "Public", close_friends: "Close Friends", family: "Family", title: "Add to which circle?" },
+        "he": { public: "ציבורי", close_friends: "חברים קרובים", family: "משפחה", title: "להוסיף לאיזה מעגל?" },
+        "ar": { public: "عام", close_friends: "أصدقاء مقربون", family: "عائلة", title: "إضافة إلى أي دائرة?" },
+        "ru": { public: "Публичный", close_friends: "Близкие друзья", family: "Семья", title: "Добавить в какой круг?" }
+    };
+    
+    const t = labels[currentLang] || labels["en"];
+    
+    const choice = prompt(
+        `${t.title}
+
+` +
+        `1. ${t.public}
+` +
+        `2. ${t.close_friends}
+` +
+        `3. ${t.family}
+
+` +
+        `Enter 1, 2, or 3:`
+    );
+    
+    if (!choice) return;
+    
+    const circleMap = {
+        "1": "public",
+        "2": "class_b",
+        "3": "class_a"
+    };
+    
+    const circleType = circleMap[choice.trim()];
+    if (!circleType) {
+        showNotification("Invalid choice", "error");
+        return;
+    }
+    
+    addToCircle(userId, circleType);
+}
+
+window.loadCircleRecommendations = loadCircleRecommendations;
+window.showCircleAddMenu = showCircleAddMenu;
 
 
 // Create member element
