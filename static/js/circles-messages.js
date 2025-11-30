@@ -683,20 +683,34 @@ if (window.i18n && window.i18n.applyLanguage) {
 
 // Load recommended users to add to circles
 async function loadCircleRecommendations() {
+    console.log('[CircleRecs] Starting loadCircleRecommendations...');
     try {
         const recommendationsContainer = document.getElementById("circleRecommendationsList");
-        if (!recommendationsContainer) return;
+        if (!recommendationsContainer) {
+            console.log('[CircleRecs] Container not found');
+            return;
+        }
 
-        const response = await fetch("/api/circles/recommendations");
+        // Show loading state
+        recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;">Loading recommendations...</p>`;
+
+        const response = await fetch("/api/circles/recommendations", {
+            credentials: 'include'
+        });
+        
+        console.log('[CircleRecs] Response status:', response.status);
+        
         if (!response.ok) {
-            console.error("Failed to load circle recommendations");
+            console.error("[CircleRecs] Failed to load circle recommendations, status:", response.status);
             recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
             return;
         }
 
         const data = await response.json();
+        console.log('[CircleRecs] Got data:', data);
 
         if (!data.recommendations || data.recommendations.length === 0) {
+            console.log('[CircleRecs] No recommendations found');
             recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
             if (window.i18n && window.i18n.applyLanguage) {
                 window.i18n.applyLanguage(window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en");
@@ -704,9 +718,12 @@ async function loadCircleRecommendations() {
             return;
         }
 
+        console.log('[CircleRecs] Building HTML for', data.recommendations.length, 'recommendations');
         let html = "";
         data.recommendations.forEach(user => {
             const reasonKey = user.reason_key || "circles.reason_default";
+            // Escape username for onclick to prevent XSS and quote issues
+            const escapedUsername = (user.username || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
             html += `
                 <div class="member-item" style="display: flex; align-items: center; gap: 15px; padding: 12px; border-radius: 10px; transition: background 0.2s; margin-bottom: 8px; background: #f8f9fa;">
                     <div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
@@ -717,7 +734,7 @@ async function loadCircleRecommendations() {
                         <div style="font-size: 12px; color: #8898aa;" data-i18n="${reasonKey}">${user.reason}</div>
                         ${user.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${user.selected_city}</div>` : ""}
                     </div>
-                    <button onclick="showCircleAddMenu(${user.id}, '${user.username}')" 
+                    <button onclick="showCircleAddMenu(${user.id}, '${escapedUsername}')" 
                         style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
                         onmouseover="this.style.transform='scale(1.05)'" 
                         onmouseout="this.style.transform='scale(1)'">
@@ -733,9 +750,15 @@ async function loadCircleRecommendations() {
             const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en";
             window.i18n.applyLanguage(currentLang);
         }
+        
+        console.log('[CircleRecs] Successfully displayed', data.recommendations.length, 'recommendations');
 
     } catch (error) {
-        console.error("Error loading circle recommendations:", error);
+        console.error("[CircleRecs] Error loading circle recommendations:", error);
+        const recommendationsContainer = document.getElementById("circleRecommendationsList");
+        if (recommendationsContainer) {
+            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+        }
     }
 }
 
