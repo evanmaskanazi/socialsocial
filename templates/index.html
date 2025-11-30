@@ -2930,6 +2930,9 @@ async function loadUserCity() {
                 const needsDiary = await checkAndRedirectToDiary();
                 if (!needsDiary) {
                     showDashboard();
+                    // Load notification settings after login
+                    console.log('[LOGIN DEBUG] Login successful, calling loadNotificationSettings');
+                    loadNotificationSettings();
                 }
             } else {
                 // FIX #1: Handle login failure (apiCall returns null on 401 or error response)
@@ -4641,38 +4644,90 @@ function showNotification(message, type = 'info') {
 
 // Load notification settings when page loads
 async function loadNotificationSettings() {
+    console.log('[NOTIFICATION DEBUG] ========================================');
+    console.log('[NOTIFICATION DEBUG] loadNotificationSettings() CALLED');
+    console.log('[NOTIFICATION DEBUG] Current time:', new Date().toISOString());
+    console.log('[NOTIFICATION DEBUG] Current user:', currentUser ? currentUser.id : 'NOT SET');
+    
+    // Check if toggles exist in DOM
+    const emailOnAlertToggle = document.getElementById('emailOnAlertToggle');
+    const dailyDiaryReminderToggle = document.getElementById('dailyDiaryReminderToggle');
+    
+    console.log('[NOTIFICATION DEBUG] emailOnAlertToggle element found:', !!emailOnAlertToggle);
+    console.log('[NOTIFICATION DEBUG] dailyDiaryReminderToggle element found:', !!dailyDiaryReminderToggle);
+    
+    if (emailOnAlertToggle) {
+        console.log('[NOTIFICATION DEBUG] emailOnAlertToggle BEFORE fetch - checked:', emailOnAlertToggle.checked);
+    }
+    if (dailyDiaryReminderToggle) {
+        console.log('[NOTIFICATION DEBUG] dailyDiaryReminderToggle BEFORE fetch - checked:', dailyDiaryReminderToggle.checked);
+    }
+    
     try {
+        console.log('[NOTIFICATION DEBUG] Fetching /api/notification-settings...');
         const response = await fetch('/api/notification-settings', {
             credentials: 'include'
         });
         
+        console.log('[NOTIFICATION DEBUG] Response status:', response.status);
+        console.log('[NOTIFICATION DEBUG] Response ok:', response.ok);
+        
         if (!response.ok) {
-            console.error('Failed to load notification settings');
+            console.error('[NOTIFICATION DEBUG] FAILED to load notification settings - status:', response.status);
             return;
         }
         
         const settings = await response.json();
+        console.log('[NOTIFICATION DEBUG] Received settings from server:', JSON.stringify(settings, null, 2));
+        console.log('[NOTIFICATION DEBUG] email_on_alert value:', settings.email_on_alert, 'type:', typeof settings.email_on_alert);
+        console.log('[NOTIFICATION DEBUG] email_daily_diary_reminder value:', settings.email_daily_diary_reminder, 'type:', typeof settings.email_daily_diary_reminder);
         
-        // Update toggle states
-        const emailOnAlertToggle = document.getElementById('emailOnAlertToggle');
-        const dailyDiaryReminderToggle = document.getElementById('dailyDiaryReminderToggle');
+        // Re-get elements (in case DOM changed)
+        const emailToggle = document.getElementById('emailOnAlertToggle');
+        const diaryToggle = document.getElementById('dailyDiaryReminderToggle');
         
-        if (emailOnAlertToggle) {
-            emailOnAlertToggle.checked = settings.email_on_alert || false;
+        console.log('[NOTIFICATION DEBUG] Re-checking elements after fetch...');
+        console.log('[NOTIFICATION DEBUG] emailOnAlertToggle still exists:', !!emailToggle);
+        console.log('[NOTIFICATION DEBUG] dailyDiaryReminderToggle still exists:', !!diaryToggle);
+        
+        if (emailToggle) {
+            const oldValue = emailToggle.checked;
+            const newValue = settings.email_on_alert || false;
+            console.log('[NOTIFICATION DEBUG] Setting emailOnAlertToggle from', oldValue, 'to', newValue);
+            emailToggle.checked = newValue;
+            console.log('[NOTIFICATION DEBUG] emailOnAlertToggle AFTER setting - checked:', emailToggle.checked);
+        } else {
+            console.error('[NOTIFICATION DEBUG] ERROR: emailOnAlertToggle element NOT FOUND!');
         }
-        if (dailyDiaryReminderToggle) {
-            dailyDiaryReminderToggle.checked = settings.email_daily_diary_reminder || false;
+        
+        if (diaryToggle) {
+            const oldValue = diaryToggle.checked;
+            const newValue = settings.email_daily_diary_reminder || false;
+            console.log('[NOTIFICATION DEBUG] Setting dailyDiaryReminderToggle from', oldValue, 'to', newValue);
+            diaryToggle.checked = newValue;
+            console.log('[NOTIFICATION DEBUG] dailyDiaryReminderToggle AFTER setting - checked:', diaryToggle.checked);
+        } else {
+            console.error('[NOTIFICATION DEBUG] ERROR: dailyDiaryReminderToggle element NOT FOUND!');
         }
         
-        console.log('Notification settings loaded:', settings);
+        console.log('[NOTIFICATION DEBUG] Notification settings load COMPLETE');
+        console.log('[NOTIFICATION DEBUG] ========================================');
     } catch (error) {
-        console.error('Error loading notification settings:', error);
+        console.error('[NOTIFICATION DEBUG] ERROR loading notification settings:', error);
+        console.error('[NOTIFICATION DEBUG] Error stack:', error.stack);
     }
 }
 
 // Update a notification setting
 async function updateNotificationSetting(settingName, value) {
+    console.log('[NOTIFICATION DEBUG] ========================================');
+    console.log('[NOTIFICATION DEBUG] updateNotificationSetting CALLED');
+    console.log('[NOTIFICATION DEBUG] settingName:', settingName);
+    console.log('[NOTIFICATION DEBUG] value:', value, 'type:', typeof value);
+    console.log('[NOTIFICATION DEBUG] Current time:', new Date().toISOString());
+    
     try {
+        console.log('[NOTIFICATION DEBUG] Sending PUT to /api/notification-settings...');
         const response = await fetch('/api/notification-settings', {
             method: 'PUT',
             headers: {
@@ -4684,12 +4739,15 @@ async function updateNotificationSetting(settingName, value) {
             })
         });
         
+        console.log('[NOTIFICATION DEBUG] PUT Response status:', response.status);
+        console.log('[NOTIFICATION DEBUG] PUT Response ok:', response.ok);
+        
         if (!response.ok) {
-            throw new Error('Failed to update setting');
+            throw new Error('Failed to update setting - status: ' + response.status);
         }
         
         const result = await response.json();
-        console.log('Notification setting updated:', settingName, '=', value, 'result:', result);
+        console.log('[NOTIFICATION DEBUG] PUT Result:', JSON.stringify(result, null, 2));
         
         // Show success feedback
         const lang = localStorage.getItem('selectedLanguage') || 'en';
@@ -4722,12 +4780,17 @@ async function updateNotificationSetting(settingName, value) {
             showNotification(messages[lang] || messages['en'], 'success');
         }
         
+        console.log('[NOTIFICATION DEBUG] Update SUCCESSFUL');
+        console.log('[NOTIFICATION DEBUG] ========================================');
+        
     } catch (error) {
-        console.error('Error updating notification setting:', error);
+        console.error('[NOTIFICATION DEBUG] ERROR updating notification setting:', error);
+        console.error('[NOTIFICATION DEBUG] Error stack:', error.stack);
         
         // Revert the toggle on error
         const toggle = document.getElementById(settingName === 'email_on_alert' ? 'emailOnAlertToggle' : 'dailyDiaryReminderToggle');
         if (toggle) {
+            console.log('[NOTIFICATION DEBUG] Reverting toggle from', toggle.checked, 'to', !value);
             toggle.checked = !value;
         }
         
@@ -8258,7 +8321,32 @@ window.addEventListener('DOMContentLoaded', async () => {
                 // Load alerts AFTER dashboard is shown and i18n is ready
                 await checkAndLoadTriggerAlerts();
                 // Load notification settings
+                console.log('[AUTH DEBUG] About to call loadNotificationSettings()');
                 loadNotificationSettings();
+                
+                // Verification: Check toggle states after a delay to detect if something resets them
+                setTimeout(() => {
+                    console.log('[VERIFICATION] ========================================');
+                    console.log('[VERIFICATION] Checking toggle states 500ms AFTER loadNotificationSettings');
+                    const emailToggle = document.getElementById('emailOnAlertToggle');
+                    const diaryToggle = document.getElementById('dailyDiaryReminderToggle');
+                    console.log('[VERIFICATION] emailOnAlertToggle exists:', !!emailToggle);
+                    console.log('[VERIFICATION] emailOnAlertToggle.checked:', emailToggle ? emailToggle.checked : 'N/A');
+                    console.log('[VERIFICATION] dailyDiaryReminderToggle exists:', !!diaryToggle);
+                    console.log('[VERIFICATION] dailyDiaryReminderToggle.checked:', diaryToggle ? diaryToggle.checked : 'N/A');
+                    console.log('[VERIFICATION] ========================================');
+                }, 500);
+                
+                // Another check after 2 seconds
+                setTimeout(() => {
+                    console.log('[VERIFICATION 2s] ========================================');
+                    console.log('[VERIFICATION 2s] Checking toggle states 2000ms AFTER loadNotificationSettings');
+                    const emailToggle = document.getElementById('emailOnAlertToggle');
+                    const diaryToggle = document.getElementById('dailyDiaryReminderToggle');
+                    console.log('[VERIFICATION 2s] emailOnAlertToggle.checked:', emailToggle ? emailToggle.checked : 'N/A');
+                    console.log('[VERIFICATION 2s] dailyDiaryReminderToggle.checked:', diaryToggle ? diaryToggle.checked : 'N/A');
+                    console.log('[VERIFICATION 2s] ========================================');
+                }, 2000);
             } else {
                 showAuthContainer();
             }
