@@ -2486,7 +2486,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=12.0"></script>
+   <script src="/static/js/circles-messages.js?v=14.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -4635,19 +4635,38 @@ async function updateNotificationSetting(settingName, value) {
         }
         
         const result = await response.json();
-        console.log('Notification setting updated:', settingName, '=', value);
+        console.log('Notification setting updated:', settingName, '=', value, 'result:', result);
         
         // Show success feedback
         const lang = localStorage.getItem('selectedLanguage') || 'en';
-        const messages = {
-            'en': 'Setting updated',
-            'he': 'ההגדרה עודכנה',
-            'ar': 'تم تحديث الإعداد',
-            'ru': 'Настройка обновлена'
-        };
         
-        // Optional: show a brief toast notification
-        // showNotification(messages[lang] || messages['en'], 'success');
+        // Check if emails were sent (when enabling email_on_alert)
+        if (settingName === 'email_on_alert' && value && result.emails_sent > 0) {
+            const emailsSentMessages = {
+                'en': `Setting enabled! ${result.emails_sent} existing alerts sent to your email.`,
+                'he': `ההגדרה הופעלה! ${result.emails_sent} התראות קיימות נשלחו למייל שלך.`,
+                'ar': `تم تفعيل الإعداد! تم إرسال ${result.emails_sent} تنبيهات موجودة إلى بريدك الإلكتروني.`,
+                'ru': `Настройка включена! ${result.emails_sent} существующих уведомлений отправлено на вашу почту.`
+            };
+            showNotification(emailsSentMessages[lang] || emailsSentMessages['en'], 'success');
+        } else if (settingName === 'email_on_alert' && value) {
+            const enabledMessages = {
+                'en': 'Email alerts enabled. You will receive emails for all future alerts.',
+                'he': 'התראות אימייל הופעלו. תקבל אימייל על כל התראה עתידית.',
+                'ar': 'تم تفعيل تنبيهات البريد الإلكتروني. ستتلقى رسائل بريد إلكتروني لجميع التنبيهات المستقبلية.',
+                'ru': 'Уведомления по email включены. Вы будете получать письма о всех будущих уведомлениях.'
+            };
+            showNotification(enabledMessages[lang] || enabledMessages['en'], 'success');
+        } else {
+            const messages = {
+                'en': 'Setting updated',
+                'he': 'ההגדרה עודכנה',
+                'ar': 'تم تحديث الإعداد',
+                'ru': 'Настройка обновлена'
+            };
+            // Show brief notification for other changes
+            showNotification(messages[lang] || messages['en'], 'success');
+        }
         
     } catch (error) {
         console.error('Error updating notification setting:', error);
