@@ -775,6 +775,67 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         return False
 
 
+def create_alert_with_email(user_id, title, content, alert_type='info'):
+    """
+    Create an alert and optionally send email notification if user has email_on_alert enabled.
+    
+    Args:
+        user_id: The user ID to create alert for
+        title: Alert title (can be JSON string with translation key)
+        content: Alert content/message
+        alert_type: Type of alert ('info', 'warning', 'success', 'error')
+    
+    Returns:
+        The created Alert object
+    """
+    try:
+        # Create the alert
+        alert = Alert(
+            user_id=user_id,
+            title=title,
+            content=content,
+            alert_type=alert_type
+        )
+        db.session.add(alert)
+        db.session.flush()  # Get the alert ID without committing
+        
+        # Check if user has email notifications enabled
+        try:
+            settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+            if settings and settings.email_on_alert:
+                user = db.session.get(User, user_id)
+                if user and user.email:
+                    # Parse alert title for email
+                    email_title = title
+                    try:
+                        title_data = json.loads(title)
+                        if isinstance(title_data, dict) and 'key' in title_data:
+                            username = title_data.get('params', {}).get('username', '')
+                            key = title_data.get('key', '')
+                            if 'new_message' in key:
+                                email_title = f"New message from {username}"
+                            elif 'started_following' in key:
+                                email_title = f"{username} started following you"
+                            elif 'invitation' in key.lower():
+                                email_title = "New invitation"
+                            else:
+                                email_title = username or 'New Alert'
+                    except:
+                        pass  # Not JSON, use as-is
+                    
+                    user_language = user.preferred_language or 'en'
+                    send_alert_notification_email(user.email, email_title, content or '', user_language)
+                    logger.info(f"Sent alert email to user {user_id}")
+        except Exception as email_err:
+            logger.error(f"Error sending alert email notification: {str(email_err)}")
+            # Don't fail the alert creation if email fails
+        
+        return alert
+    except Exception as e:
+        logger.error(f"Error creating alert: {str(e)}")
+        raise
+
+
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
     # Guard: Skip if already run in this process
@@ -4159,12 +4220,16 @@ def notification_settings():
     elif request.method == 'PUT':
         try:
             data = request.get_json()
+            user = db.session.get(User, user_id)
             
             settings = NotificationSettings.query.filter_by(user_id=user_id).first()
             
             if not settings:
                 settings = NotificationSettings(user_id=user_id)
                 db.session.add(settings)
+            
+            # Track if email_on_alert was just enabled
+            was_email_on_alert_enabled = settings.email_on_alert
             
             # Update settings based on provided data
             if 'email_on_alert' in data:
@@ -4184,11 +4249,58 @@ def notification_settings():
             
             db.session.commit()
             
+            # If email_on_alert was just turned ON, send all existing unread alerts as emails
+            emails_sent = 0
+            if 'email_on_alert' in data and data['email_on_alert'] and not was_email_on_alert_enabled:
+                if user and user.email:
+                    try:
+                        # Get all unread alerts for this user
+                        unread_alerts = Alert.query.filter_by(
+                            user_id=user_id,
+                            is_read=False
+                        ).order_by(Alert.created_at.desc()).limit(50).all()
+                        
+                        user_language = user.preferred_language or 'en'
+                        
+                        for alert in unread_alerts:
+                            try:
+                                # Parse alert title (may be JSON with translation key)
+                                alert_title = alert.title
+                                try:
+                                    title_data = json.loads(alert.title)
+                                    if isinstance(title_data, dict) and 'key' in title_data:
+                                        # It's a translation key, use a generic title
+                                        alert_title = title_data.get('params', {}).get('username', 'Alert')
+                                        if 'new_message' in title_data.get('key', ''):
+                                            alert_title = f"New message from {alert_title}"
+                                        elif 'started_following' in title_data.get('key', ''):
+                                            alert_title = f"{alert_title} started following you"
+                                        elif 'invitation' in title_data.get('key', '').lower():
+                                            alert_title = "New invitation"
+                                except:
+                                    pass  # Not JSON, use as-is
+                                
+                                send_alert_notification_email(
+                                    user.email,
+                                    alert_title,
+                                    alert.content or '',
+                                    user_language
+                                )
+                                emails_sent += 1
+                            except Exception as email_err:
+                                logger.error(f"Error sending alert email: {str(email_err)}")
+                                continue
+                        
+                        logger.info(f"Sent {emails_sent} alert emails to user {user_id}")
+                    except Exception as batch_err:
+                        logger.error(f"Error sending batch alert emails: {str(batch_err)}")
+            
             return jsonify({
                 'success': True,
                 'email_on_alert': settings.email_on_alert or False,
                 'email_daily_diary_reminder': settings.email_daily_diary_reminder or False,
-                'email_on_new_message': settings.email_on_new_message if settings.email_on_new_message is not None else True
+                'email_on_new_message': settings.email_on_new_message if settings.email_on_new_message is not None else True,
+                'emails_sent': emails_sent
             })
         except Exception as e:
             logger.error(f"Update notification settings error: {str(e)}")
@@ -4332,7 +4444,8 @@ def messages():
                 logger.error(f"Error getting sender username: {str(e)}")
                 sender_name = 'Someone'
 
-            alert = Alert(
+            # Create alert with optional email notification (for email_on_alert setting)
+            alert = create_alert_with_email(
                 user_id=recipient_id,
                 title=json.dumps({
                     'key': 'alerts.new_message_from',
@@ -4341,9 +4454,9 @@ def messages():
                 content=content[:100] + '...' if len(content) > 100 else content,
                 alert_type='info'
             )
-            db.session.add(alert)
 
-            # Send email notification if recipient has email_on_new_message enabled
+            # ALSO send dedicated message notification email if recipient has email_on_new_message enabled
+            # This is separate from alert emails - it's specifically for new messages
             try:
                 recipient_settings = NotificationSettings.query.filter_by(user_id=recipient_id).first()
                 # Default to True if no settings exist (email_on_new_message defaults to True)
