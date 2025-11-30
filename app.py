@@ -836,6 +836,72 @@ def create_alert_with_email(user_id, title, content, alert_type='info'):
         raise
 
 
+def ensure_notification_settings_schema():
+    """Ensure notification_settings table has all required columns - runs on startup"""
+    # Guard: Skip if already run in this process
+    if hasattr(ensure_notification_settings_schema, '_completed'):
+        return
+
+    try:
+        with app.app_context():
+            # Check if table exists
+            inspector = inspect(db.engine)
+            if 'notification_settings' not in inspector.get_table_names():
+                logger.info("notification_settings table doesn't exist yet, will be created by migrations")
+                return
+
+            # Get existing columns
+            existing_columns = {col['name'] for col in inspector.get_columns('notification_settings')}
+            logger.info(f"Existing columns in notification_settings: {existing_columns}")
+
+            # Check if we're using PostgreSQL or SQLite
+            is_postgres = 'postgresql' in str(db.engine.url)
+
+            # Define required columns with their types
+            required_columns = {
+                'email_on_alert': 'BOOLEAN DEFAULT FALSE',
+                'email_daily_diary_reminder': 'BOOLEAN DEFAULT FALSE',
+                'email_on_new_message': 'BOOLEAN DEFAULT TRUE'
+            }
+
+            # Add missing columns
+            missing_columns = set(required_columns.keys()) - existing_columns
+
+            if missing_columns:
+                logger.info(f"Adding missing columns to notification_settings: {missing_columns}")
+
+                with db.engine.connect() as connection:
+                    for column_name in missing_columns:
+                        column_type = required_columns[column_name]
+
+                        if is_postgres:
+                            # PostgreSQL syntax with IF NOT EXISTS
+                            alter_query = text(
+                                f"ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+                        else:
+                            # SQLite syntax (no IF NOT EXISTS)
+                            alter_query = text(
+                                f"ALTER TABLE notification_settings ADD COLUMN {column_name} {column_type}")
+
+                        try:
+                            connection.execute(alter_query)
+                            connection.commit()
+                            logger.info(f"Added column to notification_settings: {column_name}")
+                        except Exception as e:
+                            logger.error(f"Error adding column {column_name}: {e}")
+
+                logger.info("Successfully added all missing columns to notification_settings")
+            else:
+                logger.info("All required columns exist in notification_settings")
+
+        # Mark as completed for this process
+        ensure_notification_settings_schema._completed = True
+
+    except Exception as e:
+        logger.error(f"Error ensuring notification_settings schema: {str(e)}")
+        # Don't raise - allow app to start even if this fails
+
+
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
     # Guard: Skip if already run in this process
@@ -1712,6 +1778,7 @@ def init_database():
                 db.create_all()
                 ensure_database_schema()
                 ensure_saved_parameters_schema()  # ← ADDED
+                ensure_notification_settings_schema()  # ← ADDED for email notification columns
                 logger.info("Database schema created successfully")
                 create_admin_user()
                 create_test_users()
@@ -1724,6 +1791,7 @@ def init_database():
                 fix_all_schema_issues()
                 ensure_database_schema()
                 ensure_saved_parameters_schema()  # ← ADDED
+                ensure_notification_settings_schema()  # ← ADDED for email notification columns
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
@@ -1760,6 +1828,7 @@ def init_database():
                 db.create_all()
                 logger.info("Created database tables as fallback")
                 ensure_saved_parameters_schema()  # ← ADDED
+                ensure_notification_settings_schema()  # ← ADDED for email notification columns
                 create_admin_user()
                 create_test_users()
                 create_test_follows()
