@@ -2423,11 +2423,56 @@
            </main>
             <!-- Right Sidebar -->
             <aside class="right-sidebar">
+                <!-- Email Notification Settings -->
+                <div id="notificationSettingsPanel" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_settings">Email Notifications</h4>
+                    
+                    <!-- Email on Alert Toggle -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
+                        <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                            <input type="checkbox" id="emailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                            <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px;"></span>
+                        </label>
+                    </div>
+                    
+                    <!-- Daily Diary Reminder Toggle -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.daily_diary_reminder">Daily diary reminder</label>
+                        <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                            <input type="checkbox" id="dailyDiaryReminderToggle" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                            <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px;"></span>
+                        </label>
+                    </div>
+                </div>
+                
                 <h3 style="margin-bottom: 15px;" data-i18n="alerts.title">Alerts</h3>
                 <div class="alerts-list" id="alertsList"></div>
             </aside>
         </div>
     </div>
+    
+    <style>
+    /* Toggle Switch Styles */
+    .toggle-switch input:checked + span {
+        background-color: var(--primary, #6B46C1);
+    }
+    .toggle-switch span:before {
+        content: "";
+        position: absolute;
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+    }
+    .toggle-switch input:checked + span:before {
+        transform: translateX(20px);
+    }
+    </style>
+    
     <script src="/static/js/i18n.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -2441,7 +2486,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=11.0"></script>
+   <script src="/static/js/circles-messages.js?v=12.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -4534,6 +4579,92 @@ function showNotification(message, type = 'info') {
     // notif.style.display = 'block';
     // setTimeout(() => notif.style.display = 'none', 3000);
 }
+
+
+// =====================
+// NOTIFICATION SETTINGS FUNCTIONS
+// =====================
+
+// Load notification settings when page loads
+async function loadNotificationSettings() {
+    try {
+        const response = await fetch('/api/notification-settings', {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to load notification settings');
+            return;
+        }
+        
+        const settings = await response.json();
+        
+        // Update toggle states
+        const emailOnAlertToggle = document.getElementById('emailOnAlertToggle');
+        const dailyDiaryReminderToggle = document.getElementById('dailyDiaryReminderToggle');
+        
+        if (emailOnAlertToggle) {
+            emailOnAlertToggle.checked = settings.email_on_alert || false;
+        }
+        if (dailyDiaryReminderToggle) {
+            dailyDiaryReminderToggle.checked = settings.email_daily_diary_reminder || false;
+        }
+        
+        console.log('Notification settings loaded:', settings);
+    } catch (error) {
+        console.error('Error loading notification settings:', error);
+    }
+}
+
+// Update a notification setting
+async function updateNotificationSetting(settingName, value) {
+    try {
+        const response = await fetch('/api/notification-settings', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                [settingName]: value
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to update setting');
+        }
+        
+        const result = await response.json();
+        console.log('Notification setting updated:', settingName, '=', value);
+        
+        // Show success feedback
+        const lang = localStorage.getItem('selectedLanguage') || 'en';
+        const messages = {
+            'en': 'Setting updated',
+            'he': 'ההגדרה עודכנה',
+            'ar': 'تم تحديث الإعداد',
+            'ru': 'Настройка обновлена'
+        };
+        
+        // Optional: show a brief toast notification
+        // showNotification(messages[lang] || messages['en'], 'success');
+        
+    } catch (error) {
+        console.error('Error updating notification setting:', error);
+        
+        // Revert the toggle on error
+        const toggle = document.getElementById(settingName === 'email_on_alert' ? 'emailOnAlertToggle' : 'dailyDiaryReminderToggle');
+        if (toggle) {
+            toggle.checked = !value;
+        }
+        
+        showNotification('Failed to update setting', 'error');
+    }
+}
+
+// Make functions globally available
+window.loadNotificationSettings = loadNotificationSettings;
+window.updateNotificationSetting = updateNotificationSetting;
 
 
 
@@ -7929,6 +8060,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                 showDashboard();
                 // Load alerts AFTER dashboard is shown and i18n is ready
                 await checkAndLoadTriggerAlerts();
+                // Load notification settings
+                loadNotificationSettings();
             } else {
                 showAuthContainer();
             }
