@@ -2124,7 +2124,7 @@
                     </div>
 
                     <!-- Change Password Section -->
-                    <div class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-top: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <div id="changePasswordSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-top: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                         <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.change_password">Change Password</h3>
 
                         <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
@@ -2154,7 +2154,7 @@
                     </div>
 
                     <!-- Account Deletion Section -->
-                    <div class="settings-section" style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <div id="accountDeletionSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                         <h3 style="color: #EF4444; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.account_deletion">Account Deletion</h3>
 
                         <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.deletion_warning">Request deletion of your account and all associated data</p>
@@ -3669,73 +3669,15 @@ function handleCirclesClick(event) {
 
 function showView(viewName) {
     console.log('[DEBUG] showView called:', viewName, 'viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
-    // NEW BEHAVIOR: When viewing another user, profile/feed/circles/parameters/tracking maintain viewing context
-    // Following/followers/messages/home/invite reset to current user's account
+    // UPDATED BEHAVIOR: When viewing another user, ALL tabs maintain viewing context
+    // Only the "Back to Following" button should reset to current user's account
+    // This provides a consistent experience when navigating between tabs while viewing someone else
 
-    // Maintain viewing mode for: profile, feed, circles, parameters, tracking
-    // This means when viewing another user, navigating to these views keeps you viewing that user
-    // Reset viewing mode for: following, followers, messages, home, invite (return to own account)
-    const viewsToMaintainUser = ['profile', 'feed', 'circles', 'parameters', 'tracking'];
-
-    if (!viewsToMaintainUser.includes(viewName)) {
-        // User clicked Home or another reset view - go back to own account
-        if (viewingUserId !== null) {
-            viewingUserId = null;
-            updateMessagesNavVisibility();
-
-            // Re-enable profile fields
-            const bioElement = document.getElementById('profileBio');
-            const interestsElement = document.getElementById('profileInterests');
-            const occupationElement = document.getElementById('profileOccupation');
-            const goalsElement = document.getElementById('profileGoals');
-            const hobbiesElement = document.getElementById('profileFavoriteHobbies');
-            const saveButton = document.getElementById('updateProfileBtn');
-
-            // Re-enable all fields
-            [bioElement, interestsElement, occupationElement, goalsElement, hobbiesElement].forEach(el => {
-                if (el) {
-                    el.disabled = false;
-                    el.style.backgroundColor = '';
-                    el.style.cursor = '';
-                }
-            });
-
-            // Show save button
-            if (saveButton) {
-                saveButton.style.display = '';
-            }
-
-            // Show edit buttons again
-            const editButtons = document.querySelectorAll('.btn-primary, .btn-secondary');
-            editButtons.forEach(btn => {
-                if (btn.textContent.includes('Edit') || btn.textContent.includes('Save') || btn.textContent.includes('Add')) {
-                    btn.style.display = '';
-                }
-            });
-
-            // Remove ALL back to following buttons from all views
-            document.querySelectorAll('.back-to-following-btn').forEach(btn => btn.remove());
-
-            // Remove back button if exists (legacy code - covered by above)
-            const backBtn = document.querySelector('.back-to-following-btn');
-            if (backBtn) backBtn.remove();
-
-            // Reset view headers
-            const profileHeader = document.querySelector('#profileView h2');
-            if (profileHeader) profileHeader.textContent = 'Profile';
-            const feedHeader = document.querySelector('#feedView h2');
-            if (feedHeader) feedHeader.textContent = 'Feed';
-            const circlesHeader = document.querySelector('#circlesView h2');
-            if (circlesHeader) circlesHeader.textContent = 'Circles';
-            const parametersHeader = document.querySelector('#parametersView h2, #trackingView h2');
-            if (parametersHeader) parametersHeader.textContent = 'Wellness Parameters';
-
-            // Show input forms again
-            document.querySelectorAll('form, .post-form, .post-creation, .parameter-inputs').forEach(form => {
-                form.style.display = '';
-            });
-        }
-    }
+    // REMOVED: The automatic reset behavior for certain views
+    // The viewingUserId is now only reset by:
+    // 1. The "Back to Following" button click handler
+    // 2. Calling loadProfile() for own profile
+    // 3. Explicitly setting viewingUserId = null
 
     // Update desktop sidebar
     document.querySelectorAll('.sidebar-item').forEach(item => {
@@ -4869,6 +4811,42 @@ window.updateNotificationSetting = updateNotificationSetting;
                 document.getElementById('profileOccupation').value = response.occupation || '';
                 document.getElementById('profileGoals').value = response.goals || '';
                 document.getElementById('profileFavoriteHobbies').value = response.favorite_hobbies || '';
+
+                // Show Change Password and Delete Account sections when viewing own profile
+                const changePasswordSection = document.getElementById('changePasswordSection');
+                const accountDeletionSection = document.getElementById('accountDeletionSection');
+                if (changePasswordSection) {
+                    changePasswordSection.style.display = '';
+                }
+                if (accountDeletionSection) {
+                    accountDeletionSection.style.display = '';
+                }
+
+                // Re-enable profile fields for own profile
+                const bioElement = document.getElementById('profileBio');
+                const interestsElement = document.getElementById('profileInterests');
+                const occupationElement = document.getElementById('profileOccupation');
+                const goalsElement = document.getElementById('profileGoals');
+                const hobbiesElement = document.getElementById('profileFavoriteHobbies');
+                const saveButton = document.getElementById('updateProfileBtn');
+
+                [bioElement, interestsElement, occupationElement, goalsElement, hobbiesElement].forEach(el => {
+                    if (el) {
+                        el.disabled = false;
+                        el.style.backgroundColor = '';
+                        el.style.cursor = '';
+                    }
+                });
+
+                // Show save button
+                if (saveButton) {
+                    saveButton.style.display = '';
+                }
+
+                // Remove back to following button if present
+                const backBtn = document.querySelector('#profileView .back-to-following-btn');
+                if (backBtn) backBtn.remove();
+
             } catch (error) {
                 console.error('Failed to load profile:', error);
             }
@@ -7597,6 +7575,16 @@ async function loadUserProfileView(userId) {
         // Add back button
         addBackToFollowingButton('profileView');
 
+        // Hide Change Password and Delete Account sections when viewing another user
+        const changePasswordSection = document.getElementById('changePasswordSection');
+        const accountDeletionSection = document.getElementById('accountDeletionSection');
+        if (changePasswordSection) {
+            changePasswordSection.style.display = 'none';
+        }
+        if (accountDeletionSection) {
+            accountDeletionSection.style.display = 'none';
+        }
+
     } catch (error) {
         console.error('Error loading user profile:', error);
         showNotification('Failed to load user profile', 'error');
@@ -7806,6 +7794,16 @@ function addBackToFollowingButton(viewId) {
             // Show save button
             if (saveButton) {
                 saveButton.style.display = '';
+            }
+
+            // Show Change Password and Delete Account sections
+            const changePasswordSection = document.getElementById('changePasswordSection');
+            const accountDeletionSection = document.getElementById('accountDeletionSection');
+            if (changePasswordSection) {
+                changePasswordSection.style.display = '';
+            }
+            if (accountDeletionSection) {
+                accountDeletionSection.style.display = '';
             }
         }
 
