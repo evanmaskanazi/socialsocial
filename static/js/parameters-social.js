@@ -85,6 +85,53 @@ function updatePrivacy(categoryId, privacyLevel) {
     console.log('Privacy updated:', categoryId, privacyLevel);
 }
 
+// Load most recent privacy settings from any previous entry
+// This ensures privacy preferences persist even when starting a new day
+async function loadMostRecentPrivacySettings() {
+    try {
+        // Fetch the list of dates with saved parameters
+        const datesResponse = await fetch('/api/parameters/dates');
+        if (!datesResponse.ok) return;
+        
+        const datesResult = await datesResponse.json();
+        if (!datesResult.success || !datesResult.dates || datesResult.dates.length === 0) {
+            console.log('No previous entries found for privacy settings');
+            return;
+        }
+        
+        // Get the most recent date (dates are typically returned in chronological or reverse order)
+        const sortedDates = datesResult.dates.sort((a, b) => new Date(b) - new Date(a));
+        const mostRecentDate = sortedDates[0];
+        
+        console.log('Loading privacy settings from most recent entry:', mostRecentDate);
+        
+        // Fetch the most recent entry
+        const recentResponse = await fetch(`/api/parameters?date=${mostRecentDate}`);
+        if (!recentResponse.ok) return;
+        
+        const recentResult = await recentResponse.json();
+        if (!recentResult.success || !recentResult.data) return;
+        
+        // Apply privacy settings from the most recent entry
+        ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+            const privacyKey = `${param}_privacy`;
+            const privacyValue = recentResult.data[privacyKey] || 'public';
+            
+            window.selectedPrivacy[param] = privacyValue;
+            
+            // Update the dropdown UI
+            const selector = document.querySelector(`select[data-category="${param}"]`);
+            if (selector) {
+                selector.value = privacyValue;
+            }
+        });
+        
+        console.log('Privacy settings loaded from recent entry:', window.selectedPrivacy);
+    } catch (error) {
+        console.log('Could not load recent privacy settings:', error);
+    }
+}
+
 // Tooltip functions
 function showTooltip(categoryId, event) {
     if (event) {
@@ -700,34 +747,44 @@ function initializeParameters() {
                 if (result.success && result.data) {
                     console.log('Auto-loaded today\'s parameters:', result.data);
                     
-                    // Load privacy settings from server
-                    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
-                        const privacyKey = `${param}_privacy`;
-                        const privacyValue = result.data[privacyKey] || 'private';
-                        
-                        window.selectedPrivacy[param] = privacyValue;
-                        
-                        // Update the dropdown UI
-                        const selector = document.querySelector(`select[data-category="${param}"]`);
-                        if (selector) {
-                            selector.value = privacyValue;
-                        }
-                    });
+                    // Check if today has actual saved data (any non-zero parameter value)
+                    const hasRealData = result.data.parameters && 
+                        Object.values(result.data.parameters).some(v => v && v > 0);
                     
-                    // Also load ratings if they exist
-                    if (result.data.parameters) {
-                        Object.keys(result.data.parameters).forEach(categoryId => {
-                            const value = result.data.parameters[categoryId];
-                            if (value) {
-                                selectRating(categoryId, value);
+                    if (hasRealData) {
+                        // Load privacy settings from today's saved data
+                        ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+                            const privacyKey = `${param}_privacy`;
+                            const privacyValue = result.data[privacyKey] || 'public';
+                            
+                            window.selectedPrivacy[param] = privacyValue;
+                            
+                            // Update the dropdown UI
+                            const selector = document.querySelector(`select[data-category="${param}"]`);
+                            if (selector) {
+                                selector.value = privacyValue;
                             }
                         });
-                    }
-                    
-                    // Load notes
-                    const notesInput = document.getElementById('notesInput');
-                    if (notesInput && result.data.notes) {
-                        notesInput.value = result.data.notes;
+                        
+                        // Also load ratings if they exist
+                        if (result.data.parameters) {
+                            Object.keys(result.data.parameters).forEach(categoryId => {
+                                const value = result.data.parameters[categoryId];
+                                if (value) {
+                                    selectRating(categoryId, value);
+                                }
+                            });
+                        }
+                        
+                        // Load notes
+                        const notesInput = document.getElementById('notesInput');
+                        if (notesInput && result.data.notes) {
+                            notesInput.value = result.data.notes;
+                        }
+                    } else {
+                        // No saved data for today - try to load privacy settings from most recent entry
+                        console.log('No data for today, fetching most recent privacy settings...');
+                        await loadMostRecentPrivacySettings();
                     }
                     
                     // Apply emojis to reflect loaded privacy
@@ -735,7 +792,10 @@ function initializeParameters() {
                 }
             }
         } catch (error) {
-            console.log('No saved parameters for today, using defaults');
+            console.log('No saved parameters for today, trying to load recent privacy settings');
+            // Try to load most recent privacy settings even if today's fetch fails
+            await loadMostRecentPrivacySettings();
+            applyEmojisToPrivacySelectors();
         }
     }, 200);
 
