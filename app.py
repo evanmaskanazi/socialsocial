@@ -434,6 +434,347 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
         return False
 
 
+def get_new_message_email_translations(language='en'):
+    """Get email translations for new message notifications"""
+    translations = {
+        'en': {
+            'subject': 'TheraSocial - New Message from {sender}',
+            'hello': 'Hello',
+            'new_message': 'You have received a new message from {sender}:',
+            'view_message': 'View Message',
+            'preview': 'Message preview:',
+            'login_to_view': 'Log in to TheraSocial to view the full message and reply.',
+            'regards': 'Best regards',
+            'team': 'TheraSocial Team'
+        },
+        'he': {
+            'subject': 'TheraSocial - הודעה חדשה מ-{sender}',
+            'hello': 'שלום',
+            'new_message': 'קיבלת הודעה חדשה מ-{sender}:',
+            'view_message': 'צפה בהודעה',
+            'preview': 'תצוגה מקדימה:',
+            'login_to_view': 'התחבר ל-TheraSocial כדי לצפות בהודעה המלאה ולהשיב.',
+            'regards': 'בברכה',
+            'team': 'צוות TheraSocial'
+        },
+        'ar': {
+            'subject': 'TheraSocial - رسالة جديدة من {sender}',
+            'hello': 'مرحبا',
+            'new_message': 'لقد تلقيت رسالة جديدة من {sender}:',
+            'view_message': 'عرض الرسالة',
+            'preview': 'معاينة الرسالة:',
+            'login_to_view': 'سجل الدخول إلى TheraSocial لعرض الرسالة الكاملة والرد.',
+            'regards': 'مع أطيب التحيات',
+            'team': 'فريق TheraSocial'
+        },
+        'ru': {
+            'subject': 'TheraSocial - Новое сообщение от {sender}',
+            'hello': 'Здравствуйте',
+            'new_message': 'Вы получили новое сообщение от {sender}:',
+            'view_message': 'Просмотреть сообщение',
+            'preview': 'Предварительный просмотр:',
+            'login_to_view': 'Войдите в TheraSocial, чтобы прочитать полное сообщение и ответить.',
+            'regards': 'С наилучшими пожеланиями',
+            'team': 'Команда TheraSocial'
+        }
+    }
+    return translations.get(language, translations['en'])
+
+
+def send_new_message_notification_email(recipient_email, sender_name, message_preview, user_language='en'):
+    """Send email notification when user receives a new message"""
+    try:
+        t = get_new_message_email_translations(user_language)
+        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        messages_link = f"{app_url}/#messages"
+
+        is_rtl = user_language in ['he', 'ar']
+        text_dir = 'rtl' if is_rtl else 'ltr'
+        text_align = 'right' if is_rtl else 'left'
+
+        subject = t['subject'].format(sender=sender_name)
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="background: #667eea; padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">TheraSocial</h1>
+                </div>
+                <div style="padding: 40px 30px;">
+                    <h2 style="color: #333; margin-top: 0;">{t['new_message'].format(sender=sender_name)}</h2>
+                    <p style="color: #666; line-height: 1.6;">{t['hello']},</p>
+                    <p style="color: #666; line-height: 1.6;">{t['preview']}</p>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+                        <p style="color: #555; margin: 0; font-style: italic;">"{message_preview[:200]}{'...' if len(message_preview) > 200 else ''}"</p>
+                    </div>
+                    <p style="color: #666; line-height: 1.6;">{t['login_to_view']}</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{messages_link}" style="background: #667eea; color: white; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                            {t['view_message']}
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 20px 30px; border-top: 1px solid #eee;">
+                    <p style="color: #999; font-size: 12px; margin: 0;">
+                        {t['regards']},<br>{t['team']}
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            message = Mail(
+                from_email=app.config['MAIL_DEFAULT_SENDER'],
+                to_emails=recipient_email,
+                subject=subject,
+                html_content=html_content
+            )
+
+            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
+            response = sg.send(message)
+            logging.info(f'New message notification email sent to {recipient_email}')
+            return True
+        except Exception as e:
+            logging.error(f'Failed to send new message notification email: {str(e)}')
+            return False
+
+    except Exception as e:
+        logger.error(f"Failed to send new message notification email: {e}")
+        return False
+
+
+def get_alert_notification_email_translations(language='en'):
+    """Get email translations for alert notifications"""
+    translations = {
+        'en': {
+            'subject': 'TheraSocial - New Alert',
+            'hello': 'Hello',
+            'new_alert': 'You have a new alert:',
+            'view_alerts': 'View Alerts',
+            'login_to_view': 'Log in to TheraSocial to view all your alerts.',
+            'regards': 'Best regards',
+            'team': 'TheraSocial Team'
+        },
+        'he': {
+            'subject': 'TheraSocial - התראה חדשה',
+            'hello': 'שלום',
+            'new_alert': 'יש לך התראה חדשה:',
+            'view_alerts': 'צפה בהתראות',
+            'login_to_view': 'התחבר ל-TheraSocial כדי לצפות בכל ההתראות שלך.',
+            'regards': 'בברכה',
+            'team': 'צוות TheraSocial'
+        },
+        'ar': {
+            'subject': 'TheraSocial - تنبيه جديد',
+            'hello': 'مرحبا',
+            'new_alert': 'لديك تنبيه جديد:',
+            'view_alerts': 'عرض التنبيهات',
+            'login_to_view': 'سجل الدخول إلى TheraSocial لعرض جميع تنبيهاتك.',
+            'regards': 'مع أطيب التحيات',
+            'team': 'فريق TheraSocial'
+        },
+        'ru': {
+            'subject': 'TheraSocial - Новое уведомление',
+            'hello': 'Здравствуйте',
+            'new_alert': 'У вас новое уведомление:',
+            'view_alerts': 'Просмотреть уведомления',
+            'login_to_view': 'Войдите в TheraSocial, чтобы просмотреть все уведомления.',
+            'regards': 'С наилучшими пожеланиями',
+            'team': 'Команда TheraSocial'
+        }
+    }
+    return translations.get(language, translations['en'])
+
+
+def send_alert_notification_email(user_email, alert_title, alert_content, user_language='en'):
+    """Send email notification when user gets a new alert"""
+    try:
+        t = get_alert_notification_email_translations(user_language)
+        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+
+        is_rtl = user_language in ['he', 'ar']
+        text_dir = 'rtl' if is_rtl else 'ltr'
+        text_align = 'right' if is_rtl else 'left'
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="background: #667eea; padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">TheraSocial</h1>
+                </div>
+                <div style="padding: 40px 30px;">
+                    <p style="color: #666; line-height: 1.6;">{t['hello']},</p>
+                    <p style="color: #666; line-height: 1.6;">{t['new_alert']}</p>
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                        <h3 style="color: #856404; margin: 0 0 10px 0;">{alert_title}</h3>
+                        <p style="color: #856404; margin: 0;">{alert_content}</p>
+                    </div>
+                    <p style="color: #666; line-height: 1.6;">{t['login_to_view']}</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{app_url}" style="background: #667eea; color: white; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                            {t['view_alerts']}
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 20px 30px; border-top: 1px solid #eee;">
+                    <p style="color: #999; font-size: 12px; margin: 0;">
+                        {t['regards']},<br>{t['team']}
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            message = Mail(
+                from_email=app.config['MAIL_DEFAULT_SENDER'],
+                to_emails=user_email,
+                subject=t['subject'],
+                html_content=html_content
+            )
+
+            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
+            response = sg.send(message)
+            logging.info(f'Alert notification email sent to {user_email}')
+            return True
+        except Exception as e:
+            logging.error(f'Failed to send alert notification email: {str(e)}')
+            return False
+
+    except Exception as e:
+        logger.error(f"Failed to send alert notification email: {e}")
+        return False
+
+
+def get_daily_diary_reminder_translations(language='en'):
+    """Get email translations for daily diary reminder"""
+    translations = {
+        'en': {
+            'subject': 'TheraSocial - Daily Wellness Check-in Reminder',
+            'hello': 'Hello',
+            'reminder': "Don't forget to log your wellness parameters for today!",
+            'description': 'Taking a few moments to track your mood, energy, sleep, and other wellness factors helps you understand your patterns and make positive changes.',
+            'fill_diary': 'Fill Out Daily Diary',
+            'regards': 'Best regards',
+            'team': 'TheraSocial Team',
+            'unsubscribe': 'To stop receiving these reminders, turn off daily email reminders in your alert settings.'
+        },
+        'he': {
+            'subject': 'TheraSocial - תזכורת יומית למילוי יומן',
+            'hello': 'שלום',
+            'reminder': 'אל תשכח למלא את פרמטרי הבריאות שלך להיום!',
+            'description': 'הקדשת כמה רגעים למעקב אחר מצב הרוח, האנרגיה, השינה וגורמי בריאות אחרים עוזרת לך להבין את הדפוסים שלך ולבצע שינויים חיוביים.',
+            'fill_diary': 'מלא יומן יומי',
+            'regards': 'בברכה',
+            'team': 'צוות TheraSocial',
+            'unsubscribe': 'כדי להפסיק לקבל תזכורות אלה, כבה את התזכורות היומיות בהגדרות ההתראות שלך.'
+        },
+        'ar': {
+            'subject': 'TheraSocial - تذكير يومي بملء اليومية',
+            'hello': 'مرحبا',
+            'reminder': 'لا تنس تسجيل معلومات صحتك لهذا اليوم!',
+            'description': 'قضاء بضع لحظات لتتبع مزاجك وطاقتك ونومك وعوامل الصحة الأخرى يساعدك على فهم أنماطك وإجراء تغييرات إيجابية.',
+            'fill_diary': 'ملء اليومية اليومية',
+            'regards': 'مع أطيب التحيات',
+            'team': 'فريق TheraSocial',
+            'unsubscribe': 'لإيقاف تلقي هذه التذكيرات، قم بإيقاف تشغيل التذكيرات اليومية في إعدادات التنبيهات.'
+        },
+        'ru': {
+            'subject': 'TheraSocial - Ежедневное напоминание о дневнике здоровья',
+            'hello': 'Здравствуйте',
+            'reminder': 'Не забудьте записать ваши показатели здоровья за сегодня!',
+            'description': 'Несколько минут на отслеживание настроения, энергии, сна и других факторов помогут вам понять ваши паттерны и внести позитивные изменения.',
+            'fill_diary': 'Заполнить дневник',
+            'regards': 'С наилучшими пожеланиями',
+            'team': 'Команда TheraSocial',
+            'unsubscribe': 'Чтобы перестать получать эти напоминания, отключите ежедневные напоминания в настройках уведомлений.'
+        }
+    }
+    return translations.get(language, translations['en'])
+
+
+def send_daily_diary_reminder_email(user_email, user_language='en'):
+    """Send daily reminder email to fill out wellness diary"""
+    try:
+        t = get_daily_diary_reminder_translations(user_language)
+        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        diary_link = f"{app_url}/parameters"
+
+        is_rtl = user_language in ['he', 'ar']
+        text_dir = 'rtl' if is_rtl else 'ltr'
+        text_align = 'right' if is_rtl else 'left'
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">📝 TheraSocial</h1>
+                </div>
+                <div style="padding: 40px 30px;">
+                    <p style="color: #666; line-height: 1.6;">{t['hello']},</p>
+                    <h2 style="color: #667eea; margin-top: 0;">{t['reminder']}</h2>
+                    <p style="color: #666; line-height: 1.6;">{t['description']}</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{diary_link}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 40px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                            {t['fill_diary']}
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 20px 30px; border-top: 1px solid #eee;">
+                    <p style="color: #999; font-size: 12px; margin: 0;">
+                        {t['regards']},<br>{t['team']}
+                    </p>
+                    <p style="color: #999; font-size: 10px; margin-top: 15px; font-style: italic;">
+                        {t['unsubscribe']}
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            message = Mail(
+                from_email=app.config['MAIL_DEFAULT_SENDER'],
+                to_emails=user_email,
+                subject=t['subject'],
+                html_content=html_content
+            )
+
+            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
+            response = sg.send(message)
+            logging.info(f'Daily diary reminder email sent to {user_email}')
+            return True
+        except Exception as e:
+            logging.error(f'Failed to send daily diary reminder email: {str(e)}')
+            return False
+
+    except Exception as e:
+        logger.error(f"Failed to send daily diary reminder email: {e}")
+        return False
+
+
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
     # Guard: Skip if already run in this process
@@ -1209,6 +1550,10 @@ class NotificationSettings(db.Model):
     parameter_triggers = db.Column(db.Boolean, default=True)
     daily_reminder = db.Column(db.Boolean, default=False)
     weekly_summary = db.Column(db.Boolean, default=False)
+    # New email notification settings
+    email_on_alert = db.Column(db.Boolean, default=False)  # Email for each alert
+    email_daily_diary_reminder = db.Column(db.Boolean, default=False)  # Daily reminder to fill diary
+    email_on_new_message = db.Column(db.Boolean, default=True)  # Email on new message (default True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -3776,6 +4121,81 @@ def mark_alert_read(alert_id):
         return jsonify({'error': 'Failed to mark alert'}), 500
 
 
+@app.route('/api/notification-settings', methods=['GET', 'PUT'])
+@login_required
+def notification_settings():
+    """Get or update notification settings"""
+    user_id = session.get('user_id')
+    
+    if request.method == 'GET':
+        try:
+            settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+            
+            if not settings:
+                # Return defaults
+                return jsonify({
+                    'email_on_alert': False,
+                    'email_daily_diary_reminder': False,
+                    'email_on_new_message': True,
+                    'follow_requests': True,
+                    'parameter_triggers': True,
+                    'daily_reminder': False,
+                    'weekly_summary': False
+                })
+            
+            return jsonify({
+                'email_on_alert': settings.email_on_alert or False,
+                'email_daily_diary_reminder': settings.email_daily_diary_reminder or False,
+                'email_on_new_message': settings.email_on_new_message if settings.email_on_new_message is not None else True,
+                'follow_requests': settings.follow_requests,
+                'parameter_triggers': settings.parameter_triggers,
+                'daily_reminder': settings.daily_reminder,
+                'weekly_summary': settings.weekly_summary
+            })
+        except Exception as e:
+            logger.error(f"Get notification settings error: {str(e)}")
+            return jsonify({'error': 'Failed to get settings'}), 500
+    
+    elif request.method == 'PUT':
+        try:
+            data = request.get_json()
+            
+            settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+            
+            if not settings:
+                settings = NotificationSettings(user_id=user_id)
+                db.session.add(settings)
+            
+            # Update settings based on provided data
+            if 'email_on_alert' in data:
+                settings.email_on_alert = data['email_on_alert']
+            if 'email_daily_diary_reminder' in data:
+                settings.email_daily_diary_reminder = data['email_daily_diary_reminder']
+            if 'email_on_new_message' in data:
+                settings.email_on_new_message = data['email_on_new_message']
+            if 'follow_requests' in data:
+                settings.follow_requests = data['follow_requests']
+            if 'parameter_triggers' in data:
+                settings.parameter_triggers = data['parameter_triggers']
+            if 'daily_reminder' in data:
+                settings.daily_reminder = data['daily_reminder']
+            if 'weekly_summary' in data:
+                settings.weekly_summary = data['weekly_summary']
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'email_on_alert': settings.email_on_alert or False,
+                'email_daily_diary_reminder': settings.email_daily_diary_reminder or False,
+                'email_on_new_message': settings.email_on_new_message if settings.email_on_new_message is not None else True
+            })
+        except Exception as e:
+            logger.error(f"Update notification settings error: {str(e)}")
+            db.session.rollback()
+            return jsonify({'error': 'Failed to update settings'}), 500
+
+
 # =====================
 # MESSAGES ROUTES
 # =====================
@@ -3922,6 +4342,26 @@ def messages():
                 alert_type='info'
             )
             db.session.add(alert)
+
+            # Send email notification if recipient has email_on_new_message enabled
+            try:
+                recipient_settings = NotificationSettings.query.filter_by(user_id=recipient_id).first()
+                # Default to True if no settings exist (email_on_new_message defaults to True)
+                should_send_email = True
+                if recipient_settings:
+                    should_send_email = recipient_settings.email_on_new_message
+                
+                if should_send_email and recipient.email:
+                    recipient_language = recipient.preferred_language or 'en'
+                    send_new_message_notification_email(
+                        recipient.email,
+                        sender_name,
+                        content,
+                        recipient_language
+                    )
+            except Exception as email_error:
+                logger.error(f"Error sending message notification email: {str(email_error)}")
+                # Don't fail the message send if email fails
 
             # Update activity for today
             today = datetime.utcnow().date()
@@ -4565,6 +5005,103 @@ def update_circles_privacy():
         logger.error(f"Update circles privacy error: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to update privacy'}), 500
+
+
+@app.route('/api/circles/recommendations', methods=['GET'])
+@login_required
+def get_circle_recommendations():
+    """Get recommended users to add to circles - prioritizes same city and mutual connections"""
+    try:
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id)
+
+        if not user:
+            return jsonify({'recommendations': []}), 200
+
+        recommendations = []
+        seen_ids = set([user_id])
+
+        # Get users already in any circle
+        existing_circle_users = db.session.execute(
+            select(Circle.circle_user_id).filter_by(user_id=user_id)
+        ).scalars().all()
+        seen_ids.update(existing_circle_users)
+
+        # PRIORITY 1: Mutual connections (users who follow me AND I follow them)
+        # Get users I follow
+        my_following_ids = db.session.execute(
+            select(Follow.followed_id).filter_by(follower_id=user_id)
+        ).scalars().all()
+
+        # Get users who follow me
+        my_follower_ids = db.session.execute(
+            select(Follow.follower_id).filter_by(followed_id=user_id)
+        ).scalars().all()
+
+        # Find mutual connections
+        mutual_ids = set(my_following_ids) & set(my_follower_ids)
+
+        for mutual_id in mutual_ids:
+            if mutual_id in seen_ids or len(recommendations) >= 20:
+                continue
+
+            mutual_user = db.session.get(User, mutual_id)
+            if mutual_user and mutual_user.is_active:
+                seen_ids.add(mutual_id)
+                reason = 'Mutual connection'
+                if user.selected_city and mutual_user.selected_city == user.selected_city:
+                    reason = 'Mutual connection & same city'
+
+                recommendations.append({
+                    'id': mutual_user.id,
+                    'username': mutual_user.username,
+                    'email': mutual_user.email,
+                    'selected_city': mutual_user.selected_city,
+                    'reason': reason,
+                    'reason_key': 'circles.reason_mutual' if 'same city' not in reason else 'circles.reason_mutual_city'
+                })
+
+        # PRIORITY 2: Users in same city that I follow (but not mutual)
+        if user.selected_city and len(recommendations) < 20:
+            for followed_id in my_following_ids:
+                if followed_id in seen_ids or len(recommendations) >= 20:
+                    continue
+
+                followed_user = db.session.get(User, followed_id)
+                if followed_user and followed_user.is_active and followed_user.selected_city == user.selected_city:
+                    seen_ids.add(followed_id)
+                    recommendations.append({
+                        'id': followed_user.id,
+                        'username': followed_user.username,
+                        'email': followed_user.email,
+                        'selected_city': followed_user.selected_city,
+                        'reason': 'Same city',
+                        'reason_key': 'circles.reason_same_city'
+                    })
+
+        # PRIORITY 3: Other users I follow
+        if len(recommendations) < 20:
+            for followed_id in my_following_ids:
+                if followed_id in seen_ids or len(recommendations) >= 20:
+                    continue
+
+                followed_user = db.session.get(User, followed_id)
+                if followed_user and followed_user.is_active:
+                    seen_ids.add(followed_id)
+                    recommendations.append({
+                        'id': followed_user.id,
+                        'username': followed_user.username,
+                        'email': followed_user.email,
+                        'selected_city': followed_user.selected_city,
+                        'reason': 'You follow',
+                        'reason_key': 'circles.reason_following'
+                    })
+
+        return jsonify({'recommendations': recommendations[:20]})
+
+    except Exception as e:
+        logger.error(f"Get circle recommendations error: {str(e)}")
+        return jsonify({'error': 'Failed to get recommendations'}), 500
 
 
 # =====================
