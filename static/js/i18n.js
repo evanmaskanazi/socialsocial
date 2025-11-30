@@ -796,7 +796,7 @@ const translations = {
     'email.diary_reminder_subject': 'TheraSocial - Daily Wellness Check-in Reminder',
     'email.diary_reminder': "Don't forget to log your wellness parameters for today!",
     'email.fill_diary': 'Fill Out Daily Diary',
-    'email.unsubscribe_reminder': 'To stop receiving these reminders, turn off,
+    'email.unsubscribe_reminder': 'To stop receiving these reminders, turn off daily email reminders in your alert settings.',
 
         // Message notifications
         'msg.loaded': 'Parameters loaded successfully',
