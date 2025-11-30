@@ -3479,7 +3479,7 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 
         // Reset viewing context ONLY for following, followers, messages, and invite
         // Keep viewingUserId for feed, profile, circles, parameters, tracking so user can navigate between viewed user's data
-       if (['following', 'followers', 'messages', 'invite', 'circles'].includes(view)) {
+       if (['following', 'followers', 'messages', 'invite'].includes(view)) {
             console.log('[NAV] Resetting viewingUserId for main nav:', view);
             viewingUserId = null;
             window.viewingUserId = null;
