@@ -9022,21 +9022,25 @@ def user_city():
             data = request.json
             city = data.get('selected_city')
 
-            # List of valid cities
+            # List of valid cities - Israel, USA, and UK only (MVP focus)
             valid_cities = [
-                'Jerusalem, Israel', 'Tokyo, Japan', 'Delhi, India', 'Shanghai, China',
-                'Mexico City, Mexico', 'São Paulo, Brazil', 'Cairo, Egypt',
-                'Dhaka, Bangladesh', 'Beijing, China', 'Mumbai, India',
-                'Osaka, Japan', 'Karachi, Pakistan', 'Chongqing, China',
-                'Kinshasa, DR Congo', 'New York City, USA', 'Istanbul, Turkey',
-                'London, United Kingdom', 'Paris, France', 'Buenos Aires, Argentina',
-                'Moscow, Russia', 'Seoul, South Korea', 'Hong Kong, China',
-                'Dubai, UAE', 'Sydney, Australia', 'Singapore, Singapore',
-                'Los Angeles, USA', 'Chicago, USA', 'Melbourne, Australia',
-                'Berlin, Germany', 'Madrid, Spain', 'Rome, Italy',
-                'Bangkok, Thailand', 'Jakarta, Indonesia', 'Tehran, Iran',
-                'Lagos, Nigeria', 'Rio de Janeiro, Brazil', 'Vancouver, Canada',
-                'Amsterdam, Netherlands', 'Washington, USA', 'Houston, USA'
+                # Israel (10 cities)
+                'Jerusalem, Israel', 'Tel Aviv, Israel', 'Haifa, Israel',
+                'Beer Sheva, Israel', 'Netanya, Israel', 'Rishon LeZion, Israel',
+                'Petah Tikva, Israel', 'Ashdod, Israel', 'Eilat, Israel', 'Herzliya, Israel',
+                # USA (25 cities)
+                'New York City, USA', 'Los Angeles, USA', 'Chicago, USA',
+                'Washington, USA', 'Houston, USA', 'San Francisco, USA',
+                'Boston, USA', 'Philadelphia, USA', 'Phoenix, USA', 'San Diego, USA',
+                'Dallas, USA', 'Seattle, USA', 'Miami, USA', 'Atlanta, USA',
+                'Denver, USA', 'Austin, USA', 'San Jose, USA', 'Portland, USA',
+                'Las Vegas, USA', 'Minneapolis, USA', 'Detroit, USA', 'Baltimore, USA',
+                'Nashville, USA', 'Charlotte, USA', 'Orlando, USA',
+                # UK (15 cities)
+                'London, UK', 'Manchester, UK', 'Birmingham, UK', 'Edinburgh, UK',
+                'Glasgow, UK', 'Bristol, UK', 'Liverpool, UK', 'Leeds, UK',
+                'Sheffield, UK', 'Newcastle, UK', 'Nottingham, UK', 'Southampton, UK',
+                'Cardiff, UK', 'Belfast, UK', 'Cambridge, UK'
             ]
 
             if city not in valid_cities:
