@@ -81,6 +81,8 @@ const translations = {
         'triggers.set': 'Set Alert Triggers',
         'triggers.watching': 'Watching Diary For',
         'about.team_title': 'Our Team & Story',
+        'notifications.city_time': '{city} Time',
+'notifications.select_city': 'Select a city',
 'auth.username_placeholder': 'Choose a username',
 'about.team_title': 'Our Team & Story',
 'about.team_intro': 'The primary team behind this is CEO Benny Brandstetter and CTO Evan Askanazi.',
@@ -1080,6 +1082,8 @@ const translations = {
 'trigger_condition_greater_than': 'יותר מ',
 'trigger_days_format': '{count} ימים',
 'trigger_set_alert': 'הגדר התראות',
+'notifications.city_time': 'שעון {city}',
+'notifications.select_city': 'בחר עיר',
 
 'trigger_add': 'הוסף התראה',
 'trigger_remove': 'הסר',
@@ -1703,6 +1707,9 @@ const translations = {
     'parameters.notes': 'ملاحظات',
     'parameters.notes_placeholder': 'أفكار إضافية لليوم...',
     'auth.create_account': 'إنشاء حساب',
+'notifications.city_time': 'توقيت {city}',
+'notifications.select_city': 'اختر مدينة',
+
 
     'parameters.clear': 'مسح النموذج',
 
@@ -2713,6 +2720,8 @@ const translations = {
 'invite.copy': 'Скопировать ссылку',
 'invite.find_people': '🔍 Найти людей для подписки',
  'invite.view_public': '👁️ Просмотреть вашу публичную страницу приглашения',
+ 'notifications.city_time': 'Время: {city}',
+'notifications.select_city': 'Выберите город',
 'invite.email': 'Email',
 'invite.sms': 'SMS',
 'invite.whatsapp': 'WhatsApp',
