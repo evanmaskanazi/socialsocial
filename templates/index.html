@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ201 -->
-<!-- Features: User Blocking, Diary Reminder Time with Timezone, Optimized Cron Processing -->
+<!-- TheraSocial Version PJ202 -->
+<!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1472,41 +1472,67 @@
                 <span data-i18n="auth.invalid_credentials">You have entered an invalid username or password</span>
             </div>
             <h2 class="auth-title" id="authTitle" data-i18n="auth.welcome">Welcome Back</h2>
-          <form id="authForm">
+            
+            <!-- LOGIN MODE: Single email/password form -->
+            <form id="authForm">
+                <div id="loginSection">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="auth.email">Email</label>
+                        <input type="email" class="form-input" id="emailInput" autocomplete="email" required>
+                    </div>
+
+                    <div class="form-group" id="passwordGroup">
+                        <label class="form-label" data-i18n="auth.password">Password</label>
+                        <input type="password" class="form-input" id="passwordInput" autocomplete="current-password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="authSubmit" data-i18n="btn.signin">Sign In</button>
+                </div>
+            </form>
+            
+            <!-- SIGNUP MODE: Magic Link + OR + Traditional Signup -->
+            <div id="signupSection" style="display: none;">
+                <!-- Magic Link Option (TOP) -->
                 <div class="form-group">
                     <label class="form-label" data-i18n="auth.email">Email</label>
-                    <input type="email" class="form-input" id="emailInput" autocomplete="email" required>
+                    <input type="email" class="form-input" id="magicLinkEmailInput" autocomplete="email" placeholder="Enter your email">
                 </div>
-
-                <!-- Magic Link Option for signup -->
-                <div id="magicLinkOption" style="display: none;">
-                    <button type="button" class="magic-link-btn" onclick="requestMagicLink()" data-i18n="auth.magic_link">
-                        Send me a magic link to sign in
-                    </button>
-                    <div class="auth-divider">
-                        <span data-i18n="auth.or">OR</span>
+                <button type="button" class="magic-link-btn" onclick="requestMagicLinkSignup()" data-i18n="auth.magic_link">
+                    Send me a magic link to sign in
+                </button>
+                
+                <!-- OR Divider -->
+                <div class="auth-divider">
+                    <span data-i18n="auth.or">OR</span>
+                </div>
+                
+                <!-- Traditional Signup (BOTTOM) -->
+                <form id="signupForm">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="auth.email">Email</label>
+                        <input type="email" class="form-input" id="signupEmailInput" autocomplete="email" required>
                     </div>
-                </div>
 
-                <div class="form-group" id="passwordGroup">
-                    <label class="form-label" data-i18n="auth.password">Password</label>
-                    <input type="password" class="form-input" id="passwordInput" autocomplete="current-password">
-                </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="auth.password">Password</label>
+                        <input type="password" class="form-input" id="signupPasswordInput" autocomplete="new-password" required>
+                    </div>
 
-                <!-- Username field for conventional signup (can be left blank) -->
-                <div class="form-group" id="usernameGroup" style="display: none;">
-                    <label class="form-label">
-                        <span data-i18n="auth.username">Username</span>
-                        <span style="color: #666; font-size: 12px;" data-i18n="username.optional">(optional)</span>
-                    </label>
-                    <input type="text" class="form-input" id="usernameInput" autocomplete="username"
-                           data-i18n-placeholder="username.blank_for_email"
-                           placeholder="Leave blank to use email prefix">
-                    <small style="color: #666;" id="emailPrefixHint"></small>
-                </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span data-i18n="auth.username">Username</span>
+                            <span style="color: #666; font-size: 12px;" data-i18n="username.optional">(optional)</span>
+                        </label>
+                        <input type="text" class="form-input" id="signupUsernameInput" autocomplete="username"
+                               data-i18n-placeholder="username.blank_for_email"
+                               placeholder="Leave blank to use email prefix">
+                        <small style="color: #666;" id="signupEmailPrefixHint"></small>
+                    </div>
 
-                <button type="submit" class="btn btn-primary" id="authSubmit" data-i18n="btn.signin">Sign In</button>
-            </form>
+                    <button type="submit" class="btn btn-primary" data-i18n="btn.signup">Sign Up</button>
+                </form>
+            </div>
+            
             <p style="text-align: center; margin-top: 15px;">
                 <a href="#" id="forgotPasswordLink" style="color: var(--primary); font-size: 14px;" data-i18n="auth.forgot_password" onclick="showForgotPassword(); return false;">Forgot Your Password?</a>
             </p>
@@ -2477,10 +2503,16 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.reminder_time">Reminder time</label>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="time" id="diaryReminderTimeInput" 
+                                <!-- 24-hour format time input -->
+                                <input type="text" id="diaryReminderTimeInput" 
                                     value="09:00" 
+                                    pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                                    maxlength="5"
+                                    placeholder="HH:MM"
                                     onchange="updateDiaryReminderTime(this.value)"
-                                    style="padding: 6px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-size: 14px; background: var(--card-bg, #fff); color: var(--text-primary, #333);">
+                                    onkeyup="formatTimeInput(this)"
+                                    style="padding: 6px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-size: 14px; background: var(--card-bg, #fff); color: var(--text-primary, #333); width: 70px; text-align: center; font-family: monospace;">
+                                <span style="font-size: 11px; color: #888;">(24h)</span>
                                 <span id="diaryReminderTimezone" style="font-size: 11px; color: #666;"></span>
                             </div>
                         </div>
@@ -2565,7 +2597,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=12.0"></script>
+   <script src="/static/js/circles-messages.js?v=202.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -2894,27 +2926,24 @@ async function loadUserCity() {
                 // Switch to signup mode
                 authTitle.setAttribute('data-i18n', 'auth.create_account');
                 authTitle.textContent = 'Create Account';
-                document.getElementById('usernameGroup').style.display = 'block';
-                document.getElementById('magicLinkOption').style.display = 'block';
-                document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signup');
-                document.getElementById('authSubmit').textContent = 'Sign Up';
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('signupSection').style.display = 'block';
+                document.getElementById('forgotPasswordLink').style.display = 'none';
                 this.setAttribute('data-i18n', 'auth.toggle_signin');
                 this.textContent = 'Already have an account? Sign in';
-                // Update email hint when switching to signup
-                updateEmailPrefixHint();
             } else {
                 // Switch to login mode
                 authTitle.setAttribute('data-i18n', 'auth.welcome');
                 authTitle.textContent = 'Welcome Back';
-                document.getElementById('usernameGroup').style.display = 'none';
-                document.getElementById('magicLinkOption').style.display = 'none';
-                document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signin');
-                document.getElementById('authSubmit').textContent = 'Sign In';
+                document.getElementById('loginSection').style.display = 'block';
+                document.getElementById('signupSection').style.display = 'none';
+                document.getElementById('forgotPasswordLink').style.display = 'block';
                 this.setAttribute('data-i18n', 'auth.toggle_signup');
-                this.textContent = "Don't have an account? Sign up";
+                this.textContent = "New here? Create an account";
             }
         });
 
+  // Login form handler (authForm is now only for login)
   document.getElementById('authForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -2924,45 +2953,13 @@ async function loadUserCity() {
 
         const email = document.getElementById('emailInput').value;
         const password = document.getElementById('passwordInput').value;
-        const usernameInput = document.getElementById('usernameInput').value;
-
-        // Handle username - can be blank, will use email prefix
-        let username = usernameInput ? usernameInput.trim() : '';
-        if (!username && !isLoginMode) {
-            username = email.split('@')[0];
-        }
 
         try {
-            const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
-            const body = { email, password };
-
-            if (!isLoginMode) {
-                body.username = username; // Will be email prefix if left blank
-                // Send current language selection
-                body.preferred_language = window.i18n && window.i18n.getCurrentLanguage ?
-                    window.i18n.getCurrentLanguage() : 'en';
-            }
-            const response = await apiCall(endpoint, 'POST', body);
+            const response = await apiCall('/auth/login', 'POST', { email, password });
 
             if (response && response.success) {
                 currentUser = response.user;
-                currentUserId = response.user.id; // Store the user ID
-
-                // Check if new user needs consent
-                if (!isLoginMode) {
-                    // For new signups, check if consent is needed
-                    const consentCheck = await fetch('/api/auth/session');
-                    const sessionData = await consentCheck.json();
-                    if (sessionData.authenticated) {
-                        // Check if user has accepted consent
-                        const consentResponse = await fetch('/api/user/consent-status');
-                        const consentData = await consentResponse.json();
-                        if (!consentData.has_consent) {
-                            showConsentModal();
-                            return; // Don't show dashboard yet
-                        }
-                    }
-                }
+                currentUserId = response.user.id;
 
                 // FIX #5: Check if user needs to fill diary before showing dashboard
                 const needsDiary = await checkAndRedirectToDiary();
@@ -2973,29 +2970,7 @@ async function loadUserCity() {
                     loadNotificationSettings();
                 }
             } else {
-                // FIX #1: Handle login failure (apiCall returns null on 401 or error response)
-                if (isLoginMode) {
-                    // Show translated login error message
-                    const lang = localStorage.getItem('selectedLanguage') || 'en';
-                    const errorTexts = {
-                        'en': 'You have entered an invalid username or password',
-                        'he': 'הזנת שם משתמש או סיסמה לא תקינים',
-                        'ar': 'لقد أدخلت اسم مستخدم أو كلمة مرور غير صالحة',
-                        'ru': 'Вы ввели неверное имя пользователя или пароль'
-                    };
-                    const errorSpan = loginError.querySelector('span');
-                    if (errorSpan) {
-                        errorSpan.textContent = errorTexts[lang] || errorTexts['en'];
-                    }
-                    loginError.style.display = 'block';
-                    // Auto-hide after 5 seconds
-                    setTimeout(() => { loginError.style.display = 'none'; }, 5000);
-                }
-            }
-        } catch (error) {
-            // FIX #1: Show translated login error message instead of alert
-            if (loginError && isLoginMode) {
-                // Update text based on current language
+                // Show translated login error message
                 const lang = localStorage.getItem('selectedLanguage') || 'en';
                 const errorTexts = {
                     'en': 'You have entered an invalid username or password',
@@ -3008,13 +2983,141 @@ async function loadUserCity() {
                     errorSpan.textContent = errorTexts[lang] || errorTexts['en'];
                 }
                 loginError.style.display = 'block';
-                // Auto-hide after 5 seconds
                 setTimeout(() => { loginError.style.display = 'none'; }, 5000);
-            } else {
-                alert(error.message);
             }
+        } catch (error) {
+            const lang = localStorage.getItem('selectedLanguage') || 'en';
+            const errorTexts = {
+                'en': 'You have entered an invalid username or password',
+                'he': 'הזנת שם משתמש או סיסמה לא תקינים',
+                'ar': 'لقد أدخلت اسم مستخدم أو كلمة مرور غير صالحة',
+                'ru': 'Вы ввели неверное имя пользователя или пароль'
+            };
+            const errorSpan = loginError.querySelector('span');
+            if (errorSpan) {
+                errorSpan.textContent = errorTexts[lang] || errorTexts['en'];
+            }
+            loginError.style.display = 'block';
+            setTimeout(() => { loginError.style.display = 'none'; }, 5000);
         }
     });
+
+  // Signup form handler (traditional email/password signup)
+  document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const email = document.getElementById('signupEmailInput').value;
+        const password = document.getElementById('signupPasswordInput').value;
+        const usernameInput = document.getElementById('signupUsernameInput').value;
+
+        // Handle username - can be blank, will use email prefix
+        let username = usernameInput ? usernameInput.trim() : '';
+        if (!username) {
+            username = email.split('@')[0];
+        }
+
+        try {
+            const body = { 
+                email, 
+                password,
+                username,
+                preferred_language: window.i18n && window.i18n.getCurrentLanguage ?
+                    window.i18n.getCurrentLanguage() : 'en'
+            };
+            
+            const response = await apiCall('/auth/register', 'POST', body);
+
+            if (response && response.success) {
+                currentUser = response.user;
+                currentUserId = response.user.id;
+
+                // Check if new user needs consent
+                const consentCheck = await fetch('/api/auth/session');
+                const sessionData = await consentCheck.json();
+                if (sessionData.authenticated) {
+                    const consentResponse = await fetch('/api/user/consent-status');
+                    const consentData = await consentResponse.json();
+                    if (!consentData.has_consent) {
+                        showConsentModal();
+                        return;
+                    }
+                }
+
+                // Check if user needs to fill diary before showing dashboard
+                const needsDiary = await checkAndRedirectToDiary();
+                if (!needsDiary) {
+                    showDashboard();
+                    loadNotificationSettings();
+                }
+            } else {
+                alert('Registration failed. Please try again.');
+            }
+        } catch (error) {
+            console.error('Signup error:', error);
+            alert(error.message || 'Registration failed. Please try again.');
+        }
+    });
+
+  // Magic link signup function
+  async function requestMagicLinkSignup() {
+      const email = document.getElementById('magicLinkEmailInput').value;
+      if (!email) {
+          alert('Please enter your email address');
+          return;
+      }
+      
+      // Use existing magic link request logic
+      try {
+          const response = await fetch('/auth/magic-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  email,
+                  language: window.i18n && window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en'
+              })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+              const lang = localStorage.getItem('selectedLanguage') || 'en';
+              const successMessages = {
+                  'en': 'Magic link sent! Check your email.',
+                  'he': 'קישור הקסם נשלח! בדוק את האימייל שלך.',
+                  'ar': 'تم إرسال رابط السحر! تحقق من بريدك الإلكتروني.',
+                  'ru': 'Магическая ссылка отправлена! Проверьте свою почту.'
+              };
+              alert(successMessages[lang] || successMessages['en']);
+          } else {
+              alert(data.error || 'Failed to send magic link');
+          }
+      } catch (error) {
+          console.error('Magic link error:', error);
+          alert('Failed to send magic link. Please try again.');
+      }
+  }
+  
+  // Make function globally available
+  window.requestMagicLinkSignup = requestMagicLinkSignup;
+
+  // Update email prefix hint when typing in signup email
+  document.getElementById('signupEmailInput').addEventListener('input', function() {
+      const email = this.value;
+      const hintEl = document.getElementById('signupEmailPrefixHint');
+      if (hintEl && email.includes('@')) {
+          const prefix = email.split('@')[0];
+          const lang = localStorage.getItem('selectedLanguage') || 'en';
+          const hintTexts = {
+              'en': `If blank, username will be: ${prefix}`,
+              'he': `אם ריק, שם המשתמש יהיה: ${prefix}`,
+              'ar': `إذا كان فارغًا، سيكون اسم المستخدم: ${prefix}`,
+              'ru': `Если пусто, имя пользователя будет: ${prefix}`
+          };
+          hintEl.textContent = hintTexts[lang] || hintTexts['en'];
+      } else if (hintEl) {
+          hintEl.textContent = '';
+      }
+  });
 
 
 // Forgot Password form
@@ -4809,9 +4912,44 @@ async function updateNotificationSetting(settingName, value) {
     }
 }
 
+// Format time input to help users enter 24-hour time correctly
+function formatTimeInput(input) {
+    let value = input.value.replace(/[^0-9:]/g, '');
+    
+    // Auto-add colon after 2 digits
+    if (value.length === 2 && !value.includes(':')) {
+        value = value + ':';
+    }
+    
+    // Limit to 5 characters (HH:MM)
+    if (value.length > 5) {
+        value = value.substring(0, 5);
+    }
+    
+    input.value = value;
+}
+
 // Update diary reminder time
 async function updateDiaryReminderTime(timeValue) {
     console.log('[DIARY REMINDER] Updating reminder time to:', timeValue);
+    
+    // Validate 24-hour format (HH:MM)
+    const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
+    if (!timeRegex.test(timeValue)) {
+        const lang = localStorage.getItem('selectedLanguage') || 'en';
+        const errorMessages = {
+            'en': 'Please enter time in 24-hour format (HH:MM), e.g., 09:00 or 21:30',
+            'he': 'נא להזין שעה בפורמט 24 שעות (HH:MM), למשל 09:00 או 21:30',
+            'ar': 'يرجى إدخال الوقت بتنسيق 24 ساعة (HH:MM)، مثل 09:00 أو 21:30',
+            'ru': 'Введите время в 24-часовом формате (HH:MM), например 09:00 или 21:30'
+        };
+        showNotification(errorMessages[lang] || errorMessages['en'], 'error');
+        return;
+    }
+    
+    // Normalize to HH:MM format (add leading zero if needed)
+    const [hours, minutes] = timeValue.split(':');
+    const normalizedTime = hours.padStart(2, '0') + ':' + minutes;
     
     try {
         const response = await fetch('/api/notification-settings', {
@@ -4821,7 +4959,7 @@ async function updateDiaryReminderTime(timeValue) {
             },
             credentials: 'include',
             body: JSON.stringify({
-                diary_reminder_time: timeValue
+                diary_reminder_time: normalizedTime
             })
         });
         
@@ -4829,12 +4967,15 @@ async function updateDiaryReminderTime(timeValue) {
             throw new Error('Failed to update reminder time');
         }
         
+        // Update input with normalized value
+        document.getElementById('diaryReminderTimeInput').value = normalizedTime;
+        
         const lang = localStorage.getItem('selectedLanguage') || 'en';
         const messages = {
-            'en': `Reminder time set to ${timeValue}`,
-            'he': `זמן התזכורת נקבע ל-${timeValue}`,
-            'ar': `تم تعيين وقت التذكير إلى ${timeValue}`,
-            'ru': `Время напоминания установлено на ${timeValue}`
+            'en': `Reminder time set to ${normalizedTime}`,
+            'he': `זמן התזכורת נקבע ל-${normalizedTime}`,
+            'ar': `تم تعيين وقت التذكير إلى ${normalizedTime}`,
+            'ru': `Время напоминания установлено на ${normalizedTime}`
         };
         showNotification(messages[lang] || messages['en'], 'success');
         
@@ -6573,20 +6714,42 @@ window.viewingUserId = null;
             existingBackBtn.remove();
         }
 
-        const response = await fetch('/api/followers', {
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
+        // Fetch followers and blocked users in parallel
+        const [followersResponse, blockedResponse] = await Promise.all([
+            fetch('/api/followers', {
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            }),
+            fetch('/api/blocked-users', {
+                credentials: 'include'
+            })
+        ]);
 
-        if (!response.ok) throw new Error('Failed to load followers');
-        const data = await response.json();
+        if (!followersResponse.ok) throw new Error('Failed to load followers');
+        const data = await followersResponse.json();
+        
+        // Get list of blocked user IDs
+        let blockedUserIds = new Set();
+        if (blockedResponse.ok) {
+            const blockedData = await blockedResponse.json();
+            if (blockedData.blocked_users) {
+                blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+            }
+        }
 
         const followersContainer = document.querySelector('#followersList');
         if (followersContainer) {
             if (data.followers && data.followers.length > 0) {
-                followersContainer.innerHTML = data.followers.map(user => `
+                followersContainer.innerHTML = data.followers.map(user => {
+                    const isBlocked = blockedUserIds.has(user.id);
+                    const buttonText = isBlocked ? (pt('block.unblock_user') || 'Unblock') : (pt('block.block_user') || 'Block');
+                    const buttonAction = isBlocked ? 'unblockUserAndRefresh' : 'blockUser';
+                    const buttonStyle = isBlocked 
+                        ? 'background: #6c757d; color: white;'  // Gray for unblock
+                        : 'background: #dc3545; color: white;'; // Red for block
+                    const dataI18n = isBlocked ? 'block.unblock_user' : 'block.block_user';
+                    
+                    return `
                     <div class="user-card" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfile(${user.id})">
                             <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
@@ -6599,13 +6762,13 @@ window.viewingUserId = null;
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.875rem;" data-i18n="following.following_back">${pt('following.following_back') || 'Following back'}</span>` : ''}
-                            <button onclick="blockUser(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" 
+                            <button onclick="${buttonAction}(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" 
                                     class="block-btn" 
-                                    style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;"
-                                    data-i18n="block.block_user">${pt('block.block_user') || 'Block'}</button>
+                                    style="${buttonStyle} border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;"
+                                    data-i18n="${dataI18n}">${buttonText}</button>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
 
             } else {
                 followersContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;" data-i18n="followers.no_followers">No one is following you yet.</p>';
@@ -6764,6 +6927,17 @@ async function unblockUser(userId) {
         return false;
     }
 }
+
+// Unblock user and refresh followers list (for use in followers list buttons)
+async function unblockUserAndRefresh(userId, username) {
+    const success = await unblockUser(userId);
+    if (success && typeof loadFollowers === 'function') {
+        await loadFollowers();
+    }
+}
+
+// Make unblockUserAndRefresh globally available
+window.unblockUserAndRefresh = unblockUserAndRefresh;
 
 async function checkIfBlockedByUser(userId) {
     try {
