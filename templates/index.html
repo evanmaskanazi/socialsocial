@@ -4970,6 +4970,21 @@ async function updateDiaryReminderTime(timeValue) {
     const normalizedTime = hours.padStart(2, '0') + ':' + minutes;
     
     try {
+        // First get the user's timezone from their city
+        console.log('[DIARY REMINDER] Fetching timezone for user city...');
+        let timezone = 'UTC';
+        try {
+            const tzResponse = await fetch('/api/city-timezone', { credentials: 'include' });
+            if (tzResponse.ok) {
+                const tzData = await tzResponse.json();
+                timezone = tzData.timezone || 'UTC';
+                console.log('[DIARY REMINDER] Got timezone from city:', timezone);
+            }
+        } catch (tzError) {
+            console.warn('[DIARY REMINDER] Could not get timezone, using UTC:', tzError);
+        }
+        
+        // Update both time and timezone together
         const response = await fetch('/api/notification-settings', {
             method: 'PUT',
             headers: {
@@ -4977,7 +4992,8 @@ async function updateDiaryReminderTime(timeValue) {
             },
             credentials: 'include',
             body: JSON.stringify({
-                diary_reminder_time: normalizedTime
+                diary_reminder_time: normalizedTime,
+                diary_reminder_timezone: timezone
             })
         });
         
@@ -4987,6 +5003,9 @@ async function updateDiaryReminderTime(timeValue) {
         
         // Update input with normalized value
         document.getElementById('diaryReminderTimeInput').value = normalizedTime;
+        
+        // Update timezone display
+        await loadUserTimezone();
         
         const lang = localStorage.getItem('selectedLanguage') || 'en';
         const messages = {
@@ -5028,29 +5047,39 @@ async function loadUserTimezone() {
                 const lang = localStorage.getItem('selectedLanguage') || 'en';
                 console.log('[DIARY TIMEZONE] Current language:', lang);
                 
-                // Create localized timezone display
-                const timezoneLabels = {
-                    'en': `${data.city} Time`,
-                    'he': `שעון ${data.city}`,
-                    'ar': `توقيت ${data.city}`,
-                    'ru': `Время ${data.city}`
-                };
+                // Extract city name without country for cleaner display
+                const cityOnly = data.city.includes(',') ? data.city.split(',')[0].trim() : data.city;
                 
-                const displayText = timezoneLabels[lang] || timezoneLabels['en'];
+                // Create localized timezone display using i18n if available
+                let displayText;
+                if (window.i18n && window.i18n.t) {
+                    // Try to use i18n translation with city placeholder
+                    displayText = window.i18n.t('notifications.city_time', { city: cityOnly }) || `${cityOnly} Time`;
+                } else {
+                    // Fallback translations
+                    const timezoneLabels = {
+                        'en': `${cityOnly} Time`,
+                        'he': `שעון ${cityOnly}`,
+                        'ar': `توقيت ${cityOnly}`,
+                        'ru': `Время: ${cityOnly}`
+                    };
+                    displayText = timezoneLabels[lang] || timezoneLabels['en'];
+                }
+                
                 console.log('[DIARY TIMEZONE] Setting display text to:', displayText);
                 timezoneSpan.textContent = displayText;
                 timezoneSpan.setAttribute('data-city', data.city);
                 timezoneSpan.setAttribute('data-timezone', data.timezone);
             } else if (timezoneSpan && !data.city) {
-                console.log('[DIARY TIMEZONE] No city set, showing UTC');
+                console.log('[DIARY TIMEZONE] No city set, showing select city prompt');
                 const lang = localStorage.getItem('selectedLanguage') || 'en';
-                const utcLabels = {
-                    'en': 'UTC Time',
-                    'he': 'שעון UTC',
-                    'ar': 'توقيت UTC',
-                    'ru': 'Время UTC'
+                const noCityLabels = {
+                    'en': 'Select a city',
+                    'he': 'בחר עיר',
+                    'ar': 'اختر مدينة',
+                    'ru': 'Выберите город'
                 };
-                timezoneSpan.textContent = utcLabels[lang] || 'UTC Time';
+                timezoneSpan.textContent = noCityLabels[lang] || 'Select a city';
             }
             
             // Also update the backend with the timezone
