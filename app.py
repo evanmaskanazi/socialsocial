@@ -5373,8 +5373,13 @@ def get_circle_recommendations():
         user_id = session.get('user_id')
         user = db.session.get(User, user_id)
 
+        logger.info(f"[CIRCLE RECS] Starting recommendations for user {user_id}")
+
         if not user:
-            return jsonify({'recommendations': []}), 200
+            logger.warning(f"[CIRCLE RECS] User {user_id} not found")
+            return jsonify({'recommendations': [], 'debug': 'User not found'}), 200
+
+        logger.info(f"[CIRCLE RECS] User city: {user.selected_city}")
 
         recommendations = []
         seen_ids = set([user_id])
@@ -5384,20 +5389,24 @@ def get_circle_recommendations():
             select(Circle.circle_user_id).filter_by(user_id=user_id)
         ).scalars().all()
         seen_ids.update(existing_circle_users)
+        logger.info(f"[CIRCLE RECS] Users already in circles: {len(existing_circle_users)}")
 
         # PRIORITY 1: Mutual connections (users who follow me AND I follow them)
         # Get users I follow
         my_following_ids = db.session.execute(
             select(Follow.followed_id).filter_by(follower_id=user_id)
         ).scalars().all()
+        logger.info(f"[CIRCLE RECS] Users I follow: {len(my_following_ids)}")
 
         # Get users who follow me
         my_follower_ids = db.session.execute(
             select(Follow.follower_id).filter_by(followed_id=user_id)
         ).scalars().all()
+        logger.info(f"[CIRCLE RECS] Users following me: {len(my_follower_ids)}")
 
         # Find mutual connections
         mutual_ids = set(my_following_ids) & set(my_follower_ids)
+        logger.info(f"[CIRCLE RECS] Mutual connections: {len(mutual_ids)}")
 
         for mutual_id in mutual_ids:
             if mutual_id in seen_ids or len(recommendations) >= 20:
@@ -5419,6 +5428,8 @@ def get_circle_recommendations():
                     'reason_key': 'circles.reason_mutual' if 'same city' not in reason else 'circles.reason_mutual_city'
                 })
 
+        logger.info(f"[CIRCLE RECS] After mutual connections: {len(recommendations)} recommendations")
+
         # PRIORITY 2: Users in same city that I follow (but not mutual)
         if user.selected_city and len(recommendations) < 20:
             for followed_id in my_following_ids:
@@ -5433,9 +5444,11 @@ def get_circle_recommendations():
                         'username': followed_user.username,
                         'email': followed_user.email,
                         'selected_city': followed_user.selected_city,
-                        'reason': 'Same city',
+                        'reason': 'Same city (following)',
                         'reason_key': 'circles.reason_same_city'
                     })
+
+        logger.info(f"[CIRCLE RECS] After same city following: {len(recommendations)} recommendations")
 
         # PRIORITY 3: Other users I follow
         if len(recommendations) < 20:
@@ -5455,11 +5468,89 @@ def get_circle_recommendations():
                         'reason_key': 'circles.reason_following'
                     })
 
-        return jsonify({'recommendations': recommendations[:20]})
+        logger.info(f"[CIRCLE RECS] After other following: {len(recommendations)} recommendations")
+
+        # PRIORITY 4: Same city users (not following yet) - LIKE "WHO TO FOLLOW"
+        if user.selected_city and len(recommendations) < 20:
+            logger.info(f"[CIRCLE RECS] Looking for same city users in: {user.selected_city}")
+            same_city_users = User.query.filter(
+                User.selected_city == user.selected_city,
+                User.id != user_id,
+                User.is_active == True
+            ).limit(30).all()
+            
+            logger.info(f"[CIRCLE RECS] Found {len(same_city_users)} users in same city")
+            
+            for city_user in same_city_users:
+                if city_user.id in seen_ids or len(recommendations) >= 20:
+                    continue
+                    
+                seen_ids.add(city_user.id)
+                recommendations.append({
+                    'id': city_user.id,
+                    'username': city_user.username,
+                    'email': city_user.email,
+                    'selected_city': city_user.selected_city,
+                    'reason': 'Same city',
+                    'reason_key': 'circles.reason_same_city'
+                })
+
+        logger.info(f"[CIRCLE RECS] After same city (all): {len(recommendations)} recommendations")
+
+        # PRIORITY 5: Friends of friends (people in circles of people I follow)
+        if len(recommendations) < 20:
+            for circle_user_id in existing_circle_users[:10]:  # Limit to prevent slow queries
+                if len(recommendations) >= 20:
+                    break
+
+                their_circles = db.session.execute(
+                    select(Circle.circle_user_id).filter_by(
+                        user_id=circle_user_id
+                    ).filter(Circle.circle_user_id != user_id)
+                ).scalars().all()
+
+                for potential_id in their_circles[:5]:
+                    if len(recommendations) >= 20:
+                        break
+
+                    if potential_id in seen_ids:
+                        continue
+
+                    potential_user = db.session.get(User, potential_id)
+                    if potential_user and potential_user.is_active:
+                        seen_ids.add(potential_user.id)
+
+                        reason = 'Friend of friend'
+                        if user.selected_city and potential_user.selected_city == user.selected_city:
+                            reason = 'Same city & friend of friend'
+
+                        recommendations.append({
+                            'id': potential_user.id,
+                            'username': potential_user.username,
+                            'email': potential_user.email,
+                            'selected_city': potential_user.selected_city,
+                            'reason': reason,
+                            'reason_key': 'circles.reason_friend_of_friend'
+                        })
+
+        logger.info(f"[CIRCLE RECS] Final count: {len(recommendations)} recommendations")
+        
+        return jsonify({
+            'recommendations': recommendations[:20],
+            'debug': {
+                'user_city': user.selected_city,
+                'following_count': len(my_following_ids),
+                'followers_count': len(my_follower_ids),
+                'mutual_count': len(mutual_ids),
+                'in_circles_count': len(existing_circle_users)
+            }
+        })
 
     except Exception as e:
-        logger.error(f"Get circle recommendations error: {str(e)}")
-        return jsonify({'error': 'Failed to get recommendations'}), 500
+        logger.error(f"[CIRCLE RECS] ERROR: {str(e)}")
+        import traceback
+        logger.error(f"[CIRCLE RECS] Traceback: {traceback.format_exc()}")
+        return jsonify({'error': 'Failed to get recommendations', 'debug': str(e)}), 500
 
 
 # =====================
