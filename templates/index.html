@@ -5047,17 +5047,27 @@ async function loadUserTimezone() {
                 const lang = localStorage.getItem('selectedLanguage') || 'en';
                 console.log('[DIARY TIMEZONE] Current language:', lang);
                 
-                // Use full city name with country (e.g., "Jerusalem, Israel")
-                const fullCityName = data.city;
-                console.log('[DIARY TIMEZONE] Full city name:', fullCityName);
+                // Convert city name to i18n key: "Jerusalem, Israel" -> "city.jerusalem_israel"
+                const cityKey = 'city.' + data.city.toLowerCase().replace(/, /g, '_').replace(/ /g, '_');
+                console.log('[DIARY TIMEZONE] City i18n key:', cityKey);
                 
-                // Create localized timezone display with full city name
-                // Using inline translations to avoid i18n interpolation issues
+                // Get translated city name using i18n system
+                let translatedCityName = data.city; // Default to English
+                if (window.i18n && window.i18n.translate) {
+                    const translated = window.i18n.translate(cityKey);
+                    // Only use translation if it's not the key itself (meaning translation exists)
+                    if (translated && translated !== cityKey) {
+                        translatedCityName = translated;
+                    }
+                }
+                console.log('[DIARY TIMEZONE] Translated city name:', translatedCityName);
+                
+                // Create localized timezone display with translated city name
                 const timezoneLabels = {
-                    'en': `${fullCityName} time`,
-                    'he': `שעון ${fullCityName}`,
-                    'ar': `توقيت ${fullCityName}`,
-                    'ru': `время ${fullCityName}`
+                    'en': `${translatedCityName} time`,
+                    'he': `שעון ${translatedCityName}`,
+                    'ar': `توقيت ${translatedCityName}`,
+                    'ru': `время ${translatedCityName}`
                 };
                 const displayText = timezoneLabels[lang] || timezoneLabels['en'];
                 
