@@ -710,10 +710,19 @@ def get_daily_diary_reminder_translations(language='en'):
 
 def send_daily_diary_reminder_email(user_email, user_language='en'):
     """Send daily reminder email to fill out wellness diary"""
+    logger.info(f"[DAILY REMINDER] ========================================")
+    logger.info(f"[DAILY REMINDER] Starting send_daily_diary_reminder_email")
+    logger.info(f"[DAILY REMINDER] user_email: {user_email}")
+    logger.info(f"[DAILY REMINDER] user_language: {user_language}")
+    
     try:
         t = get_daily_diary_reminder_translations(user_language)
+        logger.info(f"[DAILY REMINDER] Got translations for language: {user_language}")
+        
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
         diary_link = f"{app_url}/parameters"
+        logger.info(f"[DAILY REMINDER] App URL: {app_url}")
+        logger.info(f"[DAILY REMINDER] Diary link: {diary_link}")
 
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
@@ -754,6 +763,17 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         </html>
         """
 
+        logger.info(f"[DAILY REMINDER] HTML content prepared")
+        logger.info(f"[DAILY REMINDER] Checking SendGrid API key...")
+        
+        sendgrid_api_key = app.config.get('MAIL_PASSWORD')
+        if not sendgrid_api_key:
+            logger.error(f"[DAILY REMINDER] ERROR: SendGrid API key (MAIL_PASSWORD) is not configured!")
+            return False
+        
+        logger.info(f"[DAILY REMINDER] SendGrid API key found (length: {len(sendgrid_api_key)})")
+        logger.info(f"[DAILY REMINDER] From email: {app.config.get('MAIL_DEFAULT_SENDER')}")
+        
         try:
             message = Mail(
                 from_email=app.config['MAIL_DEFAULT_SENDER'],
@@ -761,17 +781,33 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
                 subject=t['subject'],
                 html_content=html_content
             )
+            logger.info(f"[DAILY REMINDER] Mail object created successfully")
 
-            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
+            sg = SendGridAPIClient(sendgrid_api_key)
+            logger.info(f"[DAILY REMINDER] SendGrid client initialized")
+            
             response = sg.send(message)
-            logging.info(f'Daily diary reminder email sent to {user_email}')
-            return True
+            logger.info(f"[DAILY REMINDER] SendGrid response status code: {response.status_code}")
+            logger.info(f"[DAILY REMINDER] SendGrid response headers: {response.headers}")
+            
+            if response.status_code in [200, 201, 202]:
+                logger.info(f'[DAILY REMINDER] SUCCESS: Daily diary reminder email sent to {user_email}')
+                logger.info(f"[DAILY REMINDER] ========================================")
+                return True
+            else:
+                logger.error(f'[DAILY REMINDER] FAILED: Unexpected status code {response.status_code}')
+                return False
+                
         except Exception as e:
-            logging.error(f'Failed to send daily diary reminder email: {str(e)}')
+            logger.error(f'[DAILY REMINDER] ERROR: Failed to send daily diary reminder email: {str(e)}')
+            logger.error(f'[DAILY REMINDER] Exception type: {type(e).__name__}')
+            logger.error(f'[DAILY REMINDER] Traceback: {traceback.format_exc()}')
             return False
 
     except Exception as e:
-        logger.error(f"Failed to send daily diary reminder email: {e}")
+        logger.error(f"[DAILY REMINDER] CRITICAL ERROR: {e}")
+        logger.error(f"[DAILY REMINDER] Traceback: {traceback.format_exc()}")
+        logger.info(f"[DAILY REMINDER] ========================================")
         return False
 
 
@@ -1186,6 +1222,48 @@ def auto_migrate_database():
                     conn.commit()
                     logger.info("✓ Created user_consents table")
 
+                # Create blocked_users table
+                if 'blocked_users' not in inspector.get_table_names():
+                    logger.info("Creating blocked_users table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE blocked_users (
+                                id SERIAL PRIMARY KEY,
+                                blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(blocker_id, blocked_id)
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE blocked_users (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                blocker_id INTEGER NOT NULL,
+                                blocked_id INTEGER NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(blocker_id, blocked_id),
+                                FOREIGN KEY(blocker_id) REFERENCES users(id) ON DELETE CASCADE,
+                                FOREIGN KEY(blocked_id) REFERENCES users(id) ON DELETE CASCADE
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ Created blocked_users table")
+
+                # Add diary reminder columns to notification_settings table
+                if 'notification_settings' in inspector.get_table_names():
+                    columns = [col['name'] for col in inspector.get_columns('notification_settings')]
+                    if 'diary_reminder_time' not in columns:
+                        logger.info("Adding diary_reminder_time column to notification_settings table...")
+                        conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_time VARCHAR(5) DEFAULT '09:00'"))
+                        conn.commit()
+                        logger.info("✓ Added diary_reminder_time column to notification_settings table")
+                    if 'diary_reminder_timezone' not in columns:
+                        logger.info("Adding diary_reminder_timezone column to notification_settings table...")
+                        conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_timezone VARCHAR(100) DEFAULT 'UTC'"))
+                        conn.commit()
+                        logger.info("✓ Added diary_reminder_timezone column to notification_settings table")
+
                 # Add follow_note column to follows table
                 if 'follows' in inspector.get_table_names():
                     columns = [col['name'] for col in inspector.get_columns('follows')]
@@ -1375,6 +1453,40 @@ class User(db.Model):
         return Follow.query.filter_by(
             follower_id=self.id,
             followed_id=user.id
+        ).first() is not None
+
+    def block_user(self, user):
+        """Block another user"""
+        if not self.has_blocked(user):
+            from sqlalchemy import select
+            block = BlockedUser(blocker_id=self.id, blocked_id=user.id)
+            db.session.add(block)
+            return True
+        return False
+
+    def unblock_user(self, user):
+        """Unblock a user"""
+        block = BlockedUser.query.filter_by(
+            blocker_id=self.id,
+            blocked_id=user.id
+        ).first()
+        if block:
+            db.session.delete(block)
+            return True
+        return False
+
+    def has_blocked(self, user):
+        """Check if this user has blocked another user"""
+        return BlockedUser.query.filter_by(
+            blocker_id=self.id,
+            blocked_id=user.id
+        ).first() is not None
+
+    def is_blocked_by(self, user):
+        """Check if this user is blocked by another user"""
+        return BlockedUser.query.filter_by(
+            blocker_id=user.id,
+            blocked_id=self.id
         ).first() is not None
 
     def to_dict(self):
@@ -1681,10 +1793,27 @@ class NotificationSettings(db.Model):
     email_on_alert = db.Column(db.Boolean, default=False)  # Email for each alert
     email_daily_diary_reminder = db.Column(db.Boolean, default=False)  # Daily reminder to fill diary
     email_on_new_message = db.Column(db.Boolean, default=True)  # Email on new message (default True)
+    # Daily diary reminder time settings (24-hour format, e.g., "09:00" or "21:30")
+    diary_reminder_time = db.Column(db.String(5), default='09:00')  # Default 9 AM
+    diary_reminder_timezone = db.Column(db.String(100), default='UTC')  # Timezone based on selected city
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = db.relationship('User', backref=db.backref('notification_settings', uselist=False))
+
+
+class BlockedUser(db.Model):
+    """Model for tracking blocked users"""
+    __tablename__ = 'blocked_users'
+    id = db.Column(db.Integer, primary_key=True)
+    blocker_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    blocked_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    blocker = db.relationship('User', foreign_keys=[blocker_id], backref='blocked_by_me')
+    blocked = db.relationship('User', foreign_keys=[blocked_id], backref='blocked_me')
+
+    __table_args__ = (db.UniqueConstraint('blocker_id', 'blocked_id', name='unique_block'),)
 
 
 def ensure_database_schema():
@@ -4275,7 +4404,9 @@ def notification_settings():
                     'follow_requests': True,
                     'parameter_triggers': True,
                     'daily_reminder': False,
-                    'weekly_summary': False
+                    'weekly_summary': False,
+                    'diary_reminder_time': '09:00',
+                    'diary_reminder_timezone': 'UTC'
                 }
                 logger.info(f"[NOTIFICATION DEBUG] GET - Returning: {default_response}")
                 return jsonify(default_response)
@@ -4292,7 +4423,9 @@ def notification_settings():
                 'follow_requests': settings.follow_requests,
                 'parameter_triggers': settings.parameter_triggers,
                 'daily_reminder': settings.daily_reminder,
-                'weekly_summary': settings.weekly_summary
+                'weekly_summary': settings.weekly_summary,
+                'diary_reminder_time': settings.diary_reminder_time or '09:00',
+                'diary_reminder_timezone': settings.diary_reminder_timezone or 'UTC'
             }
             logger.info(f"[NOTIFICATION DEBUG] GET - Returning: {response_data}")
             logger.info(f"[NOTIFICATION DEBUG] ========================================")
@@ -4341,6 +4474,18 @@ def notification_settings():
                 settings.daily_reminder = data['daily_reminder']
             if 'weekly_summary' in data:
                 settings.weekly_summary = data['weekly_summary']
+            if 'diary_reminder_time' in data:
+                # Validate time format (HH:MM in 24-hour format)
+                time_str = data['diary_reminder_time']
+                import re
+                if re.match(r'^([01]\d|2[0-3]):([0-5]\d)$', time_str):
+                    settings.diary_reminder_time = time_str
+                    logger.info(f"[NOTIFICATION DEBUG] PUT - Setting diary_reminder_time to: {time_str}")
+                else:
+                    logger.warning(f"[NOTIFICATION DEBUG] PUT - Invalid time format: {time_str}")
+            if 'diary_reminder_timezone' in data:
+                settings.diary_reminder_timezone = data['diary_reminder_timezone']
+                logger.info(f"[NOTIFICATION DEBUG] PUT - Setting diary_reminder_timezone to: {data['diary_reminder_timezone']}")
             
             db.session.commit()
             logger.info(f"[NOTIFICATION DEBUG] PUT - Committed to database")
@@ -9311,6 +9456,355 @@ def get_followers():
     except Exception as e:
         logger.error(f"Get followers error: {str(e)}")
         return jsonify({'error': 'Failed to get followers'}), 500
+
+
+# =====================
+# BLOCKING ENDPOINTS
+# =====================
+
+@app.route('/api/users/<int:user_id>/block', methods=['POST'])
+@login_required
+def block_user(user_id):
+    """Block a user - they won't be able to view your profile"""
+    try:
+        current_user_id = session.get('user_id')
+        current_user = db.session.get(User, current_user_id)
+        user_to_block = db.session.get(User, user_id)
+        
+        if not user_to_block:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if user_id == current_user_id:
+            return jsonify({'error': 'Cannot block yourself'}), 400
+        
+        # Check if already blocked
+        existing_block = BlockedUser.query.filter_by(
+            blocker_id=current_user_id,
+            blocked_id=user_id
+        ).first()
+        
+        if existing_block:
+            return jsonify({'error': 'User already blocked'}), 400
+        
+        # Create the block
+        block = BlockedUser(blocker_id=current_user_id, blocked_id=user_id)
+        db.session.add(block)
+        db.session.commit()
+        
+        logger.info(f"User {current_user_id} blocked user {user_id}")
+        return jsonify({'success': True, 'message': 'User blocked successfully'})
+        
+    except Exception as e:
+        logger.error(f"Block user error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to block user'}), 500
+
+
+@app.route('/api/users/<int:user_id>/unblock', methods=['POST'])
+@login_required
+def unblock_user(user_id):
+    """Unblock a previously blocked user"""
+    try:
+        current_user_id = session.get('user_id')
+        
+        block = BlockedUser.query.filter_by(
+            blocker_id=current_user_id,
+            blocked_id=user_id
+        ).first()
+        
+        if not block:
+            return jsonify({'error': 'User is not blocked'}), 400
+        
+        db.session.delete(block)
+        db.session.commit()
+        
+        logger.info(f"User {current_user_id} unblocked user {user_id}")
+        return jsonify({'success': True, 'message': 'User unblocked successfully'})
+        
+    except Exception as e:
+        logger.error(f"Unblock user error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to unblock user'}), 500
+
+
+@app.route('/api/users/<int:user_id>/check-blocked', methods=['GET'])
+@login_required
+def check_if_blocked(user_id):
+    """Check if the current user is blocked by the specified user"""
+    try:
+        current_user_id = session.get('user_id')
+        
+        # Check if current user is blocked by user_id
+        is_blocked = BlockedUser.query.filter_by(
+            blocker_id=user_id,
+            blocked_id=current_user_id
+        ).first() is not None
+        
+        return jsonify({
+            'is_blocked': is_blocked,
+            'blocker_id': user_id,
+            'blocked_id': current_user_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Check blocked error: {str(e)}")
+        return jsonify({'error': 'Failed to check blocked status'}), 500
+
+
+@app.route('/api/blocked-users', methods=['GET'])
+@login_required
+def get_blocked_users():
+    """Get list of users the current user has blocked"""
+    try:
+        current_user_id = session.get('user_id')
+        
+        blocks = BlockedUser.query.filter_by(blocker_id=current_user_id).all()
+        
+        blocked_list = []
+        for block in blocks:
+            blocked_user = db.session.get(User, block.blocked_id)
+            if blocked_user:
+                blocked_list.append({
+                    'id': blocked_user.id,
+                    'username': blocked_user.username,
+                    'email': blocked_user.email,
+                    'blocked_at': block.created_at.isoformat() if block.created_at else None
+                })
+        
+        return jsonify({'blocked_users': blocked_list})
+        
+    except Exception as e:
+        logger.error(f"Get blocked users error: {str(e)}")
+        return jsonify({'error': 'Failed to get blocked users'}), 500
+
+
+# =====================
+# CITY TIMEZONE MAPPING
+# =====================
+
+CITY_TIMEZONE_MAP = {
+    # Israel
+    'Jerusalem': 'Asia/Jerusalem',
+    'Tel Aviv': 'Asia/Jerusalem',
+    'Haifa': 'Asia/Jerusalem',
+    'Rishon LeZion': 'Asia/Jerusalem',
+    'Petah Tikva': 'Asia/Jerusalem',
+    'Ashdod': 'Asia/Jerusalem',
+    'Netanya': 'Asia/Jerusalem',
+    'Beer Sheva': 'Asia/Jerusalem',
+    'Holon': 'Asia/Jerusalem',
+    'Ramat Gan': 'Asia/Jerusalem',
+    
+    # UK
+    'London': 'Europe/London',
+    'Manchester': 'Europe/London',
+    'Birmingham': 'Europe/London',
+    'Liverpool': 'Europe/London',
+    'Leeds': 'Europe/London',
+    'Sheffield': 'Europe/London',
+    'Bristol': 'Europe/London',
+    'Edinburgh': 'Europe/London',
+    'Glasgow': 'Europe/London',
+    'Cardiff': 'Europe/London',
+    
+    # US - Eastern
+    'New York': 'America/New_York',
+    'Boston': 'America/New_York',
+    'Philadelphia': 'America/New_York',
+    'Washington DC': 'America/New_York',
+    'Miami': 'America/New_York',
+    'Atlanta': 'America/New_York',
+    
+    # US - Central
+    'Chicago': 'America/Chicago',
+    'Houston': 'America/Chicago',
+    'Dallas': 'America/Chicago',
+    'San Antonio': 'America/Chicago',
+    'Austin': 'America/Chicago',
+    
+    # US - Mountain
+    'Denver': 'America/Denver',
+    'Phoenix': 'America/Phoenix',
+    'Salt Lake City': 'America/Denver',
+    
+    # US - Pacific
+    'Los Angeles': 'America/Los_Angeles',
+    'San Francisco': 'America/Los_Angeles',
+    'San Diego': 'America/Los_Angeles',
+    'Seattle': 'America/Los_Angeles',
+    'Portland': 'America/Los_Angeles',
+    'Las Vegas': 'America/Los_Angeles',
+    
+    # Default
+    'default': 'UTC'
+}
+
+
+def get_timezone_for_city(city_name):
+    """Get the timezone for a given city"""
+    if not city_name:
+        return 'UTC'
+    return CITY_TIMEZONE_MAP.get(city_name, 'UTC')
+
+
+@app.route('/api/diary-reminder/send-test', methods=['POST'])
+@login_required
+def send_test_diary_reminder():
+    """Send a test diary reminder email to the current user"""
+    try:
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id)
+        
+        if not user or not user.email:
+            return jsonify({'error': 'User or email not found'}), 404
+        
+        logger.info(f"[DAILY REMINDER TEST] Sending test reminder to user {user_id} ({user.email})")
+        
+        user_language = user.preferred_language or 'en'
+        success = send_daily_diary_reminder_email(user.email, user_language)
+        
+        if success:
+            return jsonify({'success': True, 'message': 'Test reminder email sent successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to send test reminder email'}), 500
+            
+    except Exception as e:
+        logger.error(f"Test diary reminder error: {str(e)}")
+        return jsonify({'error': 'Failed to send test reminder'}), 500
+
+
+@app.route('/api/diary-reminder/process', methods=['POST'])
+def process_diary_reminders():
+    """
+    Process and send diary reminders for users whose reminder time has arrived.
+    This should be called by a cron job or scheduler every minute.
+    
+    OPTIMIZED: Uses database-level filtering to only query users who need reminders NOW,
+    rather than loading all users and checking in Python.
+    """
+    try:
+        from datetime import datetime
+        import pytz
+        
+        logger.info(f"[DAILY REMINDER CRON] ========================================")
+        logger.info(f"[DAILY REMINDER CRON] Starting diary reminder processing (OPTIMIZED)")
+        
+        now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
+        logger.info(f"[DAILY REMINDER CRON] Current UTC time: {now_utc}")
+        
+        # Get all unique timezones from users with reminders enabled
+        unique_timezones = db.session.query(
+            NotificationSettings.diary_reminder_timezone
+        ).filter(
+            NotificationSettings.email_daily_diary_reminder == True
+        ).distinct().all()
+        
+        unique_timezones = [tz[0] or 'UTC' for tz in unique_timezones]
+        logger.info(f"[DAILY REMINDER CRON] Unique timezones to check: {unique_timezones}")
+        
+        emails_sent = 0
+        emails_failed = 0
+        total_users_matched = 0
+        
+        # Process each timezone - only query users whose time matches NOW
+        for tz_str in unique_timezones:
+            try:
+                user_tz = pytz.timezone(tz_str)
+            except:
+                logger.warning(f"[DAILY REMINDER CRON] Invalid timezone {tz_str}, using UTC")
+                user_tz = pytz.UTC
+                tz_str = 'UTC'
+            
+            # Get current time in this timezone
+            now_in_tz = now_utc.astimezone(user_tz)
+            current_time_str = now_in_tz.strftime('%H:%M')
+            
+            logger.info(f"[DAILY REMINDER CRON] Timezone {tz_str}: current time = {current_time_str}")
+            
+            # DATABASE-LEVEL FILTER: Only get users in this timezone whose reminder time is NOW
+            matching_settings = NotificationSettings.query.filter(
+                NotificationSettings.email_daily_diary_reminder == True,
+                NotificationSettings.diary_reminder_timezone == tz_str,
+                NotificationSettings.diary_reminder_time == current_time_str
+            ).all()
+            
+            if not matching_settings:
+                logger.debug(f"[DAILY REMINDER CRON] No users to remind in {tz_str} at {current_time_str}")
+                continue
+            
+            logger.info(f"[DAILY REMINDER CRON] Found {len(matching_settings)} users to remind in {tz_str}")
+            total_users_matched += len(matching_settings)
+            
+            # Process matching users in batches to avoid overwhelming email service
+            BATCH_SIZE = 50
+            for i in range(0, len(matching_settings), BATCH_SIZE):
+                batch = matching_settings[i:i + BATCH_SIZE]
+                
+                for settings in batch:
+                    try:
+                        user = db.session.get(User, settings.user_id)
+                        if not user or not user.email:
+                            logger.warning(f"[DAILY REMINDER CRON] User {settings.user_id} not found or no email")
+                            continue
+                        
+                        logger.info(f"[DAILY REMINDER CRON] Sending reminder to user {user.id} ({user.email})")
+                        
+                        user_language = user.preferred_language or 'en'
+                        success = send_daily_diary_reminder_email(user.email, user_language)
+                        
+                        if success:
+                            emails_sent += 1
+                            logger.info(f"[DAILY REMINDER CRON] Successfully sent reminder to user {user.id}")
+                        else:
+                            emails_failed += 1
+                            logger.error(f"[DAILY REMINDER CRON] Failed to send reminder to user {user.id}")
+                            
+                    except Exception as user_error:
+                        logger.error(f"[DAILY REMINDER CRON] Error processing user {settings.user_id}: {str(user_error)}")
+                        emails_failed += 1
+                
+                # Small delay between batches to avoid rate limiting
+                if i + BATCH_SIZE < len(matching_settings):
+                    import time
+                    time.sleep(0.5)
+        
+        logger.info(f"[DAILY REMINDER CRON] Processing complete: matched={total_users_matched}, sent={emails_sent}, failed={emails_failed}")
+        logger.info(f"[DAILY REMINDER CRON] ========================================")
+        
+        return jsonify({
+            'success': True,
+            'emails_sent': emails_sent,
+            'emails_failed': emails_failed,
+            'total_users_matched': total_users_matched,
+            'timezones_checked': len(unique_timezones)
+        })
+        
+    except Exception as e:
+        logger.error(f"[DAILY REMINDER CRON] CRITICAL ERROR: {str(e)}")
+        logger.error(f"[DAILY REMINDER CRON] Traceback: {traceback.format_exc()}")
+        return jsonify({'error': 'Failed to process reminders'}), 500
+
+
+@app.route('/api/city-timezone', methods=['GET'])
+@login_required
+def get_city_timezone():
+    """Get the timezone for the current user's selected city"""
+    try:
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id)
+        
+        if not user:
+            return jsonify({'timezone': 'UTC'})
+        
+        timezone = get_timezone_for_city(user.selected_city)
+        return jsonify({
+            'city': user.selected_city,
+            'timezone': timezone
+        })
+        
+    except Exception as e:
+        logger.error(f"Get city timezone error: {str(e)}")
+        return jsonify({'timezone': 'UTC'})
 
 
 @app.route('/api/recommendations')
