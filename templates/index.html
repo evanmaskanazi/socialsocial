@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version PJ201 -->
+<!-- Features: User Blocking, Diary Reminder Time with Timezone, Optimized Cron Processing -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2469,6 +2471,20 @@
                             <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
                         </div>
                     </div>
+                    
+                    <!-- Diary Reminder Time Input -->
+                    <div id="diaryReminderTimeContainer" style="display: none; margin-top: 10px; padding: 10px; background: var(--input-bg, #f5f5f5); border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.reminder_time">Reminder time</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="time" id="diaryReminderTimeInput" 
+                                    value="09:00" 
+                                    onchange="updateDiaryReminderTime(this.value)"
+                                    style="padding: 6px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-size: 14px; background: var(--card-bg, #fff); color: var(--text-primary, #333);">
+                                <span id="diaryReminderTimezone" style="font-size: 11px; color: #666;"></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <h3 style="margin-bottom: 15px;" data-i18n="alerts.title">Alerts</h3>
@@ -4670,6 +4686,24 @@ async function loadNotificationSettings() {
             console.log('[NOTIFICATION DEBUG] Setting dailyDiaryReminderToggle from', oldValue, 'to', newValue);
             diaryToggle.checked = newValue;
             console.log('[NOTIFICATION DEBUG] dailyDiaryReminderToggle AFTER setting - checked:', diaryToggle.checked);
+            
+            // Show/hide time input based on toggle state
+            const timeContainer = document.getElementById('diaryReminderTimeContainer');
+            if (timeContainer) {
+                timeContainer.style.display = newValue ? 'block' : 'none';
+            }
+            
+            // Set time input value
+            const timeInput = document.getElementById('diaryReminderTimeInput');
+            if (timeInput && settings.diary_reminder_time) {
+                timeInput.value = settings.diary_reminder_time;
+            }
+            
+            // Show timezone
+            const timezoneSpan = document.getElementById('diaryReminderTimezone');
+            if (timezoneSpan && settings.diary_reminder_timezone) {
+                timezoneSpan.textContent = settings.diary_reminder_timezone;
+            }
         } else {
             console.error('[NOTIFICATION DEBUG] ERROR: dailyDiaryReminderToggle element NOT FOUND!');
         }
@@ -4747,6 +4781,19 @@ async function updateNotificationSetting(settingName, value) {
         console.log('[NOTIFICATION DEBUG] Update SUCCESSFUL');
         console.log('[NOTIFICATION DEBUG] ========================================');
         
+        // Show/hide time container when diary reminder toggle changes
+        if (settingName === 'email_daily_diary_reminder') {
+            const timeContainer = document.getElementById('diaryReminderTimeContainer');
+            if (timeContainer) {
+                timeContainer.style.display = value ? 'block' : 'none';
+                
+                // Load timezone for user's city if enabling
+                if (value) {
+                    loadUserTimezone();
+                }
+            }
+        }
+        
     } catch (error) {
         console.error('[NOTIFICATION DEBUG] ERROR updating notification setting:', error);
         console.error('[NOTIFICATION DEBUG] Error stack:', error.stack);
@@ -4762,9 +4809,79 @@ async function updateNotificationSetting(settingName, value) {
     }
 }
 
+// Update diary reminder time
+async function updateDiaryReminderTime(timeValue) {
+    console.log('[DIARY REMINDER] Updating reminder time to:', timeValue);
+    
+    try {
+        const response = await fetch('/api/notification-settings', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                diary_reminder_time: timeValue
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to update reminder time');
+        }
+        
+        const lang = localStorage.getItem('selectedLanguage') || 'en';
+        const messages = {
+            'en': `Reminder time set to ${timeValue}`,
+            'he': `זמן התזכורת נקבע ל-${timeValue}`,
+            'ar': `تم تعيين وقت التذكير إلى ${timeValue}`,
+            'ru': `Время напоминания установлено на ${timeValue}`
+        };
+        showNotification(messages[lang] || messages['en'], 'success');
+        
+    } catch (error) {
+        console.error('[DIARY REMINDER] Error updating reminder time:', error);
+        showNotification('Failed to update reminder time', 'error');
+    }
+}
+
+// Load user's timezone based on their selected city
+async function loadUserTimezone() {
+    try {
+        const response = await fetch('/api/city-timezone', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const timezoneSpan = document.getElementById('diaryReminderTimezone');
+            if (timezoneSpan && data.timezone) {
+                timezoneSpan.textContent = data.timezone;
+            }
+            
+            // Also update the backend with the timezone
+            if (data.timezone) {
+                await fetch('/api/notification-settings', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        diary_reminder_timezone: data.timezone
+                    })
+                });
+            }
+        }
+    } catch (error) {
+        console.error('[DIARY REMINDER] Error loading timezone:', error);
+    }
+}
+
 // Make functions globally available
 window.loadNotificationSettings = loadNotificationSettings;
 window.updateNotificationSetting = updateNotificationSetting;
+window.updateDiaryReminderTime = updateDiaryReminderTime;
+window.loadUserTimezone = loadUserTimezone;
 
 
 
@@ -6447,7 +6564,7 @@ window.viewingUserId = null;
         // Ensure we're loading current user's followers (not viewing another user)
         const header = document.querySelector('#followersView h2');
         if (header) {
-            header.textContent = 'Followers';
+            header.textContent = pt('followers.title') || 'Followers';
         }
 
         // Remove any existing back buttons (we're in our own followers view now)
@@ -6470,29 +6587,28 @@ window.viewingUserId = null;
         if (followersContainer) {
             if (data.followers && data.followers.length > 0) {
                 followersContainer.innerHTML = data.followers.map(user => `
-                    <div class="user-card" data-user-id="${user.id}">
-                        <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
-                            ${user.username.charAt(0).toUpperCase()}
+                    <div class="user-card" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfile(${user.id})">
+                            <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
+                                ${user.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="user-info">
+                                <div class="user-name">${user.username}</div>
+                                <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
+                            </div>
                         </div>
-                        <div class="user-info">
-                            <div class="user-name">${user.username}</div>
-                            <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.875rem;" data-i18n="following.following_back">${pt('following.following_back') || 'Following back'}</span>` : ''}
+                            <button onclick="blockUser(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" 
+                                    class="block-btn" 
+                                    style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;"
+                                    data-i18n="block.block_user">${pt('block.block_user') || 'Block'}</button>
                         </div>
-                        ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.875rem;" data-i18n="following.following_back">${pt('following.following_back') || 'Following back'}</span>` : ''}
                     </div>
                 `).join('');
 
-                // Add click handlers to view profiles
-               // Add click handlers to view profiles
-                followersContainer.querySelectorAll('.user-card').forEach(card => {
-                    card.addEventListener('click', () => {
-                        const userId = parseInt(card.dataset.userId);
-                        console.log('[DEBUG] Follower card clicked, setting viewingUserId to:', userId);
-                        viewUserProfile(userId);
-                    });
-                });
             } else {
-                followersContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No one is following you yet.</p>';
+                followersContainer.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;" data-i18n="followers.no_followers">No one is following you yet.</p>';
             }
         }
     } catch (error) {
@@ -6575,6 +6691,160 @@ async function followUser(userId, note = '', trigger = false) {
     }
 }
 
+
+// ========== BLOCK USER FUNCTIONS - START ==========
+
+async function blockUser(userId, username) {
+    const lang = localStorage.getItem('preferredLanguage') || 'en';
+    const confirmMessages = {
+        'en': `Are you sure you want to block ${username}? They will no longer be able to see your profile.`,
+        'he': `האם אתה בטוח שברצונך לחסום את ${username}? הם לא יוכלו יותר לראות את הפרופיל שלך.`,
+        'ar': `هل أنت متأكد أنك تريد حظر ${username}؟ لن يتمكنوا من رؤية ملفك الشخصي بعد الآن.`,
+        'ru': `Вы уверены, что хотите заблокировать ${username}? Они больше не смогут видеть ваш профиль.`
+    };
+    
+    if (!confirm(confirmMessages[lang] || confirmMessages['en'])) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/users/${userId}/block`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to block user');
+        }
+        
+        const successMessages = {
+            'en': 'User blocked successfully',
+            'he': 'המשתמש נחסם בהצלחה',
+            'ar': 'تم حظر المستخدم بنجاح',
+            'ru': 'Пользователь успешно заблокирован'
+        };
+        showNotification(successMessages[lang] || successMessages['en'], 'success');
+        
+        // Refresh followers list
+        if (typeof loadFollowers === 'function') {
+            await loadFollowers();
+        }
+    } catch (error) {
+        console.error('Error blocking user:', error);
+        showNotification(error.message || 'Failed to block user', 'error');
+    }
+}
+
+async function unblockUser(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/unblock`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to unblock user');
+        }
+        
+        const lang = localStorage.getItem('preferredLanguage') || 'en';
+        const successMessages = {
+            'en': 'User unblocked successfully',
+            'he': 'החסימה הוסרה בהצלחה',
+            'ar': 'تم إلغاء حظر المستخدم بنجاح',
+            'ru': 'Пользователь разблокирован'
+        };
+        showNotification(successMessages[lang] || successMessages['en'], 'success');
+        
+        return true;
+    } catch (error) {
+        console.error('Error unblocking user:', error);
+        showNotification(error.message || 'Failed to unblock user', 'error');
+        return false;
+    }
+}
+
+async function checkIfBlockedByUser(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/check-blocked`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) return { blocked: false, blockedBy: false };
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error checking block status:', error);
+        return { blocked: false, blockedBy: false };
+    }
+}
+
+function showBlockedMessage() {
+    const lang = localStorage.getItem('preferredLanguage') || 'en';
+    const messages = {
+        'en': { title: 'This page is not available', button: 'Back to Following' },
+        'he': { title: 'דף זה אינו זמין', button: 'חזרה למעקב' },
+        'ar': { title: 'هذه الصفحة غير متاحة', button: 'العودة إلى المتابعة' },
+        'ru': { title: 'Эта страница недоступна', button: 'Назад к подпискам' }
+    };
+    const msg = messages[lang] || messages['en'];
+    
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'blockedMessageOverlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    overlay.innerHTML = `
+        <div style="
+            background: var(--card-bg, #2d2d2d);
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+        ">
+            <h2 style="color: var(--text-primary, #fff); margin-bottom: 20px;">${msg.title}</h2>
+            <button onclick="closeBlockedMessage()" style="
+                background: var(--primary-color, #6c5ce7);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+            ">${msg.button}</button>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+}
+
+function closeBlockedMessage() {
+    const overlay = document.getElementById('blockedMessageOverlay');
+    if (overlay) {
+        overlay.remove();
+    }
+    // Navigate back to following tab
+    showSection('social');
+    setTimeout(() => {
+        const followingTab = document.querySelector('[onclick*="showSocialTab"][onclick*="following"]') || 
+                            document.querySelector('.social-tab[data-tab="following"]');
+        if (followingTab) followingTab.click();
+    }, 100);
+}
+
+// ========== BLOCK USER FUNCTIONS - END ==========
 
 
 // ========== TRIGGER FUNCTIONS - START ==========
@@ -7159,6 +7429,13 @@ async function unfollowUser(userId) {
 
 async function viewUserProfile(userId) {
     try {
+        // Check if blocked by this user first
+        const blockStatus = await checkIfBlockedByUser(userId);
+        if (blockStatus.blockedBy) {
+            showBlockedMessage();
+            return;
+        }
+        
         viewingUserId = userId;
 
         // Get current user ID from session or local storage
