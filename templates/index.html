@@ -2920,26 +2920,39 @@ async function loadUserCity() {
      // Toggle between login and signup
         document.getElementById('toggleAuth').addEventListener('click', function(e) {
             e.preventDefault();
-            const isLoginMode = authTitle.textContent.includes('Welcome Back');
+            
+            // FIX: Properly get authTitle element and use reliable mode detection
+            const authTitle = document.getElementById('authTitle');
+            const loginSection = document.getElementById('loginSection');
+            const signupSection = document.getElementById('signupSection');
+            const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+            
+            // Check if currently in login mode by checking if loginSection is visible
+            const isLoginMode = loginSection.style.display !== 'none';
 
             if (isLoginMode) {
                 // Switch to signup mode
                 authTitle.setAttribute('data-i18n', 'auth.create_account');
                 authTitle.textContent = 'Create Account';
-                document.getElementById('loginSection').style.display = 'none';
-                document.getElementById('signupSection').style.display = 'block';
-                document.getElementById('forgotPasswordLink').style.display = 'none';
+                loginSection.style.display = 'none';
+                signupSection.style.display = 'block';
+                forgotPasswordLink.style.display = 'none';
                 this.setAttribute('data-i18n', 'auth.toggle_signin');
                 this.textContent = 'Already have an account? Sign in';
             } else {
                 // Switch to login mode
                 authTitle.setAttribute('data-i18n', 'auth.welcome');
                 authTitle.textContent = 'Welcome Back';
-                document.getElementById('loginSection').style.display = 'block';
-                document.getElementById('signupSection').style.display = 'none';
-                document.getElementById('forgotPasswordLink').style.display = 'block';
+                loginSection.style.display = 'block';
+                signupSection.style.display = 'none';
+                forgotPasswordLink.style.display = 'block';
                 this.setAttribute('data-i18n', 'auth.toggle_signup');
                 this.textContent = "New here? Create an account";
+            }
+            
+            // Apply translations if i18n is available
+            if (window.i18n && window.i18n.applyLanguage) {
+                window.i18n.applyLanguage();
             }
         });
 
