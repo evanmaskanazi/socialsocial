@@ -5047,24 +5047,19 @@ async function loadUserTimezone() {
                 const lang = localStorage.getItem('selectedLanguage') || 'en';
                 console.log('[DIARY TIMEZONE] Current language:', lang);
                 
-                // Extract city name without country for cleaner display
-                const cityOnly = data.city.includes(',') ? data.city.split(',')[0].trim() : data.city;
+                // Use full city name with country (e.g., "Jerusalem, Israel")
+                const fullCityName = data.city;
+                console.log('[DIARY TIMEZONE] Full city name:', fullCityName);
                 
-                // Create localized timezone display using i18n if available
-                let displayText;
-                if (window.i18n && window.i18n.t) {
-                    // Try to use i18n translation with city placeholder
-                    displayText = window.i18n.t('notifications.city_time', { city: cityOnly }) || `${cityOnly} Time`;
-                } else {
-                    // Fallback translations
-                    const timezoneLabels = {
-                        'en': `${cityOnly} Time`,
-                        'he': `שעון ${cityOnly}`,
-                        'ar': `توقيت ${cityOnly}`,
-                        'ru': `Время: ${cityOnly}`
-                    };
-                    displayText = timezoneLabels[lang] || timezoneLabels['en'];
-                }
+                // Create localized timezone display with full city name
+                // Using inline translations to avoid i18n interpolation issues
+                const timezoneLabels = {
+                    'en': `${fullCityName} time`,
+                    'he': `שעון ${fullCityName}`,
+                    'ar': `توقيت ${fullCityName}`,
+                    'ru': `время ${fullCityName}`
+                };
+                const displayText = timezoneLabels[lang] || timezoneLabels['en'];
                 
                 console.log('[DIARY TIMEZONE] Setting display text to:', displayText);
                 timezoneSpan.textContent = displayText;
