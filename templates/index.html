@@ -2513,7 +2513,7 @@
                                     onkeyup="formatTimeInput(this)"
                                     style="padding: 6px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-size: 14px; background: var(--card-bg, #fff); color: var(--text-primary, #333); width: 70px; text-align: center; font-family: monospace;">
                                 <span style="font-size: 11px; color: #888;">(24h)</span>
-                                <span id="diaryReminderTimezone" style="font-size: 11px; color: #666;"></span>
+                                <span id="diaryReminderTimezone" style="font-size: 11px; color: #666; font-weight: 500;" data-i18n-timezone="true"></span>
                             </div>
                         </div>
                     </div>
@@ -4818,8 +4818,13 @@ async function loadNotificationSettings() {
             // Show timezone
             const timezoneSpan = document.getElementById('diaryReminderTimezone');
             if (timezoneSpan && settings.diary_reminder_timezone) {
+                // Temporary display until loadUserTimezone updates it with city name
                 timezoneSpan.textContent = settings.diary_reminder_timezone;
             }
+            
+            // Always load the proper timezone from user's city (this will update the display)
+            console.log('[NOTIFICATION DEBUG] Calling loadUserTimezone() to set city-based timezone...');
+            loadUserTimezone();
         } else {
             console.error('[NOTIFICATION DEBUG] ERROR: dailyDiaryReminderToggle element NOT FOUND!');
         }
@@ -5000,21 +5005,58 @@ async function updateDiaryReminderTime(timeValue) {
 
 // Load user's timezone based on their selected city
 async function loadUserTimezone() {
+    console.log('[DIARY TIMEZONE] ========================================');
+    console.log('[DIARY TIMEZONE] loadUserTimezone() called');
+    
     try {
+        console.log('[DIARY TIMEZONE] Fetching /api/city-timezone...');
         const response = await fetch('/api/city-timezone', {
             credentials: 'include'
         });
         
+        console.log('[DIARY TIMEZONE] Response status:', response.status);
+        
         if (response.ok) {
             const data = await response.json();
+            console.log('[DIARY TIMEZONE] Response data:', JSON.stringify(data));
+            
             const timezoneSpan = document.getElementById('diaryReminderTimezone');
-            if (timezoneSpan && data.timezone) {
-                timezoneSpan.textContent = data.timezone;
+            console.log('[DIARY TIMEZONE] timezoneSpan element found:', !!timezoneSpan);
+            
+            if (timezoneSpan && data.city) {
+                // Get current language
+                const lang = localStorage.getItem('selectedLanguage') || 'en';
+                console.log('[DIARY TIMEZONE] Current language:', lang);
+                
+                // Create localized timezone display
+                const timezoneLabels = {
+                    'en': `${data.city} Time`,
+                    'he': `שעון ${data.city}`,
+                    'ar': `توقيت ${data.city}`,
+                    'ru': `Время ${data.city}`
+                };
+                
+                const displayText = timezoneLabels[lang] || timezoneLabels['en'];
+                console.log('[DIARY TIMEZONE] Setting display text to:', displayText);
+                timezoneSpan.textContent = displayText;
+                timezoneSpan.setAttribute('data-city', data.city);
+                timezoneSpan.setAttribute('data-timezone', data.timezone);
+            } else if (timezoneSpan && !data.city) {
+                console.log('[DIARY TIMEZONE] No city set, showing UTC');
+                const lang = localStorage.getItem('selectedLanguage') || 'en';
+                const utcLabels = {
+                    'en': 'UTC Time',
+                    'he': 'שעון UTC',
+                    'ar': 'توقيت UTC',
+                    'ru': 'Время UTC'
+                };
+                timezoneSpan.textContent = utcLabels[lang] || 'UTC Time';
             }
             
             // Also update the backend with the timezone
             if (data.timezone) {
-                await fetch('/api/notification-settings', {
+                console.log('[DIARY TIMEZONE] Updating backend with timezone:', data.timezone);
+                const updateResponse = await fetch('/api/notification-settings', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -5024,11 +5066,23 @@ async function loadUserTimezone() {
                         diary_reminder_timezone: data.timezone
                     })
                 });
+                console.log('[DIARY TIMEZONE] Backend update response status:', updateResponse.status);
+                
+                if (updateResponse.ok) {
+                    console.log('[DIARY TIMEZONE] Backend timezone update successful');
+                } else {
+                    console.error('[DIARY TIMEZONE] Backend timezone update failed');
+                }
             }
+        } else {
+            console.error('[DIARY TIMEZONE] Failed to fetch city timezone, status:', response.status);
         }
     } catch (error) {
-        console.error('[DIARY REMINDER] Error loading timezone:', error);
+        console.error('[DIARY TIMEZONE] Error loading timezone:', error);
+        console.error('[DIARY TIMEZONE] Error stack:', error.stack);
     }
+    
+    console.log('[DIARY TIMEZONE] ========================================');
 }
 
 // Make functions globally available
@@ -8597,6 +8651,7 @@ async function checkAndLoadTriggerAlerts() {
         async function updateUserCity() {
             const citySelector = document.getElementById('homeCitySelector');
             const selectedCity = citySelector.value;
+            console.log('[CITY UPDATE] Updating city to:', selectedCity);
 
             try {
                 const response = await apiCall('/user/update-city', 'POST', {
@@ -8606,6 +8661,12 @@ async function checkAndLoadTriggerAlerts() {
                 if (response.success) {
                     currentUser.selected_city = selectedCity;
                     updateHomeCityTime();
+                    
+                    // Update diary reminder timezone when city changes
+                    console.log('[CITY UPDATE] City updated, refreshing diary reminder timezone...');
+                    if (typeof loadUserTimezone === 'function') {
+                        loadUserTimezone();
+                    }
                 }
             } catch (error) {
                 console.error('Error updating city:', error);
