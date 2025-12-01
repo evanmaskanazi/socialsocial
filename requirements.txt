@@ -9,6 +9,7 @@ Flask-Limiter==3.5.0
 # Session management (ADD THIS)
 Flask-Session==0.5.0
 weasyprint>=60.0
+pytz>=2024.1
 
 reportlab>=4.0.0
 openpyxl>=3.1.0
