@@ -4505,6 +4505,8 @@ def notification_settings():
             logger.info(f"[NOTIFICATION DEBUG] PUT - AFTER update:")
             logger.info(f"[NOTIFICATION DEBUG]   email_on_alert is now: {settings.email_on_alert}")
             logger.info(f"[NOTIFICATION DEBUG]   email_daily_diary_reminder is now: {settings.email_daily_diary_reminder}")
+            logger.info(f"[NOTIFICATION DEBUG]   diary_reminder_time is now: {settings.diary_reminder_time}")
+            logger.info(f"[NOTIFICATION DEBUG]   diary_reminder_timezone is now: {settings.diary_reminder_timezone}")
             logger.info(f"[NOTIFICATION DEBUG] ========================================")
             
             # If email_on_alert was just turned ON, send all existing unread alerts as emails
@@ -9925,7 +9927,21 @@ def run_diary_reminder_scheduler():
             with app.app_context():
                 try:
                     now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
-                    logger.info(f"[DIARY SCHEDULER] Checking reminders at UTC: {now_utc.strftime('%H:%M')}")
+                    logger.info(f"[DIARY SCHEDULER] ========================================")
+                    logger.info(f"[DIARY SCHEDULER] Checking reminders at UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S')}")
+                    
+                    # Get all users with diary reminders enabled and log their settings
+                    all_diary_settings = NotificationSettings.query.filter(
+                        NotificationSettings.email_daily_diary_reminder == True
+                    ).all()
+                    
+                    logger.info(f"[DIARY SCHEDULER] Found {len(all_diary_settings)} users with diary reminders enabled")
+                    
+                    for s in all_diary_settings:
+                        user = db.session.get(User, s.user_id)
+                        user_email = user.email if user else 'NO_USER'
+                        user_city = user.selected_city if user else 'NO_CITY'
+                        logger.info(f"[DIARY SCHEDULER] User {s.user_id} ({user_email}): time={s.diary_reminder_time}, timezone={s.diary_reminder_timezone}, city={user_city}")
                     
                     # Get all unique timezones from users with reminders enabled
                     unique_timezones = db.session.query(
@@ -9935,9 +9951,11 @@ def run_diary_reminder_scheduler():
                     ).distinct().all()
                     
                     unique_timezones = [tz[0] or 'UTC' for tz in unique_timezones]
+                    logger.info(f"[DIARY SCHEDULER] Unique timezones to check: {unique_timezones}")
                     
                     if not unique_timezones:
-                        logger.debug("[DIARY SCHEDULER] No users with diary reminders enabled")
+                        logger.info("[DIARY SCHEDULER] No users with diary reminders enabled - skipping")
+                        logger.info(f"[DIARY SCHEDULER] ========================================")
                         continue
                     
                     emails_sent = 0
@@ -9947,13 +9965,16 @@ def run_diary_reminder_scheduler():
                     for tz_str in unique_timezones:
                         try:
                             user_tz = pytz.timezone(tz_str)
-                        except:
+                            logger.info(f"[DIARY SCHEDULER] Processing timezone: {tz_str}")
+                        except Exception as tz_error:
+                            logger.warning(f"[DIARY SCHEDULER] Invalid timezone '{tz_str}': {tz_error}, using UTC")
                             user_tz = pytz.UTC
                             tz_str = 'UTC'
                         
                         # Get current time in this timezone
                         now_in_tz = now_utc.astimezone(user_tz)
                         current_time_str = now_in_tz.strftime('%H:%M')
+                        logger.info(f"[DIARY SCHEDULER] Timezone {tz_str}: current local time = {current_time_str}")
                         
                         # DATABASE-LEVEL FILTER: Only get users whose reminder time is NOW
                         matching_settings = NotificationSettings.query.filter(
@@ -9962,7 +9983,10 @@ def run_diary_reminder_scheduler():
                             NotificationSettings.diary_reminder_time == current_time_str
                         ).all()
                         
+                        logger.info(f"[DIARY SCHEDULER] Query: timezone='{tz_str}', time='{current_time_str}' -> {len(matching_settings)} matches")
+                        
                         if not matching_settings:
+                            logger.info(f"[DIARY SCHEDULER] No users to remind in {tz_str} at {current_time_str}")
                             continue
                         
                         logger.info(f"[DIARY SCHEDULER] Found {len(matching_settings)} users to remind in {tz_str} at {current_time_str}")
@@ -9971,30 +9995,36 @@ def run_diary_reminder_scheduler():
                             try:
                                 user = db.session.get(User, settings.user_id)
                                 if not user or not user.email:
+                                    logger.warning(f"[DIARY SCHEDULER] User {settings.user_id} has no email - skipping")
                                     continue
                                 
+                                logger.info(f"[DIARY SCHEDULER] Sending reminder to user {user.id} ({user.email})...")
                                 user_language = user.preferred_language or 'en'
                                 success = send_daily_diary_reminder_email(user.email, user_language)
                                 
                                 if success:
                                     emails_sent += 1
-                                    logger.info(f"[DIARY SCHEDULER] Sent reminder to {user.email}")
+                                    logger.info(f"[DIARY SCHEDULER] SUCCESS: Sent reminder to {user.email}")
                                 else:
                                     emails_failed += 1
+                                    logger.error(f"[DIARY SCHEDULER] FAILED: Could not send reminder to {user.email}")
                                     
                             except Exception as user_error:
                                 logger.error(f"[DIARY SCHEDULER] Error for user {settings.user_id}: {str(user_error)}")
+                                logger.error(f"[DIARY SCHEDULER] Traceback: {traceback.format_exc()}")
                                 emails_failed += 1
                     
-                    if emails_sent > 0 or emails_failed > 0:
-                        logger.info(f"[DIARY SCHEDULER] Completed: sent={emails_sent}, failed={emails_failed}")
+                    logger.info(f"[DIARY SCHEDULER] Completed: sent={emails_sent}, failed={emails_failed}")
+                    logger.info(f"[DIARY SCHEDULER] ========================================")
                         
                 except Exception as inner_error:
                     logger.error(f"[DIARY SCHEDULER] Processing error: {str(inner_error)}")
+                    logger.error(f"[DIARY SCHEDULER] Traceback: {traceback.format_exc()}")
                     db.session.rollback()
                     
         except Exception as e:
             logger.error(f"[DIARY SCHEDULER] Scheduler error: {str(e)}")
+            logger.error(f"[DIARY SCHEDULER] Traceback: {traceback.format_exc()}")
             # Continue running even if there's an error
             time.sleep(60)
 
@@ -10030,12 +10060,18 @@ def get_city_timezone():
     """Get the timezone for the current user's selected city"""
     try:
         user_id = session.get('user_id')
+        logger.info(f"[CITY TIMEZONE] Getting timezone for user {user_id}")
+        
         user = db.session.get(User, user_id)
         
         if not user:
-            return jsonify({'timezone': 'UTC'})
+            logger.warning(f"[CITY TIMEZONE] User {user_id} not found, returning UTC")
+            return jsonify({'timezone': 'UTC', 'city': None})
         
+        logger.info(f"[CITY TIMEZONE] User {user_id} selected_city: '{user.selected_city}'")
         timezone = get_timezone_for_city(user.selected_city)
+        logger.info(f"[CITY TIMEZONE] Resolved timezone: '{timezone}'")
+        
         return jsonify({
             'city': user.selected_city,
             'timezone': timezone
