@@ -587,6 +587,7 @@ const translations = {
 'invite.send_request': 'Send Request',
  'invite.find_people': '🔍 Find People to Follow',
  'invite.view_public': '👁️ View Your Public Invite Page',
+  'auth.create_account': 'Create Account',
  'menu.home': 'Home',
 'home.title': 'Home',
 'home.location_settings': 'Location Settings',
@@ -1000,7 +1001,7 @@ const translations = {
                 'common.saturday': 'ש\'',
                 'common.sunday': 'א\'',
                 'common.today': 'היום',
-
+  'auth.create_account': 'צור חשבון',
 
         'username.optional': '(אופציונלי)',
         'username.blank_for_email': 'השאר ריק לשימוש בתחילת האימייל',
@@ -1701,6 +1702,7 @@ const translations = {
     'parameters.anxiety_desc': 'مستوى القلق المُجرب',
     'parameters.notes': 'ملاحظات',
     'parameters.notes_placeholder': 'أفكار إضافية لليوم...',
+    'auth.create_account': 'إنشاء حساب',
 
     'parameters.clear': 'مسح النموذج',
 
@@ -2479,6 +2481,7 @@ const translations = {
     ru: {
         // Navigation & Menu
         'nav.logo': 'TheraSocial',
+         'auth.create_account': 'Зарегистрироваться',
         'nav.home': 'Главная',
         'nav.about': 'О нас',
         'nav.support': 'Поддержка',
