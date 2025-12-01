@@ -5115,6 +5115,12 @@ window.updateNotificationSetting = updateNotificationSetting;
 window.updateDiaryReminderTime = updateDiaryReminderTime;
 window.loadUserTimezone = loadUserTimezone;
 
+// Update timezone display when language changes
+window.addEventListener('languageChanged', () => {
+    console.log('[DIARY TIMEZONE] Language changed, refreshing timezone display...');
+    loadUserTimezone();
+});
+
 
 
 
