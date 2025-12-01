@@ -683,34 +683,57 @@ if (window.i18n && window.i18n.applyLanguage) {
 
 // Load recommended users to add to circles
 async function loadCircleRecommendations() {
+    console.log('[CircleRecs] ========================================');
     console.log('[CircleRecs] Starting loadCircleRecommendations...');
+    console.log('[CircleRecs] Time:', new Date().toISOString());
+    
     try {
         const recommendationsContainer = document.getElementById("circleRecommendationsList");
         if (!recommendationsContainer) {
-            console.log('[CircleRecs] Container not found');
+            console.error('[CircleRecs] ERROR: Container #circleRecommendationsList not found in DOM');
             return;
         }
+        console.log('[CircleRecs] Container found');
 
         // Show loading state
         recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;">Loading recommendations...</p>`;
 
+        console.log('[CircleRecs] Fetching /api/circles/recommendations...');
         const response = await fetch("/api/circles/recommendations", {
             credentials: 'include'
         });
         
         console.log('[CircleRecs] Response status:', response.status);
+        console.log('[CircleRecs] Response ok:', response.ok);
         
         if (!response.ok) {
-            console.error("[CircleRecs] Failed to load circle recommendations, status:", response.status);
+            console.error("[CircleRecs] FAILED to load circle recommendations");
+            console.error("[CircleRecs] Status:", response.status);
+            const errorText = await response.text();
+            console.error("[CircleRecs] Response body:", errorText);
             recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
             return;
         }
 
         const data = await response.json();
-        console.log('[CircleRecs] Got data:', data);
+        console.log('[CircleRecs] Response data:', JSON.stringify(data, null, 2));
+        
+        // Log debug info from backend if available
+        if (data.debug) {
+            console.log('[CircleRecs] Backend debug info:');
+            console.log('[CircleRecs]   - User city:', data.debug.user_city);
+            console.log('[CircleRecs]   - Following count:', data.debug.following_count);
+            console.log('[CircleRecs]   - Followers count:', data.debug.followers_count);
+            console.log('[CircleRecs]   - Mutual count:', data.debug.mutual_count);
+            console.log('[CircleRecs]   - In circles count:', data.debug.in_circles_count);
+        }
 
         if (!data.recommendations || data.recommendations.length === 0) {
-            console.log('[CircleRecs] No recommendations found');
+            console.log('[CircleRecs] No recommendations returned from API');
+            console.log('[CircleRecs] This could mean:');
+            console.log('[CircleRecs]   1. No users in same city');
+            console.log('[CircleRecs]   2. All potential users already in circles');
+            console.log('[CircleRecs]   3. No following/follower connections');
             recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
             if (window.i18n && window.i18n.applyLanguage) {
                 window.i18n.applyLanguage(window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en");
@@ -720,7 +743,8 @@ async function loadCircleRecommendations() {
 
         console.log('[CircleRecs] Building HTML for', data.recommendations.length, 'recommendations');
         let html = "";
-        data.recommendations.forEach(user => {
+        data.recommendations.forEach((user, index) => {
+            console.log(`[CircleRecs] Rec ${index + 1}: ${user.username} (${user.selected_city}) - ${user.reason}`);
             const reasonKey = user.reason_key || "circles.reason_default";
             // Escape username for onclick to prevent XSS and quote issues
             const escapedUsername = (user.username || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
@@ -751,10 +775,13 @@ async function loadCircleRecommendations() {
             window.i18n.applyLanguage(currentLang);
         }
         
-        console.log('[CircleRecs] Successfully displayed', data.recommendations.length, 'recommendations');
+        console.log('[CircleRecs] SUCCESS: Displayed', data.recommendations.length, 'recommendations');
+        console.log('[CircleRecs] ========================================');
 
     } catch (error) {
-        console.error("[CircleRecs] Error loading circle recommendations:", error);
+        console.error("[CircleRecs] EXCEPTION in loadCircleRecommendations:");
+        console.error("[CircleRecs] Error:", error);
+        console.error("[CircleRecs] Stack:", error.stack);
         const recommendationsContainer = document.getElementById("circleRecommendationsList");
         if (recommendationsContainer) {
             recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
