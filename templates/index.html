@@ -3066,9 +3066,9 @@ async function loadUserCity() {
           return;
       }
       
-      // Use existing magic link request logic
+      // Use correct API endpoint
       try {
-          const response = await fetch('/auth/magic-link', {
+          const response = await fetch('/api/auth/request-magic-link', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
