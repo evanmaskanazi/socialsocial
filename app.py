@@ -9747,10 +9747,29 @@ CITY_TIMEZONE_MAP = {
 
 
 def get_timezone_for_city(city_name):
-    """Get the timezone for a given city"""
+    """Get the timezone for a given city.
+    Handles both 'City' and 'City, Country' formats.
+    """
     if not city_name:
+        logger.info(f"[CITY TIMEZONE] No city name provided, returning UTC")
         return 'UTC'
-    return CITY_TIMEZONE_MAP.get(city_name, 'UTC')
+    
+    # First try exact match
+    if city_name in CITY_TIMEZONE_MAP:
+        timezone = CITY_TIMEZONE_MAP[city_name]
+        logger.info(f"[CITY TIMEZONE] Exact match for '{city_name}' -> {timezone}")
+        return timezone
+    
+    # Try extracting just the city part (before comma)
+    if ',' in city_name:
+        city_only = city_name.split(',')[0].strip()
+        if city_only in CITY_TIMEZONE_MAP:
+            timezone = CITY_TIMEZONE_MAP[city_only]
+            logger.info(f"[CITY TIMEZONE] City-only match for '{city_only}' (from '{city_name}') -> {timezone}")
+            return timezone
+    
+    logger.warning(f"[CITY TIMEZONE] No match found for '{city_name}', returning UTC")
+    return 'UTC'
 
 
 @app.route('/api/diary-reminder/send-test', methods=['POST'])
