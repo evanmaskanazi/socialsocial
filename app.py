@@ -12,6 +12,8 @@ import json
 import uuid
 import redis
 import logging
+import threading
+import pytz
 from datetime import datetime, timedelta
 from functools import wraps
 import time
@@ -1950,6 +1952,12 @@ def init_database():
             except Exception as cleanup_err:
                 logger.warning(f"Cleanup warning (non-critical): {cleanup_err}")
 
+            # Start background diary reminder scheduler
+            try:
+                start_diary_reminder_scheduler()
+            except Exception as scheduler_err:
+                logger.warning(f"Diary scheduler warning (non-critical): {scheduler_err}")
+
         except Exception as e:
             logger.error(f"Database initialization error: {e}")
             # Try to create tables as fallback
@@ -1962,6 +1970,11 @@ def init_database():
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
+                # Start background diary reminder scheduler
+                try:
+                    start_diary_reminder_scheduler()
+                except Exception as scheduler_err:
+                    logger.warning(f"Diary scheduler warning (non-critical): {scheduler_err}")
             except Exception as e2:
                 logger.error(f"Failed to create tables: {e2}")
                 if not is_production:
@@ -9764,19 +9777,29 @@ def send_test_diary_reminder():
         return jsonify({'error': 'Failed to send test reminder'}), 500
 
 
-@app.route('/api/diary-reminder/process', methods=['POST'])
+@app.route('/api/diary-reminder/process', methods=['POST', 'GET'])
 def process_diary_reminders():
     """
     Process and send diary reminders for users whose reminder time has arrived.
     This should be called by a cron job or scheduler every minute.
     
+    Security: Requires CRON_SECRET header or query parameter to prevent unauthorized calls.
+    
     OPTIMIZED: Uses database-level filtering to only query users who need reminders NOW,
     rather than loading all users and checking in Python.
     """
+    # Security check - verify CRON_SECRET
+    cron_secret = os.environ.get('CRON_SECRET')
+    if cron_secret:
+        # Check header first, then query parameter
+        provided_secret = request.headers.get('X-Cron-Secret') or request.args.get('secret')
+        if provided_secret != cron_secret:
+            logger.warning(f"[DAILY REMINDER CRON] Unauthorized access attempt - invalid secret")
+            return jsonify({'error': 'Unauthorized'}), 401
+    else:
+        logger.warning(f"[DAILY REMINDER CRON] CRON_SECRET not configured - endpoint is unprotected!")
+    
     try:
-        from datetime import datetime
-        import pytz
-        
         logger.info(f"[DAILY REMINDER CRON] ========================================")
         logger.info(f"[DAILY REMINDER CRON] Starting diary reminder processing (OPTIMIZED)")
         
@@ -9874,6 +9897,131 @@ def process_diary_reminders():
         logger.error(f"[DAILY REMINDER CRON] CRITICAL ERROR: {str(e)}")
         logger.error(f"[DAILY REMINDER CRON] Traceback: {traceback.format_exc()}")
         return jsonify({'error': 'Failed to process reminders'}), 500
+
+
+# =====================
+# BACKGROUND DIARY REMINDER SCHEDULER
+# =====================
+
+# Global flag to track if scheduler is running
+_diary_reminder_scheduler_started = False
+_diary_reminder_scheduler_lock = threading.Lock()
+
+def run_diary_reminder_scheduler():
+    """
+    Background thread that checks for diary reminders every minute.
+    This runs automatically on deployment - no external cron job needed.
+    """
+    global _diary_reminder_scheduler_started
+    
+    logger.info("[DIARY SCHEDULER] Background diary reminder scheduler started")
+    
+    while True:
+        try:
+            # Sleep for 60 seconds between checks
+            time.sleep(60)
+            
+            # Process diary reminders within app context
+            with app.app_context():
+                try:
+                    now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
+                    logger.info(f"[DIARY SCHEDULER] Checking reminders at UTC: {now_utc.strftime('%H:%M')}")
+                    
+                    # Get all unique timezones from users with reminders enabled
+                    unique_timezones = db.session.query(
+                        NotificationSettings.diary_reminder_timezone
+                    ).filter(
+                        NotificationSettings.email_daily_diary_reminder == True
+                    ).distinct().all()
+                    
+                    unique_timezones = [tz[0] or 'UTC' for tz in unique_timezones]
+                    
+                    if not unique_timezones:
+                        logger.debug("[DIARY SCHEDULER] No users with diary reminders enabled")
+                        continue
+                    
+                    emails_sent = 0
+                    emails_failed = 0
+                    
+                    # Process each timezone
+                    for tz_str in unique_timezones:
+                        try:
+                            user_tz = pytz.timezone(tz_str)
+                        except:
+                            user_tz = pytz.UTC
+                            tz_str = 'UTC'
+                        
+                        # Get current time in this timezone
+                        now_in_tz = now_utc.astimezone(user_tz)
+                        current_time_str = now_in_tz.strftime('%H:%M')
+                        
+                        # DATABASE-LEVEL FILTER: Only get users whose reminder time is NOW
+                        matching_settings = NotificationSettings.query.filter(
+                            NotificationSettings.email_daily_diary_reminder == True,
+                            NotificationSettings.diary_reminder_timezone == tz_str,
+                            NotificationSettings.diary_reminder_time == current_time_str
+                        ).all()
+                        
+                        if not matching_settings:
+                            continue
+                        
+                        logger.info(f"[DIARY SCHEDULER] Found {len(matching_settings)} users to remind in {tz_str} at {current_time_str}")
+                        
+                        for settings in matching_settings:
+                            try:
+                                user = db.session.get(User, settings.user_id)
+                                if not user or not user.email:
+                                    continue
+                                
+                                user_language = user.preferred_language or 'en'
+                                success = send_daily_diary_reminder_email(user.email, user_language)
+                                
+                                if success:
+                                    emails_sent += 1
+                                    logger.info(f"[DIARY SCHEDULER] Sent reminder to {user.email}")
+                                else:
+                                    emails_failed += 1
+                                    
+                            except Exception as user_error:
+                                logger.error(f"[DIARY SCHEDULER] Error for user {settings.user_id}: {str(user_error)}")
+                                emails_failed += 1
+                    
+                    if emails_sent > 0 or emails_failed > 0:
+                        logger.info(f"[DIARY SCHEDULER] Completed: sent={emails_sent}, failed={emails_failed}")
+                        
+                except Exception as inner_error:
+                    logger.error(f"[DIARY SCHEDULER] Processing error: {str(inner_error)}")
+                    db.session.rollback()
+                    
+        except Exception as e:
+            logger.error(f"[DIARY SCHEDULER] Scheduler error: {str(e)}")
+            # Continue running even if there's an error
+            time.sleep(60)
+
+
+def start_diary_reminder_scheduler():
+    """
+    Start the background diary reminder scheduler.
+    This is called automatically on app startup/deployment.
+    Uses a lock to ensure only one scheduler runs per process.
+    """
+    global _diary_reminder_scheduler_started
+    
+    with _diary_reminder_scheduler_lock:
+        if _diary_reminder_scheduler_started:
+            logger.info("[DIARY SCHEDULER] Scheduler already running, skipping")
+            return
+        
+        _diary_reminder_scheduler_started = True
+        
+        # Start the background thread
+        scheduler_thread = threading.Thread(
+            target=run_diary_reminder_scheduler,
+            daemon=True,  # Thread will stop when main process stops
+            name="DiaryReminderScheduler"
+        )
+        scheduler_thread.start()
+        logger.info("[DIARY SCHEDULER] Background scheduler thread started successfully")
 
 
 @app.route('/api/city-timezone', methods=['GET'])
