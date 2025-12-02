@@ -5770,10 +5770,11 @@ async function loadUserCircles(userId) {
         addBackToFollowingButton('circlesView');
         
         // PJN451: Add action buttons to circles view when viewing another user
-        const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
-        if (profileResponse.ok) {
-            const userData = await profileResponse.json();
-            addUserActionButtonsToView('circlesView', userId, userData.username);
+        // Note: profileResponse already declared earlier in this function, so use different name
+        const profileResponse3 = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+        if (profileResponse3.ok) {
+            const userData3 = await profileResponse3.json();
+            addUserActionButtonsToView('circlesView', userId, userData3.username);
         }
 
         // Hide all edit buttons (add, remove, etc) - but keep action buttons visible
