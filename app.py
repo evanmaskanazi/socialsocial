@@ -813,7 +813,7 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         return False
 
 
-def create_alert_with_email(user_id, title, content, alert_type='info'):
+def create_alert_with_email(user_id, title, content, alert_type='info', source_user_id=None, alert_category='general'):
     """
     Create an alert and optionally send email notification if user has email_on_alert enabled.
     
@@ -822,17 +822,21 @@ def create_alert_with_email(user_id, title, content, alert_type='info'):
         title: Alert title (can be JSON string with translation key)
         content: Alert content/message
         alert_type: Type of alert ('info', 'warning', 'success', 'error')
+        source_user_id: PJ401 - ID of user this alert is about (for filtering based on following)
+        alert_category: PJ401 - Category: 'trigger', 'feed', 'message', 'follow', 'general'
     
     Returns:
         The created Alert object
     """
     try:
-        # Create the alert
+        # Create the alert with source_user_id for following-based filtering
         alert = Alert(
             user_id=user_id,
             title=title,
             content=content,
-            alert_type=alert_type
+            alert_type=alert_type,
+            source_user_id=source_user_id,
+            alert_category=alert_category
         )
         db.session.add(alert)
         db.session.flush()  # Get the alert ID without committing
@@ -1723,6 +1727,11 @@ class Alert(db.Model):
     alert_type = db.Column(db.String(50))  # 'info', 'warning', 'success', 'error'
     is_read = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    # PJ401: Source user ID for filtering alerts based on following status
+    # Alerts with source_user_id only show if current user follows source_user
+    source_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    # Alert category for filtering: 'trigger', 'feed', 'message', 'follow', 'general'
+    alert_category = db.Column(db.String(50), default='general')
 
     def to_dict(self):
         return {
@@ -1731,7 +1740,9 @@ class Alert(db.Model):
             'message': self.content,  # Return as 'message' for backward compatibility
             'type': self.alert_type,  # Map alert_type to type for API compatibility
             'is_read': self.is_read,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'source_user_id': self.source_user_id,
+            'alert_category': self.alert_category
         }
 
 
@@ -1987,6 +1998,29 @@ def fix_all_schema_issues():
         with db.engine.connect() as conn:
             # Check if we're using PostgreSQL or SQLite
             is_postgres = 'postgresql' in str(db.engine.url)
+            
+            # PJ401: Add source_user_id and alert_category columns to alerts table
+            inspector = inspect(db.engine)
+            if 'alerts' in inspector.get_table_names():
+                alert_columns = [col['name'] for col in inspector.get_columns('alerts')]
+                
+                if 'source_user_id' not in alert_columns:
+                    logger.info("Adding source_user_id column to alerts table...")
+                    if is_postgres:
+                        conn.execute(text("ALTER TABLE alerts ADD COLUMN IF NOT EXISTS source_user_id INTEGER REFERENCES users(id)"))
+                    else:
+                        conn.execute(text("ALTER TABLE alerts ADD COLUMN source_user_id INTEGER"))
+                    conn.commit()
+                    logger.info("✓ Added source_user_id column to alerts")
+                
+                if 'alert_category' not in alert_columns:
+                    logger.info("Adding alert_category column to alerts table...")
+                    if is_postgres:
+                        conn.execute(text("ALTER TABLE alerts ADD COLUMN IF NOT EXISTS alert_category VARCHAR(50) DEFAULT 'general'"))
+                    else:
+                        conn.execute(text("ALTER TABLE alerts ADD COLUMN alert_category VARCHAR(50) DEFAULT 'general'"))
+                    conn.commit()
+                    logger.info("✓ Added alert_category column to alerts")
 
             # 1. Fix alerts table (message -> content)
             try:
@@ -3798,7 +3832,7 @@ def profile():
 @app.route('/api/users/<int:user_id>/profile', methods=['GET'])
 @login_required
 def get_user_profile(user_id):
-    """Get another user's profile"""
+    """Get another user's profile - accessible by followers OR circle members"""
     try:
         current_user_id = session.get('user_id')
 
@@ -3808,8 +3842,14 @@ def get_user_profile(user_id):
             followed_id=user_id
         ).first() is not None
 
-        if not is_following and user_id != current_user_id:
-            return jsonify({'error': 'Must be following user to view profile'}), 403
+        # PJ401: Also check if current user is in target user's circles
+        is_in_circle = Circle.query.filter_by(
+            user_id=user_id,
+            circle_user_id=current_user_id
+        ).first() is not None
+
+        if not is_following and not is_in_circle and user_id != current_user_id:
+            return jsonify({'error': 'Must be following user or in their circles to view profile'}), 403
 
         user = User.query.get(user_id)
         if not user:
@@ -3848,8 +3888,16 @@ def get_user_posts(user_id):
             followed_id=user_id
         ).first() is not None
 
-        if not is_following and user_id != current_user_id:
-            return jsonify({'error': 'Must be following user to view posts'}), 403
+        # PJ401: Also check if current user is in target user's circles
+        membership = Circle.query.filter_by(
+            user_id=user_id,
+            circle_user_id=current_user_id
+        ).first()
+        
+        is_in_circle = membership is not None
+
+        if not is_following and not is_in_circle and user_id != current_user_id:
+            return jsonify({'error': 'Must be following user or in their circles to view posts'}), 403
 
         # If viewing own posts, return all
         if user_id == current_user_id:
@@ -3889,12 +3937,7 @@ def get_user_posts(user_id):
 
             return jsonify({'posts': posts_data})
 
-        # Check circle membership for viewing other users' posts
-        membership = Circle.query.filter_by(
-            user_id=user_id,
-            circle_user_id=current_user_id
-        ).first()
-
+        # PJ401: membership already checked above for access control
         # Determine which visibility levels current user can see
         visible_levels = ['general']  # Everyone can see public
         if membership:
@@ -3960,8 +4003,14 @@ def get_user_circles(user_id):
             followed_id=user_id
         ).first() is not None
 
-        if not is_following and user_id != current_user_id:
-            return jsonify({'error': 'Must be following user to view circles'}), 403
+        # PJ401: Also check if current user is in target user's circles
+        is_in_circle = Circle.query.filter_by(
+            user_id=user_id,
+            circle_user_id=current_user_id
+        ).first() is not None
+
+        if not is_following and not is_in_circle and user_id != current_user_id:
+            return jsonify({'error': 'Must be following user or in their circles to view circles'}), 403
 
         # Initialize viewer_circle_type
         viewer_circle_type = None
@@ -4098,8 +4147,14 @@ def get_user_parameters(user_id):
             followed_id=user_id
         ).first() is not None
 
-        if not is_following and user_id != current_user_id:
-            return jsonify({'error': 'Must be following user to view parameters'}), 403
+        # PJ401: Also check if current user is in target user's circles
+        is_in_circle = Circle.query.filter_by(
+            user_id=user_id,
+            circle_user_id=current_user_id
+        ).first() is not None
+
+        if not is_following and not is_in_circle and user_id != current_user_id:
+            return jsonify({'error': 'Must be following user or in their circles to view parameters'}), 403
 
         # Get date range from query params (REQUIRED)
         start_date = request.args.get('start_date')
@@ -4355,21 +4410,43 @@ def search_users():
 @app.route('/api/alerts', methods=['GET'])
 @login_required
 def get_alerts():
-    """Get user alerts"""
+    """Get user alerts - filters trigger/feed alerts to only show for followed users"""
     try:
         user_id = session['user_id']
 
-        # SQLAlchemy 2.0 style
+        # PJ401: Get list of users this user follows
+        following_ids = db.session.execute(
+            select(Follow.followed_id).filter_by(follower_id=user_id)
+        ).scalars().all()
+        following_set = set(following_ids)
+
+        # SQLAlchemy 2.0 style - get all unread alerts
         alerts_stmt = select(Alert).filter_by(
             user_id=user_id,
             is_read=False
-        ).order_by(desc(Alert.created_at)).limit(50)
+        ).order_by(desc(Alert.created_at)).limit(100)
 
-        alerts = db.session.execute(alerts_stmt).scalars().all()
+        all_alerts = db.session.execute(alerts_stmt).scalars().all()
+
+        # PJ401: Filter alerts based on following status
+        # Trigger and feed alerts only show if current user follows source_user
+        filtered_alerts = []
+        for alert in all_alerts:
+            # Check if this alert has a source_user_id (trigger or feed alert)
+            if alert.source_user_id:
+                # Only include if user follows the source_user
+                if alert.source_user_id in following_set:
+                    filtered_alerts.append(alert)
+            else:
+                # Alerts without source_user_id (general alerts) always show
+                filtered_alerts.append(alert)
+
+        # Limit to 50 after filtering
+        filtered_alerts = filtered_alerts[:50]
 
         return jsonify({
-            'alerts': [alert.to_dict() for alert in alerts],
-            'unread_count': len(alerts)
+            'alerts': [alert.to_dict() for alert in filtered_alerts],
+            'unread_count': len(filtered_alerts)
         })
 
     except Exception as e:
@@ -4705,6 +4782,7 @@ def messages():
                 sender_name = 'Someone'
 
             # Create alert with optional email notification (for email_on_alert setting)
+            # PJ401: Add source_user_id for the sender
             alert = create_alert_with_email(
                 user_id=recipient_id,
                 title=json.dumps({
@@ -4712,7 +4790,9 @@ def messages():
                     'params': {'username': sender_name}
                 }),
                 content=content[:100] + '...' if len(content) > 100 else content,
-                alert_type='info'
+                alert_type='info',
+                source_user_id=user_id,
+                alert_category='message'
             )
 
             # ALSO send dedicated message notification email if recipient has email_on_new_message enabled
@@ -6048,6 +6128,34 @@ def save_feed_entry():
         db.session.add(new_post)
 
         db.session.commit()
+        
+        # PJ401: Create feed alerts for followers (only for public/general visibility posts)
+        if visibility == 'general':
+            try:
+                user = User.query.get(user_id)
+                username = user.username if user else 'Someone'
+                
+                # Get all followers of this user
+                followers = Follow.query.filter_by(followed_id=user_id).all()
+                
+                for follower in followers:
+                    # Create alert with source_user_id for filtering
+                    alert = Alert(
+                        user_id=follower.follower_id,
+                        title=f"New post from {username}",
+                        content=f"{username} shared a new feed post",
+                        alert_type='feed',
+                        source_user_id=user_id,
+                        alert_category='feed'
+                    )
+                    db.session.add(alert)
+                
+                db.session.commit()
+                logger.info(f"Created feed alerts for {len(followers)} followers")
+            except Exception as alert_error:
+                logger.warning(f"Failed to create feed alerts: {alert_error}")
+                # Don't fail the main operation
+        
         visibility_display = visibility.replace("_", " ").title()
         return jsonify({'success': True, 'message': f'Feed saved for {visibility_display} on {post_date}'})
 
@@ -6516,11 +6624,14 @@ def process_parameter_triggers(user_id, params):
                                 ).first()
 
                                 if not recent_alert:
+                                    # PJ401: Add source_user_id for following-based filtering
                                     alert = Alert(
                                         user_id=trigger.watcher_id,
                                         title=f"Wellness Alert for {watched_user.username}",
                                         content=f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days (ending {consecutive_dates[0].strftime('%b %d')})",
-                                        alert_type='trigger'
+                                        alert_type='trigger',
+                                        source_user_id=watched_user.id,
+                                        alert_category='trigger'
                                     )
                                     db.session.add(alert)
                                     db.session.commit()
@@ -8679,11 +8790,17 @@ def check_parameter_triggers():
                 ).first()
 
                 if not existing:
+                    # PJ401: Include source_user_id for following-based filtering
+                    watched_user_obj = User.query.filter_by(username=alert_data['user']).first()
+                    source_id = watched_user_obj.id if watched_user_obj else None
+                    
                     alert = Alert(
                         user_id=watcher_id,
                         title=f"Wellness Alert for {alert_data['user']}",
                         content=f"{alert_data['user']}'s {alert_data['parameter']} has been {alert_data['condition_text']} for {alert_data['consecutive_days']} consecutive days (ending {end_date_str})",
-                        alert_type='trigger'
+                        alert_type='trigger',
+                        source_user_id=source_id,
+                        alert_category='trigger'
                     )
                     db.session.add(alert)
                     alerts_created += 1
@@ -8697,11 +8814,17 @@ def check_parameter_triggers():
                 ).first()
 
                 if not existing:
+                    # PJ401: Include source_user_id for following-based filtering
+                    watched_user_obj = User.query.filter_by(username=alert_data['user']).first()
+                    source_id = watched_user_obj.id if watched_user_obj else None
+                    
                     alert = Alert(
                         user_id=watcher_id,
                         title=f"Parameter Alert: {alert_data['user']}",
                         content=f"{alert_data['user']}'s {alert_data['parameter']} has been concerning for {alert_data['consecutive_days']} consecutive days",
-                        alert_type='trigger'
+                        alert_type='trigger',
+                        source_user_id=source_id,
+                        alert_category='trigger'
                     )
                     db.session.add(alert)
                     alerts_created += 1
@@ -9375,11 +9498,14 @@ def follow_user(user_id):
         if follow_trigger:
             alert_content += ' (Following your parameters)'
 
+        # PJ401: Add source_user_id for the follower
         alert = Alert(
             user_id=user_id,
             title=f'{current_user.username} started following you',
             content=alert_content,
-            alert_type='info'
+            alert_type='info',
+            source_user_id=current_user_id,
+            alert_category='follow'
         )
         db.session.add(alert)
 
@@ -10516,11 +10642,14 @@ def create_follow_request():
         requester = db.session.get(User, requester_id)
         requester_username = requester.username if requester else "Someone"
 
+        # PJ401: Add source_user_id for the requester
         alert = Alert(
             user_id=target_id,
             title="invite.alert_title",
             content=f"{requester_username}|invite.alert_content",
-            alert_type='follow_request'
+            alert_type='follow_request',
+            source_user_id=requester_id,
+            alert_category='follow'
         )
         db.session.add(alert)
         db.session.commit()
