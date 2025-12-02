@@ -210,6 +210,14 @@ try {
                 }, 200);
             }
 
+            // PJN452: Add action buttons when viewing another user's circles
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewingUserId = urlParams.get('user_id');
+            if (viewingUserId) {
+                console.log('[Circles] Viewing another user circles, adding action buttons');
+                await addCirclesActionButtons(parseInt(viewingUserId));
+            }
+
             // 13. Make visible
             const container = document.getElementById('circlesContainer');
             const loadingDiv = document.getElementById('loadingMessage');
@@ -217,6 +225,135 @@ try {
             if (loadingDiv) loadingDiv.style.display = 'none';
 
             console.log('Circles page fully initialized and visible');
+        }
+
+        // PJN452: Add action buttons to circles page when viewing another user
+        async function addCirclesActionButtons(userId) {
+            try {
+                // Get user profile info
+                const profileResponse = await fetch(`/api/users/${userId}/profile`, { credentials: 'include' });
+                if (!profileResponse.ok) return;
+                const userData = await profileResponse.json();
+                const username = userData.username || 'User';
+                
+                // Check if following
+                let isFollowing = false;
+                try {
+                    const followingResponse = await fetch('/api/following', { credentials: 'include' });
+                    if (followingResponse.ok) {
+                        const followingData = await followingResponse.json();
+                        isFollowing = followingData.following.some(u => u.id === userId);
+                    }
+                } catch (e) {
+                    console.error('Error checking following status:', e);
+                }
+                
+                // Translation labels
+                const lang = localStorage.getItem('selectedLanguage') || 'en';
+                const labels = {
+                    'en': { back: '← Back to Following', follow: 'Follow', unfollow: 'Unfollow', addToCircle: 'Add to Circle', block: 'Block' },
+                    'he': { back: '← חזרה לעוקבים', follow: 'עקוב', unfollow: 'הפסק לעקוב', addToCircle: 'הוסף למעגל', block: 'חסום' },
+                    'ar': { back: '← العودة للمتابعين', follow: 'متابعة', unfollow: 'إلغاء المتابعة', addToCircle: 'إضافة إلى دائرة', block: 'حظر' },
+                    'ru': { back: '← Назад к подписчикам', follow: 'Подписаться', unfollow: 'Отписаться', addToCircle: 'Добавить в круг', block: 'Заблокировать' }
+                };
+                const t = labels[lang] || labels['en'];
+                
+                // Create container for buttons
+                const container = document.getElementById('circlesContainer');
+                if (!container) return;
+                
+                // Create back button
+                const backBtn = document.createElement('button');
+                backBtn.className = 'btn-secondary back-to-following-btn';
+                backBtn.textContent = t.back;
+                backBtn.style.cssText = 'margin-bottom: 1rem; display: block;';
+                backBtn.onclick = () => {
+                    window.location.href = '/?view=following';
+                };
+                
+                // Create action buttons container
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'profile-action-buttons';
+                buttonContainer.style.cssText = 'display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; padding: 0.5rem; background: #f8f9fa; border-radius: 8px;';
+                
+                if (isFollowing) {
+                    const unfollowBtn = document.createElement('button');
+                    unfollowBtn.className = 'btn-secondary';
+                    unfollowBtn.textContent = t.unfollow;
+                    unfollowBtn.style.cssText = 'padding: 0.5rem 1rem;';
+                    unfollowBtn.onclick = async () => {
+                        if (confirm(`Unfollow ${username}?`)) {
+                            const response = await fetch(`/api/unfollow/${userId}`, { method: 'DELETE', credentials: 'include' });
+                            if (response.ok) {
+                                window.location.reload();
+                            }
+                        }
+                    };
+                    buttonContainer.appendChild(unfollowBtn);
+                } else {
+                    // Block button
+                    const blockBtn = document.createElement('button');
+                    blockBtn.textContent = t.block;
+                    blockBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
+                    blockBtn.onclick = async () => {
+                        if (confirm(`Block ${username}?`)) {
+                            const response = await fetch(`/api/block/${userId}`, { method: 'POST', credentials: 'include' });
+                            if (response.ok) {
+                                window.location.href = '/?view=following';
+                            }
+                        }
+                    };
+                    buttonContainer.appendChild(blockBtn);
+                    
+                    // Follow button
+                    const followBtn = document.createElement('button');
+                    followBtn.className = 'btn-primary';
+                    followBtn.textContent = t.follow;
+                    followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white;';
+                    followBtn.onclick = async () => {
+                        const response = await fetch(`/api/follow/${userId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ note: '' })
+                        });
+                        if (response.ok) {
+                            window.location.reload();
+                        }
+                    };
+                    buttonContainer.appendChild(followBtn);
+                }
+                
+                // Add to Circle button
+                const addCircleBtn = document.createElement('button');
+                addCircleBtn.textContent = t.addToCircle;
+                addCircleBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer;';
+                addCircleBtn.onclick = () => {
+                    if (typeof showCircleAddMenu === 'function') {
+                        showCircleAddMenu(userId, username);
+                    }
+                };
+                buttonContainer.appendChild(addCircleBtn);
+                
+                // Insert at top
+                const circlesHeader = container.querySelector('.circles-header');
+                if (circlesHeader) {
+                    circlesHeader.parentNode.insertBefore(backBtn, circlesHeader);
+                    circlesHeader.parentNode.insertBefore(buttonContainer, circlesHeader);
+                } else {
+                    container.insertBefore(backBtn, container.firstChild);
+                    backBtn.after(buttonContainer);
+                }
+                
+                // Update header with username
+                const header = container.querySelector('h1');
+                if (header) {
+                    header.textContent = `${username}'s Circles`;
+                }
+                
+            } catch (error) {
+                console.error('Error adding circles action buttons:', error);
+            }
         }
 
         // Language change handler - FIXED to prevent race conditions
