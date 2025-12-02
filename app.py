@@ -1429,7 +1429,7 @@ class User(db.Model):
     circles = db.relationship('Circle', foreign_keys='Circle.user_id', backref='owner', cascade='all, delete-orphan')
     saved_parameters = db.relationship('SavedParameters', backref='user', cascade='all, delete-orphan')
     posts = db.relationship('Post', backref='author', cascade='all, delete-orphan')
-    alerts = db.relationship('Alert', backref='user', cascade='all, delete-orphan')
+    alerts = db.relationship('Alert', foreign_keys='Alert.user_id', backref='user', cascade='all, delete-orphan')
     activities = db.relationship('Activity', backref='user', cascade='all, delete-orphan')
 
     def set_password(self, password):
@@ -1732,6 +1732,9 @@ class Alert(db.Model):
     source_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
     # Alert category for filtering: 'trigger', 'feed', 'message', 'follow', 'general'
     alert_category = db.Column(db.String(50), default='general')
+    
+    # PJ401: Relationship to source user (the user this alert is about)
+    source_user = db.relationship('User', foreign_keys=[source_user_id], backref='triggered_alerts')
 
     def to_dict(self):
         return {
