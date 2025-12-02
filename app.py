@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 501
+Complete app.py for Social Social Platform - Phase 601
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -8,6 +8,10 @@ PJ501 Changes:
 - Updated check-blocked endpoint to return blockedBy field
 - Added allow_preview parameter to get_user_profile for recommended users
 - Added block check to profile endpoint returning 403 with account_not_available
+
+PJ601 Changes:
+- No backend changes needed for block/unblock toggle, Follow button width, and navigation fix
+- All fixes are in the frontend HTML/JS files
 """
 
 import os
