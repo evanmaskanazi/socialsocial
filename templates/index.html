@@ -6671,9 +6671,16 @@ async function loadFollowing() {
                             <div class="user-name">${user.username}</div>
                             <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
                         </div>
-                        <button class="btn-secondary unfollow-btn" data-user-id="${user.id}" data-i18n="following.unfollow">
+                        <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center;">
+                            <button class="btn-secondary unfollow-btn" data-user-id="${user.id}" data-i18n="following.unfollow">
                                 ${pt('following.unfollow') || 'Unfollow'}
                             </button>
+                            <button class="block-btn" data-user-id="${user.id}" data-username="${user.username}" 
+                                style="padding: 6px 10px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;"
+                                data-i18n="following.block">
+                                ${pt('following.block') || 'Block'}
+                            </button>
+                        </div>
                     </div>
                 `).join('');
 
@@ -6700,6 +6707,17 @@ async function loadFollowing() {
                         e.stopPropagation();
                         const userId = btn.dataset.userId;
                         await unfollowUser(parseInt(userId));
+                        loadFollowing();
+                    });
+                });
+                
+                // PJ401: Add block handlers
+                followingContainer.querySelectorAll('.block-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const userId = parseInt(btn.dataset.userId);
+                        const username = btn.dataset.username;
+                        await blockUser(userId, username);
                         loadFollowing();
                     });
                 });
@@ -8132,6 +8150,9 @@ async function loadUserProfileView(userId) {
 
         // Add back button
         addBackToFollowingButton('profileView');
+        
+        // PJ401: Add action buttons (Follow, Follow with Note, Add to Circle, Block)
+        addUserProfileActionButtons(userId, userData.username);
 
         // Hide Change Password and Delete Account sections when viewing another user
         const changePasswordSection = document.getElementById('changePasswordSection');
@@ -8146,6 +8167,159 @@ async function loadUserProfileView(userId) {
     } catch (error) {
         console.error('Error loading user profile:', error);
         showNotification('Failed to load user profile', 'error');
+    }
+}
+
+// PJ401: Add action buttons (Follow, Follow with Note, Add to Circle, Block) to user profile view
+async function addUserProfileActionButtons(userId, username) {
+    const view = document.getElementById('profileView');
+    if (!view) return;
+    
+    // Remove existing action buttons container if any
+    const existingButtons = view.querySelector('.profile-action-buttons');
+    if (existingButtons) existingButtons.remove();
+    
+    // Check if currently following this user
+    let isFollowing = false;
+    try {
+        const followingResponse = await fetch('/api/following', { credentials: 'include' });
+        if (followingResponse.ok) {
+            const followingData = await followingResponse.json();
+            isFollowing = followingData.following.some(u => u.id === userId);
+        }
+    } catch (e) {
+        console.error('Error checking following status:', e);
+    }
+    
+    // Translation labels
+    const lang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage') || 'en';
+    const labels = {
+        'en': { 
+            follow: 'Follow', 
+            unfollow: 'Unfollow',
+            followWithNote: 'Follow with Note', 
+            addToCircle: 'Add to Circle',
+            block: 'Block'
+        },
+        'he': { 
+            follow: 'עקוב', 
+            unfollow: 'הפסק לעקוב',
+            followWithNote: 'עקוב עם הערה', 
+            addToCircle: 'הוסף למעגל',
+            block: 'חסום'
+        },
+        'ar': { 
+            follow: 'متابعة', 
+            unfollow: 'إلغاء المتابعة',
+            followWithNote: 'متابعة مع ملاحظة', 
+            addToCircle: 'إضافة إلى دائرة',
+            block: 'حظر'
+        },
+        'ru': { 
+            follow: 'Подписаться', 
+            unfollow: 'Отписаться',
+            followWithNote: 'Подписаться с заметкой', 
+            addToCircle: 'Добавить в круг',
+            block: 'Заблокировать'
+        }
+    };
+    const t = labels[lang] || labels['en'];
+    
+    // Create container for buttons
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'profile-action-buttons';
+    buttonContainer.style.cssText = `
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 1rem 0;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    `;
+    
+    if (isFollowing) {
+        // Unfollow button (grey/secondary)
+        const unfollowBtn = document.createElement('button');
+        unfollowBtn.className = 'btn-secondary';
+        unfollowBtn.textContent = t.unfollow;
+        unfollowBtn.style.cssText = 'padding: 0.5rem 1rem;';
+        unfollowBtn.onclick = async () => {
+            if (confirm(lang === 'he' ? `האם להפסיק לעקוב אחרי ${username}?` : 
+                       lang === 'ar' ? `هل تريد إلغاء متابعة ${username}؟` :
+                       lang === 'ru' ? `Отписаться от ${username}?` :
+                       `Unfollow ${username}?`)) {
+                try {
+                    const response = await fetch(`/api/unfollow/${userId}`, { 
+                        method: 'DELETE', 
+                        credentials: 'include' 
+                    });
+                    if (response.ok) {
+                        showNotification(lang === 'he' ? 'הפסקת לעקוב' : 
+                                        lang === 'ar' ? 'تم إلغاء المتابعة' :
+                                        lang === 'ru' ? 'Вы отписались' :
+                                        'Unfollowed', 'success');
+                        addUserProfileActionButtons(userId, username); // Refresh buttons
+                    }
+                } catch (e) {
+                    console.error('Error unfollowing:', e);
+                }
+            }
+        };
+        buttonContainer.appendChild(unfollowBtn);
+    } else {
+        // Follow button (blue/primary)
+        const followBtn = document.createElement('button');
+        followBtn.className = 'btn-primary';
+        followBtn.textContent = t.follow;
+        followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white;';
+        followBtn.onclick = async () => {
+            const success = await followUser(userId);
+            if (success) {
+                addUserProfileActionButtons(userId, username); // Refresh buttons
+            }
+        };
+        buttonContainer.appendChild(followBtn);
+        
+        // Follow with Note button (grey/secondary)
+        const followNoteBtn = document.createElement('button');
+        followNoteBtn.className = 'btn-secondary';
+        followNoteBtn.textContent = t.followWithNote;
+        followNoteBtn.style.cssText = 'padding: 0.5rem 1rem;';
+        followNoteBtn.onclick = () => {
+            followUserWithNote(userId, username);
+        };
+        buttonContainer.appendChild(followNoteBtn);
+    }
+    
+    // Add to Circle button (green)
+    const addCircleBtn = document.createElement('button');
+    addCircleBtn.textContent = t.addToCircle;
+    addCircleBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer;';
+    addCircleBtn.onmouseover = () => { addCircleBtn.style.backgroundColor = '#16a34a'; };
+    addCircleBtn.onmouseout = () => { addCircleBtn.style.backgroundColor = '#22c55e'; };
+    addCircleBtn.onclick = () => {
+        showCircleAddMenu(userId, username);
+    };
+    buttonContainer.appendChild(addCircleBtn);
+    
+    // Block button (red)
+    const blockBtn = document.createElement('button');
+    blockBtn.textContent = t.block;
+    blockBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
+    blockBtn.onmouseover = () => { blockBtn.style.backgroundColor = '#dc2626'; };
+    blockBtn.onmouseout = () => { blockBtn.style.backgroundColor = '#ef4444'; };
+    blockBtn.onclick = () => {
+        blockUser(userId, username);
+    };
+    buttonContainer.appendChild(blockBtn);
+    
+    // Insert after back button
+    const backButton = view.querySelector('.back-to-following-btn');
+    if (backButton) {
+        backButton.after(buttonContainer);
+    } else {
+        view.insertBefore(buttonContainer, view.firstChild);
     }
 }
 
