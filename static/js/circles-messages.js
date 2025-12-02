@@ -758,12 +758,20 @@ async function loadCircleRecommendations() {
                         <div style="font-size: 12px; color: #8898aa;" data-i18n="${reasonKey}">${user.reason}</div>
                         ${user.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${user.selected_city}</div>` : ""}
                     </div>
-                    <button onclick="showCircleAddMenu(${user.id}, '${escapedUsername}')" 
-                        style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
-                        onmouseover="this.style.transform='scale(1.05)'" 
-                        onmouseout="this.style.transform='scale(1)'">
-                        <span data-i18n="circles.add_to_circle">Add to Circle</span>
-                    </button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button onclick="showCircleAddMenu(${user.id}, '${escapedUsername}')" 
+                            style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
+                            onmouseover="this.style.transform='scale(1.05)'" 
+                            onmouseout="this.style.transform='scale(1)'">
+                            <span data-i18n="circles.add_to_circle">Add to Circle</span>
+                        </button>
+                        <button onclick="blockUser(${user.id}, '${escapedUsername}')" 
+                            style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
+                            onmouseover="this.style.transform='scale(1.05)'; this.style.background='#dc2626';" 
+                            onmouseout="this.style.transform='scale(1)'; this.style.background='#ef4444';">
+                            <span data-i18n="following.block">Block</span>
+                        </button>
+                    </div>
                 </div>
             `;
         });
