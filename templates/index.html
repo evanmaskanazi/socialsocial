@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ202 -->
+<!-- TheraSocial Version PJ501 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
+<!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2597,7 +2598,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=202.0"></script>
+   <script src="/static/js/circles-messages.js?v=203.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -6726,17 +6727,28 @@ async function loadFollowing() {
         }
 
         // Display recommended - PJN452: Block button next to Follow button (Block on left)
+        // PJ501: Fixed block button translation
         const recommendedContainer = document.querySelector('#followingRecommendationsList');
         if (recommendedContainer) {
             const recommendations = recommendedData.recommendations || [];
+            
+            // PJ501: Get translated "Block" text
+            const lang = localStorage.getItem('selectedLanguage') || 'en';
+            const blockTexts = {
+                'en': 'Block',
+                'he': 'חסום',
+                'ar': 'حظر',
+                'ru': 'Заблокировать'
+            };
+            const blockText = blockTexts[lang] || blockTexts['en'];
 
             if (recommendations && recommendations.length > 0) {
                 recommendedContainer.innerHTML = recommendations.map(user => `
                     <div class="user-card" data-user-id="${user.id}">
-                        <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}; cursor: pointer;" onclick="viewUserProfile(${user.id})">
+                        <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}; cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
                             ${user.username.charAt(0).toUpperCase()}
                         </div>
-                        <div class="user-info" style="cursor: pointer;" onclick="viewUserProfile(${user.id})">
+                        <div class="user-info" style="cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
                             <div class="user-name">${user.username}</div>
                             <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${user.reason}</div>` : ''}
@@ -6749,9 +6761,8 @@ async function loadFollowing() {
                                 ${window.i18n && window.i18n.t ? window.i18n.t('following.with_note') : '+ Note'}
                             </button>
                             <button class="block-btn" data-user-id="${user.id}" data-username="${user.username}" 
-                                style="padding: 6px 10px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;"
-                                data-i18n="following.block">
-                                ${pt('following.block') || 'Block'}
+                                style="padding: 6px 10px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                                ${blockText}
                             </button>
                         </div>
                     </div>
@@ -7097,16 +7108,17 @@ async function checkIfBlockedByUser(userId) {
 }
 
 function showBlockedMessage() {
-    const lang = localStorage.getItem('preferredLanguage') || 'en';
+    const lang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage') || 'en';
+    // PJ501: Changed message to "Account Not Available"
     const messages = {
-        'en': { title: 'This page is not available', button: 'Back to Following' },
-        'he': { title: 'דף זה אינו זמין', button: 'חזרה למעקב' },
-        'ar': { title: 'هذه الصفحة غير متاحة', button: 'العودة إلى المتابعة' },
-        'ru': { title: 'Эта страница недоступна', button: 'Назад к подпискам' }
+        'en': { title: 'Account Not Available', button: 'Back to Following' },
+        'he': { title: 'חשבון לא זמין', button: 'חזרה למעקב' },
+        'ar': { title: 'الحساب غير متاح', button: 'العودة إلى المتابعة' },
+        'ru': { title: 'Аккаунт недоступен', button: 'Назад к подпискам' }
     };
     const msg = messages[lang] || messages['en'];
     
-    // Create modal overlay
+    // Create modal overlay - PJ501: White background for blocked message
     const overlay = document.createElement('div');
     overlay.id = 'blockedMessageOverlay';
     overlay.style.cssText = `
@@ -7115,7 +7127,7 @@ function showBlockedMessage() {
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0,0,0,0.7);
+        background: white;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -7124,15 +7136,15 @@ function showBlockedMessage() {
     
     overlay.innerHTML = `
         <div style="
-            background: var(--card-bg, #2d2d2d);
+            background: white;
             padding: 40px;
             border-radius: 12px;
             text-align: center;
             max-width: 400px;
         ">
-            <h2 style="color: var(--text-primary, #fff); margin-bottom: 20px;">${msg.title}</h2>
+            <h2 style="color: #333; margin-bottom: 20px; font-size: 24px;">${msg.title}</h2>
             <button onclick="closeBlockedMessage()" style="
-                background: var(--primary-color, #6c5ce7);
+                background: #6B46C1;
                 color: white;
                 border: none;
                 padding: 12px 24px;
@@ -7743,16 +7755,20 @@ async function unfollowUser(userId) {
     }
 }
 
-async function viewUserProfile(userId) {
+async function viewUserProfile(userId, allowPreview = false) {
     try {
         // Check if blocked by this user first
         const blockStatus = await checkIfBlockedByUser(userId);
-        if (blockStatus.blockedBy) {
+        if (blockStatus.blockedBy || blockStatus.is_blocked) {
             showBlockedMessage();
             return;
         }
         
         viewingUserId = userId;
+        window.viewingUserId = userId;
+        
+        // PJ501: Store if this is a preview (for recommended users)
+        window.isProfilePreview = allowPreview;
 
         // Get current user ID from session or local storage
       const sessionResponse = await fetch('/api/profile', {credentials: 'include'});
@@ -7775,6 +7791,27 @@ updateMessagesNavVisibility();
         showNotification('Failed to load user profile', 'error');
     }
 }
+
+// PJ501: New function to view recommended user profiles (non-followed users)
+async function viewRecommendedUserProfile(userId) {
+    try {
+        // Check if blocked by this user first
+        const blockStatus = await checkIfBlockedByUser(userId);
+        if (blockStatus.blockedBy || blockStatus.is_blocked) {
+            showBlockedMessage();
+            return;
+        }
+        
+        // Set the preview flag and call viewUserProfile with preview mode
+        viewUserProfile(userId, true);
+    } catch (error) {
+        console.error('Error viewing recommended user profile:', error);
+        showNotification('Failed to load user profile', 'error');
+    }
+}
+
+// Make viewRecommendedUserProfile globally available
+window.viewRecommendedUserProfile = viewRecommendedUserProfile;
 
 // Function to view another user's parameters
 async function viewUserParameters(userId, username) {
@@ -8075,9 +8112,17 @@ function formatDateDisplay(dateString) {
 async function loadUserProfileView(userId) {
     // Set the viewing user ID so feed knows we're viewing another user
     viewingUserId = userId;
+    
+    // PJ501: Check if this is a preview request (for recommended users)
+    const isPreview = window.isProfilePreview === true;
 
     try {
-        const response = await fetch(`/api/users/${userId}/profile`, {
+        // PJ501: Add allow_preview parameter for recommended users
+        const url = isPreview 
+            ? `/api/users/${userId}/profile?allow_preview=true`
+            : `/api/users/${userId}/profile`;
+            
+        const response = await fetch(url, {
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -8086,6 +8131,12 @@ async function loadUserProfileView(userId) {
 
         if (!response.ok) {
             if (response.status === 403) {
+                const errorData = await response.json().catch(() => ({}));
+                // PJ501: Check if blocked
+                if (errorData.blocked || errorData.error === 'account_not_available') {
+                    showBlockedMessage();
+                    return;
+                }
                 showNotification('You must follow this user to view their profile', 'error');
                 showView('following');
                 return;
@@ -8169,7 +8220,11 @@ async function loadUserProfileView(userId) {
         addBackToFollowingButton('profileView');
         
         // PJ401: Add action buttons (Follow, Follow with Note, Add to Circle, Block)
-        addUserProfileActionButtons(userId, userData.username);
+        // PJ501: Pass isPreview flag to show Follow buttons instead of Unfollow for recommended users
+        addUserProfileActionButtons(userId, userData.username, isPreview || userData.is_preview);
+        
+        // PJ501: Reset the preview flag after use
+        window.isProfilePreview = false;
 
         // Hide Change Password and Delete Account sections when viewing another user
         const changePasswordSection = document.getElementById('changePasswordSection');
@@ -8184,16 +8239,19 @@ async function loadUserProfileView(userId) {
     } catch (error) {
         console.error('Error loading user profile:', error);
         showNotification('Failed to load user profile', 'error');
+        window.isProfilePreview = false; // Reset on error too
     }
 }
 
 // PJ401: Add action buttons (Follow, Follow with Note, Add to Circle, Block) to user profile view
-async function addUserProfileActionButtons(userId, username) {
-    addUserActionButtonsToView('profileView', userId, username);
+// PJ501: Added forceShowFollow parameter for recommended users
+async function addUserProfileActionButtons(userId, username, forceShowFollow = false) {
+    addUserActionButtonsToView('profileView', userId, username, forceShowFollow);
 }
 
 // PJN451: General function to add action buttons to any view
-async function addUserActionButtonsToView(viewId, userId, username) {
+// PJ501: Added forceShowFollow parameter for recommended users (shows Follow buttons even if following status is indeterminate)
+async function addUserActionButtonsToView(viewId, userId, username, forceShowFollow = false) {
     const view = document.getElementById(viewId);
     if (!view) return;
     
@@ -8203,14 +8261,18 @@ async function addUserActionButtonsToView(viewId, userId, username) {
     
     // Check if currently following this user
     let isFollowing = false;
-    try {
-        const followingResponse = await fetch('/api/following', { credentials: 'include' });
-        if (followingResponse.ok) {
-            const followingData = await followingResponse.json();
-            isFollowing = followingData.following.some(u => u.id === userId);
+    
+    // PJ501: If forceShowFollow is true (for recommended users), skip the following check and show Follow buttons
+    if (!forceShowFollow) {
+        try {
+            const followingResponse = await fetch('/api/following', { credentials: 'include' });
+            if (followingResponse.ok) {
+                const followingData = await followingResponse.json();
+                isFollowing = followingData.following.some(u => u.id === userId);
+            }
+        } catch (e) {
+            console.error('Error checking following status:', e);
         }
-    } catch (e) {
-        console.error('Error checking following status:', e);
     }
     
     // Translation labels

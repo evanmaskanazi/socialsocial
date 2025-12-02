@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- TheraSocial Circles Version PJ202 -->
+<!-- TheraSocial Circles Version PJ501 -->
+<!-- PJ501 Changes: Added block check before displaying user profile -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -33,7 +34,7 @@
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
     <script src="/static/js/i18n.js"></script>
-    <script src="/static/js/circles-messages.js?v=202.0"></script>
+    <script src="/static/js/circles-messages.js?v=203.0"></script>
     <script src="/static/js/feed-updates.js?v=202.0"></script>
 
     <script>
@@ -228,11 +229,53 @@ try {
         }
 
         // PJN452: Add action buttons to circles page when viewing another user
+        // PJ501: Added block check before displaying user profile
         async function addCirclesActionButtons(userId) {
             try {
+                // PJ501: Check if blocked by this user first
+                try {
+                    const blockCheckResponse = await fetch(`/api/users/${userId}/check-blocked`, { credentials: 'include' });
+                    if (blockCheckResponse.ok) {
+                        const blockStatus = await blockCheckResponse.json();
+                        if (blockStatus.blockedBy || blockStatus.is_blocked) {
+                            // Show Account Not Available message and redirect
+                            const lang = localStorage.getItem('selectedLanguage') || 'en';
+                            const messages = {
+                                'en': 'Account Not Available',
+                                'he': 'חשבון לא זמין',
+                                'ar': 'الحساب غير متاح',
+                                'ru': 'Аккаунт недоступен'
+                            };
+                            alert(messages[lang] || messages['en']);
+                            window.location.href = '/?view=following';
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error checking block status:', e);
+                }
+                
                 // Get user profile info
                 const profileResponse = await fetch(`/api/users/${userId}/profile`, { credentials: 'include' });
-                if (!profileResponse.ok) return;
+                if (!profileResponse.ok) {
+                    // PJ501: Check if blocked (403 with blocked error)
+                    if (profileResponse.status === 403) {
+                        const errorData = await profileResponse.json().catch(() => ({}));
+                        if (errorData.blocked || errorData.error === 'account_not_available') {
+                            const lang = localStorage.getItem('selectedLanguage') || 'en';
+                            const messages = {
+                                'en': 'Account Not Available',
+                                'he': 'חשבון לא זמין',
+                                'ar': 'الحساب غير متاح',
+                                'ru': 'Аккаунт недоступен'
+                            };
+                            alert(messages[lang] || messages['en']);
+                            window.location.href = '/?view=following';
+                            return;
+                        }
+                    }
+                    return;
+                }
                 const userData = await profileResponse.json();
                 const username = userData.username || 'User';
                 
