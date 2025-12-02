@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 601
+Complete app.py for Social Social Platform - Phase 602
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -12,6 +12,10 @@ PJ501 Changes:
 PJ601 Changes:
 - No backend changes needed for block/unblock toggle, Follow button width, and navigation fix
 - All fixes are in the frontend HTML/JS files
+
+PJ602 Changes:
+- No backend changes needed - all fixes in frontend HTML/JS files
+- Fixed Follow button width, action buttons on own profile, double 403 message
 """
 
 import os
