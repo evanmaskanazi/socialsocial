@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ601 -->
+<!-- TheraSocial Version PJ602 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
+<!-- PJ602 Changes: Fixed Follow button width (override CSS width:100%), Fixed action buttons persisting on own profile, Fixed double 403 message on Circles -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2599,7 +2600,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=603.0"></script>
+   <script src="/static/js/circles-messages.js?v=602.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -3601,6 +3602,13 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
         // (it has its own onclick handler)
         if (item.dataset.view === 'tracking') {
             console.log('[DEBUG] Skipping generic handler for tracking item');
+            return;
+        }
+        
+        // PJ602: Skip circles handler - it has its own onclick="handleCirclesClick" handler
+        // This prevents double-calling loadUserCircles and double 403 messages
+        if (item.dataset.view === 'circles') {
+            console.log('[DEBUG] Skipping generic handler for circles item');
             return;
         }
 
@@ -5213,6 +5221,10 @@ window.addEventListener('languageChanged', () => {
                 // Remove back to following button if present
                 const backBtn = document.querySelector('#profileView .back-to-following-btn');
                 if (backBtn) backBtn.remove();
+                
+                // PJ602: Remove action buttons if present (Block, Follow, etc.) - these should only show for other users
+                const actionButtons = document.querySelector('#profileView .profile-action-buttons');
+                if (actionButtons) actionButtons.remove();
 
             } catch (error) {
                 console.error('Failed to load profile:', error);
@@ -6775,7 +6787,7 @@ async function loadFollowing() {
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${user.reason}</div>` : ''}
                         </div>
                         <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap;">
-                            <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; min-width: 100px;" data-i18n="following.follow">
+                            <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">
                                 ${pt('following.follow') || 'Follow'}
                             </button>
                             <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${user.username}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;" data-i18n="following.with_note">
@@ -8430,10 +8442,11 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         buttonContainer.appendChild(blockBtn);
         
         // PJ601: Follow button (blue/primary) - with min-width to match Follow with Note
+        // PJ602: Added width:auto to override CSS width:100%
         const followBtn = document.createElement('button');
         followBtn.className = 'btn-primary';
         followBtn.textContent = t.follow;
-        followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white; min-width: 140px;';
+        followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white; width: auto;';
         followBtn.onclick = async () => {
             const success = await followUser(userId);
             if (success) {

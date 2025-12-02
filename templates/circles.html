@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<!-- TheraSocial Circles Version PJ601 -->
+<!-- TheraSocial Circles Version PJ602 -->
 <!-- PJ501 Changes: Added block check before displaying user profile -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix, Fixed navigation after 403 errors -->
+<!-- PJ602 Changes: Fixed Follow button width -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -35,7 +36,7 @@
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
     <script src="/static/js/i18n.js"></script>
-    <script src="/static/js/circles-messages.js?v=603.0"></script>
+    <script src="/static/js/circles-messages.js?v=602.0"></script>
     <script src="/static/js/feed-updates.js?v=202.0"></script>
 
     <script>
@@ -378,7 +379,7 @@ try {
                     const followBtn = document.createElement('button');
                     followBtn.className = 'btn-primary';
                     followBtn.textContent = t.follow;
-                    followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white; min-width: 140px;';
+                    followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white; width: auto;';
                     followBtn.onclick = async () => {
                         const response = await fetch(`/api/follow/${userId}`, {
                             method: 'POST',
