@@ -2,6 +2,7 @@
 // Complete Fixed Version with null safety and proper error handling
 // PJ501 Changes: Added block check to viewUserProfileFromSearch, Fixed Block button translation
 // PJ601 Changes: Block/Unblock toggle in search results
+// PJ602 Changes: Fixed Follow button width
 
 // Translation helper
 const translateCircle = (key) => {
@@ -2307,7 +2308,7 @@ async function searchUsersToFollowInstant(query) {
                                 </div>
                             </div>
                             <div style="display: flex; gap: 6px; align-items: center;">
-                                <button onclick="event.stopPropagation(); followUserById(${user.id})" class="btn btn-primary" style="padding: 6px 12px; font-size: 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                <button onclick="event.stopPropagation(); followUserById(${user.id})" class="btn btn-primary" style="padding: 6px 12px; font-size: 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; width: auto;">
                                     Follow
                                 </button>
                                 <button onclick="event.stopPropagation(); ${buttonAction}" style="padding: 6px 10px; font-size: 14px; ${buttonStyle} color: white; border: none; border-radius: 6px; cursor: pointer;">
