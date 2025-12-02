@@ -2829,6 +2829,9 @@ def admin_required(f):
 @app.before_request
 def before_request():
     """Log request details"""
+    # Skip everything for health check - maximum speed
+    if request.path == '/healthz':
+        return
     request.request_id = str(uuid.uuid4())
     if not request.path.startswith('/static'):
         logger.info(f"Request started: {request.method} {request.path}")
@@ -2837,7 +2840,8 @@ def before_request():
 @app.after_request
 def after_request(response):
     """Log response details and set security headers"""
-    if not request.path.startswith('/static'):
+    # Skip logging for health check and static files
+    if request.path != '/healthz' and not request.path.startswith('/static'):
         logger.info(f"Request completed: {response.status_code}")
 
     # Security headers
@@ -2907,6 +2911,15 @@ def messages_page():
 @login_required
 def parameters_page():
     return render_template('parameters.html')
+
+
+@app.route('/healthz')
+def healthz():
+    """Ultra-lightweight health check for Render deployment.
+    Returns immediately with no DB calls, no logging, no middleware overhead.
+    Configure Render to use this endpoint: Settings -> Health Check Path -> /healthz
+    """
+    return 'OK', 200
 
 
 @app.route('/api/health')
@@ -10963,6 +10976,24 @@ def fix_alerts():
 # MAIN INITIALIZATION
 # =====================
 
+# Flag to track if background initialization has completed
+_init_complete = False
+_init_lock = threading.Lock()
+
+def _background_init():
+    """Run heavy initialization in background so health checks pass immediately"""
+    global _init_complete
+    try:
+        init_database()
+        with _init_lock:
+            _init_complete = True
+        logger.info("Background initialization completed successfully")
+    except Exception as e:
+        logger.error(f"Background initialization error: {e}")
+        # Still mark as complete so app doesn't hang
+        with _init_lock:
+            _init_complete = True
+
 if __name__ == '__main__':
     # Initialize database
     init_database()
@@ -10983,4 +11014,8 @@ if __name__ == '__main__':
     )
 else:
     # For production servers (gunicorn, etc.)
-    init_database()
+    # Run initialization in background thread so health checks pass immediately
+    # This allows Render to mark the service as "live" much faster
+    init_thread = threading.Thread(target=_background_init, daemon=True)
+    init_thread.start()
+    logger.info("Gunicorn started - background initialization running")
