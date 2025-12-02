@@ -964,6 +964,7 @@ async function searchUsers() {
                 const bio = user.bio || '';
                 const occupation = user.occupation || '';
                 const interests = user.interests || '';
+                const city = user.selected_city || '';
 
                 // Build detail line (occupation and interests)
                 let detailLine = '';
@@ -975,16 +976,18 @@ async function searchUsers() {
                     detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${interests}</div>`;
                 }
 
+                // PJN452: Make user info clickable to view profile
                resultItem.innerHTML = `
-                    <div class="user-info">
+                    <div class="user-info" style="cursor: pointer;" onclick="viewUserProfileFromCircles(${user.id})">
                         <div class="user-avatar">${(displayName || 'U')[0].toUpperCase()}</div>
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-weight: 600;">${displayName}</div>
+                            ${city ? `<div style="font-size: 12px; color: #8898aa;">📍 ${city}</div>` : ''}
                             <div style="font-size: 13px; color: #8898aa;">${email}</div>
                             ${detailLine}
                         </div>
                     </div>
-                    <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-left: 10px; flex-shrink: 0;">
+                    <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-left: 10px; flex-shrink: 0;" onclick="event.stopPropagation()">
                         <option value="">Add to circle...</option>
                         <option value="public" data-i18n="circles.public">Public</option>
                         <option value="class_b" data-i18n="circles.class_b">Close Friends</option>
@@ -998,6 +1001,25 @@ async function searchUsers() {
         console.error('Error searching users:', error);
     }
 }
+
+// PJN452: View user profile from circles search
+function viewUserProfileFromCircles(userId) {
+    // Hide search results
+    const searchResults = document.getElementById('searchResults');
+    if (searchResults) {
+        searchResults.classList.remove('active');
+    }
+    // Clear search input
+    const searchInput = document.getElementById('userSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    // Redirect to main page with profile view
+    window.location.href = `/?view=profile&user_id=${userId}`;
+}
+
+// Export the function
+window.viewUserProfileFromCircles = viewUserProfileFromCircles;
 
 
 // Initialize circles
@@ -2220,34 +2242,42 @@ async function searchUsersToFollowInstant(query) {
         try {
             const token = localStorage.getItem('token');
             const response = await fetch(`/api/users/search?q=${encodeURIComponent(query.trim())}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${token}` },
+                credentials: 'include'
             });
 
             if (!response.ok) throw new Error('Search failed');
 
             const data = await response.json();
 
-            // Check if response is an array (valid users list)
-            const users = Array.isArray(data) ? data : [];
+            // Check if response is an array or has users property
+            const users = Array.isArray(data) ? data : (data.users || []);
 
             if (resultsContainer) {
                 if (users.length === 0) {
                     resultsContainer.innerHTML = '<p style="text-align: center; color: #6B7280;">No users found</p>';
                 } else {
+                    // PJN452: Make names clickable to view profile, add Follow + Block buttons
                     resultsContainer.innerHTML = users.map(user => `
-                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #E5E7EB;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #E5E7EB;" data-user-id="${user.id}">
+                            <div style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1;" onclick="viewUserProfileFromSearch(${user.id})">
                                 <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
                                     ${user.username.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <strong>${user.username}</strong>
+                                    <strong style="color: #2d3436;">${user.username}</strong>
+                                    ${user.selected_city ? `<p style="font-size: 12px; color: #6B7280; margin: 0;">📍 ${user.selected_city}</p>` : ''}
                                     ${user.bio ? `<p style="font-size: 12px; color: #6B7280; margin: 0;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</p>` : ''}
                                 </div>
                             </div>
-                            <button onclick="followUser('${user.username}')" class="btn btn-primary" style="padding: 6px 16px; font-size: 14px;">
-                                Follow
-                            </button>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button onclick="event.stopPropagation(); followUserById(${user.id})" class="btn btn-primary" style="padding: 6px 12px; font-size: 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                    Follow
+                                </button>
+                                <button onclick="event.stopPropagation(); blockUserFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" style="padding: 6px 10px; font-size: 14px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                    Block
+                                </button>
+                            </div>
                         </div>
                     `).join('');
                 }
@@ -2262,6 +2292,72 @@ async function searchUsersToFollowInstant(query) {
         }
     }, 200);
 }
+
+// PJN452: View user profile from search and hide search results
+function viewUserProfileFromSearch(userId) {
+    // Hide search results
+    const resultsContainer = document.getElementById('followSearchResults');
+    if (resultsContainer) {
+        resultsContainer.style.display = 'none';
+        resultsContainer.innerHTML = '';
+    }
+    // Clear search input
+    const searchInput = document.getElementById('followSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    // View the profile
+    if (typeof window.viewUserProfile === 'function') {
+        window.viewUserProfile(userId);
+    }
+}
+
+// PJN452: Follow user by ID from search
+async function followUserById(userId) {
+    try {
+        const response = await fetch(`/api/follow/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ note: '' })
+        });
+        const data = await response.json();
+        if (data.success) {
+            if (typeof showNotification === 'function') {
+                showNotification('Now following user', 'success');
+            }
+            // Refresh following list if function exists
+            if (typeof window.loadFollowing === 'function') {
+                window.loadFollowing();
+            }
+        } else {
+            if (typeof showNotification === 'function') {
+                showNotification(data.error || 'Failed to follow', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Follow error:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('Failed to follow user', 'error');
+        }
+    }
+}
+
+// PJN452: Block user from search
+async function blockUserFromSearch(userId, username) {
+    if (typeof window.blockUser === 'function') {
+        await window.blockUser(userId, username);
+        // Refresh following list
+        if (typeof window.loadFollowing === 'function') {
+            window.loadFollowing();
+        }
+    }
+}
+
+// Export new functions
+window.viewUserProfileFromSearch = viewUserProfileFromSearch;
+window.followUserById = followUserById;
+window.blockUserFromSearch = blockUserFromSearch;
 
 // Export the new functions
 window.updateFollowingSection = updateFollowingSection;
