@@ -5685,6 +5685,13 @@ async function loadUserCircles(userId) {
 
             // Add back button
             addBackToFollowingButton('circlesView');
+            
+            // PJN451: Add action buttons to circles view even when private
+            const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+            if (profileResponse.ok) {
+                const userData = await profileResponse.json();
+                addUserActionButtonsToView('circlesView', userId, userData.username);
+            }
 
             return; // Exit early - don't try to display circles
         }
@@ -5761,10 +5768,17 @@ async function loadUserCircles(userId) {
 
         // Add back button
         addBackToFollowingButton('circlesView');
+        
+        // PJN451: Add action buttons to circles view when viewing another user
+        const profileResponse = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+        if (profileResponse.ok) {
+            const userData = await profileResponse.json();
+            addUserActionButtonsToView('circlesView', userId, userData.username);
+        }
 
-        // Hide all edit buttons (add, remove, etc)
+        // Hide all edit buttons (add, remove, etc) - but keep action buttons visible
         document.querySelectorAll('#circlesView button').forEach(btn => {
-            if (!btn.classList.contains('back-to-following-btn')) {
+            if (!btn.classList.contains('back-to-following-btn') && !btn.closest('.profile-action-buttons')) {
                 btn.style.display = 'none';
             }
         });
@@ -5927,7 +5941,7 @@ function updateCircleDisplay(type, members) {
                 } else {
                     container.innerHTML = response.users.map(user => `
                         <div class="search-result-item" style="display: block; padding: 12px;">
-                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;" onclick="viewUserProfile(${user.id}); document.getElementById('searchResults').classList.remove('active'); document.getElementById('userSearchInput').value = '';">
                                 <div class="member-avatar" style="margin-right: 10px;">${user.username[0].toUpperCase()}</div>
                                 <div style="flex: 1;">
                                     <strong>${user.username}</strong><br>
@@ -5935,7 +5949,7 @@ function updateCircleDisplay(type, members) {
                                     ${user.bio ? `<br><small style="color: var(--gray); font-style: italic;">${user.bio.substring(0, 60)}${user.bio.length > 60 ? '...' : ''}</small>` : ''}
                                 </div>
                             </div>
-                           <select onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
+                           <select onclick="event.stopPropagation();" onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
     <option value="">${(window.i18n && window.i18n.t ? window.i18n.t('circles.add_to') : 'Add to circle...')}</option>
    <option value="general" data-i18n="privacy.public">Public</option>
     <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
@@ -6688,9 +6702,11 @@ async function loadFollowing() {
               // Add click handlers to view profiles
              followingContainer.querySelectorAll('.user-card').forEach(card => {
                     card.addEventListener('click', (e) => {
-                        // Prevent accidental clicks on the card itself
-                        // Only allow clicks on the actual card content, not margins
+                        // Prevent accidental clicks on buttons
                         if (!e.target.classList.contains('unfollow-btn') &&
+                            !e.target.classList.contains('block-btn') &&
+                            !e.target.closest('.unfollow-btn') &&
+                            !e.target.closest('.block-btn') &&
                             (e.target.classList.contains('user-card') ||
                              e.target.closest('.user-card'))) {
                             const userId = parseInt(card.dataset.userId);
@@ -6733,16 +6749,21 @@ async function loadFollowing() {
 
             if (recommendations && recommendations.length > 0) {
                 recommendedContainer.innerHTML = recommendations.map(user => `
-                    <div class="user-card">
-                        <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
+                    <div class="user-card" data-user-id="${user.id}">
+                        <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}; cursor: pointer;" onclick="viewUserProfile(${user.id})">
                             ${user.username.charAt(0).toUpperCase()}
                       </div>
-                        <div class="user-info">
+                        <div class="user-info" style="cursor: pointer;" onclick="viewUserProfile(${user.id})">
                             <div class="user-name">${user.username}</div>
                             <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${user.reason}</div>` : ''}
                         </div>
-                        <div class="follow-actions-container" style="min-width: 120px;">
+                        <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <button class="block-btn" data-user-id="${user.id}" data-username="${user.username}" 
+                                style="padding: 6px 10px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;"
+                                data-i18n="following.block">
+                                ${pt('following.block') || 'Block'}
+                            </button>
                            <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 10px;" data-i18n="following.follow">
                                 ${pt('following.follow') || 'Follow'}
                             </button>
@@ -6755,7 +6776,8 @@ async function loadFollowing() {
 
                 // Add follow handlers
                 recommendedContainer.querySelectorAll('.follow-btn').forEach(btn => {
-                    btn.addEventListener('click', async () => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
                         const userId = btn.dataset.userId;
                         await followUser(parseInt(userId));
                         loadFollowing();
@@ -6764,10 +6786,22 @@ async function loadFollowing() {
 
                 // Add follow with note handlers
                 recommendedContainer.querySelectorAll('.follow-note-btn').forEach(btn => {
-                    btn.addEventListener('click', async () => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
                         const userId = btn.dataset.userId;
                         const username = btn.dataset.username;
                         await followUserWithNote(parseInt(userId), username);
+                    });
+                });
+                
+                // PJN451: Add block handlers for recommended users
+                recommendedContainer.querySelectorAll('.block-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const userId = parseInt(btn.dataset.userId);
+                        const username = btn.dataset.username;
+                        await blockUser(userId, username);
+                        loadFollowing();
                     });
                 });
             } else {
@@ -8172,7 +8206,12 @@ async function loadUserProfileView(userId) {
 
 // PJ401: Add action buttons (Follow, Follow with Note, Add to Circle, Block) to user profile view
 async function addUserProfileActionButtons(userId, username) {
-    const view = document.getElementById('profileView');
+    addUserActionButtonsToView('profileView', userId, username);
+}
+
+// PJN451: General function to add action buttons to any view
+async function addUserActionButtonsToView(viewId, userId, username) {
+    const view = document.getElementById(viewId);
     if (!view) return;
     
     // Remove existing action buttons container if any
@@ -8259,7 +8298,7 @@ async function addUserProfileActionButtons(userId, username) {
                                         lang === 'ar' ? 'تم إلغاء المتابعة' :
                                         lang === 'ru' ? 'Вы отписались' :
                                         'Unfollowed', 'success');
-                        addUserProfileActionButtons(userId, username); // Refresh buttons
+                        addUserActionButtonsToView(viewId, userId, username); // Refresh buttons
                     }
                 } catch (e) {
                     console.error('Error unfollowing:', e);
@@ -8268,6 +8307,17 @@ async function addUserProfileActionButtons(userId, username) {
         };
         buttonContainer.appendChild(unfollowBtn);
     } else {
+        // Block button (red) - placed FIRST before follow button
+        const blockBtn = document.createElement('button');
+        blockBtn.textContent = t.block;
+        blockBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
+        blockBtn.onmouseover = () => { blockBtn.style.backgroundColor = '#dc2626'; };
+        blockBtn.onmouseout = () => { blockBtn.style.backgroundColor = '#ef4444'; };
+        blockBtn.onclick = () => {
+            blockUser(userId, username);
+        };
+        buttonContainer.appendChild(blockBtn);
+        
         // Follow button (blue/primary)
         const followBtn = document.createElement('button');
         followBtn.className = 'btn-primary';
@@ -8276,7 +8326,7 @@ async function addUserProfileActionButtons(userId, username) {
         followBtn.onclick = async () => {
             const success = await followUser(userId);
             if (success) {
-                addUserProfileActionButtons(userId, username); // Refresh buttons
+                addUserActionButtonsToView(viewId, userId, username); // Refresh buttons
             }
         };
         buttonContainer.appendChild(followBtn);
@@ -8303,16 +8353,18 @@ async function addUserProfileActionButtons(userId, username) {
     };
     buttonContainer.appendChild(addCircleBtn);
     
-    // Block button (red)
-    const blockBtn = document.createElement('button');
-    blockBtn.textContent = t.block;
-    blockBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
-    blockBtn.onmouseover = () => { blockBtn.style.backgroundColor = '#dc2626'; };
-    blockBtn.onmouseout = () => { blockBtn.style.backgroundColor = '#ef4444'; };
-    blockBtn.onclick = () => {
-        blockUser(userId, username);
-    };
-    buttonContainer.appendChild(blockBtn);
+    // Block button (red) - only add at end if following (otherwise already added at start)
+    if (isFollowing) {
+        const blockBtn = document.createElement('button');
+        blockBtn.textContent = t.block;
+        blockBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
+        blockBtn.onmouseover = () => { blockBtn.style.backgroundColor = '#dc2626'; };
+        blockBtn.onmouseout = () => { blockBtn.style.backgroundColor = '#ef4444'; };
+        blockBtn.onclick = () => {
+            blockUser(userId, username);
+        };
+        buttonContainer.appendChild(blockBtn);
+    }
     
     // Insert after back button
     const backButton = view.querySelector('.back-to-following-btn');
@@ -8475,6 +8527,15 @@ async function loadUserFeed(userId) {
             // Ensure it's visible
             existingBackBtn.style.display = 'block';
             existingBackBtn.style.visibility = 'visible';
+        }
+        
+        // PJN451: Add action buttons to feed view when viewing another user
+        if (!isOwnFeed) {
+            const profileResponse2 = await fetch(`/api/users/${userId}/profile`, {credentials: 'include'});
+            if (profileResponse2.ok) {
+                const userData = await profileResponse2.json();
+                addUserActionButtonsToView('feedView', userId, userData.username);
+            }
         }
 
     } catch (error) {
@@ -9251,10 +9312,12 @@ async function searchUsersToFollowInstant(query) {
                         window.i18n.translate('following.follow') : 'Follow';
                     const withNoteText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('following.with_note') : '+ Note';
+                    const blockText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('following.block') : 'Block';
                     
                     resultsContainer.innerHTML = users.map(user => `
                         <div class="search-result-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromSearch(${user.id})">
                                 <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
                                     ${user.username.charAt(0).toUpperCase()}
                                 </div>
@@ -9264,11 +9327,14 @@ async function searchUsersToFollowInstant(query) {
                                     ${user.bio ? `<br><small style="color: #9CA3AF; font-style: italic;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</small>` : ''}
                                 </div>
                             </div>
-                            <div style="display: flex; flex-direction: column; gap: 4px;">
-                                <button onclick="followUserFromSearch(${user.id})" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; width: auto;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <button onclick="event.stopPropagation(); blockUserFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" style="padding: 6px 10px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                    ${blockText}
+                                </button>
+                                <button onclick="event.stopPropagation(); followUserFromSearch(${user.id})" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; width: auto;">
                                     ${followText}
                                 </button>
-                                <button onclick="followUserWithNoteFromSearch(${user.id}, '${user.username}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto;">
+                                <button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto;">
                                     ${withNoteText}
                                 </button>
                             </div>
@@ -9330,6 +9396,32 @@ async function followUserWithNoteFromSearch(userId, username) {
 window.searchUsersToFollowInstant = searchUsersToFollowInstant;
 window.followUserFromSearch = followUserFromSearch;
 window.followUserWithNoteFromSearch = followUserWithNoteFromSearch;
+
+// PJN451: View user profile from search results
+async function viewUserProfileFromSearch(userId) {
+    // Clear search and hide results
+    document.getElementById('followSearchInput').value = '';
+    document.getElementById('followSearchResults').style.display = 'none';
+    
+    // Navigate to user profile
+    viewUserProfile(userId);
+}
+
+// PJN451: Block user from search results
+async function blockUserFromSearch(userId, username) {
+    await blockUser(userId, username);
+    
+    // Clear search and reload following
+    document.getElementById('followSearchInput').value = '';
+    document.getElementById('followSearchResults').style.display = 'none';
+    
+    if (typeof loadFollowing === 'function') {
+        await loadFollowing();
+    }
+}
+
+window.viewUserProfileFromSearch = viewUserProfileFromSearch;
+window.blockUserFromSearch = blockUserFromSearch;
 
 // ===== PROGRESS CHART FUNCTIONS =====
 let progressChartInstance = null;
