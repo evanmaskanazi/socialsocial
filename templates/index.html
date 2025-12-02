@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ501 -->
+<!-- TheraSocial Version PJ601 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
+<!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2598,7 +2599,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=203.0"></script>
+   <script src="/static/js/circles-messages.js?v=601.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -5589,6 +5590,9 @@ async function loadUserCircles(userId) {
         if (!response.ok) {
             if (response.status === 403) {
                 showNotification('You must follow this user to view their circles', 'error');
+                // PJ601: Reset viewingUserId to prevent navigation loop bug
+                viewingUserId = null;
+                window.viewingUserId = null;
                 showView('following');
                 return;
             }
@@ -6728,22 +6732,39 @@ async function loadFollowing() {
 
         // Display recommended - PJN452: Block button next to Follow button (Block on left)
         // PJ501: Fixed block button translation
+        // PJ601: Fixed block/unblock toggle for recommended users
         const recommendedContainer = document.querySelector('#followingRecommendationsList');
         if (recommendedContainer) {
             const recommendations = recommendedData.recommendations || [];
             
-            // PJ501: Get translated "Block" text
+            // PJ601: Fetch blocked users list for toggle functionality
+            let blockedUserIds = new Set();
+            try {
+                const blockedResponse = await fetch('/api/blocked-users', { credentials: 'include' });
+                if (blockedResponse.ok) {
+                    const blockedData = await blockedResponse.json();
+                    if (blockedData.blocked_users) {
+                        blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching blocked users:', e);
+            }
+            
+            // PJ501: Get translated texts
             const lang = localStorage.getItem('selectedLanguage') || 'en';
-            const blockTexts = {
-                'en': 'Block',
-                'he': 'חסום',
-                'ar': 'حظر',
-                'ru': 'Заблокировать'
-            };
-            const blockText = blockTexts[lang] || blockTexts['en'];
 
             if (recommendations && recommendations.length > 0) {
-                recommendedContainer.innerHTML = recommendations.map(user => `
+                recommendedContainer.innerHTML = recommendations.map(user => {
+                    // PJ601: Check if user is blocked and set button accordingly
+                    const isBlocked = blockedUserIds.has(user.id);
+                    const buttonText = isBlocked ? (pt('block.unblock_user') || 'Unblock') : (pt('block.block_user') || 'Block');
+                    const buttonStyle = isBlocked 
+                        ? 'background: #6c757d; color: white;'  // Gray for unblock
+                        : 'background: #ef4444; color: white;'; // Red for block
+                    const dataI18n = isBlocked ? 'block.unblock_user' : 'block.block_user';
+                    
+                    return `
                     <div class="user-card" data-user-id="${user.id}">
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}; cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
                             ${user.username.charAt(0).toUpperCase()}
@@ -6754,19 +6775,21 @@ async function loadFollowing() {
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${user.reason}</div>` : ''}
                         </div>
                         <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap;">
-                            <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px;" data-i18n="following.follow">
+                            <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; min-width: 100px;" data-i18n="following.follow">
                                 ${pt('following.follow') || 'Follow'}
                             </button>
                             <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${user.username}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;" data-i18n="following.with_note">
                                 ${window.i18n && window.i18n.t ? window.i18n.t('following.with_note') : '+ Note'}
                             </button>
                             <button class="block-btn" data-user-id="${user.id}" data-username="${user.username}" 
-                                style="padding: 6px 10px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
-                                ${blockText}
+                                data-is-blocked="${isBlocked}"
+                                style="padding: 6px 10px; ${buttonStyle} border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;"
+                                data-i18n="${dataI18n}">
+                                ${buttonText}
                             </button>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
 
                 // Add follow handlers
                 recommendedContainer.querySelectorAll('.follow-btn').forEach(btn => {
@@ -6788,14 +6811,25 @@ async function loadFollowing() {
                     });
                 });
                 
-                // PJN452: Add block handlers for recommended users
+                // PJ601: Add block/unblock toggle handlers for recommended users
                 recommendedContainer.querySelectorAll('.block-btn').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         e.stopPropagation();
                         const userId = parseInt(btn.dataset.userId);
                         const username = btn.dataset.username;
-                        await blockUser(userId, username);
-                        loadFollowing();
+                        const isBlocked = btn.dataset.isBlocked === 'true';
+                        
+                        if (isBlocked) {
+                            // Unblock user
+                            const success = await unblockUser(userId);
+                            if (success) {
+                                loadFollowing();
+                            }
+                        } else {
+                            // Block user
+                            await blockUser(userId, username);
+                            loadFollowing();
+                        }
                     });
                 });
             } else {
@@ -8245,12 +8279,14 @@ async function loadUserProfileView(userId) {
 
 // PJ401: Add action buttons (Follow, Follow with Note, Add to Circle, Block) to user profile view
 // PJ501: Added forceShowFollow parameter for recommended users
+// PJ601: Added block/unblock toggle functionality and fixed Follow button width
 async function addUserProfileActionButtons(userId, username, forceShowFollow = false) {
     addUserActionButtonsToView('profileView', userId, username, forceShowFollow);
 }
 
 // PJN451: General function to add action buttons to any view
 // PJ501: Added forceShowFollow parameter for recommended users (shows Follow buttons even if following status is indeterminate)
+// PJ601: Added block/unblock toggle and fixed Follow button width
 async function addUserActionButtonsToView(viewId, userId, username, forceShowFollow = false) {
     const view = document.getElementById(viewId);
     if (!view) return;
@@ -8275,6 +8311,20 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         }
     }
     
+    // PJ601: Check if user is blocked for toggle functionality
+    let isBlocked = false;
+    try {
+        const blockedResponse = await fetch('/api/blocked-users', { credentials: 'include' });
+        if (blockedResponse.ok) {
+            const blockedData = await blockedResponse.json();
+            if (blockedData.blocked_users) {
+                isBlocked = blockedData.blocked_users.some(u => u.id === userId);
+            }
+        }
+    } catch (e) {
+        console.error('Error checking blocked status:', e);
+    }
+    
     // Translation labels
     const lang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage') || 'en';
     const labels = {
@@ -8283,28 +8333,32 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
             unfollow: 'Unfollow',
             followWithNote: 'Follow with Note', 
             addToCircle: 'Add to Circle',
-            block: 'Block'
+            block: 'Block',
+            unblock: 'Unblock'
         },
         'he': { 
             follow: 'עקוב', 
             unfollow: 'הפסק לעקוב',
             followWithNote: 'עקוב עם הערה', 
             addToCircle: 'הוסף למעגל',
-            block: 'חסום'
+            block: 'חסום',
+            unblock: 'בטל חסימה'
         },
         'ar': { 
             follow: 'متابعة', 
             unfollow: 'إلغاء المتابعة',
             followWithNote: 'متابعة مع ملاحظة', 
             addToCircle: 'إضافة إلى دائرة',
-            block: 'حظر'
+            block: 'حظر',
+            unblock: 'إلغاء الحظر'
         },
         'ru': { 
             follow: 'Подписаться', 
             unfollow: 'Отписаться',
             followWithNote: 'Подписаться с заметкой', 
             addToCircle: 'Добавить в круг',
-            block: 'Заблокировать'
+            block: 'Заблокировать',
+            unblock: 'Разблокировать'
         }
     };
     const t = labels[lang] || labels['en'];
@@ -8352,22 +8406,34 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         };
         buttonContainer.appendChild(unfollowBtn);
     } else {
-        // Block button (red) - placed FIRST before follow button
+        // PJ601: Block/Unblock button with toggle (placed FIRST before follow button)
         const blockBtn = document.createElement('button');
-        blockBtn.textContent = t.block;
-        blockBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
-        blockBtn.onmouseover = () => { blockBtn.style.backgroundColor = '#dc2626'; };
-        blockBtn.onmouseout = () => { blockBtn.style.backgroundColor = '#ef4444'; };
-        blockBtn.onclick = () => {
-            blockUser(userId, username);
+        blockBtn.textContent = isBlocked ? t.unblock : t.block;
+        blockBtn.style.cssText = isBlocked 
+            ? 'padding: 0.5rem 1rem; background-color: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;'
+            : 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
+        blockBtn.onmouseover = () => { blockBtn.style.backgroundColor = isBlocked ? '#5a6268' : '#dc2626'; };
+        blockBtn.onmouseout = () => { blockBtn.style.backgroundColor = isBlocked ? '#6c757d' : '#ef4444'; };
+        blockBtn.onclick = async () => {
+            if (isBlocked) {
+                // Unblock user
+                const success = await unblockUser(userId);
+                if (success) {
+                    addUserActionButtonsToView(viewId, userId, username, forceShowFollow); // Refresh buttons
+                }
+            } else {
+                // Block user
+                await blockUser(userId, username);
+                addUserActionButtonsToView(viewId, userId, username, forceShowFollow); // Refresh buttons
+            }
         };
         buttonContainer.appendChild(blockBtn);
         
-        // Follow button (blue/primary)
+        // PJ601: Follow button (blue/primary) - with min-width to match Follow with Note
         const followBtn = document.createElement('button');
         followBtn.className = 'btn-primary';
         followBtn.textContent = t.follow;
-        followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white;';
+        followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white; min-width: 140px;';
         followBtn.onclick = async () => {
             const success = await followUser(userId);
             if (success) {
@@ -8464,6 +8530,9 @@ async function loadUserFeed(userId) {
         if (!response.ok) {
             if (response.status === 403) {
                 showNotification('You must follow this user to view their feed', 'error');
+                // PJ601: Reset viewingUserId to prevent navigation loop bug
+                viewingUserId = null;
+                window.viewingUserId = null;
                 showView('following');
                 return;
             }

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<!-- TheraSocial Circles Version PJ501 -->
+<!-- TheraSocial Circles Version PJ601 -->
 <!-- PJ501 Changes: Added block check before displaying user profile -->
+<!-- PJ601 Changes: Block/Unblock toggle button fix, Fixed navigation after 403 errors -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -34,7 +35,7 @@
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
     <script src="/static/js/i18n.js"></script>
-    <script src="/static/js/circles-messages.js?v=203.0"></script>
+    <script src="/static/js/circles-messages.js?v=601.0"></script>
     <script src="/static/js/feed-updates.js?v=202.0"></script>
 
     <script>
@@ -294,12 +295,26 @@ try {
                 // Translation labels
                 const lang = localStorage.getItem('selectedLanguage') || 'en';
                 const labels = {
-                    'en': { back: '← Back to Following', follow: 'Follow', unfollow: 'Unfollow', addToCircle: 'Add to Circle', block: 'Block' },
-                    'he': { back: '← חזרה לעוקבים', follow: 'עקוב', unfollow: 'הפסק לעקוב', addToCircle: 'הוסף למעגל', block: 'חסום' },
-                    'ar': { back: '← العودة للمتابعين', follow: 'متابعة', unfollow: 'إلغاء المتابعة', addToCircle: 'إضافة إلى دائرة', block: 'حظر' },
-                    'ru': { back: '← Назад к подписчикам', follow: 'Подписаться', unfollow: 'Отписаться', addToCircle: 'Добавить в круг', block: 'Заблокировать' }
+                    'en': { back: '← Back to Following', follow: 'Follow', unfollow: 'Unfollow', addToCircle: 'Add to Circle', block: 'Block', unblock: 'Unblock' },
+                    'he': { back: '← חזרה לעוקבים', follow: 'עקוב', unfollow: 'הפסק לעקוב', addToCircle: 'הוסף למעגל', block: 'חסום', unblock: 'בטל חסימה' },
+                    'ar': { back: '← العودة للمتابعين', follow: 'متابعة', unfollow: 'إلغاء المتابعة', addToCircle: 'إضافة إلى دائرة', block: 'حظر', unblock: 'إلغاء الحظر' },
+                    'ru': { back: '← Назад к подписчикам', follow: 'Подписаться', unfollow: 'Отписаться', addToCircle: 'Добавить в круг', block: 'Заблокировать', unblock: 'Разблокировать' }
                 };
                 const t = labels[lang] || labels['en'];
+                
+                // PJ601: Check if user is blocked
+                let isBlocked = false;
+                try {
+                    const blockedResponse = await fetch('/api/blocked-users', { credentials: 'include' });
+                    if (blockedResponse.ok) {
+                        const blockedData = await blockedResponse.json();
+                        if (blockedData.blocked_users) {
+                            isBlocked = blockedData.blocked_users.some(u => u.id === userId);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error checking blocked status:', e);
+                }
                 
                 // Create container for buttons
                 const container = document.getElementById('circlesContainer');
@@ -334,25 +349,36 @@ try {
                     };
                     buttonContainer.appendChild(unfollowBtn);
                 } else {
-                    // Block button
+                    // PJ601: Block/Unblock button with toggle
                     const blockBtn = document.createElement('button');
-                    blockBtn.textContent = t.block;
-                    blockBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
+                    blockBtn.textContent = isBlocked ? t.unblock : t.block;
+                    blockBtn.style.cssText = isBlocked 
+                        ? 'padding: 0.5rem 1rem; background-color: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;'
+                        : 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
                     blockBtn.onclick = async () => {
-                        if (confirm(`Block ${username}?`)) {
-                            const response = await fetch(`/api/block/${userId}`, { method: 'POST', credentials: 'include' });
+                        if (isBlocked) {
+                            // Unblock user
+                            const response = await fetch(`/api/users/${userId}/unblock`, { method: 'POST', credentials: 'include' });
                             if (response.ok) {
-                                window.location.href = '/?view=following';
+                                window.location.reload();
+                            }
+                        } else {
+                            // Block user
+                            if (confirm(`Block ${username}?`)) {
+                                const response = await fetch(`/api/users/${userId}/block`, { method: 'POST', credentials: 'include' });
+                                if (response.ok) {
+                                    window.location.href = '/?view=following';
+                                }
                             }
                         }
                     };
                     buttonContainer.appendChild(blockBtn);
                     
-                    // Follow button
+                    // Follow button with min-width to match Follow with Note
                     const followBtn = document.createElement('button');
                     followBtn.className = 'btn-primary';
                     followBtn.textContent = t.follow;
-                    followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white;';
+                    followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white; min-width: 140px;';
                     followBtn.onclick = async () => {
                         const response = await fetch(`/api/follow/${userId}`, {
                             method: 'POST',
