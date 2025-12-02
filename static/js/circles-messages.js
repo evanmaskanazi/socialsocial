@@ -1,6 +1,7 @@
 // Circles and Messages Management System with i18n support
 // Complete Fixed Version with null safety and proper error handling
 // PJ501 Changes: Added block check to viewUserProfileFromSearch, Fixed Block button translation
+// PJ601 Changes: Block/Unblock toggle in search results
 
 // Translation helper
 const translateCircle = (key) => {
@@ -2254,22 +2255,46 @@ async function searchUsersToFollowInstant(query) {
             // Check if response is an array or has users property
             const users = Array.isArray(data) ? data : (data.users || []);
             
-            // PJ501: Get translated "Block" text
+            // PJ601: Fetch blocked users list for toggle functionality
+            let blockedUserIds = new Set();
+            try {
+                const blockedResponse = await fetch('/api/blocked-users', { credentials: 'include' });
+                if (blockedResponse.ok) {
+                    const blockedData = await blockedResponse.json();
+                    if (blockedData.blocked_users) {
+                        blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching blocked users:', e);
+            }
+            
+            // PJ501: Get translated texts
             const lang = localStorage.getItem('selectedLanguage') || 'en';
             const blockTexts = {
-                'en': 'Block',
-                'he': 'חסום',
-                'ar': 'حظر',
-                'ru': 'Заблокировать'
+                'en': { block: 'Block', unblock: 'Unblock' },
+                'he': { block: 'חסום', unblock: 'בטל חסימה' },
+                'ar': { block: 'حظر', unblock: 'إلغاء الحظر' },
+                'ru': { block: 'Заблокировать', unblock: 'Разблокировать' }
             };
-            const blockText = blockTexts[lang] || blockTexts['en'];
+            const blockT = blockTexts[lang] || blockTexts['en'];
 
             if (resultsContainer) {
                 if (users.length === 0) {
                     resultsContainer.innerHTML = '<p style="text-align: center; color: #6B7280;">No users found</p>';
                 } else {
-                    // PJN452: Make names clickable to view profile, add Follow + Block buttons
-                    resultsContainer.innerHTML = users.map(user => `
+                    // PJ601: Make names clickable to view profile, add Follow + Block/Unblock toggle buttons
+                    resultsContainer.innerHTML = users.map(user => {
+                        const isBlocked = blockedUserIds.has(user.id);
+                        const buttonText = isBlocked ? blockT.unblock : blockT.block;
+                        const buttonStyle = isBlocked 
+                            ? 'background: #6c757d;'  // Gray for unblock
+                            : 'background: #ef4444;'; // Red for block
+                        const buttonAction = isBlocked 
+                            ? `unblockUserFromSearch(${user.id})`
+                            : `blockUserFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')`;
+                        
+                        return `
                         <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #E5E7EB;" data-user-id="${user.id}">
                             <div style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1;" onclick="viewUserProfileFromSearch(${user.id})">
                                 <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
@@ -2285,12 +2310,12 @@ async function searchUsersToFollowInstant(query) {
                                 <button onclick="event.stopPropagation(); followUserById(${user.id})" class="btn btn-primary" style="padding: 6px 12px; font-size: 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
                                     Follow
                                 </button>
-                                <button onclick="event.stopPropagation(); blockUserFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" style="padding: 6px 10px; font-size: 14px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                    ${blockText}
+                                <button onclick="event.stopPropagation(); ${buttonAction}" style="padding: 6px 10px; font-size: 14px; ${buttonStyle} color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                    ${buttonText}
                                 </button>
                             </div>
                         </div>
-                    `).join('');
+                    `}).join('');
                 }
                 resultsContainer.style.display = 'block';
             }
@@ -2392,10 +2417,47 @@ async function blockUserFromSearch(userId, username) {
     }
 }
 
+// PJ601: Unblock user from search
+async function unblockUserFromSearch(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/unblock`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to unblock user');
+        }
+        
+        const lang = localStorage.getItem('selectedLanguage') || 'en';
+        const successMessages = {
+            'en': 'User unblocked successfully',
+            'he': 'החסימה הוסרה בהצלחה',
+            'ar': 'تم إلغاء حظر المستخدم بنجاح',
+            'ru': 'Пользователь разблокирован'
+        };
+        if (typeof showNotification === 'function') {
+            showNotification(successMessages[lang] || successMessages['en'], 'success');
+        }
+        
+        // Refresh following list
+        if (typeof window.loadFollowing === 'function') {
+            window.loadFollowing();
+        }
+    } catch (error) {
+        console.error('Error unblocking user:', error);
+        if (typeof showNotification === 'function') {
+            showNotification(error.message || 'Failed to unblock user', 'error');
+        }
+    }
+}
+
 // Export new functions
 window.viewUserProfileFromSearch = viewUserProfileFromSearch;
 window.followUserById = followUserById;
 window.blockUserFromSearch = blockUserFromSearch;
+window.unblockUserFromSearch = unblockUserFromSearch;
 
 // Export the new functions
 window.updateFollowingSection = updateFollowingSection;
