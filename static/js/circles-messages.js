@@ -1,5 +1,6 @@
 // Circles and Messages Management System with i18n support
 // Complete Fixed Version with null safety and proper error handling
+// PJ501 Changes: Added block check to viewUserProfileFromSearch, Fixed Block button translation
 
 // Translation helper
 const translateCircle = (key) => {
@@ -2252,6 +2253,16 @@ async function searchUsersToFollowInstant(query) {
 
             // Check if response is an array or has users property
             const users = Array.isArray(data) ? data : (data.users || []);
+            
+            // PJ501: Get translated "Block" text
+            const lang = localStorage.getItem('selectedLanguage') || 'en';
+            const blockTexts = {
+                'en': 'Block',
+                'he': 'חסום',
+                'ar': 'حظر',
+                'ru': 'Заблокировать'
+            };
+            const blockText = blockTexts[lang] || blockTexts['en'];
 
             if (resultsContainer) {
                 if (users.length === 0) {
@@ -2275,7 +2286,7 @@ async function searchUsersToFollowInstant(query) {
                                     Follow
                                 </button>
                                 <button onclick="event.stopPropagation(); blockUserFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" style="padding: 6px 10px; font-size: 14px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                    Block
+                                    ${blockText}
                                 </button>
                             </div>
                         </div>
@@ -2294,7 +2305,34 @@ async function searchUsersToFollowInstant(query) {
 }
 
 // PJN452: View user profile from search and hide search results
-function viewUserProfileFromSearch(userId) {
+// PJ501: Added block check before viewing profile
+async function viewUserProfileFromSearch(userId) {
+    // PJ501: Check if blocked by this user first
+    try {
+        const blockCheckResponse = await fetch(`/api/users/${userId}/check-blocked`, { credentials: 'include' });
+        if (blockCheckResponse.ok) {
+            const blockStatus = await blockCheckResponse.json();
+            if (blockStatus.blockedBy || blockStatus.is_blocked) {
+                // Show Account Not Available message
+                const lang = localStorage.getItem('selectedLanguage') || 'en';
+                const messages = {
+                    'en': 'Account Not Available',
+                    'he': 'חשבון לא זמין',
+                    'ar': 'الحساب غير متاح',
+                    'ru': 'Аккаунт недоступен'
+                };
+                if (typeof showNotification === 'function') {
+                    showNotification(messages[lang] || messages['en'], 'error');
+                } else {
+                    alert(messages[lang] || messages['en']);
+                }
+                return;
+            }
+        }
+    } catch (e) {
+        console.error('Error checking block status:', e);
+    }
+    
     // Hide search results
     const resultsContainer = document.getElementById('followSearchResults');
     if (resultsContainer) {
