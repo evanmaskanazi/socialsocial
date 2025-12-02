@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform
+Complete app.py for Social Social Platform - Phase 501
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ501 Changes:
+- Updated check-blocked endpoint to return blockedBy field
+- Added allow_preview parameter to get_user_profile for recommended users
+- Added block check to profile endpoint returning 403 with account_not_available
 """
 
 import os
@@ -3835,9 +3840,18 @@ def profile():
 @app.route('/api/users/<int:user_id>/profile', methods=['GET'])
 @login_required
 def get_user_profile(user_id):
-    """Get another user's profile - accessible by followers OR circle members"""
+    """Get another user's profile - accessible by followers, circle members, or with allow_preview"""
     try:
         current_user_id = session.get('user_id')
+        
+        # PJ501: Check if user is blocked by target user first
+        is_blocked_by_target = BlockedUser.query.filter_by(
+            blocker_id=user_id,
+            blocked_id=current_user_id
+        ).first() is not None
+        
+        if is_blocked_by_target:
+            return jsonify({'error': 'account_not_available', 'blocked': True}), 403
 
         # Check if following this user
         is_following = Follow.query.filter_by(
@@ -3850,8 +3864,11 @@ def get_user_profile(user_id):
             user_id=user_id,
             circle_user_id=current_user_id
         ).first() is not None
+        
+        # PJ501: Allow preview mode for recommended users (view basic profile without following)
+        allow_preview = request.args.get('allow_preview', 'false').lower() == 'true'
 
-        if not is_following and not is_in_circle and user_id != current_user_id:
+        if not is_following and not is_in_circle and user_id != current_user_id and not allow_preview:
             return jsonify({'error': 'Must be following user or in their circles to view profile'}), 403
 
         user = User.query.get(user_id)
@@ -3872,7 +3889,9 @@ def get_user_profile(user_id):
             'interests': profile.interests if profile else '',
             'goals': profile.goals if profile else '',
             'favorite_hobbies': profile.favorite_hobbies if profile else '',
-            'created_at': user.created_at.isoformat() if user.created_at else None
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'is_following': is_following,  # PJ501: Include following status in response
+            'is_preview': allow_preview and not is_following  # PJ501: Indicate if this is preview mode
         })
     except Exception as e:
         logger.error(f"Error loading user profile {user_id}: {str(e)}")
@@ -9765,18 +9784,26 @@ def unblock_user(user_id):
 @app.route('/api/users/<int:user_id>/check-blocked', methods=['GET'])
 @login_required
 def check_if_blocked(user_id):
-    """Check if the current user is blocked by the specified user"""
+    """Check if the current user is blocked by the specified user OR has blocked them"""
     try:
         current_user_id = session.get('user_id')
         
-        # Check if current user is blocked by user_id
-        is_blocked = BlockedUser.query.filter_by(
+        # Check if current user is blocked by user_id (they blocked me)
+        is_blocked_by = BlockedUser.query.filter_by(
             blocker_id=user_id,
             blocked_id=current_user_id
         ).first() is not None
         
+        # Check if current user has blocked user_id (I blocked them)
+        has_blocked = BlockedUser.query.filter_by(
+            blocker_id=current_user_id,
+            blocked_id=user_id
+        ).first() is not None
+        
         return jsonify({
-            'is_blocked': is_blocked,
+            'is_blocked': is_blocked_by,  # Kept for backward compatibility
+            'blockedBy': is_blocked_by,   # PJ501: New field - target user has blocked current user
+            'blocked': has_blocked,        # PJ501: Current user has blocked target user
             'blocker_id': user_id,
             'blocked_id': current_user_id
         })
