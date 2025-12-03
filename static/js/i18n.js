@@ -490,6 +490,8 @@ const translations = {
     'errors.page_not_found': 'Page not found',
     'errors.access_denied': 'Access denied',
     'errors.user_not_found': 'User not found',
+    'invite.alert_title': 'New Invite',
+'invite.alert_content': 'You have received a new connection invite',
 // Circle labels (simplified)
 'circles.class_b': 'Close Friends 👥',
 'circles.class_a': 'Family 👨‍👩‍👧‍👦',
@@ -1162,6 +1164,8 @@ const translations = {
     'about.communication_title': 'תקשורת מאובטחת',
     'about.communication_desc': 'התחבר למטפל שלך באמצעות הודעות מוצפנות',
     'about.checkin_title': 'צ׳ק-אין יומי',
+    'invite.alert_title': 'הזמנה חדשה',
+'invite.alert_content': 'קיבלת הזמנה חדשה להתחבר',
 
     'about.community_desc': 'התחבר לאחרים במסעות דומים בסביבה בטוחה ומנוהלת',
     'about.values_title': 'הערכים שלנו',
@@ -1736,6 +1740,8 @@ const translations = {
         'following.view_full_profile': 'عرض الملف الشخصي الكامل',
         'following.circles': 'الدوائر',
 'auth.username': 'اسم المستخدم',
+'invite.alert_title': 'دعوة جديدة',
+'invite.alert_content': 'لقد تلقيت دعوة اتصال جديدة',
 
 'parameters.set_alert_triggers': 'تعيين تنبيهات',
 'parameters.alert_triggers_description': 'احصل على إشعار عندما تكون معايير صحة {username} مقلقة',
@@ -2590,7 +2596,8 @@ const translations = {
     'reports.download_started': 'Загрузка началась!',
     'reports.sending': 'Отправка отчета...',
     'reports.sent_success': 'Отчет успешно отправлен!',
-
+'invite.alert_title': 'Новое приглашение',
+'invite.alert_content': 'Вы получили новое приглашение',
     // Chart labels
     'chart.mood': 'Настроение',
     'chart.energy': 'Энергия',
