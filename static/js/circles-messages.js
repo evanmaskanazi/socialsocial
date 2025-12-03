@@ -3,6 +3,8 @@
 // PJ501 Changes: Added block check to viewUserProfileFromSearch, Fixed Block button translation
 // PJ601 Changes: Block/Unblock toggle in search results
 // PJ602 Changes: Fixed Follow button width
+// PJ703 Changes: Version update only
+// PJ704 Changes: Backend fix for alerts - no frontend changes needed
 // PJ702 Changes: Version sync with indexPhase702 and circlesPhase702
 // PJ703 Changes: Version sync - no functional changes needed for circles-messages.js
 
