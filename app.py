@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 602
+Complete app.py for Social Social Platform - Phase 701
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -16,6 +16,11 @@ PJ601 Changes:
 PJ602 Changes:
 - No backend changes needed - all fixes in frontend HTML/JS files
 - Fixed Follow button width, action buttons on own profile, double 403 message
+
+PJ701 Changes:
+- Fixed email notifications for all alert types (wellness, follow, invite)
+- All alert creation now uses create_alert_with_email to send emails when user has email_on_alert enabled
+- This applies to: wellness alerts, new follower alerts, and invite alerts
 """
 
 import os
@@ -6667,8 +6672,8 @@ def process_parameter_triggers(user_id, params):
                                 ).first()
 
                                 if not recent_alert:
-                                    # PJ401: Add source_user_id for following-based filtering
-                                    alert = Alert(
+                                    # PJ701: Use create_alert_with_email for wellness alerts
+                                    alert = create_alert_with_email(
                                         user_id=trigger.watcher_id,
                                         title=f"Wellness Alert for {watched_user.username}",
                                         content=f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days (ending {consecutive_dates[0].strftime('%b %d')})",
@@ -6676,7 +6681,6 @@ def process_parameter_triggers(user_id, params):
                                         source_user_id=watched_user.id,
                                         alert_category='trigger'
                                     )
-                                    db.session.add(alert)
                                     db.session.commit()
                                 break  # Only alert once per parameter type
                         else:
@@ -8833,11 +8837,11 @@ def check_parameter_triggers():
                 ).first()
 
                 if not existing:
-                    # PJ401: Include source_user_id for following-based filtering
+                    # PJ701: Use create_alert_with_email for wellness alerts
                     watched_user_obj = User.query.filter_by(username=alert_data['user']).first()
                     source_id = watched_user_obj.id if watched_user_obj else None
                     
-                    alert = Alert(
+                    alert = create_alert_with_email(
                         user_id=watcher_id,
                         title=f"Wellness Alert for {alert_data['user']}",
                         content=f"{alert_data['user']}'s {alert_data['parameter']} has been {alert_data['condition_text']} for {alert_data['consecutive_days']} consecutive days (ending {end_date_str})",
@@ -8845,7 +8849,6 @@ def check_parameter_triggers():
                         source_user_id=source_id,
                         alert_category='trigger'
                     )
-                    db.session.add(alert)
                     alerts_created += 1
             else:
                 # NEW schema format (existing code)
@@ -8857,11 +8860,11 @@ def check_parameter_triggers():
                 ).first()
 
                 if not existing:
-                    # PJ401: Include source_user_id for following-based filtering
+                    # PJ701: Use create_alert_with_email for wellness alerts
                     watched_user_obj = User.query.filter_by(username=alert_data['user']).first()
                     source_id = watched_user_obj.id if watched_user_obj else None
                     
-                    alert = Alert(
+                    alert = create_alert_with_email(
                         user_id=watcher_id,
                         title=f"Parameter Alert: {alert_data['user']}",
                         content=f"{alert_data['user']}'s {alert_data['parameter']} has been concerning for {alert_data['consecutive_days']} consecutive days",
@@ -8869,7 +8872,6 @@ def check_parameter_triggers():
                         source_user_id=source_id,
                         alert_category='trigger'
                     )
-                    db.session.add(alert)
                     alerts_created += 1
 
         db.session.commit()
@@ -9541,8 +9543,8 @@ def follow_user(user_id):
         if follow_trigger:
             alert_content += ' (Following your parameters)'
 
-        # PJ401: Add source_user_id for the follower
-        alert = Alert(
+        # PJ701: Use create_alert_with_email for follow alerts
+        alert = create_alert_with_email(
             user_id=user_id,
             title=f'{current_user.username} started following you',
             content=alert_content,
@@ -9550,7 +9552,6 @@ def follow_user(user_id):
             source_user_id=current_user_id,
             alert_category='follow'
         )
-        db.session.add(alert)
 
         if follow_note:
             message = Message(
@@ -10693,8 +10694,8 @@ def create_follow_request():
         requester = db.session.get(User, requester_id)
         requester_username = requester.username if requester else "Someone"
 
-        # PJ401: Add source_user_id for the requester
-        alert = Alert(
+        # PJ701: Use create_alert_with_email for invite alerts
+        alert = create_alert_with_email(
             user_id=target_id,
             title="invite.alert_title",
             content=f"{requester_username}|invite.alert_content",
@@ -10702,7 +10703,6 @@ def create_follow_request():
             source_user_id=requester_id,
             alert_category='follow'
         )
-        db.session.add(alert)
         db.session.commit()
 
         return jsonify({'message': 'Follow request sent'}), 200
