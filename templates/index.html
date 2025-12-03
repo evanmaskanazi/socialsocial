@@ -20,7 +20,7 @@
      1. Backend fix - Alerts for new followers, invites, and messages were being incorrectly filtered out
      2. The get_alerts endpoint was filtering ALL alerts with source_user_id by following status
      3. Now only 'trigger' and 'feed' category alerts are filtered - follow/invite/message alerts always show
-
+-->
      2. Fixed Followers tab - clicking on user names now works same as Following tab (uses viewUserProfileFromFollowers)
      3. Fixed Invite section follow tracking - now properly shows Unfollow when already following a user
 -->
@@ -4776,6 +4776,11 @@ document.addEventListener('click', function(e) {
         // Feed Functions
         async function loadFeed() {
             try {
+                // PJ708: Remove action buttons from viewing another user
+                if (typeof clearViewActionButtons === 'function') {
+                    clearViewActionButtons('feedView');
+                }
+                
                 // Restore post creation UI when viewing own feed
                 const postInput = document.getElementById('postInput');
                 const visibilitySelect = document.getElementById('visibilitySelect');
@@ -5330,6 +5335,12 @@ window.addEventListener('languageChanged', () => {
        async function loadProfile() {
             viewingUserId = null; // Reset when viewing own profile
             console.log('[DEBUG] loadProfile called - loading current user profile');
+            
+            // PJ708: Remove action buttons from viewing another user
+            if (typeof clearViewActionButtons === 'function') {
+                clearViewActionButtons('profileView');
+            }
+            
             try {
                 const response = await apiCall('/profile');
                 if (!response) return;
@@ -5533,6 +5544,26 @@ async function updateCirclesPrivacy(passedValue) {
 }
 
 
+// PJ708: Helper function to clear action buttons from a view when returning to own content
+function clearViewActionButtons(viewId) {
+    const view = document.getElementById(viewId);
+    if (!view) return;
+    
+    // Remove profile action buttons (Unfollow, Add to Circle, Block, etc.)
+    const actionButtons = view.querySelector('.profile-action-buttons');
+    if (actionButtons) {
+        console.log(`[PJ708] Removing action buttons from ${viewId}`);
+        actionButtons.remove();
+    }
+    
+    // Remove back to following button
+    const backBtn = view.querySelector('.back-to-following-btn');
+    if (backBtn) {
+        console.log(`[PJ708] Removing back button from ${viewId}`);
+        backBtn.remove();
+    }
+}
+
 async function loadCircles() {
     try {
         console.log('[DEBUG] loadCircles called - loading own circles');
@@ -5555,13 +5586,16 @@ async function loadCircles() {
         viewingUserId = null;
         window.viewingUserId = null;
 
+        // PJ708: Remove action buttons from viewing another user
+        clearViewActionButtons('circlesView');
+
         // Ensure we're loading current user's circles
         const header = document.querySelector('#circlesView h2');
         if (header) {
             header.textContent = window.i18n && window.i18n.translate ? window.i18n.translate('circles.title') : 'Circles';
         }
 
-        // Remove any existing back buttons (we're in our own circles view now)
+        // Remove any existing back buttons (we're in our own circles view now) - handled by clearViewActionButtons
         const existingBackBtn = document.querySelector('#circlesView .back-to-following-btn');
         if (existingBackBtn) {
             existingBackBtn.remove();
@@ -6831,6 +6865,11 @@ window.viewingUserId = null;
   // Following/Followers Functions
 async function loadFollowing() {
     try {
+        // PJ708: Remove action buttons from viewing another user
+        if (typeof clearViewActionButtons === 'function') {
+            clearViewActionButtons('followingView');
+        }
+        
         // Ensure we're loading current user's following (not viewing another user)
         const header = document.querySelector('#followingView h2');
         if (header) {
@@ -7082,6 +7121,11 @@ window.viewingUserId = null;
 
  async function loadFollowers() {
     try {
+        // PJ708: Remove action buttons from viewing another user
+        if (typeof clearViewActionButtons === 'function') {
+            clearViewActionButtons('followersView');
+        }
+        
         // Ensure we're loading current user's followers (not viewing another user)
         const header = document.querySelector('#followersView h2');
         if (header) {
@@ -9669,6 +9713,8 @@ async function searchUsersToFollowInstant(query) {
                     // FIX #6: Show results with Follow and +Note buttons like circles
                     const followText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('following.follow') : 'Follow';
+                    const unfollowText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('following.unfollow') : 'Unfollow';
                     const withNoteText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('following.with_note') : '+ Note';
                     const blockText = window.i18n && window.i18n.translate ? 
@@ -9676,7 +9722,7 @@ async function searchUsersToFollowInstant(query) {
                     const unblockText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('block.unblock_user') : 'Unblock';
                     
-                    // PJ702: Render with Block/Unblock toggle based on blocked status
+                    // PJ706: Render with Follow/Unfollow toggle based on following status
                     resultsContainer.innerHTML = users.map(user => {
                         const isBlocked = blockedUserIds.has(user.id);
                         const buttonLabel = isBlocked ? unblockText : blockText;
@@ -9686,6 +9732,16 @@ async function searchUsersToFollowInstant(query) {
                         const buttonAction = isBlocked 
                             ? `unblockUserFromSearchToggle(${user.id})`
                             : `blockUserFromSearchToggle(${user.id}, '${user.username.replace(/'/g, "\\'")}')`;
+                        
+                        // PJ706: Check if already following this user
+                        const isFollowing = user.is_following === true;
+                        const followButtonText = isFollowing ? unfollowText : followText;
+                        const followButtonAction = isFollowing 
+                            ? `unfollowUserFromSearch(${user.id})`
+                            : `followUserFromSearch(${user.id})`;
+                        const followButtonStyle = isFollowing
+                            ? 'background-color: #6c757d;'  // Gray for unfollow
+                            : '';  // Default primary style
                         
                         return `
                         <div class="search-result-item" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
@@ -9703,12 +9759,12 @@ async function searchUsersToFollowInstant(query) {
                                 <button onclick="event.stopPropagation(); ${buttonAction}" style="padding: 6px 10px; ${buttonStyle} color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
                                     ${buttonLabel}
                                 </button>
-                                <button onclick="event.stopPropagation(); followUserFromSearch(${user.id})" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; width: auto;">
-                                    ${followText}
+                                <button onclick="event.stopPropagation(); ${followButtonAction}" class="btn ${isFollowing ? '' : 'btn-primary'}" style="padding: 8px 16px; font-size: 14px; width: auto; ${followButtonStyle} ${isFollowing ? 'color: white; border: none; border-radius: 6px; cursor: pointer;' : ''}">
+                                    ${followButtonText}
                                 </button>
-                                <button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto;">
+                                ${!isFollowing ? `<button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto;">
                                     ${withNoteText}
-                                </button>
+                                </button>` : ''}
                             </div>
                         </div>
                     `}).join('');
@@ -9764,10 +9820,29 @@ async function followUserWithNoteFromSearch(userId, username) {
     }
 }
 
+// PJ706: Helper function to unfollow user from search results
+async function unfollowUserFromSearch(userId) {
+    try {
+        await apiCall(`/unfollow/${userId}`, 'POST', {});
+        showNotification('Successfully unfollowed user', 'success');
+        
+        // Clear search and reload following
+        document.getElementById('followSearchInput').value = '';
+        document.getElementById('followSearchResults').style.display = 'none';
+        
+        if (typeof loadFollowing === 'function') {
+            await loadFollowing();
+        }
+    } catch (error) {
+        showNotification('Failed to unfollow user', 'error');
+    }
+}
+
 // Make functions globally available
 window.searchUsersToFollowInstant = searchUsersToFollowInstant;
 window.followUserFromSearch = followUserFromSearch;
 window.followUserWithNoteFromSearch = followUserWithNoteFromSearch;
+window.unfollowUserFromSearch = unfollowUserFromSearch;
 
 // PJN451: View user profile from search results
 async function viewUserProfileFromSearch(userId) {
