@@ -664,6 +664,66 @@ def get_alert_notification_email_translations(language='en'):
     return translations.get(language, translations['en'])
 
 
+def get_invite_alert_translations(language='en'):
+    """
+    PJ706: Get translations for invite alert emails.
+    These translate the invite.alert_title and invite.alert_content keys.
+    """
+    translations = {
+        'en': {
+            'invite.alert_title': 'New Invitation',
+            'invite.alert_content': '{username} has invited you to follow them'
+        },
+        'he': {
+            'invite.alert_title': 'הזמנה חדשה',
+            'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה'
+        },
+        'ar': {
+            'invite.alert_title': 'دعوة جديدة',
+            'invite.alert_content': 'دعاك {username} لمتابعته'
+        },
+        'ru': {
+            'invite.alert_title': 'Новое приглашение',
+            'invite.alert_content': '{username} пригласил(а) вас подписаться'
+        }
+    }
+    return translations.get(language, translations['en'])
+
+
+def translate_alert_content(title, content, user_language='en'):
+    """
+    PJ706: Translate alert title and content if they contain translation keys.
+    Handles formats like:
+    - title: "invite.alert_title"
+    - content: "username|invite.alert_content"
+    """
+    invite_translations = get_invite_alert_translations(user_language)
+    
+    translated_title = title
+    translated_content = content
+    
+    # Translate title if it's a known key
+    if title in invite_translations:
+        translated_title = invite_translations[title]
+    
+    # Handle content format: "username|key" or just "key"
+    if content and '|' in content:
+        parts = content.split('|', 1)
+        username = parts[0]
+        content_key = parts[1] if len(parts) > 1 else ''
+        
+        if content_key in invite_translations:
+            translated_content = invite_translations[content_key].replace('{username}', username)
+        else:
+            translated_content = content
+    elif content in invite_translations:
+        translated_content = invite_translations[content]
+    
+    logger.info(f"[PJ706] Translated alert - title: '{title}' -> '{translated_title}', content: '{content}' -> '{translated_content}'")
+    
+    return translated_title, translated_content
+
+
 def send_alert_notification_email(user_email, alert_title, alert_content, user_language='en'):
     """Send email notification when user gets a new alert"""
     logger.info(f"[SMTP ALERT] send_alert_notification_email called")
@@ -671,6 +731,11 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
     try:
         t = get_alert_notification_email_translations(user_language)
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+
+        # PJ706: Translate alert title and content if they are translation keys
+        translated_title, translated_content = translate_alert_content(alert_title, alert_content, user_language)
+        alert_title = translated_title
+        alert_content = translated_content
 
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
@@ -4492,11 +4557,25 @@ def search_users():
 
         logger.info(f"✓ Found {len(users)} user(s): {[u.username for u in users]}")
 
+        # PJ706: Get list of users the current user is following
+        following_ids = set()
+        try:
+            following_result = db.session.execute(
+                select(Follow.followed_id).filter_by(follower_id=current_user_id)
+            ).scalars().all()
+            following_ids = set(following_result)
+            logger.info(f"👥 User is following {len(following_ids)} users")
+        except Exception as follow_err:
+            logger.warning(f"⚠️ Could not fetch following list: {follow_err}")
+
         # Format results with profile data
         results = []
         for user in users:
             try:
                 profile = Profile.query.filter_by(user_id=user.id).first()
+
+                # PJ706: Include is_following field
+                is_following = user.id in following_ids
 
                 user_data = {
                     'id': user.id,
@@ -4506,11 +4585,12 @@ def search_users():
                     'bio': profile.bio if profile else None,
                     'occupation': profile.occupation if profile else None,
                     'interests': profile.interests if profile else None,
-                    'avatar_url': profile.avatar_url if profile else None
+                    'avatar_url': profile.avatar_url if profile else None,
+                    'is_following': is_following  # PJ706: Added
                 }
 
                 results.append(user_data)
-                logger.debug(f"  - Formatted user {user.id}: {user.username}")
+                logger.debug(f"  - Formatted user {user.id}: {user.username}, is_following={is_following}")
 
             except Exception as profile_error:
                 # Include user even if profile loading fails
@@ -4523,7 +4603,8 @@ def search_users():
                     'bio': None,
                     'occupation': None,
                     'interests': None,
-                    'avatar_url': None
+                    'avatar_url': None,
+                    'is_following': user.id in following_ids  # PJ706: Added
                 })
 
         logger.info(f"📤 Returning {len(results)} result(s)")
