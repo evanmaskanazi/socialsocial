@@ -1,10 +1,16 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ701 -->
+<!-- TheraSocial Version PJ702 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
 <!-- PJ602 Changes: Fixed Follow button width (override CSS width:100%), Fixed action buttons persisting on own profile, Fixed double 403 message on Circles -->
 <!-- PJ701 Changes: Fixed HTML/CSS security - added escapeHtml for user input in innerHTML to prevent XSS attacks -->
+<!-- PJ702 Changes: 
+     1. Fixed Add to Circle button - now checks if user is already in circles before showing
+     2. Fixed Following search Block button - now has Block/Unblock toggle functionality  
+     3. Added clickable names in Invite tab Suggested People section
+     4. Added search bar to Invite tab with Send Request button
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2460,6 +2466,38 @@
             <h3 data-i18n="invite.suggested">Suggested People to Invite</h3>
             <p data-i18n="invite.suggested_description">Based on your location and connections</p>
 
+            <!-- PJ702: Search bar for Invite tab -->
+            <div style="margin: 20px 0;">
+                <div style="position: relative; max-width: 600px;">
+                    <input type="text"
+                        id="inviteSearchInput"
+                        placeholder="Search users to invite..."
+                        style="
+                            width: 100%;
+                            padding: 12px 20px;
+                            border: none;
+                            border-radius: 25px;
+                            font-size: 16px;
+                            background: #f5f5f5;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+                        "
+                        oninput="searchUsersToInviteInstant(this.value)"
+                    >
+                </div>
+
+                <!-- Invite Search Results Container -->
+                <div id="inviteSearchResults" style="
+                    display: none;
+                    background: white;
+                    border-radius: 12px;
+                    margin-top: 1rem;
+                    padding: 1rem;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    max-width: 600px;
+                "></div>
+            </div>
+            <!-- End of PJ702 search bar -->
+
             <div id="recommendationsList" class="recommendations-list">
                 <div class="loading">Loading recommendations...</div>
             </div>
@@ -2601,7 +2639,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js"></script>
-   <script src="/static/js/circles-messages.js?v=602.0"></script>
+   <script src="/static/js/circles-messages.js?v=702.0"></script>
 <script src="/static/js/feed-updates.js?v=3.0"></script>
 <script>
     // API Configuration
@@ -4043,14 +4081,17 @@ function loadUserRecommendations() {
             if (data.recommendations && data.recommendations.length > 0) {
                 console.log('✅ Rendering', data.recommendations.length, 'recommendations');
 
+                // PJ702: Added clickable names to view user profile
                 const html = data.recommendations.map(user => `
                     <div class="user-card">
-                        <div class="user-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                            ${user.username.charAt(0).toUpperCase()}
-                        </div>
-                        <div class="user-info">
-                            <div class="user-name">${user.username}</div>
-                            ${user.location ? `<div class="user-location">📍 ${user.location}</div>` : ''}
+                        <div style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;" onclick="viewUserProfileFromInvite(${user.id})">
+                            <div class="user-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                ${user.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="user-info">
+                                <div class="user-name">${user.username}</div>
+                                ${user.location ? `<div class="user-location">📍 ${user.location}</div>` : ''}
+                            </div>
                         </div>
                         <button class="follow-btn" onclick="sendFollowRequestFromInvite(${user.id})">
                             <span data-i18n="invite.send_request">Send Request</span>
@@ -4150,6 +4191,132 @@ function sendFollowRequestFromInvite(userId) {
         });
     }
 }
+
+// PJ702: View user profile from Invite tab recommendations
+async function viewUserProfileFromInvite(userId) {
+    // Check if blocked by this user first
+    try {
+        const blockStatus = await checkIfBlockedByUser(userId);
+        if (blockStatus.blockedBy || blockStatus.is_blocked) {
+            showBlockedMessage();
+            return;
+        }
+    } catch (e) {
+        console.error('Error checking block status:', e);
+    }
+    
+    // Navigate to user profile with preview mode (since not following)
+    viewUserProfile(userId, true);
+}
+
+window.viewUserProfileFromInvite = viewUserProfileFromInvite;
+
+// PJ702: Instant search for Invite tab with Send Request button
+let inviteSearchDebounceTimer = null;
+
+async function searchUsersToInviteInstant(query) {
+    const resultsContainer = document.getElementById('inviteSearchResults');
+    
+    // Clear previous timer
+    if (inviteSearchDebounceTimer) {
+        clearTimeout(inviteSearchDebounceTimer);
+    }
+    
+    // If empty query, hide results
+    if (!query || query.trim().length < 1) {
+        if (resultsContainer) {
+            resultsContainer.style.display = 'none';
+            resultsContainer.innerHTML = '';
+        }
+        return;
+    }
+    
+    // Debounce: wait 200ms before searching
+    inviteSearchDebounceTimer = setTimeout(async () => {
+        try {
+            const response = await apiCall(`/users/search?q=${encodeURIComponent(query.trim())}`);
+            
+            if (!response) {
+                throw new Error('Search failed');
+            }
+            
+            const users = response.users || (Array.isArray(response) ? response : []);
+            
+            if (resultsContainer) {
+                if (users.length === 0) {
+                    const noUsersText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('following.no_users') : 'No users found';
+                    resultsContainer.innerHTML = `<p style="text-align: center; color: #6B7280; padding: 15px;">${noUsersText}</p>`;
+                } else {
+                    const sendRequestText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('invite.send_request') : 'Send Request';
+                    
+                    resultsContainer.innerHTML = users.map(user => `
+                        <div class="search-result-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
+                            <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromInviteSearch(${user.id})">
+                                <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
+                                    ${user.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <strong style="display: block;">${user.username}</strong>
+                                    <small style="color: #6B7280;">${user.selected_city || user.city || ''}</small>
+                                    ${user.bio ? `<br><small style="color: #9CA3AF; font-style: italic;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</small>` : ''}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button onclick="event.stopPropagation(); sendFollowRequestFromInviteSearch(${user.id})" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; width: auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                    ${sendRequestText}
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                resultsContainer.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Invite search error:', error);
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '<p style="text-align: center; color: #EF4444; padding: 15px;">Search failed. Please try again.</p>';
+                resultsContainer.style.display = 'block';
+            }
+        }
+    }, 200);
+}
+
+// PJ702: View user profile from invite search results
+async function viewUserProfileFromInviteSearch(userId) {
+    // Clear search and hide results
+    document.getElementById('inviteSearchInput').value = '';
+    document.getElementById('inviteSearchResults').style.display = 'none';
+    
+    // Check if blocked first
+    try {
+        const blockStatus = await checkIfBlockedByUser(userId);
+        if (blockStatus.blockedBy || blockStatus.is_blocked) {
+            showBlockedMessage();
+            return;
+        }
+    } catch (e) {
+        console.error('Error checking block status:', e);
+    }
+    
+    // Navigate to user profile with preview mode
+    viewUserProfile(userId, true);
+}
+
+// PJ702: Send follow request from invite search
+async function sendFollowRequestFromInviteSearch(userId) {
+    // Clear search and hide results first
+    document.getElementById('inviteSearchInput').value = '';
+    document.getElementById('inviteSearchResults').style.display = 'none';
+    
+    // Use existing function
+    sendFollowRequestFromInvite(userId);
+}
+
+window.searchUsersToInviteInstant = searchUsersToInviteInstant;
+window.viewUserProfileFromInviteSearch = viewUserProfileFromInviteSearch;
+window.sendFollowRequestFromInviteSearch = sendFollowRequestFromInviteSearch;
 
 
 
@@ -8467,16 +8634,38 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         buttonContainer.appendChild(followNoteBtn);
     }
     
-    // Add to Circle button (green)
-    const addCircleBtn = document.createElement('button');
-    addCircleBtn.textContent = t.addToCircle;
-    addCircleBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer;';
-    addCircleBtn.onmouseover = () => { addCircleBtn.style.backgroundColor = '#16a34a'; };
-    addCircleBtn.onmouseout = () => { addCircleBtn.style.backgroundColor = '#22c55e'; };
-    addCircleBtn.onclick = () => {
-        showCircleAddMenu(userId, username);
-    };
-    buttonContainer.appendChild(addCircleBtn);
+    // PJ702: Check if user is already in any of my circles before showing Add to Circle button
+    let isInCircles = false;
+    try {
+        const circlesResponse = await fetch('/api/circles', { credentials: 'include' });
+        if (circlesResponse.ok) {
+            const circlesData = await circlesResponse.json();
+            console.log('[PJ702] My circles data for Add to Circle check:', circlesData);
+            
+            const publicCircle = circlesData.general || circlesData.public || [];
+            const classBCircle = circlesData.close_friends || circlesData.class_b || [];
+            const classACircle = circlesData.family || circlesData.class_a || [];
+            
+            const allCircleMembers = [...publicCircle, ...classBCircle, ...classACircle];
+            isInCircles = allCircleMembers.some(m => Number(m.id) === Number(userId));
+            console.log('[PJ702] User', userId, 'isInCircles:', isInCircles);
+        }
+    } catch (e) {
+        console.error('[PJ702] Error checking circle membership:', e);
+    }
+    
+    // PJ702: Add to Circle button (green) - only show if user is not already in any circle
+    if (!isInCircles) {
+        const addCircleBtn = document.createElement('button');
+        addCircleBtn.textContent = t.addToCircle;
+        addCircleBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer;';
+        addCircleBtn.onmouseover = () => { addCircleBtn.style.backgroundColor = '#16a34a'; };
+        addCircleBtn.onmouseout = () => { addCircleBtn.style.backgroundColor = '#22c55e'; };
+        addCircleBtn.onclick = () => {
+            showCircleAddMenu(userId, username);
+        };
+        buttonContainer.appendChild(addCircleBtn);
+    }
     
     // PJN451: Block button only appears when NOT following (already added at start in the else block above)
     // No block button when following - removed per requirement #3
@@ -9425,6 +9614,20 @@ async function searchUsersToFollowInstant(query) {
                         window.i18n.translate('following.no_users') : 'No users found';
                     resultsContainer.innerHTML = `<p style="text-align: center; color: #6B7280; padding: 15px;">${noUsersText}</p>`;
                 } else {
+                    // PJ702: Fetch blocked users list for Block/Unblock toggle functionality
+                    let blockedUserIds = new Set();
+                    try {
+                        const blockedResponse = await fetch('/api/blocked-users', { credentials: 'include' });
+                        if (blockedResponse.ok) {
+                            const blockedData = await blockedResponse.json();
+                            if (blockedData.blocked_users) {
+                                blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[PJ702] Error fetching blocked users:', e);
+                    }
+                    
                     // FIX #6: Show results with Follow and +Note buttons like circles
                     const followText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('following.follow') : 'Follow';
@@ -9432,9 +9635,22 @@ async function searchUsersToFollowInstant(query) {
                         window.i18n.translate('following.with_note') : '+ Note';
                     const blockText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('following.block') : 'Block';
+                    const unblockText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('block.unblock_user') : 'Unblock';
                     
-                    resultsContainer.innerHTML = users.map(user => `
-                        <div class="search-result-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
+                    // PJ702: Render with Block/Unblock toggle based on blocked status
+                    resultsContainer.innerHTML = users.map(user => {
+                        const isBlocked = blockedUserIds.has(user.id);
+                        const buttonLabel = isBlocked ? unblockText : blockText;
+                        const buttonStyle = isBlocked 
+                            ? 'background-color: #6c757d;'  // Gray for unblock
+                            : 'background-color: #ef4444;'; // Red for block
+                        const buttonAction = isBlocked 
+                            ? `unblockUserFromSearchToggle(${user.id})`
+                            : `blockUserFromSearchToggle(${user.id}, '${user.username.replace(/'/g, "\\'")}')`;
+                        
+                        return `
+                        <div class="search-result-item" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
                             <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromSearch(${user.id})">
                                 <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
                                     ${user.username.charAt(0).toUpperCase()}
@@ -9446,8 +9662,8 @@ async function searchUsersToFollowInstant(query) {
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <button onclick="event.stopPropagation(); blockUserFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" style="padding: 6px 10px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
-                                    ${blockText}
+                                <button onclick="event.stopPropagation(); ${buttonAction}" style="padding: 6px 10px; ${buttonStyle} color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                    ${buttonLabel}
                                 </button>
                                 <button onclick="event.stopPropagation(); followUserFromSearch(${user.id})" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; width: auto;">
                                     ${followText}
@@ -9457,7 +9673,7 @@ async function searchUsersToFollowInstant(query) {
                                 </button>
                             </div>
                         </div>
-                    `).join('');
+                    `}).join('');
                 }
                 resultsContainer.style.display = 'block';
             }
@@ -9540,6 +9756,85 @@ async function blockUserFromSearch(userId, username) {
 
 window.viewUserProfileFromSearch = viewUserProfileFromSearch;
 window.blockUserFromSearch = blockUserFromSearch;
+
+// PJ702: Block user from search with toggle functionality - updates button in place
+async function blockUserFromSearchToggle(userId, username) {
+    const confirmed = confirm(`Block ${username}?`);
+    if (!confirmed) return;
+    
+    try {
+        const response = await fetch(`/api/users/${userId}/block`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            showNotification('User blocked', 'success');
+            
+            // Update the button in place to show Unblock
+            const searchItem = document.querySelector(`.search-result-item[data-user-id="${userId}"]`);
+            if (searchItem) {
+                const blockBtn = searchItem.querySelector('button');
+                if (blockBtn) {
+                    const unblockText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('block.unblock_user') : 'Unblock';
+                    blockBtn.textContent = unblockText;
+                    blockBtn.style.backgroundColor = '#6c757d';
+                    blockBtn.onclick = (e) => { e.stopPropagation(); unblockUserFromSearchToggle(userId); };
+                }
+            }
+            
+            // Reload following list
+            if (typeof loadFollowing === 'function') {
+                await loadFollowing();
+            }
+        }
+    } catch (error) {
+        console.error('Error blocking user:', error);
+        showNotification('Failed to block user', 'error');
+    }
+}
+
+// PJ702: Unblock user from search with toggle functionality - updates button in place
+async function unblockUserFromSearchToggle(userId) {
+    try {
+        const response = await fetch(`/api/users/${userId}/unblock`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            showNotification('User unblocked', 'success');
+            
+            // Update the button in place to show Block
+            const searchItem = document.querySelector(`.search-result-item[data-user-id="${userId}"]`);
+            if (searchItem) {
+                const blockBtn = searchItem.querySelector('button');
+                if (blockBtn) {
+                    const blockText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('following.block') : 'Block';
+                    blockBtn.textContent = blockText;
+                    blockBtn.style.backgroundColor = '#ef4444';
+                    // Get username from the search item
+                    const usernameEl = searchItem.querySelector('strong');
+                    const username = usernameEl ? usernameEl.textContent : '';
+                    blockBtn.onclick = (e) => { e.stopPropagation(); blockUserFromSearchToggle(userId, username); };
+                }
+            }
+            
+            // Reload following list
+            if (typeof loadFollowing === 'function') {
+                await loadFollowing();
+            }
+        }
+    } catch (error) {
+        console.error('Error unblocking user:', error);
+        showNotification('Failed to unblock user', 'error');
+    }
+}
+
+window.blockUserFromSearchToggle = blockUserFromSearchToggle;
+window.unblockUserFromSearchToggle = unblockUserFromSearchToggle;
 
 // ===== PROGRESS CHART FUNCTIONS =====
 let progressChartInstance = null;

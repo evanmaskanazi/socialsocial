@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<!-- TheraSocial Circles Version PJ701 -->
+<!-- TheraSocial Circles Version PJ702 -->
 <!-- PJ501 Changes: Added block check before displaying user profile -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix, Fixed navigation after 403 errors -->
 <!-- PJ602 Changes: Fixed Follow button width -->
 <!-- PJ701 Changes: Hide Add to Circle button if user is already in any of my circles -->
+<!-- PJ702 Changes: Improved circle membership check with better logging and robust ID comparison -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -37,7 +38,7 @@
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
     <script src="/static/js/i18n.js"></script>
-    <script src="/static/js/circles-messages.js?v=602.0"></script>
+    <script src="/static/js/circles-messages.js?v=702.0"></script>
     <script src="/static/js/feed-updates.js?v=202.0"></script>
 
     <script>
@@ -318,19 +319,27 @@ try {
                     console.error('Error checking blocked status:', e);
                 }
                 
-                // PJ701: Check if user is already in any of my circles
+                // PJ702: Check if user is already in any of my circles (improved)
                 let isInCircles = false;
                 try {
+                    // Fetch MY circles (without user_id param) to check if viewed user is in them
                     const circlesResponse = await fetch('/api/circles', { credentials: 'include' });
                     if (circlesResponse.ok) {
                         const circlesData = await circlesResponse.json();
+                        console.log('[PJ702] My circles data:', circlesData);
+                        console.log('[PJ702] Checking if userId', userId, 'is in my circles');
+                        
                         // Check all circle types: general/public, close_friends/class_b, family/class_a
-                        const allCircleMembers = [
-                            ...(circlesData.general || circlesData.public || []),
-                            ...(circlesData.close_friends || circlesData.class_b || []),
-                            ...(circlesData.family || circlesData.class_a || [])
-                        ];
-                        isInCircles = allCircleMembers.some(m => m.id === userId);
+                        const publicCircle = circlesData.general || circlesData.public || [];
+                        const classBCircle = circlesData.close_friends || circlesData.class_b || [];
+                        const classACircle = circlesData.family || circlesData.class_a || [];
+                        
+                        const allCircleMembers = [...publicCircle, ...classBCircle, ...classACircle];
+                        console.log('[PJ702] All circle members:', allCircleMembers.map(m => ({id: m.id, username: m.username})));
+                        
+                        // Use Number() for robust comparison in case of type mismatch
+                        isInCircles = allCircleMembers.some(m => Number(m.id) === Number(userId));
+                        console.log('[PJ702] isInCircles result:', isInCircles);
                     }
                 } catch (e) {
                     console.error('Error checking circles:', e);
@@ -413,7 +422,7 @@ try {
                     buttonContainer.appendChild(followBtn);
                 }
                 
-                // PJ701: Add to Circle button - only show if user is not already in any circle
+                // PJ702: Add to Circle button - only show if user is not already in any circle
                 if (!isInCircles) {
                     const addCircleBtn = document.createElement('button');
                     addCircleBtn.textContent = t.addToCircle;
