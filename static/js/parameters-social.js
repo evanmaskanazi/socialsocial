@@ -1,3 +1,4 @@
+// PJ706 FIX APPLIED: Default privacy changed from 'public' to 'private' for new accounts
 // Social Parameters Save/Load System with i18n support and numeric ratings
 // COMPLETE FIXED VERSION - Includes language selector and all fixes
 
@@ -115,7 +116,7 @@ async function loadMostRecentPrivacySettings() {
         // Apply privacy settings from the most recent entry
         ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
             const privacyKey = `${param}_privacy`;
-            const privacyValue = recentResult.data[privacyKey] || 'public';
+            const privacyValue = recentResult.data[privacyKey] || 'private';
             
             window.selectedPrivacy[param] = privacyValue;
             
@@ -605,7 +606,7 @@ function initializeParameters() {
     // These will be overwritten when we auto-load today's saved data
     ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
         if (!window.selectedPrivacy[param]) {
-            window.selectedPrivacy[param] = 'public';
+            window.selectedPrivacy[param] = 'private';
         }
     });
 
@@ -662,7 +663,7 @@ function initializeParameters() {
                 <!-- Parameters Section - ONLY 5 CATEGORIES -->
                 <div class="parameters-section">
                   ${PARAMETER_CATEGORIES.map(category => {
-    const privacy = window.selectedPrivacy[category.id] || 'public';
+    const privacy = window.selectedPrivacy[category.id] || 'private';
     return `
         <div class="parameter-item">
             <div class="parameter-header">
@@ -755,7 +756,7 @@ function initializeParameters() {
                         // Load privacy settings from today's saved data
                         ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
                             const privacyKey = `${param}_privacy`;
-                            const privacyValue = result.data[privacyKey] || 'public';
+                            const privacyValue = result.data[privacyKey] || 'private';
                             
                             window.selectedPrivacy[param] = privacyValue;
                             
@@ -2018,11 +2019,11 @@ async function saveParameters() {
         sleep_quality: selectedRatings.sleep_quality || null,
         physical_activity: selectedRatings.physical_activity || null,
         anxiety: selectedRatings.anxiety || null,
-        mood_privacy: window.selectedPrivacy.mood || 'public',
-        energy_privacy: window.selectedPrivacy.energy || 'public',
-        sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'public',
-        physical_activity_privacy: window.selectedPrivacy.physical_activity || 'public',
-        anxiety_privacy: window.selectedPrivacy.anxiety || 'public',
+        mood_privacy: window.selectedPrivacy.mood || 'private',
+        energy_privacy: window.selectedPrivacy.energy || 'private',
+        sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
+        physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
+        anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
         notes: notes
     };
 
@@ -2109,7 +2110,7 @@ async function loadParameters(showMsg = true) {
           ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
                 const privacyKey = `${param}_privacy`;
                 // Check both direct property and nested in data - FIXED to load from correct location
-                const privacyValue = result.data[privacyKey] || result.data[param + '_privacy'] || 'public';
+                const privacyValue = result.data[privacyKey] || result.data[param + '_privacy'] || 'private';
 
                 window.selectedPrivacy[param] = privacyValue;
 
@@ -2129,11 +2130,11 @@ async function loadParameters(showMsg = true) {
             // Save to session storage for persistence
           const state = {
     ...selectedRatings,
-    mood_privacy: result.data.mood_privacy || 'public',
-    energy_privacy: result.data.energy_privacy || 'public',
-    sleep_quality_privacy: result.data.sleep_quality_privacy || 'public',
-    physical_activity_privacy: result.data.physical_activity_privacy || 'public',
-    anxiety_privacy: result.data.anxiety_privacy || 'public',
+    mood_privacy: result.data.mood_privacy || 'private',
+    energy_privacy: result.data.energy_privacy || 'private',
+    sleep_quality_privacy: result.data.sleep_quality_privacy || 'private',
+    physical_activity_privacy: result.data.physical_activity_privacy || 'private',
+    anxiety_privacy: result.data.anxiety_privacy || 'private',
     notes: result.data.notes || ''
 };
 sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
