@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 704
+Complete app.py for Social Social Platform - Phase 705
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -33,7 +33,15 @@ PJ704 Changes:
 - Follow alerts (alert_category='follow') and invite alerts now always show to the recipient
 - DIAGNOSTIC: Added comprehensive logging to all email sending functions
 - Logs now show exactly why emails are or aren't being sent
-- Check Render logs for [ALERT EMAIL], [MESSAGE EMAIL], [SENDGRID ALERT], [SENDGRID MESSAGE] tags
+- Check Render logs for [ALERT EMAIL], [MESSAGE EMAIL], [SMTP ALERT], [SMTP MESSAGE] tags
+
+PJ705 Changes:
+- MIGRATED FROM SENDGRID TO RESEND.COM for email delivery
+- Replaced SendGrid API library with standard Python SMTP library
+- All email functions now use SMTP_SSL with Resend.com (or any SMTP provider)
+- Environment variables: SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, FROM_EMAIL
+- Default configuration uses Resend.com with onboarding@resend.dev sender
+- No domain verification required on Resend free tier (3000 emails/month)
 """
 
 import os
@@ -64,8 +72,10 @@ from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, and_, or_, desc, func, inspect, text
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To, Content
+# SMTP email (Resend.com compatible)
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 import mimetypes
 import io
@@ -229,24 +239,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger('thera_social')
 
-# Email configuration for password reset
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-# NOTE: Using SendGrid API directly, not Flask-Mail
-# from flask_mail import Mail, Message  # REMOVED - conflicts with SendGrid
+# Email configuration - using SMTP with Resend.com
+# NOTE: Using standard SMTP library, compatible with Resend
 
-# Flask-Mail configuration for SendGrid (kept for reference but not using Flask-Mail)
-app.config['MAIL_SERVER'] = os.environ.get('SMTP_SERVER', 'smtp.sendgrid.net')
-app.config['MAIL_PORT'] = int(os.environ.get('SMTP_PORT', 587))
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USE_SSL'] = False
-app.config['MAIL_USERNAME'] = os.environ.get('SMTP_USERNAME', 'apikey')
+# SMTP configuration for Resend.com (or other SMTP providers)
+app.config['MAIL_SERVER'] = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+app.config['MAIL_PORT'] = int(os.environ.get('SMTP_PORT', 465))
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('SMTP_USERNAME', 'resend')
 app.config['MAIL_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('FROM_EMAIL', 'evanmax@outlook.com')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('FROM_EMAIL', 'TheraSocial <onboarding@resend.dev>')
 
-# Initialize Flask-Mail (DISABLED - using SendGrid API directly)
-# mail = Mail(app)
+# Flask-Mail not used - using standard SMTP library directly
 
 
 def get_email_translations(language='en'):
@@ -367,19 +372,29 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
         """
 
         try:
-            message = Mail(
-                from_email=app.config['MAIL_DEFAULT_SENDER'],
-                to_emails=user_email,
-                subject=t['subject'],
-                plain_text_content=text_content,
-                html_content=html_content
-            )
+            logger.info(f"[SMTP] Sending password reset email...")
+            logger.info(f"[SMTP] MAIL_DEFAULT_SENDER: {app.config.get('MAIL_DEFAULT_SENDER', 'NOT SET')}")
+            logger.info(f"[SMTP] SMTP_SERVER: {os.environ.get('SMTP_SERVER', 'smtp.resend.com')}")
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = t['subject']
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = user_email
+            msg.attach(MIMEText(text_content, 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
 
-            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
-            response = sg.send(message)
-            logging.info(f'Password reset email sent to {user_email}')
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+            
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], user_email, msg.as_string())
+            
+            logging.info(f'[SMTP] Password reset email sent to {user_email}')
         except Exception as e:
-            logging.error(f'Failed to send password reset email: {str(e)}')
+            logging.error(f'[SMTP] Failed to send password reset email: {str(e)}')
             raise
 
         logger.info(f"Password reset email sent to {user_email} in {user_language}")
@@ -445,18 +460,26 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
         </body></html>"""
 
         try:
-            message = Mail(
-                from_email=app.config['MAIL_DEFAULT_SENDER'],
-                to_emails=user_email,
-                subject=t['subject'],
-                html_content=html_content
-            )
+            logger.info(f"[SMTP] Sending magic link email...")
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = t['subject']
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = user_email
+            msg.attach(MIMEText(html_content, 'html'))
 
-            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
-            response = sg.send(message)
-            logging.info(f'Magic link email sent to {user_email}')
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+            
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], user_email, msg.as_string())
+            
+            logging.info(f'[SMTP] Magic link email sent to {user_email}')
         except Exception as e:
-            logging.error(f'Failed to send magic link email: {str(e)}')
+            logging.error(f'[SMTP] Failed to send magic link email: {str(e)}')
             raise
 
         logger.info(f"Magic link email sent to {user_email} in {user_language}")
@@ -516,8 +539,8 @@ def get_new_message_email_translations(language='en'):
 
 def send_new_message_notification_email(recipient_email, sender_name, message_preview, user_language='en'):
     """Send email notification when user receives a new message"""
-    logger.info(f"[SENDGRID MESSAGE] send_new_message_notification_email called")
-    logger.info(f"[SENDGRID MESSAGE] to: {recipient_email}, sender: {sender_name}, language: {user_language}")
+    logger.info(f"[SMTP MESSAGE] send_new_message_notification_email called")
+    logger.info(f"[SMTP MESSAGE] to: {recipient_email}, sender: {sender_name}, language: {user_language}")
     try:
         t = get_new_message_email_translations(user_language)
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
@@ -566,29 +589,35 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
         """
 
         try:
-            logger.info(f"[SENDGRID MESSAGE] Creating Mail object...")
-            logger.info(f"[SENDGRID MESSAGE] MAIL_DEFAULT_SENDER: {app.config.get('MAIL_DEFAULT_SENDER', 'NOT SET')}")
-            logger.info(f"[SENDGRID MESSAGE] MAIL_PASSWORD set: {bool(app.config.get('MAIL_PASSWORD'))}")
+            logger.info(f"[SMTP MESSAGE] Creating email...")
+            logger.info(f"[SMTP MESSAGE] MAIL_DEFAULT_SENDER: {app.config.get('MAIL_DEFAULT_SENDER', 'NOT SET')}")
+            logger.info(f"[SMTP MESSAGE] SMTP_SERVER: {os.environ.get('SMTP_SERVER', 'NOT SET')}")
             
-            message = Mail(
-                from_email=app.config['MAIL_DEFAULT_SENDER'],
-                to_emails=recipient_email,
-                subject=subject,
-                html_content=html_content
-            )
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = recipient_email
+            msg.attach(MIMEText(html_content, 'html'))
 
-            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
-            response = sg.send(message)
-            logger.info(f'[SENDGRID MESSAGE] New message notification email sent to {recipient_email}, status: {response.status_code}')
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+            
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], recipient_email, msg.as_string())
+            
+            logger.info(f'[SMTP MESSAGE] New message notification email sent to {recipient_email}')
             return True
         except Exception as e:
-            logger.error(f'[SENDGRID MESSAGE] Failed to send new message notification email: {str(e)}')
-            logger.error(f'[SENDGRID MESSAGE] Traceback: {traceback.format_exc()}')
+            logger.error(f'[SMTP MESSAGE] Failed to send new message notification email: {str(e)}')
+            logger.error(f'[SMTP MESSAGE] Traceback: {traceback.format_exc()}')
             return False
 
     except Exception as e:
-        logger.error(f"[SENDGRID MESSAGE] Failed to send new message notification email: {e}")
-        logger.error(f"[SENDGRID MESSAGE] Traceback: {traceback.format_exc()}")
+        logger.error(f"[SMTP MESSAGE] Failed to send new message notification email: {e}")
+        logger.error(f"[SMTP MESSAGE] Traceback: {traceback.format_exc()}")
         return False
 
 
@@ -637,8 +666,8 @@ def get_alert_notification_email_translations(language='en'):
 
 def send_alert_notification_email(user_email, alert_title, alert_content, user_language='en'):
     """Send email notification when user gets a new alert"""
-    logger.info(f"[SENDGRID ALERT] send_alert_notification_email called")
-    logger.info(f"[SENDGRID ALERT] to: {user_email}, title: {alert_title}, language: {user_language}")
+    logger.info(f"[SMTP ALERT] send_alert_notification_email called")
+    logger.info(f"[SMTP ALERT] to: {user_email}, title: {alert_title}, language: {user_language}")
     try:
         t = get_alert_notification_email_translations(user_language)
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
@@ -684,29 +713,35 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
         """
 
         try:
-            logger.info(f"[SENDGRID ALERT] Creating Mail object...")
-            logger.info(f"[SENDGRID ALERT] MAIL_DEFAULT_SENDER: {app.config.get('MAIL_DEFAULT_SENDER', 'NOT SET')}")
-            logger.info(f"[SENDGRID ALERT] MAIL_PASSWORD set: {bool(app.config.get('MAIL_PASSWORD'))}")
+            logger.info(f"[SMTP ALERT] Creating email...")
+            logger.info(f"[SMTP ALERT] MAIL_DEFAULT_SENDER: {app.config.get('MAIL_DEFAULT_SENDER', 'NOT SET')}")
+            logger.info(f"[SMTP ALERT] SMTP_SERVER: {os.environ.get('SMTP_SERVER', 'NOT SET')}")
             
-            message = Mail(
-                from_email=app.config['MAIL_DEFAULT_SENDER'],
-                to_emails=user_email,
-                subject=t['subject'],
-                html_content=html_content
-            )
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = t['subject']
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = user_email
+            msg.attach(MIMEText(html_content, 'html'))
 
-            sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
-            response = sg.send(message)
-            logger.info(f'[SENDGRID ALERT] Alert notification email sent to {user_email}, status: {response.status_code}')
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+            
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], user_email, msg.as_string())
+            
+            logger.info(f'[SMTP ALERT] Alert notification email sent to {user_email}')
             return True
         except Exception as e:
-            logger.error(f'[SENDGRID ALERT] Failed to send alert notification email: {str(e)}')
-            logger.error(f'[SENDGRID ALERT] Traceback: {traceback.format_exc()}')
+            logger.error(f'[SMTP ALERT] Failed to send alert notification email: {str(e)}')
+            logger.error(f'[SMTP ALERT] Traceback: {traceback.format_exc()}')
             return False
 
     except Exception as e:
-        logger.error(f"[SENDGRID ALERT] Failed to send alert notification email: {e}")
-        logger.error(f"[SENDGRID ALERT] Traceback: {traceback.format_exc()}")
+        logger.error(f"[SMTP ALERT] Failed to send alert notification email: {e}")
+        logger.error(f"[SMTP ALERT] Traceback: {traceback.format_exc()}")
         return False
 
 
@@ -813,39 +848,36 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         """
 
         logger.info(f"[DAILY REMINDER] HTML content prepared")
-        logger.info(f"[DAILY REMINDER] Checking SendGrid API key...")
+        logger.info(f"[DAILY REMINDER] Checking SMTP configuration...")
         
-        sendgrid_api_key = app.config.get('MAIL_PASSWORD')
-        if not sendgrid_api_key:
-            logger.error(f"[DAILY REMINDER] ERROR: SendGrid API key (MAIL_PASSWORD) is not configured!")
+        smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+        if not smtp_pass:
+            logger.error(f"[DAILY REMINDER] ERROR: SMTP_PASSWORD is not configured!")
             return False
         
-        logger.info(f"[DAILY REMINDER] SendGrid API key found (length: {len(sendgrid_api_key)})")
+        logger.info(f"[DAILY REMINDER] SMTP credentials found")
         logger.info(f"[DAILY REMINDER] From email: {app.config.get('MAIL_DEFAULT_SENDER')}")
         
         try:
-            message = Mail(
-                from_email=app.config['MAIL_DEFAULT_SENDER'],
-                to_emails=user_email,
-                subject=t['subject'],
-                html_content=html_content
-            )
-            logger.info(f"[DAILY REMINDER] Mail object created successfully")
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = t['subject']
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = user_email
+            msg.attach(MIMEText(html_content, 'html'))
+            logger.info(f"[DAILY REMINDER] Email message created successfully")
 
-            sg = SendGridAPIClient(sendgrid_api_key)
-            logger.info(f"[DAILY REMINDER] SendGrid client initialized")
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            logger.info(f"[DAILY REMINDER] Connecting to {smtp_server}:{smtp_port}")
             
-            response = sg.send(message)
-            logger.info(f"[DAILY REMINDER] SendGrid response status code: {response.status_code}")
-            logger.info(f"[DAILY REMINDER] SendGrid response headers: {response.headers}")
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], user_email, msg.as_string())
             
-            if response.status_code in [200, 201, 202]:
-                logger.info(f'[DAILY REMINDER] SUCCESS: Daily diary reminder email sent to {user_email}')
-                logger.info(f"[DAILY REMINDER] ========================================")
-                return True
-            else:
-                logger.error(f'[DAILY REMINDER] FAILED: Unexpected status code {response.status_code}')
-                return False
+            logger.info(f'[DAILY REMINDER] SUCCESS: Daily diary reminder email sent to {user_email}')
+            logger.info(f"[DAILY REMINDER] ========================================")
+            return True
                 
         except Exception as e:
             logger.error(f'[DAILY REMINDER] ERROR: Failed to send daily diary reminder email: {str(e)}')
@@ -8432,9 +8464,9 @@ def email_report():
         </html>
         """
         
-        # Send email using SendGrid
-        sendgrid_api_key = os.environ.get('SENDGRID_API_KEY') or os.environ.get('SMTP_PASSWORD')
-        if not sendgrid_api_key:
+        # Send email using SMTP (Resend.com)
+        smtp_pass = os.environ.get('SMTP_PASSWORD')
+        if not smtp_pass:
             return jsonify({'error': 'Email service not configured'}), 500
         
         subject_translations = {
@@ -8444,15 +8476,19 @@ def email_report():
             'ru': 'Ваш еженедельный отчет о здоровье'
         }
         
-        message = Mail(
-            from_email=Email(os.environ.get('FROM_EMAIL', 'noreply@therasocial.com')),
-            to_emails=To(recipient),
-            subject=subject_translations.get(lang, subject_translations['en']),
-            html_content=Content("text/html", html_content)
-        )
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject_translations.get(lang, subject_translations['en'])
+        msg['From'] = os.environ.get('FROM_EMAIL', 'TheraSocial <onboarding@resend.dev>')
+        msg['To'] = recipient
+        msg.attach(MIMEText(html_content, 'html'))
         
-        sg = SendGridAPIClient(sendgrid_api_key)
-        sg.send(message)
+        smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+        smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+        
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(msg['From'], recipient, msg.as_string())
         
         return jsonify({'success': True, 'message': 'Report sent successfully'})
         
