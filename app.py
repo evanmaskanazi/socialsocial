@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 702
+Complete app.py for Social Social Platform - Phase 703
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -21,6 +21,10 @@ PJ701 Changes:
 - Fixed email notifications for all alert types (wellness, follow, invite)
 - All alert creation now uses create_alert_with_email to send emails when user has email_on_alert enabled
 - This applies to: wellness alerts, new follower alerts, and invite alerts
+
+PJ703 Changes:
+- No backend changes needed - all fixes in frontend HTML/JS files
+- Fixed Block button translation key, Followers tab profile viewing, Invite section follow tracking
 """
 
 import os
