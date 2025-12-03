@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ704 -->
+<!-- TheraSocial Version PJ801 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
@@ -23,6 +23,14 @@
 
      2. Fixed Followers tab - clicking on user names now works same as Following tab (uses viewUserProfileFromFollowers)
      3. Fixed Invite section follow tracking - now properly shows Unfollow when already following a user
+-->
+<!-- PJ801 Changes:
+     1. Fixed circle restriction message persisting after navigating away
+     2. When viewing another user's private circles and then going back to own circles,
+        the yellow "Restricted Access" box was not being cleared
+     3. Added 'circle-restriction-message' class to restriction message div
+     4. Updated clearViewActionButtons to also remove restriction messages
+     5. Added explicit removal in loadCircles for safety
 -->
 <html lang="en">
 <head>
@@ -5569,6 +5577,13 @@ function clearViewActionButtons(viewId) {
         console.log(`[PJ709] Removing access level indicator from ${viewId}`);
         indicator.remove();
     });
+    
+    // PJ801: Remove circle restriction message (yellow "Restricted Access" box)
+    const restrictionMessages = view.querySelectorAll('.circle-restriction-message');
+    restrictionMessages.forEach(message => {
+        console.log(`[PJ801] Removing circle restriction message from ${viewId}`);
+        message.remove();
+    });
 }
 
 async function loadCircles() {
@@ -5595,6 +5610,15 @@ async function loadCircles() {
 
         // PJ708: Remove action buttons from viewing another user
         clearViewActionButtons('circlesView');
+
+        // PJ801: Restore circle cards visibility (they may have been hidden when viewing another user's private circles)
+        const circlesContainer = document.querySelector('#circlesView .circles-container');
+        if (circlesContainer) {
+            const circleCards = circlesContainer.querySelectorAll('.circle-card');
+            circleCards.forEach(card => {
+                card.style.display = '';  // Reset to default display
+            });
+        }
 
         // Ensure we're loading current user's circles
         const header = document.querySelector('#circlesView h2');
@@ -5628,6 +5652,12 @@ async function loadCircles() {
         const visibilityContainer = document.getElementById('circleVisibilityContainer');
         if (visibilityContainer) {
             visibilityContainer.style.display = 'block';
+        }
+
+        // PJ801: Show circle recommendations section when loading own circles
+        const recsSection = document.getElementById('circleRecommendationsSection');
+        if (recsSection) {
+            recsSection.style.display = '';  // Reset to default display
         }
 
         // Show add/remove functionality for own circles
@@ -5854,11 +5884,21 @@ async function loadUserCircles(userId) {
             // Show privacy restriction message with proper context
             const circlesContainer = document.querySelector('#circlesView .circles-container');
             if (circlesContainer) {
-                // Clear existing content
-                circlesContainer.innerHTML = '';
+                // PJ801: Hide circle cards instead of clearing innerHTML (which destroys the structure)
+                const circleCards = circlesContainer.querySelectorAll('.circle-card');
+                circleCards.forEach(card => {
+                    card.style.display = 'none';
+                });
+
+                // Remove any existing restriction messages first
+                const existingRestriction = circlesContainer.querySelector('.circle-restriction-message');
+                if (existingRestriction) {
+                    existingRestriction.remove();
+                }
 
                 // Create a centered message explaining the restriction
                 const restrictionMessage = document.createElement('div');
+                restrictionMessage.className = 'circle-restriction-message';  // PJ801: Add class for removal when navigating away
                 restrictionMessage.style.cssText = 'max-width: 600px; margin: 2rem auto; padding: 2rem; background: #fff3cd; border-radius: 15px; text-align: center; border: 2px solid #ffc107;';
 
                 const t = (key, fallback) => {
@@ -5920,6 +5960,12 @@ async function loadUserCircles(userId) {
             const visibilityContainer = document.getElementById('circleVisibilityContainer');
             if (visibilityContainer) {
                 visibilityContainer.style.display = 'none';
+            }
+
+            // PJ801: Hide circle recommendations section when viewing restricted circles
+            const recsSection = document.getElementById('circleRecommendationsSection');
+            if (recsSection) {
+                recsSection.style.display = 'none';
             }
 
             // Add back button
