@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version PJ703 - Fixed indentation for invite.alert_title and invite.alert_content keys
 const translations = {
     en: {
         // Navigation & Menu
@@ -387,10 +388,11 @@ const translations = {
 
             // Privacy levels (for parameters - aligned with circles)
             'privacy.public': '🌍 Public',
-
-'privacy.private': '🔒 Private',
+            'privacy.private': '🔒 Private',
+            
+            // Invite alerts
             'invite.alert_title': 'New Invitation',
-'invite.alert_content': '{username} has invited you to follow them',
+            'invite.alert_content': '{username} has invited you to follow them',
 
         // Tooltips for diary parameters
         'tooltip.mood': 'How good or bad have you felt today?\n1 = Bad - Feeling down, sad, or low\n2 = Below average - Not your best, but managing\n3 = Okay - Reasonably stable or neutral\n4 = Good - Feeling positive, content, or upbeat\n\nRemember: Mood fluctuates naturally day to day. You\'re tracking patterns over time to understand yourself better, not judging individual days. Even difficult days provide valuable information.',
@@ -490,8 +492,6 @@ const translations = {
     'errors.page_not_found': 'Page not found',
     'errors.access_denied': 'Access denied',
     'errors.user_not_found': 'User not found',
-    'invite.alert_title': 'New Invite',
-'invite.alert_content': 'You have received a new connection invite',
 // Circle labels (simplified)
 'circles.class_b': 'Close Friends 👥',
 'circles.class_a': 'Family 👨‍👩‍👧‍👦',
@@ -866,9 +866,12 @@ const translations = {
         'parameters.positive8': "מדהים! אתה לוקח אחריות על מסע הבריאות שלך! 🌟",
         'parameters.positive9': "מרהיב! המשך בתרגול המדהים הזה של מודעות עצמית! 🚀",
         'parameters.positive10': "פנומנלי! אתה כותב את סיפור הבריאות שלך, יום אחר יום! 📖",
+        
+        // Invite alerts
         'invite.alert_title': 'הזמנה חדשה',
-'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה',
- 'block.block_user': 'חסום',
+        'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה',
+        
+        'block.block_user': 'חסום',
     'block.unblock_user': 'בטל חסימה',
     'block.block_confirm': 'האם אתה בטוח שברצונך לחסום את {username}? הם לא יוכלו יותר לראות את הפרופיל שלך.',
     'block.block_success': 'המשתמש נחסם בהצלחה',
@@ -1164,8 +1167,7 @@ const translations = {
     'about.communication_title': 'תקשורת מאובטחת',
     'about.communication_desc': 'התחבר למטפל שלך באמצעות הודעות מוצפנות',
     'about.checkin_title': 'צ׳ק-אין יומי',
-    'invite.alert_title': 'הזמנה חדשה',
-'invite.alert_content': 'קיבלת הזמנה חדשה להתחבר',
+
 
     'about.community_desc': 'התחבר לאחרים במסעות דומים בסביבה בטוחה ומנוהלת',
     'about.values_title': 'הערכים שלנו',
@@ -1740,8 +1742,7 @@ const translations = {
         'following.view_full_profile': 'عرض الملف الشخصي الكامل',
         'following.circles': 'الدوائر',
 'auth.username': 'اسم المستخدم',
-'invite.alert_title': 'دعوة جديدة',
-'invite.alert_content': 'لقد تلقيت دعوة اتصال جديدة',
+
 
 'parameters.set_alert_triggers': 'تعيين تنبيهات',
 'parameters.alert_triggers_description': 'احصل على إشعار عندما تكون معايير صحة {username} مقلقة',
@@ -2558,8 +2559,11 @@ const translations = {
     'support.phone': 'Телефон',
     'support.hours': 'Часы работы',
     'support.hours_detail': 'Понедельник-Пятница<br>9:00 - 17:00 EST',
+    
+    // Invite alerts
     'invite.alert_title': 'Новое приглашение',
-'invite.alert_content': '{username} пригласил(а) вас подписаться',
+    'invite.alert_content': '{username} пригласил(а) вас подписаться',
+    
     'support.quick_help': 'Быстрая помощь',
     'support.faq_link': 'Часто задаваемые вопросы',
     'support.help_center': 'Центр помощи',
@@ -2596,8 +2600,6 @@ const translations = {
     'reports.download_started': 'Загрузка началась!',
     'reports.sending': 'Отправка отчета...',
     'reports.sent_success': 'Отчет успешно отправлен!',
-'invite.alert_title': 'Новое приглашение',
-'invite.alert_content': 'Вы получили новое приглашение',
     // Chart labels
     'chart.mood': 'Настроение',
     'chart.energy': 'Энергия',
