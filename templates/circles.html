@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<!-- TheraSocial Circles Version PJ602 -->
+<!-- TheraSocial Circles Version PJ701 -->
 <!-- PJ501 Changes: Added block check before displaying user profile -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix, Fixed navigation after 403 errors -->
 <!-- PJ602 Changes: Fixed Follow button width -->
+<!-- PJ701 Changes: Hide Add to Circle button if user is already in any of my circles -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -317,6 +318,24 @@ try {
                     console.error('Error checking blocked status:', e);
                 }
                 
+                // PJ701: Check if user is already in any of my circles
+                let isInCircles = false;
+                try {
+                    const circlesResponse = await fetch('/api/circles', { credentials: 'include' });
+                    if (circlesResponse.ok) {
+                        const circlesData = await circlesResponse.json();
+                        // Check all circle types: general/public, close_friends/class_b, family/class_a
+                        const allCircleMembers = [
+                            ...(circlesData.general || circlesData.public || []),
+                            ...(circlesData.close_friends || circlesData.class_b || []),
+                            ...(circlesData.family || circlesData.class_a || [])
+                        ];
+                        isInCircles = allCircleMembers.some(m => m.id === userId);
+                    }
+                } catch (e) {
+                    console.error('Error checking circles:', e);
+                }
+                
                 // Create container for buttons
                 const container = document.getElementById('circlesContainer');
                 if (!container) return;
@@ -394,16 +413,18 @@ try {
                     buttonContainer.appendChild(followBtn);
                 }
                 
-                // Add to Circle button
-                const addCircleBtn = document.createElement('button');
-                addCircleBtn.textContent = t.addToCircle;
-                addCircleBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer;';
-                addCircleBtn.onclick = () => {
-                    if (typeof showCircleAddMenu === 'function') {
-                        showCircleAddMenu(userId, username);
-                    }
-                };
-                buttonContainer.appendChild(addCircleBtn);
+                // PJ701: Add to Circle button - only show if user is not already in any circle
+                if (!isInCircles) {
+                    const addCircleBtn = document.createElement('button');
+                    addCircleBtn.textContent = t.addToCircle;
+                    addCircleBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer;';
+                    addCircleBtn.onclick = () => {
+                        if (typeof showCircleAddMenu === 'function') {
+                            showCircleAddMenu(userId, username);
+                        }
+                    };
+                    buttonContainer.appendChild(addCircleBtn);
+                }
                 
                 // Insert at top
                 const circlesHeader = container.querySelector('.circles-header');

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ602 -->
+<!-- TheraSocial Version PJ701 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
 <!-- PJ602 Changes: Fixed Follow button width (override CSS width:100%), Fixed action buttons persisting on own profile, Fixed double 403 message on Circles -->
+<!-- PJ701 Changes: Fixed HTML/CSS security - added escapeHtml for user input in innerHTML to prevent XSS attacks -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -4661,9 +4662,9 @@ document.addEventListener('click', function(e) {
 
             div.innerHTML = `
                 <div class="post-header">
-                    <div class="avatar">${initial}</div>
+                    <div class="avatar">${escapeHtml(initial)}</div>
                     <div class="post-meta">
-                        <div class="post-author">${author}</div>
+                        <div class="post-author">${escapeHtml(author)}</div>
                         <div class="post-time">${timeAgo}</div>
                     </div>
                 </div>
@@ -5932,8 +5933,8 @@ function updateCircleDisplay(type, members) {
 
         container.innerHTML = members.map(member => `
             <div class="member-item">
-                <div class="member-avatar">${member.username[0].toUpperCase()}</div>
-                <span class="member-name">${member.username}</span>
+                <div class="member-avatar">${escapeHtml(member.username[0].toUpperCase())}</div>
+                <span class="member-name">${escapeHtml(member.username)}</span>
                 ${!isReadOnly ? `<button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${t('circles.remove')}</button>` : ''}
             </div>
         `).join('');
@@ -5960,14 +5961,14 @@ function updateCircleDisplay(type, members) {
                     container.innerHTML = response.users.map(user => `
                         <div class="search-result-item" style="display: block; padding: 12px;">
                             <div style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;" onclick="viewUserProfile(${user.id}); document.getElementById('searchResults').classList.remove('active'); document.getElementById('userSearchInput').value = '';">
-                                <div class="member-avatar" style="margin-right: 10px;">${user.username[0].toUpperCase()}</div>
+                                <div class="member-avatar" style="margin-right: 10px;">${escapeHtml(user.username[0].toUpperCase())}</div>
                                 <div style="flex: 1;">
-                                    <strong>${user.username}</strong><br>
-                                    <small style="color: var(--gray);">${user.email}</small>
-                                    ${user.bio ? `<br><small style="color: var(--gray); font-style: italic;">${user.bio.substring(0, 60)}${user.bio.length > 60 ? '...' : ''}</small>` : ''}
+                                    <strong>${escapeHtml(user.username)}</strong><br>
+                                    <small style="color: var(--gray);">${escapeHtml(user.email)}</small>
+                                    ${user.bio ? `<br><small style="color: var(--gray); font-style: italic;">${escapeHtml(user.bio.substring(0, 60))}${user.bio.length > 60 ? '...' : ''}</small>` : ''}
                                 </div>
                             </div>
-                           <select onclick="event.stopPropagation();" onchange="addToCircle(${user.id}, this.value, '${user.username}')" style="width: 100%;">
+                           <select onclick="event.stopPropagation();" onchange="addToCircle(${user.id}, this.value, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" style="width: 100%;">
     <option value="">${(window.i18n && window.i18n.t ? window.i18n.t('circles.add_to') : 'Add to circle...')}</option>
    <option value="general" data-i18n="privacy.public">Public</option>
     <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
@@ -6697,11 +6698,11 @@ async function loadFollowing() {
                 followingContainer.innerHTML = followingData.following.map(user => `
                     <div class="user-card" data-user-id="${user.id}">
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}; cursor: pointer;">
-                            ${user.username.charAt(0).toUpperCase()}
+                            ${escapeHtml(user.username.charAt(0).toUpperCase())}
                         </div>
                         <div class="user-info" style="cursor: pointer;">
-                            <div class="user-name">${user.username}</div>
-                            <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
+                            <div class="user-name">${escapeHtml(user.username)}</div>
+                            <div class="user-location">${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
                         <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-direction: column;">
                             <button class="btn-secondary unfollow-btn" data-user-id="${user.id}" data-i18n="following.unfollow">
@@ -6779,21 +6780,21 @@ async function loadFollowing() {
                     return `
                     <div class="user-card" data-user-id="${user.id}">
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}; cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
-                            ${user.username.charAt(0).toUpperCase()}
+                            ${escapeHtml(user.username.charAt(0).toUpperCase())}
                         </div>
                         <div class="user-info" style="cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
-                            <div class="user-name">${user.username}</div>
-                            <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
-                            ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${user.reason}</div>` : ''}
+                            <div class="user-name">${escapeHtml(user.username)}</div>
+                            <div class="user-location">${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
+                            ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${escapeHtml(user.reason)}</div>` : ''}
                         </div>
                         <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap;">
                             <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">
                                 ${pt('following.follow') || 'Follow'}
                             </button>
-                            <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${user.username}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;" data-i18n="following.with_note">
+                            <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;" data-i18n="following.with_note">
                                 ${window.i18n && window.i18n.t ? window.i18n.t('following.with_note') : '+ Note'}
                             </button>
-                            <button class="block-btn" data-user-id="${user.id}" data-username="${user.username}" 
+                            <button class="block-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" 
                                 data-is-blocked="${isBlocked}"
                                 style="padding: 6px 10px; ${buttonStyle} border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;"
                                 data-i18n="${dataI18n}">
@@ -6952,11 +6953,11 @@ window.viewingUserId = null;
                     <div class="user-card" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfile(${user.id})">
                             <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
-                                ${user.username.charAt(0).toUpperCase()}
+                                ${escapeHtml(user.username.charAt(0).toUpperCase())}
                             </div>
                             <div class="user-info">
-                                <div class="user-name">${user.username}</div>
-                                <div class="user-location">${user.selected_city || user.city || 'Unknown'}</div>
+                                <div class="user-name">${escapeHtml(user.username)}</div>
+                                <div class="user-location">${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
