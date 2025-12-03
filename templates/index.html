@@ -9214,8 +9214,14 @@ async function checkAndLoadTriggerAlerts() {
         // Helper function for translations - place this RIGHT AFTER loadAlerts()
         function translateKey(key) {
             if (window.i18n && window.i18n.translate) {
-                return window.i18n.translate(key);
+                const result = window.i18n.translate(key);
+                // Debug: log when translation returns the key itself (meaning not found)
+                if (result === key) {
+                    console.warn('[i18n] Translation not found for key:', key);
+                }
+                return result;
             }
+            console.warn('[i18n] window.i18n not available, returning raw key:', key);
             return key;
         }
 
