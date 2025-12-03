@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ702 -->
+<!-- TheraSocial Version PJ703 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
@@ -10,6 +10,11 @@
      2. Fixed Following search Block button - now has Block/Unblock toggle functionality  
      3. Added clickable names in Invite tab Suggested People section
      4. Added search bar to Invite tab with Send Request button
+-->
+<!-- PJ703 Changes:
+     1. Fixed Block button showing "following.block" - changed to use correct translation key "block.block_user"
+     2. Fixed Followers tab - clicking on user names now works same as Following tab (uses viewUserProfileFromFollowers)
+     3. Fixed Invite section follow tracking - now properly shows Unfollow when already following a user
 -->
 <html lang="en">
 <head>
@@ -7118,7 +7123,7 @@ window.viewingUserId = null;
                     
                     return `
                     <div class="user-card" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfile(${user.id})">
+                        <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromFollowers(${user.id})">
                             <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}">
                                 ${escapeHtml(user.username.charAt(0).toUpperCase())}
                             </div>
@@ -8027,6 +8032,27 @@ async function viewRecommendedUserProfile(userId) {
 // Make viewRecommendedUserProfile globally available
 window.viewRecommendedUserProfile = viewRecommendedUserProfile;
 
+// PJ703: New function to view user profiles from Followers tab (works exactly like Following tab)
+async function viewUserProfileFromFollowers(userId) {
+    try {
+        // Check if blocked by this user first
+        const blockStatus = await checkIfBlockedByUser(userId);
+        if (blockStatus.blockedBy || blockStatus.is_blocked) {
+            showBlockedMessage();
+            return;
+        }
+        
+        // Use preview mode to allow viewing profiles of users you don't follow
+        viewUserProfile(userId, true);
+    } catch (error) {
+        console.error('Error viewing user profile from followers:', error);
+        showNotification('Failed to load user profile', 'error');
+    }
+}
+
+// Make viewUserProfileFromFollowers globally available
+window.viewUserProfileFromFollowers = viewUserProfileFromFollowers;
+
 // Function to view another user's parameters
 async function viewUserParameters(userId, username) {
     console.log('[DEBUG] viewUserParameters called with userId:', userId, 'username:', username);
@@ -8467,6 +8493,7 @@ async function addUserProfileActionButtons(userId, username, forceShowFollow = f
 // PJN451: General function to add action buttons to any view
 // PJ501: Added forceShowFollow parameter for recommended users (shows Follow buttons even if following status is indeterminate)
 // PJ601: Added block/unblock toggle and fixed Follow button width
+// PJ703: Always check actual following status - forceShowFollow only used for backend API preview permission
 async function addUserActionButtonsToView(viewId, userId, username, forceShowFollow = false) {
     const view = document.getElementById(viewId);
     if (!view) return;
@@ -8475,20 +8502,17 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
     const existingButtons = view.querySelector('.profile-action-buttons');
     if (existingButtons) existingButtons.remove();
     
-    // Check if currently following this user
+    // PJ703: Always check if currently following this user (don't skip based on forceShowFollow)
+    // This ensures proper Follow/Unfollow button display regardless of how we navigated to the profile
     let isFollowing = false;
-    
-    // PJ501: If forceShowFollow is true (for recommended users), skip the following check and show Follow buttons
-    if (!forceShowFollow) {
-        try {
-            const followingResponse = await fetch('/api/following', { credentials: 'include' });
-            if (followingResponse.ok) {
-                const followingData = await followingResponse.json();
-                isFollowing = followingData.following.some(u => u.id === userId);
-            }
-        } catch (e) {
-            console.error('Error checking following status:', e);
+    try {
+        const followingResponse = await fetch('/api/following', { credentials: 'include' });
+        if (followingResponse.ok) {
+            const followingData = await followingResponse.json();
+            isFollowing = followingData.following.some(u => u.id === userId);
         }
+    } catch (e) {
+        console.error('Error checking following status:', e);
     }
     
     // PJ601: Check if user is blocked for toggle functionality
@@ -9634,7 +9658,7 @@ async function searchUsersToFollowInstant(query) {
                     const withNoteText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('following.with_note') : '+ Note';
                     const blockText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('following.block') : 'Block';
+                        window.i18n.translate('block.block_user') : 'Block';
                     const unblockText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('block.unblock_user') : 'Unblock';
                     
@@ -9812,7 +9836,7 @@ async function unblockUserFromSearchToggle(userId) {
                 const blockBtn = searchItem.querySelector('button');
                 if (blockBtn) {
                     const blockText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('following.block') : 'Block';
+                        window.i18n.translate('block.block_user') : 'Block';
                     blockBtn.textContent = blockText;
                     blockBtn.style.backgroundColor = '#ef4444';
                     // Get username from the search item
