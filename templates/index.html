@@ -5562,6 +5562,13 @@ function clearViewActionButtons(viewId) {
         console.log(`[PJ708] Removing back button from ${viewId}`);
         backBtn.remove();
     }
+    
+    // PJ709: Remove viewer access level indicator (blue "Your access level" section)
+    const accessIndicators = view.querySelectorAll('.viewer-access-indicator');
+    accessIndicators.forEach(indicator => {
+        console.log(`[PJ709] Removing access level indicator from ${viewId}`);
+        indicator.remove();
+    });
 }
 
 async function loadCircles() {
