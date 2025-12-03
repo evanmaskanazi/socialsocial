@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 703
+Complete app.py for Social Social Platform - Phase 704
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -25,6 +25,15 @@ PJ701 Changes:
 PJ703 Changes:
 - No backend changes needed - all fixes in frontend HTML/JS files
 - Fixed Block button translation key, Followers tab profile viewing, Invite section follow tracking
+
+PJ704 Changes:
+- CRITICAL FIX: Fixed get_alerts filtering that was hiding follow/invite alerts
+- The filter was incorrectly hiding ALL alerts with source_user_id unless you followed that user
+- Now only 'trigger' and 'feed' category alerts are filtered by following status
+- Follow alerts (alert_category='follow') and invite alerts now always show to the recipient
+- DIAGNOSTIC: Added comprehensive logging to all email sending functions
+- Logs now show exactly why emails are or aren't being sent
+- Check Render logs for [ALERT EMAIL], [MESSAGE EMAIL], [SENDGRID ALERT], [SENDGRID MESSAGE] tags
 """
 
 import os
@@ -507,6 +516,8 @@ def get_new_message_email_translations(language='en'):
 
 def send_new_message_notification_email(recipient_email, sender_name, message_preview, user_language='en'):
     """Send email notification when user receives a new message"""
+    logger.info(f"[SENDGRID MESSAGE] send_new_message_notification_email called")
+    logger.info(f"[SENDGRID MESSAGE] to: {recipient_email}, sender: {sender_name}, language: {user_language}")
     try:
         t = get_new_message_email_translations(user_language)
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
@@ -555,6 +566,10 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
         """
 
         try:
+            logger.info(f"[SENDGRID MESSAGE] Creating Mail object...")
+            logger.info(f"[SENDGRID MESSAGE] MAIL_DEFAULT_SENDER: {app.config.get('MAIL_DEFAULT_SENDER', 'NOT SET')}")
+            logger.info(f"[SENDGRID MESSAGE] MAIL_PASSWORD set: {bool(app.config.get('MAIL_PASSWORD'))}")
+            
             message = Mail(
                 from_email=app.config['MAIL_DEFAULT_SENDER'],
                 to_emails=recipient_email,
@@ -564,14 +579,16 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
 
             sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
             response = sg.send(message)
-            logging.info(f'New message notification email sent to {recipient_email}')
+            logger.info(f'[SENDGRID MESSAGE] New message notification email sent to {recipient_email}, status: {response.status_code}')
             return True
         except Exception as e:
-            logging.error(f'Failed to send new message notification email: {str(e)}')
+            logger.error(f'[SENDGRID MESSAGE] Failed to send new message notification email: {str(e)}')
+            logger.error(f'[SENDGRID MESSAGE] Traceback: {traceback.format_exc()}')
             return False
 
     except Exception as e:
-        logger.error(f"Failed to send new message notification email: {e}")
+        logger.error(f"[SENDGRID MESSAGE] Failed to send new message notification email: {e}")
+        logger.error(f"[SENDGRID MESSAGE] Traceback: {traceback.format_exc()}")
         return False
 
 
@@ -620,6 +637,8 @@ def get_alert_notification_email_translations(language='en'):
 
 def send_alert_notification_email(user_email, alert_title, alert_content, user_language='en'):
     """Send email notification when user gets a new alert"""
+    logger.info(f"[SENDGRID ALERT] send_alert_notification_email called")
+    logger.info(f"[SENDGRID ALERT] to: {user_email}, title: {alert_title}, language: {user_language}")
     try:
         t = get_alert_notification_email_translations(user_language)
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
@@ -665,6 +684,10 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
         """
 
         try:
+            logger.info(f"[SENDGRID ALERT] Creating Mail object...")
+            logger.info(f"[SENDGRID ALERT] MAIL_DEFAULT_SENDER: {app.config.get('MAIL_DEFAULT_SENDER', 'NOT SET')}")
+            logger.info(f"[SENDGRID ALERT] MAIL_PASSWORD set: {bool(app.config.get('MAIL_PASSWORD'))}")
+            
             message = Mail(
                 from_email=app.config['MAIL_DEFAULT_SENDER'],
                 to_emails=user_email,
@@ -674,14 +697,16 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
 
             sg = SendGridAPIClient(app.config['MAIL_PASSWORD'])
             response = sg.send(message)
-            logging.info(f'Alert notification email sent to {user_email}')
+            logger.info(f'[SENDGRID ALERT] Alert notification email sent to {user_email}, status: {response.status_code}')
             return True
         except Exception as e:
-            logging.error(f'Failed to send alert notification email: {str(e)}')
+            logger.error(f'[SENDGRID ALERT] Failed to send alert notification email: {str(e)}')
+            logger.error(f'[SENDGRID ALERT] Traceback: {traceback.format_exc()}')
             return False
 
     except Exception as e:
-        logger.error(f"Failed to send alert notification email: {e}")
+        logger.error(f"[SENDGRID ALERT] Failed to send alert notification email: {e}")
+        logger.error(f"[SENDGRID ALERT] Traceback: {traceback.format_exc()}")
         return False
 
 
@@ -850,6 +875,11 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
     Returns:
         The created Alert object
     """
+    logger.info(f"[ALERT EMAIL] ========================================")
+    logger.info(f"[ALERT EMAIL] create_alert_with_email called")
+    logger.info(f"[ALERT EMAIL] user_id: {user_id}, alert_category: {alert_category}")
+    logger.info(f"[ALERT EMAIL] title: {title[:100] if title else 'None'}...")
+    
     try:
         # Create the alert with source_user_id for following-based filtering
         alert = Alert(
@@ -862,12 +892,22 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
         )
         db.session.add(alert)
         db.session.flush()  # Get the alert ID without committing
+        logger.info(f"[ALERT EMAIL] Alert created with ID: {alert.id}")
         
         # Check if user has email notifications enabled
         try:
             settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+            logger.info(f"[ALERT EMAIL] NotificationSettings found: {settings is not None}")
+            
+            if settings:
+                logger.info(f"[ALERT EMAIL] email_on_alert setting: {settings.email_on_alert}")
+            else:
+                logger.info(f"[ALERT EMAIL] No NotificationSettings for user {user_id}, email will NOT be sent")
+            
             if settings and settings.email_on_alert:
                 user = db.session.get(User, user_id)
+                logger.info(f"[ALERT EMAIL] User found: {user is not None}, has email: {user.email if user else 'N/A'}")
+                
                 if user and user.email:
                     # Parse alert title for email
                     email_title = title
@@ -887,16 +927,25 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
                     except:
                         pass  # Not JSON, use as-is
                     
+                    logger.info(f"[ALERT EMAIL] Sending alert email to {user.email} with title: {email_title}")
                     user_language = user.preferred_language or 'en'
-                    send_alert_notification_email(user.email, email_title, content or '', user_language)
-                    logger.info(f"Sent alert email to user {user_id}")
+                    result = send_alert_notification_email(user.email, email_title, content or '', user_language)
+                    logger.info(f"[ALERT EMAIL] Email send result: {result}")
+                else:
+                    logger.info(f"[ALERT EMAIL] Skipping email - user not found or no email address")
+            else:
+                logger.info(f"[ALERT EMAIL] Skipping email - email_on_alert is disabled or no settings")
+                
         except Exception as email_err:
-            logger.error(f"Error sending alert email notification: {str(email_err)}")
+            logger.error(f"[ALERT EMAIL] Error sending alert email notification: {str(email_err)}")
+            logger.error(f"[ALERT EMAIL] Traceback: {traceback.format_exc()}")
             # Don't fail the alert creation if email fails
         
+        logger.info(f"[ALERT EMAIL] ========================================")
         return alert
     except Exception as e:
-        logger.error(f"Error creating alert: {str(e)}")
+        logger.error(f"[ALERT EMAIL] Error creating alert: {str(e)}")
+        logger.error(f"[ALERT EMAIL] Traceback: {traceback.format_exc()}")
         raise
 
 
@@ -4481,16 +4530,19 @@ def get_alerts():
         all_alerts = db.session.execute(alerts_stmt).scalars().all()
 
         # PJ401: Filter alerts based on following status
-        # Trigger and feed alerts only show if current user follows source_user
+        # PJ704: CRITICAL FIX - Only filter 'trigger' category alerts by following status
+        # Follow and invite alerts (alert_category='follow') should ALWAYS show 
+        # since they notify you about someone following/inviting YOU
         filtered_alerts = []
         for alert in all_alerts:
-            # Check if this alert has a source_user_id (trigger or feed alert)
-            if alert.source_user_id:
-                # Only include if user follows the source_user
+            # Check if this alert has a source_user_id AND is a trigger/feed alert
+            if alert.source_user_id and alert.alert_category in ('trigger', 'feed'):
+                # Only include trigger/feed alerts if user follows the source_user
                 if alert.source_user_id in following_set:
                     filtered_alerts.append(alert)
             else:
-                # Alerts without source_user_id (general alerts) always show
+                # Alerts without source_user_id OR with category 'follow', 'message', 'general' always show
+                # This includes: new follower alerts, invite alerts, general notifications
                 filtered_alerts.append(alert)
 
         # Limit to 50 after filtering
@@ -4850,22 +4902,40 @@ def messages():
             # ALSO send dedicated message notification email if recipient has email_on_new_message enabled
             # This is separate from alert emails - it's specifically for new messages
             try:
+                logger.info(f"[MESSAGE EMAIL] ========================================")
+                logger.info(f"[MESSAGE EMAIL] Checking if message email should be sent")
+                logger.info(f"[MESSAGE EMAIL] recipient_id: {recipient_id}, recipient.email: {recipient.email if recipient else 'None'}")
+                
                 recipient_settings = NotificationSettings.query.filter_by(user_id=recipient_id).first()
+                logger.info(f"[MESSAGE EMAIL] NotificationSettings found: {recipient_settings is not None}")
+                
                 # Default to True if no settings exist (email_on_new_message defaults to True)
                 should_send_email = True
                 if recipient_settings:
-                    should_send_email = recipient_settings.email_on_new_message
+                    should_send_email = recipient_settings.email_on_new_message if recipient_settings.email_on_new_message is not None else True
+                    logger.info(f"[MESSAGE EMAIL] email_on_new_message setting: {recipient_settings.email_on_new_message}")
+                else:
+                    logger.info(f"[MESSAGE EMAIL] No settings found, defaulting to send email: True")
+                
+                logger.info(f"[MESSAGE EMAIL] should_send_email: {should_send_email}")
                 
                 if should_send_email and recipient.email:
                     recipient_language = recipient.preferred_language or 'en'
-                    send_new_message_notification_email(
+                    logger.info(f"[MESSAGE EMAIL] Sending message email to {recipient.email}")
+                    result = send_new_message_notification_email(
                         recipient.email,
                         sender_name,
                         content,
                         recipient_language
                     )
+                    logger.info(f"[MESSAGE EMAIL] Email send result: {result}")
+                else:
+                    logger.info(f"[MESSAGE EMAIL] Skipping email - should_send_email: {should_send_email}, has_email: {bool(recipient.email if recipient else False)}")
+                
+                logger.info(f"[MESSAGE EMAIL] ========================================")
             except Exception as email_error:
-                logger.error(f"Error sending message notification email: {str(email_error)}")
+                logger.error(f"[MESSAGE EMAIL] Error sending message notification email: {str(email_error)}")
+                logger.error(f"[MESSAGE EMAIL] Traceback: {traceback.format_exc()}")
                 # Don't fail the message send if email fails
 
             # Update activity for today
