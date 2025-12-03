@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ703 -->
+<!-- TheraSocial Version PJ704 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
@@ -13,6 +13,14 @@
 -->
 <!-- PJ703 Changes:
      1. Fixed Block button showing "following.block" - changed to use correct translation key "block.block_user"
+     2. Fixed Followers tab profile viewing - now works same as Following tab with preview mode
+     3. Fixed Invite section follow status - now always checks actual following status via API
+-->
+<!-- PJ704 Changes:
+     1. Backend fix - Alerts for new followers, invites, and messages were being incorrectly filtered out
+     2. The get_alerts endpoint was filtering ALL alerts with source_user_id by following status
+     3. Now only 'trigger' and 'feed' category alerts are filtered - follow/invite/message alerts always show
+-->
      2. Fixed Followers tab - clicking on user names now works same as Following tab (uses viewUserProfileFromFollowers)
      3. Fixed Invite section follow tracking - now properly shows Unfollow when already following a user
 -->
