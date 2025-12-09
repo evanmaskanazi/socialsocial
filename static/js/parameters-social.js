@@ -1,8 +1,14 @@
+// PJ807 FIX APPLIED: Fixed JavaScript errors in displayParameterAlerts
 // PJ806 FIX APPLIED: Fixed duplicate email spam from trigger alerts
 // PJ706 FIX APPLIED: Default privacy changed from 'public' to 'private' for new accounts
 // Social Parameters Save/Load System with i18n support and numeric ratings
 // COMPLETE FIXED VERSION - Includes language selector and all fixes
 // 
+// PJ807 Changes (version 1300):
+// - Fixed TypeError in displayParameterAlerts when alert.level is undefined
+// - Now handles both new schema (with level/dates/values) and old schema (without) gracefully
+// - Added null checks for all alert fields to prevent crashes
+//
 // PJ806 Changes:
 // - Reduced checkParameterAlerts polling from 60 seconds to 5 minutes
 // - The /api/parameters/check-triggers endpoint is now READ-ONLY
@@ -2881,8 +2887,10 @@ function displayParameterAlerts(alerts) {
 
     alerts.forEach(alert => {
         const alertDiv = document.createElement('div');
-        const bgColor = alert.level === 'critical' ? '#ff4444' :
-                        alert.level === 'high' ? '#ff8800' : '#ffcc00';
+        // PJ806 FIX: Handle both new schema (with level) and old schema (without level)
+        const alertLevel = alert.level || 'warning';  // Default to warning if no level
+        const bgColor = alertLevel === 'critical' ? '#ff4444' :
+                        alertLevel === 'high' ? '#ff8800' : '#ffcc00';
 
         alertDiv.style.cssText = `
             background: ${bgColor};
@@ -2894,18 +2902,34 @@ function displayParameterAlerts(alerts) {
             animation: slideIn 0.3s ease;
         `;
 
+        // PJ806 FIX: Handle both schema formats for dates/values display
+        let datesDisplay = '';
+        let valuesDisplay = '';
+        if (alert.dates && alert.dates.length >= 2) {
+            datesDisplay = `Dates: ${alert.dates[0]} and ${alert.dates[alert.dates.length - 1]}`;
+        } else if (alert.end_date) {
+            // Old schema format
+            datesDisplay = `End date: ${alert.end_date}`;
+        }
+        if (alert.values && alert.values.length > 0) {
+            valuesDisplay = `Values: ${alert.values.join(', ')}`;
+        } else if (alert.condition_text) {
+            // Old schema format
+            valuesDisplay = `Condition: ${alert.condition_text}`;
+        }
+
         alertDiv.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <strong>${alert.level.toUpperCase()} ALERT</strong>
+                <strong>${alertLevel.toUpperCase()} ALERT</strong>
                 <button onclick="this.parentElement.parentElement.remove()"
                         style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
             </div>
             <div style="margin-top: 8px;">
-                <strong>${alert.user}</strong> - ${alert.parameter}
+                <strong>${alert.user || 'Unknown'}</strong> - ${alert.parameter || 'parameter'}
             </div>
             <div style="font-size: 12px; margin-top: 5px;">
-                Dates: ${alert.dates[0]} and ${alert.dates[1]}<br>
-                Values: ${alert.values.join(', ')}
+                ${datesDisplay}<br>
+                ${valuesDisplay}
             </div>
         `;
 
