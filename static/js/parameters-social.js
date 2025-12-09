@@ -1,3 +1,5 @@
+// PJ810 Version 1600 - Fixed double message sending, configurable trigger alert display
+// PJ809 Version 1500 - Backend fix for duplicate detection window (no JS changes needed)
 // PJ808 Version 1400 - Backend fix for cooldown blocking (no JS changes needed)
 // PJ807 FIX APPLIED: Fixed JavaScript errors in displayParameterAlerts
 // PJ806 FIX APPLIED: Fixed duplicate email spam from trigger alerts
@@ -5,7 +7,19 @@
 // Social Parameters Save/Load System with i18n support and numeric ratings
 // COMPLETE FIXED VERSION - Includes language selector and all fixes
 // 
-// PJ808 Changes (version 1400):
+// PJ810 Changes (version 1600):
+// - Fixed double message sending when pressing Enter
+// - Added TRIGGER_ALERT_DISPLAY_MODE configuration:
+//   'overlay' = Yellow floating alerts (original behavior)
+//   'standard' = Alerts in the Alerts section like other notifications
+// - Default is 'standard' to match other alert types
+//
+// PJ809 Changes (version 1500):
+// - Backend only: Reduced duplicate detection from 1 day to 4 hours
+// - Backend only: Added enhanced logging for save_parameters
+// - No frontend changes needed
+//
+// PJ808 Changes:
 // - Backend only: Removed 24-hour cooldown that was blocking all alerts
 // - No frontend changes needed
 //
@@ -18,6 +32,20 @@
 // - Reduced checkParameterAlerts polling from 60 seconds to 5 minutes
 // - The /api/parameters/check-triggers endpoint is now READ-ONLY
 // - Alerts are created ONLY when parameters are saved (not when polling)
+
+// ============================================================================
+// PJ810 CONFIGURATION: How to display trigger alerts from polling
+// ============================================================================
+// Options:
+//   'overlay'  - Yellow floating alerts on right side (original behavior)
+//   'standard' - Add to Alerts section like other notifications (recommended)
+//   'disabled' - Don't show polling alerts at all (real alerts still work)
+// 
+// NOTE: This only affects the POLLING display. Real trigger alerts are always
+//       created in the database when parameters are saved and will appear in
+//       the Alerts section regardless of this setting.
+// ============================================================================
+const TRIGGER_ALERT_DISPLAY_MODE = 'standard';  // Change to 'overlay' for yellow popups
 
 // Translation function helper
 const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
@@ -2882,6 +2910,19 @@ async function checkParameterAlerts() {
 }
 
 function displayParameterAlerts(alerts) {
+    // PJ810: Check display mode configuration
+    if (TRIGGER_ALERT_DISPLAY_MODE === 'disabled') {
+        console.log('[PJ810] Trigger alert display is disabled');
+        return;
+    }
+    
+    // PJ810: Standard mode - add to Alerts section like other notifications
+    if (TRIGGER_ALERT_DISPLAY_MODE === 'standard') {
+        displayParameterAlertsStandard(alerts);
+        return;
+    }
+    
+    // Original overlay mode - yellow floating alerts
     let alertContainer = document.getElementById('parameterAlerts');
     if (!alertContainer) {
         alertContainer = document.createElement('div');
@@ -2943,6 +2984,80 @@ function displayParameterAlerts(alerts) {
         // Auto-remove after 30 seconds
         setTimeout(() => alertDiv.remove(), 30000);
     });
+}
+
+// PJ810: New function to display trigger alerts in the standard Alerts section
+function displayParameterAlertsStandard(alerts) {
+    // Find the alerts container in the sidebar
+    const alertsContainer = document.getElementById('alertsList') || document.querySelector('.alerts-list');
+    if (!alertsContainer) {
+        console.log('[PJ810] Alerts container not found, falling back to overlay mode');
+        // Fallback to overlay if alerts section not found
+        const tempMode = TRIGGER_ALERT_DISPLAY_MODE;
+        window.TRIGGER_ALERT_DISPLAY_MODE = 'overlay';
+        displayParameterAlerts(alerts);
+        window.TRIGGER_ALERT_DISPLAY_MODE = tempMode;
+        return;
+    }
+    
+    // Track which alerts we've already shown (by unique key)
+    if (!window._shownTriggerAlerts) {
+        window._shownTriggerAlerts = new Set();
+    }
+    
+    alerts.forEach(alert => {
+        // Create unique key for this alert to prevent duplicates
+        const alertKey = `${alert.user}-${alert.parameter}-${alert.end_date || (alert.dates ? alert.dates[0] : '')}`;
+        
+        // Skip if already shown
+        if (window._shownTriggerAlerts.has(alertKey)) {
+            return;
+        }
+        window._shownTriggerAlerts.add(alertKey);
+        
+        // Build the alert content text
+        let contentText = '';
+        if (alert.dates && alert.dates.length >= 2) {
+            contentText = `Concerning levels from ${alert.dates[0]} to ${alert.dates[alert.dates.length - 1]}`;
+        } else if (alert.end_date && alert.condition_text) {
+            contentText = `${alert.condition_text} (as of ${alert.end_date})`;
+        } else {
+            contentText = 'Parameter at concerning levels';
+        }
+        
+        // Create alert element matching the site's style
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert-item';
+        alertDiv.style.cssText = 'padding: 12px; border-left: 4px solid #f59e0b; background: #fef3c7; margin-bottom: 8px; border-radius: 4px;';
+        
+        alertDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <strong style="color: #92400e;">Wellness Alert</strong>
+                    <div style="font-size: 13px; color: #78350f; margin-top: 4px;">
+                        <strong>${alert.user || 'Someone'}</strong>'s ${alert.parameter || 'parameter'}
+                    </div>
+                    <div style="font-size: 12px; color: #92400e; margin-top: 2px;">
+                        ${contentText}
+                    </div>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="background: none; border: none; color: #92400e; cursor: pointer; font-size: 16px; padding: 0;">×</button>
+            </div>
+        `;
+        
+        // Insert at the top of the alerts list
+        if (alertsContainer.firstChild) {
+            alertsContainer.insertBefore(alertDiv, alertsContainer.firstChild);
+        } else {
+            alertsContainer.appendChild(alertDiv);
+        }
+    });
+    
+    // Clear shown alerts cache after 5 minutes to allow refresh
+    setTimeout(() => {
+        window._shownTriggerAlerts = new Set();
+    }, 300000);
 }
 
 // Add CSS animation for alerts
