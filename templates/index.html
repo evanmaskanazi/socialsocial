@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ813 v1703 -->
+<!-- TheraSocial Version PJ814 v1704 -->
+<!-- PJ814: CRITICAL FIX - Deduplicate triggers before processing, find ALL distinct date patterns -->
+<!-- ROOT CAUSE: Multiple ParameterTrigger rows for same (watcher, watched_user) caused 75 patterns but only 5 unique -->
+<!-- FIX 1: Group triggers by watched_id and merge alert flags -->
+<!-- FIX 2: Pattern algorithm properly tracks each distinct consecutive streak -->
+<!-- Added extensive [PJ814 DEBUG] and [PJ814 PATTERN] logging for diagnostics -->
 <!-- PJ813: Fixed trigger alerts - each date range creates separate alert, all patterns found -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
