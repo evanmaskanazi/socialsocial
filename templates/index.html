@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ812 -->
+<!-- TheraSocial Version PJ812 v1702 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
@@ -63,6 +63,16 @@
      2. FIX: checkParameterAlerts checks if user is logged in before making API call
      3. FIX: Backend formats dates nicely (e.g., "Dec 05 - Dec 07") instead of ISO format
      4. This ensures trigger checks happen when user is authenticated, not just on page load
+-->
+<!-- PJ812 Changes (version 1702):
+     1. FIX: Double message on Enter key - improved debouncing with multiple prevention layers
+     2. FIX: Added 1-second time-based debounce between messages
+     3. FIX: Clear input immediately before async send to prevent re-sending
+     4. FIX: Using keydown instead of keypress for reliable Enter detection
+     5. FIX: Increased alerts-list max-height to 600px for more alerts visibility
+     6. BACKEND: Increased alerts limit from 50 to 100 for full month of alerts
+     7. BACKEND: process_parameter_triggers now includes privacy checks (matching check_triggers)
+     8. BACKEND: Trigger emails now sent when watched user saves parameters (no login required)
 -->
 <html lang="en">
 <head>
@@ -1053,7 +1063,7 @@
         }
 
         .alerts-list {
-            max-height: 400px;
+            max-height: 600px;  /* PJ812: Increased from 400px for more alerts */
             overflow-y: auto;
         }
 
@@ -6515,62 +6525,86 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
     }
 }
 
-    // PJ810: Flag to prevent double message submission
+    // PJ812: Improved flag system to prevent double message submission
     let isMessageSending = false;
+    let lastMessageSentTime = 0;
+    const MESSAGE_DEBOUNCE_MS = 1000; // Minimum 1 second between messages
     
-    document.getElementById('sendMessageBtn').addEventListener('click', async () => {
-    // PJ810: Prevent double submission
-    if (isMessageSending) {
-        console.log('[PJ810] Message already sending, ignoring duplicate click');
-        return;
-    }
-    
-    // Check if recipient is selected
-    if (!currentRecipient || !currentRecipient.id) {
-       const errorText = window.i18n && window.i18n.t ? window.i18n.t('messages.select_conversation') : 'Please select a conversation first';
-        alert(errorText);
-        return;
-    }
-
-    const content = document.getElementById('messageInput').value.trim();
-    if (!content) return;
-
-    // PJ810: Set flag to prevent double submission
-    isMessageSending = true;
-    document.getElementById('sendMessageBtn').disabled = true;
-    
-    try {
-        const response = await apiCall('/messages', 'POST', {
-            recipient_id: currentRecipient.id,
-            content: content
-        });
-
-        // Validate response before proceeding
-        if (response && response.success) {
-            document.getElementById('messageInput').value = '';
-            await loadMessages(currentRecipient.id, currentRecipient.username);
-            await loadConversations();
-        } else {
-            throw new Error(response && response.error ? response.error : 'Failed to send message');
+    async function sendMessageHandler() {
+        // PJ812: Multiple layers of duplicate prevention
+        const now = Date.now();
+        
+        // Layer 1: Flag check
+        if (isMessageSending) {
+            console.log('[PJ812] Message already sending, ignoring duplicate');
+            return;
         }
-    } catch (error) {
-        console.error('Send message error:', error);
-        const errorText = window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error';
-        alert(errorText + ': ' + (error.message || 'Failed to send message'));
-    } finally {
-        // PJ810: Reset flag after completion
-        isMessageSending = false;
-        document.getElementById('sendMessageBtn').disabled = false;
-    }
-});
+        
+        // Layer 2: Time-based debounce
+        if (now - lastMessageSentTime < MESSAGE_DEBOUNCE_MS) {
+            console.log('[PJ812] Message sent too recently, ignoring duplicate');
+            return;
+        }
+        
+        // Check if recipient is selected
+        if (!currentRecipient || !currentRecipient.id) {
+            const errorText = window.i18n && window.i18n.t ? window.i18n.t('messages.select_conversation') : 'Please select a conversation first';
+            alert(errorText);
+            return;
+        }
 
-        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+        const messageInput = document.getElementById('messageInput');
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        // PJ812: Set all prevention mechanisms immediately
+        isMessageSending = true;
+        lastMessageSentTime = now;
+        document.getElementById('sendMessageBtn').disabled = true;
+        
+        // PJ812: Clear input immediately to prevent re-sending same message
+        const messageToSend = content;
+        messageInput.value = '';
+        
+        try {
+            const response = await apiCall('/messages', 'POST', {
+                recipient_id: currentRecipient.id,
+                content: messageToSend
+            });
+
+            // Validate response before proceeding
+            if (response && response.success) {
+                await loadMessages(currentRecipient.id, currentRecipient.username);
+                await loadConversations();
+            } else {
+                // Restore message if send failed
+                messageInput.value = messageToSend;
+                throw new Error(response && response.error ? response.error : 'Failed to send message');
+            }
+        } catch (error) {
+            console.error('Send message error:', error);
+            // Restore message on error
+            if (!messageInput.value) {
+                messageInput.value = messageToSend;
+            }
+            const errorText = window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error';
+            alert(errorText + ': ' + (error.message || 'Failed to send message'));
+        } finally {
+            // PJ812: Reset flag after completion, but keep debounce time active
+            isMessageSending = false;
+            document.getElementById('sendMessageBtn').disabled = false;
+        }
+    }
+    
+    document.getElementById('sendMessageBtn').addEventListener('click', sendMessageHandler);
+
+        // PJ812: Use keydown instead of keypress for more reliable Enter detection
+        document.getElementById('messageInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                // PJ810: Check flag before triggering click
-                if (!isMessageSending) {
-                    document.getElementById('sendMessageBtn').click();
-                }
+                e.stopPropagation();
+                // PJ812: Call handler directly instead of simulating click
+                sendMessageHandler();
             }
         });
 
