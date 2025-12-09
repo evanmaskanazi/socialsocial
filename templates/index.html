@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ815 v1705 -->
+<!-- TheraSocial Version PJ816 v1800 -->
+<!-- PJ816: CRITICAL FIX - Trigger alert emails now sent WITHOUT requiring watcher login -->
+<!-- ROOT CAUSE: check_parameter_triggers() required @login_required and only ran on polling -->
+<!-- Emails were only sent when the WATCHER logged in, not when WATCHED user's data triggered -->
+<!-- FIX 1: Added background trigger scheduler that runs every 5 minutes -->
+<!-- FIX 2: New function run_background_trigger_check_for_watcher() processes all triggers -->
+<!-- FIX 3: Emails sent automatically when trigger conditions are met (like message notifications) -->
 <!-- PJ815: CRITICAL FIX - Reverted broken v1704 trigger deduplication -->
 <!-- ROOT CAUSE: v1704 merged triggers upfront, losing all parameter flags (mood_alert, etc.) -->
 <!-- Because triggers use OLD schema (parameter_name) not NEW schema flags, bool(None)=False broke everything -->
