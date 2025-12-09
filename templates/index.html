@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ814 v1704 -->
-<!-- PJ814: CRITICAL FIX - Deduplicate triggers before processing, find ALL distinct date patterns -->
-<!-- ROOT CAUSE: Multiple ParameterTrigger rows for same (watcher, watched_user) caused 75 patterns but only 5 unique -->
-<!-- FIX 1: Group triggers by watched_id and merge alert flags -->
-<!-- FIX 2: Pattern algorithm properly tracks each distinct consecutive streak -->
-<!-- Added extensive [PJ814 DEBUG] and [PJ814 PATTERN] logging for diagnostics -->
+<!-- TheraSocial Version PJ815 v1705 -->
+<!-- PJ815: CRITICAL FIX - Reverted broken v1704 trigger deduplication -->
+<!-- ROOT CAUSE: v1704 merged triggers upfront, losing all parameter flags (mood_alert, etc.) -->
+<!-- Because triggers use OLD schema (parameter_name) not NEW schema flags, bool(None)=False broke everything -->
+<!-- FIX 1: Process each trigger row individually - no upfront deduplication -->
+<!-- FIX 2: Use patterns_seen SET to deduplicate RESULTS not inputs -->
+<!-- FIX 3: Each trigger checked for its actual schema (old vs new) and processed accordingly -->
+<!-- Added extensive [PJ815 DEBUG] and [PJ815 PATTERN] logging for diagnostics -->
 <!-- PJ813: Fixed trigger alerts - each date range creates separate alert, all patterns found -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
