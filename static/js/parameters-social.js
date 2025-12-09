@@ -1,3 +1,6 @@
+// PJ814 Version 1704 - CRITICAL FIX: Deduplicate triggers, find ALL distinct date patterns
+// ROOT CAUSE: Multiple ParameterTrigger rows caused 75 patterns but only 5 alerts created
+// FIX: Group triggers by watched_id, properly track consecutive streaks
 // PJ813 Version 1703 - Fixed: Each date range creates separate alert, all patterns found
 // PJ812 Version 1702 - Trigger emails work without login, fixed double messages, more alerts visible
 // PJ812 Version 1701 - Fixed trigger check to verify login first, improved date formatting
@@ -11,13 +14,14 @@
 // Social Parameters Save/Load System with i18n support and numeric ratings
 // COMPLETE FIXED VERSION - Includes language selector and all fixes
 //
-// PJ813 Changes (version 1703):
-// - BACKEND: process_parameter_triggers now finds ALL matching patterns, not just one
-// - BACKEND: Each distinct date range creates a separate alert with email
-// - BACKEND: Date-specific duplicate detection prevents over-alerting same pattern
-// - Example: If laura has mood low Nov 10-12 AND Nov 15-17, both patterns get alerts
+// PJ814 Changes (version 1704):
+// - BACKEND: Deduplicate ParameterTrigger rows by watched_id before processing
+// - BACKEND: Merge alert flags (mood_alert, energy_alert, etc.) across duplicate rows
+// - BACKEND: Pattern algorithm now properly tracks ALL distinct consecutive streaks
+// - BACKEND: Added [PJ814 DEBUG] and [PJ814 PATTERN] logging for diagnostics
+// - Shows raw vs deduplicated trigger counts, each pattern's date range
 //
-// PJ812 Changes (version 1701):
+// PJ813 Changes (version 1703):
 // - FIX: checkParameterAlerts now checks if user is logged in before making API call
 // - This prevents 401 errors when the function fires before login completes
 // - Frontend now calls checkParameterAlerts() 3 seconds after successful login
