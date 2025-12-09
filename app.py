@@ -1,8 +1,23 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 812 (Version 1702)
+Complete app.py for Social Social Platform - Phase 813 (Version 1703)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ813 Changes (v1703):
+- CRITICAL FIX: Trigger alerts now create SEPARATE alerts for each date range
+  - Previously: Only 5 alerts created (one per parameter type) even with 75 patterns
+  - Now: Each distinct date range gets its own alert (e.g., mood Nov 10-12, mood Nov 15-17, etc.)
+- FIX 1: check_parameter_triggers() now uses date-specific duplicate detection
+  - Old: Checked for any "laura's mood" alert in 24 hours
+  - New: Checks for alert with EXACT date range "(Nov 10 - Nov 12)" in content
+- FIX 2: process_parameter_triggers() now finds ALL matching patterns
+  - Old: Found only ONE pattern per parameter (the longest/most recent)
+  - New: Finds ALL consecutive streaks that meet the threshold
+- FIX 3: Emails sent when watched user saves (without requiring watcher login)
+  - process_parameter_triggers runs on every parameter save
+  - Creates alerts and sends emails for ALL watchers with triggers
+  - Works like message notifications - delivered immediately on save
 
 PJ812 Changes (v1702):
 - Increased alerts limit from 50 to 100 for full month display
@@ -6924,36 +6939,7 @@ def process_parameter_triggers(user_id, params):
             if t.anxiety_alert: alerts_enabled.append('anxiety')
             logger.info(f"[TRIGGER PROCESS] Trigger {t.id}: watcher={watcher_name} (ID:{t.watcher_id}), consecutive_days={t.consecutive_days}, alerts={alerts_enabled}")
         
-        # PJ801 FIX: Pre-load all recent trigger alerts for efficient duplicate checking
-        # PJ811 FIX: Increased back to 24 hours for more reliable duplicate detection
-        # Group by watcher_id for efficient lookup
-        watcher_alerts = {}
-        for trigger in triggers:
-            if trigger.watcher_id not in watcher_alerts:
-                recent_alerts = Alert.query.filter(
-                    Alert.user_id == trigger.watcher_id,
-                    Alert.alert_type == 'trigger',
-                    Alert.created_at >= datetime.now() - timedelta(hours=24)
-                ).all()
-                
-                logger.info(f"[TRIGGER PROCESS] Found {len(recent_alerts)} recent trigger alerts for watcher {trigger.watcher_id}")
-                
-                # Build a set of (username, normalized_param) keys
-                alert_keys = set()
-                for alert in recent_alerts:
-                    content = alert.content or ""
-                    if "'s " in content:
-                        parts = content.split("'s ", 1)
-                        if len(parts) == 2:
-                            username = parts[0].lower()
-                            param_part = parts[1].lower()
-                            for param in ['mood', 'energy', 'anxiety', 'sleep_quality', 'sleep quality', 'physical_activity', 'physical activity']:
-                                if param in param_part:
-                                    normalized_param = param.replace(' ', '_')
-                                    alert_keys.add((username, normalized_param))
-                                    logger.info(f"[TRIGGER PROCESS] Existing alert key: ({username}, {normalized_param})")
-                                    break
-                watcher_alerts[trigger.watcher_id] = alert_keys
+        # PJ813: Removed watcher_alerts pre-loading - now using direct DB queries for date-specific duplicate detection
 
         alerts_created = 0
         alerts_skipped_duplicate = 0
@@ -7001,21 +6987,14 @@ def process_parameter_triggers(user_id, params):
                 param_checks.append(('anxiety', 'anxiety', 'anxiety_privacy', lambda x: x >= 3, 3))
 
             for param_attr, param_name, privacy_attr, condition_func, threshold in param_checks:
-                # PJ801 FIX: Check if we already have an alert for this user/parameter
-                alert_key = (watched_user.username.lower(), param_name.replace(' ', '_'))
-                if alert_key in watcher_alerts.get(trigger.watcher_id, set()):
-                    logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_user.username}/{param_name} - alert exists within 24 hours for watcher {trigger.watcher_id}")
-                    alerts_skipped_duplicate += 1
-                    continue
-                
                 logger.info(f"[TRIGGER PROCESS] Checking {param_name} for {watched_user.username}, trigger requires {trigger.consecutive_days} consecutive days")
                 
-                # Look for N consecutive days (where N = trigger.consecutive_days)
-                # PJ812: Now includes privacy check for each parameter entry
+                # PJ813 FIX: Find ALL matching patterns, not just one
+                # Collect all streaks that meet the consecutive days requirement
+                all_patterns = []  # List of (start_date, end_date, consecutive_count, consecutive_dates)
                 consecutive_count = 0
                 consecutive_dates = []
                 last_date = None
-                pattern_found = False
 
                 for param_entry in all_params:
                     param_value = getattr(param_entry, param_attr, None)
@@ -7023,7 +7002,10 @@ def process_parameter_triggers(user_id, params):
                     
                     # PJ812: Check if watcher can see this parameter
                     if not can_see_parameter(param_privacy, watcher_circle):
-                        # Reset streak if we hit a private parameter
+                        # Save current streak if it meets requirements before resetting
+                        if consecutive_count >= trigger.consecutive_days:
+                            sorted_dates = sorted(consecutive_dates)
+                            all_patterns.append((sorted_dates[0], sorted_dates[-1], consecutive_count, list(consecutive_dates)))
                         consecutive_count = 0
                         consecutive_dates = []
                         last_date = None
@@ -7035,44 +7017,55 @@ def process_parameter_triggers(user_id, params):
                             consecutive_count += 1
                             consecutive_dates.append(param_entry.date)
                             last_date = param_entry.date
-
-                            # If we found the required consecutive days, create alert
-                            if consecutive_count >= trigger.consecutive_days:
-                                pattern_found = True
-                                # DON'T break yet - continue to find the longest pattern
                         else:
-                            # Reset if not consecutive
+                            # Streak broken - save previous streak if it met requirements
+                            if consecutive_count >= trigger.consecutive_days:
+                                sorted_dates = sorted(consecutive_dates)
+                                all_patterns.append((sorted_dates[0], sorted_dates[-1], consecutive_count, list(consecutive_dates)))
+                            # Start new streak
                             consecutive_count = 1
                             consecutive_dates = [param_entry.date]
                             last_date = param_entry.date
                     else:
-                        # Reset if condition not met
+                        # Condition not met - save current streak if it meets requirements before resetting
+                        if consecutive_count >= trigger.consecutive_days:
+                            sorted_dates = sorted(consecutive_dates)
+                            all_patterns.append((sorted_dates[0], sorted_dates[-1], consecutive_count, list(consecutive_dates)))
                         consecutive_count = 0
                         consecutive_dates = []
                         last_date = None
                 
-                # PJ801 FIX: Create alert only if pattern found and no duplicate exists
-                if pattern_found and consecutive_count >= trigger.consecutive_days:
-                    logger.info(f"[TRIGGER PROCESS] Pattern FOUND for {param_name}: {consecutive_count} consecutive days, creating alert")
+                # Don't forget the last streak if it meets requirements
+                if consecutive_count >= trigger.consecutive_days:
+                    sorted_dates = sorted(consecutive_dates)
+                    all_patterns.append((sorted_dates[0], sorted_dates[-1], consecutive_count, list(consecutive_dates)))
+                
+                logger.info(f"[TRIGGER PROCESS] Found {len(all_patterns)} patterns for {param_name}")
+                
+                # PJ813 FIX: Create alert for EACH pattern with date-specific duplicate detection
+                for start_date, end_date, count, dates in all_patterns:
+                    start_str = start_date.strftime('%b %d')  # e.g., "Dec 05"
+                    end_str = end_date.strftime('%b %d')      # e.g., "Dec 07"
+                    date_pattern = f"({start_str} - {end_str})"
+                    
+                    # PJ813 FIX: Check for duplicate using EXACT date range
+                    existing_alert = Alert.query.filter(
+                        Alert.user_id == trigger.watcher_id,
+                        Alert.alert_type == 'trigger',
+                        Alert.created_at >= datetime.now() - timedelta(hours=24),
+                        Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
+                    ).first()
+                    
+                    if existing_alert:
+                        logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_user.username}/{param_name} {date_pattern} - alert exists within 24 hours for watcher {trigger.watcher_id}")
+                        alerts_skipped_duplicate += 1
+                        continue
+                    
+                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {count} consecutive days {date_pattern}"
+                    logger.info(f"[TRIGGER PROCESS] Pattern FOUND for {param_name}: {count} consecutive days {date_pattern}, creating alert")
                     logger.info(f"[TRIGGER PROCESS] Alert will be sent to watcher {trigger.watcher_id} about {watched_user.username}")
                     
-                    # PJ812: Format dates nicely in alert content
-                    if consecutive_dates and len(consecutive_dates) >= 2:
-                        try:
-                            # Get first and last dates of the streak (dates are in desc order so reverse)
-                            sorted_dates = sorted(consecutive_dates)
-                            start_date = sorted_dates[0]
-                            end_date = sorted_dates[-1]
-                            start_str = start_date.strftime('%b %d')  # e.g., "Dec 05"
-                            end_str = end_date.strftime('%b %d')      # e.g., "Dec 07"
-                            content = f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days ({start_str} - {end_str})"
-                        except Exception as date_err:
-                            logger.warning(f"[TRIGGER PROCESS] Could not format dates: {date_err}")
-                            content = f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days"
-                    else:
-                        content = f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days"
-                    
-                    # Create one alert for this parameter
+                    # Create alert for this pattern
                     alert = create_alert_with_email(
                         user_id=trigger.watcher_id,
                         title=f"Wellness Alert for {watched_user.username}",
@@ -7084,7 +7077,7 @@ def process_parameter_triggers(user_id, params):
                     
                     if alert:
                         alerts_created += 1
-                        logger.info(f"[TRIGGER PROCESS] ✅ Created alert ID {alert.id} for {watched_user.username}/{param_name} -> watcher {trigger.watcher_id}")
+                        logger.info(f"[TRIGGER PROCESS] ✅ Created alert ID {alert.id} for {watched_user.username}/{param_name} {date_pattern} -> watcher {trigger.watcher_id}")
                         
                         # Check email status
                         try:
@@ -7099,15 +7092,11 @@ def process_parameter_triggers(user_id, params):
                             logger.error(f"[TRIGGER PROCESS] Error checking email: {email_check_err}")
                     else:
                         logger.error(f"[TRIGGER PROCESS] ❌ Failed to create alert for {watched_user.username}/{param_name}")
-                    
-                    # PJ808: Still update last_triggered for tracking purposes (but not used for blocking)
+                
+                # PJ808: Still update last_triggered for tracking purposes
+                if all_patterns:
                     trigger.last_triggered = datetime.now()
                     db.session.commit()
-                    # Mark as created to prevent duplicates in this session
-                    if trigger.watcher_id in watcher_alerts:
-                        watcher_alerts[trigger.watcher_id].add(alert_key)
-                else:
-                    logger.info(f"[TRIGGER PROCESS] ❌ No pattern found for {param_name}: consecutive_count={consecutive_count}, required={trigger.consecutive_days}")
 
         logger.info(f"[TRIGGER PROCESS] ========================================")
         logger.info(f"[TRIGGER PROCESS] process_parameter_triggers completed for user {user_id}")
@@ -9271,29 +9260,74 @@ def check_parameter_triggers():
                 # Build unique key for this alert
                 alert_key = f"{watched_username.lower()}_{normalized_param}"
                 
-                logger.info(f"[TRIGGER CHECK] Processing pattern: user={watched_username}, param={parameter}, days={consecutive_days}, key={alert_key}")
+                # PJ813 FIX: Build date range string for unique key - each date range should be a separate alert
+                date_range_str = ""
+                if alert_data.get('dates') and len(alert_data['dates']) >= 2:
+                    try:
+                        from datetime import datetime as dt
+                        start_date = dt.fromisoformat(alert_data['dates'][0])
+                        end_date = dt.fromisoformat(alert_data['dates'][-1])
+                        date_range_str = f"_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}"
+                    except:
+                        pass
                 
-                # Check for existing alert in last 24 hours to prevent duplicates
-                # Uses content field to match specific user/parameter combination
-                existing_alert = Alert.query.filter(
-                    Alert.user_id == watcher_id,
-                    Alert.alert_type == 'trigger',
-                    Alert.created_at >= datetime.now() - timedelta(hours=24),
-                    Alert.content.ilike(f"%{watched_username}'s {parameter}%")
-                ).first()
+                # PJ813 FIX: Include date range in alert key so different patterns create separate alerts
+                alert_key_with_dates = f"{alert_key}{date_range_str}"
                 
-                # Also check with underscore version
-                if not existing_alert:
-                    param_with_underscore = parameter.replace(' ', '_')
+                logger.info(f"[TRIGGER CHECK] Processing pattern: user={watched_username}, param={parameter}, days={consecutive_days}, key={alert_key_with_dates}")
+                
+                # PJ813 FIX: Check for existing alert with EXACT same date range in content
+                # Changed from broad ilike match to exact date range match
+                existing_alert = None
+                if date_range_str:
+                    # If we have dates, check for alert with exact date range in content
+                    try:
+                        from datetime import datetime as dt
+                        start_date = dt.fromisoformat(alert_data['dates'][0])
+                        end_date = dt.fromisoformat(alert_data['dates'][-1])
+                        start_str = start_date.strftime('%b %d')
+                        end_str = end_date.strftime('%b %d')
+                        date_pattern = f"({start_str} - {end_str})"
+                        
+                        existing_alert = Alert.query.filter(
+                            Alert.user_id == watcher_id,
+                            Alert.alert_type == 'trigger',
+                            Alert.created_at >= datetime.now() - timedelta(hours=24),
+                            Alert.content.ilike(f"%{watched_username}'s {parameter}%{date_pattern}%")
+                        ).first()
+                        
+                        # Also check with underscore version
+                        if not existing_alert:
+                            param_with_underscore = parameter.replace(' ', '_')
+                            existing_alert = Alert.query.filter(
+                                Alert.user_id == watcher_id,
+                                Alert.alert_type == 'trigger',
+                                Alert.created_at >= datetime.now() - timedelta(hours=24),
+                                Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%{date_pattern}%")
+                            ).first()
+                    except Exception as date_err:
+                        logger.warning(f"[TRIGGER CHECK] Could not check date-specific duplicate: {date_err}")
+                
+                # Fallback: if no date range available, use broader check
+                if not date_range_str:
                     existing_alert = Alert.query.filter(
                         Alert.user_id == watcher_id,
                         Alert.alert_type == 'trigger',
                         Alert.created_at >= datetime.now() - timedelta(hours=24),
-                        Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%")
+                        Alert.content.ilike(f"%{watched_username}'s {parameter}%")
                     ).first()
+                    
+                    if not existing_alert:
+                        param_with_underscore = parameter.replace(' ', '_')
+                        existing_alert = Alert.query.filter(
+                            Alert.user_id == watcher_id,
+                            Alert.alert_type == 'trigger',
+                            Alert.created_at >= datetime.now() - timedelta(hours=24),
+                            Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%")
+                        ).first()
                 
                 if existing_alert:
-                    logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_username}/{parameter} - alert already exists (ID: {existing_alert.id}, created: {existing_alert.created_at})")
+                    logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_username}/{parameter} - alert already exists for this date range (ID: {existing_alert.id}, created: {existing_alert.created_at})")
                     alerts_skipped_duplicate += 1
                     continue
                 
