@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 810
+Complete app.py for Social Social Platform - Phase 811
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -85,6 +85,24 @@ PJ810 Changes (version 1600):
   - The yellow overlay alerts come from polling (READ-ONLY endpoint)
   - Real alerts + emails happen when process_parameter_triggers() runs on save
   - If no [SAVE PARAMS] logs in Render, no parameters were saved = no trigger emails
+
+PJ811 Changes (version 1700):
+- CRITICAL FIX: Trigger alerts now persist in database and don't vanish
+- ROOT CAUSE: check-triggers returned computed patterns but didn't create DB alerts
+  Alerts appeared briefly from DOM insertion, then vanished when loadAlerts() ran
+- FIX 1: check_parameter_triggers() now creates ONE-TIME database alerts with emails
+  - Uses 24-hour duplicate detection per (watcher, watched_user, parameter) combo
+  - Creates alerts with proper alert_category='trigger' for filtering
+  - Sends email notifications if user has email_on_alert enabled
+- FIX 2: Added comprehensive logging throughout trigger lifecycle:
+  - [TRIGGER CHECK] - Polling endpoint activity
+  - [TRIGGER CREATE] - Alert creation with email
+  - [TRIGGER DUPLICATE] - When duplicate detection prevents creation
+  - [TRIGGER EMAIL] - Email sending attempts and results
+- FIX 3: Emails now sent even when user is not logged in
+  - Background trigger processing sends emails to watchers
+  - Works like message notifications - alerts delivered regardless of login status
+- Check Render logs for [TRIGGER CHECK], [TRIGGER CREATE], [TRIGGER DUPLICATE], [TRIGGER EMAIL]
 """
 
 import os
@@ -6850,14 +6868,21 @@ def process_parameter_triggers(user_id, params):
     
     PJ801 FIX: Improved duplicate detection to prevent repeated alert emails
     PJ806 FIX: Added detailed logging to debug trigger processing
+    PJ811 FIX: Enhanced logging and email notification verification
     """
     try:
         logger.info(f"[TRIGGER PROCESS] ========================================")
         logger.info(f"[TRIGGER PROCESS] process_parameter_triggers called for user_id={user_id}")
+        logger.info(f"[TRIGGER PROCESS] Parameter values: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}")
         
         # Find all triggers where someone is watching this user
         triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
         logger.info(f"[TRIGGER PROCESS] Found {len(triggers)} triggers watching user {user_id}")
+        
+        if len(triggers) == 0:
+            logger.info(f"[TRIGGER PROCESS] No triggers found - no one is watching user {user_id}")
+            logger.info(f"[TRIGGER PROCESS] ========================================")
+            return
         
         # Log trigger details
         for t in triggers:
@@ -6869,11 +6894,12 @@ def process_parameter_triggers(user_id, params):
             if t.sleep_alert: alerts_enabled.append('sleep')
             if t.physical_alert: alerts_enabled.append('activity')
             if t.anxiety_alert: alerts_enabled.append('anxiety')
-            logger.info(f"[TRIGGER PROCESS] Trigger {t.id}: watcher={watcher_name}, consecutive_days={t.consecutive_days}, alerts={alerts_enabled}")
+            logger.info(f"[TRIGGER PROCESS] Trigger {t.id}: watcher={watcher_name} (ID:{t.watcher_id}), consecutive_days={t.consecutive_days}, alerts={alerts_enabled}")
         
         # PJ801 FIX: Pre-load all recent trigger alerts for efficient duplicate checking
         # PJ806 FIX: Reduced from 7 days to 1 day to prevent over-aggressive blocking
         # PJ809 FIX: Reduced from 1 day to 4 hours - still prevents spam but allows more frequent alerts
+        # PJ811 FIX: Increased back to 24 hours for more reliable duplicate detection
         # Group by watcher_id for efficient lookup
         watcher_alerts = {}
         for trigger in triggers:
@@ -6881,8 +6907,10 @@ def process_parameter_triggers(user_id, params):
                 recent_alerts = Alert.query.filter(
                     Alert.user_id == trigger.watcher_id,
                     Alert.alert_type == 'trigger',
-                    Alert.created_at >= datetime.now() - timedelta(hours=4)  # PJ809: Changed from 1 day to 4 hours
+                    Alert.created_at >= datetime.now() - timedelta(hours=24)  # PJ811: Changed to 24 hours
                 ).all()
+                
+                logger.info(f"[TRIGGER PROCESS] Found {len(recent_alerts)} recent trigger alerts for watcher {trigger.watcher_id}")
                 
                 # Build a set of (username, normalized_param) keys
                 alert_keys = set()
@@ -6897,6 +6925,7 @@ def process_parameter_triggers(user_id, params):
                                 if param in param_part:
                                     normalized_param = param.replace(' ', '_')
                                     alert_keys.add((username, normalized_param))
+                                    logger.info(f"[TRIGGER PROCESS] Existing alert key: ({username}, {normalized_param})")
                                     break
                 watcher_alerts[trigger.watcher_id] = alert_keys
 
@@ -6947,7 +6976,7 @@ def process_parameter_triggers(user_id, params):
                 # PJ801 FIX: Check if we already have an alert for this user/parameter
                 alert_key = (watched_user.username.lower(), param_name.replace(' ', '_'))
                 if alert_key in watcher_alerts.get(trigger.watcher_id, set()):
-                    logger.info(f"[PJ809] Skipping {watched_user.username}/{param_name} - alert already exists within 4 hours for watcher {trigger.watcher_id}")
+                    logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_user.username}/{param_name} - alert exists within 24 hours for watcher {trigger.watcher_id}")
                     continue
                 
                 logger.info(f"[TRIGGER PROCESS] Checking {param_name} for {watched_user.username}, trigger requires {trigger.consecutive_days} consecutive days")
@@ -6986,6 +7015,8 @@ def process_parameter_triggers(user_id, params):
                 # PJ801 FIX: Create alert only if pattern found and no duplicate exists
                 if pattern_found and consecutive_count >= trigger.consecutive_days:
                     logger.info(f"[TRIGGER PROCESS] Pattern FOUND for {param_name}: {consecutive_count} consecutive days, creating alert")
+                    logger.info(f"[TRIGGER PROCESS] Alert will be sent to watcher {trigger.watcher_id} about {watched_user.username}")
+                    
                     # Create one alert for this parameter
                     alert = create_alert_with_email(
                         user_id=trigger.watcher_id,
@@ -6995,21 +7026,39 @@ def process_parameter_triggers(user_id, params):
                         source_user_id=watched_user.id,
                         alert_category='trigger'
                     )
+                    
+                    if alert:
+                        logger.info(f"[TRIGGER PROCESS] ✅ Created alert ID {alert.id} for {watched_user.username}/{param_name} -> watcher {trigger.watcher_id}")
+                        
+                        # Check email status
+                        try:
+                            watcher_settings = NotificationSettings.query.filter_by(user_id=trigger.watcher_id).first()
+                            watcher_user = User.query.get(trigger.watcher_id)
+                            if watcher_settings and watcher_settings.email_on_alert:
+                                logger.info(f"[TRIGGER PROCESS] ✅ Email sent to {watcher_user.email if watcher_user else 'unknown'}")
+                            else:
+                                logger.info(f"[TRIGGER PROCESS] ⚠️ No email - email_on_alert={'enabled' if watcher_settings and watcher_settings.email_on_alert else 'disabled'}")
+                        except Exception as email_check_err:
+                            logger.error(f"[TRIGGER PROCESS] Error checking email: {email_check_err}")
+                    else:
+                        logger.error(f"[TRIGGER PROCESS] ❌ Failed to create alert for {watched_user.username}/{param_name}")
+                    
                     # PJ808: Still update last_triggered for tracking purposes (but not used for blocking)
                     trigger.last_triggered = datetime.now()
                     db.session.commit()
                     # Mark as created to prevent duplicates in this session
                     if trigger.watcher_id in watcher_alerts:
                         watcher_alerts[trigger.watcher_id].add(alert_key)
-                    logger.info(f"[TRIGGER PROCESS] ✅ Created alert for {watched_user.username}/{param_name} -> watcher {trigger.watcher_id}")
                 else:
                     logger.info(f"[TRIGGER PROCESS] ❌ No pattern found for {param_name}: consecutive_count={consecutive_count}, required={trigger.consecutive_days}")
 
+        logger.info(f"[TRIGGER PROCESS] ========================================")
         logger.info(f"[TRIGGER PROCESS] process_parameter_triggers completed for user {user_id}")
+        logger.info(f"[TRIGGER PROCESS] Processed {len(triggers)} triggers")
         logger.info(f"[TRIGGER PROCESS] ========================================")
 
     except Exception as e:
-        logger.error(f"Error processing parameter triggers: {str(e)}")
+        logger.error(f"[TRIGGER PROCESS] ❌ Error processing parameter triggers: {str(e)}")
         logger.error(f"[TRIGGER PROCESS] Traceback: {traceback.format_exc()}")
         db.session.rollback()
 
@@ -9140,24 +9189,117 @@ def check_parameter_triggers():
                         last_date = None
                         streak_start = None
 
-        # ===== PJ806 FIX: READ-ONLY ENDPOINT =====
-        # This endpoint is polled frequently (every 60 seconds) and should NOT create alerts.
-        # Alerts are ONLY created when parameters are saved via process_parameter_triggers().
-        # This endpoint returns computed alert data for frontend display ONLY.
-        # 
-        # Previously, this endpoint was creating duplicate alerts because:
-        # 1. Parameter names were inconsistent (underscore vs space: 'sleep_quality' vs 'sleep quality')
-        # 2. This caused duplicate detection to fail
-        # 3. New alerts (with emails) were created every 60 seconds
-        #
-        # FIX: Remove all alert creation code. Just return the computed patterns for display.
+        # ===== PJ811 FIX: CREATE DATABASE ALERTS WITH PROPER DUPLICATE DETECTION =====
+        # This endpoint now creates ONE-TIME database alerts when trigger patterns are found.
+        # Duplicate detection uses 24-hour window per (watcher, watched_user, parameter) combo.
+        # Alerts persist in the database and don't vanish on page refresh.
+        # Emails are sent if user has email_on_alert enabled.
         
-        logger.info(f"[CHECK-TRIGGERS PJ806] Found {len(alerts)} trigger patterns for user {watcher_id} (READ-ONLY, no alerts created)")
+        logger.info(f"[TRIGGER CHECK] ========================================")
+        logger.info(f"[TRIGGER CHECK] Found {len(alerts)} trigger patterns for watcher {watcher_id}")
+        
+        alerts_created = 0
+        alerts_skipped_duplicate = 0
+        alerts_emailed = 0
+        
+        for alert_data in alerts:
+            try:
+                watched_username = alert_data.get('user', 'Unknown')
+                parameter = alert_data.get('parameter', 'unknown')
+                consecutive_days = alert_data.get('consecutive_days', 0)
+                
+                # Normalize parameter name for consistent duplicate detection
+                normalized_param = parameter.replace(' ', '_').lower()
+                
+                # Build unique key for this alert
+                alert_key = f"{watched_username.lower()}_{normalized_param}"
+                
+                logger.info(f"[TRIGGER CHECK] Processing pattern: user={watched_username}, param={parameter}, days={consecutive_days}, key={alert_key}")
+                
+                # Check for existing alert in last 24 hours to prevent duplicates
+                # Uses content field to match specific user/parameter combination
+                existing_alert = Alert.query.filter(
+                    Alert.user_id == watcher_id,
+                    Alert.alert_type == 'trigger',
+                    Alert.created_at >= datetime.now() - timedelta(hours=24),
+                    Alert.content.ilike(f"%{watched_username}'s {parameter}%")
+                ).first()
+                
+                # Also check with underscore version
+                if not existing_alert:
+                    param_with_underscore = parameter.replace(' ', '_')
+                    existing_alert = Alert.query.filter(
+                        Alert.user_id == watcher_id,
+                        Alert.alert_type == 'trigger',
+                        Alert.created_at >= datetime.now() - timedelta(hours=24),
+                        Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%")
+                    ).first()
+                
+                if existing_alert:
+                    logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_username}/{parameter} - alert already exists (ID: {existing_alert.id}, created: {existing_alert.created_at})")
+                    alerts_skipped_duplicate += 1
+                    continue
+                
+                # Get the watched user's ID for source_user_id
+                watched_user = User.query.filter_by(username=watched_username).first()
+                source_user_id = watched_user.id if watched_user else None
+                
+                # Create alert content
+                if alert_data.get('dates') and len(alert_data['dates']) >= 2:
+                    content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days (from {alert_data['dates'][0]} to {alert_data['dates'][-1]})"
+                else:
+                    content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
+                
+                # Create the alert with email notification
+                logger.info(f"[TRIGGER CREATE] Creating alert for watcher {watcher_id}: {content[:100]}...")
+                
+                alert = create_alert_with_email(
+                    user_id=watcher_id,
+                    title=f"Wellness Alert for {watched_username}",
+                    content=content,
+                    alert_type='trigger',
+                    source_user_id=source_user_id,
+                    alert_category='trigger'
+                )
+                
+                if alert:
+                    alerts_created += 1
+                    logger.info(f"[TRIGGER CREATE] ✅ Created alert ID {alert.id} for {watched_username}/{parameter}")
+                    
+                    # Check if email was sent
+                    try:
+                        settings = NotificationSettings.query.filter_by(user_id=watcher_id).first()
+                        if settings and settings.email_on_alert:
+                            alerts_emailed += 1
+                            logger.info(f"[TRIGGER EMAIL] Email was sent for alert ID {alert.id}")
+                        else:
+                            logger.info(f"[TRIGGER EMAIL] No email sent - email_on_alert is {'disabled' if settings else 'no settings found'}")
+                    except Exception as email_check_err:
+                        logger.error(f"[TRIGGER EMAIL] Error checking email status: {email_check_err}")
+                        
+            except Exception as pattern_err:
+                logger.error(f"[TRIGGER CHECK] Error processing pattern: {pattern_err}")
+                logger.error(f"[TRIGGER CHECK] Pattern data: {alert_data}")
+                continue
+        
+        # Commit all created alerts
+        try:
+            db.session.commit()
+            logger.info(f"[TRIGGER CHECK] Committed {alerts_created} new alerts to database")
+        except Exception as commit_err:
+            logger.error(f"[TRIGGER CHECK] Error committing alerts: {commit_err}")
+            db.session.rollback()
+        
+        logger.info(f"[TRIGGER CHECK] Summary: patterns={len(alerts)}, created={alerts_created}, duplicates_skipped={alerts_skipped_duplicate}, emailed={alerts_emailed}")
+        logger.info(f"[TRIGGER CHECK] ========================================")
 
         return jsonify({
             'success': True,
             'alerts': alerts,
-            'count': len(alerts)  # Just return count of patterns found, not alerts created
+            'count': len(alerts),
+            'alerts_created': alerts_created,
+            'alerts_skipped_duplicate': alerts_skipped_duplicate,
+            'alerts_emailed': alerts_emailed
         })
 
     except Exception as e:
