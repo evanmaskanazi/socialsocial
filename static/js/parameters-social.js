@@ -1,3 +1,4 @@
+// PJ812 Version 1701 - Fixed trigger check to verify login first, improved date formatting
 // PJ811 Version 1700 - Fixed trigger alerts vanishing, alerts now persist in database
 // PJ810 Version 1600 - Fixed double message sending, configurable trigger alert display
 // PJ809 Version 1500 - Backend fix for duplicate detection window (no JS changes needed)
@@ -8,6 +9,12 @@
 // Social Parameters Save/Load System with i18n support and numeric ratings
 // COMPLETE FIXED VERSION - Includes language selector and all fixes
 // 
+// PJ812 Changes (version 1701):
+// - FIX: checkParameterAlerts now checks if user is logged in before making API call
+// - This prevents 401 errors when the function fires before login completes
+// - Frontend now calls checkParameterAlerts() 3 seconds after successful login
+// - Better error handling for non-authenticated responses
+//
 // PJ811 Changes (version 1700):
 // - CRITICAL FIX: Trigger alerts no longer vanish on page refresh
 // - Backend now creates persistent database alerts with proper duplicate detection
@@ -44,7 +51,7 @@
 // - Alerts are created ONLY when parameters are saved (not when polling)
 
 // ============================================================================
-// PJ811 CONFIGURATION: How to display trigger alerts from polling
+// PJ812 CONFIGURATION: How to display trigger alerts from polling
 // ============================================================================
 // Options:
 //   'overlay'  - Yellow floating alerts on right side (additional visual feedback)
@@ -2907,35 +2914,56 @@ window.saveTriggers = async function(userId) {
 
 async function checkParameterAlerts() {
     try {
-        console.log('[PJ811] checkParameterAlerts called - checking for trigger patterns');
+        console.log('[PJ812] checkParameterAlerts called - checking for trigger patterns');
+        
+        // PJ812 FIX: Check if user is logged in first to avoid 401 errors
+        const sessionResponse = await fetch('/api/auth/session');
+        if (!sessionResponse.ok || sessionResponse.status === 401) {
+            console.log('[PJ812] User not logged in, skipping trigger check');
+            return;
+        }
+        
+        const sessionData = await sessionResponse.json();
+        if (!sessionData.authenticated) {
+            console.log('[PJ812] Session not authenticated, skipping trigger check');
+            return;
+        }
+        
+        console.log('[PJ812] User is authenticated, checking triggers...');
         const response = await fetch('/api/parameters/check-triggers');
+        
+        if (!response.ok) {
+            console.log('[PJ812] check-triggers returned status:', response.status);
+            return;
+        }
+        
         const data = await response.json();
 
-        console.log('[PJ811] check-triggers response:', data);
+        console.log('[PJ812] check-triggers response:', data);
         
         if (data.alerts && data.alerts.length > 0) {
-            console.log(`[PJ811] Found ${data.alerts.length} trigger patterns`);
-            console.log(`[PJ811] Alerts created: ${data.alerts_created || 0}, Duplicates skipped: ${data.alerts_skipped_duplicate || 0}`);
+            console.log(`[PJ812] Found ${data.alerts.length} trigger patterns`);
+            console.log(`[PJ812] Alerts created: ${data.alerts_created || 0}, Duplicates skipped: ${data.alerts_skipped_duplicate || 0}`);
             
-            // PJ811: Only show visual feedback if configured
+            // PJ812: Only show visual feedback if configured
             // Database alerts are now created by the backend and will appear in /api/alerts
             if (TRIGGER_ALERT_DISPLAY_MODE === 'overlay') {
                 displayParameterAlerts(data.alerts);
             }
             
-            // PJ811: Refresh the alerts list to show any newly created alerts
+            // PJ812: Refresh the alerts list to show any newly created alerts
             if (data.alerts_created > 0 && typeof loadAlerts === 'function') {
-                console.log('[PJ811] New alerts created, refreshing alerts list...');
+                console.log('[PJ812] New alerts created, refreshing alerts list...');
                 setTimeout(() => {
-                    loadAlerts().catch(err => console.error('[PJ811] Error refreshing alerts:', err));
+                    loadAlerts().catch(err => console.error('[PJ812] Error refreshing alerts:', err));
                 }, 500);
             }
         } else {
-            console.log('[PJ811] No trigger patterns found');
+            console.log('[PJ812] No trigger patterns found');
         }
 
     } catch (error) {
-        console.error('[PJ811] Failed to check alerts:', error);
+        console.error('[PJ812] Failed to check alerts:', error);
     }
 }
 
@@ -3016,15 +3044,15 @@ function displayParameterAlerts(alerts) {
     });
 }
 
-// PJ811: Updated function - no longer adds ephemeral DOM alerts
+// PJ812: Updated function - no longer adds ephemeral DOM alerts
 // Alerts are now created in the database by the backend and will be
 // loaded by loadAlerts() which fetches from /api/alerts
 function displayParameterAlertsStandard(alerts) {
-    console.log('[PJ811] displayParameterAlertsStandard called with', alerts.length, 'patterns');
-    console.log('[PJ811] These alerts are now persisted in the database');
-    console.log('[PJ811] They will appear in the Alerts section via loadAlerts()');
+    console.log('[PJ812] displayParameterAlertsStandard called with', alerts.length, 'patterns');
+    console.log('[PJ812] These alerts are now persisted in the database');
+    console.log('[PJ812] They will appear in the Alerts section via loadAlerts()');
     
-    // PJ811: No longer adding ephemeral DOM alerts that would vanish
+    // PJ812: No longer adding ephemeral DOM alerts that would vanish
     // The backend now creates real database alerts that persist
     // loadAlerts() will fetch and display them properly
     
@@ -3035,7 +3063,7 @@ function displayParameterAlertsStandard(alerts) {
         if (alertsContainer) {
             const existingAlertCount = alertsContainer.querySelectorAll('.alert-item').length;
             if (existingAlertCount === 0) {
-                console.log('[PJ811] No existing alerts in DOM, loadAlerts will populate');
+                console.log('[PJ812] No existing alerts in DOM, loadAlerts will populate');
             }
         }
     }
@@ -3060,16 +3088,17 @@ if (!document.getElementById('parameterAlertsStyles')) {
     document.head.appendChild(style);
 }
 
-// PJ811 FIX: The /api/parameters/check-triggers endpoint now creates database alerts.
+// PJ812 FIX: The /api/parameters/check-triggers endpoint now creates database alerts.
 // Alerts are created with 24-hour duplicate detection per (watcher, user, parameter) combo.
 // This polling triggers alert creation and emails for users who have email_on_alert enabled.
 // loadAlerts() fetches the persisted alerts from /api/alerts.
-// Increased interval to 5 minutes (300000ms) to prevent excessive API calls.
+// PJ812: Increased interval to 5 minutes (300000ms) to prevent excessive API calls.
+// PJ812: Now checks if user is logged in before making API call to avoid 401 errors.
 setInterval(checkParameterAlerts, 300000);  // Changed from 60000 (1 min) to 300000 (5 min)
 
-// Check on page load
+// Check on page load (but only if logged in)
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('[PJ811] parameters-social.js loaded - will check triggers in 2 seconds');
+    console.log('[PJ812] parameters-social.js loaded - will check triggers in 2 seconds');
     setTimeout(checkParameterAlerts, 2000);
 });
 
