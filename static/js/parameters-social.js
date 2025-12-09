@@ -1,3 +1,4 @@
+// PJ813 Version 1703 - Fixed: Each date range creates separate alert, all patterns found
 // PJ812 Version 1702 - Trigger emails work without login, fixed double messages, more alerts visible
 // PJ812 Version 1701 - Fixed trigger check to verify login first, improved date formatting
 // PJ811 Version 1700 - Fixed trigger alerts vanishing, alerts now persist in database
@@ -9,7 +10,13 @@
 // PJ706 FIX APPLIED: Default privacy changed from 'public' to 'private' for new accounts
 // Social Parameters Save/Load System with i18n support and numeric ratings
 // COMPLETE FIXED VERSION - Includes language selector and all fixes
-// 
+//
+// PJ813 Changes (version 1703):
+// - BACKEND: process_parameter_triggers now finds ALL matching patterns, not just one
+// - BACKEND: Each distinct date range creates a separate alert with email
+// - BACKEND: Date-specific duplicate detection prevents over-alerting same pattern
+// - Example: If laura has mood low Nov 10-12 AND Nov 15-17, both patterns get alerts
+//
 // PJ812 Changes (version 1701):
 // - FIX: checkParameterAlerts now checks if user is logged in before making API call
 // - This prevents 401 errors when the function fires before login completes
