@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ811 -->
+<!-- TheraSocial Version PJ812 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
@@ -57,6 +57,12 @@
      4. Frontend: No longer adds ephemeral DOM alerts that disappear on refresh
      5. Frontend: loadAlerts() fetches persistent alerts from /api/alerts
      6. Added comprehensive logging: [TRIGGER CHECK], [TRIGGER CREATE], [TRIGGER DUPLICATE], [TRIGGER EMAIL]
+-->
+<!-- PJ812 Changes (version 1701):
+     1. FIX: Frontend now calls checkParameterAlerts() after login completes (3 second delay)
+     2. FIX: checkParameterAlerts checks if user is logged in before making API call
+     3. FIX: Backend formats dates nicely (e.g., "Dec 05 - Dec 07") instead of ISO format
+     4. This ensures trigger checks happen when user is authenticated, not just on page load
 -->
 <html lang="en">
 <head>
@@ -3070,6 +3076,17 @@ async function loadUserCity() {
                     // Load notification settings after login
                     console.log('[LOGIN DEBUG] Login successful, calling loadNotificationSettings');
                     loadNotificationSettings();
+                    
+                    // PJ812 FIX: Check trigger alerts after login (with delay to ensure session is ready)
+                    console.log('[PJ812] Login successful, will check trigger alerts in 3 seconds');
+                    setTimeout(() => {
+                        if (typeof checkParameterAlerts === 'function') {
+                            console.log('[PJ812] Calling checkParameterAlerts after login');
+                            checkParameterAlerts();
+                        } else {
+                            console.warn('[PJ812] checkParameterAlerts not available');
+                        }
+                    }, 3000);
                 }
             } else {
                 // Show translated login error message
