@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 705
+Complete app.py for Social Social Platform - Phase 806
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -42,6 +42,18 @@ PJ705 Changes:
 - Environment variables: SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, FROM_EMAIL
 - Default configuration uses Resend.com with onboarding@resend.dev sender
 - No domain verification required on Resend free tier (3000 emails/month)
+
+PJ806 Changes:
+- CRITICAL BUG FIX: Fixed repeated email spam from trigger alerts
+- ROOT CAUSE: check_parameter_triggers() endpoint was creating duplicate alerts every 60 seconds
+  because duplicate detection used inconsistent parameter names ('sleep_quality' vs 'sleep quality')
+- FIX 1: Made /api/parameters/check-triggers endpoint READ-ONLY - no longer creates alerts
+  This endpoint now only returns computed trigger patterns for frontend display
+- FIX 2: Only process_parameter_triggers() (called on parameter save) creates alerts now
+- FIX 3: Improved duplicate detection to handle both underscore and space in parameter names
+- FIX 4: Added 24-hour cooldown using last_triggered timestamp on ParameterTrigger model
+- FIX 5: Alerts now show in the Alerts section properly and emails are sent only ONCE per trigger
+- RESULT: Trigger alerts work correctly - one email per trigger condition, alerts appear in UI
 """
 
 import os
@@ -6795,15 +6807,53 @@ def save_parameters():
 
 
 def process_parameter_triggers(user_id, params):
-    """Check triggers when parameters are saved - checks for N consecutive days based on trigger settings"""
+    """Check triggers when parameters are saved - checks for N consecutive days based on trigger settings
+    
+    PJ801 FIX: Improved duplicate detection to prevent repeated alert emails
+    """
     try:
         # Find all triggers where someone is watching this user
         triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
+        
+        # PJ801 FIX: Pre-load all recent trigger alerts for efficient duplicate checking
+        # Group by watcher_id for efficient lookup
+        watcher_alerts = {}
+        for trigger in triggers:
+            if trigger.watcher_id not in watcher_alerts:
+                recent_alerts = Alert.query.filter(
+                    Alert.user_id == trigger.watcher_id,
+                    Alert.alert_type == 'trigger',
+                    Alert.created_at >= datetime.now() - timedelta(days=7)
+                ).all()
+                
+                # Build a set of (username, normalized_param) keys
+                alert_keys = set()
+                for alert in recent_alerts:
+                    content = alert.content or ""
+                    if "'s " in content:
+                        parts = content.split("'s ", 1)
+                        if len(parts) == 2:
+                            username = parts[0].lower()
+                            param_part = parts[1].lower()
+                            for param in ['mood', 'energy', 'anxiety', 'sleep_quality', 'sleep quality', 'physical_activity', 'physical activity']:
+                                if param in param_part:
+                                    normalized_param = param.replace(' ', '_')
+                                    alert_keys.add((username, normalized_param))
+                                    break
+                watcher_alerts[trigger.watcher_id] = alert_keys
 
         for trigger in triggers:
             # Skip if no consecutive_days is set (shouldn't happen, but safety check)
             if not trigger.consecutive_days or trigger.consecutive_days < 1:
                 continue
+            
+            # PJ806 FIX: Skip if this trigger was already fired within the last 24 hours
+            # This prevents email spam even if duplicate detection fails
+            if trigger.last_triggered:
+                hours_since_last = (datetime.now() - trigger.last_triggered).total_seconds() / 3600
+                if hours_since_last < 24:
+                    logger.info(f"[PJ806] Skipping trigger {trigger.id} - last triggered {hours_since_last:.1f} hours ago")
+                    continue
 
             # Get last 30 days of parameters to check for consecutive patterns
             thirty_days_ago = datetime.now().date() - timedelta(days=30)
@@ -6825,17 +6875,24 @@ def process_parameter_triggers(user_id, params):
             if trigger.energy_alert:
                 param_checks.append(('energy', 'energy', lambda x: x <= 2, 2))
             if trigger.sleep_alert:
-                param_checks.append(('sleep_quality', 'sleep quality', lambda x: x <= 2, 2))
+                param_checks.append(('sleep_quality', 'sleep_quality', lambda x: x <= 2, 2))
             if trigger.physical_alert:
-                param_checks.append(('physical_activity', 'physical activity', lambda x: x <= 2, 2))
+                param_checks.append(('physical_activity', 'physical_activity', lambda x: x <= 2, 2))
             if trigger.anxiety_alert:
                 param_checks.append(('anxiety', 'anxiety', lambda x: x >= 3, 3))
 
             for param_attr, param_name, condition_func, threshold in param_checks:
+                # PJ801 FIX: Check if we already have an alert for this user/parameter
+                alert_key = (watched_user.username.lower(), param_name.replace(' ', '_'))
+                if alert_key in watcher_alerts.get(trigger.watcher_id, set()):
+                    logger.info(f"[PJ801] Skipping {watched_user.username}/{param_name} - alert already exists for watcher {trigger.watcher_id}")
+                    continue
+                
                 # Look for N consecutive days (where N = trigger.consecutive_days)
                 consecutive_count = 0
                 consecutive_dates = []
                 last_date = None
+                pattern_found = False
 
                 for param_entry in all_params:
                     param_value = getattr(param_entry, param_attr, None)
@@ -6849,27 +6906,8 @@ def process_parameter_triggers(user_id, params):
 
                             # If we found the required consecutive days, create alert
                             if consecutive_count >= trigger.consecutive_days:
-                                # Check if we've already alerted for this pattern
-                                # Look for recent similar alerts (within last 7 days)
-                                recent_alert = Alert.query.filter(
-                                    Alert.user_id == trigger.watcher_id,
-                                    Alert.alert_type == 'trigger',
-                                    Alert.content.like(f"%{watched_user.username}%{param_name}%consecutive%"),
-                                    Alert.created_at >= datetime.now() - timedelta(days=7)
-                                ).first()
-
-                                if not recent_alert:
-                                    # PJ701: Use create_alert_with_email for wellness alerts
-                                    alert = create_alert_with_email(
-                                        user_id=trigger.watcher_id,
-                                        title=f"Wellness Alert for {watched_user.username}",
-                                        content=f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days (ending {consecutive_dates[0].strftime('%b %d')})",
-                                        alert_type='trigger',
-                                        source_user_id=watched_user.id,
-                                        alert_category='trigger'
-                                    )
-                                    db.session.commit()
-                                break  # Only alert once per parameter type
+                                pattern_found = True
+                                # DON'T break yet - continue to find the longest pattern
                         else:
                             # Reset if not consecutive
                             consecutive_count = 1
@@ -6880,6 +6918,25 @@ def process_parameter_triggers(user_id, params):
                         consecutive_count = 0
                         consecutive_dates = []
                         last_date = None
+                
+                # PJ801 FIX: Create alert only if pattern found and no duplicate exists
+                if pattern_found and consecutive_count >= trigger.consecutive_days:
+                    # Create one alert for this parameter
+                    alert = create_alert_with_email(
+                        user_id=trigger.watcher_id,
+                        title=f"Wellness Alert for {watched_user.username}",
+                        content=f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days",
+                        alert_type='trigger',
+                        source_user_id=watched_user.id,
+                        alert_category='trigger'
+                    )
+                    # PJ806 FIX: Update last_triggered timestamp to prevent spam
+                    trigger.last_triggered = datetime.now()
+                    db.session.commit()
+                    # Mark as created to prevent duplicates in this session
+                    if trigger.watcher_id in watcher_alerts:
+                        watcher_alerts[trigger.watcher_id].add(alert_key)
+                    logger.info(f"[PJ806] Created alert for {watched_user.username}/{param_name} -> watcher {trigger.watcher_id}")
 
     except Exception as e:
         logger.error(f"Error processing parameter triggers: {str(e)}")
@@ -9012,65 +9069,24 @@ def check_parameter_triggers():
                         last_date = None
                         streak_start = None
 
-        # ===== CREATE ALERT OBJECTS =====
-        for alert_data in alerts:
-            # Check if OLD schema alert
-            if alert_data.get('is_old_schema'):
-                # OLD schema format
-                end_date_str = alert_data['end_date'].strftime('%b %d')
-
-                # Check if we've already created this alert recently
-                existing = Alert.query.filter(
-                    Alert.user_id == watcher_id,
-                    Alert.alert_type == 'trigger',
-                    Alert.content.like(f"%{alert_data['user']}%{alert_data['parameter']}%ending {end_date_str}%"),
-                    Alert.created_at >= datetime.utcnow() - timedelta(days=7)
-                ).first()
-
-                if not existing:
-                    # PJ701: Use create_alert_with_email for wellness alerts
-                    watched_user_obj = User.query.filter_by(username=alert_data['user']).first()
-                    source_id = watched_user_obj.id if watched_user_obj else None
-                    
-                    alert = create_alert_with_email(
-                        user_id=watcher_id,
-                        title=f"Wellness Alert for {alert_data['user']}",
-                        content=f"{alert_data['user']}'s {alert_data['parameter']} has been {alert_data['condition_text']} for {alert_data['consecutive_days']} consecutive days (ending {end_date_str})",
-                        alert_type='trigger',
-                        source_user_id=source_id,
-                        alert_category='trigger'
-                    )
-                    alerts_created += 1
-            else:
-                # NEW schema format (existing code)
-                existing = Alert.query.filter(
-                    Alert.user_id == watcher_id,
-                    Alert.alert_type == 'trigger',
-                    Alert.content.like(f"%{alert_data['user']}%{alert_data['parameter']}%"),
-                    Alert.created_at >= datetime.utcnow() - timedelta(days=7)
-                ).first()
-
-                if not existing:
-                    # PJ701: Use create_alert_with_email for wellness alerts
-                    watched_user_obj = User.query.filter_by(username=alert_data['user']).first()
-                    source_id = watched_user_obj.id if watched_user_obj else None
-                    
-                    alert = create_alert_with_email(
-                        user_id=watcher_id,
-                        title=f"Parameter Alert: {alert_data['user']}",
-                        content=f"{alert_data['user']}'s {alert_data['parameter']} has been concerning for {alert_data['consecutive_days']} consecutive days",
-                        alert_type='trigger',
-                        source_user_id=source_id,
-                        alert_category='trigger'
-                    )
-                    alerts_created += 1
-
-        db.session.commit()
+        # ===== PJ806 FIX: READ-ONLY ENDPOINT =====
+        # This endpoint is polled frequently (every 60 seconds) and should NOT create alerts.
+        # Alerts are ONLY created when parameters are saved via process_parameter_triggers().
+        # This endpoint returns computed alert data for frontend display ONLY.
+        # 
+        # Previously, this endpoint was creating duplicate alerts because:
+        # 1. Parameter names were inconsistent (underscore vs space: 'sleep_quality' vs 'sleep quality')
+        # 2. This caused duplicate detection to fail
+        # 3. New alerts (with emails) were created every 60 seconds
+        #
+        # FIX: Remove all alert creation code. Just return the computed patterns for display.
+        
+        logger.info(f"[CHECK-TRIGGERS PJ806] Found {len(alerts)} trigger patterns for user {watcher_id} (READ-ONLY, no alerts created)")
 
         return jsonify({
             'success': True,
             'alerts': alerts,
-            'count': alerts_created
+            'count': len(alerts)  # Just return count of patterns found, not alerts created
         })
 
     except Exception as e:
