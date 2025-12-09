@@ -1,25 +1,29 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 814 (Version 1704)
+Complete app.py for Social Social Platform - Phase 815 (Version 1705)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
-PJ814 Changes (v1704):
-- CRITICAL FIX 1: Deduplicate triggers before processing
-  - ROOT CAUSE FOUND: Multiple ParameterTrigger rows for same (watcher, watched_user) combination
-  - 75 patterns = 15 duplicate trigger rows × 5 parameters
-  - Each trigger row generated the SAME pattern, marked as duplicate after first creation
-  - FIX: Group triggers by watched_id and merge alert flags before processing
-- CRITICAL FIX 2: Pattern algorithm finds ALL DISTINCT date ranges
-  - OLD: Algorithm found patterns but they were all the same date range
-  - NEW: Properly tracks each distinct consecutive streak with unique dates
-  - Added pattern_keys_seen set to prevent duplicate patterns within same processing run
+PJ815 Changes (v1705):
+- CRITICAL FIX: Reverted broken trigger deduplication from v1704
+  - v1704 broke triggers by merging them upfront - lost all parameter flags
+  - ROOT CAUSE: Triggers use OLD schema (parameter_name) not NEW schema (mood_alert flags)
+  - When merging with bool(t.mood_alert) where t.mood_alert=None, got False
+- FIX 1: Process each trigger row individually (no upfront deduplication)
+  - Each trigger row processed with its actual flags/parameter_name
+  - Handles BOTH old schema and new schema triggers correctly
+- FIX 2: Use patterns_seen SET to deduplicate RESULTS, not inputs
+  - Key = (username, param_name, start_date_iso, end_date_iso)
+  - Prevents duplicate alerts from multiple trigger rows for same pattern
+- FIX 3: Fixed dates array generation in OLD schema code
+  - Now builds proper dates array from streak, not just end_date
+  - Patterns have unique date ranges for proper duplicate detection
+- FIX 4: Fixed process_parameter_triggers for email sending
+  - Handles old/new schema properly
+  - Sends emails when watched user saves parameters
 - EXTENSIVE DEBUG LOGGING:
-  - [PJ814 DEBUG] - Trigger deduplication info
-  - [PJ814 PATTERN] - Pattern finding algorithm details
-  - Shows raw vs deduplicated trigger counts
-  - Shows each date being processed and whether it meets condition
-  - Shows all unique patterns found with their date ranges
+  - [PJ815 DEBUG] - Shows each trigger's flags and schema type
+  - [PJ815 PATTERN] - Shows each pattern found with date range
 
 PJ813 Changes (v1703):
 - CRITICAL FIX: Trigger alerts now create SEPARATE alerts for each date range
@@ -6912,11 +6916,11 @@ def save_parameters():
 def process_parameter_triggers(user_id, params):
     """Check triggers when parameters are saved - checks for N consecutive days based on trigger settings
     
-    PJ801 FIX: Improved duplicate detection to prevent repeated alert emails
-    PJ806 FIX: Added detailed logging to debug trigger processing
-    PJ811 FIX: Enhanced logging and email notification verification
-    PJ812 FIX: Added privacy checks (matching check_triggers), date formatting in content
-    PJ814 FIX: Deduplicate triggers by watcher_id before processing to prevent duplicate emails
+    PJ815 FIX (v1705):
+    - Process each trigger row individually (don't deduplicate upfront)
+    - Handle BOTH old schema (parameter_name) and new schema (mood_alert, etc.)
+    - Use patterns_seen SET to deduplicate results, not inputs
+    - This runs when watched user saves parameters -> sends emails to watchers
     """
     try:
         logger.info(f"[TRIGGER PROCESS] ========================================")
@@ -6924,225 +6928,299 @@ def process_parameter_triggers(user_id, params):
         logger.info(f"[TRIGGER PROCESS] Parameter values: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}")
         
         # Find all triggers where someone is watching this user
-        raw_triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
-        logger.info(f"[TRIGGER PROCESS] Found {len(raw_triggers)} raw trigger rows watching user {user_id}")
+        all_triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
+        logger.info(f"[TRIGGER PROCESS] Found {len(all_triggers)} trigger rows watching user {user_id}")
         
-        if len(raw_triggers) == 0:
+        if len(all_triggers) == 0:
             logger.info(f"[TRIGGER PROCESS] No triggers found - no one is watching user {user_id}")
             logger.info(f"[TRIGGER PROCESS] ========================================")
             return
         
-        # PJ814: Deduplicate triggers by watcher_id - merge alert flags
-        triggers_by_watcher = {}
-        for t in raw_triggers:
-            if t.watcher_id not in triggers_by_watcher:
-                triggers_by_watcher[t.watcher_id] = {
-                    'watcher_id': t.watcher_id,
-                    'consecutive_days': t.consecutive_days or 3,
-                    'mood_alert': False,
-                    'energy_alert': False,
-                    'sleep_alert': False,
-                    'physical_alert': False,
-                    'anxiety_alert': False
-                }
-            # Merge alert flags (OR them together)
-            triggers_by_watcher[t.watcher_id]['mood_alert'] |= bool(t.mood_alert)
-            triggers_by_watcher[t.watcher_id]['energy_alert'] |= bool(t.energy_alert)
-            triggers_by_watcher[t.watcher_id]['sleep_alert'] |= bool(t.sleep_alert)
-            triggers_by_watcher[t.watcher_id]['physical_alert'] |= bool(t.physical_alert)
-            triggers_by_watcher[t.watcher_id]['anxiety_alert'] |= bool(t.anxiety_alert)
-            # Keep the minimum consecutive_days
-            if t.consecutive_days:
-                triggers_by_watcher[t.watcher_id]['consecutive_days'] = min(
-                    triggers_by_watcher[t.watcher_id]['consecutive_days'],
-                    t.consecutive_days
-                )
+        # Log each trigger's details
+        for i, t in enumerate(all_triggers):
+            watcher = User.query.get(t.watcher_id)
+            watcher_name = watcher.username if watcher else f"user_{t.watcher_id}"
+            # Check both new and old schema
+            flags = []
+            if t.mood_alert: flags.append('mood')
+            if t.energy_alert: flags.append('energy')
+            if t.sleep_alert: flags.append('sleep')
+            if t.physical_alert: flags.append('activity')
+            if t.anxiety_alert: flags.append('anxiety')
+            logger.info(f"[TRIGGER PROCESS] Trigger {i+1}: watcher={watcher_name}, days={t.consecutive_days}, new_flags={flags}, old_param={t.parameter_name}")
         
-        logger.info(f"[TRIGGER PROCESS] Deduplicated: {len(triggers_by_watcher)} unique watchers (was {len(raw_triggers)} trigger rows)")
-        
-        # PJ812: Helper function to check privacy permissions (same as check_triggers)
+        # PJ815: Helper function to check privacy permissions
         def can_see_parameter(param_privacy, watcher_circle):
             """Check if watcher can see this parameter based on privacy and circle level"""
             if param_privacy == 'private':
-                return False  # Private params never trigger alerts
+                return False
             elif param_privacy == 'class_a':
                 return watcher_circle == 'class_a'
             elif param_privacy == 'class_b':
                 return watcher_circle in ['class_b', 'class_a']
             elif param_privacy == 'public':
-                return True  # Public params trigger for everyone
+                return True
             return False
         
-        # Log trigger details
-        for watcher_id, trigger_data in triggers_by_watcher.items():
-            watcher = User.query.get(watcher_id)
-            watcher_name = watcher.username if watcher else f"user_{watcher_id}"
-            alerts_enabled = []
-            if trigger_data['mood_alert']: alerts_enabled.append('mood')
-            if trigger_data['energy_alert']: alerts_enabled.append('energy')
-            if trigger_data['sleep_alert']: alerts_enabled.append('sleep')
-            if trigger_data['physical_alert']: alerts_enabled.append('activity')
-            if trigger_data['anxiety_alert']: alerts_enabled.append('anxiety')
-            logger.info(f"[TRIGGER PROCESS] Watcher {watcher_name} (ID:{watcher_id}): consecutive_days={trigger_data['consecutive_days']}, alerts={alerts_enabled}")
+        # PJ815: Track patterns already alerted to prevent duplicates
+        # Key = (watcher_id, param_name, start_date_iso, end_date_iso)
+        patterns_seen = set()
 
         alerts_created = 0
         alerts_skipped_duplicate = 0
         alerts_skipped_privacy = 0
         alerts_emailed = 0
+        watchers_processed = set()
 
-        # PJ814: Iterate over deduplicated triggers by watcher
-        for watcher_id, trigger_data in triggers_by_watcher.items():
-            consecutive_days = trigger_data['consecutive_days']
+        watched_user = User.query.get(user_id)
+        
+        # Get last 30 days of parameters
+        thirty_days_ago = datetime.now().date() - timedelta(days=30)
+        all_params = SavedParameters.query.filter(
+            SavedParameters.user_id == user_id,
+            SavedParameters.date >= thirty_days_ago
+        ).order_by(SavedParameters.date.asc()).all()  # ASC for proper streak detection
+
+        logger.info(f"[TRIGGER PROCESS] Found {len(all_params)} parameter entries in last 30 days")
+
+        # PJ815: Process each trigger row individually
+        for trigger in all_triggers:
+            watcher_id = trigger.watcher_id
+            consecutive_days = trigger.consecutive_days or 3
             
-            # Skip if no consecutive_days is set (shouldn't happen, but safety check)
-            if not consecutive_days or consecutive_days < 1:
-                logger.info(f"[TRIGGER PROCESS] Skipping watcher {watcher_id} - no consecutive_days set")
+            if consecutive_days < 1:
                 continue
-            
-            # PJ812: Get watcher's circle level for privacy check
-            watcher_circle = get_watcher_circle_level(user_id, watcher_id)
-            if not watcher_circle:
-                logger.info(f"[TRIGGER PROCESS] Skipping watcher {watcher_id} - not in any circle for user {user_id}")
-                continue
-            logger.info(f"[TRIGGER PROCESS] Watcher {watcher_id} has circle level: {watcher_circle}")
-
-            # Get last 30 days of parameters to check for consecutive patterns
-            thirty_days_ago = datetime.now().date() - timedelta(days=30)
-            all_params = SavedParameters.query.filter(
-                SavedParameters.user_id == user_id,
-                SavedParameters.date >= thirty_days_ago
-            ).order_by(SavedParameters.date.desc()).all()
-
-            # Need at least as many days as the trigger requires
+                
             if len(all_params) < consecutive_days:
                 continue
-
-            watched_user = User.query.get(user_id)
-
-            # Define parameters to check with their trigger conditions and privacy attributes
-            # Format: (param_attr, param_name, privacy_attr, condition_func, threshold)
+            
+            # Get watcher's circle level for privacy check
+            watcher_circle = get_watcher_circle_level(user_id, watcher_id)
+            if not watcher_circle:
+                logger.info(f"[TRIGGER PROCESS] Skipping watcher {watcher_id} - not in any circle")
+                continue
+            
+            watchers_processed.add(watcher_id)
+            
+            # Determine which schema this trigger uses
+            has_new_schema = any([
+                trigger.mood_alert,
+                trigger.energy_alert,
+                trigger.sleep_alert,
+                trigger.physical_alert,
+                trigger.anxiety_alert
+            ])
+            
+            has_old_schema = trigger.parameter_name is not None
+            
+            logger.info(f"[TRIGGER PROCESS] Processing watcher {watcher_id}: new_schema={has_new_schema}, old_schema={has_old_schema}")
+            
+            # Build list of parameters to check
             param_checks = []
-            if trigger_data['mood_alert']:
-                param_checks.append(('mood', 'mood', 'mood_privacy', lambda x: x <= 2, 2))
-            if trigger_data['energy_alert']:
-                param_checks.append(('energy', 'energy', 'energy_privacy', lambda x: x <= 2, 2))
-            if trigger_data['sleep_alert']:
-                param_checks.append(('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: x <= 2, 2))
-            if trigger_data['physical_alert']:
-                param_checks.append(('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: x <= 2, 2))
-            if trigger_data['anxiety_alert']:
-                param_checks.append(('anxiety', 'anxiety', 'anxiety_privacy', lambda x: x >= 3, 3))
-
-            for param_attr, param_name, privacy_attr, condition_func, threshold in param_checks:
-                logger.info(f"[TRIGGER PROCESS] Checking {param_name} for {watched_user.username}, need {consecutive_days} consecutive days")
-                
-                # PJ813 FIX: Find ALL matching patterns, not just one
-                # Collect all streaks that meet the consecutive days requirement
-                all_patterns = []  # List of (start_date, end_date, consecutive_count, consecutive_dates)
-                consecutive_count = 0
-                consecutive_dates = []
+            
+            if has_new_schema:
+                if trigger.mood_alert:
+                    param_checks.append(('mood', 'mood', 'mood_privacy', lambda x: x <= 2))
+                if trigger.energy_alert:
+                    param_checks.append(('energy', 'energy', 'energy_privacy', lambda x: x <= 2))
+                if trigger.sleep_alert:
+                    param_checks.append(('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: x <= 2))
+                if trigger.physical_alert:
+                    param_checks.append(('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: x <= 2))
+                if trigger.anxiety_alert:
+                    param_checks.append(('anxiety', 'anxiety', 'anxiety_privacy', lambda x: x >= 3))
+            elif has_old_schema:
+                # Old schema - single parameter from trigger.parameter_name
+                param_mapping = {
+                    'mood': ('mood', 'mood', 'mood_privacy', lambda x: x <= 2),
+                    'energy': ('energy', 'energy', 'energy_privacy', lambda x: x <= 2),
+                    'sleep_quality': ('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: x <= 2),
+                    'physical_activity': ('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: x <= 2),
+                    'anxiety': ('anxiety', 'anxiety', 'anxiety_privacy', lambda x: x >= 3)
+                }
+                if trigger.parameter_name in param_mapping:
+                    param_checks.append(param_mapping[trigger.parameter_name])
+            
+            logger.info(f"[TRIGGER PROCESS] Watcher {watcher_id} checking {len(param_checks)} parameters")
+            
+            # Check each parameter
+            for param_attr, param_name, privacy_attr, condition_func in param_checks:
+                # Find all consecutive streaks
+                streak_dates = []
                 last_date = None
-
+                
                 for param_entry in all_params:
                     param_value = getattr(param_entry, param_attr, None)
                     param_privacy = getattr(param_entry, privacy_attr, 'private')
                     
-                    # PJ812: Check if watcher can see this parameter
+                    # Check privacy
                     if not can_see_parameter(param_privacy, watcher_circle):
-                        # Save current streak if it meets requirements before resetting
-                        if consecutive_count >= consecutive_days:
-                            sorted_dates = sorted(consecutive_dates)
-                            all_patterns.append((sorted_dates[0], sorted_dates[-1], consecutive_count, list(consecutive_dates)))
-                        consecutive_count = 0
-                        consecutive_dates = []
-                        last_date = None
-                        continue
-
-                    if param_value is not None and condition_func(param_value):
-                        # Check if consecutive
-                        if last_date is None or (last_date - param_entry.date).days == 1:
-                            consecutive_count += 1
-                            consecutive_dates.append(param_entry.date)
-                            last_date = param_entry.date
-                        else:
-                            # Streak broken - save previous streak if it met requirements
-                            if consecutive_count >= consecutive_days:
-                                sorted_dates = sorted(consecutive_dates)
-                                all_patterns.append((sorted_dates[0], sorted_dates[-1], consecutive_count, list(consecutive_dates)))
-                            # Start new streak
-                            consecutive_count = 1
-                            consecutive_dates = [param_entry.date]
-                            last_date = param_entry.date
-                    else:
-                        # Condition not met - save current streak if it meets requirements before resetting
-                        if consecutive_count >= consecutive_days:
-                            sorted_dates = sorted(consecutive_dates)
-                            all_patterns.append((sorted_dates[0], sorted_dates[-1], consecutive_count, list(consecutive_dates)))
-                        consecutive_count = 0
-                        consecutive_dates = []
-                        last_date = None
-                
-                # Don't forget the last streak if it meets requirements
-                if consecutive_count >= consecutive_days:
-                    sorted_dates = sorted(consecutive_dates)
-                    all_patterns.append((sorted_dates[0], sorted_dates[-1], consecutive_count, list(consecutive_dates)))
-                
-                logger.info(f"[TRIGGER PROCESS] Found {len(all_patterns)} patterns for {param_name}")
-                
-                # PJ813 FIX: Create alert for EACH pattern with date-specific duplicate detection
-                for start_date, end_date, count, dates in all_patterns:
-                    start_str = start_date.strftime('%b %d')  # e.g., "Dec 05"
-                    end_str = end_date.strftime('%b %d')      # e.g., "Dec 07"
-                    date_pattern = f"({start_str} - {end_str})"
-                    
-                    # PJ813 FIX: Check for duplicate using EXACT date range
-                    existing_alert = Alert.query.filter(
-                        Alert.user_id == watcher_id,
-                        Alert.alert_type == 'trigger',
-                        Alert.created_at >= datetime.now() - timedelta(hours=24),
-                        Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
-                    ).first()
-                    
-                    if existing_alert:
-                        logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_user.username}/{param_name} {date_pattern} - alert exists within 24 hours for watcher {watcher_id}")
-                        alerts_skipped_duplicate += 1
-                        continue
-                    
-                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {count} consecutive days {date_pattern}"
-                    logger.info(f"[TRIGGER PROCESS] Pattern FOUND for {param_name}: {count} consecutive days {date_pattern}, creating alert")
-                    logger.info(f"[TRIGGER PROCESS] Alert will be sent to watcher {watcher_id} about {watched_user.username}")
-                    
-                    # Create alert for this pattern
-                    alert = create_alert_with_email(
-                        user_id=watcher_id,
-                        title=f"Wellness Alert for {watched_user.username}",
-                        content=content,
-                        alert_type='trigger',
-                        source_user_id=watched_user.id,
-                        alert_category='trigger'
-                    )
-                    
-                    if alert:
-                        alerts_created += 1
-                        logger.info(f"[TRIGGER PROCESS] ✅ Created alert ID {alert.id} for {watched_user.username}/{param_name} {date_pattern} -> watcher {watcher_id}")
+                        # Save streak if long enough before resetting
+                        if len(streak_dates) >= consecutive_days:
+                            start_date = streak_dates[0]
+                            end_date = streak_dates[-1]
+                            pattern_key = (watcher_id, param_name, start_date.isoformat(), end_date.isoformat())
+                            
+                            if pattern_key not in patterns_seen:
+                                patterns_seen.add(pattern_key)
+                                # Create alert for this pattern
+                                start_str = start_date.strftime('%b %d')
+                                end_str = end_date.strftime('%b %d')
+                                date_pattern = f"({start_str} - {end_str})"
+                                
+                                # Check for DB duplicate
+                                existing = Alert.query.filter(
+                                    Alert.user_id == watcher_id,
+                                    Alert.alert_type == 'trigger',
+                                    Alert.created_at >= datetime.now() - timedelta(hours=24),
+                                    Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
+                                ).first()
+                                
+                                if not existing:
+                                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                    alert = create_alert_with_email(
+                                        user_id=watcher_id,
+                                        title=f"Wellness Alert for {watched_user.username}",
+                                        content=content,
+                                        alert_type='trigger',
+                                        source_user_id=watched_user.id,
+                                        alert_category='trigger'
+                                    )
+                                    if alert:
+                                        alerts_created += 1
+                                        logger.info(f"[TRIGGER PROCESS] ✅ Created alert for {param_name} {date_pattern}")
+                                else:
+                                    alerts_skipped_duplicate += 1
                         
-                        # Check email status
-                        try:
-                            watcher_settings = NotificationSettings.query.filter_by(user_id=watcher_id).first()
-                            watcher_user = User.query.get(watcher_id)
-                            if watcher_settings and watcher_settings.email_on_alert:
-                                alerts_emailed += 1
-                                logger.info(f"[TRIGGER PROCESS] ✅ Email sent to {watcher_user.email if watcher_user else 'unknown'}")
-                            else:
-                                logger.info(f"[TRIGGER PROCESS] ⚠️ No email - email_on_alert={'enabled' if watcher_settings and watcher_settings.email_on_alert else 'disabled'}")
-                        except Exception as email_check_err:
-                            logger.error(f"[TRIGGER PROCESS] Error checking email: {email_check_err}")
+                        streak_dates = []
+                        last_date = None
+                        continue
+                    
+                    if param_value is not None and condition_func(param_value):
+                        # Condition met
+                        if last_date is None:
+                            streak_dates = [param_entry.date]
+                            last_date = param_entry.date
+                        elif (param_entry.date - last_date).days == 1:
+                            streak_dates.append(param_entry.date)
+                            last_date = param_entry.date
+                        elif (param_entry.date - last_date).days == 0:
+                            continue  # Same day
+                        else:
+                            # Gap - save and start new
+                            if len(streak_dates) >= consecutive_days:
+                                start_date = streak_dates[0]
+                                end_date = streak_dates[-1]
+                                pattern_key = (watcher_id, param_name, start_date.isoformat(), end_date.isoformat())
+                                
+                                if pattern_key not in patterns_seen:
+                                    patterns_seen.add(pattern_key)
+                                    start_str = start_date.strftime('%b %d')
+                                    end_str = end_date.strftime('%b %d')
+                                    date_pattern = f"({start_str} - {end_str})"
+                                    
+                                    existing = Alert.query.filter(
+                                        Alert.user_id == watcher_id,
+                                        Alert.alert_type == 'trigger',
+                                        Alert.created_at >= datetime.now() - timedelta(hours=24),
+                                        Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
+                                    ).first()
+                                    
+                                    if not existing:
+                                        content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                        alert = create_alert_with_email(
+                                            user_id=watcher_id,
+                                            title=f"Wellness Alert for {watched_user.username}",
+                                            content=content,
+                                            alert_type='trigger',
+                                            source_user_id=watched_user.id,
+                                            alert_category='trigger'
+                                        )
+                                        if alert:
+                                            alerts_created += 1
+                                            logger.info(f"[TRIGGER PROCESS] ✅ Created alert for {param_name} {date_pattern}")
+                                    else:
+                                        alerts_skipped_duplicate += 1
+                            
+                            streak_dates = [param_entry.date]
+                            last_date = param_entry.date
                     else:
-                        logger.error(f"[TRIGGER PROCESS] ❌ Failed to create alert for {watched_user.username}/{param_name}")
+                        # Condition not met - save streak if long enough
+                        if len(streak_dates) >= consecutive_days:
+                            start_date = streak_dates[0]
+                            end_date = streak_dates[-1]
+                            pattern_key = (watcher_id, param_name, start_date.isoformat(), end_date.isoformat())
+                            
+                            if pattern_key not in patterns_seen:
+                                patterns_seen.add(pattern_key)
+                                start_str = start_date.strftime('%b %d')
+                                end_str = end_date.strftime('%b %d')
+                                date_pattern = f"({start_str} - {end_str})"
+                                
+                                existing = Alert.query.filter(
+                                    Alert.user_id == watcher_id,
+                                    Alert.alert_type == 'trigger',
+                                    Alert.created_at >= datetime.now() - timedelta(hours=24),
+                                    Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
+                                ).first()
+                                
+                                if not existing:
+                                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                    alert = create_alert_with_email(
+                                        user_id=watcher_id,
+                                        title=f"Wellness Alert for {watched_user.username}",
+                                        content=content,
+                                        alert_type='trigger',
+                                        source_user_id=watched_user.id,
+                                        alert_category='trigger'
+                                    )
+                                    if alert:
+                                        alerts_created += 1
+                                        logger.info(f"[TRIGGER PROCESS] ✅ Created alert for {param_name} {date_pattern}")
+                                else:
+                                    alerts_skipped_duplicate += 1
+                        
+                        streak_dates = []
+                        last_date = None
+                
+                # Don't forget the last streak
+                if len(streak_dates) >= consecutive_days:
+                    start_date = streak_dates[0]
+                    end_date = streak_dates[-1]
+                    pattern_key = (watcher_id, param_name, start_date.isoformat(), end_date.isoformat())
+                    
+                    if pattern_key not in patterns_seen:
+                        patterns_seen.add(pattern_key)
+                        start_str = start_date.strftime('%b %d')
+                        end_str = end_date.strftime('%b %d')
+                        date_pattern = f"({start_str} - {end_str})"
+                        
+                        existing = Alert.query.filter(
+                            Alert.user_id == watcher_id,
+                            Alert.alert_type == 'trigger',
+                            Alert.created_at >= datetime.now() - timedelta(hours=24),
+                            Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
+                        ).first()
+                        
+                        if not existing:
+                            content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                            alert = create_alert_with_email(
+                                user_id=watcher_id,
+                                title=f"Wellness Alert for {watched_user.username}",
+                                content=content,
+                                alert_type='trigger',
+                                source_user_id=watched_user.id,
+                                alert_category='trigger'
+                            )
+                            if alert:
+                                alerts_created += 1
+                                logger.info(f"[TRIGGER PROCESS] ✅ Created alert for {param_name} {date_pattern}")
+                        else:
+                            alerts_skipped_duplicate += 1
 
         logger.info(f"[TRIGGER PROCESS] ========================================")
         logger.info(f"[TRIGGER PROCESS] process_parameter_triggers completed for user {user_id}")
-        logger.info(f"[TRIGGER PROCESS] Summary: unique_watchers={len(triggers_by_watcher)}, alerts_created={alerts_created}, duplicates={alerts_skipped_duplicate}, privacy_skipped={alerts_skipped_privacy}, emailed={alerts_emailed}")
+        logger.info(f"[TRIGGER PROCESS] Summary: watchers={len(watchers_processed)}, alerts_created={alerts_created}, duplicates={alerts_skipped_duplicate}")
         logger.info(f"[TRIGGER PROCESS] ========================================")
 
     except Exception as e:
@@ -8952,68 +9030,40 @@ def get_watcher_circle_level(watched_id, watcher_id):
 def check_parameter_triggers():
     """Check for parameter alerts - respects privacy settings
     
-    PJ814 FIX: 
-    - Deduplicate triggers by watched_id before processing
-    - Find ALL distinct patterns (not just one per parameter)
-    - Deduplicate alerts by (user, parameter, date_range) before creating
-    - Extensive logging for debugging
+    PJ815 FIX (v1705):
+    - Process each trigger row individually (don't deduplicate upfront)
+    - Use a SET to track unique (user, param, start_date, end_date) patterns already seen
+    - Only add NEW patterns to results - prevents duplicate alerts from duplicate trigger rows
+    - Extensive logging showing each trigger's flags and each pattern found
     """
     try:
         watcher_id = session.get('user_id')
-        
-        # PJ814: Get all triggers and log raw count
-        raw_triggers = db.session.execute(
+        triggers = db.session.execute(
             select(ParameterTrigger).filter_by(watcher_id=watcher_id)
         ).scalars().all()
         
-        logger.info(f"[PJ814 DEBUG] ========================================")
-        logger.info(f"[PJ814 DEBUG] check_parameter_triggers called for watcher_id={watcher_id}")
-        logger.info(f"[PJ814 DEBUG] Raw triggers count: {len(raw_triggers)}")
+        logger.info(f"[PJ815 DEBUG] ========================================")
+        logger.info(f"[PJ815 DEBUG] check_parameter_triggers called for watcher_id={watcher_id}")
+        logger.info(f"[PJ815 DEBUG] Found {len(triggers)} trigger rows")
         
-        # PJ814: Deduplicate triggers by watched_id - merge alert flags
-        triggers_by_watched = {}
-        for t in raw_triggers:
-            if t.watched_id not in triggers_by_watched:
-                triggers_by_watched[t.watched_id] = {
-                    'watched_id': t.watched_id,
-                    'consecutive_days': t.consecutive_days or 3,
-                    'mood_alert': False,
-                    'energy_alert': False,
-                    'sleep_alert': False,
-                    'physical_alert': False,
-                    'anxiety_alert': False,
-                    'parameter_name': t.parameter_name,
-                    'trigger_condition': t.trigger_condition,
-                    'trigger_value': t.trigger_value
-                }
-            # Merge alert flags (OR them together)
-            triggers_by_watched[t.watched_id]['mood_alert'] |= bool(t.mood_alert)
-            triggers_by_watched[t.watched_id]['energy_alert'] |= bool(t.energy_alert)
-            triggers_by_watched[t.watched_id]['sleep_alert'] |= bool(t.sleep_alert)
-            triggers_by_watched[t.watched_id]['physical_alert'] |= bool(t.physical_alert)
-            triggers_by_watched[t.watched_id]['anxiety_alert'] |= bool(t.anxiety_alert)
-            # Keep the minimum consecutive_days
-            if t.consecutive_days:
-                triggers_by_watched[t.watched_id]['consecutive_days'] = min(
-                    triggers_by_watched[t.watched_id]['consecutive_days'],
-                    t.consecutive_days
-                )
-        
-        logger.info(f"[PJ814 DEBUG] Deduplicated triggers: {len(triggers_by_watched)} unique watched users (was {len(raw_triggers)} trigger rows)")
-        for watched_id, merged in triggers_by_watched.items():
-            watched_user = db.session.get(User, watched_id)
-            username = watched_user.username if watched_user else f"user_{watched_id}"
+        # Log each trigger's actual flags
+        for i, t in enumerate(triggers):
+            watched_user = db.session.get(User, t.watched_id)
+            username = watched_user.username if watched_user else f"user_{t.watched_id}"
             flags = []
-            if merged['mood_alert']: flags.append('mood')
-            if merged['energy_alert']: flags.append('energy')
-            if merged['sleep_alert']: flags.append('sleep')
-            if merged['physical_alert']: flags.append('activity')
-            if merged['anxiety_alert']: flags.append('anxiety')
-            logger.info(f"[PJ814 DEBUG] Watching {username}: consecutive_days={merged['consecutive_days']}, alerts={flags}")
+            if t.mood_alert: flags.append('mood')
+            if t.energy_alert: flags.append('energy')
+            if t.sleep_alert: flags.append('sleep')
+            if t.physical_alert: flags.append('activity')
+            if t.anxiety_alert: flags.append('anxiety')
+            logger.info(f"[PJ815 DEBUG] Trigger {i+1}: watched={username}, consecutive_days={t.consecutive_days}, flags={flags}, mood_alert_raw={t.mood_alert}")
 
         alerts = []
-        alerts_created = 0
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
+        # PJ815: Track unique patterns to prevent duplicates from multiple trigger rows
+        # Key = (username, param_name, start_date_iso, end_date_iso)
+        patterns_seen = set()
 
         # Helper function to convert values to numbers (for OLD schema)
         def to_number(val):
@@ -9030,83 +9080,67 @@ def check_parameter_triggers():
                     return None
             return None
 
-        # ✅ NEW: Helper to check if parameter is visible to watcher
         def can_see_parameter(param_privacy, watcher_circle):
             """Check if watcher can see this parameter based on privacy and circle level"""
             if param_privacy == 'private':
-                return False  # Private params never trigger alerts
+                return False
             elif param_privacy == 'class_a':
                 return watcher_circle == 'class_a'
             elif param_privacy == 'class_b':
                 return watcher_circle in ['class_b', 'class_a']
             elif param_privacy == 'public':
-                return True  # Public params trigger for everyone
+                return True
             return False
 
-        # PJ814: Iterate over deduplicated triggers
-        for watched_id, trigger_data in triggers_by_watched.items():
-            consecutive_days = trigger_data['consecutive_days']
-            
+        for trigger in triggers:
             # Skip if no consecutive_days setting
-            if not consecutive_days or consecutive_days < 1:
-                logger.info(f"[PJ814 DEBUG] Skipping watched_id={watched_id}: no consecutive_days")
+            if not trigger.consecutive_days or trigger.consecutive_days < 1:
                 continue
 
-            # ✅ NEW: Get watcher's circle level for this watched user
-            watcher_circle = get_watcher_circle_level(watched_id, watcher_id)
+            watcher_circle = get_watcher_circle_level(trigger.watched_id, watcher_id)
             if not watcher_circle:
-                # Watcher is not in any circle for this user - skip
-                logger.info(f"[PJ814 DEBUG] Skipping watched_id={watched_id}: watcher not in any circle")
                 continue
-            
-            logger.info(f"[PJ814 DEBUG] Processing watched_id={watched_id}, watcher_circle={watcher_circle}")
 
             parameters = db.session.execute(
                 select(SavedParameters).filter(
-                    SavedParameters.user_id == watched_id,
+                    SavedParameters.user_id == trigger.watched_id,
                     SavedParameters.date >= thirty_days_ago
                 ).order_by(SavedParameters.date.asc())
             ).scalars().all()
 
-            logger.info(f"[PJ814 DEBUG] Found {len(parameters)} parameter entries in last 30 days")
-
-            # Need at least as many days as the trigger requires
-            if len(parameters) < consecutive_days:
-                logger.info(f"[PJ814 DEBUG] Skipping: only {len(parameters)} entries, need {consecutive_days}")
+            if len(parameters) < trigger.consecutive_days:
                 continue
 
-            watched_user = db.session.get(User, watched_id)
+            watched_user = db.session.get(User, trigger.watched_id)
             if not watched_user:
-                logger.info(f"[PJ814 DEBUG] Skipping: watched user not found")
                 continue
 
-            # ===== DETERMINE WHICH SCHEMA THIS TRIGGER USES =====
+            consecutive_days = trigger.consecutive_days
+            
+            # Determine which schema this trigger uses
             has_new_schema = any([
-                trigger_data['mood_alert'],
-                trigger_data['energy_alert'],
-                trigger_data['sleep_alert'],
-                trigger_data['physical_alert'],
-                trigger_data['anxiety_alert']
+                trigger.mood_alert,
+                trigger.energy_alert,
+                trigger.sleep_alert,
+                trigger.physical_alert,
+                trigger.anxiety_alert
             ])
 
-            has_old_schema = trigger_data['parameter_name'] is not None
+            has_old_schema = trigger.parameter_name is not None
+            
+            logger.info(f"[PJ815 DEBUG] Processing trigger for {watched_user.username}: has_new_schema={has_new_schema}, has_old_schema={has_old_schema}")
 
-            # ===== NEW SCHEMA CODE (WITH PRIVACY CHECK) =====
+            # ===== NEW SCHEMA CODE =====
             if has_new_schema:
-                # PJ814 FIX: Helper function to check consecutive days - FINDS ALL DISTINCT PATTERNS
                 def check_consecutive_pattern(param_attr, privacy_attr, condition_func, alert_level_func):
                     found_patterns = []
-                    pattern_keys_seen = set()  # Track unique (start_date, end_date) combinations
                     
-                    logger.info(f"[PJ814 PATTERN] Checking {param_attr} for {watched_user.username}, need {consecutive_days} consecutive days")
-                    
-                    # PJ814: Collect all valid entries that meet the condition
+                    # Collect all valid entries that meet the condition
                     valid_entries = []
                     for param in parameters:
                         param_value = getattr(param, param_attr, None)
                         param_privacy = getattr(param, privacy_attr, 'private')
 
-                        # Check if watcher can see this parameter
                         if not can_see_parameter(param_privacy, watcher_circle):
                             continue
                         
@@ -9116,22 +9150,15 @@ def check_parameter_triggers():
                                 'value': param_value
                             })
                     
-                    logger.info(f"[PJ814 PATTERN] Found {len(valid_entries)} entries meeting condition for {param_attr}")
-                    if len(valid_entries) > 0:
-                        dates_str = [str(e['date']) for e in valid_entries[:10]]  # First 10 for logging
-                        logger.info(f"[PJ814 PATTERN] First valid dates: {dates_str}")
+                    logger.info(f"[PJ815 PATTERN] {watched_user.username}/{param_attr}: {len(valid_entries)} entries meet condition")
                     
-                    # PJ814: Find ALL consecutive streaks of required length
+                    # Find ALL consecutive streaks of required length
                     if len(valid_entries) >= consecutive_days:
-                        # Sort by date ascending
                         valid_entries.sort(key=lambda x: x['date'])
-                        
-                        # Build all consecutive streaks
                         current_streak = []
                         
                         for entry in valid_entries:
                             if not current_streak:
-                                # Start new streak
                                 current_streak = [entry]
                             else:
                                 last_date = current_streak[-1]['date']
@@ -9139,156 +9166,118 @@ def check_parameter_triggers():
                                 days_diff = (curr_date - last_date).days
                                 
                                 if days_diff == 1:
-                                    # Consecutive - extend streak
                                     current_streak.append(entry)
                                 elif days_diff == 0:
-                                    # Same day - skip duplicate
-                                    continue
+                                    continue  # Same day, skip
                                 else:
-                                    # Gap found - save current streak if long enough and start new one
+                                    # Gap found - save streak if long enough
                                     if len(current_streak) >= consecutive_days:
                                         start_date = current_streak[0]['date']
                                         end_date = current_streak[-1]['date']
-                                        pattern_key = (start_date.isoformat(), end_date.isoformat())
                                         
-                                        if pattern_key not in pattern_keys_seen:
-                                            pattern_keys_seen.add(pattern_key)
+                                        # PJ815: Check if this pattern is already seen
+                                        pattern_key = (watched_user.username, param_attr, 
+                                                      start_date.isoformat(), end_date.isoformat())
+                                        
+                                        if pattern_key not in patterns_seen:
+                                            patterns_seen.add(pattern_key)
                                             pattern_values = [e['value'] for e in current_streak]
+                                            # Convert dates to ISO strings for JSON serialization
+                                            date_strings = []
+                                            for e in current_streak:
+                                                if hasattr(e['date'], 'isoformat'):
+                                                    date_strings.append(e['date'].isoformat())
+                                                else:
+                                                    date_strings.append(str(e['date']))
                                             pattern = {
                                                 'level': alert_level_func(pattern_values),
                                                 'user': watched_user.username,
                                                 'parameter': param_attr,
-                                                'dates': [e['date'].isoformat() for e in current_streak],
+                                                'dates': date_strings,
                                                 'values': pattern_values,
                                                 'consecutive_days': len(current_streak)
                                             }
                                             found_patterns.append(pattern)
-                                            logger.info(f"[PJ814 PATTERN] Found streak: {start_date} to {end_date}, {len(current_streak)} days")
+                                            logger.info(f"[PJ815 PATTERN] NEW pattern: {watched_user.username}/{param_attr} {start_date} to {end_date}")
+                                        else:
+                                            logger.info(f"[PJ815 PATTERN] DUPLICATE (from another trigger row): {watched_user.username}/{param_attr} {start_date} to {end_date}")
                                     
-                                    # Start new streak
                                     current_streak = [entry]
                         
                         # Don't forget the last streak
                         if len(current_streak) >= consecutive_days:
                             start_date = current_streak[0]['date']
                             end_date = current_streak[-1]['date']
-                            pattern_key = (start_date.isoformat(), end_date.isoformat())
+                            pattern_key = (watched_user.username, param_attr,
+                                          start_date.isoformat(), end_date.isoformat())
                             
-                            if pattern_key not in pattern_keys_seen:
-                                pattern_keys_seen.add(pattern_key)
+                            if pattern_key not in patterns_seen:
+                                patterns_seen.add(pattern_key)
                                 pattern_values = [e['value'] for e in current_streak]
+                                date_strings = []
+                                for e in current_streak:
+                                    if hasattr(e['date'], 'isoformat'):
+                                        date_strings.append(e['date'].isoformat())
+                                    else:
+                                        date_strings.append(str(e['date']))
                                 pattern = {
                                     'level': alert_level_func(pattern_values),
                                     'user': watched_user.username,
                                     'parameter': param_attr,
-                                    'dates': [e['date'].isoformat() for e in current_streak],
+                                    'dates': date_strings,
                                     'values': pattern_values,
                                     'consecutive_days': len(current_streak)
                                 }
                                 found_patterns.append(pattern)
-                                logger.info(f"[PJ814 PATTERN] Found final streak: {start_date} to {end_date}, {len(current_streak)} days")
+                                logger.info(f"[PJ815 PATTERN] NEW pattern (final): {watched_user.username}/{param_attr} {start_date} to {end_date}")
+                            else:
+                                logger.info(f"[PJ815 PATTERN] DUPLICATE (final): {watched_user.username}/{param_attr} {start_date} to {end_date}")
                     
-                    logger.info(f"[PJ814 PATTERN] Total unique patterns found for {param_attr}: {len(found_patterns)}")
                     return found_patterns
 
-                # Check mood triggers (lower is worse)
-                if trigger_data['mood_alert']:
-                    def mood_condition(val):
-                        return val <= 2
-
-                    def mood_level(vals):
-                        avg = sum(vals) / len(vals)
-                        if avg == 1:
-                            return 'critical'
-                        elif avg <= 1.5:
-                            return 'high'
-                        else:
-                            return 'warning'
-
-                    # ✅ MODIFIED: Pass privacy_attr parameter
-                    results = check_consecutive_pattern('mood', 'mood_privacy', mood_condition, mood_level)
+                # Check each parameter type if its alert flag is enabled
+                if trigger.mood_alert:
+                    logger.info(f"[PJ815 DEBUG] Checking mood for {watched_user.username}")
+                    results = check_consecutive_pattern('mood', 'mood_privacy', 
+                                                        lambda val: val <= 2,
+                                                        lambda vals: 'critical' if sum(vals)/len(vals) == 1 else ('high' if sum(vals)/len(vals) <= 1.5 else 'warning'))
                     alerts.extend(results)
 
-                # Check energy triggers (lower is worse)
-                if trigger_data['energy_alert']:
-                    def energy_condition(val):
-                        return val <= 2
-
-                    def energy_level(vals):
-                        avg = sum(vals) / len(vals)
-                        if avg == 1:
-                            return 'critical'
-                        elif avg <= 1.5:
-                            return 'high'
-                        else:
-                            return 'warning'
-
-                    # ✅ MODIFIED: Pass privacy_attr parameter
-                    results = check_consecutive_pattern('energy', 'energy_privacy', energy_condition,
-                                                        energy_level)
+                if trigger.energy_alert:
+                    logger.info(f"[PJ815 DEBUG] Checking energy for {watched_user.username}")
+                    results = check_consecutive_pattern('energy', 'energy_privacy',
+                                                        lambda val: val <= 2,
+                                                        lambda vals: 'critical' if sum(vals)/len(vals) == 1 else ('high' if sum(vals)/len(vals) <= 1.5 else 'warning'))
                     alerts.extend(results)
 
-                # Check sleep quality triggers (lower is worse)
-                if trigger_data['sleep_alert']:
-                    def sleep_condition(val):
-                        return val <= 2
-
-                    def sleep_level(vals):
-                        avg = sum(vals) / len(vals)
-                        if avg == 1:
-                            return 'critical'
-                        elif avg <= 1.5:
-                            return 'high'
-                        else:
-                            return 'warning'
-
-                    # ✅ MODIFIED: Pass privacy_attr parameter
-                    results = check_consecutive_pattern('sleep_quality', 'sleep_quality_privacy', sleep_condition,
-                                                        sleep_level)
+                if trigger.sleep_alert:
+                    logger.info(f"[PJ815 DEBUG] Checking sleep_quality for {watched_user.username}")
+                    results = check_consecutive_pattern('sleep_quality', 'sleep_quality_privacy',
+                                                        lambda val: val <= 2,
+                                                        lambda vals: 'critical' if sum(vals)/len(vals) == 1 else ('high' if sum(vals)/len(vals) <= 1.5 else 'warning'))
                     alerts.extend(results)
 
-                # Check physical activity triggers (lower is worse)
-                if trigger_data['physical_alert']:
-                    def physical_condition(val):
-                        return val <= 2
-
-                    def physical_level(vals):
-                        avg = sum(vals) / len(vals)
-                        if avg == 1:
-                            return 'critical'
-                        elif avg <= 1.5:
-                            return 'high'
-                        else:
-                            return 'warning'
-
-                    # ✅ MODIFIED: Pass privacy_attr parameter
+                if trigger.physical_alert:
+                    logger.info(f"[PJ815 DEBUG] Checking physical_activity for {watched_user.username}")
                     results = check_consecutive_pattern('physical_activity', 'physical_activity_privacy',
-                                                        physical_condition, physical_level)
+                                                        lambda val: val <= 2,
+                                                        lambda vals: 'critical' if sum(vals)/len(vals) == 1 else ('high' if sum(vals)/len(vals) <= 1.5 else 'warning'))
                     alerts.extend(results)
 
-                # Check anxiety triggers (higher is worse)
-                if trigger_data['anxiety_alert']:
-                    def anxiety_condition(val):
-                        return val >= 3
-
-                    def anxiety_level(vals):
-                        avg = sum(vals) / len(vals)
-                        if avg == 4:
-                            return 'critical'
-                        elif avg >= 3.5:
-                            return 'high'
-                        else:
-                            return 'warning'
-
-                    # ✅ MODIFIED: Pass privacy_attr parameter
-                    results = check_consecutive_pattern('anxiety', 'anxiety_privacy', anxiety_condition, anxiety_level)
+                if trigger.anxiety_alert:
+                    logger.info(f"[PJ815 DEBUG] Checking anxiety for {watched_user.username}")
+                    results = check_consecutive_pattern('anxiety', 'anxiety_privacy',
+                                                        lambda val: val >= 3,
+                                                        lambda vals: 'critical' if sum(vals)/len(vals) == 4 else ('high' if sum(vals)/len(vals) >= 3.5 else 'warning'))
                     alerts.extend(results)
 
-            # ===== OLD SCHEMA CODE (WITH PRIVACY CHECK) =====
+            # ===== OLD SCHEMA CODE =====
             elif has_old_schema:
-                param_name = trigger_data['parameter_name']
-                condition = trigger_data['trigger_condition']
-                threshold = trigger_data['trigger_value']
+                param_name = trigger.parameter_name
+                condition = trigger.trigger_condition
+                threshold = trigger.trigger_value
+                
+                logger.info(f"[PJ815 DEBUG] OLD SCHEMA: param_name={param_name}, condition={condition}, threshold={threshold}")
 
                 # Map parameter name to model attribute
                 param_mapping = {
@@ -9300,6 +9289,7 @@ def check_parameter_triggers():
                 }
 
                 if param_name not in param_mapping:
+                    logger.info(f"[PJ815 DEBUG] Skipping unknown param_name: {param_name}")
                     continue
 
                 param_attr, privacy_attr = param_mapping[param_name]
@@ -9324,77 +9314,160 @@ def check_parameter_triggers():
 
                     condition_text = f"equal to {threshold}"
                 else:
+                    logger.info(f"[PJ815 DEBUG] Skipping unknown condition: {condition}")
                     continue
 
-                # Find ALL consecutive patterns (WITH PRIVACY CHECK)
-                consecutive_count = 0
+                # PJ815: Find ALL consecutive patterns with proper dates array
+                streak_dates = []  # Track dates in current streak
+                streak_values = []  # Track values in current streak
                 last_date = None
-                streak_start = None
 
                 for param in parameters:
                     param_value = getattr(param, param_attr, None)
                     param_privacy = getattr(param, privacy_attr, 'private')
 
-                    # ✅ NEW: Check if watcher can see this parameter
+                    # Check if watcher can see this parameter
                     if not can_see_parameter(param_privacy, watcher_circle):
                         # Reset streak if we hit a private parameter
-                        consecutive_count = 0
+                        if len(streak_dates) >= consecutive_days:
+                            # Save the streak before resetting
+                            start_date = streak_dates[0]
+                            end_date = streak_dates[-1]
+                            pattern_key = (watched_user.username, param_name, 
+                                          start_date.isoformat(), end_date.isoformat())
+                            
+                            if pattern_key not in patterns_seen:
+                                patterns_seen.add(pattern_key)
+                                date_strings = [d.isoformat() for d in streak_dates]
+                                alert_data = {
+                                    'user': watched_user.username,
+                                    'parameter': param_name,
+                                    'consecutive_days': len(streak_dates),
+                                    'dates': date_strings,
+                                    'values': streak_values[:],
+                                    'end_date': end_date,
+                                    'condition_text': condition_text,
+                                    'is_old_schema': True
+                                }
+                                alerts.append(alert_data)
+                                logger.info(f"[PJ815 PATTERN] OLD SCHEMA NEW: {watched_user.username}/{param_name} {start_date} to {end_date}")
+                        streak_dates = []
+                        streak_values = []
                         last_date = None
-                        streak_start = None
                         continue
 
                     if condition_func(param_value):
                         # Condition met
-                        if last_date is None or (param.date - last_date).days == 1:
-                            if consecutive_count == 0:
-                                streak_start = param.date
-                            consecutive_count += 1
+                        if last_date is None:
+                            # Start new streak
+                            streak_dates = [param.date]
+                            streak_values = [param_value]
                             last_date = param.date
-
-                            # Check if we completed a pattern
-                            if consecutive_count == consecutive_days:
-                                # Add to alerts list for OLD schema format
+                        elif (param.date - last_date).days == 1:
+                            # Consecutive - extend streak
+                            streak_dates.append(param.date)
+                            streak_values.append(param_value)
+                            last_date = param.date
+                        elif (param.date - last_date).days == 0:
+                            # Same day - skip
+                            continue
+                        else:
+                            # Gap found - save streak if long enough, then start new one
+                            if len(streak_dates) >= consecutive_days:
+                                start_date = streak_dates[0]
+                                end_date = streak_dates[-1]
+                                pattern_key = (watched_user.username, param_name,
+                                              start_date.isoformat(), end_date.isoformat())
+                                
+                                if pattern_key not in patterns_seen:
+                                    patterns_seen.add(pattern_key)
+                                    date_strings = [d.isoformat() for d in streak_dates]
+                                    alert_data = {
+                                        'user': watched_user.username,
+                                        'parameter': param_name,
+                                        'consecutive_days': len(streak_dates),
+                                        'dates': date_strings,
+                                        'values': streak_values[:],
+                                        'end_date': end_date,
+                                        'condition_text': condition_text,
+                                        'is_old_schema': True
+                                    }
+                                    alerts.append(alert_data)
+                                    logger.info(f"[PJ815 PATTERN] OLD SCHEMA NEW: {watched_user.username}/{param_name} {start_date} to {end_date}")
+                            
+                            # Start new streak
+                            streak_dates = [param.date]
+                            streak_values = [param_value]
+                            last_date = param.date
+                    else:
+                        # Condition not met - save streak if long enough
+                        if len(streak_dates) >= consecutive_days:
+                            start_date = streak_dates[0]
+                            end_date = streak_dates[-1]
+                            pattern_key = (watched_user.username, param_name,
+                                          start_date.isoformat(), end_date.isoformat())
+                            
+                            if pattern_key not in patterns_seen:
+                                patterns_seen.add(pattern_key)
+                                date_strings = [d.isoformat() for d in streak_dates]
                                 alert_data = {
                                     'user': watched_user.username,
                                     'parameter': param_name,
-                                    'consecutive_days': consecutive_count,
-                                    'end_date': param.date,
+                                    'consecutive_days': len(streak_dates),
+                                    'dates': date_strings,
+                                    'values': streak_values[:],
+                                    'end_date': end_date,
                                     'condition_text': condition_text,
-                                    'is_old_schema': True  # Flag for later processing
+                                    'is_old_schema': True
                                 }
                                 alerts.append(alert_data)
-
-                                # Reset to find more patterns
-                                consecutive_count = 0
-                                last_date = None
-                                streak_start = None
-                        else:
-                            # Not consecutive
-                            consecutive_count = 1
-                            streak_start = param.date
-                            last_date = param.date
-                    else:
-                        # Condition not met
-                        consecutive_count = 0
+                                logger.info(f"[PJ815 PATTERN] OLD SCHEMA NEW: {watched_user.username}/{param_name} {start_date} to {end_date}")
+                        
+                        streak_dates = []
+                        streak_values = []
                         last_date = None
-                        streak_start = None
+                
+                # Don't forget the last streak after loop ends
+                if len(streak_dates) >= consecutive_days:
+                    start_date = streak_dates[0]
+                    end_date = streak_dates[-1]
+                    pattern_key = (watched_user.username, param_name,
+                                  start_date.isoformat(), end_date.isoformat())
+                    
+                    if pattern_key not in patterns_seen:
+                        patterns_seen.add(pattern_key)
+                        date_strings = [d.isoformat() for d in streak_dates]
+                        alert_data = {
+                            'user': watched_user.username,
+                            'parameter': param_name,
+                            'consecutive_days': len(streak_dates),
+                            'dates': date_strings,
+                            'values': streak_values[:],
+                            'end_date': end_date,
+                            'condition_text': condition_text,
+                            'is_old_schema': True
+                        }
+                        alerts.append(alert_data)
+                        logger.info(f"[PJ815 PATTERN] OLD SCHEMA FINAL: {watched_user.username}/{param_name} {start_date} to {end_date}")
 
         # ===== PJ811 FIX: CREATE DATABASE ALERTS WITH PROPER DUPLICATE DETECTION =====
-        # PJ814: Added extensive debugging to track alert creation
+        # PJ815: Extensive debugging and proper pattern deduplication
         # This endpoint now creates ONE-TIME database alerts when trigger patterns are found.
         # Duplicate detection uses 24-hour window per (watcher, watched_user, parameter, date_range) combo.
         # Alerts persist in the database and don't vanish on page refresh.
         # Emails are sent if user has email_on_alert enabled.
         
-        logger.info(f"[PJ814 DEBUG] ========================================")
-        logger.info(f"[PJ814 DEBUG] Alert processing starting")
-        logger.info(f"[PJ814 DEBUG] Total unique patterns found: {len(alerts)}")
+        logger.info(f"[PJ815 DEBUG] ========================================")
+        logger.info(f"[PJ815 DEBUG] Alert processing starting")
+        logger.info(f"[PJ815 DEBUG] Total unique patterns found: {len(alerts)}")
         
         # Log each pattern's date range
         for i, a in enumerate(alerts[:20]):  # First 20 for logging
             dates = a.get('dates', [])
             if dates:
-                logger.info(f"[PJ814 DEBUG] Pattern {i+1}: {a.get('user')}/{a.get('parameter')} dates={dates[0]} to {dates[-1]}")
+                logger.info(f"[PJ815 DEBUG] Pattern {i+1}: {a.get('user')}/{a.get('parameter')} dates={dates[0]} to {dates[-1]}")
+            else:
+                logger.info(f"[PJ815 DEBUG] Pattern {i+1}: {a.get('user')}/{a.get('parameter')} NO DATES (end_date={a.get('end_date')})")
         
         logger.info(f"[TRIGGER CHECK] ========================================")
         logger.info(f"[TRIGGER CHECK] Found {len(alerts)} trigger patterns for watcher {watcher_id}")
@@ -9428,7 +9501,7 @@ def check_parameter_triggers():
                         end_str = end_date.strftime('%b %d')
                         date_pattern = f"({start_str} - {end_str})"
                     except Exception as e:
-                        logger.warning(f"[PJ814 DEBUG] Could not parse dates: {e}")
+                        logger.warning(f"[PJ815 DEBUG] Could not parse dates: {e}")
                 
                 # PJ813 FIX: Include date range in alert key so different patterns create separate alerts
                 alert_key_with_dates = f"{alert_key}{date_range_str}"
@@ -9459,9 +9532,9 @@ def check_parameter_triggers():
                             ).first()
                         
                         if existing_alert:
-                            logger.info(f"[PJ814 DEBUG] Found existing alert with date pattern '{date_pattern}': ID={existing_alert.id}")
+                            logger.info(f"[PJ815 DEBUG] Found existing alert with date pattern '{date_pattern}': ID={existing_alert.id}")
                         else:
-                            logger.info(f"[PJ814 DEBUG] No existing alert with date pattern '{date_pattern}' - will create new")
+                            logger.info(f"[PJ815 DEBUG] No existing alert with date pattern '{date_pattern}' - will create new")
                     except Exception as date_err:
                         logger.warning(f"[TRIGGER CHECK] Could not check date-specific duplicate: {date_err}")
                 
