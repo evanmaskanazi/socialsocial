@@ -1,3 +1,4 @@
+// PJ811 Version 1700 - Fixed trigger alerts vanishing, alerts now persist in database
 // PJ810 Version 1600 - Fixed double message sending, configurable trigger alert display
 // PJ809 Version 1500 - Backend fix for duplicate detection window (no JS changes needed)
 // PJ808 Version 1400 - Backend fix for cooldown blocking (no JS changes needed)
@@ -7,6 +8,15 @@
 // Social Parameters Save/Load System with i18n support and numeric ratings
 // COMPLETE FIXED VERSION - Includes language selector and all fixes
 // 
+// PJ811 Changes (version 1700):
+// - CRITICAL FIX: Trigger alerts no longer vanish on page refresh
+// - Backend now creates persistent database alerts with proper duplicate detection
+// - Frontend no longer adds ephemeral DOM alerts that disappear
+// - Alerts are now loaded from /api/alerts like other notifications
+// - checkParameterAlerts still polls for patterns but alerts persist in DB
+// - TRIGGER_ALERT_DISPLAY_MODE now controls ADDITIONAL visual feedback only
+// - Emails are sent when alerts are created (if email_on_alert enabled)
+//
 // PJ810 Changes (version 1600):
 // - Fixed double message sending when pressing Enter
 // - Added TRIGGER_ALERT_DISPLAY_MODE configuration:
@@ -34,16 +44,16 @@
 // - Alerts are created ONLY when parameters are saved (not when polling)
 
 // ============================================================================
-// PJ810 CONFIGURATION: How to display trigger alerts from polling
+// PJ811 CONFIGURATION: How to display trigger alerts from polling
 // ============================================================================
 // Options:
-//   'overlay'  - Yellow floating alerts on right side (original behavior)
-//   'standard' - Add to Alerts section like other notifications (recommended)
-//   'disabled' - Don't show polling alerts at all (real alerts still work)
+//   'overlay'  - Yellow floating alerts on right side (additional visual feedback)
+//   'standard' - Silent mode - alerts are in Alerts section via /api/alerts (default)
+//   'disabled' - Don't show any polling feedback (alerts still in DB)
 // 
-// NOTE: This only affects the POLLING display. Real trigger alerts are always
-//       created in the database when parameters are saved and will appear in
-//       the Alerts section regardless of this setting.
+// NOTE: Alerts are NOW ALWAYS created in the database when patterns are found.
+//       This setting only controls ADDITIONAL visual feedback from polling.
+//       Real alerts always appear in the Alerts section via loadAlerts().
 // ============================================================================
 const TRIGGER_ALERT_DISPLAY_MODE = 'standard';  // Change to 'overlay' for yellow popups
 
@@ -2897,15 +2907,35 @@ window.saveTriggers = async function(userId) {
 
 async function checkParameterAlerts() {
     try {
+        console.log('[PJ811] checkParameterAlerts called - checking for trigger patterns');
         const response = await fetch('/api/parameters/check-triggers');
         const data = await response.json();
 
+        console.log('[PJ811] check-triggers response:', data);
+        
         if (data.alerts && data.alerts.length > 0) {
-            displayParameterAlerts(data.alerts);
+            console.log(`[PJ811] Found ${data.alerts.length} trigger patterns`);
+            console.log(`[PJ811] Alerts created: ${data.alerts_created || 0}, Duplicates skipped: ${data.alerts_skipped_duplicate || 0}`);
+            
+            // PJ811: Only show visual feedback if configured
+            // Database alerts are now created by the backend and will appear in /api/alerts
+            if (TRIGGER_ALERT_DISPLAY_MODE === 'overlay') {
+                displayParameterAlerts(data.alerts);
+            }
+            
+            // PJ811: Refresh the alerts list to show any newly created alerts
+            if (data.alerts_created > 0 && typeof loadAlerts === 'function') {
+                console.log('[PJ811] New alerts created, refreshing alerts list...');
+                setTimeout(() => {
+                    loadAlerts().catch(err => console.error('[PJ811] Error refreshing alerts:', err));
+                }, 500);
+            }
+        } else {
+            console.log('[PJ811] No trigger patterns found');
         }
 
     } catch (error) {
-        console.error('Failed to check alerts:', error);
+        console.error('[PJ811] Failed to check alerts:', error);
     }
 }
 
@@ -2986,78 +3016,29 @@ function displayParameterAlerts(alerts) {
     });
 }
 
-// PJ810: New function to display trigger alerts in the standard Alerts section
+// PJ811: Updated function - no longer adds ephemeral DOM alerts
+// Alerts are now created in the database by the backend and will be
+// loaded by loadAlerts() which fetches from /api/alerts
 function displayParameterAlertsStandard(alerts) {
-    // Find the alerts container in the sidebar
-    const alertsContainer = document.getElementById('alertsList') || document.querySelector('.alerts-list');
-    if (!alertsContainer) {
-        console.log('[PJ810] Alerts container not found, falling back to overlay mode');
-        // Fallback to overlay if alerts section not found
-        const tempMode = TRIGGER_ALERT_DISPLAY_MODE;
-        window.TRIGGER_ALERT_DISPLAY_MODE = 'overlay';
-        displayParameterAlerts(alerts);
-        window.TRIGGER_ALERT_DISPLAY_MODE = tempMode;
-        return;
+    console.log('[PJ811] displayParameterAlertsStandard called with', alerts.length, 'patterns');
+    console.log('[PJ811] These alerts are now persisted in the database');
+    console.log('[PJ811] They will appear in the Alerts section via loadAlerts()');
+    
+    // PJ811: No longer adding ephemeral DOM alerts that would vanish
+    // The backend now creates real database alerts that persist
+    // loadAlerts() will fetch and display them properly
+    
+    // If you want to show a brief notification that new alerts were found:
+    if (alerts.length > 0 && typeof showNotification === 'function') {
+        // Only show if this is genuinely new (not already showing in alerts)
+        const alertsContainer = document.getElementById('alertsList');
+        if (alertsContainer) {
+            const existingAlertCount = alertsContainer.querySelectorAll('.alert-item').length;
+            if (existingAlertCount === 0) {
+                console.log('[PJ811] No existing alerts in DOM, loadAlerts will populate');
+            }
+        }
     }
-    
-    // Track which alerts we've already shown (by unique key)
-    if (!window._shownTriggerAlerts) {
-        window._shownTriggerAlerts = new Set();
-    }
-    
-    alerts.forEach(alert => {
-        // Create unique key for this alert to prevent duplicates
-        const alertKey = `${alert.user}-${alert.parameter}-${alert.end_date || (alert.dates ? alert.dates[0] : '')}`;
-        
-        // Skip if already shown
-        if (window._shownTriggerAlerts.has(alertKey)) {
-            return;
-        }
-        window._shownTriggerAlerts.add(alertKey);
-        
-        // Build the alert content text
-        let contentText = '';
-        if (alert.dates && alert.dates.length >= 2) {
-            contentText = `Concerning levels from ${alert.dates[0]} to ${alert.dates[alert.dates.length - 1]}`;
-        } else if (alert.end_date && alert.condition_text) {
-            contentText = `${alert.condition_text} (as of ${alert.end_date})`;
-        } else {
-            contentText = 'Parameter at concerning levels';
-        }
-        
-        // Create alert element matching the site's style
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'alert-item';
-        alertDiv.style.cssText = 'padding: 12px; border-left: 4px solid #f59e0b; background: #fef3c7; margin-bottom: 8px; border-radius: 4px;';
-        
-        alertDiv.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div>
-                    <strong style="color: #92400e;">Wellness Alert</strong>
-                    <div style="font-size: 13px; color: #78350f; margin-top: 4px;">
-                        <strong>${alert.user || 'Someone'}</strong>'s ${alert.parameter || 'parameter'}
-                    </div>
-                    <div style="font-size: 12px; color: #92400e; margin-top: 2px;">
-                        ${contentText}
-                    </div>
-                </div>
-                <button onclick="this.parentElement.parentElement.remove()" 
-                        style="background: none; border: none; color: #92400e; cursor: pointer; font-size: 16px; padding: 0;">×</button>
-            </div>
-        `;
-        
-        // Insert at the top of the alerts list
-        if (alertsContainer.firstChild) {
-            alertsContainer.insertBefore(alertDiv, alertsContainer.firstChild);
-        } else {
-            alertsContainer.appendChild(alertDiv);
-        }
-    });
-    
-    // Clear shown alerts cache after 5 minutes to allow refresh
-    setTimeout(() => {
-        window._shownTriggerAlerts = new Set();
-    }, 300000);
 }
 
 // Add CSS animation for alerts
@@ -3079,15 +3060,16 @@ if (!document.getElementById('parameterAlertsStyles')) {
     document.head.appendChild(style);
 }
 
-// PJ806 FIX: The /api/parameters/check-triggers endpoint is now READ-ONLY.
-// It no longer creates alerts or sends emails - that is handled by process_parameter_triggers() 
-// on the backend when parameters are saved.
-// This polling just displays computed trigger patterns in the UI.
-// Increased interval to 5 minutes (300000ms) since this is now just for display purposes.
+// PJ811 FIX: The /api/parameters/check-triggers endpoint now creates database alerts.
+// Alerts are created with 24-hour duplicate detection per (watcher, user, parameter) combo.
+// This polling triggers alert creation and emails for users who have email_on_alert enabled.
+// loadAlerts() fetches the persisted alerts from /api/alerts.
+// Increased interval to 5 minutes (300000ms) to prevent excessive API calls.
 setInterval(checkParameterAlerts, 300000);  // Changed from 60000 (1 min) to 300000 (5 min)
 
 // Check on page load
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[PJ811] parameters-social.js loaded - will check triggers in 2 seconds');
     setTimeout(checkParameterAlerts, 2000);
 });
 
@@ -3096,4 +3078,4 @@ window.viewUserParameters = viewUserParameters;
 window.closeUserParametersModal = closeUserParametersModal;
 window.checkParameterAlerts = checkParameterAlerts;
 
-console.log('Parameters-social.js UPDATED with user monitoring and trigger system');
+console.log('[PJ811] Parameters-social.js v1700 loaded - trigger alerts now persist in database');
