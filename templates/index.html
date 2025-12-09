@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ808 -->
+<!-- TheraSocial Version PJ809 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
@@ -42,10 +42,13 @@
      2. Backend: Added comprehensive logging for process_parameter_triggers debugging
      3. Frontend: Fixed JavaScript error in displayParameterAlerts for old schema alerts
 -->
-<!-- PJ808 Changes (version 1400):
+<!-- PJ808 Changes:
      1. Backend: REMOVED 24-hour cooldown that was blocking ALL legitimate alerts
-     2. The cooldown was overkill - spam had set last_triggered on all triggers, blocking everything
-     3. READ-ONLY polling + 1-day duplicate detection are sufficient spam prevention
+-->
+<!-- PJ809 Changes (version 1500):
+     1. Backend: Enhanced logging for save_parameters function
+     2. Backend: Reduced duplicate detection window from 1 day to 4 hours
+     3. This allows more frequent alerts while still preventing spam
 -->
 <html lang="en">
 <head>
@@ -6487,7 +6490,16 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
     }
 }
 
+    // PJ810: Flag to prevent double message submission
+    let isMessageSending = false;
+    
     document.getElementById('sendMessageBtn').addEventListener('click', async () => {
+    // PJ810: Prevent double submission
+    if (isMessageSending) {
+        console.log('[PJ810] Message already sending, ignoring duplicate click');
+        return;
+    }
+    
     // Check if recipient is selected
     if (!currentRecipient || !currentRecipient.id) {
        const errorText = window.i18n && window.i18n.t ? window.i18n.t('messages.select_conversation') : 'Please select a conversation first';
@@ -6498,6 +6510,10 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
     const content = document.getElementById('messageInput').value.trim();
     if (!content) return;
 
+    // PJ810: Set flag to prevent double submission
+    isMessageSending = true;
+    document.getElementById('sendMessageBtn').disabled = true;
+    
     try {
         const response = await apiCall('/messages', 'POST', {
             recipient_id: currentRecipient.id,
@@ -6516,13 +6532,20 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
         console.error('Send message error:', error);
         const errorText = window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error';
         alert(errorText + ': ' + (error.message || 'Failed to send message'));
+    } finally {
+        // PJ810: Reset flag after completion
+        isMessageSending = false;
+        document.getElementById('sendMessageBtn').disabled = false;
     }
 });
 
         document.getElementById('messageInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                document.getElementById('sendMessageBtn').click();
+                // PJ810: Check flag before triggering click
+                if (!isMessageSending) {
+                    document.getElementById('sendMessageBtn').click();
+                }
             }
         });
 
