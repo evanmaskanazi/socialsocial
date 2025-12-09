@@ -1,3 +1,4 @@
+// PJ812 Version 1702 - Trigger emails work without login, fixed double messages, more alerts visible
 // PJ812 Version 1701 - Fixed trigger check to verify login first, improved date formatting
 // PJ811 Version 1700 - Fixed trigger alerts vanishing, alerts now persist in database
 // PJ810 Version 1600 - Fixed double message sending, configurable trigger alert display
@@ -14,6 +15,13 @@
 // - This prevents 401 errors when the function fires before login completes
 // - Frontend now calls checkParameterAlerts() 3 seconds after successful login
 // - Better error handling for non-authenticated responses
+//
+// PJ812 Changes (version 1702):
+// - BACKEND: process_parameter_triggers now sends emails even when watcher not logged in
+// - BACKEND: Added privacy checks to process_parameter_triggers (matching check_triggers)
+// - BACKEND: Increased alerts limit from 50 to 100 for full month display
+// - FRONTEND: Fixed double message sending with improved debouncing
+// - FRONTEND: Increased alerts-list height to 600px for better visibility
 //
 // PJ811 Changes (version 1700):
 // - CRITICAL FIX: Trigger alerts no longer vanish on page refresh
