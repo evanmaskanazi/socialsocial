@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 808
+Complete app.py for Social Social Platform - Phase 810
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -57,14 +57,34 @@ PJ807 Changes:
 - Added comprehensive logging to process_parameter_triggers()
 - FRONTEND FIX: Fixed JavaScript error in displayParameterAlerts()
 
-PJ808 Changes (version 1400):
-- CRITICAL FIX: Removed 24-hour cooldown that was blocking ALL legitimate alerts
-- The 24-hour cooldown was overkill - the email spam from before set last_triggered on all triggers,
-  which then blocked ALL alerts for 24 hours after ANY trigger fired
-- The READ-ONLY polling endpoint + 1-day duplicate detection are sufficient to prevent spam
+PJ808 Changes:
+- Removed 24-hour cooldown that was blocking ALL legitimate alerts
 - Added detailed trigger logging showing watcher, consecutive_days, and which alerts are enabled
-- Improved log messages with ✅/❌ emojis for easy scanning of alert creation success/failure
-- RESULT: Trigger alerts now work correctly - one email + one site alert per trigger condition
+
+PJ809 Changes (version 1500):
+- ENHANCED LOGGING: Added [SAVE PARAMS] logs when parameters are saved
+  - Shows user_id, date, and all parameter values when saved
+  - Confirms process_parameter_triggers is being called
+- REDUCED DUPLICATE WINDOW: Changed from 1 day to 4 hours
+  - This allows more frequent alerts while still preventing rapid spam
+  - Old spam alerts no longer block new legitimate alerts
+- Check Render logs for:
+  - [SAVE PARAMS] - When parameters are saved
+  - [TRIGGER PROCESS] - Trigger processing lifecycle
+  - [PJ809] - When duplicates are skipped (within 4-hour window)
+
+PJ810 Changes (version 1600):
+- FIXED: Double message sending when pressing Enter key
+  - Added isMessageSending flag to prevent double submissions
+  - Button is disabled during send to prevent clicks during API call
+- FRONTEND CONFIG: Added TRIGGER_ALERT_DISPLAY_MODE setting
+  - 'overlay' = Yellow floating alerts (original behavior)
+  - 'standard' = Add to Alerts section like other notifications (default)
+  - 'disabled' = Don't show polling alerts (real DB alerts still work)
+- CLARIFICATION: Trigger emails are ONLY sent when parameters are saved
+  - The yellow overlay alerts come from polling (READ-ONLY endpoint)
+  - Real alerts + emails happen when process_parameter_triggers() runs on save
+  - If no [SAVE PARAMS] logs in Render, no parameters were saved = no trigger emails
 """
 
 import os
@@ -6728,6 +6748,10 @@ def save_parameters():
         data = request.get_json()
         user_id = session.get('user_id')
         date_str = data.get('date')
+        
+        # PJ809: Add logging to confirm save_parameters is called
+        logger.info(f"[SAVE PARAMS] ========================================")
+        logger.info(f"[SAVE PARAMS] save_parameters called for user_id={user_id}, date={date_str}")
 
         if not date_str:
             return jsonify({'error': 'Date is required'}), 400
@@ -6778,6 +6802,10 @@ def save_parameters():
         params.updated_at = datetime.utcnow()
         db.session.add(params)
         db.session.commit()
+        
+        # PJ809: Log parameter values before trigger check
+        logger.info(f"[SAVE PARAMS] Saved: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}")
+        logger.info(f"[SAVE PARAMS] Calling process_parameter_triggers for user_id={user_id}")
 
         # Check triggers
         process_parameter_triggers(user_id, params)
@@ -6845,6 +6873,7 @@ def process_parameter_triggers(user_id, params):
         
         # PJ801 FIX: Pre-load all recent trigger alerts for efficient duplicate checking
         # PJ806 FIX: Reduced from 7 days to 1 day to prevent over-aggressive blocking
+        # PJ809 FIX: Reduced from 1 day to 4 hours - still prevents spam but allows more frequent alerts
         # Group by watcher_id for efficient lookup
         watcher_alerts = {}
         for trigger in triggers:
@@ -6852,7 +6881,7 @@ def process_parameter_triggers(user_id, params):
                 recent_alerts = Alert.query.filter(
                     Alert.user_id == trigger.watcher_id,
                     Alert.alert_type == 'trigger',
-                    Alert.created_at >= datetime.now() - timedelta(days=1)  # PJ806: Changed from 7 to 1 day
+                    Alert.created_at >= datetime.now() - timedelta(hours=4)  # PJ809: Changed from 1 day to 4 hours
                 ).all()
                 
                 # Build a set of (username, normalized_param) keys
@@ -6918,7 +6947,7 @@ def process_parameter_triggers(user_id, params):
                 # PJ801 FIX: Check if we already have an alert for this user/parameter
                 alert_key = (watched_user.username.lower(), param_name.replace(' ', '_'))
                 if alert_key in watcher_alerts.get(trigger.watcher_id, set()):
-                    logger.info(f"[PJ801] Skipping {watched_user.username}/{param_name} - alert already exists for watcher {trigger.watcher_id}")
+                    logger.info(f"[PJ809] Skipping {watched_user.username}/{param_name} - alert already exists within 4 hours for watcher {trigger.watcher_id}")
                     continue
                 
                 logger.info(f"[TRIGGER PROCESS] Checking {param_name} for {watched_user.username}, trigger requires {trigger.consecutive_days} consecutive days")
