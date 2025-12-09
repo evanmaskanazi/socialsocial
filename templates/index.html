@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ809 -->
+<!-- TheraSocial Version PJ811 -->
 <!-- Features: User Blocking with Toggle, Diary Reminder 24hr Time, Fixed Circle Recommendations, Improved Login Form -->
 <!-- PJ501 Changes: Fixed block message to "Account Not Available", Fixed Block button translation, Added recommended user profile preview -->
 <!-- PJ601 Changes: Block/Unblock toggle button fix in Following and Profile views, Fixed Follow button width, Fixed navigation loop after 403 on Circles/Feed -->
@@ -49,6 +49,14 @@
      1. Backend: Enhanced logging for save_parameters function
      2. Backend: Reduced duplicate detection window from 1 day to 4 hours
      3. This allows more frequent alerts while still preventing spam
+-->
+<!-- PJ811 Changes (version 1700):
+     1. CRITICAL FIX: Trigger alerts now persist in database and don't vanish
+     2. Backend: check_parameter_triggers now creates database alerts with 24hr duplicate detection
+     3. Backend: Emails are sent when trigger alerts are created (if email_on_alert enabled)
+     4. Frontend: No longer adds ephemeral DOM alerts that disappear on refresh
+     5. Frontend: loadAlerts() fetches persistent alerts from /api/alerts
+     6. Added comprehensive logging: [TRIGGER CHECK], [TRIGGER CREATE], [TRIGGER DUPLICATE], [TRIGGER EMAIL]
 -->
 <html lang="en">
 <head>
