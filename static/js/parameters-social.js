@@ -1,10 +1,15 @@
+// PJ808 Version 1400 - Backend fix for cooldown blocking (no JS changes needed)
 // PJ807 FIX APPLIED: Fixed JavaScript errors in displayParameterAlerts
 // PJ806 FIX APPLIED: Fixed duplicate email spam from trigger alerts
 // PJ706 FIX APPLIED: Default privacy changed from 'public' to 'private' for new accounts
 // Social Parameters Save/Load System with i18n support and numeric ratings
 // COMPLETE FIXED VERSION - Includes language selector and all fixes
 // 
-// PJ807 Changes (version 1300):
+// PJ808 Changes (version 1400):
+// - Backend only: Removed 24-hour cooldown that was blocking all alerts
+// - No frontend changes needed
+//
+// PJ807 Changes:
 // - Fixed TypeError in displayParameterAlerts when alert.level is undefined
 // - Now handles both new schema (with level/dates/values) and old schema (without) gracefully
 // - Added null checks for all alert fields to prevent crashes
