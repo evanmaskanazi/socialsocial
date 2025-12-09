@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 807
+Complete app.py for Social Social Platform - Phase 808
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
@@ -51,18 +51,20 @@ PJ806 Changes:
   This endpoint now only returns computed trigger patterns for frontend display
 - FIX 2: Only process_parameter_triggers() (called on parameter save) creates alerts now
 - FIX 3: Improved duplicate detection to handle both underscore and space in parameter names
-- FIX 4: Added 24-hour cooldown using last_triggered timestamp on ParameterTrigger model
-- FIX 5: Alerts now show in the Alerts section properly and emails are sent only ONCE per trigger
 
-PJ807 Changes (version 1300):
-- FIX: Reduced duplicate detection window from 7 days to 1 day
-  This prevents over-aggressive blocking of legitimate new alerts
-- FIX: Added comprehensive logging to process_parameter_triggers()
-  Check Render logs for [TRIGGER PROCESS] tags to debug alert creation
+PJ807 Changes:
+- Reduced duplicate detection window from 7 days to 1 day
+- Added comprehensive logging to process_parameter_triggers()
 - FRONTEND FIX: Fixed JavaScript error in displayParameterAlerts()
-  The function was crashing on old schema alerts that lack 'level', 'dates', 'values' fields
-  Now handles both new and old schema formats gracefully
-- RESULT: Trigger alerts now properly create alerts and send emails when parameters are saved
+
+PJ808 Changes (version 1400):
+- CRITICAL FIX: Removed 24-hour cooldown that was blocking ALL legitimate alerts
+- The 24-hour cooldown was overkill - the email spam from before set last_triggered on all triggers,
+  which then blocked ALL alerts for 24 hours after ANY trigger fired
+- The READ-ONLY polling endpoint + 1-day duplicate detection are sufficient to prevent spam
+- Added detailed trigger logging showing watcher, consecutive_days, and which alerts are enabled
+- Improved log messages with ✅/❌ emojis for easy scanning of alert creation success/failure
+- RESULT: Trigger alerts now work correctly - one email + one site alert per trigger condition
 """
 
 import os
@@ -6829,6 +6831,18 @@ def process_parameter_triggers(user_id, params):
         triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
         logger.info(f"[TRIGGER PROCESS] Found {len(triggers)} triggers watching user {user_id}")
         
+        # Log trigger details
+        for t in triggers:
+            watcher = User.query.get(t.watcher_id)
+            watcher_name = watcher.username if watcher else f"user_{t.watcher_id}"
+            alerts_enabled = []
+            if t.mood_alert: alerts_enabled.append('mood')
+            if t.energy_alert: alerts_enabled.append('energy')
+            if t.sleep_alert: alerts_enabled.append('sleep')
+            if t.physical_alert: alerts_enabled.append('activity')
+            if t.anxiety_alert: alerts_enabled.append('anxiety')
+            logger.info(f"[TRIGGER PROCESS] Trigger {t.id}: watcher={watcher_name}, consecutive_days={t.consecutive_days}, alerts={alerts_enabled}")
+        
         # PJ801 FIX: Pre-load all recent trigger alerts for efficient duplicate checking
         # PJ806 FIX: Reduced from 7 days to 1 day to prevent over-aggressive blocking
         # Group by watcher_id for efficient lookup
@@ -6860,15 +6874,19 @@ def process_parameter_triggers(user_id, params):
         for trigger in triggers:
             # Skip if no consecutive_days is set (shouldn't happen, but safety check)
             if not trigger.consecutive_days or trigger.consecutive_days < 1:
+                logger.info(f"[TRIGGER PROCESS] Skipping trigger {trigger.id} - no consecutive_days set")
                 continue
             
-            # PJ806 FIX: Skip if this trigger was already fired within the last 24 hours
-            # This prevents email spam even if duplicate detection fails
-            if trigger.last_triggered:
-                hours_since_last = (datetime.now() - trigger.last_triggered).total_seconds() / 3600
-                if hours_since_last < 24:
-                    logger.info(f"[PJ806] Skipping trigger {trigger.id} - last triggered {hours_since_last:.1f} hours ago")
-                    continue
+            # PJ808 FIX: REMOVED 24-hour cooldown - it was blocking legitimate alerts
+            # The READ-ONLY polling endpoint + 1-day duplicate detection already prevent spam
+            # The cooldown was overkill and blocked ALL alerts for 24 hours after any trigger fired
+            # 
+            # OLD CODE (removed):
+            # if trigger.last_triggered:
+            #     hours_since_last = (datetime.now() - trigger.last_triggered).total_seconds() / 3600
+            #     if hours_since_last < 24:
+            #         logger.info(f"[PJ806] Skipping trigger {trigger.id} - last triggered {hours_since_last:.1f} hours ago")
+            #         continue
 
             # Get last 30 days of parameters to check for consecutive patterns
             thirty_days_ago = datetime.now().date() - timedelta(days=30)
@@ -6948,15 +6966,15 @@ def process_parameter_triggers(user_id, params):
                         source_user_id=watched_user.id,
                         alert_category='trigger'
                     )
-                    # PJ806 FIX: Update last_triggered timestamp to prevent spam
+                    # PJ808: Still update last_triggered for tracking purposes (but not used for blocking)
                     trigger.last_triggered = datetime.now()
                     db.session.commit()
                     # Mark as created to prevent duplicates in this session
                     if trigger.watcher_id in watcher_alerts:
                         watcher_alerts[trigger.watcher_id].add(alert_key)
-                    logger.info(f"[PJ806] Created alert for {watched_user.username}/{param_name} -> watcher {trigger.watcher_id}")
+                    logger.info(f"[TRIGGER PROCESS] ✅ Created alert for {watched_user.username}/{param_name} -> watcher {trigger.watcher_id}")
                 else:
-                    logger.info(f"[TRIGGER PROCESS] No pattern found for {param_name}: consecutive_count={consecutive_count}, required={trigger.consecutive_days}")
+                    logger.info(f"[TRIGGER PROCESS] ❌ No pattern found for {param_name}: consecutive_count={consecutive_count}, required={trigger.consecutive_days}")
 
         logger.info(f"[TRIGGER PROCESS] process_parameter_triggers completed for user {user_id}")
         logger.info(f"[TRIGGER PROCESS] ========================================")
