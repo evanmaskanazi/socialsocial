@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 811
+Complete app.py for Social Social Platform - Phase 812 (Version 1702)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ812 Changes (v1702):
+- Increased alerts limit from 50 to 100 for full month display
+- Fixed process_parameter_triggers to include privacy checks (matching check_triggers)
+- Fixed trigger emails to be sent when watched user saves parameters (no login required)
+- Added detailed logging to process_parameter_triggers for debugging
+- Fixed date formatting in trigger alert content
 
 PJ501 Changes:
 - Updated check-blocked endpoint to return blockedBy field
@@ -4726,8 +4733,8 @@ def get_alerts():
                 # This includes: new follower alerts, invite alerts, general notifications
                 filtered_alerts.append(alert)
 
-        # Limit to 50 after filtering
-        filtered_alerts = filtered_alerts[:50]
+        # PJ812: Increased limit to 100 for full month of alerts
+        filtered_alerts = filtered_alerts[:100]
 
         return jsonify({
             'alerts': [alert.to_dict() for alert in filtered_alerts],
@@ -6876,6 +6883,7 @@ def process_parameter_triggers(user_id, params):
     PJ801 FIX: Improved duplicate detection to prevent repeated alert emails
     PJ806 FIX: Added detailed logging to debug trigger processing
     PJ811 FIX: Enhanced logging and email notification verification
+    PJ812 FIX: Added privacy checks (matching check_triggers), date formatting in content
     """
     try:
         logger.info(f"[TRIGGER PROCESS] ========================================")
@@ -6891,6 +6899,19 @@ def process_parameter_triggers(user_id, params):
             logger.info(f"[TRIGGER PROCESS] ========================================")
             return
         
+        # PJ812: Helper function to check privacy permissions (same as check_triggers)
+        def can_see_parameter(param_privacy, watcher_circle):
+            """Check if watcher can see this parameter based on privacy and circle level"""
+            if param_privacy == 'private':
+                return False  # Private params never trigger alerts
+            elif param_privacy == 'class_a':
+                return watcher_circle == 'class_a'
+            elif param_privacy == 'class_b':
+                return watcher_circle in ['class_b', 'class_a']
+            elif param_privacy == 'public':
+                return True  # Public params trigger for everyone
+            return False
+        
         # Log trigger details
         for t in triggers:
             watcher = User.query.get(t.watcher_id)
@@ -6904,8 +6925,6 @@ def process_parameter_triggers(user_id, params):
             logger.info(f"[TRIGGER PROCESS] Trigger {t.id}: watcher={watcher_name} (ID:{t.watcher_id}), consecutive_days={t.consecutive_days}, alerts={alerts_enabled}")
         
         # PJ801 FIX: Pre-load all recent trigger alerts for efficient duplicate checking
-        # PJ806 FIX: Reduced from 7 days to 1 day to prevent over-aggressive blocking
-        # PJ809 FIX: Reduced from 1 day to 4 hours - still prevents spam but allows more frequent alerts
         # PJ811 FIX: Increased back to 24 hours for more reliable duplicate detection
         # Group by watcher_id for efficient lookup
         watcher_alerts = {}
@@ -6914,7 +6933,7 @@ def process_parameter_triggers(user_id, params):
                 recent_alerts = Alert.query.filter(
                     Alert.user_id == trigger.watcher_id,
                     Alert.alert_type == 'trigger',
-                    Alert.created_at >= datetime.now() - timedelta(hours=24)  # PJ811: Changed to 24 hours
+                    Alert.created_at >= datetime.now() - timedelta(hours=24)
                 ).all()
                 
                 logger.info(f"[TRIGGER PROCESS] Found {len(recent_alerts)} recent trigger alerts for watcher {trigger.watcher_id}")
@@ -6936,22 +6955,23 @@ def process_parameter_triggers(user_id, params):
                                     break
                 watcher_alerts[trigger.watcher_id] = alert_keys
 
+        alerts_created = 0
+        alerts_skipped_duplicate = 0
+        alerts_skipped_privacy = 0
+        alerts_emailed = 0
+
         for trigger in triggers:
             # Skip if no consecutive_days is set (shouldn't happen, but safety check)
             if not trigger.consecutive_days or trigger.consecutive_days < 1:
                 logger.info(f"[TRIGGER PROCESS] Skipping trigger {trigger.id} - no consecutive_days set")
                 continue
             
-            # PJ808 FIX: REMOVED 24-hour cooldown - it was blocking legitimate alerts
-            # The READ-ONLY polling endpoint + 1-day duplicate detection already prevent spam
-            # The cooldown was overkill and blocked ALL alerts for 24 hours after any trigger fired
-            # 
-            # OLD CODE (removed):
-            # if trigger.last_triggered:
-            #     hours_since_last = (datetime.now() - trigger.last_triggered).total_seconds() / 3600
-            #     if hours_since_last < 24:
-            #         logger.info(f"[PJ806] Skipping trigger {trigger.id} - last triggered {hours_since_last:.1f} hours ago")
-            #         continue
+            # PJ812: Get watcher's circle level for privacy check
+            watcher_circle = get_watcher_circle_level(user_id, trigger.watcher_id)
+            if not watcher_circle:
+                logger.info(f"[TRIGGER PROCESS] Skipping trigger {trigger.id} - watcher {trigger.watcher_id} not in any circle for user {user_id}")
+                continue
+            logger.info(f"[TRIGGER PROCESS] Watcher {trigger.watcher_id} has circle level: {watcher_circle}")
 
             # Get last 30 days of parameters to check for consecutive patterns
             thirty_days_ago = datetime.now().date() - timedelta(days=30)
@@ -6966,29 +6986,32 @@ def process_parameter_triggers(user_id, params):
 
             watched_user = User.query.get(user_id)
 
-            # Define parameters to check with their trigger conditions
+            # Define parameters to check with their trigger conditions and privacy attributes
+            # Format: (param_attr, param_name, privacy_attr, condition_func, threshold)
             param_checks = []
             if trigger.mood_alert:
-                param_checks.append(('mood', 'mood', lambda x: x <= 2, 2))
+                param_checks.append(('mood', 'mood', 'mood_privacy', lambda x: x <= 2, 2))
             if trigger.energy_alert:
-                param_checks.append(('energy', 'energy', lambda x: x <= 2, 2))
+                param_checks.append(('energy', 'energy', 'energy_privacy', lambda x: x <= 2, 2))
             if trigger.sleep_alert:
-                param_checks.append(('sleep_quality', 'sleep_quality', lambda x: x <= 2, 2))
+                param_checks.append(('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: x <= 2, 2))
             if trigger.physical_alert:
-                param_checks.append(('physical_activity', 'physical_activity', lambda x: x <= 2, 2))
+                param_checks.append(('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: x <= 2, 2))
             if trigger.anxiety_alert:
-                param_checks.append(('anxiety', 'anxiety', lambda x: x >= 3, 3))
+                param_checks.append(('anxiety', 'anxiety', 'anxiety_privacy', lambda x: x >= 3, 3))
 
-            for param_attr, param_name, condition_func, threshold in param_checks:
+            for param_attr, param_name, privacy_attr, condition_func, threshold in param_checks:
                 # PJ801 FIX: Check if we already have an alert for this user/parameter
                 alert_key = (watched_user.username.lower(), param_name.replace(' ', '_'))
                 if alert_key in watcher_alerts.get(trigger.watcher_id, set()):
                     logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_user.username}/{param_name} - alert exists within 24 hours for watcher {trigger.watcher_id}")
+                    alerts_skipped_duplicate += 1
                     continue
                 
                 logger.info(f"[TRIGGER PROCESS] Checking {param_name} for {watched_user.username}, trigger requires {trigger.consecutive_days} consecutive days")
                 
                 # Look for N consecutive days (where N = trigger.consecutive_days)
+                # PJ812: Now includes privacy check for each parameter entry
                 consecutive_count = 0
                 consecutive_dates = []
                 last_date = None
@@ -6996,6 +7019,15 @@ def process_parameter_triggers(user_id, params):
 
                 for param_entry in all_params:
                     param_value = getattr(param_entry, param_attr, None)
+                    param_privacy = getattr(param_entry, privacy_attr, 'private')
+                    
+                    # PJ812: Check if watcher can see this parameter
+                    if not can_see_parameter(param_privacy, watcher_circle):
+                        # Reset streak if we hit a private parameter
+                        consecutive_count = 0
+                        consecutive_dates = []
+                        last_date = None
+                        continue
 
                     if param_value is not None and condition_func(param_value):
                         # Check if consecutive
@@ -7024,17 +7056,34 @@ def process_parameter_triggers(user_id, params):
                     logger.info(f"[TRIGGER PROCESS] Pattern FOUND for {param_name}: {consecutive_count} consecutive days, creating alert")
                     logger.info(f"[TRIGGER PROCESS] Alert will be sent to watcher {trigger.watcher_id} about {watched_user.username}")
                     
+                    # PJ812: Format dates nicely in alert content
+                    if consecutive_dates and len(consecutive_dates) >= 2:
+                        try:
+                            # Get first and last dates of the streak (dates are in desc order so reverse)
+                            sorted_dates = sorted(consecutive_dates)
+                            start_date = sorted_dates[0]
+                            end_date = sorted_dates[-1]
+                            start_str = start_date.strftime('%b %d')  # e.g., "Dec 05"
+                            end_str = end_date.strftime('%b %d')      # e.g., "Dec 07"
+                            content = f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days ({start_str} - {end_str})"
+                        except Exception as date_err:
+                            logger.warning(f"[TRIGGER PROCESS] Could not format dates: {date_err}")
+                            content = f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days"
+                    else:
+                        content = f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days"
+                    
                     # Create one alert for this parameter
                     alert = create_alert_with_email(
                         user_id=trigger.watcher_id,
                         title=f"Wellness Alert for {watched_user.username}",
-                        content=f"{watched_user.username}'s {param_name} has been at concerning levels for {consecutive_count} consecutive days",
+                        content=content,
                         alert_type='trigger',
                         source_user_id=watched_user.id,
                         alert_category='trigger'
                     )
                     
                     if alert:
+                        alerts_created += 1
                         logger.info(f"[TRIGGER PROCESS] ✅ Created alert ID {alert.id} for {watched_user.username}/{param_name} -> watcher {trigger.watcher_id}")
                         
                         # Check email status
@@ -7042,6 +7091,7 @@ def process_parameter_triggers(user_id, params):
                             watcher_settings = NotificationSettings.query.filter_by(user_id=trigger.watcher_id).first()
                             watcher_user = User.query.get(trigger.watcher_id)
                             if watcher_settings and watcher_settings.email_on_alert:
+                                alerts_emailed += 1
                                 logger.info(f"[TRIGGER PROCESS] ✅ Email sent to {watcher_user.email if watcher_user else 'unknown'}")
                             else:
                                 logger.info(f"[TRIGGER PROCESS] ⚠️ No email - email_on_alert={'enabled' if watcher_settings and watcher_settings.email_on_alert else 'disabled'}")
@@ -7061,7 +7111,7 @@ def process_parameter_triggers(user_id, params):
 
         logger.info(f"[TRIGGER PROCESS] ========================================")
         logger.info(f"[TRIGGER PROCESS] process_parameter_triggers completed for user {user_id}")
-        logger.info(f"[TRIGGER PROCESS] Processed {len(triggers)} triggers")
+        logger.info(f"[TRIGGER PROCESS] Summary: triggers={len(triggers)}, alerts_created={alerts_created}, duplicates={alerts_skipped_duplicate}, privacy_skipped={alerts_skipped_privacy}, emailed={alerts_emailed}")
         logger.info(f"[TRIGGER PROCESS] ========================================")
 
     except Exception as e:
