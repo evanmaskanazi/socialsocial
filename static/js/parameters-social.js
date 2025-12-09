@@ -1,3 +1,7 @@
+// PJ816 Version 1800 - CRITICAL FIX: Trigger emails now sent without watcher login
+// ROOT CAUSE: check_parameter_triggers() required login and only ran on polling
+// FIX: Added background trigger scheduler that runs every 5 minutes
+// Emails are sent automatically when trigger conditions are met
 // PJ815 Version 1705 - CRITICAL FIX: Reverted broken v1704 trigger deduplication
 // ROOT CAUSE: v1704 merged triggers upfront, but triggers use OLD schema (parameter_name)
 // Merging with bool(None)=False caused all alert flags to be False
