@@ -1,6 +1,12 @@
+// PJ806 FIX APPLIED: Fixed duplicate email spam from trigger alerts
 // PJ706 FIX APPLIED: Default privacy changed from 'public' to 'private' for new accounts
 // Social Parameters Save/Load System with i18n support and numeric ratings
 // COMPLETE FIXED VERSION - Includes language selector and all fixes
+// 
+// PJ806 Changes:
+// - Reduced checkParameterAlerts polling from 60 seconds to 5 minutes
+// - The /api/parameters/check-triggers endpoint is now READ-ONLY
+// - Alerts are created ONLY when parameters are saved (not when polling)
 
 // Translation function helper
 const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
@@ -2929,8 +2935,12 @@ if (!document.getElementById('parameterAlertsStyles')) {
     document.head.appendChild(style);
 }
 
-// Check for alerts periodically (every minute)
-setInterval(checkParameterAlerts, 60000);
+// PJ806 FIX: The /api/parameters/check-triggers endpoint is now READ-ONLY.
+// It no longer creates alerts or sends emails - that is handled by process_parameter_triggers() 
+// on the backend when parameters are saved.
+// This polling just displays computed trigger patterns in the UI.
+// Increased interval to 5 minutes (300000ms) since this is now just for display purposes.
+setInterval(checkParameterAlerts, 300000);  // Changed from 60000 (1 min) to 300000 (5 min)
 
 // Check on page load
 document.addEventListener('DOMContentLoaded', function() {
