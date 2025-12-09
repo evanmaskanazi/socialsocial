@@ -98,6 +98,13 @@ PJ811 Changes (version 1700):
   - [TRIGGER CHECK] - Polling endpoint activity
   - [TRIGGER CREATE] - Alert creation with email
   - [TRIGGER DUPLICATE] - When duplicate detection prevents creation
+
+PJ812 Changes (version 1701):
+- FIX: Date formatting in trigger alerts now shows nice dates (e.g., "Dec 05 - Dec 07")
+  instead of ISO format dates (e.g., "2025-12-05")
+- FIX: Both new schema (with dates array) and old schema (with end_date) now format nicely
+- FIX: Frontend now calls checkParameterAlerts() after login completes
+- This ensures triggers are checked immediately when user logs in, not just on page load
   - [TRIGGER EMAIL] - Email sending attempts and results
 - FIX 3: Emails now sent even when user is not logged in
   - Background trigger processing sends emails to watchers
@@ -9244,9 +9251,33 @@ def check_parameter_triggers():
                 watched_user = User.query.filter_by(username=watched_username).first()
                 source_user_id = watched_user.id if watched_user else None
                 
-                # Create alert content
+                # Create alert content with nicely formatted dates
                 if alert_data.get('dates') and len(alert_data['dates']) >= 2:
-                    content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days (from {alert_data['dates'][0]} to {alert_data['dates'][-1]})"
+                    try:
+                        # Parse ISO dates and format nicely (e.g., "Dec 5 - Dec 7")
+                        from datetime import datetime as dt
+                        start_date = dt.fromisoformat(alert_data['dates'][0])
+                        end_date = dt.fromisoformat(alert_data['dates'][-1])
+                        start_str = start_date.strftime('%b %d')  # e.g., "Dec 05"
+                        end_str = end_date.strftime('%b %d')      # e.g., "Dec 07"
+                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
+                    except Exception as date_err:
+                        logger.warning(f"[TRIGGER CHECK] Could not parse dates: {date_err}")
+                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days (from {alert_data['dates'][0]} to {alert_data['dates'][-1]})"
+                elif alert_data.get('end_date'):
+                    # Old schema format - has end_date object
+                    try:
+                        end_date = alert_data['end_date']
+                        if hasattr(end_date, 'strftime'):
+                            end_str = end_date.strftime('%b %d')
+                            start_date = end_date - timedelta(days=consecutive_days - 1)
+                            start_str = start_date.strftime('%b %d')
+                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
+                        else:
+                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
+                    except Exception as date_err:
+                        logger.warning(f"[TRIGGER CHECK] Could not format end_date: {date_err}")
+                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
                 else:
                     content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
                 
