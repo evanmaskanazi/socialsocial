@@ -7044,28 +7044,46 @@ def process_parameter_triggers(user_id, params):
             
             logger.info(f"[TRIGGER PROCESS] Processing watcher {watcher_id}: new_schema={has_new_schema}, old_schema={has_old_schema}")
             
+            # PJ817: Helper to safely convert values to numbers (fixes TypeError with string comparisons)
+            def to_number(val):
+                """Convert value to number, handling string/int/float/None cases"""
+                if val is None:
+                    return None
+                if isinstance(val, (int, float)):
+                    return float(val)
+                if isinstance(val, str):
+                    if val.lower() in ['private', 'hidden', 'none', '']:
+                        return None
+                    try:
+                        return float(val)
+                    except ValueError:
+                        return None
+                return None
+            
             # Build list of parameters to check
             param_checks = []
             
             if has_new_schema:
+                # PJ817: Fixed lambdas to use to_number() to handle string values from database
                 if trigger.mood_alert:
-                    param_checks.append(('mood', 'mood', 'mood_privacy', lambda x: x <= 2))
+                    param_checks.append(('mood', 'mood', 'mood_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2))
                 if trigger.energy_alert:
-                    param_checks.append(('energy', 'energy', 'energy_privacy', lambda x: x <= 2))
+                    param_checks.append(('energy', 'energy', 'energy_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2))
                 if trigger.sleep_alert:
-                    param_checks.append(('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: x <= 2))
+                    param_checks.append(('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2))
                 if trigger.physical_alert:
-                    param_checks.append(('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: x <= 2))
+                    param_checks.append(('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2))
                 if trigger.anxiety_alert:
-                    param_checks.append(('anxiety', 'anxiety', 'anxiety_privacy', lambda x: x >= 3))
+                    param_checks.append(('anxiety', 'anxiety', 'anxiety_privacy', lambda x: to_number(x) is not None and to_number(x) >= 3))
             elif has_old_schema:
                 # Old schema - single parameter from trigger.parameter_name
+                # PJ817: Fixed lambdas to use to_number() to handle string values from database
                 param_mapping = {
-                    'mood': ('mood', 'mood', 'mood_privacy', lambda x: x <= 2),
-                    'energy': ('energy', 'energy', 'energy_privacy', lambda x: x <= 2),
-                    'sleep_quality': ('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: x <= 2),
-                    'physical_activity': ('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: x <= 2),
-                    'anxiety': ('anxiety', 'anxiety', 'anxiety_privacy', lambda x: x >= 3)
+                    'mood': ('mood', 'mood', 'mood_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2),
+                    'energy': ('energy', 'energy', 'energy_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2),
+                    'sleep_quality': ('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2),
+                    'physical_activity': ('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2),
+                    'anxiety': ('anxiety', 'anxiety', 'anxiety_privacy', lambda x: to_number(x) is not None and to_number(x) >= 3)
                 }
                 if trigger.parameter_name in param_mapping:
                     param_checks.append(param_mapping[trigger.parameter_name])
@@ -11197,16 +11215,17 @@ def run_background_trigger_check_for_watcher(watcher_id):
                     
                     return found_patterns
 
+                # PJ817: Fixed lambdas to use to_number() to handle string values from database
                 if trigger.mood_alert:
-                    alerts.extend(check_consecutive_pattern('mood', 'mood_privacy', lambda val: val <= 2))
+                    alerts.extend(check_consecutive_pattern('mood', 'mood_privacy', lambda val: to_number(val) is not None and to_number(val) <= 2))
                 if trigger.energy_alert:
-                    alerts.extend(check_consecutive_pattern('energy', 'energy_privacy', lambda val: val <= 2))
+                    alerts.extend(check_consecutive_pattern('energy', 'energy_privacy', lambda val: to_number(val) is not None and to_number(val) <= 2))
                 if trigger.sleep_alert:
-                    alerts.extend(check_consecutive_pattern('sleep_quality', 'sleep_quality_privacy', lambda val: val <= 2))
+                    alerts.extend(check_consecutive_pattern('sleep_quality', 'sleep_quality_privacy', lambda val: to_number(val) is not None and to_number(val) <= 2))
                 if trigger.physical_alert:
-                    alerts.extend(check_consecutive_pattern('physical_activity', 'physical_activity_privacy', lambda val: val <= 2))
+                    alerts.extend(check_consecutive_pattern('physical_activity', 'physical_activity_privacy', lambda val: to_number(val) is not None and to_number(val) <= 2))
                 if trigger.anxiety_alert:
-                    alerts.extend(check_consecutive_pattern('anxiety', 'anxiety_privacy', lambda val: val >= 3))
+                    alerts.extend(check_consecutive_pattern('anxiety', 'anxiety_privacy', lambda val: to_number(val) is not None and to_number(val) >= 3))
 
             # OLD SCHEMA processing
             elif has_old_schema:
@@ -11352,14 +11371,21 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 consecutive_days = alert_data.get('consecutive_days', 0)
                 
                 date_pattern = ""
-                if alert_data.get('dates') and len(alert_data['dates']) >= 2:
+                # PJ817: Generate date pattern for ALL streaks, including single-day
+                # This ensures duplicate detection works properly
+                if alert_data.get('dates') and len(alert_data['dates']) >= 1:
                     try:
                         from datetime import datetime as dt
                         start_date = dt.fromisoformat(alert_data['dates'][0])
                         end_date = dt.fromisoformat(alert_data['dates'][-1])
                         start_str = start_date.strftime('%b %d')
                         end_str = end_date.strftime('%b %d')
-                        date_pattern = f"({start_str} - {end_str})"
+                        if len(alert_data['dates']) == 1:
+                            # Single day - use format like "(Dec 10)"
+                            date_pattern = f"({start_str})"
+                        else:
+                            # Multi-day - use format like "(Dec 07 - Dec 09)"
+                            date_pattern = f"({start_str} - {end_str})"
                     except:
                         pass
                 
@@ -11388,14 +11414,18 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 watched_user = User.query.filter_by(username=watched_username).first()
                 source_user_id = watched_user.id if watched_user else None
                 
-                if alert_data.get('dates') and len(alert_data['dates']) >= 2:
+                # PJ817: Generate content with date pattern for ALL streak lengths
+                if alert_data.get('dates') and len(alert_data['dates']) >= 1:
                     try:
                         from datetime import datetime as dt
                         start_date = dt.fromisoformat(alert_data['dates'][0])
                         end_date = dt.fromisoformat(alert_data['dates'][-1])
                         start_str = start_date.strftime('%b %d')
                         end_str = end_date.strftime('%b %d')
-                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
+                        if len(alert_data['dates']) == 1:
+                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str})"
+                        else:
+                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
                     except:
                         content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
                 else:
