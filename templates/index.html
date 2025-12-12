@@ -2706,7 +2706,11 @@
     <!-- FIX: Intercept and protect language selector changes -->
     <script>
     (function() {
-        console.log('[INTERCEPTOR] Language interceptor script loading...');
+        console.log('[INTERCEPTOR] Language interceptor script loading... v4005');
+        
+        // Track if user has ACTUALLY clicked/interacted with the selector
+        window._userClickedLanguageSelector = false;
+        window._lastLanguageSelectorInteraction = 0;
         
         // Wait for DOM to be ready
         document.addEventListener('DOMContentLoaded', function() {
@@ -2721,38 +2725,87 @@
             console.log('[INTERCEPTOR] Found language selector, options:', 
                 Array.from(langSelector.options).map(o => o.value).join(', '));
             
+            // Track REAL user interaction - mousedown/focus events confirm user intent
+            langSelector.addEventListener('mousedown', function() {
+                console.log('[INTERCEPTOR] User mousedown on selector');
+                window._userClickedLanguageSelector = true;
+                window._lastLanguageSelectorInteraction = Date.now();
+            });
+            
+            langSelector.addEventListener('focus', function() {
+                console.log('[INTERCEPTOR] Selector focused');
+                window._lastLanguageSelectorInteraction = Date.now();
+            });
+            
+            langSelector.addEventListener('keydown', function() {
+                window._userClickedLanguageSelector = true;
+                window._lastLanguageSelectorInteraction = Date.now();
+            });
+            
             // Add a capturing phase listener to intercept changes FIRST
             langSelector.addEventListener('change', function(e) {
                 console.log('[INTERCEPTOR] ========================================');
                 console.log('[INTERCEPTOR] CHANGE EVENT DETECTED');
                 console.log('[INTERCEPTOR] Timestamp:', new Date().toISOString());
-                console.log('[INTERCEPTOR] Event type:', e.type);
                 console.log('[INTERCEPTOR] Event isTrusted:', e.isTrusted);
                 console.log('[INTERCEPTOR] _updatingSelectorProgrammatically:', window._updatingSelectorProgrammatically);
+                console.log('[INTERCEPTOR] _userClickedLanguageSelector:', window._userClickedLanguageSelector);
+                console.log('[INTERCEPTOR] Time since last interaction:', Date.now() - window._lastLanguageSelectorInteraction, 'ms');
                 console.log('[INTERCEPTOR] New value:', this.value);
                 console.log('[INTERCEPTOR] localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
                 
                 // If being updated programmatically, allow it
                 if (window._updatingSelectorProgrammatically) {
                     console.log('[INTERCEPTOR] Programmatic update, allowing through');
+                    console.log('[INTERCEPTOR] ========================================');
                     return;
                 }
                 
                 const newValue = this.value;
                 const storedLang = localStorage.getItem('selectedLanguage');
+                const timeSinceInteraction = Date.now() - window._lastLanguageSelectorInteraction;
+                
+                // FIX: BLOCK changes that don't come from real user interaction
+                // A real user interaction means:
+                // 1. User clicked/focused/keyed on the selector recently (within 10 seconds)
+                // 2. The _userClickedLanguageSelector flag is set
+                
+                const isRealUserInteraction = window._userClickedLanguageSelector && timeSinceInteraction < 10000;
+                
+                // If the value is changing to something DIFFERENT from what's stored,
+                // and it's NOT a confirmed user interaction, BLOCK it
+                if (newValue !== storedLang && !isRealUserInteraction) {
+                    console.error('[INTERCEPTOR] BLOCKING SUSPICIOUS CHANGE!');
+                    console.error('[INTERCEPTOR]   From:', storedLang, '-> To:', newValue);
+                    console.error('[INTERCEPTOR]   Reason: Not a confirmed user interaction');
+                    console.error('[INTERCEPTOR]   _userClickedLanguageSelector:', window._userClickedLanguageSelector);
+                    console.error('[INTERCEPTOR]   timeSinceInteraction:', timeSinceInteraction, 'ms');
+                    
+                    // BLOCK the event
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    
+                    // Restore to correct value
+                    if (storedLang) {
+                        console.log('[INTERCEPTOR] Restoring to stored language:', storedLang);
+                        window._updatingSelectorProgrammatically = true;
+                        this.value = storedLang;
+                        window._updatingSelectorProgrammatically = false;
+                    }
+                    
+                    console.log('[INTERCEPTOR] ========================================');
+                    return false;
+                }
                 
                 // If selector is empty but we have a stored language, this is a BUG - restore it
                 if (!newValue || newValue === '') {
                     console.error('[INTERCEPTOR] BLOCKING: Empty value detected!');
-                    console.error('[INTERCEPTOR]   Stored language:', storedLang);
-                    console.error('[INTERCEPTOR]   Stack trace:', new Error().stack);
-                    
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
                     
                     if (storedLang) {
-                        console.log('[INTERCEPTOR] Restoring to stored language:', storedLang);
                         window._updatingSelectorProgrammatically = true;
                         this.value = storedLang;
                         window._updatingSelectorProgrammatically = false;
@@ -2761,8 +2814,12 @@
                     return false;
                 }
                 
-                // Log the change for debugging
-                console.log('[INTERCEPTOR] Valid change:', storedLang, '->', newValue);
+                // This is a valid user-initiated change
+                console.log('[INTERCEPTOR] VALID USER CHANGE:', storedLang, '->', newValue);
+                
+                // Reset the flag after processing a valid change
+                window._userClickedLanguageSelector = false;
+                
                 console.log('[INTERCEPTOR] ========================================');
             }, true); // Use capturing phase to intercept before other handlers
             
@@ -2776,7 +2833,7 @@
             });
             observer.observe(langSelector, { attributes: true });
             
-            console.log('[INTERCEPTOR] Setup complete');
+            console.log('[INTERCEPTOR] Setup complete with user interaction tracking');
         });
     })();
     </script>
@@ -2846,6 +2903,11 @@
     (function() {
         console.log('[PRE-FETCH] ========================================');
         console.log('[PRE-FETCH] Pre-fetching backend language preference...');
+        
+        // Initialize user interaction tracking flags EARLY
+        window._userClickedLanguageSelector = false;
+        window._lastLanguageSelectorInteraction = 0;
+        window._updatingSelectorProgrammatically = false;
         
         // Use synchronous XHR to fetch backend language BEFORE i18n.js initializes
         // This is necessary because we need to set localStorage before i18n.js reads it

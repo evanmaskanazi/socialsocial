@@ -128,6 +128,11 @@ Storage.prototype.setItem = function(key, value) {
     <script>
     (function() {
         console.log('[PRE-FETCH] Pre-fetching backend language...');
+        
+        // Initialize user interaction tracking flags
+        window._userClickedLanguageSelector = false;
+        window._lastLanguageSelectorInteraction = 0;
+        
         try {
             const xhr = new XMLHttpRequest();
             xhr.open('GET', '/api/user/profile', false);
