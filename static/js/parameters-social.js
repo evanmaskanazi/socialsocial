@@ -1053,6 +1053,10 @@ async function setupLanguageSelector() {
         // Send to server to save preference - ONLY for user-initiated changes
         console.log('[PS CHANGE DEBUG] POSTing to /api/user/language:', newLang);
         if (window.fetch) {
+            // CRITICAL: Set flag to allow this POST through the interceptor
+            window._allowLanguagePost = true;
+            console.log('[PS CHANGE DEBUG] Set _allowLanguagePost = true');
+            
             fetch('/api/user/language', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
