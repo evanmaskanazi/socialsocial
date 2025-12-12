@@ -791,6 +791,8 @@ const translations = {
                 'common.saturday': 'Sat',
                 'common.sunday': 'Sun',
                 'common.today': 'Today',
+                'menu.more': 'More',
+'menu.social': 'Social',
 
 
         // Error messages
@@ -1151,6 +1153,8 @@ const translations = {
 'invite.suggested': 'אנשים מומלצים להזמנה',
 'invite.suggested_description': 'מבוסס על המיקום והקשרים שלך',
 'invite.send_request': 'שלח בקשה',
+'menu.more': 'עוד',
+'menu.social': 'חברתי',
 
     // About page
     'about.title': 'אודות TheraSocial',
@@ -1815,6 +1819,8 @@ const translations = {
         'triggers.physical': 'تنبيه النشاط البدني',
         'triggers.anxiety': 'تنبيه القلق',
         'triggers.set': 'تعيين تنبيهات التحذير',
+        'menu.more': 'المزيد',
+'menu.social': 'اجتماعي',
 
 'auth.username_placeholder': 'اختر اسم مستخدم',
 'about.team_title': 'فريقنا وقصتنا',
@@ -2643,6 +2649,8 @@ const translations = {
 'progress.avg_energy': 'Средний уровень энергии:',
 'progress.avg_sleep': 'Среднее качество сна:',
 'progress.avg_activity': 'Средний уровень активности:',
+'menu.more': 'Ещё',
+'menu.social': 'Социальное',
 
 // Circle labels (simplified)
 'circles.class_b': 'Близкие друзья',
