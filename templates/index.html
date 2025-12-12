@@ -2781,6 +2781,109 @@
     })();
     </script>
     
+    <!-- CRITICAL FIX: Intercept fetch to block unwanted language POSTs from i18n.js -->
+    <!-- This MUST be before i18n.js loads -->
+    <script>
+    (function() {
+        console.log('[FETCH INTERCEPTOR] Installing fetch interceptor for language API...');
+        
+        // Store the original fetch
+        const originalFetch = window.fetch;
+        
+        // Flag to allow language posts (set by user-initiated changes only)
+        window._allowLanguagePost = false;
+        window._languagePostBlockedCount = 0;
+        
+        // Override fetch
+        window.fetch = function(url, options) {
+            // Check if this is a POST to /api/user/language
+            const urlStr = typeof url === 'string' ? url : url.toString();
+            const isLanguagePost = urlStr.includes('/api/user/language') && 
+                                   options && 
+                                   options.method && 
+                                   options.method.toUpperCase() === 'POST';
+            
+            if (isLanguagePost) {
+                console.log('[FETCH INTERCEPTOR] ========================================');
+                console.log('[FETCH INTERCEPTOR] Detected POST to /api/user/language');
+                console.log('[FETCH INTERCEPTOR] _allowLanguagePost:', window._allowLanguagePost);
+                console.log('[FETCH INTERCEPTOR] Body:', options.body);
+                
+                // If not explicitly allowed, BLOCK the request
+                if (!window._allowLanguagePost) {
+                    window._languagePostBlockedCount++;
+                    console.warn('[FETCH INTERCEPTOR] BLOCKED! Unwanted language POST #' + window._languagePostBlockedCount);
+                    console.warn('[FETCH INTERCEPTOR] This is likely from i18n.js auto-sync');
+                    console.log('[FETCH INTERCEPTOR] ========================================');
+                    
+                    // Return a fake successful response to prevent errors
+                    return Promise.resolve(new Response(JSON.stringify({
+                        success: true,
+                        message: 'Blocked by interceptor - language already set correctly',
+                        blocked: true
+                    }), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' }
+                    }));
+                }
+                
+                // Reset the flag after allowing one POST
+                window._allowLanguagePost = false;
+                console.log('[FETCH INTERCEPTOR] ALLOWED - User-initiated language change');
+                console.log('[FETCH INTERCEPTOR] ========================================');
+            }
+            
+            // Call original fetch
+            return originalFetch.apply(this, arguments);
+        };
+        
+        console.log('[FETCH INTERCEPTOR] Fetch interceptor installed');
+    })();
+    </script>
+    
+    <!-- CRITICAL FIX: Pre-fetch backend language and set localStorage BEFORE i18n.js loads -->
+    <script>
+    (function() {
+        console.log('[PRE-FETCH] ========================================');
+        console.log('[PRE-FETCH] Pre-fetching backend language preference...');
+        
+        // Use synchronous XHR to fetch backend language BEFORE i18n.js initializes
+        // This is necessary because we need to set localStorage before i18n.js reads it
+        try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/user/profile', false); // Synchronous!
+            xhr.withCredentials = true;
+            xhr.send();
+            
+            if (xhr.status === 200) {
+                const profile = JSON.parse(xhr.responseText);
+                const backendLang = profile.preferred_language;
+                
+                console.log('[PRE-FETCH] Backend language:', backendLang);
+                console.log('[PRE-FETCH] Current localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+                
+                if (backendLang) {
+                    // Set localStorage to match backend BEFORE i18n.js loads
+                    localStorage.setItem('selectedLanguage', backendLang);
+                    localStorage.setItem('userLanguage', backendLang);
+                    console.log('[PRE-FETCH] SUCCESS: localStorage updated to backend value:', backendLang);
+                } else {
+                    console.log('[PRE-FETCH] No backend language set, keeping localStorage');
+                }
+            } else if (xhr.status === 401) {
+                console.log('[PRE-FETCH] Not authenticated yet - will sync after login');
+            } else {
+                console.warn('[PRE-FETCH] Unexpected status:', xhr.status);
+            }
+        } catch (e) {
+            console.warn('[PRE-FETCH] Error pre-fetching language:', e.message);
+            // Don't block page load on error
+        }
+        
+        console.log('[PRE-FETCH] ========================================');
+    })();
+    </script>
+    
     <script src="/static/js/i18n.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>

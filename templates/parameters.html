@@ -87,6 +87,69 @@ Storage.prototype.setItem = function(key, value) {
 };
 </script>
 
+    <!-- CRITICAL FIX: Intercept fetch to block unwanted language POSTs from i18n.js -->
+    <script>
+    (function() {
+        console.log('[FETCH INTERCEPTOR] Installing fetch interceptor for language API...');
+        
+        const originalFetch = window.fetch;
+        window._allowLanguagePost = false;
+        window._languagePostBlockedCount = 0;
+        
+        window.fetch = function(url, options) {
+            const urlStr = typeof url === 'string' ? url : url.toString();
+            const isLanguagePost = urlStr.includes('/api/user/language') && 
+                                   options && options.method && 
+                                   options.method.toUpperCase() === 'POST';
+            
+            if (isLanguagePost) {
+                console.log('[FETCH INTERCEPTOR] Detected POST to /api/user/language');
+                console.log('[FETCH INTERCEPTOR] _allowLanguagePost:', window._allowLanguagePost);
+                
+                if (!window._allowLanguagePost) {
+                    window._languagePostBlockedCount++;
+                    console.warn('[FETCH INTERCEPTOR] BLOCKED unwanted language POST #' + window._languagePostBlockedCount);
+                    return Promise.resolve(new Response(JSON.stringify({
+                        success: true, message: 'Blocked by interceptor', blocked: true
+                    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+                }
+                
+                window._allowLanguagePost = false;
+                console.log('[FETCH INTERCEPTOR] ALLOWED user-initiated language change');
+            }
+            return originalFetch.apply(this, arguments);
+        };
+        
+        console.log('[FETCH INTERCEPTOR] Installed');
+    })();
+    </script>
+    
+    <!-- CRITICAL FIX: Pre-fetch backend language before i18n.js loads -->
+    <script>
+    (function() {
+        console.log('[PRE-FETCH] Pre-fetching backend language...');
+        try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/user/profile', false);
+            xhr.withCredentials = true;
+            xhr.send();
+            
+            if (xhr.status === 200) {
+                const profile = JSON.parse(xhr.responseText);
+                if (profile.preferred_language) {
+                    localStorage.setItem('selectedLanguage', profile.preferred_language);
+                    localStorage.setItem('userLanguage', profile.preferred_language);
+                    console.log('[PRE-FETCH] Set localStorage to backend value:', profile.preferred_language);
+                }
+            } else {
+                console.log('[PRE-FETCH] Status:', xhr.status, '- skipping');
+            }
+        } catch (e) {
+            console.warn('[PRE-FETCH] Error:', e.message);
+        }
+    })();
+    </script>
+
     <!-- Load scripts -->
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/parameters-social.js"></script>
