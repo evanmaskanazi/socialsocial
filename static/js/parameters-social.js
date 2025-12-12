@@ -977,7 +977,23 @@ async function setupLanguageSelector() {
 
     // Handle language change
     selector.addEventListener('change', function() {
+        // FIX: Skip if being updated programmatically
+        if (window._updatingSelectorProgrammatically) {
+            console.log('[Parameters-Social] Programmatic update, skipping change handler');
+            return;
+        }
+        
         const newLang = this.value;
+        
+        // FIX: Validate the new language - if empty, restore from localStorage
+        if (!newLang || newLang === '') {
+            const storedLang = localStorage.getItem('selectedLanguage') || 'en';
+            console.log('[Parameters-Social] Empty language detected, restoring:', storedLang);
+            window._updatingSelectorProgrammatically = true;
+            this.value = storedLang;
+            window._updatingSelectorProgrammatically = false;
+            return;
+        }
 
         // Save to localStorage
         localStorage.setItem('selectedLanguage', newLang);
