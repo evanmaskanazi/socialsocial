@@ -7,6 +7,7 @@
 // Merging with bool(None)=False caused all alert flags to be False
 // FIX: Process each trigger row individually, deduplicate RESULTS not inputs
 // PJ813 Version 1703 - Fixed: Each date range creates separate alert, all patterns found
+// PJ812 Version 1706 - Fixed language selector resetting by blocking non-user-initiated changes
 // PJ812 Version 1702 - Trigger emails work without login, fixed double messages, more alerts visible
 // PJ812 Version 1701 - Fixed trigger check to verify login first, improved date formatting
 // PJ811 Version 1700 - Fixed trigger alerts vanishing, alerts now persist in database
@@ -999,12 +1000,20 @@ async function setupLanguageSelector() {
         }
     }, 10);
 
+    // Track user interaction with the selector for this file too
+    selector.addEventListener('mousedown', function() {
+        console.log('[PS LANG] User mousedown on selector');
+        window._userClickedLanguageSelector = true;
+        window._lastLanguageSelectorInteraction = Date.now();
+    });
+
     // Handle language change - only fires for USER-INITIATED changes
     selector.addEventListener('change', function() {
         console.log('[PS CHANGE DEBUG] ========================================');
         console.log('[PS CHANGE DEBUG] CHANGE EVENT FIRED');
         console.log('[PS CHANGE DEBUG] Timestamp:', new Date().toISOString());
         console.log('[PS CHANGE DEBUG] _updatingSelectorProgrammatically:', window._updatingSelectorProgrammatically);
+        console.log('[PS CHANGE DEBUG] _userClickedLanguageSelector:', window._userClickedLanguageSelector);
         console.log('[PS CHANGE DEBUG] this.value:', this.value);
         
         // FIX: Skip if being updated programmatically
@@ -1015,14 +1024,32 @@ async function setupLanguageSelector() {
         }
         
         const newLang = this.value;
+        const storedLang = localStorage.getItem('selectedLanguage');
+        const timeSinceInteraction = Date.now() - (window._lastLanguageSelectorInteraction || 0);
+        
         console.log('[PS CHANGE DEBUG] New language:', newLang);
+        console.log('[PS CHANGE DEBUG] Stored language:', storedLang);
+        console.log('[PS CHANGE DEBUG] Time since interaction:', timeSinceInteraction, 'ms');
         
         // FIX: Validate the new language - if empty, restore from localStorage
         if (!newLang || newLang === '') {
-            const storedLang = localStorage.getItem('selectedLanguage') || 'en';
-            console.error('[PS CHANGE DEBUG] EMPTY LANGUAGE - restoring to:', storedLang);
+            console.error('[PS CHANGE DEBUG] EMPTY LANGUAGE - restoring to:', storedLang || 'en');
             window._updatingSelectorProgrammatically = true;
-            this.value = storedLang;
+            this.value = storedLang || 'en';
+            window._updatingSelectorProgrammatically = false;
+            console.log('[PS CHANGE DEBUG] ========================================');
+            return;
+        }
+
+        // FIX: Double-check that this is a real user interaction
+        // If not, skip the POST (interceptor should have handled it, but double-check)
+        const isRealUserInteraction = window._userClickedLanguageSelector && timeSinceInteraction < 10000;
+        if (!isRealUserInteraction && newLang !== storedLang) {
+            console.error('[PS CHANGE DEBUG] SUSPICIOUS CHANGE BLOCKED!');
+            console.error('[PS CHANGE DEBUG]   Not a confirmed user interaction');
+            console.error('[PS CHANGE DEBUG]   Restoring to:', storedLang);
+            window._updatingSelectorProgrammatically = true;
+            this.value = storedLang || 'en';
             window._updatingSelectorProgrammatically = false;
             console.log('[PS CHANGE DEBUG] ========================================');
             return;
@@ -1030,7 +1057,7 @@ async function setupLanguageSelector() {
 
         console.log('[PS CHANGE DEBUG] Valid user-initiated change to:', newLang);
         
-        // Save to localStorage
+        // Save to localStorage BEFORE any other actions
         localStorage.setItem('selectedLanguage', newLang);
         localStorage.setItem('userLanguage', newLang);
 
@@ -1068,6 +1095,10 @@ async function setupLanguageSelector() {
                 console.error('[PS CHANGE DEBUG] POST error:', err);
             });
         }
+        
+        // Reset the user interaction flag
+        window._userClickedLanguageSelector = false;
+        
         console.log('[PS CHANGE DEBUG] ========================================');
     });
 
