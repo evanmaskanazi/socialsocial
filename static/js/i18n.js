@@ -3424,8 +3424,10 @@ function applyLanguage(lang) {
     });
 
    // Update language selector if it exists
+    // PJ709 FIX: Only set selector value if lang is defined and valid
+    // Previously, calling applyLanguage() without a parameter would set selector to undefined (blank)
     const langSelector = document.getElementById('languageSelector');
-    if (langSelector) {
+    if (langSelector && lang && typeof lang === 'string') {
         langSelector.value = lang;
     }
 
