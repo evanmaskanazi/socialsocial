@@ -3481,9 +3481,16 @@ def update_user_language():
     Update user's language preference
     Works both for authenticated and unauthenticated users
     """
+    logger.info("[LANG API DEBUG] ========================================")
+    logger.info("[LANG API DEBUG] POST /api/user/language called")
+    
     try:
         data = request.get_json()
+        logger.info(f"[LANG API DEBUG] Request data: {data}")
+        logger.info(f"[LANG API DEBUG] User ID in session: {session.get('user_id')}")
+        
         if not data:
+            logger.warning("[LANG API DEBUG] No data provided in request")
             return jsonify({
                 'success': False,
                 'message': 'No data provided'
@@ -3491,10 +3498,14 @@ def update_user_language():
 
         # FIXED: Accept both 'language' and 'preferred_language' for compatibility
         language = data.get('preferred_language') or data.get('language', 'en')
+        logger.info(f"[LANG API DEBUG] Language from request: {language}")
+        logger.info(f"[LANG API DEBUG]   preferred_language field: {data.get('preferred_language')}")
+        logger.info(f"[LANG API DEBUG]   language field: {data.get('language')}")
 
         # Validate language code
         valid_languages = ['en', 'he', 'ar', 'ru']
         if language not in valid_languages:
+            logger.warning(f"[LANG API DEBUG] Invalid language code: {language}")
             return jsonify({
                 'success': False,
                 'message': 'Invalid language code'
@@ -3503,21 +3514,28 @@ def update_user_language():
         # If user is authenticated, save to database
         if 'user_id' in session:
             user_id = session['user_id']
+            logger.info(f"[LANG API DEBUG] User {user_id} is authenticated")
 
             try:
                 user = db.session.get(User, user_id)
                 if user:
+                    old_language = user.preferred_language
+                    logger.info(f"[LANG API DEBUG] Current language in DB: {old_language}")
+                    logger.info(f"[LANG API DEBUG] New language to set: {language}")
+                    
                     # FIXED: Use correct column name 'preferred_language'
                     user.preferred_language = language
                     db.session.commit()
 
-                    logger.info(f"Updated language for user {user_id} to {language}")
+                    logger.info(f"[LANG API DEBUG] SUCCESS: Updated language for user {user_id}: {old_language} -> {language}")
+                    logger.info("[LANG API DEBUG] ========================================")
                     return jsonify({
                         'success': True,
                         'message': 'Language preference saved',
                         'language': language  # Return the saved language
                     }), 200
                 else:
+                    logger.error(f"[LANG API DEBUG] User {user_id} not found in database")
                     return jsonify({
                         'success': False,
                         'message': 'User not found'
@@ -3525,7 +3543,7 @@ def update_user_language():
 
             except Exception as e:
                 db.session.rollback()
-                logger.error(f"Error updating language preference: {e}")
+                logger.error(f"[LANG API DEBUG] Error updating language preference: {e}")
                 return jsonify({
                     'success': False,
                     'message': 'Database error'
