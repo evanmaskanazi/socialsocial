@@ -4052,8 +4052,9 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
             return;
         }
         
-        // PJ4006: Skip invite handler - it has its own onclick="showView('invite')" handler
-        // This prevents double-calling syncLanguageSelector causing the language dropdown to go blank
+        // PJ4007: Skip invite handler - it has its own onclick="showView('invite')" handler
+        // This prevents the generic handler from running after showView() already completed
+        // The fix ensures only showView()'s syncLanguageSelector() call happens, not a duplicate
         if (item.dataset.view === 'invite') {
             console.log('[DEBUG] Skipping generic handler for invite item');
             return;
@@ -4427,10 +4428,8 @@ function showView(viewName) {
 function loadInviteView() {
     console.log('Loading invite view...');
     
-    // FIX: Sync language selector when loading invite view to prevent blank dropdown
-    if (typeof syncLanguageSelector === 'function') {
-        syncLanguageSelector();
-    }
+    // PJ4007: REMOVED redundant syncLanguageSelector call - showView() already calls it
+    // Having two calls was unnecessary since the generic sidebar handler is now skipped for invite
 
     fetch('/api/auth/session', {
         credentials: 'include'
