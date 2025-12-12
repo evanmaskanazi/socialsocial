@@ -1,8 +1,20 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 816 (Version 1800)
+Complete app.py for Social Social Platform - Phase 5001 (Version 1900)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ5001 Changes (v1900):
+- CRITICAL FIX: Mobile Alerts View (frontend-only changes in index5001.html)
+- ROOT CAUSE: .right-sidebar was hidden on mobile (display:none in @media max-width:768px)
+- This caused ALL alerts to be invisible on iPhone and similar small screens
+- FIX 1: Added dedicated Alerts tab to mobile navigation bar
+- FIX 2: Created alertsView section with mobile-optimized layout
+- FIX 3: loadAlerts() now populates both desktop and mobile alert lists
+- FIX 4: dismissAlert() syncs removal between desktop and mobile lists
+- FIX 5: Added mobile alerts badge showing unread count
+- FIX 6: Added syncMobileNotificationSettings() for toggle sync
+- No backend changes required - all fixes are in the frontend HTML/JS
 
 PJ816 Changes (v1800):
 - CRITICAL FIX: Trigger alert emails now sent WITHOUT requiring watcher login
