@@ -1,5 +1,13 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ5001 v1900 -->
+<!-- TheraSocial Version PJ5002 v2000 -->
+<!-- PJ5002: Mobile Navigation Consolidation - 10 tabs reduced to 5 -->
+<!-- ROOT CAUSE: Too many tabs (10) on mobile made navigation confusing and touch targets too small -->
+<!-- FIX 1: Consolidated into 5 primary tabs: Home, Feed, Diary, Messages, More -->
+<!-- FIX 2: Fixed Feed icon from 🏠 to 📝 (journal/post icon) -->
+<!-- FIX 3: Added proper Home tab with 🏠 icon for dashboard/progress page -->
+<!-- FIX 4: Created "More" slide-up menu containing: Profile, Circles, Social section (Following/Followers/Invite), Alerts -->
+<!-- FIX 5: Alert badge now shows on both main nav "More" button and inside More menu on Alerts item -->
+<!-- FIX 6: More menu follows iOS/Android bottom sheet UX pattern -->
 <!-- PJ5001: CRITICAL FIX - Mobile Alerts View -->
 <!-- ROOT CAUSE: .right-sidebar was hidden on mobile (display:none in @media max-width:768px) -->
 <!-- This caused ALL alerts to be invisible on iPhone and similar small screens -->
@@ -1336,6 +1344,156 @@
         .mobile-nav-item {
             position: relative;
         }
+        
+        /* PJ5002: Mobile More Menu Styles */
+        .mobile-more-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        
+        .mobile-more-menu.hidden {
+            display: none !important;
+        }
+        
+        .mobile-more-menu-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            animation: fadeInBackdrop 0.2s ease;
+        }
+        
+        @keyframes fadeInBackdrop {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .mobile-more-menu-sheet {
+            position: relative;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            max-height: 70vh;
+            overflow-y: auto;
+            animation: slideUpSheet 0.3s ease;
+            padding-bottom: 20px;
+        }
+        
+        @keyframes slideUpSheet {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .mobile-more-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #E5E7EB;
+            position: sticky;
+            top: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+        }
+        
+        .mobile-more-menu-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--dark);
+        }
+        
+        .mobile-more-close-btn {
+            background: var(--light);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+        }
+        
+        .mobile-more-close-btn:hover {
+            background: #E5E7EB;
+        }
+        
+        .mobile-more-menu-list {
+            list-style: none;
+            padding: 10px 0;
+            margin: 0;
+        }
+        
+        .mobile-more-menu-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            position: relative;
+        }
+        
+        .mobile-more-menu-item:hover {
+            background: var(--light);
+        }
+        
+        .mobile-more-menu-item:active {
+            background: #E5E7EB;
+        }
+        
+        .mobile-more-icon {
+            font-size: 20px;
+            margin-right: 15px;
+            width: 28px;
+            text-align: center;
+        }
+        
+        [dir="rtl"] .mobile-more-icon {
+            margin-right: 0;
+            margin-left: 15px;
+        }
+        
+        .mobile-more-label {
+            font-size: 16px;
+            color: var(--dark);
+            flex: 1;
+        }
+        
+        .mobile-more-badge {
+            background: var(--danger);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .mobile-more-menu-divider {
+            height: 1px;
+            background: #E5E7EB;
+            margin: 10px 20px;
+        }
+        
+        .mobile-more-menu-section-header {
+            padding: 10px 20px 5px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
         .hidden {
             display: none !important;
@@ -1980,49 +2138,73 @@
 
     <!-- Dashboard -->
  <div id="dashboard" class="dashboard container">
-    <!-- Mobile Navigation Bar -->
+    <!-- Mobile Navigation Bar - PJ5002: Consolidated 5-tab navigation -->
     <nav class="mobile-nav">
         <ul class="mobile-nav-menu">
-            <li class="mobile-nav-item active" data-view="feed" onclick="showView('feed')">
+            <li class="mobile-nav-item" data-view="home" onclick="showView('home')">
                 <span class="mobile-nav-icon">🏠</span>
+                <span class="mobile-nav-label" data-i18n="menu.home">Home</span>
+            </li>
+            <li class="mobile-nav-item active" data-view="feed" onclick="showView('feed')">
+                <span class="mobile-nav-icon">📝</span>
                 <span class="mobile-nav-label" data-i18n="menu.feed">Feed</span>
             </li>
-            <li class="mobile-nav-item" data-view="profile" onclick="showView('profile')">
-                <span class="mobile-nav-icon">👤</span>
-                <span class="mobile-nav-label" data-i18n="menu.profile">Profile</span>
-            </li>
-          <li class="mobile-nav-item" data-view="circles" onclick="handleCirclesClick(event)">
-                <span class="mobile-nav-icon">⭕</span>
-                <span class="mobile-nav-label" data-i18n="menu.circles">Circles</span>
+            <li class="mobile-nav-item" data-view="tracking" onclick="handleParametersClick(event)">
+                <span class="mobile-nav-icon">📊</span>
+                <span class="mobile-nav-label" data-i18n="menu.diary">Diary</span>
             </li>
             <li class="mobile-nav-item" id="mobileMessagesNav" data-view="messages" onclick="showView('messages')">
                 <span class="mobile-nav-icon">💬</span>
                 <span class="mobile-nav-label" data-i18n="menu.messages">Messages</span>
             </li>
-            <li class="mobile-nav-item" data-view="tracking" onclick="handleParametersClick(event)">
-    <span class="mobile-nav-icon">📊</span>
-    <span class="mobile-nav-label" data-i18n="menu.diary">Parameters</span>
-</li>
-<li class="mobile-nav-item" data-view="following" onclick="showView('following')">
-    <span class="mobile-nav-icon">➕</span>
-    <span class="mobile-nav-label" data-i18n="menu.following">Following</span>
-</li>
-<li class="mobile-nav-item" data-view="followers" onclick="showView('followers')">
-    <span class="mobile-nav-icon">👥</span>
-    <span class="mobile-nav-label" data-i18n="menu.followers">Followers</span>
-</li>
-<li class="mobile-nav-item" data-view="invite" onclick="showView('invite')">
-    <span class="mobile-nav-icon">👋</span>
-    <span class="mobile-nav-label" data-i18n="menu.invite">Invite</span>
-</li>
-<li class="mobile-nav-item" data-view="alerts" onclick="showView('alerts')">
-    <span class="mobile-nav-icon">🔔</span>
-    <span class="mobile-nav-label" data-i18n="alerts.title">Alerts</span>
-    <span class="mobile-alerts-badge" id="mobileAlertsBadge" style="display: none;"></span>
-</li>
-
+            <li class="mobile-nav-item" data-view="more" onclick="toggleMobileMoreMenu()">
+                <span class="mobile-nav-icon">☰</span>
+                <span class="mobile-nav-label" data-i18n="menu.more">More</span>
+                <span class="mobile-alerts-badge" id="mobileAlertsBadge" style="display: none;"></span>
+            </li>
         </ul>
     </nav>
+    
+    <!-- Mobile More Menu Sheet - PJ5002 -->
+    <div id="mobileMoreMenu" class="mobile-more-menu hidden">
+        <div class="mobile-more-menu-backdrop" onclick="closeMobileMoreMenu()"></div>
+        <div class="mobile-more-menu-sheet">
+            <div class="mobile-more-menu-header">
+                <h3 data-i18n="menu.more">More</h3>
+                <button class="mobile-more-close-btn" onclick="closeMobileMoreMenu()">✕</button>
+            </div>
+            <ul class="mobile-more-menu-list">
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('profile')">
+                    <span class="mobile-more-icon">👤</span>
+                    <span class="mobile-more-label" data-i18n="menu.profile">Profile</span>
+                </li>
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('circles')">
+                    <span class="mobile-more-icon">⭕</span>
+                    <span class="mobile-more-label" data-i18n="menu.circles">Circles</span>
+                </li>
+                <li class="mobile-more-menu-divider"></li>
+                <li class="mobile-more-menu-section-header" data-i18n="menu.social">Social</li>
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('following')">
+                    <span class="mobile-more-icon">➕</span>
+                    <span class="mobile-more-label" data-i18n="menu.following">Following</span>
+                </li>
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('followers')">
+                    <span class="mobile-more-icon">👥</span>
+                    <span class="mobile-more-label" data-i18n="menu.followers">Followers</span>
+                </li>
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('invite')">
+                    <span class="mobile-more-icon">👋</span>
+                    <span class="mobile-more-label" data-i18n="menu.invite">Invite</span>
+                </li>
+                <li class="mobile-more-menu-divider"></li>
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('alerts')">
+                    <span class="mobile-more-icon">🔔</span>
+                    <span class="mobile-more-label" data-i18n="alerts.title">Alerts</span>
+                    <span class="mobile-more-badge" id="mobileMoreAlertsBadge" style="display: none;"></span>
+                </li>
+            </ul>
+        </div>
+    </div>
 
     <div class="dashboard-grid">
             <!-- Left Sidebar -->
@@ -4391,6 +4573,56 @@ function handleCirclesClick(event) {
 }
 
 
+// ===============================================
+// PJ5002: MOBILE MORE MENU FUNCTIONS
+// ===============================================
+
+function toggleMobileMoreMenu() {
+    const moreMenu = document.getElementById('mobileMoreMenu');
+    if (moreMenu) {
+        if (moreMenu.classList.contains('hidden')) {
+            moreMenu.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        } else {
+            closeMobileMoreMenu();
+        }
+    }
+}
+
+function closeMobileMoreMenu() {
+    const moreMenu = document.getElementById('mobileMoreMenu');
+    if (moreMenu) {
+        moreMenu.classList.add('hidden');
+        document.body.style.overflow = ''; // Restore scrolling
+    }
+}
+
+function showViewFromMore(viewName) {
+    closeMobileMoreMenu();
+    
+    // Handle circles specially
+    if (viewName === 'circles') {
+        handleCirclesClick(null);
+    } else {
+        showView(viewName);
+    }
+}
+
+// Close More menu when pressing Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeMobileMoreMenu();
+    }
+});
+
+// Make functions globally available
+window.toggleMobileMoreMenu = toggleMobileMoreMenu;
+window.closeMobileMoreMenu = closeMobileMoreMenu;
+window.showViewFromMore = showViewFromMore;
+
+// ===============================================
+// END MOBILE MORE MENU FUNCTIONS
+// ===============================================
 
 
 function showView(viewName) {
@@ -9693,10 +9925,15 @@ async function loadAlerts() {
             if (mobileNoAlertsMsg) {
                 mobileNoAlertsMsg.style.display = 'block';
             }
-            // Hide mobile badge when no alerts
+            // Hide mobile badges when no alerts
             const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
             if (mobileAlertsBadge) {
                 mobileAlertsBadge.style.display = 'none';
+            }
+            // PJ5002: Also hide More menu badge
+            const mobileMoreAlertsBadge = document.getElementById('mobileMoreAlertsBadge');
+            if (mobileMoreAlertsBadge) {
+                mobileMoreAlertsBadge.style.display = 'none';
             }
             return;
         }
@@ -9819,14 +10056,28 @@ async function loadAlerts() {
             console.log(`✅ Rendered ${alertHTML.length} alerts to mobile DOM`);
         }
         
-        // Update mobile alerts badge
+        // Update mobile alerts badge (on main nav and in More menu)
         const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
+        const mobileMoreAlertsBadge = document.getElementById('mobileMoreAlertsBadge');
+        const badgeCount = response.alerts && response.alerts.length > 0 ? response.alerts.length : 0;
+        const badgeText = badgeCount > 99 ? '99+' : badgeCount.toString();
+        
         if (mobileAlertsBadge) {
-            if (response.alerts && response.alerts.length > 0) {
-                mobileAlertsBadge.textContent = response.alerts.length > 99 ? '99+' : response.alerts.length;
+            if (badgeCount > 0) {
+                mobileAlertsBadge.textContent = badgeText;
                 mobileAlertsBadge.style.display = 'block';
             } else {
                 mobileAlertsBadge.style.display = 'none';
+            }
+        }
+        
+        // PJ5002: Also update badge in More menu
+        if (mobileMoreAlertsBadge) {
+            if (badgeCount > 0) {
+                mobileMoreAlertsBadge.textContent = badgeText;
+                mobileMoreAlertsBadge.style.display = 'inline-block';
+            } else {
+                mobileMoreAlertsBadge.style.display = 'none';
             }
         }
         
@@ -9890,15 +10141,27 @@ async function dismissAlert(alertId, element) {
                     if (mobileNoAlertsMsg) mobileNoAlertsMsg.style.display = 'block';
                 }
                 
-                // Update mobile badge
+                // Update mobile badges (main nav and More menu)
                 const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
-                if (mobileAlertsBadge && mobileContainer) {
-                    const remainingAlerts = mobileContainer.querySelectorAll('.alert-item').length;
+                const mobileMoreAlertsBadge = document.getElementById('mobileMoreAlertsBadge');
+                const remainingAlerts = mobileContainer ? mobileContainer.querySelectorAll('.alert-item').length : 0;
+                
+                if (mobileAlertsBadge) {
                     if (remainingAlerts > 0) {
                         mobileAlertsBadge.textContent = remainingAlerts > 99 ? '99+' : remainingAlerts;
                         mobileAlertsBadge.style.display = 'block';
                     } else {
                         mobileAlertsBadge.style.display = 'none';
+                    }
+                }
+                
+                // PJ5002: Also update More menu badge
+                if (mobileMoreAlertsBadge) {
+                    if (remainingAlerts > 0) {
+                        mobileMoreAlertsBadge.textContent = remainingAlerts > 99 ? '99+' : remainingAlerts;
+                        mobileMoreAlertsBadge.style.display = 'inline-block';
+                    } else {
+                        mobileMoreAlertsBadge.style.display = 'none';
                     }
                 }
             }, 300);
