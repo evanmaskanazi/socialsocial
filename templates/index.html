@@ -1288,69 +1288,6 @@
                 padding: 6px 10px;
                 font-size: 14px;
             }
-
-            /* FIX: Mobile alerts section - show alerts on small screens */
-            .mobile-alerts-section {
-                display: block;
-                background: white;
-                border-radius: 12px;
-                padding: 15px;
-                margin: 15px 0;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-
-            .mobile-alerts-section .alerts-list {
-                max-height: 300px;
-                overflow-y: auto;
-            }
-
-            .mobile-alerts-section .alert-item {
-                padding: 10px;
-                margin-bottom: 8px;
-                font-size: 14px;
-            }
-
-            .mobile-alerts-toggle {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                cursor: pointer;
-                padding: 10px 0;
-            }
-
-            .mobile-alerts-toggle h4 {
-                margin: 0;
-                color: var(--primary);
-                font-size: 16px;
-            }
-
-            .mobile-alerts-badge {
-                background: var(--danger);
-                color: white;
-                border-radius: 50%;
-                width: 24px;
-                height: 24px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 12px;
-                font-weight: 600;
-            }
-
-            .mobile-alerts-content {
-                display: none;
-            }
-
-            .mobile-alerts-content.expanded {
-                display: block;
-            }
-        }
-
-        /* Hide mobile alerts on desktop */
-        @media (min-width: 769px) {
-            .mobile-alerts-section {
-                display: none !important;
-            }
         }
 
         .hidden {
@@ -2647,17 +2584,6 @@
 
 
 
-<!-- FIX #2: Mobile Alerts Section - visible on small screens -->
-<div class="mobile-alerts-section" id="mobileAlertsSection">
-    <div class="mobile-alerts-toggle" onclick="toggleMobileAlerts()">
-        <h4 data-i18n="alerts.title">Alerts</h4>
-        <span class="mobile-alerts-badge" id="mobileAlertsBadge">0</span>
-    </div>
-    <div class="mobile-alerts-content" id="mobileAlertsContent">
-        <div class="alerts-list" id="mobileAlertsList"></div>
-    </div>
-</div>
-
            </main>
             <!-- Right Sidebar -->
             <aside class="right-sidebar">
@@ -2775,6 +2701,46 @@
     window.addEventListener('languageChanged', updateToggleLabels);
     // Initial update
     document.addEventListener('DOMContentLoaded', updateToggleLabels);
+    </script>
+    
+    <!-- FIX: Intercept and protect language selector changes -->
+    <script>
+    (function() {
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const langSelector = document.getElementById('languageSelector');
+            if (!langSelector) return;
+            
+            // Add a capturing phase listener to intercept changes
+            langSelector.addEventListener('change', function(e) {
+                // If being updated programmatically, allow it
+                if (window._updatingSelectorProgrammatically) {
+                    console.log('[Language Interceptor] Programmatic update, allowing');
+                    return;
+                }
+                
+                // Check if the new value is valid
+                const newValue = this.value;
+                const storedLang = localStorage.getItem('selectedLanguage');
+                
+                // If selector is empty but we have a stored language, restore it
+                if (!newValue || newValue === '') {
+                    console.log('[Language Interceptor] Empty value detected, restoring from localStorage:', storedLang);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (storedLang) {
+                        window._updatingSelectorProgrammatically = true;
+                        this.value = storedLang;
+                        window._updatingSelectorProgrammatically = false;
+                    }
+                    return false;
+                }
+                
+                // Log the change for debugging
+                console.log('[Language Interceptor] Change event:', 'from stored:', storedLang, 'to:', newValue);
+            }, true); // Use capturing phase
+        });
+    })();
     </script>
     
     <script src="/static/js/i18n.js"></script>
@@ -3757,6 +3723,44 @@ async function submitConsent() {
 
 loadUserLanguage();
 
+// FIX: Sync language selector on tab navigation to prevent it from becoming blank
+// This function ensures the language selector always displays the correct language
+function syncLanguageSelector() {
+    const selector = document.getElementById('languageSelector');
+    if (!selector) {
+        console.log('[syncLanguageSelector] Selector not found');
+        return;
+    }
+    
+    // Get the current language from multiple sources
+    const currentLang = localStorage.getItem('selectedLanguage') || 
+                        localStorage.getItem('userLanguage') || 
+                        (window.i18n && window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : null) ||
+                        'en';
+    
+    console.log('[syncLanguageSelector] Current language:', currentLang, 'Selector value:', selector.value);
+    
+    // Only update if different to avoid triggering change events
+    if (selector.value !== currentLang) {
+        console.log('[syncLanguageSelector] Syncing selector from', selector.value, 'to', currentLang);
+        // Set flag to prevent change event from firing
+        window._updatingSelectorProgrammatically = true;
+        selector.value = currentLang;
+        window._updatingSelectorProgrammatically = false;
+    }
+    
+    // Fallback: if selector is still empty, force set it
+    if (!selector.value || selector.value === '') {
+        console.log('[syncLanguageSelector] Selector was empty, forcing to:', currentLang);
+        window._updatingSelectorProgrammatically = true;
+        selector.value = currentLang || 'en';
+        window._updatingSelectorProgrammatically = false;
+    }
+}
+
+// Make function globally available
+window.syncLanguageSelector = syncLanguageSelector;
+
     // Hide feed view on initial dashboard load (feed should only show when Feed tab is clicked)
     const feedView = document.getElementById('feedView');
     if (feedView) {
@@ -4012,6 +4016,12 @@ function handleCirclesClick(event) {
 
 function showView(viewName) {
     console.log('[DEBUG] showView called:', viewName, 'viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+    
+    // FIX: Sync language selector on every view change to prevent blank dropdown
+    if (typeof syncLanguageSelector === 'function') {
+        syncLanguageSelector();
+    }
+    
     // UPDATED BEHAVIOR: When viewing another user, ALL tabs maintain viewing context
     // Only the "Back to Following" button should reset to current user's account
     // This provides a consistent experience when navigating between tabs while viewing someone else
@@ -4021,9 +4031,6 @@ function showView(viewName) {
     // 1. The "Back to Following" button click handler
     // 2. Calling loadProfile() for own profile
     // 3. Explicitly setting viewingUserId = null
-
-    // FIX #1: Sync language selector on every tab change
-    syncLanguageSelector();
 
     // Update desktop sidebar
     document.querySelectorAll('.sidebar-item').forEach(item => {
@@ -4177,9 +4184,11 @@ function showView(viewName) {
 
 function loadInviteView() {
     console.log('Loading invite view...');
-
-    // FIX #1: Sync language selector when loading invite view
-    syncLanguageSelector();
+    
+    // FIX: Sync language selector when loading invite view to prevent blank dropdown
+    if (typeof syncLanguageSelector === 'function') {
+        syncLanguageSelector();
+    }
 
     fetch('/api/auth/session', {
         credentials: 'include'
@@ -9409,9 +9418,6 @@ async function loadAlerts() {
         container.innerHTML = alertHTML.join('');
         console.log(`✅ Rendered ${alertHTML.length} alerts to DOM`);
 
-        // FIX #2: Also update mobile alerts section
-        updateMobileAlerts(alertHTML);
-
     } catch (error) {
         console.error('❌ Failed to load alerts:', error);
         console.error('Error stack:', error.stack);
@@ -9420,60 +9426,6 @@ async function loadAlerts() {
         if (container) {
             container.innerHTML = '<p style="color: red;">Error loading alerts. Please refresh the page.</p>';
         }
-    }
-}
-
-// FIX #2: Mobile alerts functions
-function updateMobileAlerts(alertHTML) {
-    const mobileAlertsList = document.getElementById('mobileAlertsList');
-    const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
-    
-    if (mobileAlertsList) {
-        if (alertHTML && alertHTML.length > 0) {
-            mobileAlertsList.innerHTML = alertHTML.join('');
-        } else {
-            const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
-            mobileAlertsList.innerHTML = `<p style="color: var(--gray);">${noAlertsText}</p>`;
-        }
-    }
-    
-    if (mobileAlertsBadge) {
-        const count = alertHTML && alertHTML.length > 0 ? alertHTML.length : 0;
-        mobileAlertsBadge.textContent = count > 99 ? '99+' : count;
-        mobileAlertsBadge.style.display = count > 0 ? 'flex' : 'none';
-    }
-}
-
-function toggleMobileAlerts() {
-    const content = document.getElementById('mobileAlertsContent');
-    if (content) {
-        content.classList.toggle('expanded');
-    }
-}
-
-// FIX #1: Function to sync language selector across pages and tabs
-function syncLanguageSelector() {
-    const selector = document.getElementById('languageSelector');
-    if (!selector) return;
-    
-    // Get current language from multiple sources
-    const currentLang = localStorage.getItem('selectedLanguage') || 
-                        localStorage.getItem('userLanguage') || 
-                        (window.i18n && window.i18n.getCurrentLanguage && window.i18n.getCurrentLanguage()) ||
-                        'en';
-    
-    console.log('[SYNC LANGUAGE] Current language:', currentLang, 'Selector value:', selector.value);
-    
-    // Only update if different to avoid triggering change events
-    if (selector.value !== currentLang) {
-        selector.value = currentLang;
-        console.log('[SYNC LANGUAGE] Updated selector to:', currentLang);
-    }
-    
-    // Ensure the selector has a valid value
-    if (!selector.value || selector.value === '') {
-        selector.value = currentLang || 'en';
-        console.log('[SYNC LANGUAGE] Force set selector to:', selector.value);
     }
 }
 
@@ -9828,6 +9780,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                 currentUser = data.user;
                 currentUserId = data.user.id;
                 showDashboard();
+                
+                // FIX: Sync language selector immediately after showing dashboard
+                setTimeout(() => {
+                    if (typeof syncLanguageSelector === 'function') {
+                        syncLanguageSelector();
+                    }
+                }, 100);
+                
                 // Load alerts AFTER dashboard is shown and i18n is ready
                 await checkAndLoadTriggerAlerts();
                 // Load notification settings
