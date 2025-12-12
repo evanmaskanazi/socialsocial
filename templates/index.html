@@ -2706,39 +2706,77 @@
     <!-- FIX: Intercept and protect language selector changes -->
     <script>
     (function() {
+        console.log('[INTERCEPTOR] Language interceptor script loading...');
+        
         // Wait for DOM to be ready
         document.addEventListener('DOMContentLoaded', function() {
-            const langSelector = document.getElementById('languageSelector');
-            if (!langSelector) return;
+            console.log('[INTERCEPTOR] DOMContentLoaded - setting up interceptor');
             
-            // Add a capturing phase listener to intercept changes
+            const langSelector = document.getElementById('languageSelector');
+            if (!langSelector) {
+                console.error('[INTERCEPTOR] ERROR: Language selector not found!');
+                return;
+            }
+            
+            console.log('[INTERCEPTOR] Found language selector, options:', 
+                Array.from(langSelector.options).map(o => o.value).join(', '));
+            
+            // Add a capturing phase listener to intercept changes FIRST
             langSelector.addEventListener('change', function(e) {
+                console.log('[INTERCEPTOR] ========================================');
+                console.log('[INTERCEPTOR] CHANGE EVENT DETECTED');
+                console.log('[INTERCEPTOR] Timestamp:', new Date().toISOString());
+                console.log('[INTERCEPTOR] Event type:', e.type);
+                console.log('[INTERCEPTOR] Event isTrusted:', e.isTrusted);
+                console.log('[INTERCEPTOR] _updatingSelectorProgrammatically:', window._updatingSelectorProgrammatically);
+                console.log('[INTERCEPTOR] New value:', this.value);
+                console.log('[INTERCEPTOR] localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+                
                 // If being updated programmatically, allow it
                 if (window._updatingSelectorProgrammatically) {
-                    console.log('[Language Interceptor] Programmatic update, allowing');
+                    console.log('[INTERCEPTOR] Programmatic update, allowing through');
                     return;
                 }
                 
-                // Check if the new value is valid
                 const newValue = this.value;
                 const storedLang = localStorage.getItem('selectedLanguage');
                 
-                // If selector is empty but we have a stored language, restore it
+                // If selector is empty but we have a stored language, this is a BUG - restore it
                 if (!newValue || newValue === '') {
-                    console.log('[Language Interceptor] Empty value detected, restoring from localStorage:', storedLang);
+                    console.error('[INTERCEPTOR] BLOCKING: Empty value detected!');
+                    console.error('[INTERCEPTOR]   Stored language:', storedLang);
+                    console.error('[INTERCEPTOR]   Stack trace:', new Error().stack);
+                    
                     e.preventDefault();
                     e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    
                     if (storedLang) {
+                        console.log('[INTERCEPTOR] Restoring to stored language:', storedLang);
                         window._updatingSelectorProgrammatically = true;
                         this.value = storedLang;
                         window._updatingSelectorProgrammatically = false;
                     }
+                    console.log('[INTERCEPTOR] ========================================');
                     return false;
                 }
                 
                 // Log the change for debugging
-                console.log('[Language Interceptor] Change event:', 'from stored:', storedLang, 'to:', newValue);
-            }, true); // Use capturing phase
+                console.log('[INTERCEPTOR] Valid change:', storedLang, '->', newValue);
+                console.log('[INTERCEPTOR] ========================================');
+            }, true); // Use capturing phase to intercept before other handlers
+            
+            // Also add a MutationObserver to watch for value changes
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                        console.log('[INTERCEPTOR OBSERVER] Value attribute changed to:', langSelector.value);
+                    }
+                });
+            });
+            observer.observe(langSelector, { attributes: true });
+            
+            console.log('[INTERCEPTOR] Setup complete');
         });
     })();
     </script>
@@ -3623,102 +3661,102 @@ async function submitConsent() {
 
 
    async function loadUserLanguage() {
+    console.log('[LANG DEBUG] ========================================');
+    console.log('[LANG DEBUG] loadUserLanguage() STARTED');
+    console.log('[LANG DEBUG] Timestamp:', new Date().toISOString());
+    
     try {
-        console.log('[Dashboard] Loading user language preference...');
-
-        // Check if user just set a language (localStorage has recent value)
+        // Log current state BEFORE any changes
         const currentLocalLang = localStorage.getItem('selectedLanguage');
+        const currentUserLang = localStorage.getItem('userLanguage');
+        const langSelector = document.getElementById('languageSelector');
+        
+        console.log('[LANG DEBUG] BEFORE STATE:');
+        console.log('[LANG DEBUG]   localStorage.selectedLanguage:', currentLocalLang);
+        console.log('[LANG DEBUG]   localStorage.userLanguage:', currentUserLang);
+        console.log('[LANG DEBUG]   selector exists:', !!langSelector);
+        console.log('[LANG DEBUG]   selector.value:', langSelector ? langSelector.value : 'N/A');
+        console.log('[LANG DEBUG]   i18n.currentLanguage:', window.i18n?.currentLanguage);
 
+        // Fetch user profile from backend - THIS IS THE SOURCE OF TRUTH
+        console.log('[LANG DEBUG] Fetching backend profile...');
         const response = await fetch(`${API_URL}/user/profile`);
 
         if (response.ok) {
             const profile = await response.json();
             const backendLang = profile.preferred_language || 'en';
 
-            console.log('[Dashboard] Backend language:', backendLang);
-            console.log('[Dashboard] Current localStorage:', currentLocalLang);
+            console.log('[LANG DEBUG] Backend response:');
+            console.log('[LANG DEBUG]   profile.preferred_language:', profile.preferred_language);
+            console.log('[LANG DEBUG]   backendLang (with fallback):', backendLang);
 
-            // CRITICAL: If localStorage has Hebrew but backend has English,
-            // trust localStorage (user just changed it) and update backend
-            if (currentLocalLang && currentLocalLang !== backendLang) {
-                console.log('[Dashboard] localStorage differs from backend - using localStorage and updating backend');
+            // CRITICAL FIX: ALWAYS trust backend as source of truth
+            // Never POST to backend from here - only POST when user explicitly changes selector
+            const savedLang = backendLang;
+            
+            console.log('[LANG DEBUG] USING BACKEND LANGUAGE:', savedLang);
+            console.log('[LANG DEBUG] (localStorage was:', currentLocalLang, '- will be overwritten)');
 
-                // Use the localStorage value
-                const savedLang = currentLocalLang;
+            // Update localStorage to match backend (cache the source of truth)
+            localStorage.setItem('selectedLanguage', savedLang);
+            localStorage.setItem('userLanguage', savedLang);
+            console.log('[LANG DEBUG] localStorage updated to:', savedLang);
 
-                // Update backend to match
-                fetch(`${API_URL}/user/language`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ preferred_language: savedLang })
-                }).catch(err => console.error('Failed to sync language to backend:', err));
+            // Apply language using i18n
+            if (window.i18n && window.i18n.setLanguage) {
+                console.log('[LANG DEBUG] Calling i18n.setLanguage with:', savedLang);
+                await window.i18n.setLanguage(savedLang);
+                console.log('[LANG DEBUG] i18n.setLanguage completed');
+            } else {
+                console.warn('[LANG DEBUG] i18n.setLanguage not available!');
+            }
 
-                // Apply language using i18n
-                if (window.i18n && window.i18n.setLanguage) {
-                    await window.i18n.setLanguage(savedLang);
-                    console.log('[Dashboard] Language applied from localStorage:', savedLang);
-                }
-
-                // Update language selector to match
-                const langSelector = document.getElementById('languageSelector');
-                if (langSelector) {
-                    // Set flag to prevent triggering change event
+            // Update language selector to match
+            if (langSelector) {
+                console.log('[LANG DEBUG] Updating selector:');
+                console.log('[LANG DEBUG]   Current value:', langSelector.value);
+                console.log('[LANG DEBUG]   Setting to:', savedLang);
+                
+                // Check if option exists
+                const optionExists = Array.from(langSelector.options).some(opt => opt.value === savedLang);
+                console.log('[LANG DEBUG]   Option exists:', optionExists);
+                
+                if (optionExists) {
                     window._updatingSelectorProgrammatically = true;
                     langSelector.value = savedLang;
                     window._updatingSelectorProgrammatically = false;
-                }
-
-                // Set RTL for Hebrew/Arabic
-                const rtlLanguages = ['ar', 'he'];
-                if (rtlLanguages.includes(savedLang)) {
-                    document.body.setAttribute('dir', 'rtl');
+                    console.log('[LANG DEBUG]   Selector updated, new value:', langSelector.value);
                 } else {
-                    document.body.setAttribute('dir', 'ltr');
+                    console.error('[LANG DEBUG]   ERROR: Option not found for language:', savedLang);
                 }
             } else {
-                // Backend and localStorage match (or localStorage empty) - use backend
-                const savedLang = backendLang;
-
-                console.log('[Dashboard] Using backend language:', savedLang);
-
-                // Update localStorage to match backend
-                localStorage.setItem('selectedLanguage', savedLang);
-
-                // Apply language using i18n
-                if (window.i18n && window.i18n.setLanguage) {
-                    await window.i18n.setLanguage(savedLang);
-                    console.log('[Dashboard] Language applied from backend:', savedLang);
-                } else {
-                    console.warn('[Dashboard] i18n not available, setting manually');
-                    window.i18n.currentLanguage = savedLang;
-                    if (window.i18n && window.i18n.applyLanguage) {
-                        window.i18n.applyLanguage();
-                    }
-                }
-
-                // Update language selector to match
-                const langSelector = document.getElementById('languageSelector');
-                if (langSelector) {
-                    // Set flag to prevent triggering change event
-                    window._updatingSelectorProgrammatically = true;
-                    langSelector.value = savedLang;
-                    window._updatingSelectorProgrammatically = false;
-                }
-
-                // Set RTL for Hebrew/Arabic
-                const rtlLanguages = ['ar', 'he'];
-                if (rtlLanguages.includes(savedLang)) {
-                    document.body.setAttribute('dir', 'rtl');
-                } else {
-                    document.body.setAttribute('dir', 'ltr');
-                }
+                console.error('[LANG DEBUG] Language selector not found in DOM!');
             }
+
+            // Set RTL for Hebrew/Arabic
+            const rtlLanguages = ['ar', 'he'];
+            if (rtlLanguages.includes(savedLang)) {
+                document.body.setAttribute('dir', 'rtl');
+                console.log('[LANG DEBUG] Set RTL direction');
+            } else {
+                document.body.setAttribute('dir', 'ltr');
+                console.log('[LANG DEBUG] Set LTR direction');
+            }
+            
+            console.log('[LANG DEBUG] AFTER STATE:');
+            console.log('[LANG DEBUG]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+            console.log('[LANG DEBUG]   selector.value:', langSelector ? langSelector.value : 'N/A');
+            console.log('[LANG DEBUG]   i18n.currentLanguage:', window.i18n?.currentLanguage);
+            
         } else {
-            console.warn('[Dashboard] Could not fetch user profile');
+            console.error('[LANG DEBUG] Failed to fetch profile, status:', response.status);
         }
     } catch (error) {
-        console.error('[Dashboard] Error loading language:', error);
+        console.error('[LANG DEBUG] ERROR in loadUserLanguage:', error);
     }
+    
+    console.log('[LANG DEBUG] loadUserLanguage() COMPLETED');
+    console.log('[LANG DEBUG] ========================================');
 }
 
 loadUserLanguage();
@@ -3726,11 +3764,25 @@ loadUserLanguage();
 // FIX: Sync language selector on tab navigation to prevent it from becoming blank
 // This function ensures the language selector always displays the correct language
 function syncLanguageSelector() {
+    console.log('[SYNC DEBUG] ========================================');
+    console.log('[SYNC DEBUG] syncLanguageSelector() CALLED');
+    console.log('[SYNC DEBUG] Timestamp:', new Date().toISOString());
+    console.log('[SYNC DEBUG] Call stack:', new Error().stack.split('\n').slice(1, 4).join('\n'));
+    
     const selector = document.getElementById('languageSelector');
     if (!selector) {
-        console.log('[syncLanguageSelector] Selector not found');
+        console.error('[SYNC DEBUG] ERROR: Selector not found in DOM!');
         return;
     }
+    
+    // Log current state
+    console.log('[SYNC DEBUG] CURRENT STATE:');
+    console.log('[SYNC DEBUG]   selector.value:', selector.value);
+    console.log('[SYNC DEBUG]   selector.selectedIndex:', selector.selectedIndex);
+    console.log('[SYNC DEBUG]   selector.options.length:', selector.options.length);
+    console.log('[SYNC DEBUG]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+    console.log('[SYNC DEBUG]   localStorage.userLanguage:', localStorage.getItem('userLanguage'));
+    console.log('[SYNC DEBUG]   i18n.currentLanguage:', window.i18n?.currentLanguage);
     
     // Get the current language from multiple sources
     const currentLang = localStorage.getItem('selectedLanguage') || 
@@ -3738,24 +3790,42 @@ function syncLanguageSelector() {
                         (window.i18n && window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : null) ||
                         'en';
     
-    console.log('[syncLanguageSelector] Current language:', currentLang, 'Selector value:', selector.value);
+    console.log('[SYNC DEBUG] Resolved language to use:', currentLang);
     
     // Only update if different to avoid triggering change events
     if (selector.value !== currentLang) {
-        console.log('[syncLanguageSelector] Syncing selector from', selector.value, 'to', currentLang);
-        // Set flag to prevent change event from firing
-        window._updatingSelectorProgrammatically = true;
-        selector.value = currentLang;
-        window._updatingSelectorProgrammatically = false;
+        console.log('[SYNC DEBUG] VALUES DIFFER - Syncing selector');
+        console.log('[SYNC DEBUG]   FROM:', selector.value, '-> TO:', currentLang);
+        
+        // Verify option exists
+        const optionExists = Array.from(selector.options).some(opt => opt.value === currentLang);
+        console.log('[SYNC DEBUG]   Option exists:', optionExists);
+        
+        if (optionExists) {
+            window._updatingSelectorProgrammatically = true;
+            selector.value = currentLang;
+            window._updatingSelectorProgrammatically = false;
+            console.log('[SYNC DEBUG]   Selector updated, new value:', selector.value);
+        } else {
+            console.error('[SYNC DEBUG]   ERROR: Option not found for:', currentLang);
+        }
+    } else {
+        console.log('[SYNC DEBUG] Values match, no sync needed');
     }
     
     // Fallback: if selector is still empty, force set it
     if (!selector.value || selector.value === '') {
-        console.log('[syncLanguageSelector] Selector was empty, forcing to:', currentLang);
+        console.warn('[SYNC DEBUG] FALLBACK: Selector is EMPTY after sync!');
+        console.log('[SYNC DEBUG]   Forcing to:', currentLang || 'en');
         window._updatingSelectorProgrammatically = true;
         selector.value = currentLang || 'en';
         window._updatingSelectorProgrammatically = false;
+        console.log('[SYNC DEBUG]   After force set, value:', selector.value);
     }
+    
+    console.log('[SYNC DEBUG] FINAL STATE:');
+    console.log('[SYNC DEBUG]   selector.value:', selector.value);
+    console.log('[SYNC DEBUG] ========================================');
 }
 
 // Make function globally available
