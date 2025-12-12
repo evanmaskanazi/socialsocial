@@ -1,5 +1,14 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ816 v1800 -->
+<!-- TheraSocial Version PJ5001 v1900 -->
+<!-- PJ5001: CRITICAL FIX - Mobile Alerts View -->
+<!-- ROOT CAUSE: .right-sidebar was hidden on mobile (display:none in @media max-width:768px) -->
+<!-- This caused ALL alerts to be invisible on iPhone and similar small screens -->
+<!-- FIX 1: Added dedicated Alerts tab to mobile navigation bar -->
+<!-- FIX 2: Created alertsView section with mobile-optimized layout -->
+<!-- FIX 3: loadAlerts() now populates both desktop and mobile alert lists -->
+<!-- FIX 4: dismissAlert() syncs removal between desktop and mobile lists -->
+<!-- FIX 5: Added mobile alerts badge showing unread count -->
+<!-- FIX 6: Added syncMobileNotificationSettings() for toggle sync -->
 <!-- PJ816: CRITICAL FIX - Trigger alert emails now sent WITHOUT requiring watcher login -->
 <!-- ROOT CAUSE: check_parameter_triggers() required @login_required and only ran on polling -->
 <!-- Emails were only sent when the WATCHER logged in, not when WATCHED user's data triggered -->
@@ -1288,6 +1297,44 @@
                 padding: 6px 10px;
                 font-size: 14px;
             }
+            
+            /* Mobile Alerts View Styles */
+            #alertsView {
+                display: block; /* Allow alerts view to show on mobile */
+            }
+            
+            #alertsView.hidden {
+                display: none !important;
+            }
+            
+            .mobile-alerts-container {
+                max-height: calc(100vh - 250px);
+                overflow-y: auto;
+            }
+            
+            .mobile-alerts-container .alerts-list {
+                max-height: none;
+            }
+        }
+        
+        /* Mobile Alerts Badge Styling */
+        .mobile-alerts-badge {
+            position: absolute;
+            top: 2px;
+            right: 50%;
+            transform: translateX(15px);
+            background: var(--danger);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+        }
+        
+        .mobile-nav-item {
+            position: relative;
         }
 
         .hidden {
@@ -1968,6 +2015,11 @@
     <span class="mobile-nav-icon">👋</span>
     <span class="mobile-nav-label" data-i18n="menu.invite">Invite</span>
 </li>
+<li class="mobile-nav-item" data-view="alerts" onclick="showView('alerts')">
+    <span class="mobile-nav-icon">🔔</span>
+    <span class="mobile-nav-label" data-i18n="alerts.title">Alerts</span>
+    <span class="mobile-alerts-badge" id="mobileAlertsBadge" style="display: none;"></span>
+</li>
 
         </ul>
     </nav>
@@ -2582,6 +2634,68 @@
     </div>
 </div>
 
+
+<!-- Mobile Alerts View (only visible on mobile) -->
+<div id="alertsView" class="view hidden">
+    <h2 style="margin-bottom: 20px;" data-i18n="alerts.title">Alerts</h2>
+    
+    <!-- Email Notification Settings for Mobile -->
+    <div id="mobileNotificationSettingsPanel" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_settings">Email Notifications</h4>
+        
+        <!-- Email on Alert Toggle -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
+            <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
+                <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
+                <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                    <input type="checkbox" id="mobileEmailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked); document.getElementById('emailOnAlertToggle').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
+                    <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
+                </label>
+                <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
+            </div>
+        </div>
+        
+        <!-- Daily Diary Reminder Toggle -->
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.daily_diary_reminder">Daily diary reminder</label>
+            <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
+                <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
+                <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                    <input type="checkbox" id="mobileDailyDiaryReminderToggle" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked); document.getElementById('dailyDiaryReminderToggle').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
+                    <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
+                </label>
+                <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
+            </div>
+        </div>
+        
+        <!-- Diary Reminder Time Input -->
+        <div id="mobileDiaryReminderTimeContainer" style="display: none; margin-top: 10px; padding: 10px; background: var(--input-bg, #f5f5f5); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.reminder_time">Reminder time</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="text" id="mobileDiaryReminderTimeInput" 
+                        value="09:00" 
+                        pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                        maxlength="5"
+                        placeholder="HH:MM"
+                        onchange="updateDiaryReminderTime(this.value); document.getElementById('diaryReminderTimeInput').value = this.value;"
+                        onkeyup="formatTimeInput(this)"
+                        style="padding: 6px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-size: 14px; background: var(--card-bg, #fff); color: var(--text-primary, #333); width: 70px; text-align: center; font-family: monospace;">
+                    <span style="font-size: 11px; color: #888;">(24h)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alerts List for Mobile -->
+    <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div class="alerts-list" id="mobileAlertsList"></div>
+        <div id="mobileNoAlertsMessage" style="display: none; text-align: center; padding: 20px; color: #666;">
+            <span data-i18n="alerts.no_alerts">No alerts to display</span>
+        </div>
+    </div>
+</div>
 
 
            </main>
@@ -4437,6 +4551,12 @@ function showView(viewName) {
                 break;
                  case 'invite':
                 loadInviteView();
+                break;
+            case 'alerts':
+                // PJ5001: Load alerts for mobile view
+                loadAlerts();
+                // Also sync mobile notification toggles with desktop toggles
+                syncMobileNotificationSettings();
                 break;
         }
     }
@@ -9563,6 +9683,21 @@ async function loadAlerts() {
         if (!response.alerts || response.alerts.length === 0) {
             const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
             container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
+            
+            // PJ5001: Also update mobile alerts view
+            const mobileContainer = document.getElementById('mobileAlertsList');
+            if (mobileContainer) {
+                mobileContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
+            }
+            const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
+            if (mobileNoAlertsMsg) {
+                mobileNoAlertsMsg.style.display = 'block';
+            }
+            // Hide mobile badge when no alerts
+            const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
+            if (mobileAlertsBadge) {
+                mobileAlertsBadge.style.display = 'none';
+            }
             return;
         }
 
@@ -9675,6 +9810,30 @@ async function loadAlerts() {
 
         container.innerHTML = alertHTML.join('');
         console.log(`✅ Rendered ${alertHTML.length} alerts to DOM`);
+        
+        // PJ5001: Also populate mobile alerts list
+        const mobileContainer = document.getElementById('mobileAlertsList');
+        const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
+        if (mobileContainer) {
+            mobileContainer.innerHTML = alertHTML.join('');
+            console.log(`✅ Rendered ${alertHTML.length} alerts to mobile DOM`);
+        }
+        
+        // Update mobile alerts badge
+        const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
+        if (mobileAlertsBadge) {
+            if (response.alerts && response.alerts.length > 0) {
+                mobileAlertsBadge.textContent = response.alerts.length > 99 ? '99+' : response.alerts.length;
+                mobileAlertsBadge.style.display = 'block';
+            } else {
+                mobileAlertsBadge.style.display = 'none';
+            }
+        }
+        
+        // Show/hide no alerts message on mobile
+        if (mobileNoAlertsMsg) {
+            mobileNoAlertsMsg.style.display = (!response.alerts || response.alerts.length === 0) ? 'block' : 'none';
+        }
 
     } catch (error) {
         console.error('❌ Failed to load alerts:', error);
@@ -9704,12 +9863,43 @@ async function dismissAlert(alertId, element) {
             element.style.opacity = '0';
             setTimeout(() => {
                 element.remove();
+                
+                // PJ5001: Also remove from the other list (mobile or desktop)
+                const otherListSelectors = ['#alertsList', '#mobileAlertsList'];
+                otherListSelectors.forEach(selector => {
+                    const otherList = document.querySelector(selector);
+                    if (otherList) {
+                        const otherElement = otherList.querySelector(`[data-alert-id="${alertId}"]`);
+                        if (otherElement && otherElement !== element) {
+                            otherElement.remove();
+                        }
+                    }
+                });
 
                 // If no alerts left, show "no alerts" message
-                const container = document.getElementById('alertsList');
-                if (container && container.children.length === 0) {
-                    const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
-                    container.innerHTML = `<p style="color: var(--gray);">${noAlertsText}</p>`;
+                const desktopContainer = document.getElementById('alertsList');
+                const mobileContainer = document.getElementById('mobileAlertsList');
+                const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
+                
+                if (desktopContainer && desktopContainer.children.length === 0) {
+                    desktopContainer.innerHTML = `<p style="color: var(--gray);">${noAlertsText}</p>`;
+                }
+                if (mobileContainer && mobileContainer.children.length === 0) {
+                    mobileContainer.innerHTML = `<p style="color: var(--gray);">${noAlertsText}</p>`;
+                    const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
+                    if (mobileNoAlertsMsg) mobileNoAlertsMsg.style.display = 'block';
+                }
+                
+                // Update mobile badge
+                const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
+                if (mobileAlertsBadge && mobileContainer) {
+                    const remainingAlerts = mobileContainer.querySelectorAll('.alert-item').length;
+                    if (remainingAlerts > 0) {
+                        mobileAlertsBadge.textContent = remainingAlerts > 99 ? '99+' : remainingAlerts;
+                        mobileAlertsBadge.style.display = 'block';
+                    } else {
+                        mobileAlertsBadge.style.display = 'none';
+                    }
                 }
             }, 300);
         } else {
@@ -9734,6 +9924,39 @@ let alertPollInterval = setInterval(async () => {
         }
     }
 }, 30000);
+
+// PJ5001: Sync mobile notification settings with desktop toggles
+function syncMobileNotificationSettings() {
+    // Sync email on alert toggle
+    const desktopEmailToggle = document.getElementById('emailOnAlertToggle');
+    const mobileEmailToggle = document.getElementById('mobileEmailOnAlertToggle');
+    if (desktopEmailToggle && mobileEmailToggle) {
+        mobileEmailToggle.checked = desktopEmailToggle.checked;
+    }
+    
+    // Sync daily diary reminder toggle
+    const desktopDiaryToggle = document.getElementById('dailyDiaryReminderToggle');
+    const mobileDiaryToggle = document.getElementById('mobileDailyDiaryReminderToggle');
+    if (desktopDiaryToggle && mobileDiaryToggle) {
+        mobileDiaryToggle.checked = desktopDiaryToggle.checked;
+    }
+    
+    // Sync time input
+    const desktopTimeInput = document.getElementById('diaryReminderTimeInput');
+    const mobileTimeInput = document.getElementById('mobileDiaryReminderTimeInput');
+    if (desktopTimeInput && mobileTimeInput) {
+        mobileTimeInput.value = desktopTimeInput.value;
+    }
+    
+    // Sync time container visibility
+    const desktopTimeContainer = document.getElementById('diaryReminderTimeContainer');
+    const mobileTimeContainer = document.getElementById('mobileDiaryReminderTimeContainer');
+    if (desktopTimeContainer && mobileTimeContainer) {
+        mobileTimeContainer.style.display = desktopTimeContainer.style.display;
+    }
+    
+    console.log('[PJ5001] Synced mobile notification settings');
+}
 
 // Refresh alerts when user returns to the page
 document.addEventListener('visibilitychange', async () => {
