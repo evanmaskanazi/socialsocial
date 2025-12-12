@@ -3313,9 +3313,8 @@ async function loadUserCity() {
             }
             
             // Apply translations if i18n is available
-            if (window.i18n && window.i18n.applyLanguage) {
-                window.i18n.applyLanguage();
-            }
+            // PJ4007: Use safe wrapper to protect language selector
+            safeApplyLanguage();
         });
 
   // Login form handler (authForm is now only for login)
@@ -3996,6 +3995,29 @@ function syncLanguageSelector() {
 // Make function globally available
 window.syncLanguageSelector = syncLanguageSelector;
 
+// PJ4007: Safe wrapper for i18n.applyLanguage that protects the language selector
+// The i18n.applyLanguage() function has a bug that sets selector.value to undefined
+function safeApplyLanguage(lang) {
+    if (!window.i18n || !window.i18n.applyLanguage) return;
+    
+    const selector = document.getElementById('languageSelector');
+    const savedValue = selector ? selector.value : null;
+    
+    // Call the original applyLanguage
+    if (lang) {
+        window.i18n.applyLanguage(lang);
+    } else {
+        window.i18n.applyLanguage();
+    }
+    
+    // Restore selector if it was corrupted (set to undefined/empty)
+    if (selector && savedValue && (!selector.value || selector.value === '')) {
+        console.log('[PJ4007] Restoring selector from empty to', savedValue);
+        selector.value = savedValue;
+    }
+}
+window.safeApplyLanguage = safeApplyLanguage;
+
     // Hide feed view on initial dashboard load (feed should only show when Feed tab is clicked)
     const feedView = document.getElementById('feedView');
     if (feedView) {
@@ -4521,10 +4543,8 @@ function loadUserRecommendations() {
                 list.innerHTML = html;
                 console.log('✅ HTML set to list');
 
-                // Apply translations
-                if (window.i18n && window.i18n.applyLanguage) {
-                    window.i18n.applyLanguage();
-                }
+                // PJ4007: Use safe wrapper to protect language selector
+                safeApplyLanguage();
             } else {
                 console.log('⚠️ No recommendations in array');
                 list.innerHTML = '<div class="empty-state">No recommendations available yet. Check back soon!</div>';
@@ -6135,9 +6155,8 @@ async function loadCircleRecommendations() {
         if (!data.recommendations || data.recommendations.length === 0) {
             console.log('[CircleRecs] No recommendations found');
             recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
-            if (window.i18n && window.i18n.applyLanguage) {
-                window.i18n.applyLanguage(window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en");
-            }
+            // PJ4007: Use safe wrapper to protect language selector
+            safeApplyLanguage(window.i18n?.getCurrentLanguage?.() || "en");
             return;
         }
 
@@ -6169,10 +6188,8 @@ async function loadCircleRecommendations() {
 
         recommendationsContainer.innerHTML = html;
 
-        if (window.i18n && window.i18n.applyLanguage) {
-            const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en";
-            window.i18n.applyLanguage(currentLang);
-        }
+        // PJ4007: Use safe wrapper to protect language selector
+        safeApplyLanguage(window.i18n?.getCurrentLanguage?.() || "en");
         
         console.log('[CircleRecs] Successfully displayed', data.recommendations.length, 'recommendations');
 
