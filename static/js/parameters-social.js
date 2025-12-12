@@ -818,8 +818,12 @@ function initializeParameters() {
     // Add styles
     addParameterStyles();
 
-    // Setup language selector
-    setupLanguageSelector();
+    // Setup language selector (now async - uses .then() for non-blocking execution)
+    setupLanguageSelector().then(() => {
+        console.log('[INIT] Language selector setup complete');
+    }).catch(err => {
+        console.error('[INIT] Language selector setup error:', err);
+    });
 
     // Initialize calendar
     updateCalendar();
@@ -918,42 +922,57 @@ function initializeParameters() {
 }
 
 // Setup language selector
-function setupLanguageSelector() {
+async function setupLanguageSelector() {
     const selector = document.getElementById('languageSelector');
     if (!selector) return;
 
-    // Get current language, defaulting to 'en' if nothing is set
-   // Get current language from multiple sources - check selectedLanguage FIRST, then userLanguage
-let currentLang = window.i18n?.getCurrentLanguage?.() ||
-                 localStorage.getItem('selectedLanguage') ||  // ← Check this FIRST!
-                 localStorage.getItem('userLanguage');
-
-// Only set default if BOTH selectedLanguage and userLanguage are empty
-if (!currentLang || currentLang === '') {
-    const hasSelectedLanguage = localStorage.getItem('selectedLanguage');
-    const hasUserLanguage = localStorage.getItem('userLanguage');
-
-    // Only set defaults if both are truly empty
-    if (!hasSelectedLanguage && !hasUserLanguage) {
-        currentLang = 'en';
-        localStorage.setItem('selectedLanguage', 'en');
-        localStorage.setItem('userLanguage', 'en');
-    } else {
-        // Use whichever exists (don't overwrite!)
-        currentLang = hasSelectedLanguage || hasUserLanguage || 'en';
+    // FIX #3: Fetch user's language preference from backend profile FIRST
+    let backendLang = null;
+    try {
+        const profileResponse = await fetch('/api/user/profile', {
+            credentials: 'include'
+        });
+        if (profileResponse.ok) {
+            const profile = await profileResponse.json();
+            if (profile.preferred_language) {
+                backendLang = profile.preferred_language;
+                console.log('[LANGUAGE SETUP] Got backend language preference:', backendLang);
+            }
+        }
+    } catch (e) {
+        console.log('[LANGUAGE SETUP] Could not fetch backend language preference:', e);
     }
-}
+
+    // Get current language, prioritizing: backend > localStorage > default
+    let currentLang = backendLang || 
+                      localStorage.getItem('selectedLanguage') || 
+                      localStorage.getItem('userLanguage') ||
+                      (window.i18n?.getCurrentLanguage?.());
+
+    // Only set default if nothing is found
+    if (!currentLang || currentLang === '') {
+        currentLang = 'en';
+    }
+
+    // Sync localStorage with the determined language
+    localStorage.setItem('selectedLanguage', currentLang);
+    localStorage.setItem('userLanguage', currentLang);
+
+    console.log('[LANGUAGE SETUP] Setting language selector to:', currentLang);
 
     // Set the selector value
     selector.value = currentLang;
 
+    // Update i18n if available
+    if (window.i18n && window.i18n.setLanguage) {
+        await window.i18n.setLanguage(currentLang);
+    }
+
     // Force a re-render of the selector to ensure it displays properly
     setTimeout(() => {
         if (!selector.value || selector.value === '') {
-            selector.value = 'en';
+            selector.value = currentLang || 'en';
         }
-        // Trigger a change event to update display
-     //   selector.dispatchEvent(new Event('change', { bubbles: false }));
     }, 10);
 
     // Handle language change
@@ -962,7 +981,7 @@ if (!currentLang || currentLang === '') {
 
         // Save to localStorage
         localStorage.setItem('selectedLanguage', newLang);
-localStorage.setItem('userLanguage', newLang);
+        localStorage.setItem('userLanguage', newLang);
 
         // Update i18n if available
         if (window.i18n && window.i18n.setLanguage) {
@@ -985,6 +1004,7 @@ localStorage.setItem('userLanguage', newLang);
             fetch('/api/user/language', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ language: newLang })
             }).catch(err => console.error('Failed to save language preference:', err));
         }
@@ -996,6 +1016,11 @@ localStorage.setItem('userLanguage', newLang);
         document.body.setAttribute('dir', 'rtl');
     } else {
         document.body.setAttribute('dir', 'ltr');
+    }
+
+    // Apply translations after setting language
+    if (typeof updateTranslations === 'function') {
+        updateTranslations();
     }
 }
 
