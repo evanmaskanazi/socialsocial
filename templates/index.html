@@ -4051,6 +4051,13 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
             console.log('[DEBUG] Skipping generic handler for circles item');
             return;
         }
+        
+        // PJ4006: Skip invite handler - it has its own onclick="showView('invite')" handler
+        // This prevents double-calling syncLanguageSelector causing the language dropdown to go blank
+        if (item.dataset.view === 'invite') {
+            console.log('[DEBUG] Skipping generic handler for invite item');
+            return;
+        }
 
         document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
         item.classList.add('active');
