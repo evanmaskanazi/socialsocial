@@ -1288,6 +1288,69 @@
                 padding: 6px 10px;
                 font-size: 14px;
             }
+
+            /* FIX: Mobile alerts section - show alerts on small screens */
+            .mobile-alerts-section {
+                display: block;
+                background: white;
+                border-radius: 12px;
+                padding: 15px;
+                margin: 15px 0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            .mobile-alerts-section .alerts-list {
+                max-height: 300px;
+                overflow-y: auto;
+            }
+
+            .mobile-alerts-section .alert-item {
+                padding: 10px;
+                margin-bottom: 8px;
+                font-size: 14px;
+            }
+
+            .mobile-alerts-toggle {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                cursor: pointer;
+                padding: 10px 0;
+            }
+
+            .mobile-alerts-toggle h4 {
+                margin: 0;
+                color: var(--primary);
+                font-size: 16px;
+            }
+
+            .mobile-alerts-badge {
+                background: var(--danger);
+                color: white;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            .mobile-alerts-content {
+                display: none;
+            }
+
+            .mobile-alerts-content.expanded {
+                display: block;
+            }
+        }
+
+        /* Hide mobile alerts on desktop */
+        @media (min-width: 769px) {
+            .mobile-alerts-section {
+                display: none !important;
+            }
         }
 
         .hidden {
@@ -2583,6 +2646,17 @@
 </div>
 
 
+
+<!-- FIX #2: Mobile Alerts Section - visible on small screens -->
+<div class="mobile-alerts-section" id="mobileAlertsSection">
+    <div class="mobile-alerts-toggle" onclick="toggleMobileAlerts()">
+        <h4 data-i18n="alerts.title">Alerts</h4>
+        <span class="mobile-alerts-badge" id="mobileAlertsBadge">0</span>
+    </div>
+    <div class="mobile-alerts-content" id="mobileAlertsContent">
+        <div class="alerts-list" id="mobileAlertsList"></div>
+    </div>
+</div>
 
            </main>
             <!-- Right Sidebar -->
@@ -3948,6 +4022,9 @@ function showView(viewName) {
     // 2. Calling loadProfile() for own profile
     // 3. Explicitly setting viewingUserId = null
 
+    // FIX #1: Sync language selector on every tab change
+    syncLanguageSelector();
+
     // Update desktop sidebar
     document.querySelectorAll('.sidebar-item').forEach(item => {
         item.classList.remove('active');
@@ -4100,6 +4177,9 @@ function showView(viewName) {
 
 function loadInviteView() {
     console.log('Loading invite view...');
+
+    // FIX #1: Sync language selector when loading invite view
+    syncLanguageSelector();
 
     fetch('/api/auth/session', {
         credentials: 'include'
@@ -9329,6 +9409,9 @@ async function loadAlerts() {
         container.innerHTML = alertHTML.join('');
         console.log(`✅ Rendered ${alertHTML.length} alerts to DOM`);
 
+        // FIX #2: Also update mobile alerts section
+        updateMobileAlerts(alertHTML);
+
     } catch (error) {
         console.error('❌ Failed to load alerts:', error);
         console.error('Error stack:', error.stack);
@@ -9337,6 +9420,60 @@ async function loadAlerts() {
         if (container) {
             container.innerHTML = '<p style="color: red;">Error loading alerts. Please refresh the page.</p>';
         }
+    }
+}
+
+// FIX #2: Mobile alerts functions
+function updateMobileAlerts(alertHTML) {
+    const mobileAlertsList = document.getElementById('mobileAlertsList');
+    const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
+    
+    if (mobileAlertsList) {
+        if (alertHTML && alertHTML.length > 0) {
+            mobileAlertsList.innerHTML = alertHTML.join('');
+        } else {
+            const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
+            mobileAlertsList.innerHTML = `<p style="color: var(--gray);">${noAlertsText}</p>`;
+        }
+    }
+    
+    if (mobileAlertsBadge) {
+        const count = alertHTML && alertHTML.length > 0 ? alertHTML.length : 0;
+        mobileAlertsBadge.textContent = count > 99 ? '99+' : count;
+        mobileAlertsBadge.style.display = count > 0 ? 'flex' : 'none';
+    }
+}
+
+function toggleMobileAlerts() {
+    const content = document.getElementById('mobileAlertsContent');
+    if (content) {
+        content.classList.toggle('expanded');
+    }
+}
+
+// FIX #1: Function to sync language selector across pages and tabs
+function syncLanguageSelector() {
+    const selector = document.getElementById('languageSelector');
+    if (!selector) return;
+    
+    // Get current language from multiple sources
+    const currentLang = localStorage.getItem('selectedLanguage') || 
+                        localStorage.getItem('userLanguage') || 
+                        (window.i18n && window.i18n.getCurrentLanguage && window.i18n.getCurrentLanguage()) ||
+                        'en';
+    
+    console.log('[SYNC LANGUAGE] Current language:', currentLang, 'Selector value:', selector.value);
+    
+    // Only update if different to avoid triggering change events
+    if (selector.value !== currentLang) {
+        selector.value = currentLang;
+        console.log('[SYNC LANGUAGE] Updated selector to:', currentLang);
+    }
+    
+    // Ensure the selector has a valid value
+    if (!selector.value || selector.value === '') {
+        selector.value = currentLang || 'en';
+        console.log('[SYNC LANGUAGE] Force set selector to:', selector.value);
     }
 }
 
