@@ -923,12 +923,25 @@ function initializeParameters() {
 
 // Setup language selector
 async function setupLanguageSelector() {
+    console.log('[PS LANG DEBUG] ========================================');
+    console.log('[PS LANG DEBUG] setupLanguageSelector() STARTED');
+    console.log('[PS LANG DEBUG] Timestamp:', new Date().toISOString());
+    
     const selector = document.getElementById('languageSelector');
-    if (!selector) return;
+    if (!selector) {
+        console.error('[PS LANG DEBUG] ERROR: Selector not found!');
+        return;
+    }
+    
+    console.log('[PS LANG DEBUG] INITIAL STATE:');
+    console.log('[PS LANG DEBUG]   selector.value:', selector.value);
+    console.log('[PS LANG DEBUG]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+    console.log('[PS LANG DEBUG]   i18n.currentLanguage:', window.i18n?.currentLanguage);
 
     // FIX #3: Fetch user's language preference from backend profile FIRST
     let backendLang = null;
     try {
+        console.log('[PS LANG DEBUG] Fetching backend profile...');
         const profileResponse = await fetch('/api/user/profile', {
             credentials: 'include'
         });
@@ -936,65 +949,87 @@ async function setupLanguageSelector() {
             const profile = await profileResponse.json();
             if (profile.preferred_language) {
                 backendLang = profile.preferred_language;
-                console.log('[LANGUAGE SETUP] Got backend language preference:', backendLang);
+                console.log('[PS LANG DEBUG] Backend language from profile:', backendLang);
+            } else {
+                console.log('[PS LANG DEBUG] No preferred_language in profile');
             }
+        } else {
+            console.log('[PS LANG DEBUG] Profile fetch failed, status:', profileResponse.status);
         }
     } catch (e) {
-        console.log('[LANGUAGE SETUP] Could not fetch backend language preference:', e);
+        console.error('[PS LANG DEBUG] Profile fetch error:', e);
     }
 
-    // Get current language, prioritizing: backend > localStorage > default
+    // CRITICAL: Backend is source of truth - use it if available
     let currentLang = backendLang || 
                       localStorage.getItem('selectedLanguage') || 
                       localStorage.getItem('userLanguage') ||
-                      (window.i18n?.getCurrentLanguage?.());
+                      (window.i18n?.getCurrentLanguage?.()) ||
+                      'en';
 
-    // Only set default if nothing is found
-    if (!currentLang || currentLang === '') {
-        currentLang = 'en';
-    }
+    console.log('[PS LANG DEBUG] Resolved language:', currentLang);
+    console.log('[PS LANG DEBUG]   backendLang:', backendLang);
+    console.log('[PS LANG DEBUG]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
 
     // Sync localStorage with the determined language
     localStorage.setItem('selectedLanguage', currentLang);
     localStorage.setItem('userLanguage', currentLang);
+    console.log('[PS LANG DEBUG] localStorage updated to:', currentLang);
 
-    console.log('[LANGUAGE SETUP] Setting language selector to:', currentLang);
-
-    // Set the selector value
+    // CRITICAL FIX: Set programmatic flag BEFORE setting selector value
+    console.log('[PS LANG DEBUG] Setting selector value with programmatic flag...');
+    window._updatingSelectorProgrammatically = true;
     selector.value = currentLang;
+    window._updatingSelectorProgrammatically = false;
+    console.log('[PS LANG DEBUG] Selector value set to:', selector.value);
 
     // Update i18n if available
     if (window.i18n && window.i18n.setLanguage) {
+        console.log('[PS LANG DEBUG] Calling i18n.setLanguage...');
         await window.i18n.setLanguage(currentLang);
     }
 
     // Force a re-render of the selector to ensure it displays properly
     setTimeout(() => {
         if (!selector.value || selector.value === '') {
+            console.warn('[PS LANG DEBUG] Selector empty after timeout, forcing to:', currentLang);
+            window._updatingSelectorProgrammatically = true;
             selector.value = currentLang || 'en';
+            window._updatingSelectorProgrammatically = false;
         }
     }, 10);
 
-    // Handle language change
+    // Handle language change - only fires for USER-INITIATED changes
     selector.addEventListener('change', function() {
+        console.log('[PS CHANGE DEBUG] ========================================');
+        console.log('[PS CHANGE DEBUG] CHANGE EVENT FIRED');
+        console.log('[PS CHANGE DEBUG] Timestamp:', new Date().toISOString());
+        console.log('[PS CHANGE DEBUG] _updatingSelectorProgrammatically:', window._updatingSelectorProgrammatically);
+        console.log('[PS CHANGE DEBUG] this.value:', this.value);
+        
         // FIX: Skip if being updated programmatically
         if (window._updatingSelectorProgrammatically) {
-            console.log('[Parameters-Social] Programmatic update, skipping change handler');
+            console.log('[PS CHANGE DEBUG] Programmatic update - SKIPPING');
+            console.log('[PS CHANGE DEBUG] ========================================');
             return;
         }
         
         const newLang = this.value;
+        console.log('[PS CHANGE DEBUG] New language:', newLang);
         
         // FIX: Validate the new language - if empty, restore from localStorage
         if (!newLang || newLang === '') {
             const storedLang = localStorage.getItem('selectedLanguage') || 'en';
-            console.log('[Parameters-Social] Empty language detected, restoring:', storedLang);
+            console.error('[PS CHANGE DEBUG] EMPTY LANGUAGE - restoring to:', storedLang);
             window._updatingSelectorProgrammatically = true;
             this.value = storedLang;
             window._updatingSelectorProgrammatically = false;
+            console.log('[PS CHANGE DEBUG] ========================================');
             return;
         }
 
+        console.log('[PS CHANGE DEBUG] Valid user-initiated change to:', newLang);
+        
         // Save to localStorage
         localStorage.setItem('selectedLanguage', newLang);
         localStorage.setItem('userLanguage', newLang);
@@ -1015,15 +1050,21 @@ async function setupLanguageSelector() {
         // Update translations
         updateTranslations();
 
-        // Send to server to save preference
+        // Send to server to save preference - ONLY for user-initiated changes
+        console.log('[PS CHANGE DEBUG] POSTing to /api/user/language:', newLang);
         if (window.fetch) {
             fetch('/api/user/language', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ language: newLang })
-            }).catch(err => console.error('Failed to save language preference:', err));
+            }).then(resp => {
+                console.log('[PS CHANGE DEBUG] POST response status:', resp.status);
+            }).catch(err => {
+                console.error('[PS CHANGE DEBUG] POST error:', err);
+            });
         }
+        console.log('[PS CHANGE DEBUG] ========================================');
     });
 
     // Set initial RTL direction based on current language
@@ -1038,6 +1079,12 @@ async function setupLanguageSelector() {
     if (typeof updateTranslations === 'function') {
         updateTranslations();
     }
+    
+    console.log('[PS LANG DEBUG] FINAL STATE:');
+    console.log('[PS LANG DEBUG]   selector.value:', selector.value);
+    console.log('[PS LANG DEBUG]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+    console.log('[PS LANG DEBUG] setupLanguageSelector() COMPLETED');
+    console.log('[PS LANG DEBUG] ========================================');
 }
 
 // Add parameter-specific styles
