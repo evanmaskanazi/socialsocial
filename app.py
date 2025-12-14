@@ -204,7 +204,7 @@ import redis
 import logging
 import threading
 import pytz
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from functools import wraps
 import time
 from collections import defaultdict
@@ -7516,6 +7516,8 @@ def save_parameters():
 def process_parameter_triggers_async(user_id, param_snapshot):
     """
     PJ6007: Async trigger processing with CONSOLIDATED emails.
+    PJ6008: Fixed date parsing and minimum consecutive_days enforcement.
+    
     Instead of sending one email per triggered parameter, collects all triggers
     per watcher and sends ONE consolidated email.
     
@@ -7525,7 +7527,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
     """
     try:
         logger.info(f"[TRIGGER PROCESS ASYNC] ========================================")
-        logger.info(f"[TRIGGER PROCESS ASYNC] PJ6007: Starting with consolidated emails for user_id={user_id}")
+        logger.info(f"[TRIGGER PROCESS ASYNC] PJ6008: Starting with fixed date parsing for user_id={user_id}")
         
         # Find all triggers where someone is watching this user
         all_triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
@@ -7540,6 +7542,25 @@ def process_parameter_triggers_async(user_id, param_snapshot):
         if not watched_user:
             logger.error(f"[TRIGGER PROCESS ASYNC] Watched user {user_id} not found")
             return
+        
+        # PJ6008: Helper to parse date string to date object
+        def parse_date(date_val):
+            """Convert date string or date object to date object"""
+            if date_val is None:
+                return None
+            if isinstance(date_val, date):
+                return date_val
+            if isinstance(date_val, datetime):
+                return date_val.date()
+            if isinstance(date_val, str):
+                try:
+                    return datetime.strptime(date_val, '%Y-%m-%d').date()
+                except ValueError:
+                    try:
+                        return datetime.fromisoformat(date_val.split('T')[0]).date()
+                    except:
+                        return None
+            return None
         
         # Helper function to check privacy permissions
         def can_see_parameter(param_privacy, watcher_circle):
@@ -7572,13 +7593,13 @@ def process_parameter_triggers_async(user_id, param_snapshot):
         thirty_days_ago = datetime.now().date() - timedelta(days=30)
         all_params = SavedParameters.query.filter(
             SavedParameters.user_id == user_id,
-            SavedParameters.date >= thirty_days_ago
+            SavedParameters.date >= str(thirty_days_ago)  # PJ6008: Convert to string for comparison
         ).order_by(SavedParameters.date.asc()).all()
         
         logger.info(f"[TRIGGER PROCESS ASYNC] Found {len(all_params)} parameter entries in last 30 days")
         
         # PJ6007: Collect triggered params per watcher for consolidated email
-        # Key: watcher_id, Value: list of {'param_name', 'days', 'date_range', 'content'}
+        # Key: watcher_id, Value: list of {'param_name', 'days', 'date_range'}
         watcher_triggered_params = {}
         patterns_seen = set()
         alerts_created = 0
@@ -7587,13 +7608,19 @@ def process_parameter_triggers_async(user_id, param_snapshot):
         # Process each trigger row
         for trigger in all_triggers:
             watcher_id = trigger.watcher_id
-            consecutive_days = trigger.consecutive_days or 3
+            # PJ6008: Enforce minimum of 3 consecutive days - this is the key fix!
+            raw_consecutive_days = trigger.consecutive_days
+            consecutive_days = max(raw_consecutive_days or 3, 3)  # Minimum 3 days
             
-            if consecutive_days < 1 or len(all_params) < consecutive_days:
+            logger.info(f"[TRIGGER PROCESS ASYNC] Processing trigger for watcher {watcher_id}: raw_consecutive_days={raw_consecutive_days}, enforced={consecutive_days}")
+            
+            if len(all_params) < consecutive_days:
+                logger.info(f"[TRIGGER PROCESS ASYNC] Skipping - not enough params ({len(all_params)} < {consecutive_days})")
                 continue
             
             watcher_circle = get_watcher_circle_level(user_id, watcher_id)
             if not watcher_circle:
+                logger.info(f"[TRIGGER PROCESS ASYNC] Skipping - watcher {watcher_id} not in any circle")
                 continue
             
             # Initialize watcher's list if not exists
@@ -7632,6 +7659,8 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                 if trigger.parameter_name in param_mapping:
                     param_checks.append(param_mapping[trigger.parameter_name])
             
+            logger.info(f"[TRIGGER PROCESS ASYNC] Checking {len(param_checks)} parameters for watcher {watcher_id}")
+            
             # Check each parameter for consecutive day streaks
             for param_attr, param_name, privacy_attr, condition_func in param_checks:
                 streak_dates = []
@@ -7640,6 +7669,12 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                 for param_entry in all_params:
                     param_value = getattr(param_entry, param_attr, None)
                     param_privacy = getattr(param_entry, privacy_attr, 'private')
+                    # PJ6008: Parse date properly
+                    entry_date = parse_date(param_entry.date)
+                    
+                    if entry_date is None:
+                        logger.warning(f"[TRIGGER PROCESS ASYNC] Could not parse date: {param_entry.date}")
+                        continue
                     
                     # Check privacy - process streak if long enough before reset
                     if not can_see_parameter(param_privacy, watcher_circle):
@@ -7664,7 +7699,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
-                                    # PJ6007: Create alert WITHOUT email
+                                    logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
                                         title=f"Wellness Alert for {watched_user.username}",
@@ -7675,7 +7710,6 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     )
                                     if alert:
                                         alerts_created += 1
-                                        # Add to watcher's triggered params for consolidated email
                                         watcher_triggered_params[watcher_id].append({
                                             'param_name': param_name,
                                             'days': len(streak_dates),
@@ -7690,13 +7724,13 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                     
                     if param_value is not None and condition_func(param_value):
                         if last_date is None:
-                            streak_dates = [param_entry.date]
-                            last_date = param_entry.date
-                        elif (param_entry.date - last_date).days == 1:
-                            streak_dates.append(param_entry.date)
-                            last_date = param_entry.date
-                        elif (param_entry.date - last_date).days == 0:
-                            continue
+                            streak_dates = [entry_date]
+                            last_date = entry_date
+                        elif (entry_date - last_date).days == 1:
+                            streak_dates.append(entry_date)
+                            last_date = entry_date
+                        elif (entry_date - last_date).days == 0:
+                            continue  # Same day, skip
                         else:
                             # Gap in streak - process if long enough
                             if len(streak_dates) >= consecutive_days:
@@ -7719,6 +7753,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     
                                     if not existing:
                                         content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                        logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                         alert = create_alert_no_email(
                                             user_id=watcher_id,
                                             title=f"Wellness Alert for {watched_user.username}",
@@ -7737,8 +7772,9 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     else:
                                         alerts_skipped_duplicate += 1
                             
-                            streak_dates = [param_entry.date]
-                            last_date = param_entry.date
+                            # Start new streak
+                            streak_dates = [entry_date]
+                            last_date = entry_date
                     else:
                         # Condition not met - process streak if long enough
                         if len(streak_dates) >= consecutive_days:
@@ -7761,6 +7797,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                    logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
                                         title=f"Wellness Alert for {watched_user.username}",
@@ -7803,6 +7840,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                         
                         if not existing:
                             content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                            logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                             alert = create_alert_no_email(
                                 user_id=watcher_id,
                                 title=f"Wellness Alert for {watched_user.username}",
@@ -7839,10 +7877,10 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                 if send_consolidated_wellness_alert_email(watcher_id, watched_user.username, triggered_params, user_language):
                     emails_sent += 1
         
-        logger.info(f"[TRIGGER PROCESS ASYNC] PJ6007 Completed:")
+        logger.info(f"[TRIGGER PROCESS ASYNC] PJ6008 Completed:")
         logger.info(f"[TRIGGER PROCESS ASYNC]   - {alerts_created} alerts created in DB")
         logger.info(f"[TRIGGER PROCESS ASYNC]   - {alerts_skipped_duplicate} duplicates skipped")
-        logger.info(f"[TRIGGER PROCESS ASYNC]   - {emails_sent} consolidated emails sent (was {alerts_created} before PJ6007)")
+        logger.info(f"[TRIGGER PROCESS ASYNC]   - {emails_sent} consolidated emails sent")
         logger.info(f"[TRIGGER PROCESS ASYNC] ========================================")
         
     except Exception as e:
