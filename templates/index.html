@@ -1748,9 +1748,10 @@
                     <option value="ar">العربية</option>
                     <option value="ru">Русский</option>
                 </select>
-                <a href="#" class="nav-link" id="navHome" data-i18n="nav.home">Home</a>
-                <a href="#" class="nav-link" id="navAbout" data-i18n="nav.about">About</a>
-                <a href="#" class="nav-link" id="navSupport" data-i18n="nav.support">Support</a>
+                <!-- PJ6001: Home, About, Support hidden when logged in -->
+                <a href="#" class="nav-link auth-only-hide" id="navHome" data-i18n="nav.home">Home</a>
+                <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
+                <a href="#" class="nav-link auth-only-hide" id="navSupport" data-i18n="nav.support">Support</a>
                 <button class="btn btn-primary" id="logoutBtn" style="display: none; width: auto;" data-i18n="nav.logout">Logout</button>
             </div>
         </div>
@@ -1894,6 +1895,19 @@
                    placeholder="Leave blank to use your email prefix"
                    data-i18n-placeholder="username.blank_for_email">
             <small id="suggestedUsername" style="color: #666; display: block; margin-top: 5px;"></small>
+        </div>
+
+        <!-- PJ6001: Birth Year Field (Required) -->
+        <div class="form-group" style="margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+            <label class="form-label">
+                <span data-i18n="profile.birth_year">Birth Year</span>
+                <span style="color: #dc2626; font-size: 14px;">*</span>
+            </label>
+            <input type="number" id="consentBirthYear" class="form-input"
+                   placeholder="YYYY" min="1900" max="2025" maxlength="4"
+                   data-i18n-placeholder="profile.birth_year_placeholder"
+                   style="width: 120px;" required>
+            <small style="color: #666; display: block; margin-top: 5px;" data-i18n="profile.birth_year_hint">Enter your birth year (4 digits)</small>
         </div>
 
         <!-- Consent checkboxes -->
@@ -2441,6 +2455,18 @@
                         </div>
 
                         <div class="profile-fields">
+                            <!-- PJ6001: Birth Year Field -->
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="number" class="form-input" id="profileBirthYear" 
+                                           min="1900" max="2025" maxlength="4"
+                                           placeholder="YYYY" style="width: 120px;">
+                                    <button type="button" class="btn btn-secondary" style="padding: 8px 16px;" 
+                                            onclick="updateBirthYear()" data-i18n="profile.update_birth_year">Update</button>
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label class="form-label" data-i18n="profile.bio">Bio</label>
                                 <textarea class="profile-textarea" id="profileBio" data-i18n="profile.bio_placeholder" placeholder="Tell us about yourself..." maxlength="500"></textarea>
@@ -2821,17 +2847,30 @@
 <div id="alertsView" class="view hidden">
     <h2 style="margin-bottom: 20px;" data-i18n="alerts.title">Alerts</h2>
     
-    <!-- Email Notification Settings for Mobile -->
+    <!-- PJ6001: Email Options for Mobile -->
     <div id="mobileNotificationSettingsPanel" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-        <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_settings">Email Notifications</h4>
+        <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
         
-        <!-- Email on Alert Toggle -->
+        <!-- Email on Alert Toggle (Wellness Alerts) -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
             <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                 <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
                 <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
                     <input type="checkbox" id="mobileEmailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked); document.getElementById('emailOnAlertToggle').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
+                    <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
+                </label>
+                <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
+            </div>
+        </div>
+        
+        <!-- PJ6001: Email on Notification Toggle (Messages, Followers, Invites) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_notification">Email me on new notifications</label>
+            <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
+                <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
+                <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                    <input type="checkbox" id="mobileEmailOnNotificationToggle" onchange="updateNotificationSetting('email_on_notification', this.checked); if(document.getElementById('emailOnNotificationToggle')) document.getElementById('emailOnNotificationToggle').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
                     <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
                 </label>
                 <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
@@ -2870,11 +2909,21 @@
         </div>
     </div>
     
-    <!-- Alerts List for Mobile -->
-    <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <!-- PJ6001: Wellness Alerts List for Mobile -->
+    <h3 style="margin-bottom: 10px;" data-i18n="alerts.title">Alerts</h3>
+    <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div class="alerts-list" id="mobileAlertsList"></div>
         <div id="mobileNoAlertsMessage" style="display: none; text-align: center; padding: 20px; color: #666;">
             <span data-i18n="alerts.no_alerts">No alerts to display</span>
+        </div>
+    </div>
+    
+    <!-- PJ6001: Notifications List for Mobile (messages, followers, invites) -->
+    <h3 style="margin-bottom: 10px;" data-i18n="notifications.title">Notifications</h3>
+    <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div class="alerts-list" id="mobileNotificationsList"></div>
+        <div id="mobileNoNotificationsMessage" style="display: none; text-align: center; padding: 20px; color: #666;">
+            <span data-i18n="notifications.no_notifications">No notifications to display</span>
         </div>
     </div>
 </div>
@@ -2883,17 +2932,30 @@
            </main>
             <!-- Right Sidebar -->
             <aside class="right-sidebar">
-                <!-- Email Notification Settings -->
+                <!-- PJ6001: Email Options (renamed from Email Notifications) -->
                 <div id="notificationSettingsPanel" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_settings">Email Notifications</h4>
+                    <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
                     
-                    <!-- Email on Alert Toggle -->
+                    <!-- Email on Alert Toggle (Wellness Alerts only) -->
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
                         <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                             <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
                             <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
                                 <input type="checkbox" id="emailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
+                            </label>
+                            <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
+                        </div>
+                    </div>
+                    
+                    <!-- PJ6001: Email on Notification Toggle (Messages, Followers, Invites) -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_notification">Email me on new notifications</label>
+                        <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
+                            <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
+                            <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                                <input type="checkbox" id="emailOnNotificationToggle" onchange="updateNotificationSetting('email_on_notification', this.checked)" style="opacity: 0; width: 0; height: 0;">
                                 <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
                             </label>
                             <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
@@ -2934,8 +2996,13 @@
                     </div>
                 </div>
                 
+                <!-- PJ6001: Wellness Alerts Section (trigger alerts only) -->
                 <h3 style="margin-bottom: 15px;" data-i18n="alerts.title">Alerts</h3>
                 <div class="alerts-list" id="alertsList"></div>
+                
+                <!-- PJ6001: Notifications Section (messages, followers, invites) -->
+                <h3 style="margin-top: 20px; margin-bottom: 15px;" data-i18n="notifications.title">Notifications</h3>
+                <div class="alerts-list" id="notificationsList"></div>
             </aside>
         </div>
     </div>
@@ -3905,6 +3972,8 @@ async function loadUserCity() {
             hideAllViews();
             document.getElementById('authContainer').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'none';
+            // PJ6001: Show nav links when logged out
+            document.querySelectorAll('.auth-only-hide').forEach(el => el.style.display = '');
         }
 
 
@@ -4023,12 +4092,22 @@ function showConsentModal() {
     document.getElementById('consentModal').style.display = 'flex';
 }
 
-// Submit consent with optional username
+// Submit consent with optional username and required birth year
 async function submitConsent() {
     const username = document.getElementById('consentUsername').value.trim(); // Can be empty
+    const birthYearInput = document.getElementById('consentBirthYear').value.trim();
+    
+    // PJ6001: Validate birth year
+    const birthYear = parseInt(birthYearInput);
+    if (!birthYearInput || isNaN(birthYear) || birthYear < 1900 || birthYear > 2025) {
+        document.getElementById('consentError').textContent = t('profile.birth_year_error') || 'Please enter a valid birth year (4 digits)';
+        document.getElementById('consentError').style.display = 'block';
+        return;
+    }
 
     const consent = {
         username: username, // Empty string is valid - backend will use email prefix
+        birth_year: birthYear, // PJ6001: Add birth year
         email_updates: document.getElementById('emailUpdates').checked,
         privacy_accepted: document.getElementById('privacyAccepted').checked,
         research_data: document.getElementById('researchData').checked,
@@ -4043,6 +4122,7 @@ async function submitConsent() {
     const allAccepted = required.every(field => consent[field]);
 
     if (!allAccepted) {
+        document.getElementById('consentError').textContent = t('consent.error') || 'Please accept all required terms';
         document.getElementById('consentError').style.display = 'block';
         return;
     }
@@ -4077,6 +4157,8 @@ async function submitConsent() {
     hideAllViews();
     document.getElementById('dashboard').style.display = 'block';
     document.getElementById('logoutBtn').style.display = 'block';
+    // PJ6001: Hide nav links when logged in
+    document.querySelectorAll('.auth-only-hide').forEach(el => el.style.display = 'none');
 
     if (currentUser && currentUser.username) {
         document.getElementById('profileAvatar').textContent = currentUser.username[0].toUpperCase();
@@ -5720,9 +5802,11 @@ async function loadNotificationSettings() {
     
     // Check if toggles exist in DOM
     const emailOnAlertToggle = document.getElementById('emailOnAlertToggle');
+    const emailOnNotificationToggle = document.getElementById('emailOnNotificationToggle'); // PJ6001
     const dailyDiaryReminderToggle = document.getElementById('dailyDiaryReminderToggle');
     
     console.log('[NOTIFICATION DEBUG] emailOnAlertToggle element found:', !!emailOnAlertToggle);
+    console.log('[NOTIFICATION DEBUG] emailOnNotificationToggle element found:', !!emailOnNotificationToggle);
     console.log('[NOTIFICATION DEBUG] dailyDiaryReminderToggle element found:', !!dailyDiaryReminderToggle);
     
     if (emailOnAlertToggle) {
@@ -5749,14 +5833,17 @@ async function loadNotificationSettings() {
         const settings = await response.json();
         console.log('[NOTIFICATION DEBUG] Received settings from server:', JSON.stringify(settings, null, 2));
         console.log('[NOTIFICATION DEBUG] email_on_alert value:', settings.email_on_alert, 'type:', typeof settings.email_on_alert);
+        console.log('[NOTIFICATION DEBUG] email_on_notification value:', settings.email_on_notification, 'type:', typeof settings.email_on_notification);
         console.log('[NOTIFICATION DEBUG] email_daily_diary_reminder value:', settings.email_daily_diary_reminder, 'type:', typeof settings.email_daily_diary_reminder);
         
         // Re-get elements (in case DOM changed)
         const emailToggle = document.getElementById('emailOnAlertToggle');
+        const notificationToggle = document.getElementById('emailOnNotificationToggle'); // PJ6001
         const diaryToggle = document.getElementById('dailyDiaryReminderToggle');
         
         console.log('[NOTIFICATION DEBUG] Re-checking elements after fetch...');
         console.log('[NOTIFICATION DEBUG] emailOnAlertToggle still exists:', !!emailToggle);
+        console.log('[NOTIFICATION DEBUG] emailOnNotificationToggle still exists:', !!notificationToggle);
         console.log('[NOTIFICATION DEBUG] dailyDiaryReminderToggle still exists:', !!diaryToggle);
         
         if (emailToggle) {
@@ -5767,6 +5854,14 @@ async function loadNotificationSettings() {
             console.log('[NOTIFICATION DEBUG] emailOnAlertToggle AFTER setting - checked:', emailToggle.checked);
         } else {
             console.error('[NOTIFICATION DEBUG] ERROR: emailOnAlertToggle element NOT FOUND!');
+        }
+        
+        // PJ6001: Set email on notification toggle
+        if (notificationToggle) {
+            const oldValue = notificationToggle.checked;
+            const newValue = settings.email_on_notification !== false; // Default to true
+            console.log('[NOTIFICATION DEBUG] Setting emailOnNotificationToggle from', oldValue, 'to', newValue);
+            notificationToggle.checked = newValue;
         }
         
         if (diaryToggle) {
@@ -6155,6 +6250,12 @@ window.addEventListener('languageChanged', () => {
                 document.getElementById('profileOccupation').value = response.occupation || '';
                 document.getElementById('profileGoals').value = response.goals || '';
                 document.getElementById('profileFavoriteHobbies').value = response.favorite_hobbies || '';
+                
+                // PJ6001: Load birth year
+                const birthYearInput = document.getElementById('profileBirthYear');
+                if (birthYearInput) {
+                    birthYearInput.value = response.birth_year || 1985;
+                }
 
                 // Show Change Password and Delete Account sections when viewing own profile
                 const changePasswordSection = document.getElementById('changePasswordSection');
@@ -6216,6 +6317,26 @@ window.addEventListener('languageChanged', () => {
                 alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
             }
         });
+
+        // PJ6001: Update birth year function
+        async function updateBirthYear() {
+            const birthYearInput = document.getElementById('profileBirthYear');
+            const birthYear = parseInt(birthYearInput.value);
+            
+            if (isNaN(birthYear) || birthYear < 1900 || birthYear > 2025) {
+                alert(t('profile.birth_year_error') || 'Please enter a valid birth year (1900-2025)');
+                return;
+            }
+            
+            try {
+                await apiCall('/profile', 'PUT', { birth_year: birthYear });
+                alert(t('profile.birth_year_updated') || 'Birth year updated successfully!');
+            } catch (error) {
+                alert(t('msg.error') || 'Error' + ': ' + error.message);
+            }
+        }
+        // Make updateBirthYear globally available
+        window.updateBirthYear = updateBirthYear;
 
         // Circles Functions
  // FIXED: Move loadCirclesPrivacy and updateCirclesPrivacy OUTSIDE of loadCircles()
