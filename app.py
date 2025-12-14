@@ -841,21 +841,83 @@ def get_invite_alert_translations(language='en'):
     return translations.get(language, translations['en'])
 
 
+def get_notification_translations(language='en'):
+    """
+    PJ6003: Get translations for all notification types (follow, message, invite).
+    """
+    translations = {
+        'en': {
+            # Follow notifications
+            'follow.alert_title': '{username} started following you',
+            'follow.alert_content': 'You have a new follower!',
+            'follow.new_follower': 'You have a new follower!',
+            # Message notifications
+            'message.alert_title': 'New message from {username}',
+            'message.alert_content': 'You have received a new message',
+            # Invite notifications  
+            'invite.alert_title': 'New Invitation',
+            'invite.alert_content': '{username} has invited you to follow them'
+        },
+        'he': {
+            # Follow notifications
+            'follow.alert_title': '{username} התחיל/ה לעקוב אחריך',
+            'follow.alert_content': 'יש לך עוקב/ת חדש/ה!',
+            'follow.new_follower': 'יש לך עוקב/ת חדש/ה!',
+            # Message notifications
+            'message.alert_title': 'הודעה חדשה מ-{username}',
+            'message.alert_content': 'קיבלת הודעה חדשה',
+            # Invite notifications
+            'invite.alert_title': 'הזמנה חדשה',
+            'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה'
+        },
+        'ar': {
+            # Follow notifications
+            'follow.alert_title': 'بدأ {username} بمتابعتك',
+            'follow.alert_content': 'لديك متابع جديد!',
+            'follow.new_follower': 'لديك متابع جديد!',
+            # Message notifications
+            'message.alert_title': 'رسالة جديدة من {username}',
+            'message.alert_content': 'لقد تلقيت رسالة جديدة',
+            # Invite notifications
+            'invite.alert_title': 'دعوة جديدة',
+            'invite.alert_content': 'دعاك {username} لمتابعته'
+        },
+        'ru': {
+            # Follow notifications
+            'follow.alert_title': '{username} подписался на вас',
+            'follow.alert_content': 'У вас новый подписчик!',
+            'follow.new_follower': 'У вас новый подписчик!',
+            # Message notifications
+            'message.alert_title': 'Новое сообщение от {username}',
+            'message.alert_content': 'Вы получили новое сообщение',
+            # Invite notifications
+            'invite.alert_title': 'Новое приглашение',
+            'invite.alert_content': '{username} пригласил(а) вас подписаться'
+        }
+    }
+    return translations.get(language, translations['en'])
+
+
 def translate_alert_content(title, content, user_language='en'):
     """
-    PJ706: Translate alert title and content if they contain translation keys.
+    PJ706/PJ6003: Translate alert/notification title and content if they contain translation keys.
     Handles formats like:
     - title: "invite.alert_title"
     - content: "username|invite.alert_content"
+    - title: "follow.alert_title" with {username} placeholder
     """
     invite_translations = get_invite_alert_translations(user_language)
+    notification_translations = get_notification_translations(user_language)
+    
+    # Merge all translations
+    all_translations = {**invite_translations, **notification_translations}
     
     translated_title = title
     translated_content = content
     
     # Translate title if it's a known key
-    if title in invite_translations:
-        translated_title = invite_translations[title]
+    if title in all_translations:
+        translated_title = all_translations[title]
     
     # Handle content format: "username|key" or just "key"
     if content and '|' in content:
@@ -863,14 +925,19 @@ def translate_alert_content(title, content, user_language='en'):
         username = parts[0]
         content_key = parts[1] if len(parts) > 1 else ''
         
-        if content_key in invite_translations:
-            translated_content = invite_translations[content_key].replace('{username}', username)
+        if content_key in all_translations:
+            translated_content = all_translations[content_key].replace('{username}', username)
         else:
             translated_content = content
-    elif content in invite_translations:
-        translated_content = invite_translations[content]
+    elif content in all_translations:
+        translated_content = all_translations[content]
     
-    logger.info(f"[PJ706] Translated alert - title: '{title}' -> '{translated_title}', content: '{content}' -> '{translated_content}'")
+    # Handle {username} placeholder in title if content contains username
+    if '{username}' in translated_title and content and '|' in content:
+        username = content.split('|')[0]
+        translated_title = translated_title.replace('{username}', username)
+    
+    logger.info(f"[PJ6003] Translated notification - title: '{title}' -> '{translated_title}', content: '{content}' -> '{translated_content}'")
     
     return translated_title, translated_content
 
@@ -1245,6 +1312,11 @@ def send_notification_email(user_email, notification_title, notification_content
     try:
         t = get_notification_email_translations(user_language)
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+
+        # PJ6003: Translate notification title and content if they contain translation keys
+        translated_title, translated_content = translate_alert_content(notification_title, notification_content, user_language)
+        notification_title = translated_title
+        notification_content = translated_content
 
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
@@ -5427,8 +5499,8 @@ def messages():
                 sender_name = 'Someone'
 
             # Create alert with optional email notification (for email_on_alert setting)
-            # PJ401: Add source_user_id for the sender
-            alert = create_alert_with_email(
+            # PJ6003: Messages should use create_notification_with_email, not create_alert_with_email
+            alert = create_notification_with_email(
                 user_id=recipient_id,
                 title=json.dumps({
                     'key': 'alerts.new_message_from',
@@ -8107,8 +8179,17 @@ def get_progress():
         avg_activity = calc_avg(activity_data)
         avg_anxiety = calc_avg(anxiety_data)  # FIX #2: Added anxiety average
         
-        # Generate insights including anxiety
-        insights = generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, len(params), avg_anxiety)
+        # PJ6003: Get user's language for translated insights
+        user_language = 'en'
+        try:
+            user = db.session.get(User, user_id)
+            if user and user.preferred_language:
+                user_language = user.preferred_language
+        except:
+            pass
+        
+        # Generate insights including anxiety with user's language
+        insights = generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, len(params), avg_anxiety, user_language)
         
         return jsonify({
             'dates': dates,
@@ -8131,52 +8212,122 @@ def get_progress():
         return jsonify({'error': str(e)}), 500
 
 
-def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, total_entries, avg_anxiety=None):
+def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, total_entries, avg_anxiety=None, language='en'):
     """Generate personalized insights based on averages. Diary values are 1-4, chart Y-axis is 1-5."""
+    
+    # PJ6003: Insight translations
+    insight_translations = {
+        'en': {
+            'start_tracking': 'Start tracking your daily wellness to receive personalized insights!',
+            'logged_entries': "Great job tracking for {days} days!",
+            'logged_few': "You've logged {days} entries. Keep tracking daily for better insights!",
+            'mood_positive': 'Your mood has been generally positive. Keep up the good work!',
+            'mood_low': 'Your mood has been lower than usual. Consider activities that boost your wellbeing.',
+            'energy_strong': 'Your energy levels are strong!',
+            'energy_low': 'Low energy detected. Consider prioritizing rest or exercise.',
+            'sleep_great': 'Great sleep quality!',
+            'sleep_improve': 'Your sleep quality could be improved. Consider better sleep hygiene.',
+            'activity_excellent': 'Excellent activity levels!',
+            'activity_low': 'Consider increasing your physical activity for better wellbeing.',
+            'anxiety_high': 'Anxiety levels appear elevated. Consider relaxation techniques or speaking with a professional.',
+            'anxiety_good': 'Good anxiety management!',
+            'making_progress': "You're making progress! Continue tracking for more detailed insights."
+        },
+        'he': {
+            'start_tracking': 'התחל/י לעקוב אחרי הבריאות שלך כדי לקבל תובנות מותאמות אישית!',
+            'logged_entries': 'כל הכבוד על מעקב במשך {days} ימים!',
+            'logged_few': 'רשמת {days} רשומות. המשך/י לעקוב יומיומית לתובנות טובות יותר!',
+            'mood_positive': 'מצב הרוח שלך היה חיובי באופן כללי. המשך/י כך!',
+            'mood_low': 'מצב הרוח שלך היה נמוך מהרגיל. שקול/י פעילויות שמשפרות את הרווחה שלך.',
+            'energy_strong': 'רמות האנרגיה שלך חזקות!',
+            'energy_low': 'זוהתה אנרגיה נמוכה. שקול/י לתעדף מנוחה או פעילות גופנית.',
+            'sleep_great': 'איכות שינה מעולה!',
+            'sleep_improve': 'איכות השינה שלך יכולה להשתפר. שקול/י היגיינת שינה טובה יותר.',
+            'activity_excellent': 'רמות פעילות מצוינות!',
+            'activity_low': 'שקול/י להגביר את הפעילות הגופנית שלך לרווחה טובה יותר.',
+            'anxiety_high': 'רמות החרדה נראות מוגברות. שקול/י טכניקות הרגעה או שיחה עם מומחה.',
+            'anxiety_good': 'ניהול חרדה טוב!',
+            'making_progress': 'את/ה מתקדם/ת! המשך/י לעקוב לתובנות מפורטות יותר.'
+        },
+        'ar': {
+            'start_tracking': 'ابدأ بتتبع صحتك اليومية لتلقي رؤى مخصصة!',
+            'logged_entries': 'عمل رائع في التتبع لمدة {days} أيام!',
+            'logged_few': 'لقد سجلت {days} إدخالات. استمر في التتبع يوميًا للحصول على رؤى أفضل!',
+            'mood_positive': 'كان مزاجك إيجابيًا بشكل عام. استمر في ذلك!',
+            'mood_low': 'كان مزاجك أقل من المعتاد. فكر في أنشطة تعزز رفاهيتك.',
+            'energy_strong': 'مستويات طاقتك قوية!',
+            'energy_low': 'تم اكتشاف طاقة منخفضة. فكر في إعطاء الأولوية للراحة أو التمارين.',
+            'sleep_great': 'جودة نوم رائعة!',
+            'sleep_improve': 'يمكن تحسين جودة نومك. فكر في نظافة نوم أفضل.',
+            'activity_excellent': 'مستويات نشاط ممتازة!',
+            'activity_low': 'فكر في زيادة نشاطك البدني لرفاهية أفضل.',
+            'anxiety_high': 'يبدو أن مستويات القلق مرتفعة. فكر في تقنيات الاسترخاء أو التحدث مع متخصص.',
+            'anxiety_good': 'إدارة قلق جيدة!',
+            'making_progress': 'أنت تحرز تقدمًا! استمر في التتبع للحصول على رؤى أكثر تفصيلاً.'
+        },
+        'ru': {
+            'start_tracking': 'Начните отслеживать своё здоровье, чтобы получать персонализированные советы!',
+            'logged_entries': 'Отличная работа! Вы отслеживаете уже {days} дней!',
+            'logged_few': 'Вы записали {days} записей. Продолжайте отслеживать ежедневно для лучших советов!',
+            'mood_positive': 'Ваше настроение было в целом позитивным. Продолжайте в том же духе!',
+            'mood_low': 'Ваше настроение было ниже обычного. Подумайте о занятиях, которые улучшат ваше самочувствие.',
+            'energy_strong': 'Ваш уровень энергии высок!',
+            'energy_low': 'Обнаружен низкий уровень энергии. Подумайте о приоритете отдыха или упражнений.',
+            'sleep_great': 'Отличное качество сна!',
+            'sleep_improve': 'Качество вашего сна можно улучшить. Подумайте о лучшей гигиене сна.',
+            'activity_excellent': 'Отличный уровень активности!',
+            'activity_low': 'Подумайте об увеличении физической активности для лучшего самочувствия.',
+            'anxiety_high': 'Уровень тревожности повышен. Подумайте о техниках релаксации или консультации специалиста.',
+            'anxiety_good': 'Хорошее управление тревожностью!',
+            'making_progress': 'Вы делаете успехи! Продолжайте отслеживать для более детальных советов.'
+        }
+    }
+    
+    t = insight_translations.get(language, insight_translations['en'])
     insights = []
     
     if total_entries == 0:
-        return "Start tracking your daily wellness to receive personalized insights!"
+        return t['start_tracking']
     
     if total_entries < 7:
-        insights.append(f"You've logged {total_entries} entries. Keep tracking daily for better insights!")
+        insights.append(t['logged_few'].replace('{days}', str(total_entries)))
     else:
-        insights.append(f"Great job tracking for {total_entries} days!")
+        insights.append(t['logged_entries'].replace('{days}', str(total_entries)))
     
     # Thresholds based on 1-4 scale (midpoint is 2.5)
     if avg_mood is not None:
         if avg_mood >= 3:
-            insights.append("Your mood has been generally positive. Keep up the good work!")
+            insights.append(t['mood_positive'])
         elif avg_mood <= 2:
-            insights.append("Your mood has been lower than usual. Consider activities that boost your wellbeing.")
+            insights.append(t['mood_low'])
     
     if avg_energy is not None:
         if avg_energy >= 3:
-            insights.append("Your energy levels are strong!")
+            insights.append(t['energy_strong'])
         elif avg_energy <= 2:
-            insights.append("Low energy detected. Consider prioritizing rest or exercise.")
+            insights.append(t['energy_low'])
     
     if avg_sleep is not None:
         if avg_sleep >= 3:
-            insights.append("Great sleep quality!")
+            insights.append(t['sleep_great'])
         elif avg_sleep <= 2:
-            insights.append("Your sleep quality could be improved. Consider better sleep hygiene.")
+            insights.append(t['sleep_improve'])
     
     if avg_activity is not None:
         if avg_activity >= 3:
-            insights.append("Excellent activity levels!")
+            insights.append(t['activity_excellent'])
         elif avg_activity <= 2:
-            insights.append("Consider increasing your physical activity for better wellbeing.")
+            insights.append(t['activity_low'])
     
     # Anxiety insights (higher = worse for anxiety)
     if avg_anxiety is not None:
         if avg_anxiety >= 3:
-            insights.append("Anxiety levels appear elevated. Consider relaxation techniques or speaking with a professional.")
+            insights.append(t['anxiety_high'])
         elif avg_anxiety <= 2:
-            insights.append("Good anxiety management!")
+            insights.append(t['anxiety_good'])
     
     if not insights:
-        insights.append("You're making progress! Continue tracking for more detailed insights.")
+        insights.append(t['making_progress'])
     
     return " ".join(insights)
 
@@ -12102,16 +12253,23 @@ def public_invite_page(username):
         ).scalar_one_or_none()
 
         if not user:
-            return render_template('invite_not_found.html'), 404
+            return """
+            <!DOCTYPE html>
+            <html><head><title>User Not Found</title></head>
+            <body style="font-family: Arial; text-align: center; padding: 50px;">
+            <h1>User Not Found</h1><p>The user you're looking for doesn't exist.</p>
+            <a href="/">Go to TheraSocial</a>
+            </body></html>
+            """, 404
 
         # Get user's public stats
         follower_count = db.session.execute(
             select(func.count(Follow.id)).filter_by(followed_id=user.id)
-        ).scalar()
+        ).scalar() or 0
 
         following_count = db.session.execute(
             select(func.count(Follow.id)).filter_by(follower_id=user.id)
-        ).scalar()
+        ).scalar() or 0
 
         # Check if current user is logged in
         current_user_id = session.get('user_id')
@@ -12122,17 +12280,14 @@ def public_invite_page(username):
         pending_request = False
 
         if is_logged_in:
-            # Check if already following
             follow_exists = db.session.execute(
                 select(Follow).filter_by(
                     follower_id=current_user_id,
                     followed_id=user.id
                 )
             ).scalar_one_or_none()
-
             already_following = follow_exists is not None
 
-            # Check for pending request
             request_exists = db.session.execute(
                 select(FollowRequest).filter_by(
                     requester_id=current_user_id,
@@ -12140,25 +12295,275 @@ def public_invite_page(username):
                     status='pending'
                 )
             ).scalar_one_or_none()
-
             pending_request = request_exists is not None
 
-        # PJ6001: Get the invite user's preferred language for the page
-        invite_user_language = user.preferred_language or 'en'
+        # PJ6003: Check for language query parameter first, then browser language
+        lang_param = request.args.get('lang')
+        if lang_param and lang_param in ['en', 'he', 'ar', 'ru']:
+            default_language = lang_param
+        else:
+            # Detect browser language from Accept-Language header
+            browser_lang = request.accept_languages.best_match(['en', 'he', 'ar', 'ru'], default='en')
+            default_language = browser_lang
 
-        return render_template('invite.html',
-                               invite_user=user,
-                               follower_count=follower_count,
-                               following_count=following_count,
-                               is_logged_in=is_logged_in,
-                               already_following=already_following,
-                               pending_request=pending_request,
-                               default_language=invite_user_language  # PJ6001: Pass user's language
-                               )
+        # Translations for invite page
+        translations = {
+            'en': {
+                'title': f"Join {username}'s Wellness Journey",
+                'subtitle': 'Follow their progress on TheraSocial',
+                'followers': 'Followers',
+                'following': 'Following',
+                'description': f'{username} is tracking their wellness journey and wants to share it with you.',
+                'join_text': 'Join TheraSocial to follow their progress and support their mental health goals.',
+                'follow_btn': f'Follow {username}',
+                'dashboard_btn': 'Go to Dashboard',
+                'already_following': 'Already Following',
+                'request_pending': 'Request Pending'
+            },
+            'he': {
+                'title': f'הצטרף/י למסע הבריאות של {username}',
+                'subtitle': 'עקוב/י אחרי ההתקדמות שלו/ה ב-TheraSocial',
+                'followers': 'עוקבים',
+                'following': 'עוקב/ת אחרי',
+                'description': f'{username} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
+                'join_text': 'הצטרף/י ל-TheraSocial כדי לעקוב אחרי ההתקדמות שלו/ה ולתמוך ביעדי הבריאות הנפשית שלו/ה.',
+                'follow_btn': f'עקוב/י אחרי {username}',
+                'dashboard_btn': 'עבור ללוח הבקרה',
+                'already_following': 'כבר עוקב/ת',
+                'request_pending': 'בקשה ממתינה'
+            },
+            'ar': {
+                'title': f'انضم إلى رحلة {username} الصحية',
+                'subtitle': 'تابع تقدمهم على TheraSocial',
+                'followers': 'المتابعون',
+                'following': 'يتابع',
+                'description': f'{username} يتتبع رحلته الصحية ويريد مشاركتها معك.',
+                'join_text': 'انضم إلى TheraSocial لمتابعة تقدمهم ودعم أهدافهم الصحية النفسية.',
+                'follow_btn': f'تابع {username}',
+                'dashboard_btn': 'اذهب إلى لوحة التحكم',
+                'already_following': 'متابع بالفعل',
+                'request_pending': 'طلب قيد الانتظار'
+            },
+            'ru': {
+                'title': f'Присоединяйтесь к пути здоровья {username}',
+                'subtitle': 'Следите за их прогрессом на TheraSocial',
+                'followers': 'Подписчики',
+                'following': 'Подписки',
+                'description': f'{username} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
+                'join_text': 'Присоединяйтесь к TheraSocial, чтобы следить за их прогрессом и поддерживать их цели психического здоровья.',
+                'follow_btn': f'Подписаться на {username}',
+                'dashboard_btn': 'Перейти к панели',
+                'already_following': 'Уже подписаны',
+                'request_pending': 'Запрос ожидает'
+            }
+        }
+
+        t = translations.get(default_language, translations['en'])
+        is_rtl = default_language in ['he', 'ar']
+        text_dir = 'rtl' if is_rtl else 'ltr'
+
+        # Determine button state
+        if already_following:
+            button_html = f'<button class="btn btn-secondary" disabled>{t["already_following"]}</button>'
+        elif pending_request:
+            button_html = f'<button class="btn btn-secondary" disabled>{t["request_pending"]}</button>'
+        elif is_logged_in:
+            button_html = f'<a href="/api/follow/{user.id}" class="btn btn-primary">{t["follow_btn"]}</a>'
+        else:
+            button_html = f'<a href="/" class="btn btn-primary">{t["follow_btn"]}</a>'
+
+        dashboard_btn = f'<a href="/" class="btn btn-outline">{t["dashboard_btn"]}</a>' if is_logged_in else ''
+
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="{default_language}" dir="{text_dir}">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{t['title']} - TheraSocial</title>
+            <style>
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    padding: 20px;
+                    direction: {text_dir};
+                }}
+                .language-selector {{
+                    position: fixed;
+                    top: 20px;
+                    {'left' if is_rtl else 'right'}: 20px;
+                    z-index: 1000;
+                }}
+                .language-selector select {{
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    border: none;
+                    background: white;
+                    font-size: 14px;
+                    cursor: pointer;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }}
+                .card {{
+                    background: white;
+                    border-radius: 20px;
+                    padding: 40px;
+                    max-width: 500px;
+                    width: 100%;
+                    margin-top: 60px;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                    text-align: center;
+                }}
+                .avatar {{
+                    width: 100px;
+                    height: 100px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 40px;
+                    font-weight: bold;
+                    margin: 0 auto 20px;
+                }}
+                h1 {{
+                    color: #667eea;
+                    font-size: 28px;
+                    margin-bottom: 10px;
+                }}
+                .subtitle {{
+                    color: #666;
+                    margin-bottom: 25px;
+                }}
+                .stats {{
+                    display: flex;
+                    justify-content: center;
+                    gap: 40px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 12px;
+                    margin-bottom: 25px;
+                }}
+                .stat {{
+                    text-align: center;
+                }}
+                .stat-value {{
+                    font-size: 28px;
+                    font-weight: bold;
+                    color: #667eea;
+                }}
+                .stat-label {{
+                    color: #888;
+                    font-size: 14px;
+                }}
+                .description {{
+                    color: #666;
+                    line-height: 1.6;
+                    margin-bottom: 30px;
+                }}
+                .btn {{
+                    display: inline-block;
+                    padding: 14px 40px;
+                    border-radius: 25px;
+                    text-decoration: none;
+                    font-weight: bold;
+                    margin: 5px;
+                    transition: all 0.3s;
+                    border: none;
+                    cursor: pointer;
+                    font-size: 16px;
+                }}
+                .btn-primary {{
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                }}
+                .btn-primary:hover {{
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+                }}
+                .btn-outline {{
+                    background: transparent;
+                    color: #667eea;
+                    border: 2px solid #667eea;
+                }}
+                .btn-outline:hover {{
+                    background: #667eea;
+                    color: white;
+                }}
+                .btn-secondary {{
+                    background: #e0e0e0;
+                    color: #666;
+                }}
+                .buttons {{
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    align-items: center;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="language-selector">
+                <select id="langSelect" onchange="changeLanguage(this.value)">
+                    <option value="en" {'selected' if default_language == 'en' else ''}>English</option>
+                    <option value="he" {'selected' if default_language == 'he' else ''}>עברית</option>
+                    <option value="ar" {'selected' if default_language == 'ar' else ''}>العربية</option>
+                    <option value="ru" {'selected' if default_language == 'ru' else ''}>Русский</option>
+                </select>
+            </div>
+            <div class="card">
+                <div class="avatar">{username[0].upper()}</div>
+                <h1>{t['title']}</h1>
+                <p class="subtitle">{t['subtitle']}</p>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">{follower_count}</div>
+                        <div class="stat-label">{t['followers']}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">{following_count}</div>
+                        <div class="stat-label">{t['following']}</div>
+                    </div>
+                </div>
+                <p class="description">
+                    {t['description']}<br><br>
+                    {t['join_text']}
+                </p>
+                <div class="buttons">
+                    {button_html}
+                    {dashboard_btn}
+                </div>
+            </div>
+            <script>
+                function changeLanguage(lang) {{
+                    // Reload page with language parameter
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('lang', lang);
+                    window.location.href = url.toString();
+                }}
+            </script>
+        </body>
+        </html>
+        """
+
+        return html
 
     except Exception as e:
         logger.error(f"Invite page error: {str(e)}")
-        return render_template('invite_error.html'), 500
+        return """
+        <!DOCTYPE html>
+        <html><head><title>Error</title></head>
+        <body style="font-family: Arial; text-align: center; padding: 50px;">
+        <h1>Something went wrong</h1><p>Please try again later.</p>
+        <a href="/">Go to TheraSocial</a>
+        </body></html>
+        """, 500
 
 
 @app.route('/api/user/<int:user_id>/feed/<date_str>')
