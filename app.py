@@ -8101,6 +8101,8 @@ def get_progress():
     try:
         user_id = session['user_id']
         days = request.args.get('days', 30, type=int)  # Default to 30 days
+        # PJ6004: Accept language parameter from frontend for translated insights
+        request_lang = request.args.get('lang', None)
         
         # Limit to reasonable ranges
         if days > 365:
@@ -8179,14 +8181,15 @@ def get_progress():
         avg_activity = calc_avg(activity_data)
         avg_anxiety = calc_avg(anxiety_data)  # FIX #2: Added anxiety average
         
-        # PJ6003: Get user's language for translated insights
-        user_language = 'en'
-        try:
-            user = db.session.get(User, user_id)
-            if user and user.preferred_language:
-                user_language = user.preferred_language
-        except:
-            pass
+        # PJ6004: Use language from request first, then user preference, then default to 'en'
+        user_language = request_lang if request_lang and request_lang in ['en', 'he', 'ar', 'ru'] else 'en'
+        if not request_lang:
+            try:
+                user = db.session.get(User, user_id)
+                if user and user.preferred_language:
+                    user_language = user.preferred_language
+            except:
+                pass
         
         # Generate insights including anxiety with user's language
         insights = generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, len(params), avg_anxiety, user_language)
