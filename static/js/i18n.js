@@ -274,7 +274,7 @@ const translations = {
 
 'alerts.title': 'Alerts',
 'alerts.no_alerts': 'No new alerts',
-'alerts.new_message_from': 'New message from',
+'alerts.new_message_from': 'New message from {username}',
 
         // Moods
         'mood.great': '😊 Great',
@@ -1644,7 +1644,7 @@ const translations = {
 
 'alerts.title': 'התראות',
 'alerts.no_alerts': 'אין התראות חדשות',
-'alerts.new_message_from': 'הודעה חדשה מ',
+'alerts.new_message_from': 'הודעה חדשה מ-{username}',
 
         // Moods
         'mood.great': '😊 מצוין',
@@ -2539,7 +2539,7 @@ const translations = {
 
 'alerts.title': 'التنبيهات',
 'alerts.no_alerts': 'لا توجد تنبيهات جديدة',
-'alerts.new_message_from': 'رسالة جديدة من',
+'alerts.new_message_from': 'رسالة جديدة من {username}',
 
         // Moods
         'mood.great': '😊 رائع',
@@ -2785,7 +2785,7 @@ const translations = {
     'alerts.new_follower': 'У вас новый подписчик!',
 
     // PJ6003 - Invite Translations
- 
+
     'invite.legacy_alert_content': 'Кто-то пригласил вас подписаться',
 
     // PJ6003 - Notifications section
@@ -3436,7 +3436,7 @@ const translations = {
 
 'alerts.title': 'Уведомления',
 'alerts.no_alerts': 'Нет новых уведомлений',
-'alerts.new_message_from': 'Новое сообщение от',
+'alerts.new_message_from': 'Новое сообщение от {username}',
 
         // Moods
         'mood.great': '😊 Отлично',
