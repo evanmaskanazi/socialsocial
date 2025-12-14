@@ -1260,8 +1260,8 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
                         user_language = user.preferred_language or 'en'
                         result = send_alert_notification_email(user.email, email_title, content or '', user_language)
                         logger.info(f"[ALERT EMAIL] Email send result: {result}")
-                else:
-                    logger.info(f"[ALERT EMAIL] Skipping email - user not found or no email address")
+                    else:
+                        logger.info(f"[ALERT EMAIL] Skipping email - user not found or no email address")
             else:
                 logger.info(f"[ALERT EMAIL] Skipping email - email_on_alert is disabled or no settings")
                 
