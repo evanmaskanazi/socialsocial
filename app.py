@@ -1,8 +1,18 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 5002 (Version 2000)
+Complete app.py for Social Social Platform - Phase 6009 (Version 2000)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6009 Changes:
+- FIX 1: Stopped sending duplicate "TheraSocial - New Alert" individual emails for trigger alerts
+  - Only batch emails "TheraSocial - Wellness Alert for {username}" should be sent
+  - Modified create_alert_with_email() to skip email for alert_category='trigger'
+  - Batch emails are sent via send_consolidated_wellness_alert_email()
+- FIX 2: Batch wellness alert emails use watcher's preferred_language (already correct)
+- FIX 3: Progress insights now properly translated based on frontend language
+  - Backend now reads 'lang' query parameter sent by frontend
+  - Falls back to user.preferred_language if lang param not provided
 
 PJ5002 Changes (v2000):
 - Mobile Navigation Consolidation (frontend-only changes in index5002.html)
@@ -1220,32 +1230,36 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
                 logger.info(f"[ALERT EMAIL] No NotificationSettings for user {user_id}, email will NOT be sent")
             
             if settings and settings.email_on_alert:
-                user = db.session.get(User, user_id)
-                logger.info(f"[ALERT EMAIL] User found: {user is not None}, has email: {user.email if user else 'N/A'}")
-                
-                if user and user.email:
-                    # Parse alert title for email
-                    email_title = title
-                    try:
-                        title_data = json.loads(title)
-                        if isinstance(title_data, dict) and 'key' in title_data:
-                            username = title_data.get('params', {}).get('username', '')
-                            key = title_data.get('key', '')
-                            if 'new_message' in key:
-                                email_title = f"New message from {username}"
-                            elif 'started_following' in key:
-                                email_title = f"{username} started following you"
-                            elif 'invitation' in key.lower():
-                                email_title = "New invitation"
-                            else:
-                                email_title = username or 'New Alert'
-                    except:
-                        pass  # Not JSON, use as-is
+                # PJ6009: Skip individual emails for trigger alerts - they use batch emails via send_consolidated_wellness_alert_email
+                if alert_category == 'trigger':
+                    logger.info(f"[ALERT EMAIL] Skipping individual email for trigger alert - batch email will be sent instead")
+                else:
+                    user = db.session.get(User, user_id)
+                    logger.info(f"[ALERT EMAIL] User found: {user is not None}, has email: {user.email if user else 'N/A'}")
                     
-                    logger.info(f"[ALERT EMAIL] Sending alert email to {user.email} with title: {email_title}")
-                    user_language = user.preferred_language or 'en'
-                    result = send_alert_notification_email(user.email, email_title, content or '', user_language)
-                    logger.info(f"[ALERT EMAIL] Email send result: {result}")
+                    if user and user.email:
+                        # Parse alert title for email
+                        email_title = title
+                        try:
+                            title_data = json.loads(title)
+                            if isinstance(title_data, dict) and 'key' in title_data:
+                                username = title_data.get('params', {}).get('username', '')
+                                key = title_data.get('key', '')
+                                if 'new_message' in key:
+                                    email_title = f"New message from {username}"
+                                elif 'started_following' in key:
+                                    email_title = f"{username} started following you"
+                                elif 'invitation' in key.lower():
+                                    email_title = "New invitation"
+                                else:
+                                    email_title = username or 'New Alert'
+                        except:
+                            pass  # Not JSON, use as-is
+                        
+                        logger.info(f"[ALERT EMAIL] Sending alert email to {user.email} with title: {email_title}")
+                        user_language = user.preferred_language or 'en'
+                        result = send_alert_notification_email(user.email, email_title, content or '', user_language)
+                        logger.info(f"[ALERT EMAIL] Email send result: {result}")
                 else:
                     logger.info(f"[ALERT EMAIL] Skipping email - user not found or no email address")
             else:
@@ -8769,14 +8783,21 @@ def get_progress():
         avg_activity = calc_avg(activity_data)
         avg_anxiety = calc_avg(anxiety_data)  # FIX #2: Added anxiety average
         
-        # PJ6003: Get user's language for translated insights
-        user_language = 'en'
-        try:
-            user = db.session.get(User, user_id)
-            if user and user.preferred_language:
-                user_language = user.preferred_language
-        except:
-            pass
+        # PJ6009: Get language from query parameter first, then fall back to user preference
+        user_language = request.args.get('lang', None)
+        if not user_language:
+            try:
+                user = db.session.get(User, user_id)
+                if user and user.preferred_language:
+                    user_language = user.preferred_language
+                else:
+                    user_language = 'en'
+            except:
+                user_language = 'en'
+        
+        # Validate language is supported
+        if user_language not in ['en', 'he', 'ar', 'ru']:
+            user_language = 'en'
         
         # Generate insights including anxiety with user's language
         insights = generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, len(params), avg_anxiety, user_language)
