@@ -1742,16 +1742,15 @@
         <div class="nav-content">
             <div class="logo" data-i18n="nav.logo">🧠 Thera Social</div>
             <div class="nav-menu">
+                <!-- PJ6004: About and Support shown when logged out, language selector at end -->
+                <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
+                <a href="#" class="nav-link auth-only-hide" id="navSupport" data-i18n="nav.support">Support</a>
                 <select id="languageSelector" class="language-selector">
                     <option value="en">English</option>
                     <option value="he">עברית</option>
                     <option value="ar">العربية</option>
                     <option value="ru">Русский</option>
                 </select>
-                <!-- PJ6001: Home, About, Support hidden when logged in -->
-                <a href="#" class="nav-link auth-only-hide" id="navHome" data-i18n="nav.home">Home</a>
-                <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
-                <a href="#" class="nav-link auth-only-hide" id="navSupport" data-i18n="nav.support">Support</a>
                 <button class="btn btn-primary" id="logoutBtn" style="display: none; width: auto;" data-i18n="nav.logout">Logout</button>
             </div>
         </div>
@@ -3620,10 +3619,7 @@ async function loadUserCity() {
             document.getElementById('supportPage').classList.remove('hidden');
         });
 
-        document.getElementById('navHome').addEventListener('click', (e) => {
-            e.preventDefault();
-            goHome();
-        });
+        // PJ6004: Removed navHome button and event listener
 
         function goHome() {
             hideAllViews();
@@ -10089,9 +10085,10 @@ async function loadAlerts() {
                 try {
                     const titleData = JSON.parse(title);
                     if (titleData.key && titleData.params) {
-                        const translatedBase = translateKey(titleData.key);
+                        const translatedBase = translateKey(titleData.key) || titleData.key;
+                        // PJ6004: Replace {username} placeholder instead of concatenating
                         if (titleData.params.username) {
-                            title = `${translatedBase} ${titleData.params.username}`;
+                            title = translatedBase.replace('{username}', titleData.params.username);
                         } else {
                             title = translatedBase;
                         }
@@ -11134,9 +11131,11 @@ let progressChartInstance = null;
 async function updateProgressChart() {
     const days = document.getElementById('progressTimeRange')?.value || 7;
     const token = localStorage.getItem('token');
+    // PJ6004: Pass current language to get translated insights
+    const currentLang = localStorage.getItem('selectedLanguage') || 'en';
     
     try {
-        const response = await fetch(`/api/parameters/progress?days=${days}`, {
+        const response = await fetch(`/api/parameters/progress?days=${days}&lang=${currentLang}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
