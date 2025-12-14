@@ -10025,47 +10025,67 @@ async function loadAlerts() {
             return;
         }
 
-        const container = document.getElementById('alertsList');
-        if (!container) {
+        const alertsContainer = document.getElementById('alertsList');
+        const notificationsContainer = document.getElementById('notificationsList');
+        const mobileAlertsContainer = document.getElementById('mobileAlertsList');
+        const mobileNotificationsContainer = document.getElementById('mobileNotificationsList');
+        
+        if (!alertsContainer) {
             console.error('❌ alertsList container not found');
             return;
         }
 
-        console.log(`📬 Received ${response.alerts?.length || 0} alerts from API`);
+        console.log(`📬 Received ${response.alerts?.length || 0} items from API`);
 
-        if (!response.alerts || response.alerts.length === 0) {
-            const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
-            container.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
-            
-            // PJ5001: Also update mobile alerts view
-            const mobileContainer = document.getElementById('mobileAlertsList');
-            if (mobileContainer) {
-                mobileContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
-            }
-            const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
-            if (mobileNoAlertsMsg) {
-                mobileNoAlertsMsg.style.display = 'block';
-            }
-            // Hide mobile badges when no alerts
-            const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
-            if (mobileAlertsBadge) {
-                mobileAlertsBadge.style.display = 'none';
-            }
-            // PJ5002: Also hide More menu badge
-            const mobileMoreAlertsBadge = document.getElementById('mobileMoreAlertsBadge');
-            if (mobileMoreAlertsBadge) {
-                mobileMoreAlertsBadge.style.display = 'none';
-            }
-            return;
+        // PJ6003: Separate alerts (wellness/trigger) from notifications (messages, follows, invites)
+        const wellnessAlerts = [];
+        const notifications = [];
+        
+        if (response.alerts && response.alerts.length > 0) {
+            response.alerts.forEach(alert => {
+                // Wellness alerts have alert_category='trigger' or type='trigger'
+                if (alert.alert_category === 'trigger' || alert.type === 'trigger') {
+                    wellnessAlerts.push(alert);
+                } else {
+                    // Everything else is a notification (messages, follows, invites)
+                    notifications.push(alert);
+                }
+            });
         }
+        
+        console.log(`📊 Separated: ${wellnessAlerts.length} wellness alerts, ${notifications.length} notifications`);
 
-        // Process each alert with error handling
-        const alertHTML = response.alerts.map((alert, index) => {
+        // Helper function to translate and render an alert/notification item
+        function renderItem(alert) {
             try {
                 let title = alert.title || '';
                 let content = alert.message || alert.content || '';
 
-                // ===== HANDLE TITLE =====
+                // ===== HANDLE WELLNESS ALERT TITLES =====
+                // PJ6003: Translate "Wellness Alert for username" pattern
+                if (title.startsWith('Wellness Alert for ')) {
+                    const username = title.replace('Wellness Alert for ', '');
+                    const template = translateKey('alerts.wellness_alert_for') || 'Wellness Alert for {username}';
+                    title = template.replace('{username}', username);
+                }
+                
+                // ===== HANDLE WELLNESS ALERT CONTENT =====
+                // PJ6003: Translate wellness alert content patterns
+                // Pattern: "username's param has been at concerning levels for N consecutive days (date range)"
+                const wellnessMatch = content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
+                if (wellnessMatch) {
+                    const [, alertUsername, param, days, dateRange] = wellnessMatch;
+                    // Translate parameter name
+                    const translatedParam = translateKey(`params.${param}`) || param;
+                    const template = translateKey('alerts.wellness_content') || "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})";
+                    content = template
+                        .replace('{username}', alertUsername)
+                        .replace('{param}', translatedParam)
+                        .replace('{days}', days)
+                        .replace('{dateRange}', dateRange);
+                }
+
+                // ===== HANDLE OTHER TITLE PATTERNS =====
                 try {
                     const titleData = JSON.parse(title);
                     if (titleData.key && titleData.params) {
@@ -10082,7 +10102,7 @@ async function loadAlerts() {
                         const translated = translateKey(title);
                         if (!translated || translated === title) {
                             if (title === 'invite.alert_title') {
-                                title = 'New Invitation';
+                                title = translateKey('invite.alert_title') || 'New Invitation';
                             } else {
                                 title = title.replace('alerts.', '').replace('invite.', '').replace(/_/g, ' ');
                             }
@@ -10092,21 +10112,22 @@ async function loadAlerts() {
                     }
                     else if (title.startsWith('New message from ')) {
                         const username = title.replace('New message from ', '');
-                        title = `${translateKey('alerts.new_message_from')} ${username}`;
+                        const template = translateKey('alerts.new_message_from') || 'New message from {username}';
+                        title = template.replace('{username}', username);
                     }
                     else if (title.includes('started following you')) {
                         const username = title.split(' started following you')[0];
-                        const template = translateKey('alerts.started_following');
+                        const template = translateKey('alerts.started_following') || '{username} started following you';
                         title = template.replace('{username}', username);
                     }
                     else if (title.includes('accepted your follow request')) {
                         const username = title.split(' accepted your follow request')[0];
-                        const template = translateKey('alerts.accepted_request');
+                        const template = translateKey('alerts.accepted_request') || '{username} accepted your follow request';
                         title = template.replace('{username}', username);
                     }
                     else if (title.includes('wants to follow you')) {
                         const username = title.split(' wants to follow you')[0];
-                        const template = translateKey('alerts.follow_request');
+                        const template = translateKey('alerts.follow_request') || '{username} wants to follow you';
                         title = template.replace('{username}', username);
                     }
                     else if (title === 'New Follow Request') {
@@ -10124,13 +10145,13 @@ async function loadAlerts() {
                     }
                 }
                 else if (content === 'You have a new follower!' || content === 'You have a new follower') {
-                    content = translateKey('alerts.new_follower');
+                    content = translateKey('alerts.new_follower') || 'You have a new follower!';
                 }
                 else if (content && typeof content === 'string' && content.includes('|')) {
                     const parts = content.split('|');
                     if (parts.length === 2) {
                         const [username, i18nKey] = parts;
-                        const template = translateKey(i18nKey) || 'has invited you to follow them';
+                        const template = translateKey(i18nKey) || '{username} has invited you to follow them';
                         content = template.replace('{username}', username);
                     }
                 }
@@ -10139,13 +10160,12 @@ async function loadAlerts() {
                 }
 
                 if (!title || title.trim() === '') {
-                    title = 'Notification';
+                    title = translateKey('notifications.notification') || 'Notification';
                 }
                 if (!content || content.trim() === '') {
-                    content = 'You have a new notification';
+                    content = translateKey('notifications.new_notification') || 'You have a new notification';
                 }
 
-                // ✅ ONLY CHANGE FROM OLD VERSION: Added data-alert-id, onclick, and dismiss button
                 return `
                     <div class="alert-item ${alert.type || 'info'}"
                          data-alert-id="${alert.id}"
@@ -10156,7 +10176,7 @@ async function loadAlerts() {
                     </div>
                 `;
             } catch (alertError) {
-                console.error(`❌ Error rendering alert ${index}:`, alertError, alert);
+                console.error(`❌ Error rendering item:`, alertError, alert);
                 return `
                     <div class="alert-item info">
                         <strong>Notification</strong><br>
@@ -10164,27 +10184,54 @@ async function loadAlerts() {
                     </div>
                 `;
             }
-        });
-
-        container.innerHTML = alertHTML.join('');
-        console.log(`✅ Rendered ${alertHTML.length} alerts to DOM`);
-        
-        // PJ5001: Also populate mobile alerts list
-        const mobileContainer = document.getElementById('mobileAlertsList');
-        const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
-        if (mobileContainer) {
-            mobileContainer.innerHTML = alertHTML.join('');
-            console.log(`✅ Rendered ${alertHTML.length} alerts to mobile DOM`);
         }
+
+        // Render wellness alerts
+        const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
+        const noNotificationsText = translateKey('notifications.no_notifications') || 'No notifications';
+        
+        if (wellnessAlerts.length === 0) {
+            alertsContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
+            if (mobileAlertsContainer) {
+                mobileAlertsContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
+            }
+        } else {
+            const alertsHTML = wellnessAlerts.map(renderItem).join('');
+            alertsContainer.innerHTML = alertsHTML;
+            if (mobileAlertsContainer) {
+                mobileAlertsContainer.innerHTML = alertsHTML;
+            }
+        }
+        
+        // Render notifications
+        if (notificationsContainer) {
+            if (notifications.length === 0) {
+                notificationsContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="notifications.no_notifications">${noNotificationsText}</p>`;
+            } else {
+                const notificationsHTML = notifications.map(renderItem).join('');
+                notificationsContainer.innerHTML = notificationsHTML;
+            }
+        }
+        
+        if (mobileNotificationsContainer) {
+            if (notifications.length === 0) {
+                mobileNotificationsContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="notifications.no_notifications">${noNotificationsText}</p>`;
+            } else {
+                const notificationsHTML = notifications.map(renderItem).join('');
+                mobileNotificationsContainer.innerHTML = notificationsHTML;
+            }
+        }
+        
+        console.log(`✅ Rendered ${wellnessAlerts.length} wellness alerts and ${notifications.length} notifications`);
         
         // Update mobile alerts badge (on main nav and in More menu)
         const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
         const mobileMoreAlertsBadge = document.getElementById('mobileMoreAlertsBadge');
-        const badgeCount = response.alerts && response.alerts.length > 0 ? response.alerts.length : 0;
-        const badgeText = badgeCount > 99 ? '99+' : badgeCount.toString();
+        const totalCount = wellnessAlerts.length + notifications.length;
+        const badgeText = totalCount > 99 ? '99+' : totalCount.toString();
         
         if (mobileAlertsBadge) {
-            if (badgeCount > 0) {
+            if (totalCount > 0) {
                 mobileAlertsBadge.textContent = badgeText;
                 mobileAlertsBadge.style.display = 'block';
             } else {
@@ -10194,7 +10241,7 @@ async function loadAlerts() {
         
         // PJ5002: Also update badge in More menu
         if (mobileMoreAlertsBadge) {
-            if (badgeCount > 0) {
+            if (totalCount > 0) {
                 mobileMoreAlertsBadge.textContent = badgeText;
                 mobileMoreAlertsBadge.style.display = 'inline-block';
             } else {
@@ -10203,8 +10250,14 @@ async function loadAlerts() {
         }
         
         // Show/hide no alerts message on mobile
+        const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
         if (mobileNoAlertsMsg) {
-            mobileNoAlertsMsg.style.display = (!response.alerts || response.alerts.length === 0) ? 'block' : 'none';
+            mobileNoAlertsMsg.style.display = wellnessAlerts.length === 0 ? 'block' : 'none';
+        }
+        
+        const mobileNoNotificationsMsg = document.getElementById('mobileNoNotificationsMessage');
+        if (mobileNoNotificationsMsg) {
+            mobileNoNotificationsMsg.style.display = notifications.length === 0 ? 'block' : 'none';
         }
 
     } catch (error) {
