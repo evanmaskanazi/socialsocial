@@ -1197,6 +1197,204 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
         raise
 
 
+def get_notification_email_translations(language='en'):
+    """PJ6001: Get email translations for notification emails (messages, followers, invites)"""
+    translations = {
+        'en': {
+            'subject': 'TheraSocial - New Notification',
+            'hello': 'Hello',
+            'new_notification': 'You have a new notification:',
+            'view_notifications': 'View Notifications',
+            'login_to_view': 'Log in to TheraSocial to view all your notifications.',
+            'regards': 'Best regards',
+            'team': 'TheraSocial Team'
+        },
+        'he': {
+            'subject': 'TheraSocial - הודעה חדשה',
+            'hello': 'שלום',
+            'new_notification': 'יש לך הודעה חדשה:',
+            'view_notifications': 'צפה בהודעות',
+            'login_to_view': 'התחבר ל-TheraSocial כדי לצפות בכל ההודעות שלך.',
+            'regards': 'בברכה',
+            'team': 'צוות TheraSocial'
+        },
+        'ar': {
+            'subject': 'TheraSocial - إشعار جديد',
+            'hello': 'مرحبا',
+            'new_notification': 'لديك إشعار جديد:',
+            'view_notifications': 'عرض الإشعارات',
+            'login_to_view': 'سجل الدخول إلى TheraSocial لعرض جميع إشعاراتك.',
+            'regards': 'مع أطيب التحيات',
+            'team': 'فريق TheraSocial'
+        },
+        'ru': {
+            'subject': 'TheraSocial - Новое уведомление',
+            'hello': 'Здравствуйте',
+            'new_notification': 'У вас новое уведомление:',
+            'view_notifications': 'Просмотреть уведомления',
+            'login_to_view': 'Войдите в TheraSocial, чтобы просмотреть все уведомления.',
+            'regards': 'С наилучшими пожеланиями',
+            'team': 'Команда TheraSocial'
+        }
+    }
+    return translations.get(language, translations['en'])
+
+
+def send_notification_email(user_email, notification_title, notification_content, user_language='en'):
+    """PJ6001: Send email for notifications (messages, followers, invites) - separate from alerts"""
+    try:
+        t = get_notification_email_translations(user_language)
+        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+
+        is_rtl = user_language in ['he', 'ar']
+        text_dir = 'rtl' if is_rtl else 'ltr'
+        text_align = 'right' if is_rtl else 'left'
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">TheraSocial</h1>
+                </div>
+                <div style="padding: 40px 30px;">
+                    <p style="color: #666; line-height: 1.6;">{t['hello']},</p>
+                    <h2 style="color: #667eea; margin-top: 0;">{t['new_notification']}</h2>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+                        <p style="color: #333; font-weight: 600; margin: 0 0 8px 0;">{notification_title}</p>
+                        <p style="color: #666; margin: 0;">{notification_content}</p>
+                    </div>
+                    <p style="color: #666; line-height: 1.6;">{t['login_to_view']}</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{app_url}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 40px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                            {t['view_notifications']}
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 20px 30px; border-top: 1px solid #eee;">
+                    <p style="color: #999; font-size: 12px; margin: 0;">
+                        {t['regards']},<br>{t['team']}
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            logger.info(f"[SMTP NOTIFICATION] Sending notification email to {user_email}...")
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = t['subject']
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = user_email
+            msg.attach(MIMEText(html_content, 'html'))
+
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+            
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], user_email, msg.as_string())
+            
+            logger.info(f'[SMTP NOTIFICATION] Notification email sent to {user_email}')
+            return True
+        except Exception as e:
+            logger.error(f'[SMTP NOTIFICATION] Failed to send notification email: {str(e)}')
+            return False
+
+    except Exception as e:
+        logger.error(f"[SMTP NOTIFICATION] Failed to send notification email: {e}")
+        return False
+
+
+def create_notification_with_email(user_id, title, content, alert_type='info', source_user_id=None, alert_category='notification'):
+    """
+    PJ6001: Create a notification and optionally send email if user has email_on_notification enabled.
+    Used for messages, new followers, invites - NOT wellness alerts.
+    
+    Args:
+        user_id: The user ID to create notification for
+        title: Notification title
+        content: Notification content/message
+        alert_type: Type of notification
+        source_user_id: ID of user this notification is about
+        alert_category: Category: 'message', 'follow', 'invite', 'notification'
+    
+    Returns:
+        The created Alert object (stored in alerts table but shown in notifications list)
+    """
+    logger.info(f"[NOTIFICATION EMAIL] ========================================")
+    logger.info(f"[NOTIFICATION EMAIL] create_notification_with_email called")
+    logger.info(f"[NOTIFICATION EMAIL] user_id: {user_id}, alert_category: {alert_category}")
+    
+    try:
+        # Create the notification (stored in alerts table with notification category)
+        alert = Alert(
+            user_id=user_id,
+            title=title,
+            content=content,
+            alert_type=alert_type,
+            source_user_id=source_user_id,
+            alert_category=alert_category
+        )
+        db.session.add(alert)
+        db.session.flush()
+        logger.info(f"[NOTIFICATION EMAIL] Notification created with ID: {alert.id}")
+        
+        # Check if user has email_on_notification enabled
+        try:
+            settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+            
+            # Check email_on_notification setting (default to True if not set)
+            email_enabled = settings.email_on_notification if settings and hasattr(settings, 'email_on_notification') else True
+            
+            if email_enabled:
+                user = db.session.get(User, user_id)
+                
+                if user and user.email:
+                    # Parse notification title for email
+                    email_title = title
+                    try:
+                        title_data = json.loads(title)
+                        if isinstance(title_data, dict) and 'key' in title_data:
+                            username = title_data.get('params', {}).get('username', '')
+                            key = title_data.get('key', '')
+                            if 'new_message' in key:
+                                email_title = f"New message from {username}"
+                            elif 'started_following' in key:
+                                email_title = f"{username} started following you"
+                            elif 'invitation' in key.lower():
+                                email_title = "New invitation"
+                            else:
+                                email_title = username or 'New Notification'
+                    except:
+                        pass
+                    
+                    logger.info(f"[NOTIFICATION EMAIL] Sending notification email to {user.email}")
+                    user_language = user.preferred_language or 'en'
+                    result = send_notification_email(user.email, email_title, content or '', user_language)
+                    logger.info(f"[NOTIFICATION EMAIL] Email send result: {result}")
+            else:
+                logger.info(f"[NOTIFICATION EMAIL] Skipping email - email_on_notification is disabled")
+                
+        except Exception as email_err:
+            logger.error(f"[NOTIFICATION EMAIL] Error sending notification email: {str(email_err)}")
+        
+        logger.info(f"[NOTIFICATION EMAIL] ========================================")
+        return alert
+    except Exception as e:
+        logger.error(f"[NOTIFICATION EMAIL] Error creating notification: {str(e)}")
+        raise
+
+
 def ensure_notification_settings_schema():
     """Ensure notification_settings table has all required columns - runs on startup"""
     # Guard: Skip if already run in this process
@@ -1221,6 +1419,7 @@ def ensure_notification_settings_schema():
             # Define required columns with their types
             required_columns = {
                 'email_on_alert': 'BOOLEAN DEFAULT FALSE',
+                'email_on_notification': 'BOOLEAN DEFAULT TRUE',  # PJ6001: Email for notifications
                 'email_daily_diary_reminder': 'BOOLEAN DEFAULT FALSE',
                 'email_on_new_message': 'BOOLEAN DEFAULT TRUE'
             }
@@ -1735,6 +1934,7 @@ class User(db.Model):
     onboarding_dismissed = db.Column(db.Boolean, default=False)
     shareable_link_token = db.Column(db.String(100), unique=True)
     circles_privacy = db.Column(db.String(20), default='private')
+    birth_year = db.Column(db.Integer, default=1985)  # PJ6001: Birth year field
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
@@ -1827,7 +2027,8 @@ class User(db.Model):
             # ADD THESE TO to_dict():
             'has_completed_onboarding': self.has_completed_onboarding,
             'shareable_link_token': self.shareable_link_token,
-            'circles_privacy': self.circles_privacy or 'private'
+            'circles_privacy': self.circles_privacy or 'private',
+            'birth_year': self.birth_year or 1985  # PJ6001: Birth year field
         }
 
 
@@ -2125,7 +2326,8 @@ class NotificationSettings(db.Model):
     daily_reminder = db.Column(db.Boolean, default=False)
     weekly_summary = db.Column(db.Boolean, default=False)
     # New email notification settings
-    email_on_alert = db.Column(db.Boolean, default=False)  # Email for each alert
+    email_on_alert = db.Column(db.Boolean, default=False)  # Email for wellness alerts only
+    email_on_notification = db.Column(db.Boolean, default=True)  # PJ6001: Email for notifications (messages, followers, invites)
     email_daily_diary_reminder = db.Column(db.Boolean, default=False)  # Daily reminder to fill diary
     email_on_new_message = db.Column(db.Boolean, default=True)  # Email on new message (default True)
     # Daily diary reminder time settings (24-hour format, e.g., "09:00" or "21:30")
@@ -2797,6 +2999,16 @@ def fix_all_schema_issues():
                         logger.info("✓ Added selected_city column to users table")
                     elif 'selected_city' in existing_columns:
                         logger.info("✓ Users table already has selected_city column")
+
+                    # PJ6001: Add birth_year column to users table
+                    if existing_columns and 'birth_year' not in existing_columns:
+                        logger.info("Adding birth_year column to users table...")
+                        conn.execute(
+                            text("ALTER TABLE users ADD COLUMN birth_year INTEGER DEFAULT 1985"))
+                        conn.commit()
+                        logger.info("✓ Added birth_year column to users table")
+                    elif 'birth_year' in existing_columns:
+                        logger.info("✓ Users table already has birth_year column")
 
             except Exception as e:
                 logger.warning(f"Could not add selected_city column to users table: {e}")
@@ -3842,15 +4054,14 @@ def set_username():
 @app.route('/api/auth/save-consent', methods=['POST'])
 @login_required
 def save_consent():
-    """Save user consent preferences with optional username"""
+    """Save user consent preferences with optional username and birth_year"""
     try:
         data = request.json
+        user = db.session.get(User, session['user_id'])
 
         # Handle username if provided with consent
         username = data.get('username', '').strip()
         if username:
-            user = db.session.get(User, session['user_id'])
-
             # If blank, use email prefix
             if not username:
                 username = user.email.split('@')[0]
@@ -3866,6 +4077,16 @@ def save_consent():
             if not existing:
                 user.username = username
                 session['username'] = username
+
+        # PJ6001: Handle birth_year
+        birth_year = data.get('birth_year')
+        if birth_year:
+            try:
+                birth_year = int(birth_year)
+                if 1900 <= birth_year <= 2025:
+                    user.birth_year = birth_year
+            except (ValueError, TypeError):
+                pass  # Ignore invalid birth year
 
         # Check if consent already exists
         consent = db.session.execute(
@@ -4146,6 +4367,7 @@ def profile():
 
         return jsonify({
             'username': user.username if user else '',  # FIXED: Added username field
+            'birth_year': user.birth_year if user else 1985,  # PJ6001: Birth year field
             'bio': profile.bio or '',
             'interests': profile.interests or '',
             'occupation': profile.occupation or '',
@@ -4188,6 +4410,17 @@ def profile():
             user = db.session.get(User, user_id)
             if user and data['preferred_language'] in ['en', 'he', 'ar', 'ru']:
                 user.preferred_language = data['preferred_language']
+
+        # PJ6001: Update birth_year if provided
+        if 'birth_year' in data:
+            user = db.session.get(User, user_id)
+            if user:
+                try:
+                    birth_year = int(data['birth_year'])
+                    if 1900 <= birth_year <= 2025:
+                        user.birth_year = birth_year
+                except (ValueError, TypeError):
+                    pass
 
         db.session.commit()
         return jsonify({'success': True, 'message': 'Profile updated'})
@@ -4886,6 +5119,7 @@ def notification_settings():
                 logger.info(f"[NOTIFICATION DEBUG] GET - No settings found, returning DEFAULTS")
                 default_response = {
                     'email_on_alert': False,
+                    'email_on_notification': True,  # PJ6001: Default to True for notifications
                     'email_daily_diary_reminder': False,
                     'email_on_new_message': True,
                     'follow_requests': True,
@@ -4905,6 +5139,7 @@ def notification_settings():
             
             response_data = {
                 'email_on_alert': settings.email_on_alert or False,
+                'email_on_notification': settings.email_on_notification if hasattr(settings, 'email_on_notification') and settings.email_on_notification is not None else True,  # PJ6001
                 'email_daily_diary_reminder': settings.email_daily_diary_reminder or False,
                 'email_on_new_message': settings.email_on_new_message if settings.email_on_new_message is not None else True,
                 'follow_requests': settings.follow_requests,
@@ -4948,6 +5183,9 @@ def notification_settings():
             if 'email_on_alert' in data:
                 logger.info(f"[NOTIFICATION DEBUG] PUT - Setting email_on_alert to: {data['email_on_alert']}")
                 settings.email_on_alert = data['email_on_alert']
+            if 'email_on_notification' in data:  # PJ6001: Handle email_on_notification
+                logger.info(f"[NOTIFICATION DEBUG] PUT - Setting email_on_notification to: {data['email_on_notification']}")
+                settings.email_on_notification = data['email_on_notification']
             if 'email_daily_diary_reminder' in data:
                 logger.info(f"[NOTIFICATION DEBUG] PUT - Setting email_daily_diary_reminder to: {data['email_daily_diary_reminder']}")
                 settings.email_daily_diary_reminder = data['email_daily_diary_reminder']
@@ -10395,8 +10633,8 @@ def follow_user(user_id):
         if follow_trigger:
             alert_content += ' (Following your parameters)'
 
-        # PJ701: Use create_alert_with_email for follow alerts
-        alert = create_alert_with_email(
+        # PJ6001: Use create_notification_with_email for follow notifications (not wellness alerts)
+        alert = create_notification_with_email(
             user_id=user_id,
             title=f'{current_user.username} started following you',
             content=alert_content,
@@ -11895,13 +12133,17 @@ def public_invite_page(username):
 
             pending_request = request_exists is not None
 
+        # PJ6001: Get the invite user's preferred language for the page
+        invite_user_language = user.preferred_language or 'en'
+
         return render_template('invite.html',
                                invite_user=user,
                                follower_count=follower_count,
                                following_count=following_count,
                                is_logged_in=is_logged_in,
                                already_following=already_following,
-                               pending_request=pending_request
+                               pending_request=pending_request,
+                               default_language=invite_user_language  # PJ6001: Pass user's language
                                )
 
     except Exception as e:
@@ -12047,8 +12289,8 @@ def create_follow_request():
         requester = db.session.get(User, requester_id)
         requester_username = requester.username if requester else "Someone"
 
-        # PJ701: Use create_alert_with_email for invite alerts
-        alert = create_alert_with_email(
+        # PJ6001: Use create_notification_with_email for invite notifications (not wellness alerts)
+        alert = create_notification_with_email(
             user_id=target_id,
             title="invite.alert_title",
             content=f"{requester_username}|invite.alert_content",
