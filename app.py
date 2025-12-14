@@ -2986,6 +2986,16 @@ def fix_all_schema_issues():
                         logger.info("✓ Added selected_city column to users table")
                     elif 'selected_city' in existing_columns:
                         logger.info("✓ Users table already has selected_city column")
+
+                    # PJ6001: Add birth_year column to users table (PostgreSQL)
+                    if existing_columns and 'birth_year' not in existing_columns:
+                        logger.info("Adding birth_year column to users table (PostgreSQL)...")
+                        conn.execute(
+                            text("ALTER TABLE users ADD COLUMN birth_year INTEGER DEFAULT 1985"))
+                        conn.commit()
+                        logger.info("✓ Added birth_year column to users table")
+                    elif 'birth_year' in existing_columns:
+                        logger.info("✓ Users table already has birth_year column")
                 else:
                     # SQLite
                     result = conn.execute(text("PRAGMA table_info(users)"))
@@ -3000,9 +3010,9 @@ def fix_all_schema_issues():
                     elif 'selected_city' in existing_columns:
                         logger.info("✓ Users table already has selected_city column")
 
-                    # PJ6001: Add birth_year column to users table
+                    # PJ6001: Add birth_year column to users table (SQLite)
                     if existing_columns and 'birth_year' not in existing_columns:
-                        logger.info("Adding birth_year column to users table...")
+                        logger.info("Adding birth_year column to users table (SQLite)...")
                         conn.execute(
                             text("ALTER TABLE users ADD COLUMN birth_year INTEGER DEFAULT 1985"))
                         conn.commit()
@@ -3011,7 +3021,7 @@ def fix_all_schema_issues():
                         logger.info("✓ Users table already has birth_year column")
 
             except Exception as e:
-                logger.warning(f"Could not add selected_city column to users table: {e}")
+                logger.warning(f"Could not add selected_city/birth_year column to users table: {e}")
 
             logger.info("✓ All schema fixes complete")
 
