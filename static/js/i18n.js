@@ -343,6 +343,32 @@ const translations = {
         'following.circles': 'Circles',
 'followers.title': 'Followers',
 'invite.legacy_alert_content': 'Someone has invited you to follow them',
+// PJ6003 - Wellness Alert Translations
+    'alerts.wellness_alert_for': 'Wellness Alert for {username}',
+    'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
+
+    // PJ6003 - Notification Translations (for alerts list rendering)
+    'alerts.new_message_from': 'New message from {username}',
+    'alerts.started_following': '{username} started following you',
+    'alerts.accepted_request': '{username} accepted your follow request',
+    'alerts.follow_request': '{username} wants to follow you',
+    'alerts.new_follower': 'You have a new follower!',
+
+    // PJ6003 - Invite Translations
+
+    'invite.legacy_alert_content': 'Someone has invited you to follow them',
+
+    // PJ6003 - Notifications section
+    'notifications.notification': 'Notification',
+    'notifications.new_notification': 'You have a new notification',
+    'notifications.no_notifications': 'No notifications',
+
+    // PJ6003 - Parameter names for wellness alerts
+    'params.mood': 'mood',
+    'params.energy': 'energy',
+    'params.sleep_quality': 'sleep quality',
+    'params.physical_activity': 'physical activity',
+    'params.anxiety': 'anxiety',
 
     // About page
     'about.title': 'About TheraSocial',
@@ -389,7 +415,7 @@ const translations = {
             // Privacy levels (for parameters - aligned with circles)
             'privacy.public': '🌍 Public',
             'privacy.private': '🔒 Private',
-            
+
             // Invite alerts
             'invite.alert_title': 'New Invitation',
             'invite.alert_content': '{username} has invited you to follow them',
@@ -952,11 +978,37 @@ const translations = {
     'invite.go_to_dashboard': 'עבור ללוח הבקרה',
     'invite.already_following': 'כבר עוקב/ת',
     'invite.request_pending': 'בקשה ממתינה',
-        
+
         // Invite alerts
         'invite.alert_title': 'הזמנה חדשה',
         'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה',
-        
+         // PJ6003 - Wellness Alert Translations
+    'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
+    'alerts.wellness_content': "{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})",
+
+    // PJ6003 - Notification Translations
+    'alerts.new_message_from': 'הודעה חדשה מ-{username}',
+    'alerts.started_following': '{username} התחיל/ה לעקוב אחריך',
+    'alerts.accepted_request': '{username} אישר/ה את בקשת המעקב שלך',
+    'alerts.follow_request': '{username} רוצה לעקוב אחריך',
+    'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
+
+    // PJ6003 - Invite Translations
+
+    'invite.legacy_alert_content': 'מישהו הזמין אותך לעקוב אחריו/ה',
+
+    // PJ6003 - Notifications section
+    'notifications.notification': 'הודעה',
+    'notifications.new_notification': 'יש לך הודעה חדשה',
+    'notifications.no_notifications': 'אין הודעות',
+
+    // PJ6003 - Parameter names for wellness alerts
+    'params.mood': 'מצב רוח',
+    'params.energy': 'אנרגיה',
+    'params.sleep_quality': 'איכות שינה',
+    'params.physical_activity': 'פעילות גופנית',
+    'params.anxiety': 'חרדה',
+
         'block.block_user': 'חסום',
     'block.unblock_user': 'בטל חסימה',
     'block.block_confirm': 'האם אתה בטוח שברצונך לחסום את {username}? הם לא יוכלו יותר לראות את הפרופיל שלך.',
@@ -1223,6 +1275,7 @@ const translations = {
 'invite.find_people': '🔍 מצא אנשים לעקוב',
  'invite.view_public': '👁️ צפה בדף ההזמנה הציבורי שלך',
  'invite.legacy_alert_content': 'מישהו הזמין אותך לעקוב אחריו/ה',
+
 'invite.invite_friends': 'הזמן חברים',
 'invite.find_people': 'מצא אנשים לעקוב אחריהם',
 'invite.link_copied': 'קישור ההזמנה הועתק ללוח!',
@@ -1971,6 +2024,32 @@ const translations = {
 'invite.link_description': 'شارك هذا الرابط مع الأصدقاء والعائلة حتى يتمكنوا من متابعة رحلة صحتك',
 'invite.alert_title': 'دعوة جديدة',
 'invite.alert_content': 'دعاك {username} لمتابعته',
+ // PJ6003 - Wellness Alert Translations
+    'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
+    'alerts.wellness_content': "كان {param} لـ {username} في مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})",
+
+    // PJ6003 - Notification Translations
+    'alerts.new_message_from': 'رسالة جديدة من {username}',
+    'alerts.started_following': 'بدأ {username} بمتابعتك',
+    'alerts.accepted_request': 'قبل {username} طلب المتابعة الخاص بك',
+    'alerts.follow_request': 'يريد {username} متابعتك',
+    'alerts.new_follower': 'لديك متابع جديد!',
+
+    // PJ6003 - Invite Translations
+
+    'invite.legacy_alert_content': 'شخص ما دعاك لمتابعته',
+
+    // PJ6003 - Notifications section
+    'notifications.notification': 'إشعار',
+    'notifications.new_notification': 'لديك إشعار جديد',
+    'notifications.no_notifications': 'لا توجد إشعارات',
+
+    // PJ6003 - Parameter names for wellness alerts
+    'params.mood': 'المزاج',
+    'params.energy': 'الطاقة',
+    'params.sleep_quality': 'جودة النوم',
+    'params.physical_activity': 'النشاط البدني',
+    'params.anxiety': 'القلق',
 'invite.copy': 'نسخ الرابط',
 'invite.email': 'البريد الإلكتروني',
 'invite.sms': 'رسالة نصية',
@@ -2690,11 +2769,36 @@ const translations = {
     'support.phone': 'Телефон',
     'support.hours': 'Часы работы',
     'support.hours_detail': 'Понедельник-Пятница<br>9:00 - 17:00 EST',
-    
+
     // Invite alerts
     'invite.alert_title': 'Новое приглашение',
     'invite.alert_content': '{username} пригласил(а) вас подписаться',
-    
+ // PJ6003 - Wellness Alert Translations
+    'alerts.wellness_alert_for': 'Предупреждение о здоровье для {username}',
+    'alerts.wellness_content': "{param} пользователя {username} был на тревожном уровне в течение {days} дней подряд ({dateRange})",
+
+    // PJ6003 - Notification Translations
+    'alerts.new_message_from': 'Новое сообщение от {username}',
+    'alerts.started_following': '{username} подписался на вас',
+    'alerts.accepted_request': '{username} принял(а) ваш запрос на подписку',
+    'alerts.follow_request': '{username} хочет подписаться на вас',
+    'alerts.new_follower': 'У вас новый подписчик!',
+
+    // PJ6003 - Invite Translations
+ 
+    'invite.legacy_alert_content': 'Кто-то пригласил вас подписаться',
+
+    // PJ6003 - Notifications section
+    'notifications.notification': 'Уведомление',
+    'notifications.new_notification': 'У вас новое уведомление',
+    'notifications.no_notifications': 'Нет уведомлений',
+
+    // PJ6003 - Parameter names for wellness alerts
+    'params.mood': 'настроение',
+    'params.energy': 'энергия',
+    'params.sleep_quality': 'качество сна',
+    'params.physical_activity': 'физическая активность',
+    'params.anxiety': 'тревожность',
     'support.quick_help': 'Быстрая помощь',
     'support.faq_link': 'Часто задаваемые вопросы',
     'support.help_center': 'Центр помощи',
