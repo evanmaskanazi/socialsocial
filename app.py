@@ -5512,44 +5512,13 @@ def messages():
                 alert_category='message'
             )
 
-            # ALSO send dedicated message notification email if recipient has email_on_new_message enabled
-            # This is separate from alert emails - it's specifically for new messages
-            try:
-                logger.info(f"[MESSAGE EMAIL] ========================================")
-                logger.info(f"[MESSAGE EMAIL] Checking if message email should be sent")
-                logger.info(f"[MESSAGE EMAIL] recipient_id: {recipient_id}, recipient.email: {recipient.email if recipient else 'None'}")
-                
-                recipient_settings = NotificationSettings.query.filter_by(user_id=recipient_id).first()
-                logger.info(f"[MESSAGE EMAIL] NotificationSettings found: {recipient_settings is not None}")
-                
-                # Default to True if no settings exist (email_on_new_message defaults to True)
-                should_send_email = True
-                if recipient_settings:
-                    should_send_email = recipient_settings.email_on_new_message if recipient_settings.email_on_new_message is not None else True
-                    logger.info(f"[MESSAGE EMAIL] email_on_new_message setting: {recipient_settings.email_on_new_message}")
-                else:
-                    logger.info(f"[MESSAGE EMAIL] No settings found, defaulting to send email: True")
-                
-                logger.info(f"[MESSAGE EMAIL] should_send_email: {should_send_email}")
-                
-                if should_send_email and recipient.email:
-                    recipient_language = recipient.preferred_language or 'en'
-                    logger.info(f"[MESSAGE EMAIL] Sending message email to {recipient.email}")
-                    result = send_new_message_notification_email(
-                        recipient.email,
-                        sender_name,
-                        content,
-                        recipient_language
-                    )
-                    logger.info(f"[MESSAGE EMAIL] Email send result: {result}")
-                else:
-                    logger.info(f"[MESSAGE EMAIL] Skipping email - should_send_email: {should_send_email}, has_email: {bool(recipient.email if recipient else False)}")
-                
-                logger.info(f"[MESSAGE EMAIL] ========================================")
-            except Exception as email_error:
-                logger.error(f"[MESSAGE EMAIL] Error sending message notification email: {str(email_error)}")
-                logger.error(f"[MESSAGE EMAIL] Traceback: {traceback.format_exc()}")
-                # Don't fail the message send if email fails
+            # PJ6005: Removed redundant dedicated message email (send_new_message_notification_email)
+            # The notification email via create_notification_with_email above already includes
+            # the message info ("New message from username" + message preview).
+            # Previously there were TWO emails sent for each message:
+            # 1. Notification email (via create_notification_with_email) - KEPT
+            # 2. Dedicated message email (via send_new_message_notification_email) - REMOVED
+            # Now only #1 is sent, controlled by "Email me on new notifications" setting.
 
             # Update activity for today
             today = datetime.utcnow().date()
@@ -8101,8 +8070,6 @@ def get_progress():
     try:
         user_id = session['user_id']
         days = request.args.get('days', 30, type=int)  # Default to 30 days
-        # PJ6004: Accept language parameter from frontend for translated insights
-        request_lang = request.args.get('lang', None)
         
         # Limit to reasonable ranges
         if days > 365:
@@ -8181,15 +8148,14 @@ def get_progress():
         avg_activity = calc_avg(activity_data)
         avg_anxiety = calc_avg(anxiety_data)  # FIX #2: Added anxiety average
         
-        # PJ6004: Use language from request first, then user preference, then default to 'en'
-        user_language = request_lang if request_lang and request_lang in ['en', 'he', 'ar', 'ru'] else 'en'
-        if not request_lang:
-            try:
-                user = db.session.get(User, user_id)
-                if user and user.preferred_language:
-                    user_language = user.preferred_language
-            except:
-                pass
+        # PJ6003: Get user's language for translated insights
+        user_language = 'en'
+        try:
+            user = db.session.get(User, user_id)
+            if user and user.preferred_language:
+                user_language = user.preferred_language
+        except:
+            pass
         
         # Generate insights including anxiety with user's language
         insights = generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, len(params), avg_anxiety, user_language)
