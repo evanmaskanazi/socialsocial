@@ -1264,6 +1264,218 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
         raise
 
 
+def create_alert_no_email(user_id, title, content, alert_type='info', source_user_id=None, alert_category='general'):
+    """
+    PJ6007: Create an alert WITHOUT sending email.
+    Used for individual trigger alerts when we want to send a consolidated email later.
+    
+    Args:
+        user_id: The user ID to create alert for
+        title: Alert title
+        content: Alert content/message
+        alert_type: Type of alert
+        source_user_id: ID of user this alert is about
+        alert_category: Category of alert
+    
+    Returns:
+        The created Alert object
+    """
+    try:
+        alert = Alert(
+            user_id=user_id,
+            title=title,
+            content=content,
+            alert_type=alert_type,
+            source_user_id=source_user_id,
+            alert_category=alert_category
+        )
+        db.session.add(alert)
+        db.session.flush()
+        logger.info(f"[ALERT NO EMAIL] Created alert ID {alert.id} for user {user_id} (no email)")
+        return alert
+    except Exception as e:
+        logger.error(f"[ALERT NO EMAIL] Error creating alert: {str(e)}")
+        raise
+
+
+def send_consolidated_wellness_alert_email(watcher_id, watched_username, triggered_params, user_language='en'):
+    """
+    PJ6007: Send ONE consolidated email for multiple wellness alerts.
+    Instead of 7 separate emails, sends one email listing all triggered parameters.
+    
+    Args:
+        watcher_id: User ID of the person receiving the alert
+        watched_username: Username of the person being watched
+        triggered_params: List of dicts with 'param_name', 'days', 'date_range'
+        user_language: Language for email content
+    
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    logger.info(f"[CONSOLIDATED EMAIL] ========================================")
+    logger.info(f"[CONSOLIDATED EMAIL] Sending consolidated alert to watcher_id={watcher_id}")
+    logger.info(f"[CONSOLIDATED EMAIL] watched_username={watched_username}, params={len(triggered_params)}")
+    
+    try:
+        # Check if user has email notifications enabled
+        settings = NotificationSettings.query.filter_by(user_id=watcher_id).first()
+        if not settings or not settings.email_on_alert:
+            logger.info(f"[CONSOLIDATED EMAIL] Skipping - email_on_alert disabled for user {watcher_id}")
+            return False
+        
+        watcher = db.session.get(User, watcher_id)
+        if not watcher or not watcher.email:
+            logger.info(f"[CONSOLIDATED EMAIL] Skipping - no email for user {watcher_id}")
+            return False
+        
+        # Build the consolidated content
+        translations = {
+            'en': {
+                'subject': f'TheraSocial - Wellness Alert for {watched_username}',
+                'hello': 'Hello',
+                'intro': f"We noticed some concerning wellness patterns for {watched_username}:",
+                'param_line': '{param} has been at concerning levels for {days} consecutive days ({date_range})',
+                'recommendation': 'Consider reaching out to check in on them.',
+                'view_details': 'View Details',
+                'regards': 'Best regards',
+                'team': 'TheraSocial Team',
+                'mood': 'Mood',
+                'energy': 'Energy',
+                'sleep_quality': 'Sleep quality',
+                'physical_activity': 'Physical activity',
+                'anxiety': 'Anxiety'
+            },
+            'he': {
+                'subject': f'TheraSocial - התראת בריאות עבור {watched_username}',
+                'hello': 'שלום',
+                'intro': f"שמנו לב לדפוסי בריאות מדאיגים עבור {watched_username}:",
+                'param_line': '{param} היה ברמות מדאיגות במשך {days} ימים רצופים ({date_range})',
+                'recommendation': 'שקול/י ליצור קשר כדי לבדוק את מצבם.',
+                'view_details': 'צפה בפרטים',
+                'regards': 'בברכה',
+                'team': 'צוות TheraSocial',
+                'mood': 'מצב רוח',
+                'energy': 'אנרגיה',
+                'sleep_quality': 'איכות שינה',
+                'physical_activity': 'פעילות גופנית',
+                'anxiety': 'חרדה'
+            },
+            'ar': {
+                'subject': f'TheraSocial - تنبيه صحي لـ {watched_username}',
+                'hello': 'مرحباً',
+                'intro': f"لاحظنا بعض أنماط الصحة المقلقة لـ {watched_username}:",
+                'param_line': '{param} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({date_range})',
+                'recommendation': 'فكر في التواصل للاطمئنان عليهم.',
+                'view_details': 'عرض التفاصيل',
+                'regards': 'مع أطيب التحيات',
+                'team': 'فريق TheraSocial',
+                'mood': 'المزاج',
+                'energy': 'الطاقة',
+                'sleep_quality': 'جودة النوم',
+                'physical_activity': 'النشاط البدني',
+                'anxiety': 'القلق'
+            },
+            'ru': {
+                'subject': f'TheraSocial - Оповещение о здоровье {watched_username}',
+                'hello': 'Здравствуйте',
+                'intro': f"Мы заметили тревожные показатели здоровья у {watched_username}:",
+                'param_line': '{param} был на тревожном уровне {days} дней подряд ({date_range})',
+                'recommendation': 'Рассмотрите возможность связаться с ними.',
+                'view_details': 'Подробнее',
+                'regards': 'С уважением',
+                'team': 'Команда TheraSocial',
+                'mood': 'Настроение',
+                'energy': 'Энергия',
+                'sleep_quality': 'Качество сна',
+                'physical_activity': 'Физическая активность',
+                'anxiety': 'Тревожность'
+            }
+        }
+        
+        t = translations.get(user_language, translations['en'])
+        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        is_rtl = user_language in ['he', 'ar']
+        text_dir = 'rtl' if is_rtl else 'ltr'
+        text_align = 'right' if is_rtl else 'left'
+        
+        # Build parameter list HTML
+        param_items = []
+        for p in triggered_params:
+            param_display = t.get(p['param_name'], p['param_name'])
+            line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p['days'])).replace('{date_range}', p['date_range'])
+            param_items.append(f'<li style="margin-bottom: 8px;">{line}</li>')
+        
+        params_html = '\n'.join(param_items)
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">TheraSocial</h1>
+                </div>
+                <div style="padding: 40px 30px;">
+                    <p style="color: #666; line-height: 1.6;">{t['hello']},</p>
+                    <p style="color: #666; line-height: 1.6;">{t['intro']}</p>
+                    <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                        <ul style="color: #856404; margin: 0; padding-left: 20px;">
+                            {params_html}
+                        </ul>
+                    </div>
+                    <p style="color: #666; line-height: 1.6;">{t['recommendation']}</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{app_url}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                            {t['view_details']}
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 20px 30px; border-top: 1px solid #eee;">
+                    <p style="color: #999; font-size: 12px; margin: 0;">
+                        {t['regards']},<br>{t['team']}
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Send the email
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = t['subject']
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = watcher.email
+            msg.attach(MIMEText(html_content, 'html'))
+            
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+            
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], watcher.email, msg.as_string())
+            
+            logger.info(f'[CONSOLIDATED EMAIL] Successfully sent to {watcher.email} with {len(triggered_params)} params')
+            logger.info(f"[CONSOLIDATED EMAIL] ========================================")
+            return True
+            
+        except Exception as e:
+            logger.error(f'[CONSOLIDATED EMAIL] Failed to send: {str(e)}')
+            logger.error(f"[CONSOLIDATED EMAIL] ========================================")
+            return False
+            
+    except Exception as e:
+        logger.error(f"[CONSOLIDATED EMAIL] Error: {str(e)}")
+        logger.error(f"[CONSOLIDATED EMAIL] Traceback: {traceback.format_exc()}")
+        return False
+
+
 def get_notification_email_translations(language='en'):
     """PJ6001: Get email translations for notification emails (messages, followers, invites)"""
     translations = {
@@ -7231,13 +7443,43 @@ def save_parameters():
         
         # PJ809: Log parameter values before trigger check
         logger.info(f"[SAVE PARAMS] Saved: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}")
-        logger.info(f"[SAVE PARAMS] Calling process_parameter_triggers for user_id={user_id}")
-
-        # Check triggers
-        process_parameter_triggers(user_id, params)
-
-        # Cleanup stale trigger alerts based on new privacy settings
-        cleanup_stale_trigger_alerts_for_user(user_id)
+        
+        # PJ6006: Run trigger processing in background thread to avoid blocking response
+        # This prevents the 5+ second delay when multiple alert emails need to be sent
+        logger.info(f"[SAVE PARAMS] Starting background thread for trigger processing user_id={user_id}")
+        
+        # Create a copy of param values for the background thread (can't use ORM object across threads)
+        param_snapshot = {
+            'mood': params.mood,
+            'energy': params.energy,
+            'sleep_quality': params.sleep_quality,
+            'physical_activity': params.physical_activity,
+            'anxiety': params.anxiety,
+            'mood_privacy': getattr(params, 'mood_privacy', 'private'),
+            'energy_privacy': getattr(params, 'energy_privacy', 'private'),
+            'sleep_quality_privacy': getattr(params, 'sleep_quality_privacy', 'private'),
+            'physical_activity_privacy': getattr(params, 'physical_activity_privacy', 'private'),
+            'anxiety_privacy': getattr(params, 'anxiety_privacy', 'private'),
+            'date': params.date,
+            'notes': params.notes
+        }
+        
+        def run_trigger_processing():
+            """Background thread function for trigger processing"""
+            try:
+                with app.app_context():
+                    logger.info(f"[BACKGROUND TRIGGERS] Starting trigger processing for user_id={user_id}")
+                    process_parameter_triggers_async(user_id, param_snapshot)
+                    cleanup_stale_trigger_alerts_for_user(user_id)
+                    logger.info(f"[BACKGROUND TRIGGERS] Completed trigger processing for user_id={user_id}")
+            except Exception as e:
+                logger.error(f"[BACKGROUND TRIGGERS] Error in background trigger processing: {str(e)}")
+                logger.error(f"[BACKGROUND TRIGGERS] Traceback: {traceback.format_exc()}")
+        
+        # Start background thread - don't wait for it
+        trigger_thread = threading.Thread(target=run_trigger_processing, daemon=True)
+        trigger_thread.start()
+        logger.info(f"[SAVE PARAMS] Background trigger thread started")
 
         import random
         encouragements = [
@@ -7269,6 +7511,347 @@ def save_parameters():
         logger.error(f"Error saving parameters: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to save parameters'}), 500
+
+
+def process_parameter_triggers_async(user_id, param_snapshot):
+    """
+    PJ6007: Async trigger processing with CONSOLIDATED emails.
+    Instead of sending one email per triggered parameter, collects all triggers
+    per watcher and sends ONE consolidated email.
+    
+    Args:
+        user_id: The user ID whose parameters were saved
+        param_snapshot: Dict containing parameter values (since ORM objects can't cross threads)
+    """
+    try:
+        logger.info(f"[TRIGGER PROCESS ASYNC] ========================================")
+        logger.info(f"[TRIGGER PROCESS ASYNC] PJ6007: Starting with consolidated emails for user_id={user_id}")
+        
+        # Find all triggers where someone is watching this user
+        all_triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
+        logger.info(f"[TRIGGER PROCESS ASYNC] Found {len(all_triggers)} trigger rows watching user {user_id}")
+        
+        if len(all_triggers) == 0:
+            logger.info(f"[TRIGGER PROCESS ASYNC] No triggers found - no one is watching user {user_id}")
+            logger.info(f"[TRIGGER PROCESS ASYNC] ========================================")
+            return
+        
+        watched_user = User.query.get(user_id)
+        if not watched_user:
+            logger.error(f"[TRIGGER PROCESS ASYNC] Watched user {user_id} not found")
+            return
+        
+        # Helper function to check privacy permissions
+        def can_see_parameter(param_privacy, watcher_circle):
+            if param_privacy == 'private':
+                return False
+            elif param_privacy == 'class_a':
+                return watcher_circle == 'class_a'
+            elif param_privacy == 'class_b':
+                return watcher_circle in ['class_b', 'class_a']
+            elif param_privacy == 'public':
+                return True
+            return False
+        
+        # Helper to safely convert values to numbers
+        def to_number(val):
+            if val is None:
+                return None
+            if isinstance(val, (int, float)):
+                return float(val)
+            if isinstance(val, str):
+                if val.lower() in ['private', 'hidden', 'none', '']:
+                    return None
+                try:
+                    return float(val)
+                except ValueError:
+                    return None
+            return None
+        
+        # Get last 30 days of parameters from DB
+        thirty_days_ago = datetime.now().date() - timedelta(days=30)
+        all_params = SavedParameters.query.filter(
+            SavedParameters.user_id == user_id,
+            SavedParameters.date >= thirty_days_ago
+        ).order_by(SavedParameters.date.asc()).all()
+        
+        logger.info(f"[TRIGGER PROCESS ASYNC] Found {len(all_params)} parameter entries in last 30 days")
+        
+        # PJ6007: Collect triggered params per watcher for consolidated email
+        # Key: watcher_id, Value: list of {'param_name', 'days', 'date_range', 'content'}
+        watcher_triggered_params = {}
+        patterns_seen = set()
+        alerts_created = 0
+        alerts_skipped_duplicate = 0
+        
+        # Process each trigger row
+        for trigger in all_triggers:
+            watcher_id = trigger.watcher_id
+            consecutive_days = trigger.consecutive_days or 3
+            
+            if consecutive_days < 1 or len(all_params) < consecutive_days:
+                continue
+            
+            watcher_circle = get_watcher_circle_level(user_id, watcher_id)
+            if not watcher_circle:
+                continue
+            
+            # Initialize watcher's list if not exists
+            if watcher_id not in watcher_triggered_params:
+                watcher_triggered_params[watcher_id] = []
+            
+            # Determine which schema this trigger uses
+            has_new_schema = any([
+                trigger.mood_alert, trigger.energy_alert, trigger.sleep_alert,
+                trigger.physical_alert, trigger.anxiety_alert
+            ])
+            has_old_schema = trigger.parameter_name is not None
+            
+            # Build list of parameters to check
+            param_checks = []
+            
+            if has_new_schema:
+                if trigger.mood_alert:
+                    param_checks.append(('mood', 'mood', 'mood_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2))
+                if trigger.energy_alert:
+                    param_checks.append(('energy', 'energy', 'energy_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2))
+                if trigger.sleep_alert:
+                    param_checks.append(('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2))
+                if trigger.physical_alert:
+                    param_checks.append(('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2))
+                if trigger.anxiety_alert:
+                    param_checks.append(('anxiety', 'anxiety', 'anxiety_privacy', lambda x: to_number(x) is not None and to_number(x) >= 3))
+            elif has_old_schema:
+                param_mapping = {
+                    'mood': ('mood', 'mood', 'mood_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2),
+                    'energy': ('energy', 'energy', 'energy_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2),
+                    'sleep_quality': ('sleep_quality', 'sleep_quality', 'sleep_quality_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2),
+                    'physical_activity': ('physical_activity', 'physical_activity', 'physical_activity_privacy', lambda x: to_number(x) is not None and to_number(x) <= 2),
+                    'anxiety': ('anxiety', 'anxiety', 'anxiety_privacy', lambda x: to_number(x) is not None and to_number(x) >= 3)
+                }
+                if trigger.parameter_name in param_mapping:
+                    param_checks.append(param_mapping[trigger.parameter_name])
+            
+            # Check each parameter for consecutive day streaks
+            for param_attr, param_name, privacy_attr, condition_func in param_checks:
+                streak_dates = []
+                last_date = None
+                
+                for param_entry in all_params:
+                    param_value = getattr(param_entry, param_attr, None)
+                    param_privacy = getattr(param_entry, privacy_attr, 'private')
+                    
+                    # Check privacy - process streak if long enough before reset
+                    if not can_see_parameter(param_privacy, watcher_circle):
+                        if len(streak_dates) >= consecutive_days:
+                            start_date = streak_dates[0]
+                            end_date = streak_dates[-1]
+                            pattern_key = (watcher_id, param_name, start_date.isoformat(), end_date.isoformat())
+                            
+                            if pattern_key not in patterns_seen:
+                                patterns_seen.add(pattern_key)
+                                start_str = start_date.strftime('%b %d')
+                                end_str = end_date.strftime('%b %d')
+                                date_pattern = f"({start_str} - {end_str})"
+                                
+                                # Check for DB duplicate
+                                existing = Alert.query.filter(
+                                    Alert.user_id == watcher_id,
+                                    Alert.alert_type == 'trigger',
+                                    Alert.created_at >= datetime.now() - timedelta(hours=24),
+                                    Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
+                                ).first()
+                                
+                                if not existing:
+                                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                    # PJ6007: Create alert WITHOUT email
+                                    alert = create_alert_no_email(
+                                        user_id=watcher_id,
+                                        title=f"Wellness Alert for {watched_user.username}",
+                                        content=content,
+                                        alert_type='trigger',
+                                        source_user_id=watched_user.id,
+                                        alert_category='trigger'
+                                    )
+                                    if alert:
+                                        alerts_created += 1
+                                        # Add to watcher's triggered params for consolidated email
+                                        watcher_triggered_params[watcher_id].append({
+                                            'param_name': param_name,
+                                            'days': len(streak_dates),
+                                            'date_range': f"{start_str} - {end_str}"
+                                        })
+                                else:
+                                    alerts_skipped_duplicate += 1
+                        
+                        streak_dates = []
+                        last_date = None
+                        continue
+                    
+                    if param_value is not None and condition_func(param_value):
+                        if last_date is None:
+                            streak_dates = [param_entry.date]
+                            last_date = param_entry.date
+                        elif (param_entry.date - last_date).days == 1:
+                            streak_dates.append(param_entry.date)
+                            last_date = param_entry.date
+                        elif (param_entry.date - last_date).days == 0:
+                            continue
+                        else:
+                            # Gap in streak - process if long enough
+                            if len(streak_dates) >= consecutive_days:
+                                start_date = streak_dates[0]
+                                end_date = streak_dates[-1]
+                                pattern_key = (watcher_id, param_name, start_date.isoformat(), end_date.isoformat())
+                                
+                                if pattern_key not in patterns_seen:
+                                    patterns_seen.add(pattern_key)
+                                    start_str = start_date.strftime('%b %d')
+                                    end_str = end_date.strftime('%b %d')
+                                    date_pattern = f"({start_str} - {end_str})"
+                                    
+                                    existing = Alert.query.filter(
+                                        Alert.user_id == watcher_id,
+                                        Alert.alert_type == 'trigger',
+                                        Alert.created_at >= datetime.now() - timedelta(hours=24),
+                                        Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
+                                    ).first()
+                                    
+                                    if not existing:
+                                        content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                        alert = create_alert_no_email(
+                                            user_id=watcher_id,
+                                            title=f"Wellness Alert for {watched_user.username}",
+                                            content=content,
+                                            alert_type='trigger',
+                                            source_user_id=watched_user.id,
+                                            alert_category='trigger'
+                                        )
+                                        if alert:
+                                            alerts_created += 1
+                                            watcher_triggered_params[watcher_id].append({
+                                                'param_name': param_name,
+                                                'days': len(streak_dates),
+                                                'date_range': f"{start_str} - {end_str}"
+                                            })
+                                    else:
+                                        alerts_skipped_duplicate += 1
+                            
+                            streak_dates = [param_entry.date]
+                            last_date = param_entry.date
+                    else:
+                        # Condition not met - process streak if long enough
+                        if len(streak_dates) >= consecutive_days:
+                            start_date = streak_dates[0]
+                            end_date = streak_dates[-1]
+                            pattern_key = (watcher_id, param_name, start_date.isoformat(), end_date.isoformat())
+                            
+                            if pattern_key not in patterns_seen:
+                                patterns_seen.add(pattern_key)
+                                start_str = start_date.strftime('%b %d')
+                                end_str = end_date.strftime('%b %d')
+                                date_pattern = f"({start_str} - {end_str})"
+                                
+                                existing = Alert.query.filter(
+                                    Alert.user_id == watcher_id,
+                                    Alert.alert_type == 'trigger',
+                                    Alert.created_at >= datetime.now() - timedelta(hours=24),
+                                    Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
+                                ).first()
+                                
+                                if not existing:
+                                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                    alert = create_alert_no_email(
+                                        user_id=watcher_id,
+                                        title=f"Wellness Alert for {watched_user.username}",
+                                        content=content,
+                                        alert_type='trigger',
+                                        source_user_id=watched_user.id,
+                                        alert_category='trigger'
+                                    )
+                                    if alert:
+                                        alerts_created += 1
+                                        watcher_triggered_params[watcher_id].append({
+                                            'param_name': param_name,
+                                            'days': len(streak_dates),
+                                            'date_range': f"{start_str} - {end_str}"
+                                        })
+                                else:
+                                    alerts_skipped_duplicate += 1
+                        
+                        streak_dates = []
+                        last_date = None
+                
+                # Check final streak at end of loop
+                if len(streak_dates) >= consecutive_days:
+                    start_date = streak_dates[0]
+                    end_date = streak_dates[-1]
+                    pattern_key = (watcher_id, param_name, start_date.isoformat(), end_date.isoformat())
+                    
+                    if pattern_key not in patterns_seen:
+                        patterns_seen.add(pattern_key)
+                        start_str = start_date.strftime('%b %d')
+                        end_str = end_date.strftime('%b %d')
+                        date_pattern = f"({start_str} - {end_str})"
+                        
+                        existing = Alert.query.filter(
+                            Alert.user_id == watcher_id,
+                            Alert.alert_type == 'trigger',
+                            Alert.created_at >= datetime.now() - timedelta(hours=24),
+                            Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
+                        ).first()
+                        
+                        if not existing:
+                            content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                            alert = create_alert_no_email(
+                                user_id=watcher_id,
+                                title=f"Wellness Alert for {watched_user.username}",
+                                content=content,
+                                alert_type='trigger',
+                                source_user_id=watched_user.id,
+                                alert_category='trigger'
+                            )
+                            if alert:
+                                alerts_created += 1
+                                watcher_triggered_params[watcher_id].append({
+                                    'param_name': param_name,
+                                    'days': len(streak_dates),
+                                    'date_range': f"{start_str} - {end_str}"
+                                })
+                        else:
+                            alerts_skipped_duplicate += 1
+        
+        # Commit alerts to DB
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+        
+        # PJ6007: Send ONE consolidated email per watcher (instead of many individual emails)
+        emails_sent = 0
+        for watcher_id, triggered_params in watcher_triggered_params.items():
+            if triggered_params:  # Only send if there are triggered params
+                watcher = User.query.get(watcher_id)
+                user_language = watcher.preferred_language if watcher else 'en'
+                
+                logger.info(f"[TRIGGER PROCESS ASYNC] Sending consolidated email to watcher {watcher_id} with {len(triggered_params)} params")
+                
+                if send_consolidated_wellness_alert_email(watcher_id, watched_user.username, triggered_params, user_language):
+                    emails_sent += 1
+        
+        logger.info(f"[TRIGGER PROCESS ASYNC] PJ6007 Completed:")
+        logger.info(f"[TRIGGER PROCESS ASYNC]   - {alerts_created} alerts created in DB")
+        logger.info(f"[TRIGGER PROCESS ASYNC]   - {alerts_skipped_duplicate} duplicates skipped")
+        logger.info(f"[TRIGGER PROCESS ASYNC]   - {emails_sent} consolidated emails sent (was {alerts_created} before PJ6007)")
+        logger.info(f"[TRIGGER PROCESS ASYNC] ========================================")
+        
+    except Exception as e:
+        logger.error(f"[TRIGGER PROCESS ASYNC] Error: {str(e)}")
+        logger.error(f"[TRIGGER PROCESS ASYNC] Traceback: {traceback.format_exc()}")
+        try:
+            db.session.rollback()
+        except:
+            pass
 
 
 def process_parameter_triggers(user_id, params):
