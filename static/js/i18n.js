@@ -749,6 +749,48 @@ const translations = {
         'following.no_users': 'No users found',
         'following.follow': 'Follow',
         'following.with_note': '+ Note',
+           'profile.birth_year': 'Birth Year',
+    'profile.birth_year_placeholder': 'YYYY',
+    'profile.birth_year_hint': 'Enter your birth year (4 digits)',
+    'profile.birth_year_error': 'Please enter a valid birth year (4 digits between 1900-2025)',
+    'profile.birth_year_updated': 'Birth year updated successfully!',
+    'profile.update_birth_year': 'Update',
+
+    // Email Options (renamed from Email Notifications)
+    'notifications.email_options': 'Email Options',
+    'notifications.email_on_alert': 'Email me on new alerts',
+    'notifications.email_on_notification': 'Email me on new notifications',
+
+    // Notifications section (separate from Alerts)
+    'notifications.title': 'Notifications',
+    'notifications.no_notifications': 'No notifications to display',
+
+    // Alert types (for translation in alert list)
+    'alerts.wellness_alert': 'Wellness Alert',
+    'alerts.wellness_alert_for': 'Wellness Alert for {username}',
+    'alerts.parameter_alert': '{parameter} has been at concerning levels',
+    'alerts.consecutive_days': 'for {days} consecutive days',
+    'alerts.date_range': '({start} - {end})',
+
+    // Notification types
+    'notifications.new_message': 'New message from {username}',
+    'notifications.message_sent': 'Message sent',
+    'notifications.new_follower': '{username} started following you',
+    'notifications.you_have_new_follower': 'You have a new follower!',
+    'notifications.new_invitation': 'New Invitation',
+    'notifications.invitation_content': '{username} has invited you to follow them',
+
+    // Invite page
+    'invite.join_journey': "Join {username}'s Wellness Journey",
+    'invite.follow_progress': 'Follow their progress on TheraSocial',
+    'invite.followers': 'Followers',
+    'invite.following': 'Following',
+    'invite.tracking_wellness': '{username} is tracking their wellness journey and wants to share it with you.',
+    'invite.join_to_follow': 'Join TheraSocial to follow their progress and support their mental health goals.',
+    'invite.follow_user': 'Follow {username}',
+    'invite.go_to_dashboard': 'Go to Dashboard',
+    'invite.already_following': 'Already Following',
+    'invite.request_pending': 'Request Pending',
 
 
 
@@ -868,6 +910,48 @@ const translations = {
         'parameters.positive8': "מדהים! אתה לוקח אחריות על מסע הבריאות שלך! 🌟",
         'parameters.positive9': "מרהיב! המשך בתרגול המדהים הזה של מודעות עצמית! 🚀",
         'parameters.positive10': "פנומנלי! אתה כותב את סיפור הבריאות שלך, יום אחר יום! 📖",
+          'profile.birth_year': 'שנת לידה',
+    'profile.birth_year_placeholder': 'YYYY',
+    'profile.birth_year_hint': 'הזן את שנת הלידה שלך (4 ספרות)',
+    'profile.birth_year_error': 'אנא הזן שנת לידה תקינה (4 ספרות בין 1900-2025)',
+    'profile.birth_year_updated': 'שנת הלידה עודכנה בהצלחה!',
+    'profile.update_birth_year': 'עדכן',
+
+    // Email Options
+    'notifications.email_options': 'אפשרויות דוא"ל',
+    'notifications.email_on_alert': 'שלח לי דוא"ל על התראות חדשות',
+    'notifications.email_on_notification': 'שלח לי דוא"ל על הודעות חדשות',
+
+    // Notifications section
+    'notifications.title': 'הודעות',
+    'notifications.no_notifications': 'אין הודעות להצגה',
+
+    // Alert types
+    'alerts.wellness_alert': 'התראת בריאות',
+    'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
+    'alerts.parameter_alert': '{parameter} היה ברמות מדאיגות',
+    'alerts.consecutive_days': 'במשך {days} ימים רצופים',
+    'alerts.date_range': '({start} - {end})',
+
+    // Notification types
+    'notifications.new_message': 'הודעה חדשה מ-{username}',
+    'notifications.message_sent': 'הודעה נשלחה',
+    'notifications.new_follower': '{username} התחיל/ה לעקוב אחריך',
+    'notifications.you_have_new_follower': 'יש לך עוקב/ת חדש/ה!',
+    'notifications.new_invitation': 'הזמנה חדשה',
+    'notifications.invitation_content': '{username} הזמין/ה אותך לעקוב אחריו/ה',
+
+    // Invite page
+    'invite.join_journey': 'הצטרף/י למסע הבריאות של {username}',
+    'invite.follow_progress': 'עקוב/י אחרי ההתקדמות שלו/ה ב-TheraSocial',
+    'invite.followers': 'עוקבים',
+    'invite.following': 'עוקב/ת אחרי',
+    'invite.tracking_wellness': '{username} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
+    'invite.join_to_follow': 'הצטרף/י ל-TheraSocial כדי לעקוב אחרי ההתקדמות שלו/ה ולתמוך ביעדי הבריאות הנפשית שלו/ה.',
+    'invite.follow_user': 'עקוב/י אחרי {username}',
+    'invite.go_to_dashboard': 'עבור ללוח הבקרה',
+    'invite.already_following': 'כבר עוקב/ת',
+    'invite.request_pending': 'בקשה ממתינה',
         
         // Invite alerts
         'invite.alert_title': 'הזמנה חדשה',
@@ -1746,7 +1830,48 @@ const translations = {
         'following.view_full_profile': 'عرض الملف الشخصي الكامل',
         'following.circles': 'الدوائر',
 'auth.username': 'اسم المستخدم',
+    'profile.birth_year': 'سنة الميلاد',
+    'profile.birth_year_placeholder': 'YYYY',
+    'profile.birth_year_hint': 'أدخل سنة ميلادك (4 أرقام)',
+    'profile.birth_year_error': 'الرجاء إدخال سنة ميلاد صالحة (4 أرقام بين 1900-2025)',
+    'profile.birth_year_updated': 'تم تحديث سنة الميلاد بنجاح!',
+    'profile.update_birth_year': 'تحديث',
 
+    // Email Options
+    'notifications.email_options': 'خيارات البريد الإلكتروني',
+    'notifications.email_on_alert': 'أرسل لي بريدًا عند التنبيهات الجديدة',
+    'notifications.email_on_notification': 'أرسل لي بريدًا عند الإشعارات الجديدة',
+
+    // Notifications section
+    'notifications.title': 'الإشعارات',
+    'notifications.no_notifications': 'لا توجد إشعارات للعرض',
+
+    // Alert types
+    'alerts.wellness_alert': 'تنبيه صحي',
+    'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
+    'alerts.parameter_alert': 'كان {parameter} في مستويات مقلقة',
+    'alerts.consecutive_days': 'لمدة {days} أيام متتالية',
+    'alerts.date_range': '({start} - {end})',
+
+    // Notification types
+    'notifications.new_message': 'رسالة جديدة من {username}',
+    'notifications.message_sent': 'تم إرسال الرسالة',
+    'notifications.new_follower': 'بدأ {username} بمتابعتك',
+    'notifications.you_have_new_follower': 'لديك متابع جديد!',
+    'notifications.new_invitation': 'دعوة جديدة',
+    'notifications.invitation_content': 'دعاك {username} لمتابعته',
+
+    // Invite page
+    'invite.join_journey': 'انضم إلى رحلة {username} الصحية',
+    'invite.follow_progress': 'تابع تقدمهم على TheraSocial',
+    'invite.followers': 'المتابعون',
+    'invite.following': 'يتابع',
+    'invite.tracking_wellness': '{username} يتتبع رحلته الصحية ويريد مشاركتها معك.',
+    'invite.join_to_follow': 'انضم إلى TheraSocial لمتابعة تقدمهم ودعم أهدافهم الصحية النفسية.',
+    'invite.follow_user': 'تابع {username}',
+    'invite.go_to_dashboard': 'اذهب إلى لوحة التحكم',
+    'invite.already_following': 'متابع بالفعل',
+    'invite.request_pending': 'طلب قيد الانتظار',
 
 'parameters.set_alert_triggers': 'تعيين تنبيهات',
 'parameters.alert_triggers_description': 'احصل على إشعار عندما تكون معايير صحة {username} مقلقة',
@@ -2651,6 +2776,48 @@ const translations = {
 'progress.avg_activity': 'Средний уровень активности:',
 'menu.more': 'Ещё',
 'menu.social': 'Социальное',
+  'profile.birth_year': 'Год рождения',
+    'profile.birth_year_placeholder': 'YYYY',
+    'profile.birth_year_hint': 'Введите год рождения (4 цифры)',
+    'profile.birth_year_error': 'Пожалуйста, введите корректный год рождения (4 цифры между 1900-2025)',
+    'profile.birth_year_updated': 'Год рождения успешно обновлён!',
+    'profile.update_birth_year': 'Обновить',
+
+    // Email Options
+    'notifications.email_options': 'Настройки email',
+    'notifications.email_on_alert': 'Отправлять email о новых предупреждениях',
+    'notifications.email_on_notification': 'Отправлять email о новых уведомлениях',
+
+    // Notifications section
+    'notifications.title': 'Уведомления',
+    'notifications.no_notifications': 'Нет уведомлений для отображения',
+
+    // Alert types
+    'alerts.wellness_alert': 'Предупреждение о здоровье',
+    'alerts.wellness_alert_for': 'Предупреждение о здоровье для {username}',
+    'alerts.parameter_alert': '{parameter} был на тревожном уровне',
+    'alerts.consecutive_days': 'в течение {days} дней подряд',
+    'alerts.date_range': '({start} - {end})',
+
+    // Notification types
+    'notifications.new_message': 'Новое сообщение от {username}',
+    'notifications.message_sent': 'Сообщение отправлено',
+    'notifications.new_follower': '{username} подписался на вас',
+    'notifications.you_have_new_follower': 'У вас новый подписчик!',
+    'notifications.new_invitation': 'Новое приглашение',
+    'notifications.invitation_content': '{username} пригласил(а) вас подписаться',
+
+    // Invite page
+    'invite.join_journey': 'Присоединяйтесь к пути здоровья {username}',
+    'invite.follow_progress': 'Следите за их прогрессом на TheraSocial',
+    'invite.followers': 'Подписчики',
+    'invite.following': 'Подписки',
+    'invite.tracking_wellness': '{username} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
+    'invite.join_to_follow': 'Присоединяйтесь к TheraSocial, чтобы следить за их прогрессом и поддерживать их цели психического здоровья.',
+    'invite.follow_user': 'Подписаться на {username}',
+    'invite.go_to_dashboard': 'Перейти к панели',
+    'invite.already_following': 'Уже подписаны',
+    'invite.request_pending': 'Запрос ожидает',
 
 // Circle labels (simplified)
 'circles.class_b': 'Близкие друзья',
