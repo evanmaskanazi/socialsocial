@@ -1,14 +1,8 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6018 (Version 2009)
+Complete app.py for Social Social Platform - Phase 6017 (Version 2008)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
-
-PJ6018 Changes (v2009):
-- FIX: Added missing cities to CITY_TIMEZONE_MAP (Herzliya, Eilat, and 15+ others)
-- ROOT CAUSE: When user selected 'Herzliya, Israel', get_timezone_for_city() couldn't find it
-  and returned UTC, causing diary reminders to be sent at wrong time
-- Now ALL cities in valid_cities list have matching timezone entries
 
 PJ6017 Changes (v2008):
 - FIX: Added /api/parameters/save route alias - frontend was calling this but only /api/parameters existed
@@ -12181,71 +12175,55 @@ def get_blocked_users():
 # =====================
 
 CITY_TIMEZONE_MAP = {
-    # Israel (10 cities - ALL from valid_cities list)
+    # Israel
     'Jerusalem': 'Asia/Jerusalem',
     'Tel Aviv': 'Asia/Jerusalem',
     'Haifa': 'Asia/Jerusalem',
-    'Beer Sheva': 'Asia/Jerusalem',
-    'Netanya': 'Asia/Jerusalem',
     'Rishon LeZion': 'Asia/Jerusalem',
     'Petah Tikva': 'Asia/Jerusalem',
     'Ashdod': 'Asia/Jerusalem',
-    'Eilat': 'Asia/Jerusalem',        # PJ6018: Added - was missing!
-    'Herzliya': 'Asia/Jerusalem',     # PJ6018: Added - was missing! This caused UTC fallback
+    'Netanya': 'Asia/Jerusalem',
+    'Beer Sheva': 'Asia/Jerusalem',
     'Holon': 'Asia/Jerusalem',
     'Ramat Gan': 'Asia/Jerusalem',
     
-    # UK (15 cities - ALL from valid_cities list)
+    # UK
     'London': 'Europe/London',
     'Manchester': 'Europe/London',
     'Birmingham': 'Europe/London',
-    'Edinburgh': 'Europe/London',
-    'Glasgow': 'Europe/London',
-    'Bristol': 'Europe/London',
     'Liverpool': 'Europe/London',
     'Leeds': 'Europe/London',
     'Sheffield': 'Europe/London',
-    'Newcastle': 'Europe/London',     # PJ6018: Added - was missing!
-    'Nottingham': 'Europe/London',    # PJ6018: Added - was missing!
-    'Southampton': 'Europe/London',   # PJ6018: Added - was missing!
+    'Bristol': 'Europe/London',
+    'Edinburgh': 'Europe/London',
+    'Glasgow': 'Europe/London',
     'Cardiff': 'Europe/London',
-    'Belfast': 'Europe/London',       # PJ6018: Added - was missing!
-    'Cambridge': 'Europe/London',     # PJ6018: Added - was missing!
     
-    # US - Eastern (matches valid_cities)
+    # US - Eastern
     'New York': 'America/New_York',
-    'New York City': 'America/New_York',  # PJ6018: Added - valid_cities uses this form
     'Boston': 'America/New_York',
     'Philadelphia': 'America/New_York',
-    'Washington': 'America/New_York',     # PJ6018: Added - valid_cities uses this form
     'Washington DC': 'America/New_York',
     'Miami': 'America/New_York',
     'Atlanta': 'America/New_York',
-    'Baltimore': 'America/New_York',      # PJ6018: Added - was missing!
-    'Charlotte': 'America/New_York',      # PJ6018: Added - was missing!
-    'Orlando': 'America/New_York',        # PJ6018: Added - was missing!
-    'Detroit': 'America/New_York',        # PJ6018: Added - was missing!
     
-    # US - Central (matches valid_cities)
+    # US - Central
     'Chicago': 'America/Chicago',
     'Houston': 'America/Chicago',
     'Dallas': 'America/Chicago',
-    'Austin': 'America/Chicago',
-    'Nashville': 'America/Chicago',       # PJ6018: Added - was missing!
-    'Minneapolis': 'America/Chicago',     # PJ6018: Added - was missing!
     'San Antonio': 'America/Chicago',
+    'Austin': 'America/Chicago',
     
     # US - Mountain
     'Denver': 'America/Denver',
     'Phoenix': 'America/Phoenix',
     'Salt Lake City': 'America/Denver',
     
-    # US - Pacific (matches valid_cities)
+    # US - Pacific
     'Los Angeles': 'America/Los_Angeles',
     'San Francisco': 'America/Los_Angeles',
     'San Diego': 'America/Los_Angeles',
     'Seattle': 'America/Los_Angeles',
-    'San Jose': 'America/Los_Angeles',    # PJ6018: Added - was missing!
     'Portland': 'America/Los_Angeles',
     'Las Vegas': 'America/Los_Angeles',
     
