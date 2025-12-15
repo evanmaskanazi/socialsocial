@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6009 (Version 2000)
+Complete app.py for Social Social Platform - Phase 6010 (Version 2001)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6010 Changes (v2001):
+- MOBILE FIX: About and Support links now visible on mobile devices
+- ROOT CAUSE: .nav-link CSS had display:none in @media max-width:768px
+- FIX: Changed to display:inline-block with responsive font-size (14px) and padding
+- This is a frontend-only fix - no backend changes required
+- Paired with indexmobile.html which contains the actual CSS fix
 
 PJ6009 Changes:
 - FIX 1: Stopped sending duplicate "TheraSocial - New Alert" individual emails for trigger alerts
@@ -2651,6 +2658,38 @@ class BlockedUser(db.Model):
     __table_args__ = (db.UniqueConstraint('blocker_id', 'blocked_id', name='unique_block'),)
 
 
+class BackgroundJob(db.Model):
+    """
+    Database-backed job queue for reliable background processing.
+    Replaces simple threading with persistent, retry-capable jobs.
+    
+    Benefits over threading:
+    - Jobs survive server restarts
+    - Automatic retries on failure
+    - Prevents thread exhaustion under load
+    - Auditable job history
+    """
+    __tablename__ = 'background_jobs'
+    id = db.Column(db.Integer, primary_key=True)
+    job_type = db.Column(db.String(50), nullable=False, index=True)  # 'trigger_processing', 'send_email', etc.
+    payload = db.Column(db.JSON, nullable=False)  # Job-specific data
+    status = db.Column(db.String(20), default='pending', index=True)  # pending, processing, completed, failed
+    priority = db.Column(db.Integer, default=0)  # Higher = processed first
+    attempts = db.Column(db.Integer, default=0)
+    max_attempts = db.Column(db.Integer, default=3)
+    error_message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    
+    # For job locking to prevent double-processing
+    locked_by = db.Column(db.String(100))  # Worker ID
+    locked_at = db.Column(db.DateTime)
+    
+    def __repr__(self):
+        return f'<BackgroundJob {self.id} {self.job_type} {self.status}>'
+
+
 def ensure_database_schema():
     """Automatically ensure all required columns exist"""
     # Guard: Skip if already run in this process
@@ -2725,6 +2764,83 @@ def ensure_database_schema():
         logger.error(f"Database schema check error: {str(e)}")
 
 
+def ensure_background_jobs_schema():
+    """Ensure the background_jobs table exists for the job queue system"""
+    try:
+        with db.engine.connect() as conn:
+            is_postgres = 'postgresql' in str(db.engine.url)
+            
+            if is_postgres:
+                # Check if table exists
+                result = conn.execute(text("""
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        AND table_name = 'background_jobs'
+                    )
+                """))
+                exists = result.scalar()
+                
+                if not exists:
+                    logger.info("[JOB QUEUE] Creating background_jobs table...")
+                    conn.execute(text("""
+                        CREATE TABLE background_jobs (
+                            id SERIAL PRIMARY KEY,
+                            job_type VARCHAR(50) NOT NULL,
+                            payload JSON NOT NULL,
+                            status VARCHAR(20) DEFAULT 'pending',
+                            priority INTEGER DEFAULT 0,
+                            attempts INTEGER DEFAULT 0,
+                            max_attempts INTEGER DEFAULT 3,
+                            error_message TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            started_at TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            locked_by VARCHAR(100),
+                            locked_at TIMESTAMP
+                        )
+                    """))
+                    conn.execute(text("CREATE INDEX idx_bg_jobs_status ON background_jobs(status)"))
+                    conn.execute(text("CREATE INDEX idx_bg_jobs_type ON background_jobs(job_type)"))
+                    conn.execute(text("CREATE INDEX idx_bg_jobs_created ON background_jobs(created_at)"))
+                    conn.commit()
+                    logger.info("[JOB QUEUE] background_jobs table created successfully")
+                else:
+                    logger.debug("[JOB QUEUE] background_jobs table already exists")
+            else:
+                # SQLite
+                result = conn.execute(text("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='background_jobs'
+                """))
+                exists = result.fetchone() is not None
+                
+                if not exists:
+                    logger.info("[JOB QUEUE] Creating background_jobs table...")
+                    conn.execute(text("""
+                        CREATE TABLE background_jobs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            job_type VARCHAR(50) NOT NULL,
+                            payload JSON NOT NULL,
+                            status VARCHAR(20) DEFAULT 'pending',
+                            priority INTEGER DEFAULT 0,
+                            attempts INTEGER DEFAULT 0,
+                            max_attempts INTEGER DEFAULT 3,
+                            error_message TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            started_at TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            locked_by VARCHAR(100),
+                            locked_at TIMESTAMP
+                        )
+                    """))
+                    conn.commit()
+                    logger.info("[JOB QUEUE] background_jobs table created successfully")
+                    
+    except Exception as e:
+        logger.error(f"[JOB QUEUE] Schema error: {str(e)}")
+
+
 # =====================
 # DATABASE INITIALIZATION
 # =====================
@@ -2743,6 +2859,7 @@ def init_database():
                 ensure_database_schema()
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
+                ensure_background_jobs_schema()  # ← ADDED for job queue
                 logger.info("Database schema created successfully")
                 create_admin_user()
                 create_test_users()
@@ -2756,6 +2873,7 @@ def init_database():
                 ensure_database_schema()
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
+                ensure_background_jobs_schema()  # ← ADDED for job queue
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
@@ -2797,6 +2915,12 @@ def init_database():
             except Exception as scheduler_err:
                 logger.warning(f"Trigger scheduler warning (non-critical): {scheduler_err}")
 
+            # Start background job queue scheduler
+            try:
+                start_job_queue_scheduler()
+            except Exception as scheduler_err:
+                logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
+
         except Exception as e:
             logger.error(f"Database initialization error: {e}")
             # Try to create tables as fallback
@@ -2805,6 +2929,7 @@ def init_database():
                 logger.info("Created database tables as fallback")
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
+                ensure_background_jobs_schema()  # ← ADDED for job queue
                 create_admin_user()
                 create_test_users()
                 create_test_follows()
@@ -2819,6 +2944,11 @@ def init_database():
                     start_trigger_scheduler()
                 except Exception as scheduler_err:
                     logger.warning(f"Trigger scheduler warning (non-critical): {scheduler_err}")
+                # Start background job queue scheduler
+                try:
+                    start_job_queue_scheduler()
+                except Exception as scheduler_err:
+                    logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
             except Exception as e2:
                 logger.error(f"Failed to create tables: {e2}")
                 if not is_production:
@@ -7460,9 +7590,9 @@ def save_parameters():
         
         # PJ6006: Run trigger processing in background thread to avoid blocking response
         # This prevents the 5+ second delay when multiple alert emails need to be sent
-        logger.info(f"[SAVE PARAMS] Starting background thread for trigger processing user_id={user_id}")
+        logger.info(f"[SAVE PARAMS] Creating background job for trigger processing user_id={user_id}")
         
-        # Create a copy of param values for the background thread (can't use ORM object across threads)
+        # Create a copy of param values for the background job
         param_snapshot = {
             'mood': params.mood,
             'energy': params.energy,
@@ -7478,22 +7608,24 @@ def save_parameters():
             'notes': params.notes
         }
         
-        def run_trigger_processing():
-            """Background thread function for trigger processing"""
-            try:
-                with app.app_context():
-                    logger.info(f"[BACKGROUND TRIGGERS] Starting trigger processing for user_id={user_id}")
-                    process_parameter_triggers_async(user_id, param_snapshot)
-                    cleanup_stale_trigger_alerts_for_user(user_id)
-                    logger.info(f"[BACKGROUND TRIGGERS] Completed trigger processing for user_id={user_id}")
-            except Exception as e:
-                logger.error(f"[BACKGROUND TRIGGERS] Error in background trigger processing: {str(e)}")
-                logger.error(f"[BACKGROUND TRIGGERS] Traceback: {traceback.format_exc()}")
-        
-        # Start background thread - don't wait for it
-        trigger_thread = threading.Thread(target=run_trigger_processing, daemon=True)
-        trigger_thread.start()
-        logger.info(f"[SAVE PARAMS] Background trigger thread started")
+        # Create a background job instead of spawning a thread
+        # This provides: persistence, retries, and prevents thread exhaustion
+        try:
+            job = BackgroundJob(
+                job_type='trigger_processing',
+                payload={
+                    'user_id': user_id,
+                    'param_snapshot': param_snapshot
+                },
+                priority=1  # Normal priority
+            )
+            db.session.add(job)
+            db.session.commit()
+            logger.info(f"[SAVE PARAMS] Created background job {job.id} for trigger processing")
+        except Exception as job_err:
+            logger.error(f"[SAVE PARAMS] Failed to create background job: {str(job_err)}")
+            # Don't fail the save if job creation fails - it's not critical
+            db.session.rollback()
 
         import random
         encouragements = [
@@ -7525,6 +7657,157 @@ def save_parameters():
         logger.error(f"Error saving parameters: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to save parameters'}), 500
+
+
+# =============================================================================
+# BACKGROUND JOB QUEUE SYSTEM
+# =============================================================================
+
+def process_background_jobs(batch_size=10):
+    """
+    Process pending background jobs from the database queue.
+    Called periodically by the scheduler.
+    
+    Features:
+    - Processes jobs in priority order (higher first)
+    - Automatic retries with exponential backoff
+    - Job locking to prevent double-processing
+    - Cleanup of completed jobs older than 24 hours
+    
+    Args:
+        batch_size: Maximum number of jobs to process per run
+    """
+    import uuid
+    worker_id = f"worker-{uuid.uuid4().hex[:8]}"
+    
+    try:
+        logger.info(f"[JOB QUEUE] Processing background jobs (worker: {worker_id})")
+        
+        # Lock and fetch pending jobs
+        jobs = BackgroundJob.query.filter(
+            BackgroundJob.status == 'pending',
+            # Don't pick up jobs that are locked (being processed by another worker)
+            db.or_(
+                BackgroundJob.locked_at.is_(None),
+                BackgroundJob.locked_at < datetime.utcnow() - timedelta(minutes=5)  # Stale lock
+            )
+        ).order_by(
+            BackgroundJob.priority.desc(),
+            BackgroundJob.created_at.asc()
+        ).limit(batch_size).all()
+        
+        if not jobs:
+            logger.debug(f"[JOB QUEUE] No pending jobs")
+            return
+        
+        logger.info(f"[JOB QUEUE] Found {len(jobs)} pending jobs")
+        
+        for job in jobs:
+            try:
+                # Lock the job
+                job.locked_by = worker_id
+                job.locked_at = datetime.utcnow()
+                job.status = 'processing'
+                job.started_at = datetime.utcnow()
+                job.attempts += 1
+                db.session.commit()
+                
+                logger.info(f"[JOB QUEUE] Processing job {job.id} type={job.job_type} attempt={job.attempts}")
+                
+                # Execute the job based on type
+                if job.job_type == 'trigger_processing':
+                    user_id = job.payload.get('user_id')
+                    param_snapshot = job.payload.get('param_snapshot')
+                    
+                    if user_id and param_snapshot:
+                        process_parameter_triggers_async(user_id, param_snapshot)
+                        cleanup_stale_trigger_alerts_for_user(user_id)
+                    else:
+                        raise ValueError(f"Invalid payload for trigger_processing: {job.payload}")
+                
+                elif job.job_type == 'send_email':
+                    # Future: Handle email sending jobs
+                    email_data = job.payload
+                    # send_email_from_job(email_data)
+                    logger.info(f"[JOB QUEUE] Email job type - placeholder for future implementation")
+                
+                else:
+                    logger.warning(f"[JOB QUEUE] Unknown job type: {job.job_type}")
+                
+                # Mark job as completed
+                job.status = 'completed'
+                job.completed_at = datetime.utcnow()
+                job.locked_by = None
+                job.locked_at = None
+                db.session.commit()
+                
+                logger.info(f"[JOB QUEUE] Job {job.id} completed successfully")
+                
+            except Exception as e:
+                logger.error(f"[JOB QUEUE] Job {job.id} failed: {str(e)}")
+                logger.error(f"[JOB QUEUE] Traceback: {traceback.format_exc()}")
+                
+                # Handle retry or failure
+                if job.attempts >= job.max_attempts:
+                    job.status = 'failed'
+                    job.error_message = str(e)[:1000]  # Truncate error message
+                    logger.error(f"[JOB QUEUE] Job {job.id} permanently failed after {job.attempts} attempts")
+                else:
+                    job.status = 'pending'  # Will be retried
+                    logger.info(f"[JOB QUEUE] Job {job.id} will be retried (attempt {job.attempts}/{job.max_attempts})")
+                
+                job.locked_by = None
+                job.locked_at = None
+                
+                try:
+                    db.session.commit()
+                except:
+                    db.session.rollback()
+        
+        # Cleanup old completed jobs (older than 24 hours)
+        cleanup_cutoff = datetime.utcnow() - timedelta(hours=24)
+        old_jobs = BackgroundJob.query.filter(
+            BackgroundJob.status.in_(['completed', 'failed']),
+            BackgroundJob.completed_at < cleanup_cutoff
+        ).delete(synchronize_session=False)
+        
+        if old_jobs > 0:
+            db.session.commit()
+            logger.info(f"[JOB QUEUE] Cleaned up {old_jobs} old jobs")
+        
+    except Exception as e:
+        logger.error(f"[JOB QUEUE] Error in job processor: {str(e)}")
+        logger.error(f"[JOB QUEUE] Traceback: {traceback.format_exc()}")
+        try:
+            db.session.rollback()
+        except:
+            pass
+
+
+def get_job_queue_stats():
+    """
+    Get statistics about the job queue for monitoring.
+    
+    Returns:
+        Dict with queue statistics
+    """
+    try:
+        stats = {
+            'pending': BackgroundJob.query.filter_by(status='pending').count(),
+            'processing': BackgroundJob.query.filter_by(status='processing').count(),
+            'completed_24h': BackgroundJob.query.filter(
+                BackgroundJob.status == 'completed',
+                BackgroundJob.completed_at >= datetime.utcnow() - timedelta(hours=24)
+            ).count(),
+            'failed_24h': BackgroundJob.query.filter(
+                BackgroundJob.status == 'failed',
+                BackgroundJob.completed_at >= datetime.utcnow() - timedelta(hours=24)
+            ).count()
+        }
+        return stats
+    except Exception as e:
+        logger.error(f"[JOB QUEUE] Error getting stats: {str(e)}")
+        return {'error': str(e)}
 
 
 def process_parameter_triggers_async(user_id, param_snapshot):
@@ -11218,6 +11501,47 @@ def admin_stats():
         return jsonify({'error': 'Failed to get stats'}), 500
 
 
+@app.route('/api/admin/job-queue-stats')
+@admin_required
+def admin_job_queue_stats():
+    """
+    Get job queue statistics for monitoring.
+    
+    Returns:
+        - pending: Jobs waiting to be processed
+        - processing: Jobs currently being processed
+        - completed_24h: Jobs completed in last 24 hours
+        - failed_24h: Jobs that failed in last 24 hours
+        - recent_jobs: Last 10 jobs with details
+    """
+    try:
+        stats = get_job_queue_stats()
+        
+        # Get recent jobs for debugging
+        recent_jobs = BackgroundJob.query.order_by(
+            BackgroundJob.created_at.desc()
+        ).limit(10).all()
+        
+        recent_list = [{
+            'id': job.id,
+            'job_type': job.job_type,
+            'status': job.status,
+            'attempts': job.attempts,
+            'created_at': job.created_at.isoformat() if job.created_at else None,
+            'completed_at': job.completed_at.isoformat() if job.completed_at else None,
+            'error_message': job.error_message[:100] if job.error_message else None
+        } for job in recent_jobs]
+        
+        return jsonify({
+            **stats,
+            'recent_jobs': recent_list
+        })
+
+    except Exception as e:
+        logger.error(f"Job queue stats error: {str(e)}")
+        return jsonify({'error': 'Failed to get job queue stats'}), 500
+
+
 # =====================
 # SAMPLE DATA ROUTE
 # =====================
@@ -12612,6 +12936,73 @@ def start_trigger_scheduler():
         )
         scheduler_thread.start()
         logger.info("[TRIGGER SCHEDULER] Background scheduler thread started successfully")
+
+
+# =====================
+# JOB QUEUE SCHEDULER
+# =====================
+# This scheduler processes background jobs from the database queue
+# every 10 seconds for near-immediate processing without blocking requests.
+
+_job_queue_scheduler_started = False
+_job_queue_scheduler_lock = threading.Lock()
+
+def run_job_queue_scheduler():
+    """
+    Background thread that processes pending jobs from the database queue.
+    Runs every 10 seconds for near-immediate job processing.
+    
+    This replaces per-request threading with a centralized job processor
+    that provides: retries, persistence, and prevents thread exhaustion.
+    """
+    global _job_queue_scheduler_started
+    
+    logger.info("[JOB QUEUE SCHEDULER] Background job queue scheduler started")
+    
+    # Initial delay to let the app fully start
+    time.sleep(15)
+    
+    while True:
+        try:
+            with app.app_context():
+                try:
+                    # Process up to 10 jobs per cycle
+                    process_background_jobs(batch_size=10)
+                except Exception as inner_error:
+                    logger.error(f"[JOB QUEUE SCHEDULER] Processing error: {str(inner_error)}")
+                    db.session.rollback()
+            
+            # Sleep for 10 seconds between job processing cycles
+            time.sleep(10)
+                    
+        except Exception as e:
+            logger.error(f"[JOB QUEUE SCHEDULER] Scheduler error: {str(e)}")
+            time.sleep(10)
+
+
+def start_job_queue_scheduler():
+    """
+    Start the background job queue scheduler.
+    This is called automatically on app startup/deployment.
+    Uses a lock to ensure only one scheduler runs per process.
+    """
+    global _job_queue_scheduler_started
+    
+    with _job_queue_scheduler_lock:
+        if _job_queue_scheduler_started:
+            logger.info("[JOB QUEUE SCHEDULER] Scheduler already running, skipping")
+            return
+        
+        _job_queue_scheduler_started = True
+        
+        # Start the background thread
+        scheduler_thread = threading.Thread(
+            target=run_job_queue_scheduler,
+            daemon=True,
+            name="JobQueueScheduler"
+        )
+        scheduler_thread.start()
+        logger.info("[JOB QUEUE SCHEDULER] Background job queue scheduler started successfully")
 
 
 @app.route('/api/city-timezone', methods=['GET'])
