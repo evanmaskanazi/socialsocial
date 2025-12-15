@@ -1,8 +1,32 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6015 (Version 2006)
+Complete app.py for Social Social Platform - Phase 6019 (Version 2010)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6019 Changes (v2010):
+- FIX: Frontend removed external parameters-social.js script tag
+- ROOT CAUSE: Old JS file on Render was overriding the trackingView HTML
+  with the old "Diary" UI (1-4 buttons, two calendars, visibility dropdowns)
+- The HTML file already has all necessary functions inline
+
+PJ6018 Changes (v2009):
+- FIX: Added missing cities to CITY_TIMEZONE_MAP (Herzliya, Eilat, and 15+ others)
+- ROOT CAUSE: When user selected 'Herzliya, Israel', get_timezone_for_city() couldn't find it
+  and returned UTC, causing diary reminders to be sent at wrong time
+- Now ALL cities in valid_cities list have matching timezone entries
+
+PJ6017 Changes (v2008):
+- FIX: Added /api/parameters/save route alias - frontend was calling this but only /api/parameters existed
+- FIX: Timezone now syncs when city changes - diary_reminder_timezone updates automatically
+- When user changes city, notification_settings.diary_reminder_timezone is updated to match
+- This ensures daily diary reminders are sent at the correct local time
+
+PJ6016 Changes (v2007):
+- FIX: Birth year now displays when viewing another user's profile
+- ROOT CAUSE: get_user_profile API endpoint didn't include birth_year in response
+- FIX: Added 'birth_year': user.birth_year to the /api/users/<user_id>/profile response
+- Now when viewing another user's profile, their birth year shows instead of "YYYY" placeholder
 
 PJ6015 Changes (v2006):
 - CRITICAL FIX: Daily diary reminder email links now work for logged-out users
@@ -4972,6 +4996,7 @@ def get_user_profile(user_id):
             'interests': profile.interests if profile else '',
             'goals': profile.goals if profile else '',
             'favorite_hobbies': profile.favorite_hobbies if profile else '',
+            'birth_year': user.birth_year,  # PJ6016: Include birth year in profile response
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'is_following': is_following,  # PJ501: Include following status in response
             'is_preview': allow_preview and not is_following  # PJ501: Indicate if this is preview mode
@@ -7610,6 +7635,7 @@ def get_parameters():
 
 
 @app.route('/api/parameters', methods=['POST'])
+@app.route('/api/parameters/save', methods=['POST'])  # PJ6017: Add alias for frontend compatibility
 @login_required
 def save_parameters():
     """Save user parameters with privacy settings"""
@@ -11740,6 +11766,27 @@ def user_city():
 
             user.selected_city = city
             user.updated_at = datetime.utcnow()
+            
+            # PJ6017: Sync diary_reminder_timezone when city changes
+            # This ensures the daily diary reminder is sent at the correct local time
+            new_timezone = get_timezone_for_city(city)
+            logger.info(f"[CITY UPDATE] User {user_id} changed city to {city}, syncing timezone to {new_timezone}")
+            
+            # Update notification settings timezone if they exist
+            notification_settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+            if notification_settings:
+                old_timezone = notification_settings.diary_reminder_timezone
+                notification_settings.diary_reminder_timezone = new_timezone
+                logger.info(f"[CITY UPDATE] Updated diary_reminder_timezone from {old_timezone} to {new_timezone}")
+            else:
+                # Create notification settings with correct timezone if they don't exist
+                notification_settings = NotificationSettings(
+                    user_id=user_id,
+                    diary_reminder_timezone=new_timezone
+                )
+                db.session.add(notification_settings)
+                logger.info(f"[CITY UPDATE] Created notification settings with timezone {new_timezone}")
+            
             db.session.commit()
 
             return jsonify({
@@ -12140,55 +12187,71 @@ def get_blocked_users():
 # =====================
 
 CITY_TIMEZONE_MAP = {
-    # Israel
+    # Israel (10 cities - ALL from valid_cities list)
     'Jerusalem': 'Asia/Jerusalem',
     'Tel Aviv': 'Asia/Jerusalem',
     'Haifa': 'Asia/Jerusalem',
+    'Beer Sheva': 'Asia/Jerusalem',
+    'Netanya': 'Asia/Jerusalem',
     'Rishon LeZion': 'Asia/Jerusalem',
     'Petah Tikva': 'Asia/Jerusalem',
     'Ashdod': 'Asia/Jerusalem',
-    'Netanya': 'Asia/Jerusalem',
-    'Beer Sheva': 'Asia/Jerusalem',
+    'Eilat': 'Asia/Jerusalem',        # PJ6018: Added - was missing!
+    'Herzliya': 'Asia/Jerusalem',     # PJ6018: Added - was missing! This caused UTC fallback
     'Holon': 'Asia/Jerusalem',
     'Ramat Gan': 'Asia/Jerusalem',
     
-    # UK
+    # UK (15 cities - ALL from valid_cities list)
     'London': 'Europe/London',
     'Manchester': 'Europe/London',
     'Birmingham': 'Europe/London',
+    'Edinburgh': 'Europe/London',
+    'Glasgow': 'Europe/London',
+    'Bristol': 'Europe/London',
     'Liverpool': 'Europe/London',
     'Leeds': 'Europe/London',
     'Sheffield': 'Europe/London',
-    'Bristol': 'Europe/London',
-    'Edinburgh': 'Europe/London',
-    'Glasgow': 'Europe/London',
+    'Newcastle': 'Europe/London',     # PJ6018: Added - was missing!
+    'Nottingham': 'Europe/London',    # PJ6018: Added - was missing!
+    'Southampton': 'Europe/London',   # PJ6018: Added - was missing!
     'Cardiff': 'Europe/London',
+    'Belfast': 'Europe/London',       # PJ6018: Added - was missing!
+    'Cambridge': 'Europe/London',     # PJ6018: Added - was missing!
     
-    # US - Eastern
+    # US - Eastern (matches valid_cities)
     'New York': 'America/New_York',
+    'New York City': 'America/New_York',  # PJ6018: Added - valid_cities uses this form
     'Boston': 'America/New_York',
     'Philadelphia': 'America/New_York',
+    'Washington': 'America/New_York',     # PJ6018: Added - valid_cities uses this form
     'Washington DC': 'America/New_York',
     'Miami': 'America/New_York',
     'Atlanta': 'America/New_York',
+    'Baltimore': 'America/New_York',      # PJ6018: Added - was missing!
+    'Charlotte': 'America/New_York',      # PJ6018: Added - was missing!
+    'Orlando': 'America/New_York',        # PJ6018: Added - was missing!
+    'Detroit': 'America/New_York',        # PJ6018: Added - was missing!
     
-    # US - Central
+    # US - Central (matches valid_cities)
     'Chicago': 'America/Chicago',
     'Houston': 'America/Chicago',
     'Dallas': 'America/Chicago',
-    'San Antonio': 'America/Chicago',
     'Austin': 'America/Chicago',
+    'Nashville': 'America/Chicago',       # PJ6018: Added - was missing!
+    'Minneapolis': 'America/Chicago',     # PJ6018: Added - was missing!
+    'San Antonio': 'America/Chicago',
     
     # US - Mountain
     'Denver': 'America/Denver',
     'Phoenix': 'America/Phoenix',
     'Salt Lake City': 'America/Denver',
     
-    # US - Pacific
+    # US - Pacific (matches valid_cities)
     'Los Angeles': 'America/Los_Angeles',
     'San Francisco': 'America/Los_Angeles',
     'San Diego': 'America/Los_Angeles',
     'Seattle': 'America/Los_Angeles',
+    'San Jose': 'America/Los_Angeles',    # PJ6018: Added - was missing!
     'Portland': 'America/Los_Angeles',
     'Las Vegas': 'America/Los_Angeles',
     
