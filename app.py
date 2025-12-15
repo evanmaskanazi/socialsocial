@@ -1,8 +1,21 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6011 (Version 2002)
+Complete app.py for Social Social Platform - Phase 6012 (Version 2003)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6012 Changes (v2003):
+- CRITICAL FIX: Consolidated batch emails now actually sent from TRIGGER SCHEDULER
+- ROOT CAUSE: The run_background_trigger_check_for_watcher() function was creating alerts
+  with create_alert_with_email() which correctly skipped individual emails (PJ6009),
+  but it NEVER called send_consolidated_wellness_alert_email() to send the batch email
+- The batch/consolidated email was only being sent from the job queue path (when user saves diary),
+  NOT from the trigger scheduler path (5-minute background check)
+- FIX: Added code to collect triggered_params_by_user and call send_consolidated_wellness_alert_email()
+  after alerts are created in run_background_trigger_check_for_watcher()
+- Now batch emails are sent from BOTH paths:
+  1. Job queue path (process_parameter_triggers_async) - when user saves diary
+  2. Trigger scheduler path (run_background_trigger_check_for_watcher) - every 5 minutes
 
 PJ6011 Changes (v2002):
 - CRITICAL FIX: Stopped sending individual "You have a new alert" emails for trigger alerts
@@ -12752,6 +12765,10 @@ def run_background_trigger_check_for_watcher(watcher_id):
         alerts_created = 0
         alerts_skipped_duplicate = 0
         
+        # PJ6012: Collect triggered params per watched user for consolidated email
+        # Key: watched_username, Value: list of {'param_name', 'days', 'date_range'}
+        triggered_params_by_user = {}
+        
         for alert_data in alerts:
             try:
                 watched_username = alert_data.get('user', 'Unknown')
@@ -12832,6 +12849,29 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 if alert:
                     alerts_created += 1
                     
+                    # PJ6012: Collect triggered params for consolidated email
+                    if watched_username not in triggered_params_by_user:
+                        triggered_params_by_user[watched_username] = []
+                    
+                    # Build date_range string
+                    date_range_str = ""
+                    if alert_data.get('dates') and len(alert_data['dates']) >= 1:
+                        try:
+                            from datetime import datetime as dt
+                            start_date_obj = dt.fromisoformat(alert_data['dates'][0])
+                            end_date_obj = dt.fromisoformat(alert_data['dates'][-1])
+                            start_str = start_date_obj.strftime('%b %d')
+                            end_str = end_date_obj.strftime('%b %d')
+                            date_range_str = f"{start_str} - {end_str}"
+                        except:
+                            date_range_str = "recent"
+                    
+                    triggered_params_by_user[watched_username].append({
+                        'param_name': parameter,
+                        'days': consecutive_days,
+                        'date_range': date_range_str
+                    })
+                    
             except Exception as pattern_err:
                 logger.error(f"[TRIGGER SCHEDULER] Error processing pattern: {pattern_err}")
                 continue
@@ -12843,7 +12883,22 @@ def run_background_trigger_check_for_watcher(watcher_id):
             logger.error(f"[TRIGGER SCHEDULER] Error committing alerts: {commit_err}")
             db.session.rollback()
         
-        return {'alerts_created': alerts_created, 'duplicates_skipped': alerts_skipped_duplicate}
+        # PJ6012: Send consolidated emails for each watched user that had alerts created
+        emails_sent = 0
+        if alerts_created > 0:
+            watcher = db.session.get(User, watcher_id)
+            user_language = watcher.preferred_language if watcher else 'en'
+            
+            for watched_username, triggered_params in triggered_params_by_user.items():
+                if triggered_params:
+                    logger.info(f"[TRIGGER SCHEDULER] Sending consolidated email to watcher {watcher_id} for {watched_username} with {len(triggered_params)} params")
+                    if send_consolidated_wellness_alert_email(watcher_id, watched_username, triggered_params, user_language):
+                        emails_sent += 1
+                        logger.info(f"[TRIGGER SCHEDULER] ✅ Consolidated email sent successfully")
+                    else:
+                        logger.info(f"[TRIGGER SCHEDULER] ⚠️ Consolidated email not sent (user may have email_on_alert disabled)")
+        
+        return {'alerts_created': alerts_created, 'duplicates_skipped': alerts_skipped_duplicate, 'emails_sent': emails_sent}
         
     except Exception as e:
         logger.error(f"[TRIGGER SCHEDULER] Error checking triggers for watcher {watcher_id}: {e}")
