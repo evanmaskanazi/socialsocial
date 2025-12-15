@@ -1,8 +1,14 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6016 (Version 2007)
+Complete app.py for Social Social Platform - Phase 6017 (Version 2008)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6017 Changes (v2008):
+- FIX: Added /api/parameters/save route alias - frontend was calling this but only /api/parameters existed
+- FIX: Timezone now syncs when city changes - diary_reminder_timezone updates automatically
+- When user changes city, notification_settings.diary_reminder_timezone is updated to match
+- This ensures daily diary reminders are sent at the correct local time
 
 PJ6016 Changes (v2007):
 - FIX: Birth year now displays when viewing another user's profile
@@ -7617,6 +7623,7 @@ def get_parameters():
 
 
 @app.route('/api/parameters', methods=['POST'])
+@app.route('/api/parameters/save', methods=['POST'])  # PJ6017: Add alias for frontend compatibility
 @login_required
 def save_parameters():
     """Save user parameters with privacy settings"""
@@ -11747,6 +11754,27 @@ def user_city():
 
             user.selected_city = city
             user.updated_at = datetime.utcnow()
+            
+            # PJ6017: Sync diary_reminder_timezone when city changes
+            # This ensures the daily diary reminder is sent at the correct local time
+            new_timezone = get_timezone_for_city(city)
+            logger.info(f"[CITY UPDATE] User {user_id} changed city to {city}, syncing timezone to {new_timezone}")
+            
+            # Update notification settings timezone if they exist
+            notification_settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+            if notification_settings:
+                old_timezone = notification_settings.diary_reminder_timezone
+                notification_settings.diary_reminder_timezone = new_timezone
+                logger.info(f"[CITY UPDATE] Updated diary_reminder_timezone from {old_timezone} to {new_timezone}")
+            else:
+                # Create notification settings with correct timezone if they don't exist
+                notification_settings = NotificationSettings(
+                    user_id=user_id,
+                    diary_reminder_timezone=new_timezone
+                )
+                db.session.add(notification_settings)
+                logger.info(f"[CITY UPDATE] Created notification settings with timezone {new_timezone}")
+            
             db.session.commit()
 
             return jsonify({
