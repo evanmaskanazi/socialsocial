@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!-- TheraSocial Version PJ5002 v2000 -->
+<!-- PJ6010: MOBILE FIX - About and Support links now visible on mobile -->
+<!-- ROOT CAUSE: .nav-link had display:none in @media max-width:768px, hiding About/Support buttons -->
+<!-- FIX: Changed .nav-link from display:none to display:inline-block with responsive sizing -->
 <!-- PJ5002: Mobile Navigation Consolidation - 10 tabs reduced to 5 -->
 <!-- ROOT CAUSE: Too many tabs (10) on mobile made navigation confusing and touch targets too small -->
 <!-- FIX 1: Consolidated into 5 primary tabs: Home, Feed, Diary, Messages, More -->
@@ -1295,9 +1298,12 @@
                 gap: 10px;
             }
 
-            /* Hide desktop navigation links on mobile */
+            /* PJ6010: MOBILE FIX - Show About and Support links on mobile */
+            /* Previously hidden, now visible with responsive styling */
             .nav-link {
-                display: none;
+                display: inline-block;
+                font-size: 14px;
+                padding: 6px 10px;
             }
 
             /* Keep language selector visible */
