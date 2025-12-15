@@ -1,14 +1,8 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6016 (Version 2007)
+Complete app.py for Social Social Platform - Phase 6015 (Version 2006)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
-
-PJ6016 Changes (v2007):
-- FIX: Birth year now displays when viewing another user's profile
-- ROOT CAUSE: get_user_profile API endpoint didn't include birth_year in response
-- FIX: Added 'birth_year': user.birth_year to the /api/users/<user_id>/profile response
-- Now when viewing another user's profile, their birth year shows instead of "YYYY" placeholder
 
 PJ6015 Changes (v2006):
 - CRITICAL FIX: Daily diary reminder email links now work for logged-out users
@@ -4978,7 +4972,6 @@ def get_user_profile(user_id):
             'interests': profile.interests if profile else '',
             'goals': profile.goals if profile else '',
             'favorite_hobbies': profile.favorite_hobbies if profile else '',
-            'birth_year': user.birth_year,  # PJ6016: Include birth year in profile response
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'is_following': is_following,  # PJ501: Include following status in response
             'is_preview': allow_preview and not is_following  # PJ501: Indicate if this is preview mode
