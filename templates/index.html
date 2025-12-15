@@ -1,6 +1,10 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ6012 v2003 -->
-<!-- PJ6012: CRITICAL FIX - Consolidated batch emails now sent from TRIGGER SCHEDULER path -->
+<!-- TheraSocial Version PJ6013 v2004 -->
+<!-- PJ6013: CRITICAL FIX - Mobile notification toggles now load correctly from backend -->
+<!-- ROOT CAUSE: loadNotificationSettings() only set desktop toggles, not mobile toggles -->
+<!-- Mobile toggles (mobileEmailOnAlertToggle, mobileEmailOnNotificationToggle, mobileDailyDiaryReminderToggle) -->
+<!-- were NEVER populated from backend settings, causing them to show incorrect state -->
+<!-- PJ6012: Consolidated batch emails now sent from TRIGGER SCHEDULER path -->
 <!-- PJ6011: Backend fix - Trigger alerts no longer send individual emails, only consolidated batch emails -->
 <!-- PJ6010: MOBILE FIX - About and Support links now visible on mobile -->
 <!-- ROOT CAUSE: .nav-link had display:none in @media max-width:768px, hiding About/Support buttons -->
@@ -5874,6 +5878,37 @@ async function loadNotificationSettings() {
             console.log('[NOTIFICATION DEBUG] Setting dailyDiaryReminderToggle from', oldValue, 'to', newValue);
             diaryToggle.checked = newValue;
             console.log('[NOTIFICATION DEBUG] dailyDiaryReminderToggle AFTER setting - checked:', diaryToggle.checked);
+        
+        // PJ6013: CRITICAL FIX - Also set MOBILE toggles (they have separate IDs)
+        // Without this, mobile toggles show incorrect state after page load
+        const mobileEmailToggle = document.getElementById('mobileEmailOnAlertToggle');
+        const mobileNotificationToggle = document.getElementById('mobileEmailOnNotificationToggle');
+        const mobileDiaryToggle = document.getElementById('mobileDailyDiaryReminderToggle');
+        
+        if (mobileEmailToggle) {
+            mobileEmailToggle.checked = settings.email_on_alert || false;
+            console.log('[NOTIFICATION DEBUG] PJ6013: Set mobileEmailOnAlertToggle to', mobileEmailToggle.checked);
+        }
+        if (mobileNotificationToggle) {
+            mobileNotificationToggle.checked = settings.email_on_notification !== false;
+            console.log('[NOTIFICATION DEBUG] PJ6013: Set mobileEmailOnNotificationToggle to', mobileNotificationToggle.checked);
+        }
+        if (mobileDiaryToggle) {
+            mobileDiaryToggle.checked = settings.email_daily_diary_reminder || false;
+            console.log('[NOTIFICATION DEBUG] PJ6013: Set mobileDailyDiaryReminderToggle to', mobileDiaryToggle.checked);
+            
+            // Also show/hide mobile time container
+            const mobileTimeContainer = document.getElementById('mobileDiaryReminderTimeContainer');
+            if (mobileTimeContainer) {
+                mobileTimeContainer.style.display = mobileDiaryToggle.checked ? 'block' : 'none';
+            }
+            
+            // Set mobile time input value
+            const mobileTimeInput = document.getElementById('mobileDiaryReminderTimeInput');
+            if (mobileTimeInput && settings.diary_reminder_time) {
+                mobileTimeInput.value = settings.diary_reminder_time;
+            }
+        }
             
             // Show/hide time input based on toggle state
             const timeContainer = document.getElementById('diaryReminderTimeContainer');
