@@ -1,8 +1,18 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6010 (Version 2001)
+Complete app.py for Social Social Platform - Phase 6011 (Version 2002)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6011 Changes (v2002):
+- CRITICAL FIX: Stopped sending individual "You have a new alert" emails for trigger alerts
+- ROOT CAUSE: When email_on_alert is turned ON, the notification settings endpoint was 
+  sending individual emails for ALL unread alerts, including trigger alerts
+- This bypassed the consolidated batch email logic (send_consolidated_wellness_alert_email)
+- FIX: Added filter `Alert.alert_category != 'trigger'` to exclude trigger alerts
+- Trigger alerts should ONLY send batch/consolidated emails, never individual ones
+- Individual email format: "You have a new alert" with single item (BAD for triggers)
+- Batch email format: "We noticed some concerning wellness patterns" with list (CORRECT)
 
 PJ6010 Changes (v2001):
 - MOBILE FIX: About and Support links now visible on mobile devices
@@ -5660,15 +5670,19 @@ def notification_settings():
             logger.info(f"[NOTIFICATION DEBUG] ========================================")
             
             # If email_on_alert was just turned ON, send all existing unread alerts as emails
+            # PJ6011: EXCLUDE trigger alerts - they use consolidated batch emails only
             emails_sent = 0
             if 'email_on_alert' in data and data['email_on_alert'] and not was_email_on_alert_enabled:
                 if user and user.email:
                     try:
-                        # Get all unread alerts for this user
-                        unread_alerts = Alert.query.filter_by(
-                            user_id=user_id,
-                            is_read=False
+                        # Get all unread alerts for this user, EXCLUDING trigger alerts
+                        # Trigger alerts use consolidated batch emails (send_consolidated_wellness_alert_email)
+                        unread_alerts = Alert.query.filter(
+                            Alert.user_id == user_id,
+                            Alert.is_read == False,
+                            Alert.alert_category != 'trigger'  # PJ6011: Skip trigger alerts
                         ).order_by(Alert.created_at.desc()).limit(50).all()
+                        logger.info(f"[PJ6011] Sending individual emails for {len(unread_alerts)} non-trigger alerts")
                         
                         user_language = user.preferred_language or 'en'
                         
