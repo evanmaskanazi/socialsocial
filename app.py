@@ -1,8 +1,17 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6012 (Version 2003)
+Complete app.py for Social Social Platform - Phase 6013 (Version 2004)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6013 Changes (v2004):
+- FRONTEND FIX: Mobile notification toggles now load correctly from backend
+- ROOT CAUSE: loadNotificationSettings() only set desktop toggles (emailOnAlertToggle, etc.)
+  but did NOT set mobile toggles (mobileEmailOnAlertToggle, mobileEmailOnNotificationToggle, 
+  mobileDailyDiaryReminderToggle)
+- SYMPTOM: On mobile, toggles would show incorrect state (usually OFF even when ON in backend)
+- FIX: Added code to also set mobile toggle states after setting desktop toggles
+- This is a FRONTEND-ONLY fix in indexsend3.html - no backend changes
 
 PJ6012 Changes (v2003):
 - CRITICAL FIX: Consolidated batch emails now actually sent from TRIGGER SCHEDULER
