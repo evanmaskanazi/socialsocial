@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ6015 v2006 -->
-<!-- PJ6015: CRITICAL FIX - Daily diary email links now work for logged-out users -->
+<!-- TheraSocial Version PJ6017 v2008 -->
+<!-- PJ6017: FIX - /api/parameters/save now works (route alias added to backend) -->
+<!-- PJ6017: FIX - Timezone syncs automatically when city changes -->
+<!-- PJ6016: FIX - Birth year now displays when viewing another user's profile -->
 <!-- ROOT CAUSE: /parameters route had @login_required returning JSON error instead of login page -->
 <!-- FIX 1: Backend removed @login_required from /parameters, added /diary route alias -->
 <!-- FIX 2: Frontend detects /parameters or /diary URL and stores intended destination -->
