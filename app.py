@@ -1,8 +1,20 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 40E (Version 2010)
+Complete app.py for Social Social Platform - Phase 40E (Version 2011)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6015 Changes (v2011):
+- CRITICAL FIX 1: Batch emails now sent from FRONTEND POLLING path
+  - ROOT CAUSE: /api/parameters/check-triggers created alerts but NEVER sent batch emails
+  - The log "Email was sent" was misleading - no email was actually sent
+  - Race condition: Frontend polls first → creates alerts → 5-min scheduler finds duplicates → no emails ever sent
+  - FIX: Added send_consolidated_wellness_alert_email() call after alert creation
+  - Now BOTH paths (frontend + background scheduler) send emails on first detection
+- CRITICAL FIX 2: Fixed "Multiple rows were found" error for watcher 52
+  - ROOT CAUSE: get_watcher_circle_level() used scalar_one_or_none() which crashes on duplicate Circle entries
+  - FIX: Changed to scalars().first() which handles duplicates gracefully
+  - Added try/catch with logging for better error handling
 
 PJ40E Changes (v2010):
 - FIX 1: Daily reminder email link now works correctly for logged-in AND logged-out users
@@ -10493,19 +10505,24 @@ def get_watcher_circle_level(watched_id, watcher_id):
     Returns:
         str: 'class_a', 'class_b', 'public', or None if not in any circle
     """
-    # Check if watcher is in any of watched user's circles
-    circle = db.session.execute(
-        select(Circle).filter_by(
-            user_id=watched_id,
-            circle_user_id=watcher_id
-        )
-    ).scalar_one_or_none()
+    # PJ6015 FIX: Use scalars().first() instead of scalar_one_or_none() to handle duplicate entries
+    # This prevents "Multiple rows were found" error when Circle table has duplicates
+    try:
+        circle = db.session.execute(
+            select(Circle).filter_by(
+                user_id=watched_id,
+                circle_user_id=watcher_id
+            )
+        ).scalars().first()  # Changed from scalar_one_or_none() to handle duplicates
 
-    if circle:
-        return circle.circle_type
+        if circle:
+            return circle.circle_type
 
-    # Not in any circle
-    return None
+        # Not in any circle
+        return None
+    except Exception as e:
+        logger.error(f"[GET_WATCHER_CIRCLE] Error getting circle level for watched={watched_id}, watcher={watcher_id}: {e}")
+        return None
 
 
 @app.route('/api/parameters/check-triggers', methods=['GET'])
@@ -10957,7 +10974,7 @@ def check_parameter_triggers():
         
         alerts_created = 0
         alerts_skipped_duplicate = 0
-        alerts_emailed = 0
+        # PJ6015: Removed alerts_emailed = 0 - now using emails_actually_sent from batch email code
         
         for alert_data in alerts:
             try:
@@ -11093,17 +11110,7 @@ def check_parameter_triggers():
                 if alert:
                     alerts_created += 1
                     logger.info(f"[TRIGGER CREATE] ✅ Created alert ID {alert.id} for {watched_username}/{parameter}")
-                    
-                    # Check if email was sent
-                    try:
-                        settings = NotificationSettings.query.filter_by(user_id=watcher_id).first()
-                        if settings and settings.email_on_alert:
-                            alerts_emailed += 1
-                            logger.info(f"[TRIGGER EMAIL] Email was sent for alert ID {alert.id}")
-                        else:
-                            logger.info(f"[TRIGGER EMAIL] No email sent - email_on_alert is {'disabled' if settings else 'no settings found'}")
-                    except Exception as email_check_err:
-                        logger.error(f"[TRIGGER EMAIL] Error checking email status: {email_check_err}")
+                    # PJ6015: Removed misleading email check - actual emails are sent via batch system below
                         
             except Exception as pattern_err:
                 logger.error(f"[TRIGGER CHECK] Error processing pattern: {pattern_err}")
@@ -11117,6 +11124,60 @@ def check_parameter_triggers():
         except Exception as commit_err:
             logger.error(f"[TRIGGER CHECK] Error committing alerts: {commit_err}")
             db.session.rollback()
+        
+        # PJ6015 FIX: Send consolidated batch emails for newly created alerts
+        # This was MISSING - frontend path created alerts but never sent emails!
+        emails_actually_sent = 0
+        if alerts_created > 0:
+            try:
+                # Group alerts by watched user for consolidated emails
+                triggered_params_by_user = {}
+                for alert_data in alerts:
+                    watched_username = alert_data.get('user', 'Unknown')
+                    parameter = alert_data.get('parameter', 'unknown')
+                    consecutive_days = alert_data.get('consecutive_days', 0)
+                    
+                    # Build date_range string
+                    date_range_str = "recent"
+                    if alert_data.get('dates') and len(alert_data['dates']) >= 1:
+                        try:
+                            from datetime import datetime as dt
+                            start_date = dt.fromisoformat(alert_data['dates'][0])
+                            end_date = dt.fromisoformat(alert_data['dates'][-1])
+                            start_str = start_date.strftime('%b %d')
+                            end_str = end_date.strftime('%b %d')
+                            date_range_str = f"{start_str} - {end_str}"
+                        except:
+                            pass
+                    
+                    if watched_username not in triggered_params_by_user:
+                        triggered_params_by_user[watched_username] = []
+                    
+                    triggered_params_by_user[watched_username].append({
+                        'param_name': parameter,
+                        'days': consecutive_days,
+                        'date_range': date_range_str
+                    })
+                
+                # Get watcher's language preference
+                watcher = db.session.get(User, watcher_id)
+                user_language = watcher.preferred_language if watcher else 'en'
+                
+                # Send consolidated email for each watched user
+                for watched_username, triggered_params in triggered_params_by_user.items():
+                    if triggered_params:
+                        logger.info(f"[TRIGGER CHECK] Sending consolidated email for {watched_username} with {len(triggered_params)} params")
+                        if send_consolidated_wellness_alert_email(watcher_id, watched_username, triggered_params, user_language):
+                            emails_actually_sent += 1
+                            logger.info(f"[TRIGGER CHECK] ✅ Consolidated email sent for {watched_username}")
+                        else:
+                            logger.info(f"[TRIGGER CHECK] ⚠️ No email sent for {watched_username} (email_on_alert may be disabled)")
+            except Exception as email_err:
+                logger.error(f"[TRIGGER CHECK] Error sending batch emails: {email_err}")
+                logger.error(f"[TRIGGER CHECK] Traceback: {traceback.format_exc()}")
+        
+        # Update emailed count to reflect ACTUAL emails sent (not just settings check)
+        alerts_emailed = emails_actually_sent
         
         logger.info(f"[TRIGGER CHECK] Summary: patterns={len(alerts)}, created={alerts_created}, duplicates_skipped={alerts_skipped_duplicate}, emailed={alerts_emailed}")
         logger.info(f"[TRIGGER CHECK] ========================================")
