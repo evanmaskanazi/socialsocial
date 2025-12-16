@@ -3752,9 +3752,8 @@ async function loadUserCity() {
                     }, 100);
                     // Load notification settings after login
                     loadNotificationSettings();
-                    // Clear the pending view and update URL
+                    // Clear the pending view (but DON'T change URL - keep /parameters so checkAndRedirectToDiary skips)
                     pendingViewAfterLogin = null;
-                    window.history.replaceState({}, document.title, '/');
                     return;
                 }
 
@@ -10838,6 +10837,30 @@ window.addEventListener('DOMContentLoaded', async () => {
                 currentUser = data.user;
                 currentUserId = data.user.id;
                 showDashboard();
+                
+                // PJ6016: Check if user arrived from email link (diary reminder)
+                // If so, navigate directly to tracking view
+                if (pendingViewAfterLogin === 'tracking') {
+                    console.log('[PJ6016] User already authenticated, navigating to diary/tracking view');
+                    setTimeout(() => {
+                        if (typeof showView === 'function') {
+                            showView('tracking');
+                        }
+                        // Initialize calendar and parameter options for tracking view
+                        if (typeof initializeCalendar === 'function') {
+                            initializeCalendar();
+                        }
+                        if (typeof createParameterOptions === 'function') {
+                            createParameterOptions('moodInput', 'mood');
+                            createParameterOptions('sleepInput', 'sleep');
+                            createParameterOptions('exerciseInput', 'exercise');
+                            createParameterOptions('stressInput', 'stress');
+                            createParameterOptions('socialInput', 'social');
+                        }
+                    }, 100);
+                    // Clear the pending view (but DON'T change URL - keep /parameters so checkAndRedirectToDiary skips)
+                    pendingViewAfterLogin = null;
+                }
                 
                 // FIX: Sync language selector immediately after showing dashboard
                 setTimeout(() => {
