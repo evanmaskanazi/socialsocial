@@ -1,20 +1,17 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ6025 v2021 -->
-<!-- PJ6025: CRITICAL FIX - /parameters and /diary routes now redirect to /?view=tracking -->
-<!-- ROOT CAUSE: Previous inline template was missing DOM structure that parameters-social.js needs -->
-<!-- FIX: Simply redirect to main page with view=tracking, let frontend show tracking view -->
-<!-- PJ6024: CRITICAL FIX - Alerts and Notifications now load after login -->
-<!-- PJ6023: FIX - Magic links now work properly (added credentials:'include' and delay) -->
-<!-- PJ6023: FIX - btn-secondary restored to --light background (was changed to --white) -->
-<!-- PJ6021: FIX - Magic links now work (await checkMagicToken before session check) -->
-<!-- PJ6021: FIX - follow-btn CSS now has background color (was showing white) -->
-<!-- PJ6020: FIX - Restored standalone Diary page (ParamRight.jpeg) -->
-<!-- FIX 3: Sidebar "Diary" click redirects to /parameters for own data -->
-<!-- Result: User sees standalone Diary page (no sidebar) exactly like ParamRight.jpeg -->
-<!-- PJ6018: FIX - Added missing cities to CITY_TIMEZONE_MAP (Herzliya, Eilat, etc.) -->
-<!-- PJ6017: FIX - /api/parameters/save now works (route alias added to backend) -->
-<!-- PJ6017: FIX - Timezone syncs automatically when city changes -->
-<!-- PJ6016: FIX - Birth year now displays when viewing another user's profile -->
+<!-- TheraSocial Version PJ6016 v2007 -->
+<!-- PJ6016: CRITICAL FIXES -->
+<!-- FIX 1: Daily diary reminder email links now work for logged-out users -->
+<!--   - Backend removed @login_required from /parameters route -->
+<!--   - Added /diary route as alias for cleaner email URLs -->
+<!--   - Both routes now render index.html (not non-existent parameters.html) -->
+<!--   - Frontend detects /parameters or /diary URL path -->
+<!--   - After login, user is navigated to tracking/diary view -->
+<!--   - URL is cleaned up after navigation -->
+<!-- FIX 2: Birth year now displayed on other users' profiles -->
+<!--   - Backend now returns birth_year in /api/users/<id>/profile endpoint -->
+<!-- FIX 3: Diary reminder timezone now syncs when user changes city -->
+<!--   - Changing city now updates diary_reminder_timezone in notification settings -->
 <!-- PJ6014: MULTIPLE FIXES -->
 <!-- FIX 1: Search results in Circles/Following/Invite now show mutual connection & same city instead of email -->
 <!-- FIX 2: "Recommended for You" and "Suggested People to Invite" now show mutual/city reason -->
@@ -197,8 +194,6 @@
     cursor: pointer;
     font-weight: 500;
     transition: all 0.2s;
-    background: var(--primary);
-    color: white;
 }
 
 .follow-btn:hover {
@@ -517,7 +512,7 @@
         }
 
         .btn-secondary {
-            background: var(--light);
+            background: var(--white);
             color: var(--primary);
             border: 2px solid var(--primary);
         }
@@ -1268,6 +1263,24 @@
 
         [dir="rtl"] .mobile-nav-item {
             direction: rtl;
+        }
+
+        /* PJ6017: Hide sidebars when accessing /parameters or /diary directly */
+        body.standalone-diary .sidebar,
+        body.standalone-diary .right-sidebar,
+        body.standalone-diary .mobile-nav {
+            display: none !important;
+        }
+        
+        body.standalone-diary .dashboard-grid {
+            grid-template-columns: 1fr !important;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        body.standalone-diary .main-content {
+            border-radius: 15px;
+            margin: 20px auto;
         }
 
         @media (max-width: 768px) {
@@ -2675,11 +2688,9 @@
                     </div>
                 </div>
 
-                <!-- Tracking/Parameters View - PJ6020: Emptied to let parameters-social.js create the Diary UI -->
-                <!-- The old HTML content (calendar, text inputs) was conflicting with parameters-social.js -->
-                <!-- which creates the 1-4 buttons Diary interface, causing duplicate UI -->
+                <!-- Tracking/Parameters View - PJ6017: EMPTY - content created by parameters-social.js -->
                 <div id="trackingView" class="view hidden">
-                    <!-- Content will be dynamically created by parameters-social.js -->
+                    <!-- parameters-social.js dynamically creates the Diary interface here -->
                 </div>
 
 <!-- Following View -->
@@ -3311,15 +3322,16 @@
         var currentUserId = null;
     }
     
-    // PJ6015: Track pending view for email link redirects
+    // PJ6016: Track pending view for email link redirects
     // If user arrives at /parameters or /diary, they should go to tracking view after login
-    // PJ6025: Also check for view=tracking URL parameter
     let pendingViewAfterLogin = null;
-    const initUrlParams = new URLSearchParams(window.location.search);
-    if (window.location.pathname === '/parameters' || window.location.pathname === '/diary' || 
-        initUrlParams.get('view') === 'tracking' || initUrlParams.get('redirect') === 'diary') {
+    if (window.location.pathname === '/parameters' || window.location.pathname === '/diary') {
         pendingViewAfterLogin = 'tracking';
-        console.log('[PJ6025] User arrived from diary/parameters link, will navigate to tracking view after login');
+        console.log('[PJ6016] User arrived from email link, will navigate to tracking view after login');
+        
+        // PJ6017: Add body class to hide sidebars for standalone diary page
+        document.body.classList.add('standalone-diary');
+        console.log('[PJ6017] Added standalone-diary class - sidebars will be hidden');
     }
     
     // Variables above already declared before parameters-social.js
@@ -3683,33 +3695,10 @@ async function loadUserCity() {
                 currentUser = response.user;
                 currentUserId = response.user.id;
 
-                // PJ6025: Check if user came from diary link via URL parameter
-                // Handle both old redirect=diary format and new view=tracking format
-                const urlParams = new URLSearchParams(window.location.search);
-                const viewParam = urlParams.get('view');
-                const redirectParam = urlParams.get('redirect');
-                
-                if (viewParam === 'tracking' || redirectParam === 'diary') {
-                    console.log('[PJ6025] User came from diary link, showing tracking view');
-                    window.history.replaceState({}, document.title, '/');
-                    showDashboard();
-                    // Wait for dashboard to render, then show tracking view
-                    setTimeout(() => {
-                        if (typeof showView === 'function') {
-                            showView('tracking');
-                        }
-                    }, 100);
-                    loadNotificationSettings();
-                    if (typeof loadAlerts === 'function') {
-                        loadAlerts().catch(err => console.error('[PJ6025] Error loading alerts:', err));
-                    }
-                    return;
-                }
-
-                // PJ6015: Check if user came from email link (diary reminder)
+                // PJ6016: Check if user came from email link (diary reminder)
                 // If so, navigate directly to tracking view after login
                 if (pendingViewAfterLogin === 'tracking') {
-                    console.log('[PJ6015] User logged in from email link, navigating to diary/tracking view');
+                    console.log('[PJ6016] User logged in from email link, navigating to diary/tracking view');
                     showDashboard();
                     // Wait for dashboard to render, then show tracking view
                     setTimeout(() => {
@@ -3730,11 +3719,7 @@ async function loadUserCity() {
                     }, 100);
                     // Load notification settings after login
                     loadNotificationSettings();
-                    // PJ6024 FIX: Load alerts after login (was missing!)
-                    if (typeof loadAlerts === 'function') {
-                        loadAlerts().catch(err => console.error('[PJ6024] Error loading alerts:', err));
-                    }
-                    // Clear the pending view
+                    // Clear the pending view (but DON'T change URL - keep /parameters so checkAndRedirectToDiary skips)
                     pendingViewAfterLogin = null;
                     return;
                 }
@@ -3746,12 +3731,6 @@ async function loadUserCity() {
                     // Load notification settings after login
                     console.log('[LOGIN DEBUG] Login successful, calling loadNotificationSettings');
                     loadNotificationSettings();
-                    
-                    // PJ6024 FIX: Load alerts immediately after login (was missing!)
-                    console.log('[PJ6024] Loading alerts after login');
-                    if (typeof loadAlerts === 'function') {
-                        loadAlerts().catch(err => console.error('[PJ6024] Error loading alerts:', err));
-                    }
                     
                     // PJ812 FIX: Check trigger alerts after login (with delay to ensure session is ready)
                     console.log('[PJ812] Login successful, will check trigger alerts in 3 seconds');
@@ -4078,33 +4057,27 @@ async function requestMagicLink() {
     }
 }
 
-// Check for magic token on page load - PJ6021: Returns true if magic token was processed
-// PJ6023: Added credentials and delay to ensure session cookie is properly set
+// Check for magic token on page load
 async function checkMagicToken() {
     const params = new URLSearchParams(window.location.search);
     const magicToken = params.get('magic_token');
 
     if (magicToken) {
         try {
-            console.log('[MAGIC-LINK] Processing magic token...');
             const response = await fetch('/api/auth/verify-magic-link', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                credentials: 'include',  // PJ6023: Ensure cookies are set properly
                 body: JSON.stringify({token: magicToken})
             });
 
             const data = await response.json();
             if (response.ok) {
-                console.log('[MAGIC-LINK] Token verified successfully, user:', data.user?.username);
                 // Clear token from URL
                 window.history.replaceState({}, document.title, "/");
 
-                // Store user info for session
-                if (data.user) {
-                    // PJ6023: Store user info locally to ensure session is recognized
-                    sessionStorage.setItem('userEmail', data.user.email || '');
-                    sessionStorage.setItem('magicLoginSuccess', 'true');
+                // Store user email for username suggestion
+                if (data.user && data.user.email) {
+                    sessionStorage.setItem('userEmail', data.user.email);
                 }
                 if (data.suggested_username) {
                     sessionStorage.setItem('suggestedUsername', data.suggested_username);
@@ -4113,26 +4086,16 @@ async function checkMagicToken() {
                 // Go straight to consent (username is optional there)
                 if (data.needs_consent) {
                     showConsentModal();
-                    return true; // Handled - consent modal shown
                 } else {
-                    // PJ6023: Small delay to ensure session cookie is fully established
-                    console.log('[MAGIC-LINK] Session established, reloading...');
-                    await new Promise(resolve => setTimeout(resolve, 100));
                     window.location.reload();
-                    return true; // Handled - will reload
                 }
             } else {
-                console.error('[MAGIC-LINK] Token verification failed:', data.error);
                 showNotification(data.error || 'Invalid or expired link', 'error');
-                return false; // Not handled successfully, continue with normal flow
             }
         } catch (error) {
-            console.error('[MAGIC-LINK] Error:', error);
             showNotification('Verification failed', 'error');
-            return false; // Not handled, continue with normal flow
         }
     }
-    return false; // No magic token in URL
 }
 
 // Show consent modal with optional username
@@ -10808,12 +10771,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         return; // Don't proceed with normal login check
     }
 
-    // Check for magic link token - PJ6021: Must await this before checking session
-    const magicTokenHandled = await checkMagicToken();
-    if (magicTokenHandled) {
-        // Magic token was processed, page will reload or consent shown
-        return;
-    }
+    // Check for magic link token
+    checkMagicToken();
 
     // Wait for i18n to be ready (max 1 second)
     let i18nReady = false;
@@ -10846,25 +10805,28 @@ window.addEventListener('DOMContentLoaded', async () => {
                 currentUserId = data.user.id;
                 showDashboard();
                 
-                // PJ6025: Check if user came from diary/parameters link 
-                // Handle both old redirect=diary format and new view=tracking format
-                const urlParams = new URLSearchParams(window.location.search);
-                const viewParam = urlParams.get('view');
-                const redirectParam = urlParams.get('redirect');
-                
-                if (viewParam === 'tracking' || redirectParam === 'diary') {
-                    console.log('[AUTH] User came from diary link, showing tracking view');
-                    window.history.replaceState({}, document.title, '/');
-                    // Show tracking view directly instead of redirecting
+                // PJ6016: Check if user arrived from email link (diary reminder)
+                // If so, navigate directly to tracking view
+                if (pendingViewAfterLogin === 'tracking') {
+                    console.log('[PJ6016] User already authenticated, navigating to diary/tracking view');
                     setTimeout(() => {
                         if (typeof showView === 'function') {
                             showView('tracking');
                         }
+                        // Initialize calendar and parameter options for tracking view
+                        if (typeof initializeCalendar === 'function') {
+                            initializeCalendar();
+                        }
+                        if (typeof createParameterOptions === 'function') {
+                            createParameterOptions('moodInput', 'mood');
+                            createParameterOptions('sleepInput', 'sleep');
+                            createParameterOptions('exerciseInput', 'exercise');
+                            createParameterOptions('stressInput', 'stress');
+                            createParameterOptions('socialInput', 'social');
+                        }
                     }, 100);
-                    // Still need to load alerts and settings
-                    await checkAndLoadTriggerAlerts();
-                    loadNotificationSettings();
-                    return;
+                    // Clear the pending view (but DON'T change URL - keep /parameters so checkAndRedirectToDiary skips)
+                    pendingViewAfterLogin = null;
                 }
                 
                 // FIX: Sync language selector immediately after showing dashboard
@@ -10952,34 +10914,28 @@ window.addEventListener('DOMContentLoaded', async () => {
 // Handle active_view from Flask backend
 {% if active_view %}
 document.addEventListener('DOMContentLoaded', function() {
-    // Wait for all scripts to load and auth check to complete
+    // Wait for all scripts to load
     setTimeout(function() {
-        // PJ6015: Only show the active view if user is authenticated
-        // This prevents issues when user arrives from email link but needs to login
-        if (currentUser) {
-            // Call showView with the tracking view
-            if (typeof showView === 'function') {
-                showView('{{ active_view }}');
+        // Call showView with the tracking view
+        if (typeof showView === 'function') {
+            showView('{{ active_view }}');
+        }
+
+        // Ensure calendar and options are initialized for parameters
+        if ('{{ active_view }}' === 'tracking') {
+            // Initialize the calendar
+            if (typeof initializeCalendar === 'function') {
+                initializeCalendar();
             }
 
-            // Ensure calendar and options are initialized for parameters
-            if ('{{ active_view }}' === 'tracking') {
-                // Initialize the calendar
-                if (typeof initializeCalendar === 'function') {
-                    initializeCalendar();
-                }
-
-                // Create parameter options
-                if (typeof createParameterOptions === 'function') {
-                    createParameterOptions('moodInput', 'mood');
-                    createParameterOptions('sleepInput', 'sleep');
-                    createParameterOptions('exerciseInput', 'exercise');
-                    createParameterOptions('stressInput', 'stress');
-                    createParameterOptions('socialInput', 'social');
-                }
+            // Create parameter options
+            if (typeof createParameterOptions === 'function') {
+                createParameterOptions('moodInput', 'mood');
+                createParameterOptions('sleepInput', 'sleep');
+                createParameterOptions('exerciseInput', 'exercise');
+                createParameterOptions('stressInput', 'stress');
+                createParameterOptions('socialInput', 'social');
             }
-        } else {
-            console.log('[PJ6015] active_view={{ active_view }} but user not authenticated, waiting for login');
         }
     }, 500); // Increased delay from 200 to 500
 });
