@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ6020 v2011 -->
+<!-- TheraSocial Version PJ6021 v2012 -->
+<!-- PJ6021: FIX - Magic links now work (await checkMagicToken before session check) -->
+<!-- PJ6021: FIX - follow-btn CSS now has background color (was showing white) -->
 <!-- PJ6020: FIX - Restored standalone Diary page (ParamRight.jpeg) -->
 <!-- ROOT CAUSE: PJ6015 changed /parameters to render index.html with sidebar -->
 <!-- This caused TWO Diary UIs to overlap - trackingView HTML + parameters-social.js content -->
@@ -193,6 +195,8 @@
     cursor: pointer;
     font-weight: 500;
     transition: all 0.2s;
+    background: var(--primary);
+    color: white;
 }
 
 .follow-btn:hover {
@@ -4036,13 +4040,14 @@ async function requestMagicLink() {
     }
 }
 
-// Check for magic token on page load
+// Check for magic token on page load - PJ6021: Returns true if magic token was processed
 async function checkMagicToken() {
     const params = new URLSearchParams(window.location.search);
     const magicToken = params.get('magic_token');
 
     if (magicToken) {
         try {
+            console.log('[MAGIC-LINK] Processing magic token...');
             const response = await fetch('/api/auth/verify-magic-link', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -4051,6 +4056,7 @@ async function checkMagicToken() {
 
             const data = await response.json();
             if (response.ok) {
+                console.log('[MAGIC-LINK] Token verified successfully');
                 // Clear token from URL
                 window.history.replaceState({}, document.title, "/");
 
@@ -4065,16 +4071,23 @@ async function checkMagicToken() {
                 // Go straight to consent (username is optional there)
                 if (data.needs_consent) {
                     showConsentModal();
+                    return true; // Handled - consent modal shown
                 } else {
                     window.location.reload();
+                    return true; // Handled - will reload
                 }
             } else {
+                console.error('[MAGIC-LINK] Token verification failed:', data.error);
                 showNotification(data.error || 'Invalid or expired link', 'error');
+                return false; // Not handled successfully, continue with normal flow
             }
         } catch (error) {
+            console.error('[MAGIC-LINK] Error:', error);
             showNotification('Verification failed', 'error');
+            return false; // Not handled, continue with normal flow
         }
     }
+    return false; // No magic token in URL
 }
 
 // Show consent modal with optional username
@@ -10750,8 +10763,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         return; // Don't proceed with normal login check
     }
 
-    // Check for magic link token
-    checkMagicToken();
+    // Check for magic link token - PJ6021: Must await this before checking session
+    const magicTokenHandled = await checkMagicToken();
+    if (magicTokenHandled) {
+        // Magic token was processed, page will reload or consent shown
+        return;
+    }
 
     // Wait for i18n to be ready (max 1 second)
     let i18nReady = false;

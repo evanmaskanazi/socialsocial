@@ -4,6 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diary - TheraSocial</title>
+    <!-- PJ6021: Early auth check - redirect immediately if not logged in -->
+    <script>
+        // Check auth BEFORE page renders - prevents flash of content
+        (async function earlyAuthCheck() {
+            try {
+                const response = await fetch('/api/auth/session', {credentials: 'include'});
+                if (response.status === 401 || !response.ok) {
+                    // Not authenticated - redirect to login IMMEDIATELY
+                    console.log('[DIARY] Not authenticated, redirecting to login');
+                    window.location.replace('/');
+                    // Stop page from rendering
+                    document.documentElement.innerHTML = '';
+                    return;
+                }
+            } catch (error) {
+                console.error('[DIARY] Auth check failed:', error);
+                window.location.replace('/');
+                document.documentElement.innerHTML = '';
+            }
+        })();
+    </script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -162,6 +183,19 @@ Storage.prototype.setItem = function(key, value) {
 
     <script>
         console.log('Parameters page loading...');
+
+        // PJ6021: Override goHome function from parameters-social.js to prevent logout
+        // The original goHome was calling something that logged the user out
+        window.goHome = function() {
+            console.log('[DIARY] goHome called - navigating to main app');
+            window.location.href = '/';
+        };
+        
+        // Also override any goToHome variant
+        window.goToHome = function() {
+            console.log('[DIARY] goToHome called - navigating to main app');
+            window.location.href = '/';
+        };
 
         // Check if this is for another user - if so, redirect
         const urlParams = new URLSearchParams(window.location.search);
