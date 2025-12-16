@@ -1,8 +1,17 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6024 (Version 2020)
+Complete app.py for Social Social Platform - Phase 6025 (Version 2021)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6025 Changes (v2021):
+- CRITICAL FIX: /parameters and /diary routes now redirect to /?view=tracking
+- ROOT CAUSE: Previous inline template was missing DOM structure that parameters-social.js needs
+- The inline template only had a loading message but NO actual form elements, buttons, etc.
+- parameters-social.js expects specific HTML elements to exist - it doesn't create everything dynamically
+- FIX: Simply redirect to main page with view=tracking parameter
+- Frontend handles showing tracking view for authenticated users
+- Frontend shows login form with redirect back to tracking for unauthenticated users
 
 PJ6024 Changes (v2020):
 - CRITICAL FIX: Alerts and Notifications now load after login via form
@@ -3981,96 +3990,19 @@ def messages_page():
 @app.route('/parameters')
 @app.route('/diary')
 def parameters_page():
-    """Diary/parameters page - serves standalone parameters template.
-    PJ6020: Restored standalone Diary page (ParamRight.jpeg) without sidebar.
+    """Diary/parameters page - redirects to main page with tracking view.
+    PJ6025: FIXED - Previous inline template was missing DOM structure that parameters-social.js needs.
+    Now simply redirects to main page with ?view=tracking parameter.
+    The main index.html has all the proper DOM structure and will show the tracking view.
     PJ6015: Removed @login_required so email links work properly.
-    PJ6023: Added early auth check and goHome override to prevent logout on Home click.
-    If user is not logged in, frontend will show login form.
-    After login, frontend will show the Diary interface.
+    If user is not logged in, they'll see login form, then tracking view after login.
     """
-    from flask import render_template_string
+    from flask import redirect
     
-    # PJ6023: Inline template with early auth check and goHome override
-    parameters_template = '''<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheraSocial - Diary</title>
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="stylesheet" href="/static/css/parameters-social.css">
-    <!-- PJ6023: Early auth check - redirect to login before page renders if not authenticated -->
-    <script>
-        (async function() {
-            try {
-                const response = await fetch('/api/auth/session', {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include'
-                });
-                if (!response.ok) {
-                    // Not authenticated, redirect to main page for login
-                    window.location.href = '/?redirect=diary';
-                    return;
-                }
-                const data = await response.json();
-                if (!data.authenticated) {
-                    window.location.href = '/?redirect=diary';
-                    return;
-                }
-            } catch (error) {
-                console.log('Auth check failed, redirecting to login');
-                window.location.href = '/?redirect=diary';
-            }
-        })();
-    </script>
-</head>
-<body>
-    <div id="parameters-app">
-        <!-- Parameters social.js will render content here -->
-        <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
-            <div style="text-align: center;">
-                <div class="loading-spinner" style="margin-bottom: 20px;"></div>
-                <p>Loading your diary...</p>
-            </div>
-        </div>
-    </div>
-    
-    <script src="/static/js/i18n.js"></script>
-    <script src="/static/js/utilities.js"></script>
-    <script src="/static/js/parameters-social.js"></script>
-    
-    <!-- PJ6023: Override goHome to prevent logout on Home click -->
-    <script>
-        // Override goHome function AFTER parameters-social.js loads
-        window.goHome = function() {
-            console.log('[DIARY] goHome called - navigating to main page');
-            window.location.href = '/';
-        };
-        
-        // Also override any navHome click handlers
-        document.addEventListener('DOMContentLoaded', function() {
-            const homeBtn = document.getElementById('navHome');
-            if (homeBtn) {
-                homeBtn.onclick = function(e) {
-                    e.preventDefault();
-                    window.location.href = '/';
-                };
-            }
-            
-            // Override any other home navigation elements
-            document.querySelectorAll('[data-nav="home"], .home-btn, #homeBtn').forEach(function(el) {
-                el.onclick = function(e) {
-                    e.preventDefault();
-                    window.location.href = '/';
-                };
-            });
-        });
-    </script>
-</body>
-</html>'''
-    
-    return render_template_string(parameters_template)
+    # PJ6025: Simply redirect to main page with view=tracking
+    # The frontend will check auth and show tracking view if authenticated
+    # or show login form with redirect back to tracking view
+    return redirect('/?view=tracking')
 
 
 @app.route('/healthz')
