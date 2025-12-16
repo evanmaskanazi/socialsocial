@@ -1,5 +1,16 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ6014 v2005 -->
+<!-- TheraSocial Version PJ40E v2010 -->
+<!-- PJ40E: THREE FIXES (NO CHANGES TO /parameters route) -->
+<!-- FIX 1: Daily reminder email link now works correctly for logged-in AND logged-out users -->
+<!--        Created NEW route /diary-redirect that handles the login check -->
+<!--        If logged in → redirects to /parameters (diary page) -->
+<!--        If not logged in → redirects to / (login page) -->
+<!--        Email link changed from /parameters to /diary-redirect -->
+<!--        /parameters route is COMPLETELY UNTOUCHED -->
+<!-- FIX 2: Birth year now displayed when viewing another user's profile -->
+<!--        Backend now includes birth_year in /api/users/<id>/profile response -->
+<!-- FIX 3: Fixed timezone mapping for all valid cities (including "Chicago, USA" etc.) -->
+<!--        Added full city names with countries to CITY_TIMEZONE_MAP -->
 <!-- PJ6014: MULTIPLE FIXES -->
 <!-- FIX 1: Search results in Circles/Following/Invite now show mutual connection & same city instead of email -->
 <!-- FIX 2: "Recommended for You" and "Suggested People to Invite" now show mutual/city reason -->
