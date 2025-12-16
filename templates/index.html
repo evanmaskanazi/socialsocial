@@ -1,18 +1,14 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ6024 v2020 -->
+<!-- TheraSocial Version PJ6025 v2021 -->
+<!-- PJ6025: CRITICAL FIX - /parameters and /diary routes now redirect to /?view=tracking -->
+<!-- ROOT CAUSE: Previous inline template was missing DOM structure that parameters-social.js needs -->
+<!-- FIX: Simply redirect to main page with view=tracking, let frontend show tracking view -->
 <!-- PJ6024: CRITICAL FIX - Alerts and Notifications now load after login -->
-<!-- ROOT CAUSE: Login form handler called checkParameterAlerts but NOT loadAlerts() -->
-<!-- This caused the Alerts sidebar to be empty after logging in via form -->
-<!-- FIX: Added loadAlerts() call in all login success paths -->
 <!-- PJ6023: FIX - Magic links now work properly (added credentials:'include' and delay) -->
 <!-- PJ6023: FIX - btn-secondary restored to --light background (was changed to --white) -->
 <!-- PJ6021: FIX - Magic links now work (await checkMagicToken before session check) -->
 <!-- PJ6021: FIX - follow-btn CSS now has background color (was showing white) -->
 <!-- PJ6020: FIX - Restored standalone Diary page (ParamRight.jpeg) -->
-<!-- ROOT CAUSE: PJ6015 changed /parameters to render index.html with sidebar -->
-<!-- This caused TWO Diary UIs to overlap - trackingView HTML + parameters-social.js content -->
-<!-- FIX 1: Created standalone parameters.html template for /parameters and /diary routes -->
-<!-- FIX 2: Emptied trackingView in index.html (used only for viewing OTHER users' data) -->
 <!-- FIX 3: Sidebar "Diary" click redirects to /parameters for own data -->
 <!-- Result: User sees standalone Diary page (no sidebar) exactly like ParamRight.jpeg -->
 <!-- PJ6018: FIX - Added missing cities to CITY_TIMEZONE_MAP (Herzliya, Eilat, etc.) -->
@@ -3317,10 +3313,13 @@
     
     // PJ6015: Track pending view for email link redirects
     // If user arrives at /parameters or /diary, they should go to tracking view after login
+    // PJ6025: Also check for view=tracking URL parameter
     let pendingViewAfterLogin = null;
-    if (window.location.pathname === '/parameters' || window.location.pathname === '/diary') {
+    const initUrlParams = new URLSearchParams(window.location.search);
+    if (window.location.pathname === '/parameters' || window.location.pathname === '/diary' || 
+        initUrlParams.get('view') === 'tracking' || initUrlParams.get('redirect') === 'diary') {
         pendingViewAfterLogin = 'tracking';
-        console.log('[PJ6015] User arrived from email link, will navigate to tracking view after login');
+        console.log('[PJ6025] User arrived from diary/parameters link, will navigate to tracking view after login');
     }
     
     // Variables above already declared before parameters-social.js
@@ -3684,12 +3683,26 @@ async function loadUserCity() {
                 currentUser = response.user;
                 currentUserId = response.user.id;
 
-                // PJ6023: Check if user came from diary link via URL parameter
+                // PJ6025: Check if user came from diary link via URL parameter
+                // Handle both old redirect=diary format and new view=tracking format
                 const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('redirect') === 'diary') {
-                    console.log('[PJ6023] User came from diary link, redirecting to diary');
+                const viewParam = urlParams.get('view');
+                const redirectParam = urlParams.get('redirect');
+                
+                if (viewParam === 'tracking' || redirectParam === 'diary') {
+                    console.log('[PJ6025] User came from diary link, showing tracking view');
                     window.history.replaceState({}, document.title, '/');
-                    window.location.href = '/diary';
+                    showDashboard();
+                    // Wait for dashboard to render, then show tracking view
+                    setTimeout(() => {
+                        if (typeof showView === 'function') {
+                            showView('tracking');
+                        }
+                    }, 100);
+                    loadNotificationSettings();
+                    if (typeof loadAlerts === 'function') {
+                        loadAlerts().catch(err => console.error('[PJ6025] Error loading alerts:', err));
+                    }
                     return;
                 }
 
@@ -10833,12 +10846,24 @@ window.addEventListener('DOMContentLoaded', async () => {
                 currentUserId = data.user.id;
                 showDashboard();
                 
-                // PJ6023: Check if user came from diary link and redirect
+                // PJ6025: Check if user came from diary/parameters link 
+                // Handle both old redirect=diary format and new view=tracking format
                 const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('redirect') === 'diary') {
-                    console.log('[AUTH] User came from diary link, redirecting to diary');
+                const viewParam = urlParams.get('view');
+                const redirectParam = urlParams.get('redirect');
+                
+                if (viewParam === 'tracking' || redirectParam === 'diary') {
+                    console.log('[AUTH] User came from diary link, showing tracking view');
                     window.history.replaceState({}, document.title, '/');
-                    window.location.href = '/diary';
+                    // Show tracking view directly instead of redirecting
+                    setTimeout(() => {
+                        if (typeof showView === 'function') {
+                            showView('tracking');
+                        }
+                    }, 100);
+                    // Still need to load alerts and settings
+                    await checkAndLoadTriggerAlerts();
+                    loadNotificationSettings();
                     return;
                 }
                 
