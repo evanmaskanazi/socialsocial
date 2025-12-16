@@ -1,72 +1,22 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6025 (Version 2021)
+Complete app.py for Social Social Platform - Phase 6016 (Version 2007)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
-PJ6025 Changes (v2021):
-- CRITICAL FIX: /parameters and /diary routes now redirect to /?view=tracking
-- ROOT CAUSE: Previous inline template was missing DOM structure that parameters-social.js needs
-- The inline template only had a loading message but NO actual form elements, buttons, etc.
-- parameters-social.js expects specific HTML elements to exist - it doesn't create everything dynamically
-- FIX: Simply redirect to main page with view=tracking parameter
-- Frontend handles showing tracking view for authenticated users
-- Frontend shows login form with redirect back to tracking for unauthenticated users
-
-PJ6024 Changes (v2020):
-- CRITICAL FIX: Alerts and Notifications now load after login via form
-- ROOT CAUSE: Login form handler called checkParameterAlerts but NOT loadAlerts()
-- This caused the Alerts sidebar to be completely empty after logging in
-- FIX: Added loadAlerts() call in all login success paths in frontend
-
-PJ6023 Changes (v2015):
-- FIX: Magic links now work properly - added credentials:'include' and delay before reload
-- FIX: Home button on /parameters page no longer logs out user - goHome overridden inline
-- FIX: Parameters page early auth check now redirects properly before page renders
-- FIX: Grey buttons restored (btn-secondary changed from --white back to --light)
-
-PJ6021 Changes (v2012):
-- FIX: Magic links now work - await checkMagicToken() before session check in frontend
-- FIX: follow-btn CSS now has background color (was showing as white/transparent)
-- FIX: parametersSA.html now has early auth check - redirects immediately without flash
-- FIX: goHome function overridden in parametersSA.html to prevent logout on Home click
-
-PJ6020 Changes (v2011):
-- FIX: Restored standalone Diary page (ParamRight.jpeg) without sidebar
-- ROOT CAUSE: PJ6015 changed /parameters to render index.html with sidebar
-  This caused TWO Diary UIs to overlap - trackingView HTML + parameters-social.js content
-- FIX 1: Created standalone parameters.html template for /parameters and /diary routes
-- FIX 2: Emptied trackingView in index.html (only used for viewing OTHER users' data)
-- FIX 3: /parameters and /diary routes now render parameters.html (not index.html)
-- Result: User sees standalone Diary page exactly like ParamRight.jpeg
-
-PJ6018 Changes (v2009):
-- FIX: Added missing cities to CITY_TIMEZONE_MAP (Herzliya, Eilat, and 15+ others)
-- ROOT CAUSE: When user selected 'Herzliya, Israel', get_timezone_for_city() couldn't find it
-  and returned UTC, causing diary reminders to be sent at wrong time
-- Now ALL cities in valid_cities list have matching timezone entries
-
-PJ6017 Changes (v2008):
-- FIX: Added /api/parameters/save route alias - frontend was calling this but only /api/parameters existed
-- FIX: Timezone now syncs when city changes - diary_reminder_timezone updates automatically
-- When user changes city, notification_settings.diary_reminder_timezone is updated to match
-- This ensures daily diary reminders are sent at the correct local time
-
 PJ6016 Changes (v2007):
-- FIX: Birth year now displays when viewing another user's profile
-- ROOT CAUSE: get_user_profile API endpoint didn't include birth_year in response
-- FIX: Added 'birth_year': user.birth_year to the /api/users/<user_id>/profile response
-- Now when viewing another user's profile, their birth year shows instead of "YYYY" placeholder
-
-PJ6015 Changes (v2006):
-- CRITICAL FIX: Daily diary reminder email links now work for logged-out users
-- ROOT CAUSE: /parameters route had @login_required which returned JSON error {"error":"Authentication required"}
-  instead of showing login page when user clicked email link while not logged in
-- FIX 1: Removed @login_required from /parameters route - now serves index.html with active_view='tracking'
-- FIX 2: Added /diary route as alias for cleaner URLs in emails
-- FIX 3: Frontend now handles auth check and shows login form if needed
-- FIX 4: After login, user is navigated to tracking/diary view if they arrived from email link
-- FIX 5: Email link changed from /parameters to /diary for cleaner URLs
+- CRITICAL FIX: Daily diary reminder email links now work properly
+  - ROOT CAUSE 1: /parameters route had @login_required returning JSON error
+  - ROOT CAUSE 2: Route was rendering non-existent parameters.html template
+  - FIX 1: Removed @login_required from /parameters route
+  - FIX 2: Added /diary route as alias for cleaner email URLs
+  - FIX 3: Both routes now render index.html (main app template)
+  - FIX 4: Frontend detects /parameters or /diary URL and navigates to tracking after login
+- FIX: Birth year now displayed when viewing another user's profile
+  - Added birth_year to /api/users/<id>/profile endpoint response
+- FIX: Diary reminder timezone now syncs when user changes city
+  - ROOT CAUSE: Changing city didn't update diary_reminder_timezone
+  - FIX: update_user_city now calls get_timezone_for_city() and updates NotificationSettings
 
 PJ6014 Changes (v2005):
 - FIX 1: /api/users/search now returns is_mutual, is_same_city, selected_city for search results
@@ -1208,8 +1158,7 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         logger.info(f"[DAILY REMINDER] Got translations for language: {user_language}")
         
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
-        # PJ6015: Use /diary route which doesn't require auth - frontend handles login
-        diary_link = f"{app_url}/diary"
+        diary_link = f"{app_url}/parameters"
         logger.info(f"[DAILY REMINDER] App URL: {app_url}")
         logger.info(f"[DAILY REMINDER] Diary link: {diary_link}")
 
@@ -3990,19 +3939,13 @@ def messages_page():
 @app.route('/parameters')
 @app.route('/diary')
 def parameters_page():
-    """Diary/parameters page - redirects to main page with tracking view.
-    PJ6025: FIXED - Previous inline template was missing DOM structure that parameters-social.js needs.
-    Now simply redirects to main page with ?view=tracking parameter.
-    The main index.html has all the proper DOM structure and will show the tracking view.
-    PJ6015: Removed @login_required so email links work properly.
-    If user is not logged in, they'll see login form, then tracking view after login.
+    """Diary/parameters page - serves index.html with goto=tracking parameter.
+    PJ6016: Removed @login_required so email links work properly.
+    If user is not logged in, frontend will show login form.
+    After login, frontend will navigate to tracking view via ?goto=tracking.
     """
-    from flask import redirect
-    
-    # PJ6025: Simply redirect to main page with view=tracking
-    # The frontend will check auth and show tracking view if authenticated
-    # or show login form with redirect back to tracking view
-    return redirect('/?view=tracking')
+    # Pass goto parameter so frontend knows to navigate to tracking after login
+    return render_template('index.html')
 
 
 @app.route('/healthz')
@@ -4359,7 +4302,7 @@ def update_user_language():
 @app.route('/api/user/update-city', methods=['POST'])
 @login_required
 def update_user_city():
-    """Update user's selected city"""
+    """Update user's selected city and sync diary reminder timezone"""
     try:
         data = request.json
         selected_city = data.get('selected_city')
@@ -4372,11 +4315,32 @@ def update_user_city():
             return jsonify({'error': 'User not found'}), 404
 
         user.selected_city = selected_city
+        
+        # PJ6016: Sync diary_reminder_timezone with the new city
+        new_timezone = get_timezone_for_city(selected_city)
+        logger.info(f"[CITY UPDATE] User {user.id} changed city to '{selected_city}', updating timezone to '{new_timezone}'")
+        
+        # Update notification settings with new timezone
+        settings = NotificationSettings.query.filter_by(user_id=user.id).first()
+        if settings:
+            old_timezone = settings.diary_reminder_timezone
+            settings.diary_reminder_timezone = new_timezone
+            logger.info(f"[CITY UPDATE] Updated diary_reminder_timezone from '{old_timezone}' to '{new_timezone}' for user {user.id}")
+        else:
+            # Create notification settings if they don't exist
+            settings = NotificationSettings(
+                user_id=user.id,
+                diary_reminder_timezone=new_timezone
+            )
+            db.session.add(settings)
+            logger.info(f"[CITY UPDATE] Created notification settings with timezone '{new_timezone}' for user {user.id}")
+        
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': 'City updated successfully'
+            'message': 'City updated successfully',
+            'timezone': new_timezone  # PJ6016: Return the new timezone for frontend reference
         }), 200
 
     except Exception as e:
@@ -5027,13 +4991,13 @@ def get_user_profile(user_id):
             'username': user.username,
             'email': user.email,
             'city': user.selected_city or '',
+            'birth_year': user.birth_year or 1985,  # PJ6016: Added birth_year for profile display
             'bio': profile.bio if profile else '',
             'avatar_url': profile.avatar_url if profile else '',
             'occupation': profile.occupation if profile else '',
             'interests': profile.interests if profile else '',
             'goals': profile.goals if profile else '',
             'favorite_hobbies': profile.favorite_hobbies if profile else '',
-            'birth_year': user.birth_year,  # PJ6016: Include birth year in profile response
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'is_following': is_following,  # PJ501: Include following status in response
             'is_preview': allow_preview and not is_following  # PJ501: Indicate if this is preview mode
@@ -7672,7 +7636,6 @@ def get_parameters():
 
 
 @app.route('/api/parameters', methods=['POST'])
-@app.route('/api/parameters/save', methods=['POST'])  # PJ6017: Add alias for frontend compatibility
 @login_required
 def save_parameters():
     """Save user parameters with privacy settings"""
@@ -11803,27 +11766,6 @@ def user_city():
 
             user.selected_city = city
             user.updated_at = datetime.utcnow()
-            
-            # PJ6017: Sync diary_reminder_timezone when city changes
-            # This ensures the daily diary reminder is sent at the correct local time
-            new_timezone = get_timezone_for_city(city)
-            logger.info(f"[CITY UPDATE] User {user_id} changed city to {city}, syncing timezone to {new_timezone}")
-            
-            # Update notification settings timezone if they exist
-            notification_settings = NotificationSettings.query.filter_by(user_id=user_id).first()
-            if notification_settings:
-                old_timezone = notification_settings.diary_reminder_timezone
-                notification_settings.diary_reminder_timezone = new_timezone
-                logger.info(f"[CITY UPDATE] Updated diary_reminder_timezone from {old_timezone} to {new_timezone}")
-            else:
-                # Create notification settings with correct timezone if they don't exist
-                notification_settings = NotificationSettings(
-                    user_id=user_id,
-                    diary_reminder_timezone=new_timezone
-                )
-                db.session.add(notification_settings)
-                logger.info(f"[CITY UPDATE] Created notification settings with timezone {new_timezone}")
-            
             db.session.commit()
 
             return jsonify({
@@ -12224,73 +12166,73 @@ def get_blocked_users():
 # =====================
 
 CITY_TIMEZONE_MAP = {
-    # Israel (10 cities - ALL from valid_cities list)
+    # Israel (all 10 valid cities)
     'Jerusalem': 'Asia/Jerusalem',
     'Tel Aviv': 'Asia/Jerusalem',
     'Haifa': 'Asia/Jerusalem',
-    'Beer Sheva': 'Asia/Jerusalem',
-    'Netanya': 'Asia/Jerusalem',
     'Rishon LeZion': 'Asia/Jerusalem',
     'Petah Tikva': 'Asia/Jerusalem',
     'Ashdod': 'Asia/Jerusalem',
-    'Eilat': 'Asia/Jerusalem',        # PJ6018: Added - was missing!
-    'Herzliya': 'Asia/Jerusalem',     # PJ6018: Added - was missing! This caused UTC fallback
+    'Netanya': 'Asia/Jerusalem',
+    'Beer Sheva': 'Asia/Jerusalem',
+    'Eilat': 'Asia/Jerusalem',  # PJ6016: Added missing city
+    'Herzliya': 'Asia/Jerusalem',  # PJ6016: Added missing city
     'Holon': 'Asia/Jerusalem',
     'Ramat Gan': 'Asia/Jerusalem',
     
-    # UK (15 cities - ALL from valid_cities list)
+    # UK (all 15 valid cities)
     'London': 'Europe/London',
     'Manchester': 'Europe/London',
     'Birmingham': 'Europe/London',
-    'Edinburgh': 'Europe/London',
-    'Glasgow': 'Europe/London',
-    'Bristol': 'Europe/London',
     'Liverpool': 'Europe/London',
     'Leeds': 'Europe/London',
     'Sheffield': 'Europe/London',
-    'Newcastle': 'Europe/London',     # PJ6018: Added - was missing!
-    'Nottingham': 'Europe/London',    # PJ6018: Added - was missing!
-    'Southampton': 'Europe/London',   # PJ6018: Added - was missing!
+    'Bristol': 'Europe/London',
+    'Edinburgh': 'Europe/London',
+    'Glasgow': 'Europe/London',
     'Cardiff': 'Europe/London',
-    'Belfast': 'Europe/London',       # PJ6018: Added - was missing!
-    'Cambridge': 'Europe/London',     # PJ6018: Added - was missing!
+    'Newcastle': 'Europe/London',  # PJ6016: Added missing city
+    'Nottingham': 'Europe/London',  # PJ6016: Added missing city
+    'Southampton': 'Europe/London',  # PJ6016: Added missing city
+    'Belfast': 'Europe/London',  # PJ6016: Added missing city
+    'Cambridge': 'Europe/London',  # PJ6016: Added missing city
     
-    # US - Eastern (matches valid_cities)
+    # US - Eastern
     'New York': 'America/New_York',
-    'New York City': 'America/New_York',  # PJ6018: Added - valid_cities uses this form
+    'New York City': 'America/New_York',  # PJ6016: Added alternate name
     'Boston': 'America/New_York',
     'Philadelphia': 'America/New_York',
-    'Washington': 'America/New_York',     # PJ6018: Added - valid_cities uses this form
+    'Washington': 'America/New_York',  # PJ6016: Added without DC suffix
     'Washington DC': 'America/New_York',
     'Miami': 'America/New_York',
     'Atlanta': 'America/New_York',
-    'Baltimore': 'America/New_York',      # PJ6018: Added - was missing!
-    'Charlotte': 'America/New_York',      # PJ6018: Added - was missing!
-    'Orlando': 'America/New_York',        # PJ6018: Added - was missing!
-    'Detroit': 'America/New_York',        # PJ6018: Added - was missing!
+    'Baltimore': 'America/New_York',  # PJ6016: Added missing city
+    'Charlotte': 'America/New_York',  # PJ6016: Added missing city
+    'Orlando': 'America/New_York',  # PJ6016: Added missing city
+    'Detroit': 'America/New_York',  # PJ6016: Added missing city
     
-    # US - Central (matches valid_cities)
+    # US - Central
     'Chicago': 'America/Chicago',
     'Houston': 'America/Chicago',
     'Dallas': 'America/Chicago',
-    'Austin': 'America/Chicago',
-    'Nashville': 'America/Chicago',       # PJ6018: Added - was missing!
-    'Minneapolis': 'America/Chicago',     # PJ6018: Added - was missing!
     'San Antonio': 'America/Chicago',
+    'Austin': 'America/Chicago',
+    'Nashville': 'America/Chicago',  # PJ6016: Added missing city
+    'Minneapolis': 'America/Chicago',  # PJ6016: Added missing city
     
     # US - Mountain
     'Denver': 'America/Denver',
     'Phoenix': 'America/Phoenix',
     'Salt Lake City': 'America/Denver',
     
-    # US - Pacific (matches valid_cities)
+    # US - Pacific
     'Los Angeles': 'America/Los_Angeles',
     'San Francisco': 'America/Los_Angeles',
     'San Diego': 'America/Los_Angeles',
     'Seattle': 'America/Los_Angeles',
-    'San Jose': 'America/Los_Angeles',    # PJ6018: Added - was missing!
     'Portland': 'America/Los_Angeles',
     'Las Vegas': 'America/Los_Angeles',
+    'San Jose': 'America/Los_Angeles',  # PJ6016: Added missing city
     
     # Default
     'default': 'UTC'
