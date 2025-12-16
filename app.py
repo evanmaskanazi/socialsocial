@@ -1,8 +1,14 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6020 (Version 2011)
+Complete app.py for Social Social Platform - Phase 6021 (Version 2012)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6021 Changes (v2012):
+- FIX: Magic links now work - await checkMagicToken() before session check in frontend
+- FIX: follow-btn CSS now has background color (was showing as white/transparent)
+- FIX: parametersSA.html now has early auth check - redirects immediately without flash
+- FIX: goHome function overridden in parametersSA.html to prevent logout on Home click
 
 PJ6020 Changes (v2011):
 - FIX: Restored standalone Diary page (ParamRight.jpeg) without sidebar
