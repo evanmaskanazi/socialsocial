@@ -1,22 +1,8 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6016 (Version 2007)
+Complete app.py for Social Social Platform - Phase 6014 (Version 2005)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
-
-PJ6016 Changes (v2007):
-- CRITICAL FIX: Daily diary reminder email links now work properly
-  - ROOT CAUSE 1: /parameters route had @login_required returning JSON error
-  - ROOT CAUSE 2: Route was rendering non-existent parameters.html template
-  - FIX 1: Removed @login_required from /parameters route
-  - FIX 2: Added /diary route as alias for cleaner email URLs
-  - FIX 3: Both routes now render index.html (main app template)
-  - FIX 4: Frontend detects /parameters or /diary URL and navigates to tracking after login
-- FIX: Birth year now displayed when viewing another user's profile
-  - Added birth_year to /api/users/<id>/profile endpoint response
-- FIX: Diary reminder timezone now syncs when user changes city
-  - ROOT CAUSE: Changing city didn't update diary_reminder_timezone
-  - FIX: update_user_city now calls get_timezone_for_city() and updates NotificationSettings
 
 PJ6014 Changes (v2005):
 - FIX 1: /api/users/search now returns is_mutual, is_same_city, selected_city for search results
@@ -3937,15 +3923,9 @@ def messages_page():
 
 
 @app.route('/parameters')
-@app.route('/diary')
+@login_required
 def parameters_page():
-    """Diary/parameters page - serves index.html with goto=tracking parameter.
-    PJ6016: Removed @login_required so email links work properly.
-    If user is not logged in, frontend will show login form.
-    After login, frontend will navigate to tracking view via ?goto=tracking.
-    """
-    # Pass goto parameter so frontend knows to navigate to tracking after login
-    return render_template('index.html')
+    return render_template('parameters.html')
 
 
 @app.route('/healthz')
@@ -4302,7 +4282,7 @@ def update_user_language():
 @app.route('/api/user/update-city', methods=['POST'])
 @login_required
 def update_user_city():
-    """Update user's selected city and sync diary reminder timezone"""
+    """Update user's selected city"""
     try:
         data = request.json
         selected_city = data.get('selected_city')
@@ -4315,32 +4295,11 @@ def update_user_city():
             return jsonify({'error': 'User not found'}), 404
 
         user.selected_city = selected_city
-        
-        # PJ6016: Sync diary_reminder_timezone with the new city
-        new_timezone = get_timezone_for_city(selected_city)
-        logger.info(f"[CITY UPDATE] User {user.id} changed city to '{selected_city}', updating timezone to '{new_timezone}'")
-        
-        # Update notification settings with new timezone
-        settings = NotificationSettings.query.filter_by(user_id=user.id).first()
-        if settings:
-            old_timezone = settings.diary_reminder_timezone
-            settings.diary_reminder_timezone = new_timezone
-            logger.info(f"[CITY UPDATE] Updated diary_reminder_timezone from '{old_timezone}' to '{new_timezone}' for user {user.id}")
-        else:
-            # Create notification settings if they don't exist
-            settings = NotificationSettings(
-                user_id=user.id,
-                diary_reminder_timezone=new_timezone
-            )
-            db.session.add(settings)
-            logger.info(f"[CITY UPDATE] Created notification settings with timezone '{new_timezone}' for user {user.id}")
-        
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': 'City updated successfully',
-            'timezone': new_timezone  # PJ6016: Return the new timezone for frontend reference
+            'message': 'City updated successfully'
         }), 200
 
     except Exception as e:
@@ -4991,7 +4950,6 @@ def get_user_profile(user_id):
             'username': user.username,
             'email': user.email,
             'city': user.selected_city or '',
-            'birth_year': user.birth_year or 1985,  # PJ6016: Added birth_year for profile display
             'bio': profile.bio if profile else '',
             'avatar_url': profile.avatar_url if profile else '',
             'occupation': profile.occupation if profile else '',
@@ -12166,7 +12124,7 @@ def get_blocked_users():
 # =====================
 
 CITY_TIMEZONE_MAP = {
-    # Israel (all 10 valid cities)
+    # Israel
     'Jerusalem': 'Asia/Jerusalem',
     'Tel Aviv': 'Asia/Jerusalem',
     'Haifa': 'Asia/Jerusalem',
@@ -12175,12 +12133,10 @@ CITY_TIMEZONE_MAP = {
     'Ashdod': 'Asia/Jerusalem',
     'Netanya': 'Asia/Jerusalem',
     'Beer Sheva': 'Asia/Jerusalem',
-    'Eilat': 'Asia/Jerusalem',  # PJ6016: Added missing city
-    'Herzliya': 'Asia/Jerusalem',  # PJ6016: Added missing city
     'Holon': 'Asia/Jerusalem',
     'Ramat Gan': 'Asia/Jerusalem',
     
-    # UK (all 15 valid cities)
+    # UK
     'London': 'Europe/London',
     'Manchester': 'Europe/London',
     'Birmingham': 'Europe/London',
@@ -12191,25 +12147,14 @@ CITY_TIMEZONE_MAP = {
     'Edinburgh': 'Europe/London',
     'Glasgow': 'Europe/London',
     'Cardiff': 'Europe/London',
-    'Newcastle': 'Europe/London',  # PJ6016: Added missing city
-    'Nottingham': 'Europe/London',  # PJ6016: Added missing city
-    'Southampton': 'Europe/London',  # PJ6016: Added missing city
-    'Belfast': 'Europe/London',  # PJ6016: Added missing city
-    'Cambridge': 'Europe/London',  # PJ6016: Added missing city
     
     # US - Eastern
     'New York': 'America/New_York',
-    'New York City': 'America/New_York',  # PJ6016: Added alternate name
     'Boston': 'America/New_York',
     'Philadelphia': 'America/New_York',
-    'Washington': 'America/New_York',  # PJ6016: Added without DC suffix
     'Washington DC': 'America/New_York',
     'Miami': 'America/New_York',
     'Atlanta': 'America/New_York',
-    'Baltimore': 'America/New_York',  # PJ6016: Added missing city
-    'Charlotte': 'America/New_York',  # PJ6016: Added missing city
-    'Orlando': 'America/New_York',  # PJ6016: Added missing city
-    'Detroit': 'America/New_York',  # PJ6016: Added missing city
     
     # US - Central
     'Chicago': 'America/Chicago',
@@ -12217,8 +12162,6 @@ CITY_TIMEZONE_MAP = {
     'Dallas': 'America/Chicago',
     'San Antonio': 'America/Chicago',
     'Austin': 'America/Chicago',
-    'Nashville': 'America/Chicago',  # PJ6016: Added missing city
-    'Minneapolis': 'America/Chicago',  # PJ6016: Added missing city
     
     # US - Mountain
     'Denver': 'America/Denver',
@@ -12232,7 +12175,6 @@ CITY_TIMEZONE_MAP = {
     'Seattle': 'America/Los_Angeles',
     'Portland': 'America/Los_Angeles',
     'Las Vegas': 'America/Los_Angeles',
-    'San Jose': 'America/Los_Angeles',  # PJ6016: Added missing city
     
     # Default
     'default': 'UTC'
