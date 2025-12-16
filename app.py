@@ -1,8 +1,26 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6013 (Version 2004)
+Complete app.py for Social Social Platform - Phase 6015 (Version 2006)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6015 Changes (v2006):
+- CRITICAL FIX: Daily diary reminder email links now work for logged-out users
+- ROOT CAUSE: /parameters route had @login_required which returned JSON error {"error":"Authentication required"}
+  instead of showing login page when user clicked email link while not logged in
+- FIX 1: Removed @login_required from /parameters route - now serves index.html with active_view='tracking'
+- FIX 2: Added /diary route as alias for cleaner URLs in emails
+- FIX 3: Frontend now handles auth check and shows login form if needed
+- FIX 4: After login, user is navigated to tracking/diary view if they arrived from email link
+- FIX 5: Email link changed from /parameters to /diary for cleaner URLs
+
+PJ6014 Changes (v2005):
+- FIX 1: /api/users/search now returns is_mutual, is_same_city, selected_city for search results
+- FIX 2: /api/users/recommendations now returns is_mutual, is_same_city, reason for invite suggestions
+- FIX 3: Frontend search results in Circles/Following/Invite show mutual connection & city info (no email)
+- FIX 4: "Recommended for You" and "Suggested People to Invite" show reason before city
+- FIX 5: Birth Year Update button hidden when viewing another user's profile
+- This enables consistent display format across all recommendation/search UI
 
 PJ6013 Changes (v2004):
 - FRONTEND FIX: Mobile notification toggles now load correctly from backend
@@ -1136,7 +1154,8 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         logger.info(f"[DAILY REMINDER] Got translations for language: {user_language}")
         
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
-        diary_link = f"{app_url}/parameters"
+        # PJ6015: Use /diary route which doesn't require auth - frontend handles login
+        diary_link = f"{app_url}/diary"
         logger.info(f"[DAILY REMINDER] App URL: {app_url}")
         logger.info(f"[DAILY REMINDER] Diary link: {diary_link}")
 
@@ -3915,9 +3934,14 @@ def messages_page():
 
 
 @app.route('/parameters')
-@login_required
+@app.route('/diary')
 def parameters_page():
-    return render_template('parameters.html')
+    """Diary/parameters page - serves index.html and lets frontend handle auth.
+    PJ6015: Removed @login_required so email links work properly.
+    If user is not logged in, frontend will show login form.
+    After login, frontend will navigate to tracking view.
+    """
+    return render_template('index.html', active_view='tracking')
 
 
 @app.route('/healthz')
@@ -5429,6 +5453,10 @@ def search_users():
             return jsonify({'error': 'Not authenticated'}), 401
 
         logger.info(f"👤 Current user: {current_user_id}")
+        
+        # PJ6014: Get current user's city for same_city comparison
+        current_user = db.session.get(User, current_user_id)
+        current_user_city = current_user.selected_city if current_user else None
 
         # Perform search
         logger.info(f"🔎 Searching: username ILIKE '%{query}%' WHERE id != {current_user_id}")
@@ -5450,6 +5478,17 @@ def search_users():
             logger.info(f"👥 User is following {len(following_ids)} users")
         except Exception as follow_err:
             logger.warning(f"⚠️ Could not fetch following list: {follow_err}")
+        
+        # PJ6014: Get list of users who follow the current user (for mutual connection check)
+        follower_ids = set()
+        try:
+            follower_result = db.session.execute(
+                select(Follow.follower_id).filter_by(followed_id=current_user_id)
+            ).scalars().all()
+            follower_ids = set(follower_result)
+            logger.info(f"👥 Users following current user: {len(follower_ids)}")
+        except Exception as follow_err:
+            logger.warning(f"⚠️ Could not fetch followers list: {follow_err}")
 
         # Format results with profile data
         results = []
@@ -5459,21 +5498,30 @@ def search_users():
 
                 # PJ706: Include is_following field
                 is_following = user.id in following_ids
+                
+                # PJ6014: Check if mutual connection (both follow each other)
+                is_mutual = user.id in following_ids and user.id in follower_ids
+                
+                # PJ6014: Check if same city
+                is_same_city = current_user_city and user.selected_city and current_user_city == user.selected_city
 
                 user_data = {
                     'id': user.id,
                     'username': user.username,
-                    'email': user.email,
+                    'email': user.email,  # Keep for backward compatibility but frontend won't display
                     'display_name': user.username,
                     'bio': profile.bio if profile else None,
                     'occupation': profile.occupation if profile else None,
                     'interests': profile.interests if profile else None,
                     'avatar_url': profile.avatar_url if profile else None,
-                    'is_following': is_following  # PJ706: Added
+                    'is_following': is_following,  # PJ706: Added
+                    'is_mutual': is_mutual,  # PJ6014: Added
+                    'is_same_city': is_same_city,  # PJ6014: Added
+                    'selected_city': user.selected_city  # PJ6014: Added
                 }
 
                 results.append(user_data)
-                logger.debug(f"  - Formatted user {user.id}: {user.username}, is_following={is_following}")
+                logger.debug(f"  - Formatted user {user.id}: {user.username}, is_following={is_following}, is_mutual={is_mutual}, is_same_city={is_same_city}")
 
             except Exception as profile_error:
                 # Include user even if profile loading fails
@@ -5487,7 +5535,10 @@ def search_users():
                     'occupation': None,
                     'interests': None,
                     'avatar_url': None,
-                    'is_following': user.id in following_ids  # PJ706: Added
+                    'is_following': user.id in following_ids,
+                    'is_mutual': user.id in following_ids and user.id in follower_ids,
+                    'is_same_city': current_user_city and user.selected_city == current_user_city,
+                    'selected_city': user.selected_city
                 })
 
         logger.info(f"📤 Returning {len(results)} result(s)")
@@ -13226,6 +13277,16 @@ def get_user_recommendations():
             ).scalars().all()
         except Exception as e:
             logger.warning(f"Followers query failed: {e}")
+        
+        # PJ6014: Get users I'm following (for mutual connection check)
+        my_following = []
+        try:
+            my_following = db.session.execute(
+                select(Follow.followed_id).filter_by(follower_id=user_id)
+            ).scalars().all()
+        except Exception as e:
+            logger.warning(f"Following query failed: {e}")
+        my_following_set = set(my_following)
 
         # Get pending follow requests I RECEIVED
         # These should be EXCLUDED because they already want to follow me
@@ -13259,6 +13320,9 @@ def get_user_recommendations():
         logger.info(f"User {user_id} ({current_user.username}) invite recommendations - "
                     f"excluding {len(exclude_ids)} users: "
                     f"followers={len(my_followers)}, received_requests={len(received_requests)}, sent_requests={len(sent_requests)}")
+
+        # PJ6014: Get current user's city for same_city comparison
+        current_user_city = current_user.selected_city if current_user else None
 
         # Get users with similar location (potential people to invite)
         location_matches = []
@@ -13297,10 +13361,27 @@ def get_user_recommendations():
             for user in user_list:
                 if user.id not in seen_ids:
                     seen_ids.add(user.id)
+                    
+                    # PJ6014: Calculate mutual connection and same city
+                    is_mutual = user.id in my_following_set  # If I follow them, it's a connection
+                    is_same_city = current_user_city and user.selected_city and current_user_city == user.selected_city
+                    
+                    # PJ6014: Build reason string
+                    reason = ''
+                    if is_mutual and is_same_city:
+                        reason = 'Mutual connection & same city'
+                    elif is_mutual:
+                        reason = 'Mutual connection'
+                    elif is_same_city:
+                        reason = 'Same city'
+                    
                     all_recommendations.append({
                         'id': user.id,
                         'username': user.username,
-                        'location': getattr(user, 'selected_city', None)
+                        'location': getattr(user, 'selected_city', None),
+                        'is_mutual': is_mutual,
+                        'is_same_city': is_same_city,
+                        'reason': reason
                     })
 
         # Limit to 20 recommendations
