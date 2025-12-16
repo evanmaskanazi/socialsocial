@@ -1,5 +1,17 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ6014 v2005 -->
+<!-- TheraSocial Version PJ6016 v2007 -->
+<!-- PJ6016: CRITICAL FIXES -->
+<!-- FIX 1: Daily diary reminder email links now work for logged-out users -->
+<!--   - Backend removed @login_required from /parameters route -->
+<!--   - Added /diary route as alias for cleaner email URLs -->
+<!--   - Both routes now render index.html (not non-existent parameters.html) -->
+<!--   - Frontend detects /parameters or /diary URL path -->
+<!--   - After login, user is navigated to tracking/diary view -->
+<!--   - URL is cleaned up after navigation -->
+<!-- FIX 2: Birth year now displayed on other users' profiles -->
+<!--   - Backend now returns birth_year in /api/users/<id>/profile endpoint -->
+<!-- FIX 3: Diary reminder timezone now syncs when user changes city -->
+<!--   - Changing city now updates diary_reminder_timezone in notification settings -->
 <!-- PJ6014: MULTIPLE FIXES -->
 <!-- FIX 1: Search results in Circles/Following/Invite now show mutual connection & same city instead of email -->
 <!-- FIX 2: "Recommended for You" and "Suggested People to Invite" now show mutual/city reason -->
@@ -3346,6 +3358,15 @@
     if (typeof currentUserId === 'undefined') {
         var currentUserId = null;
     }
+    
+    // PJ6016: Track pending view for email link redirects
+    // If user arrives at /parameters or /diary, they should go to tracking view after login
+    let pendingViewAfterLogin = null;
+    if (window.location.pathname === '/parameters' || window.location.pathname === '/diary') {
+        pendingViewAfterLogin = 'tracking';
+        console.log('[PJ6016] User arrived from email link, will navigate to tracking view after login');
+    }
+    
     // Variables above already declared before parameters-social.js
     // Helper function to format message time with translation
     function formatMessageTime(timestamp) {
@@ -3706,6 +3727,36 @@ async function loadUserCity() {
             if (response && response.success) {
                 currentUser = response.user;
                 currentUserId = response.user.id;
+
+                // PJ6016: Check if user came from email link (diary reminder)
+                // If so, navigate directly to tracking view after login
+                if (pendingViewAfterLogin === 'tracking') {
+                    console.log('[PJ6016] User logged in from email link, navigating to diary/tracking view');
+                    showDashboard();
+                    // Wait for dashboard to render, then show tracking view
+                    setTimeout(() => {
+                        if (typeof showView === 'function') {
+                            showView('tracking');
+                        }
+                        // Initialize calendar and parameter options for tracking view
+                        if (typeof initializeCalendar === 'function') {
+                            initializeCalendar();
+                        }
+                        if (typeof createParameterOptions === 'function') {
+                            createParameterOptions('moodInput', 'mood');
+                            createParameterOptions('sleepInput', 'sleep');
+                            createParameterOptions('exerciseInput', 'exercise');
+                            createParameterOptions('stressInput', 'stress');
+                            createParameterOptions('socialInput', 'social');
+                        }
+                    }, 100);
+                    // Load notification settings after login
+                    loadNotificationSettings();
+                    // Clear the pending view and update URL
+                    pendingViewAfterLogin = null;
+                    window.history.replaceState({}, document.title, '/');
+                    return;
+                }
 
                 // FIX #5: Check if user needs to fill diary before showing dashboard
                 const needsDiary = await checkAndRedirectToDiary();
