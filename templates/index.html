@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ6013 v2004 -->
-<!-- PJ6013: CRITICAL FIX - Mobile notification toggles now load correctly from backend -->
-<!-- ROOT CAUSE: loadNotificationSettings() only set desktop toggles, not mobile toggles -->
-<!-- Mobile toggles (mobileEmailOnAlertToggle, mobileEmailOnNotificationToggle, mobileDailyDiaryReminderToggle) -->
-<!-- were NEVER populated from backend settings, causing them to show incorrect state -->
+<!-- TheraSocial Version PJ6020 v2011 -->
+<!-- PJ6020: FIX - Restored standalone Diary page (ParamRight.jpeg) -->
+<!-- ROOT CAUSE: PJ6015 changed /parameters to render index.html with sidebar -->
+<!-- This caused TWO Diary UIs to overlap - trackingView HTML + parameters-social.js content -->
+<!-- FIX 1: Created standalone parameters.html template for /parameters and /diary routes -->
+<!-- FIX 2: Emptied trackingView in index.html (used only for viewing OTHER users' data) -->
+<!-- FIX 3: Sidebar "Diary" click redirects to /parameters for own data -->
+<!-- Result: User sees standalone Diary page (no sidebar) exactly like ParamRight.jpeg -->
+<!-- PJ6018: FIX - Added missing cities to CITY_TIMEZONE_MAP (Herzliya, Eilat, etc.) -->
+<!-- PJ6017: FIX - /api/parameters/save now works (route alias added to backend) -->
+<!-- PJ6017: FIX - Timezone syncs automatically when city changes -->
+<!-- PJ6016: FIX - Birth year now displays when viewing another user's profile -->
+<!-- PJ6014: MULTIPLE FIXES -->
+<!-- FIX 1: Search results in Circles/Following/Invite now show mutual connection & same city instead of email -->
+<!-- FIX 2: "Recommended for You" and "Suggested People to Invite" now show mutual/city reason -->
+<!-- FIX 3: Birth Year Update button only visible on OWN profile, hidden when viewing others -->
+<!-- PJ6013: Mobile notification toggles now load correctly from backend -->
 <!-- PJ6012: Consolidated batch emails now sent from TRIGGER SCHEDULER path -->
 <!-- PJ6011: Backend fix - Trigger alerts no longer send individual emails, only consolidated batch emails -->
 <!-- PJ6010: MOBILE FIX - About and Support links now visible on mobile -->
@@ -2467,13 +2479,13 @@
 
                         <div class="profile-fields">
                             <!-- PJ6001: Birth Year Field -->
-                            <div class="form-group">
+                            <div class="form-group" id="birthYearSection">
                                 <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <input type="number" class="form-input" id="profileBirthYear" 
                                            min="1900" max="2025" maxlength="4"
                                            placeholder="YYYY" style="width: 120px;">
-                                    <button type="button" class="btn btn-secondary" style="padding: 8px 16px;" 
+                                    <button type="button" class="btn btn-secondary" id="birthYearUpdateBtn" style="padding: 8px 16px;" 
                                             onclick="updateBirthYear()" data-i18n="profile.update_birth_year">Update</button>
                                 </div>
                             </div>
@@ -2657,64 +2669,11 @@
                     </div>
                 </div>
 
-                <!-- Tracking/Parameters View (Enhanced with save/load) -->
+                <!-- Tracking/Parameters View - PJ6020: Emptied to let parameters-social.js create the Diary UI -->
+                <!-- The old HTML content (calendar, text inputs) was conflicting with parameters-social.js -->
+                <!-- which creates the 1-4 buttons Diary interface, causing duplicate UI -->
                 <div id="trackingView" class="view hidden">
-                    <h2 style="margin-bottom: 20px;" data-i18n="parameters.title">Wellness Parameters</h2>
-
-                    <div class="calendar-section">
-                        <div class="calendar-header">
-                            <button class="btn btn-secondary" onclick="previousMonth()" data-i18n="calendar.prev">←</button>
-                            <span id="currentMonth" style="font-weight: 600;">January 2025</span>
-                            <button class="btn btn-secondary" onclick="nextMonth()" data-i18n="calendar.next">→</button>
-                        </div>
-                        <div class="calendar-grid" id="calendarGrid"></div>
-                        <div style="text-align: center; margin-top: 15px;">
-                            <p><span data-i18n="parameters.selected_date">Selected Date:</span> <strong id="selectedDateDisplay" data-i18n="feed.today">Today</strong></p>
-                        </div>
-                    </div>
-
-                    <div id="parametersContainer" class="parameter-grid">
-                        <div class="parameter-card">
-                            <div class="parameter-name" data-i18n="parameters.mood">Mood</div>
-                            <div id="moodInput"></div>
-                        </div>
-
-                        <div class="parameter-card">
-                            <div class="parameter-name" data-i18n="parameters.sleep">Sleep</div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <input type="number" class="parameter-input" id="sleepInput" data-i18n="parameters.sleep_placeholder" placeholder="Hours" min="0" max="24" step="0.5" style="width: 100px;">
-                                <span style="color: white; font-weight: 600;" id="sleepDisplay"><span>0</span> <span data-i18n="parameters.sleep_hours">Hours</span></span>
-                            </div>
-                        </div>
-
-                        <div class="parameter-card">
-                            <div class="parameter-name" data-i18n="parameters.exercise">Exercise</div>
-                            <div id="exerciseInput"></div>
-                        </div>
-
-                        <div class="parameter-card">
-                            <div class="parameter-name" data-i18n="parameters.anxiety">Anxiety</div>
-                            <input type="text" class="parameter-input" id="anxietyInput" data-i18n="parameters.anxiety_placeholder" placeholder="e.g., None, Mild, Moderate">
-                        </div>
-
-                        <div class="parameter-card">
-                            <div class="parameter-name" data-i18n="parameters.energy">Energy</div>
-                            <input type="text" class="parameter-input" id="energyInput" data-i18n="parameters.energy_placeholder" placeholder="e.g., Low, Normal, High">
-                        </div>
-
-                        <div class="parameter-card" style="grid-column: span 2;">
-                            <div class="parameter-name" data-i18n="parameters.notes">Notes</div>
-                            <textarea class="parameter-input" id="notesInput" data-i18n="parameters.notes_placeholder" placeholder="Additional notes..." style="min-height: 80px;"></textarea>
-                        </div>
-                    </div>
-
-                    <div style="text-align: center; margin-top: 20px; display: flex; gap: 15px; justify-content: center;">
-                        <button class="btn btn-primary" style="width: 200px;" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
-                        <button class="btn btn-secondary" style="width: 200px;" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
-                    </div>
-
-                    <h3 style="margin-top: 30px; margin-bottom: 15px;" data-i18n="parameters.insights">Insights</h3>
-                    <div id="insights"></div>
+                    <!-- Content will be dynamically created by parameters-social.js -->
                 </div>
 
 <!-- Following View -->
@@ -3345,6 +3304,15 @@
     if (typeof currentUserId === 'undefined') {
         var currentUserId = null;
     }
+    
+    // PJ6015: Track pending view for email link redirects
+    // If user arrives at /parameters or /diary, they should go to tracking view after login
+    let pendingViewAfterLogin = null;
+    if (window.location.pathname === '/parameters' || window.location.pathname === '/diary') {
+        pendingViewAfterLogin = 'tracking';
+        console.log('[PJ6015] User arrived from email link, will navigate to tracking view after login');
+    }
+    
     // Variables above already declared before parameters-social.js
     // Helper function to format message time with translation
     function formatMessageTime(timestamp) {
@@ -3705,6 +3673,35 @@ async function loadUserCity() {
             if (response && response.success) {
                 currentUser = response.user;
                 currentUserId = response.user.id;
+
+                // PJ6015: Check if user came from email link (diary reminder)
+                // If so, navigate directly to tracking view after login
+                if (pendingViewAfterLogin === 'tracking') {
+                    console.log('[PJ6015] User logged in from email link, navigating to diary/tracking view');
+                    showDashboard();
+                    // Wait for dashboard to render, then show tracking view
+                    setTimeout(() => {
+                        if (typeof showView === 'function') {
+                            showView('tracking');
+                        }
+                        // Initialize calendar and parameter options for tracking view
+                        if (typeof initializeCalendar === 'function') {
+                            initializeCalendar();
+                        }
+                        if (typeof createParameterOptions === 'function') {
+                            createParameterOptions('moodInput', 'mood');
+                            createParameterOptions('sleepInput', 'sleep');
+                            createParameterOptions('exerciseInput', 'exercise');
+                            createParameterOptions('stressInput', 'stress');
+                            createParameterOptions('socialInput', 'social');
+                        }
+                    }, 100);
+                    // Load notification settings after login
+                    loadNotificationSettings();
+                    // Clear the pending view
+                    pendingViewAfterLogin = null;
+                    return;
+                }
 
                 // FIX #5: Check if user needs to fill diary before showing dashboard
                 const needsDiary = await checkAndRedirectToDiary();
@@ -4964,6 +4961,7 @@ function loadUserRecommendations() {
                 console.log('✅ Rendering', data.recommendations.length, 'recommendations');
 
                 // PJ702: Added clickable names to view user profile
+                // PJ6014: Updated to show mutual/city info like circle recommendations
                 const html = data.recommendations.map(user => `
                     <div class="user-card">
                         <div style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;" onclick="viewUserProfileFromInvite(${user.id})">
@@ -4972,6 +4970,7 @@ function loadUserRecommendations() {
                             </div>
                             <div class="user-info">
                                 <div class="user-name">${user.username}</div>
+                                ${user.reason ? `<div style="font-size: 12px; color: var(--gray);">${user.reason}</div>` : ''}
                                 ${user.location ? `<div class="user-location">📍 ${user.location}</div>` : ''}
                             </div>
                         </div>
@@ -5131,7 +5130,19 @@ async function searchUsersToInviteInstant(query) {
                     const sendRequestText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('invite.send_request') : 'Send Request';
                     
-                    resultsContainer.innerHTML = users.map(user => `
+                    // PJ6014: Updated to show mutual/city info like circle recommendations
+                    resultsContainer.innerHTML = users.map(user => {
+                        // Build reason string like circle recommendations
+                        let reason = '';
+                        if (user.is_mutual && user.is_same_city) {
+                            reason = 'Mutual connection & same city';
+                        } else if (user.is_mutual) {
+                            reason = 'Mutual connection';
+                        } else if (user.is_same_city) {
+                            reason = 'Same city';
+                        }
+                        
+                        return `
                         <div class="search-result-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
                             <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromInviteSearch(${user.id})">
                                 <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
@@ -5139,8 +5150,8 @@ async function searchUsersToInviteInstant(query) {
                                 </div>
                                 <div>
                                     <strong style="display: block;">${user.username}</strong>
-                                    <small style="color: #6B7280;">${user.selected_city || user.city || ''}</small>
-                                    ${user.bio ? `<br><small style="color: #9CA3AF; font-style: italic;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</small>` : ''}
+                                    ${reason ? `<small style="color: var(--gray);">${reason}</small><br>` : ''}
+                                    ${user.selected_city ? `<small style="color: #6B7280;">📍 ${user.selected_city}</small>` : ''}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -5149,7 +5160,7 @@ async function searchUsersToInviteInstant(query) {
                                 </button>
                             </div>
                         </div>
-                    `).join('');
+                    `}).join('');
                 }
                 resultsContainer.style.display = 'block';
             }
@@ -6294,6 +6305,15 @@ window.addEventListener('languageChanged', () => {
                 const birthYearInput = document.getElementById('profileBirthYear');
                 if (birthYearInput) {
                     birthYearInput.value = response.birth_year || 1985;
+                    birthYearInput.disabled = false;
+                    birthYearInput.style.backgroundColor = '';
+                    birthYearInput.style.cursor = '';
+                }
+                
+                // PJ6014: Show birth year Update button for own profile
+                const birthYearUpdateBtn = document.getElementById('birthYearUpdateBtn');
+                if (birthYearUpdateBtn) {
+                    birthYearUpdateBtn.style.display = '';
                 }
 
                 // Show Change Password and Delete Account sections when viewing own profile
@@ -7151,14 +7171,26 @@ function updateCircleDisplay(type, members) {
                 if (response.users.length === 0) {
                     container.innerHTML = `<div class="search-result-item">${(window.i18n && window.i18n.t ? window.i18n.t('circles.no_users') : 'No users found')}</div>`;
                 } else {
-                    container.innerHTML = response.users.map(user => `
+                    // PJ6014: Updated to show mutual/city info like circle recommendations
+                    container.innerHTML = response.users.map(user => {
+                        // Build reason string like circle recommendations
+                        let reason = '';
+                        if (user.is_mutual && user.is_same_city) {
+                            reason = 'Mutual connection & same city';
+                        } else if (user.is_mutual) {
+                            reason = 'Mutual connection';
+                        } else if (user.is_same_city) {
+                            reason = 'Same city';
+                        }
+                        
+                        return `
                         <div class="search-result-item" style="display: block; padding: 12px;">
                             <div style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;" onclick="viewUserProfile(${user.id}); document.getElementById('searchResults').classList.remove('active'); document.getElementById('userSearchInput').value = '';">
                                 <div class="member-avatar" style="margin-right: 10px;">${escapeHtml(user.username[0].toUpperCase())}</div>
                                 <div style="flex: 1;">
-                                    <strong>${escapeHtml(user.username)}</strong><br>
-                                    <small style="color: var(--gray);">${escapeHtml(user.email)}</small>
-                                    ${user.bio ? `<br><small style="color: var(--gray); font-style: italic;">${escapeHtml(user.bio.substring(0, 60))}${user.bio.length > 60 ? '...' : ''}</small>` : ''}
+                                    <strong>${escapeHtml(user.username)}</strong>
+                                    ${reason ? `<br><small style="color: var(--gray);">${reason}</small>` : ''}
+                                    ${user.selected_city ? `<br><small style="color: var(--gray);">📍 ${escapeHtml(user.selected_city)}</small>` : ''}
                                 </div>
                             </div>
                            <select onclick="event.stopPropagation();" onchange="addToCircle(${user.id}, this.value, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" style="width: 100%;">
@@ -7168,7 +7200,7 @@ function updateCircleDisplay(type, members) {
     <option value="family" data-i18n="privacy.class_a">Family</option>
 </select>
                         </div>
-                    `).join('');
+                    `}).join('');
                 }
 
                 container.classList.add('active');
@@ -8026,8 +8058,8 @@ async function loadFollowing() {
                         </div>
                         <div class="user-info" style="cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
                             <div class="user-name">${escapeHtml(user.username)}</div>
-                            <div class="user-location">${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${escapeHtml(user.reason)}</div>` : ''}
+                            <div class="user-location" style="font-size: 0.75rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
                         <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap;">
                             <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">
@@ -9518,6 +9550,19 @@ async function loadUserProfileView(userId) {
             hobbiesElement.style.backgroundColor = '#f3f4f6';
             hobbiesElement.style.cursor = 'default';
         }
+        
+        // PJ6014: Hide birth year Update button and disable input when viewing another user
+        const birthYearInput = document.getElementById('profileBirthYear');
+        const birthYearUpdateBtn = document.getElementById('birthYearUpdateBtn');
+        if (birthYearInput) {
+            birthYearInput.value = userData.birth_year || '';
+            birthYearInput.disabled = true;
+            birthYearInput.style.backgroundColor = '#f3f4f6';
+            birthYearInput.style.cursor = 'default';
+        }
+        if (birthYearUpdateBtn) {
+            birthYearUpdateBtn.style.display = 'none';
+        }
 
         // Hide the Save Profile button and any edit buttons
         const saveButton = document.getElementById('updateProfileBtn');
@@ -10824,28 +10869,34 @@ window.addEventListener('DOMContentLoaded', async () => {
 // Handle active_view from Flask backend
 {% if active_view %}
 document.addEventListener('DOMContentLoaded', function() {
-    // Wait for all scripts to load
+    // Wait for all scripts to load and auth check to complete
     setTimeout(function() {
-        // Call showView with the tracking view
-        if (typeof showView === 'function') {
-            showView('{{ active_view }}');
-        }
-
-        // Ensure calendar and options are initialized for parameters
-        if ('{{ active_view }}' === 'tracking') {
-            // Initialize the calendar
-            if (typeof initializeCalendar === 'function') {
-                initializeCalendar();
+        // PJ6015: Only show the active view if user is authenticated
+        // This prevents issues when user arrives from email link but needs to login
+        if (currentUser) {
+            // Call showView with the tracking view
+            if (typeof showView === 'function') {
+                showView('{{ active_view }}');
             }
 
-            // Create parameter options
-            if (typeof createParameterOptions === 'function') {
-                createParameterOptions('moodInput', 'mood');
-                createParameterOptions('sleepInput', 'sleep');
-                createParameterOptions('exerciseInput', 'exercise');
-                createParameterOptions('stressInput', 'stress');
-                createParameterOptions('socialInput', 'social');
+            // Ensure calendar and options are initialized for parameters
+            if ('{{ active_view }}' === 'tracking') {
+                // Initialize the calendar
+                if (typeof initializeCalendar === 'function') {
+                    initializeCalendar();
+                }
+
+                // Create parameter options
+                if (typeof createParameterOptions === 'function') {
+                    createParameterOptions('moodInput', 'mood');
+                    createParameterOptions('sleepInput', 'sleep');
+                    createParameterOptions('exerciseInput', 'exercise');
+                    createParameterOptions('stressInput', 'stress');
+                    createParameterOptions('socialInput', 'social');
+                }
             }
+        } else {
+            console.log('[PJ6015] active_view={{ active_view }} but user not authenticated, waiting for login');
         }
     }, 500); // Increased delay from 200 to 500
 });
@@ -10942,6 +10993,7 @@ async function searchUsersToFollowInstant(query) {
                         window.i18n.translate('block.unblock_user') : 'Unblock';
                     
                     // PJ706: Render with Follow/Unfollow toggle based on following status
+                    // PJ6014: Updated to show mutual/city info like circle recommendations
                     resultsContainer.innerHTML = users.map(user => {
                         const isBlocked = blockedUserIds.has(user.id);
                         const buttonLabel = isBlocked ? unblockText : blockText;
@@ -10962,6 +11014,16 @@ async function searchUsersToFollowInstant(query) {
                             ? 'background-color: #6c757d;'  // Gray for unfollow
                             : '';  // Default primary style
                         
+                        // PJ6014: Build reason string like circle recommendations
+                        let reason = '';
+                        if (user.is_mutual && user.is_same_city) {
+                            reason = 'Mutual connection & same city';
+                        } else if (user.is_mutual) {
+                            reason = 'Mutual connection';
+                        } else if (user.is_same_city) {
+                            reason = 'Same city';
+                        }
+                        
                         return `
                         <div class="search-result-item" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
                             <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromSearch(${user.id})">
@@ -10970,8 +11032,8 @@ async function searchUsersToFollowInstant(query) {
                                 </div>
                                 <div>
                                     <strong style="display: block;">${user.username}</strong>
-                                    <small style="color: #6B7280;">${user.selected_city || user.city || ''}</small>
-                                    ${user.bio ? `<br><small style="color: #9CA3AF; font-style: italic;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</small>` : ''}
+                                    ${reason ? `<small style="color: var(--gray);">${reason}</small><br>` : ''}
+                                    ${user.selected_city ? `<small style="color: #6B7280;">📍 ${user.selected_city}</small>` : ''}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
