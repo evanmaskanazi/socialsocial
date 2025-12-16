@@ -1,8 +1,20 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 6014 (Version 2005)
+Complete app.py for Social Social Platform - Phase 40E (Version 2010)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ40E Changes (v2010):
+- FIX 1: Daily reminder email link now works correctly for logged-in AND logged-out users
+  - Created NEW route /diary-redirect that handles the login check
+  - If logged in → redirects to /parameters (diary page)
+  - If not logged in → redirects to / (login page)
+  - Email link changed from /parameters to /diary-redirect
+  - /parameters route is COMPLETELY UNTOUCHED
+- FIX 2: Birth year now displayed when viewing another user's profile
+  - Added birth_year field to /api/users/<user_id>/profile response
+- FIX 3: Fixed timezone mapping for all valid cities
+  - Added full city names with countries (e.g., "Chicago, USA") to CITY_TIMEZONE_MAP
 
 PJ6014 Changes (v2005):
 - FIX 1: /api/users/search now returns is_mutual, is_same_city, selected_city for search results
@@ -1144,7 +1156,7 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         logger.info(f"[DAILY REMINDER] Got translations for language: {user_language}")
         
         app_url = os.environ.get('APP_URL', 'http://localhost:5000')
-        diary_link = f"{app_url}/parameters"
+        diary_link = f"{app_url}/diary-redirect"  # PJ40E: Use redirect route for proper login handling
         logger.info(f"[DAILY REMINDER] App URL: {app_url}")
         logger.info(f"[DAILY REMINDER] Diary link: {diary_link}")
 
@@ -3928,6 +3940,25 @@ def parameters_page():
     return render_template('parameters.html')
 
 
+@app.route('/diary-redirect')
+def diary_redirect():
+    """PJ40E: Smart redirect for daily reminder email links.
+    - If user is logged in → redirect to /parameters (diary page)
+    - If user is not logged in → redirect to / (login page)
+    This allows email links to work correctly regardless of login status.
+    """
+    if 'user_id' in session:
+        # Verify user still exists and is active
+        user = db.session.get(User, session['user_id'])
+        if user and user.is_active:
+            logger.info(f"[DIARY REDIRECT] User {session['user_id']} is logged in, redirecting to /parameters")
+            return redirect('/parameters')
+    
+    # Not logged in or invalid session - redirect to login page
+    logger.info("[DIARY REDIRECT] User not logged in, redirecting to login page")
+    return redirect('/')
+
+
 @app.route('/healthz')
 def healthz():
     """Ultra-lightweight health check for Render deployment.
@@ -4956,6 +4987,7 @@ def get_user_profile(user_id):
             'interests': profile.interests if profile else '',
             'goals': profile.goals if profile else '',
             'favorite_hobbies': profile.favorite_hobbies if profile else '',
+            'birth_year': user.birth_year,  # PJ40E: Include birth year for display
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'is_following': is_following,  # PJ501: Include following status in response
             'is_preview': allow_preview and not is_following  # PJ501: Indicate if this is preview mode
@@ -12124,57 +12156,122 @@ def get_blocked_users():
 # =====================
 
 CITY_TIMEZONE_MAP = {
-    # Israel
+    # PJ40E: Added full city names with countries to match valid_cities list
+    # Israel - Both short and full names for compatibility
     'Jerusalem': 'Asia/Jerusalem',
+    'Jerusalem, Israel': 'Asia/Jerusalem',
     'Tel Aviv': 'Asia/Jerusalem',
+    'Tel Aviv, Israel': 'Asia/Jerusalem',
     'Haifa': 'Asia/Jerusalem',
+    'Haifa, Israel': 'Asia/Jerusalem',
     'Rishon LeZion': 'Asia/Jerusalem',
+    'Rishon LeZion, Israel': 'Asia/Jerusalem',
     'Petah Tikva': 'Asia/Jerusalem',
+    'Petah Tikva, Israel': 'Asia/Jerusalem',
     'Ashdod': 'Asia/Jerusalem',
+    'Ashdod, Israel': 'Asia/Jerusalem',
     'Netanya': 'Asia/Jerusalem',
+    'Netanya, Israel': 'Asia/Jerusalem',
     'Beer Sheva': 'Asia/Jerusalem',
+    'Beer Sheva, Israel': 'Asia/Jerusalem',
     'Holon': 'Asia/Jerusalem',
+    'Eilat': 'Asia/Jerusalem',
+    'Eilat, Israel': 'Asia/Jerusalem',
+    'Herzliya': 'Asia/Jerusalem',
+    'Herzliya, Israel': 'Asia/Jerusalem',
     'Ramat Gan': 'Asia/Jerusalem',
     
-    # UK
+    # UK - Both short and full names
     'London': 'Europe/London',
+    'London, UK': 'Europe/London',
     'Manchester': 'Europe/London',
+    'Manchester, UK': 'Europe/London',
     'Birmingham': 'Europe/London',
+    'Birmingham, UK': 'Europe/London',
     'Liverpool': 'Europe/London',
+    'Liverpool, UK': 'Europe/London',
     'Leeds': 'Europe/London',
+    'Leeds, UK': 'Europe/London',
     'Sheffield': 'Europe/London',
+    'Sheffield, UK': 'Europe/London',
     'Bristol': 'Europe/London',
+    'Bristol, UK': 'Europe/London',
     'Edinburgh': 'Europe/London',
+    'Edinburgh, UK': 'Europe/London',
     'Glasgow': 'Europe/London',
+    'Glasgow, UK': 'Europe/London',
     'Cardiff': 'Europe/London',
+    'Cardiff, UK': 'Europe/London',
+    'Newcastle': 'Europe/London',
+    'Newcastle, UK': 'Europe/London',
+    'Nottingham': 'Europe/London',
+    'Nottingham, UK': 'Europe/London',
+    'Southampton': 'Europe/London',
+    'Southampton, UK': 'Europe/London',
+    'Belfast': 'Europe/London',
+    'Belfast, UK': 'Europe/London',
+    'Cambridge': 'Europe/London',
+    'Cambridge, UK': 'Europe/London',
     
-    # US - Eastern
+    # US - Eastern (Both short and full names)
     'New York': 'America/New_York',
+    'New York City, USA': 'America/New_York',
     'Boston': 'America/New_York',
+    'Boston, USA': 'America/New_York',
     'Philadelphia': 'America/New_York',
+    'Philadelphia, USA': 'America/New_York',
     'Washington DC': 'America/New_York',
+    'Washington, USA': 'America/New_York',
     'Miami': 'America/New_York',
+    'Miami, USA': 'America/New_York',
     'Atlanta': 'America/New_York',
+    'Atlanta, USA': 'America/New_York',
+    'Baltimore': 'America/New_York',
+    'Baltimore, USA': 'America/New_York',
+    'Charlotte': 'America/New_York',
+    'Charlotte, USA': 'America/New_York',
+    'Orlando': 'America/New_York',
+    'Orlando, USA': 'America/New_York',
+    'Detroit': 'America/New_York',
+    'Detroit, USA': 'America/New_York',
     
-    # US - Central
+    # US - Central (Both short and full names)
     'Chicago': 'America/Chicago',
+    'Chicago, USA': 'America/Chicago',
     'Houston': 'America/Chicago',
+    'Houston, USA': 'America/Chicago',
     'Dallas': 'America/Chicago',
+    'Dallas, USA': 'America/Chicago',
     'San Antonio': 'America/Chicago',
     'Austin': 'America/Chicago',
+    'Austin, USA': 'America/Chicago',
+    'Minneapolis': 'America/Chicago',
+    'Minneapolis, USA': 'America/Chicago',
+    'Nashville': 'America/Chicago',
+    'Nashville, USA': 'America/Chicago',
     
-    # US - Mountain
+    # US - Mountain (Both short and full names)
     'Denver': 'America/Denver',
+    'Denver, USA': 'America/Denver',
     'Phoenix': 'America/Phoenix',
+    'Phoenix, USA': 'America/Phoenix',
     'Salt Lake City': 'America/Denver',
     
-    # US - Pacific
+    # US - Pacific (Both short and full names)
     'Los Angeles': 'America/Los_Angeles',
+    'Los Angeles, USA': 'America/Los_Angeles',
     'San Francisco': 'America/Los_Angeles',
+    'San Francisco, USA': 'America/Los_Angeles',
     'San Diego': 'America/Los_Angeles',
+    'San Diego, USA': 'America/Los_Angeles',
     'Seattle': 'America/Los_Angeles',
+    'Seattle, USA': 'America/Los_Angeles',
     'Portland': 'America/Los_Angeles',
+    'Portland, USA': 'America/Los_Angeles',
     'Las Vegas': 'America/Los_Angeles',
+    'Las Vegas, USA': 'America/Los_Angeles',
+    'San Jose': 'America/Los_Angeles',
+    'San Jose, USA': 'America/Los_Angeles',
     
     # Default
     'default': 'UTC'
