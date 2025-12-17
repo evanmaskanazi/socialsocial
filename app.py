@@ -1,8 +1,16 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 40E (Version 2011)
+Complete app.py for Social Social Platform - Phase 40E (Version 2012)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6016 Changes (v2012):
+- CRITICAL FIX: Job queue path was completely broken due to date serialization error
+- ROOT CAUSE: param_snapshot['date'] = params.date (datetime.date object)
+- datetime.date is NOT JSON serializable, causing BackgroundJob creation to fail
+- SYMPTOM: "[SAVE PARAMS] Failed to create background job: Object of type date is not JSON serializable"
+- IMPACT: Trigger processing only ran via frontend polling or 5-minute scheduler (job queue path broken)
+- FIX: Changed to params.date.isoformat() which produces a JSON-serializable string
 
 PJ6015 Changes (v2011):
 - CRITICAL FIX 1: Batch emails now sent from FRONTEND POLLING path
@@ -7708,6 +7716,7 @@ def save_parameters():
         logger.info(f"[SAVE PARAMS] Creating background job for trigger processing user_id={user_id}")
         
         # Create a copy of param values for the background job
+        # PJ6016 FIX: Convert date to ISO string for JSON serialization
         param_snapshot = {
             'mood': params.mood,
             'energy': params.energy,
@@ -7719,7 +7728,7 @@ def save_parameters():
             'sleep_quality_privacy': getattr(params, 'sleep_quality_privacy', 'private'),
             'physical_activity_privacy': getattr(params, 'physical_activity_privacy', 'private'),
             'anxiety_privacy': getattr(params, 'anxiety_privacy', 'private'),
-            'date': params.date,
+            'date': params.date.isoformat() if params.date else None,  # PJ6016: Must be string for JSON
             'notes': params.notes
         }
         
