@@ -1,8 +1,18 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 40E (Version 2015)
+Complete app.py for Social Social Platform - Phase 40F (Version 2016)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ40F Changes (v2016):
+- FEATURE: Simplified invite page to show only Follow button (no "Go to Dashboard" button)
+  - Page now looks identical whether user is logged in or logged out (like LinkLogOut.jpeg)
+- FEATURE: New /followlog/<username> route for invite link handling
+  - If logged in: redirects to main page with ?view=following&highlight_user={username}
+  - If not logged in: saves target username to session, redirects to login
+  - After login, user is automatically taken to Following tab with invited user at top
+- Modified /api/auth/login to include followlog_target in response if session has pending target
+- Frontend handles highlighting the invited user at top of recommendations list
 
 PJ6019 Changes (v2015):
 - CRITICAL FIX: Trigger updates now UPDATE existing triggers instead of creating duplicates
@@ -4309,10 +4319,18 @@ def login():
         user_data = user.to_dict()
         user_data['preferred_language'] = user.preferred_language or 'en'
 
-        return jsonify({
+        # Check if there's a followlog target to redirect to after login
+        followlog_target = session.pop('followlog_target', None)
+
+        response_data = {
             'success': True,
             'user': user_data
-        }), 200
+        }
+
+        if followlog_target:
+            response_data['followlog_target'] = followlog_target
+
+        return jsonify(response_data), 200
 
     except Exception as e:
         logger.error(f"Login error: {str(e)}")
@@ -13769,17 +13787,19 @@ def public_invite_page(username):
         is_rtl = default_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
 
-        # Determine button state
+        # Determine button state - always show single Follow button linking to /followlog/{username}
+        # No dashboard button - page looks the same whether logged in or logged out
         if already_following:
             button_html = f'<button class="btn btn-secondary" disabled>{t["already_following"]}</button>'
         elif pending_request:
             button_html = f'<button class="btn btn-secondary" disabled>{t["request_pending"]}</button>'
-        elif is_logged_in:
-            button_html = f'<a href="/api/follow/{user.id}" class="btn btn-primary">{t["follow_btn"]}</a>'
         else:
-            button_html = f'<a href="/" class="btn btn-primary">{t["follow_btn"]}</a>'
+            # Both logged in and logged out users see the same Follow button
+            # It redirects through /followlog/{username} which handles auth and redirect
+            button_html = f'<a href="/followlog/{username}" class="btn btn-primary">{t["follow_btn"]}</a>'
 
-        dashboard_btn = f'<a href="/" class="btn btn-outline">{t["dashboard_btn"]}</a>' if is_logged_in else ''
+        # No dashboard button - removed to make page identical for logged in/out users
+        dashboard_btn = ''
 
         html = f"""
         <!DOCTYPE html>
@@ -13971,6 +13991,40 @@ def public_invite_page(username):
         <a href="/">Go to TheraSocial</a>
         </body></html>
         """, 500
+
+
+@app.route('/followlog/<username>')
+def followlog_redirect(username):
+    """
+    Handle follow link from invite page.
+    - If logged in: redirect to main page with following tab and user at top
+    - If not logged in: save target username to session, redirect to login
+    After login, user will be redirected to following tab with target user at top
+    """
+    try:
+        # Verify the target user exists
+        target_user = db.session.execute(
+            select(User).filter_by(username=username)
+        ).scalar_one_or_none()
+
+        if not target_user:
+            # User doesn't exist, redirect to home
+            return redirect('/')
+
+        current_user_id = session.get('user_id')
+
+        if current_user_id:
+            # User is logged in - redirect to main page with special parameters
+            # The frontend will handle showing the Following tab with this user at top
+            return redirect(f'/?view=following&highlight_user={username}')
+        else:
+            # User is not logged in - save the target username and redirect to login
+            session['followlog_target'] = username
+            return redirect('/')
+
+    except Exception as e:
+        logger.error(f"Followlog redirect error: {str(e)}")
+        return redirect('/')
 
 
 @app.route('/api/user/<int:user_id>/feed/<date_str>')
