@@ -1,8 +1,18 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 40E (Version 2012)
+Complete app.py for Social Social Platform - Phase 40E (Version 2013)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6017 Changes (v2013):
+- FIX: Alert emails now ONLY sent from background scheduler, NOT on user login
+- PROBLEM: PJ6015 fix added email sending to frontend polling path (/api/parameters/check-triggers)
+- This caused emails to be sent when watcher logged in, not just when watched user saved diary
+- SOLUTION: Removed email sending from check_parameter_triggers() function
+- Emails are now sent ONLY from:
+  1. Background scheduler (run_background_trigger_check_for_watcher) - every 5 minutes
+  2. Job queue (process_parameter_triggers_async) - when watched user saves diary
+- This ensures emails are triggered by watched user activity, not watcher login
 
 PJ6016 Changes (v2012):
 - CRITICAL FIX: Job queue path was completely broken due to date serialization error
@@ -11134,61 +11144,13 @@ def check_parameter_triggers():
             logger.error(f"[TRIGGER CHECK] Error committing alerts: {commit_err}")
             db.session.rollback()
         
-        # PJ6015 FIX: Send consolidated batch emails for newly created alerts
-        # This was MISSING - frontend path created alerts but never sent emails!
-        emails_actually_sent = 0
-        if alerts_created > 0:
-            try:
-                # Group alerts by watched user for consolidated emails
-                triggered_params_by_user = {}
-                for alert_data in alerts:
-                    watched_username = alert_data.get('user', 'Unknown')
-                    parameter = alert_data.get('parameter', 'unknown')
-                    consecutive_days = alert_data.get('consecutive_days', 0)
-                    
-                    # Build date_range string
-                    date_range_str = "recent"
-                    if alert_data.get('dates') and len(alert_data['dates']) >= 1:
-                        try:
-                            from datetime import datetime as dt
-                            start_date = dt.fromisoformat(alert_data['dates'][0])
-                            end_date = dt.fromisoformat(alert_data['dates'][-1])
-                            start_str = start_date.strftime('%b %d')
-                            end_str = end_date.strftime('%b %d')
-                            date_range_str = f"{start_str} - {end_str}"
-                        except:
-                            pass
-                    
-                    if watched_username not in triggered_params_by_user:
-                        triggered_params_by_user[watched_username] = []
-                    
-                    triggered_params_by_user[watched_username].append({
-                        'param_name': parameter,
-                        'days': consecutive_days,
-                        'date_range': date_range_str
-                    })
-                
-                # Get watcher's language preference
-                watcher = db.session.get(User, watcher_id)
-                user_language = watcher.preferred_language if watcher else 'en'
-                
-                # Send consolidated email for each watched user
-                for watched_username, triggered_params in triggered_params_by_user.items():
-                    if triggered_params:
-                        logger.info(f"[TRIGGER CHECK] Sending consolidated email for {watched_username} with {len(triggered_params)} params")
-                        if send_consolidated_wellness_alert_email(watcher_id, watched_username, triggered_params, user_language):
-                            emails_actually_sent += 1
-                            logger.info(f"[TRIGGER CHECK] ✅ Consolidated email sent for {watched_username}")
-                        else:
-                            logger.info(f"[TRIGGER CHECK] ⚠️ No email sent for {watched_username} (email_on_alert may be disabled)")
-            except Exception as email_err:
-                logger.error(f"[TRIGGER CHECK] Error sending batch emails: {email_err}")
-                logger.error(f"[TRIGGER CHECK] Traceback: {traceback.format_exc()}")
+        # PJ6017: REMOVED email sending from frontend polling path
+        # Emails should ONLY be sent from background scheduler when watched users save diary
+        # This prevents duplicate emails when watcher logs in and frontend polls for alerts
+        # The background scheduler (run_background_trigger_check_for_watcher) handles all email sending
         
-        # Update emailed count to reflect ACTUAL emails sent (not just settings check)
-        alerts_emailed = emails_actually_sent
-        
-        logger.info(f"[TRIGGER CHECK] Summary: patterns={len(alerts)}, created={alerts_created}, duplicates_skipped={alerts_skipped_duplicate}, emailed={alerts_emailed}")
+        logger.info(f"[TRIGGER CHECK] Summary: patterns={len(alerts)}, created={alerts_created}, duplicates_skipped={alerts_skipped_duplicate}")
+        logger.info(f"[TRIGGER CHECK] Note: Emails sent via background scheduler only (not on login)")
         logger.info(f"[TRIGGER CHECK] ========================================")
 
         return jsonify({
@@ -11196,8 +11158,8 @@ def check_parameter_triggers():
             'alerts': alerts,
             'count': len(alerts),
             'alerts_created': alerts_created,
-            'alerts_skipped_duplicate': alerts_skipped_duplicate,
-            'alerts_emailed': alerts_emailed
+            'alerts_skipped_duplicate': alerts_skipped_duplicate
+            # PJ6017: Removed alerts_emailed - emails only sent from background scheduler
         })
 
     except Exception as e:
