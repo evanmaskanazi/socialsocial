@@ -1,8 +1,20 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 40E (Version 2013)
+Complete app.py for Social Social Platform - Phase 40E (Version 2014)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6018 Changes (v2014):
+- FEATURE: Added ALERT_EMAIL_MODE configuration for trigger alert behavior
+- Two modes available (set ALERT_EMAIL_MODE constant near top of file):
+  1. "new_alerts_only" - Only email when a NEW pattern is detected that has NEVER been seen before
+     Once an alert exists for a specific date range (e.g., "Dec 07 - Dec 09"), no future emails
+     will be sent for that pattern, even if the watched user saves parameters again
+  2. "daily_reminder" - Email each time the watched user saves, as long as patterns exist
+     and 24 hours have passed since the last alert for that pattern
+- Added helper functions: check_duplicate_alert() and check_duplicate_alert_broad()
+- All duplicate detection paths now use these helpers to respect ALERT_EMAIL_MODE
+- Default is "new_alerts_only" - change the constant to switch behavior
 
 PJ6017 Changes (v2013):
 - FIX: Alert emails now ONLY sent from background scheduler, NOT on user login
@@ -310,6 +322,28 @@ from collections import defaultdict
 
 # Cache busting timestamp - updates on every app restart
 CACHE_BUST_VERSION = str(int(time.time()))
+
+# =============================================================================
+# ALERT EMAIL MODE CONFIGURATION
+# =============================================================================
+# Choose how trigger alert emails are sent:
+#
+# "new_alerts_only" - Only email when a NEW pattern emerges that has NEVER been
+#                     seen before. Once an alert is created for a specific date
+#                     range (e.g., "Dec 07 - Dec 09"), no future emails will be
+#                     sent for that exact pattern, even if the watched user
+#                     saves parameters again.
+#
+# "daily_reminder"  - Email each time the watched user saves parameters, as long
+#                     as concerning patterns exist and more than 24 hours have
+#                     passed since the last alert for that pattern. Acts as a
+#                     check-in reminder that the watched user is still showing
+#                     concerning levels.
+#
+# To change: Simply edit the value below and redeploy.
+# =============================================================================
+ALERT_EMAIL_MODE = "new_alerts_only"  # Options: "new_alerts_only" or "daily_reminder"
+# =============================================================================
 
 from flask import (
     Flask, request, jsonify, session,
@@ -1272,6 +1306,90 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         logger.error(f"[DAILY REMINDER] Traceback: {traceback.format_exc()}")
         logger.info(f"[DAILY REMINDER] ========================================")
         return False
+
+
+def check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern):
+    """
+    PJ6018: Check for duplicate alerts based on ALERT_EMAIL_MODE setting.
+    
+    Args:
+        watcher_id: The user ID of the watcher
+        watched_username: Username of the watched user
+        parameter: Parameter name (e.g., 'mood', 'sleep_quality')
+        date_pattern: Date pattern string like "(Dec 07 - Dec 09)"
+    
+    Returns:
+        Alert object if duplicate found, None otherwise
+    
+    Mode behavior:
+        - "new_alerts_only": Check if alert with this exact pattern exists AT ALL
+        - "daily_reminder": Check if alert exists within last 24 hours
+    """
+    try:
+        # Build base query
+        base_query = Alert.query.filter(
+            Alert.user_id == watcher_id,
+            Alert.alert_type == 'trigger'
+        )
+        
+        # Add time constraint only in "daily_reminder" mode
+        if ALERT_EMAIL_MODE == "daily_reminder":
+            base_query = base_query.filter(Alert.created_at >= datetime.now() - timedelta(hours=24))
+        
+        # Check with original parameter name
+        existing = base_query.filter(
+            Alert.content.ilike(f"%{watched_username}'s {parameter}%{date_pattern}%")
+        ).first()
+        
+        # Also check with underscore version of parameter
+        if not existing:
+            param_with_underscore = parameter.replace(' ', '_')
+            existing = base_query.filter(
+                Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%{date_pattern}%")
+            ).first()
+        
+        return existing
+    except Exception as e:
+        logger.warning(f"[DUPLICATE CHECK] Error checking duplicate: {e}")
+        return None
+
+
+def check_duplicate_alert_broad(watcher_id, watched_username, parameter):
+    """
+    PJ6018: Broader duplicate check (no date pattern) based on ALERT_EMAIL_MODE.
+    Used as fallback when date range is not available.
+    
+    Args:
+        watcher_id: The user ID of the watcher
+        watched_username: Username of the watched user
+        parameter: Parameter name
+    
+    Returns:
+        Alert object if duplicate found, None otherwise
+    """
+    try:
+        base_query = Alert.query.filter(
+            Alert.user_id == watcher_id,
+            Alert.alert_type == 'trigger'
+        )
+        
+        if ALERT_EMAIL_MODE == "daily_reminder":
+            base_query = base_query.filter(Alert.created_at >= datetime.now() - timedelta(hours=24))
+        
+        existing = base_query.filter(
+            Alert.content.ilike(f"%{watched_username}'s {parameter}%")
+        ).first()
+        
+        if not existing:
+            param_with_underscore = parameter.replace(' ', '_')
+            existing = base_query.filter(
+                Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%")
+            ).first()
+        
+        return existing
+    except Exception as e:
+        logger.warning(f"[DUPLICATE CHECK] Error checking broad duplicate: {e}")
+        return None
 
 
 def create_alert_with_email(user_id, title, content, alert_type='info', source_user_id=None, alert_category='general'):
@@ -8120,13 +8238,8 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 end_str = end_date.strftime('%b %d')
                                 date_pattern = f"({start_str} - {end_str})"
                                 
-                                # Check for DB duplicate
-                                existing = Alert.query.filter(
-                                    Alert.user_id == watcher_id,
-                                    Alert.alert_type == 'trigger',
-                                    Alert.created_at >= datetime.now() - timedelta(hours=24),
-                                    Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
-                                ).first()
+                                # Check for DB duplicate - PJ6018: Uses helper that respects ALERT_EMAIL_MODE
+                                existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
@@ -8175,12 +8288,8 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     end_str = end_date.strftime('%b %d')
                                     date_pattern = f"({start_str} - {end_str})"
                                     
-                                    existing = Alert.query.filter(
-                                        Alert.user_id == watcher_id,
-                                        Alert.alert_type == 'trigger',
-                                        Alert.created_at >= datetime.now() - timedelta(hours=24),
-                                        Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
-                                    ).first()
+                                    # PJ6018: Uses helper that respects ALERT_EMAIL_MODE
+                                    existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                     
                                     if not existing:
                                         content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
@@ -8219,12 +8328,8 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 end_str = end_date.strftime('%b %d')
                                 date_pattern = f"({start_str} - {end_str})"
                                 
-                                existing = Alert.query.filter(
-                                    Alert.user_id == watcher_id,
-                                    Alert.alert_type == 'trigger',
-                                    Alert.created_at >= datetime.now() - timedelta(hours=24),
-                                    Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
-                                ).first()
+                                # PJ6018: Uses helper that respects ALERT_EMAIL_MODE
+                                existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
@@ -8262,12 +8367,8 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                         end_str = end_date.strftime('%b %d')
                         date_pattern = f"({start_str} - {end_str})"
                         
-                        existing = Alert.query.filter(
-                            Alert.user_id == watcher_id,
-                            Alert.alert_type == 'trigger',
-                            Alert.created_at >= datetime.now() - timedelta(hours=24),
-                            Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
-                        ).first()
+                        # PJ6018: Uses helper that respects ALERT_EMAIL_MODE
+                        existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                         
                         if not existing:
                             content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
@@ -8496,13 +8597,8 @@ def process_parameter_triggers(user_id, params):
                                 end_str = end_date.strftime('%b %d')
                                 date_pattern = f"({start_str} - {end_str})"
                                 
-                                # Check for DB duplicate
-                                existing = Alert.query.filter(
-                                    Alert.user_id == watcher_id,
-                                    Alert.alert_type == 'trigger',
-                                    Alert.created_at >= datetime.now() - timedelta(hours=24),
-                                    Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
-                                ).first()
+                                # Check for DB duplicate - PJ6018: Uses helper that respects ALERT_EMAIL_MODE
+                                existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
@@ -8547,12 +8643,8 @@ def process_parameter_triggers(user_id, params):
                                     end_str = end_date.strftime('%b %d')
                                     date_pattern = f"({start_str} - {end_str})"
                                     
-                                    existing = Alert.query.filter(
-                                        Alert.user_id == watcher_id,
-                                        Alert.alert_type == 'trigger',
-                                        Alert.created_at >= datetime.now() - timedelta(hours=24),
-                                        Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
-                                    ).first()
+                                    # PJ6018: Uses helper that respects ALERT_EMAIL_MODE
+                                    existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                     
                                     if not existing:
                                         content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
@@ -8585,12 +8677,8 @@ def process_parameter_triggers(user_id, params):
                                 end_str = end_date.strftime('%b %d')
                                 date_pattern = f"({start_str} - {end_str})"
                                 
-                                existing = Alert.query.filter(
-                                    Alert.user_id == watcher_id,
-                                    Alert.alert_type == 'trigger',
-                                    Alert.created_at >= datetime.now() - timedelta(hours=24),
-                                    Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
-                                ).first()
+                                # PJ6018: Uses helper that respects ALERT_EMAIL_MODE
+                                existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
@@ -8623,12 +8711,8 @@ def process_parameter_triggers(user_id, params):
                         end_str = end_date.strftime('%b %d')
                         date_pattern = f"({start_str} - {end_str})"
                         
-                        existing = Alert.query.filter(
-                            Alert.user_id == watcher_id,
-                            Alert.alert_type == 'trigger',
-                            Alert.created_at >= datetime.now() - timedelta(hours=24),
-                            Alert.content.ilike(f"%{watched_user.username}'s {param_name}%{date_pattern}%")
-                        ).first()
+                        # PJ6018: Uses helper that respects ALERT_EMAIL_MODE
+                        existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                         
                         if not existing:
                             content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
@@ -11025,58 +11109,23 @@ def check_parameter_triggers():
                 # PJ813 FIX: Include date range in alert key so different patterns create separate alerts
                 alert_key_with_dates = f"{alert_key}{date_range_str}"
                 
-                logger.info(f"[TRIGGER CHECK] Processing pattern: user={watched_username}, param={parameter}, days={consecutive_days}, dates={date_pattern}, key={alert_key_with_dates}")
+                logger.info(f"[TRIGGER CHECK] Processing pattern: user={watched_username}, param={parameter}, days={consecutive_days}, dates={date_pattern}, key={alert_key_with_dates}, mode={ALERT_EMAIL_MODE}")
                 
-                # PJ813 FIX: Check for existing alert with EXACT same date range in content
-                # Changed from broad ilike match to exact date range match
+                # PJ6018: Check for existing alert using helper function that respects ALERT_EMAIL_MODE
                 existing_alert = None
                 if date_pattern:
-                    # If we have dates, check for alert with exact date range in content
-                    try:
-                        existing_alert = Alert.query.filter(
-                            Alert.user_id == watcher_id,
-                            Alert.alert_type == 'trigger',
-                            Alert.created_at >= datetime.now() - timedelta(hours=24),
-                            Alert.content.ilike(f"%{watched_username}'s {parameter}%{date_pattern}%")
-                        ).first()
-                        
-                        # Also check with underscore version
-                        if not existing_alert:
-                            param_with_underscore = parameter.replace(' ', '_')
-                            existing_alert = Alert.query.filter(
-                                Alert.user_id == watcher_id,
-                                Alert.alert_type == 'trigger',
-                                Alert.created_at >= datetime.now() - timedelta(hours=24),
-                                Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%{date_pattern}%")
-                            ).first()
-                        
-                        if existing_alert:
-                            logger.info(f"[PJ815 DEBUG] Found existing alert with date pattern '{date_pattern}': ID={existing_alert.id}")
-                        else:
-                            logger.info(f"[PJ815 DEBUG] No existing alert with date pattern '{date_pattern}' - will create new")
-                    except Exception as date_err:
-                        logger.warning(f"[TRIGGER CHECK] Could not check date-specific duplicate: {date_err}")
+                    existing_alert = check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
+                    if existing_alert:
+                        logger.info(f"[PJ815 DEBUG] Found existing alert with date pattern '{date_pattern}': ID={existing_alert.id} (mode={ALERT_EMAIL_MODE})")
+                    else:
+                        logger.info(f"[PJ815 DEBUG] No existing alert with date pattern '{date_pattern}' - will create new (mode={ALERT_EMAIL_MODE})")
                 
                 # Fallback: if no date range available, use broader check
                 if not date_range_str:
-                    existing_alert = Alert.query.filter(
-                        Alert.user_id == watcher_id,
-                        Alert.alert_type == 'trigger',
-                        Alert.created_at >= datetime.now() - timedelta(hours=24),
-                        Alert.content.ilike(f"%{watched_username}'s {parameter}%")
-                    ).first()
-                    
-                    if not existing_alert:
-                        param_with_underscore = parameter.replace(' ', '_')
-                        existing_alert = Alert.query.filter(
-                            Alert.user_id == watcher_id,
-                            Alert.alert_type == 'trigger',
-                            Alert.created_at >= datetime.now() - timedelta(hours=24),
-                            Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%")
-                        ).first()
+                    existing_alert = check_duplicate_alert_broad(watcher_id, watched_username, parameter)
                 
                 if existing_alert:
-                    logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_username}/{parameter} - alert already exists for this date range (ID: {existing_alert.id}, created: {existing_alert.created_at})")
+                    logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_username}/{parameter} - alert already exists for this date range (ID: {existing_alert.id}, created: {existing_alert.created_at}, mode={ALERT_EMAIL_MODE})")
                     alerts_skipped_duplicate += 1
                     continue
                 
@@ -12968,21 +13017,10 @@ def run_background_trigger_check_for_watcher(watcher_id):
                         pass
                 
                 # Check for existing alert with exact date pattern
+                # PJ6018: Use helper function that respects ALERT_EMAIL_MODE
                 existing_alert = None
                 if date_pattern:
-                    existing_alert = Alert.query.filter(
-                        Alert.user_id == watcher_id,
-                        Alert.alert_type == 'trigger',
-                        Alert.content.ilike(f"%{watched_username}'s {parameter}%{date_pattern}%")
-                    ).first()
-                    
-                    if not existing_alert:
-                        param_with_underscore = parameter.replace(' ', '_')
-                        existing_alert = Alert.query.filter(
-                            Alert.user_id == watcher_id,
-                            Alert.alert_type == 'trigger',
-                            Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%{date_pattern}%")
-                        ).first()
+                    existing_alert = check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
                 
                 if existing_alert:
                     alerts_skipped_duplicate += 1
