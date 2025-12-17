@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ40F v2016 -->
+<!-- TheraSocial Version PJ40F v2017 -->
+<!-- PJ40F v2017: FIX - Followlog highlight now persists using sessionStorage -->
+<!-- Problem: Highlight was disappearing because loadFollowing() called multiple times -->
+<!-- Solution: Store highlight in sessionStorage, only clear on follow/navigate away/logout -->
 <!-- PJ40F: FOLLOWLOG INVITE LINK FEATURE -->
 <!-- Invite page (/invite/{username}) now shows only one Follow button (no Dashboard button) -->
 <!-- Page looks identical whether logged in or logged out -->
@@ -4019,6 +4022,9 @@ async function loadUserCity() {
                 sessionStorage.removeItem('diary_redirect_checked');
             }
             
+            // FOLLOWLOG: Clear highlight on logout
+            sessionStorage.removeItem('followlog_highlight_user');
+            
             showAuthContainer();
         });
 
@@ -4763,6 +4769,15 @@ window.showViewFromMore = showViewFromMore;
 
 function showView(viewName) {
     console.log('[DEBUG] showView called:', viewName, 'viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+    
+    // FOLLOWLOG: Clear highlight when navigating away from Following view
+    if (viewName !== 'following') {
+        const highlightUser = sessionStorage.getItem('followlog_highlight_user');
+        if (highlightUser) {
+            console.log('[FOLLOWLOG] Navigating away from Following, clearing highlight');
+            sessionStorage.removeItem('followlog_highlight_user');
+        }
+    }
     
     // FIX: Sync language selector on every view change to prevent blank dropdown
     if (typeof syncLanguageSelector === 'function') {
@@ -8015,32 +8030,46 @@ async function loadFollowing() {
         const recommendedData = await recommendedResponse.json();
 
         // FOLLOWLOG: Check if there's a highlighted user from invite link
+        // Use sessionStorage to persist across multiple loadFollowing() calls
         let highlightedUser = null;
-        const highlightUsername = window.followlogHighlightUser;
+        let highlightUsername = window.followlogHighlightUser;
+        
+        // If we have a new highlight request, save it to sessionStorage
         if (highlightUsername) {
-            console.log('[FOLLOWLOG] Looking for highlighted user:', highlightUsername);
-            // Clear the global variable so it doesn't persist
-            window.followlogHighlightUser = null;
-            
-            // Try to find this user in recommended or search for them
-            const foundInRecommended = (recommendedData.recommendations || []).find(
+            console.log('[FOLLOWLOG] New highlight request for:', highlightUsername);
+            sessionStorage.setItem('followlog_highlight_user', highlightUsername);
+            window.followlogHighlightUser = null; // Clear the window variable
+        } else {
+            // Check if we have a persisted highlight
+            highlightUsername = sessionStorage.getItem('followlog_highlight_user');
+            if (highlightUsername) {
+                console.log('[FOLLOWLOG] Restored highlight from sessionStorage:', highlightUsername);
+            }
+        }
+        
+        if (highlightUsername) {
+            // Check if user is already being followed - if so, clear the highlight
+            const alreadyFollowing = (followingData.following || []).find(
                 u => u.username.toLowerCase() === highlightUsername.toLowerCase()
             );
             
-            if (foundInRecommended) {
-                // Remove from recommendations array to avoid duplicate
-                recommendedData.recommendations = recommendedData.recommendations.filter(
-                    u => u.username.toLowerCase() !== highlightUsername.toLowerCase()
-                );
-                highlightedUser = foundInRecommended;
-                console.log('[FOLLOWLOG] Found user in recommendations');
+            if (alreadyFollowing) {
+                console.log('[FOLLOWLOG] User is already being followed, clearing highlight');
+                sessionStorage.removeItem('followlog_highlight_user');
             } else {
-                // Check if already following
-                const foundInFollowing = (followingData.following || []).find(
+                // Try to find this user in recommended
+                const foundInRecommended = (recommendedData.recommendations || []).find(
                     u => u.username.toLowerCase() === highlightUsername.toLowerCase()
                 );
                 
-                if (!foundInFollowing) {
+                if (foundInRecommended) {
+                    // Remove from recommendations array to avoid duplicate
+                    recommendedData.recommendations = recommendedData.recommendations.filter(
+                        u => u.username.toLowerCase() !== highlightUsername.toLowerCase()
+                    );
+                    highlightedUser = foundInRecommended;
+                    console.log('[FOLLOWLOG] Found user in recommendations');
+                } else {
                     // Search for the user via API
                     try {
                         const searchResponse = await fetch(`/api/users/search?q=${encodeURIComponent(highlightUsername)}`, {
@@ -8058,8 +8087,6 @@ async function loadFollowing() {
                     } catch (e) {
                         console.error('[FOLLOWLOG] Error searching for user:', e);
                     }
-                } else {
-                    console.log('[FOLLOWLOG] User is already being followed');
                 }
             }
         }
@@ -8167,7 +8194,7 @@ async function loadFollowing() {
                         : '';
                     
                     return `
-                    <div class="user-card" data-user-id="${user.id}" style="${highlightStyle}">
+                    <div class="user-card" data-user-id="${user.id}" data-is-highlighted="${user.isHighlighted ? 'true' : 'false'}" style="${highlightStyle}">
                         ${highlightBadge}
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}; cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
                             ${escapeHtml(user.username.charAt(0).toUpperCase())}
@@ -8199,6 +8226,12 @@ async function loadFollowing() {
                     btn.addEventListener('click', async (e) => {
                         e.stopPropagation();
                         const userId = btn.dataset.userId;
+                        // FOLLOWLOG: Clear highlight when following highlighted user
+                        const card = btn.closest('.user-card');
+                        if (card && card.dataset.isHighlighted === 'true') {
+                            console.log('[FOLLOWLOG] Following highlighted user, clearing highlight');
+                            sessionStorage.removeItem('followlog_highlight_user');
+                        }
                         await followUser(parseInt(userId));
                         loadFollowing();
                     });
@@ -8210,6 +8243,12 @@ async function loadFollowing() {
                         e.stopPropagation();
                         const userId = btn.dataset.userId;
                         const username = btn.dataset.username;
+                        // FOLLOWLOG: Clear highlight when following highlighted user
+                        const card = btn.closest('.user-card');
+                        if (card && card.dataset.isHighlighted === 'true') {
+                            console.log('[FOLLOWLOG] Following highlighted user with note, clearing highlight');
+                            sessionStorage.removeItem('followlog_highlight_user');
+                        }
                         await followUserWithNote(parseInt(userId), username);
                     });
                 });
