@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ40E v2010 -->
+<!-- TheraSocial Version PJ40E v2014 -->
+<!-- PJ6018: ALERT EMAIL MODE CONFIGURATION -->
+<!-- Alert behavior is controlled by ALERT_EMAIL_MODE constant in backend (appchoice.py) -->
+<!-- Two modes available: -->
+<!--   "new_alerts_only" - Only email for NEW patterns never seen before -->
+<!--   "daily_reminder" - Re-email every time watched user saves (after 24hr window) -->
+<!-- To change mode: Edit ALERT_EMAIL_MODE in appchoice.py near top of file -->
 <!-- PJ40E: THREE FIXES (NO CHANGES TO /parameters route) -->
 <!-- FIX 1: Daily reminder email link now works correctly for logged-in AND logged-out users -->
 <!--        Created NEW route /diary-redirect that handles the login check -->
