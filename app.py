@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 40F (Version 2016)
+Complete app.py for Social Social Platform - Phase 40F (Version 2017)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ40F Changes (v2017):
+- FIX: Frontend now uses sessionStorage to persist highlight across loadFollowing() calls
+- This is a frontend-only fix (indexchoicefollow.html v2017)
 
 PJ40F Changes (v2016):
 - FEATURE: Simplified invite page to show only Follow button (no "Go to Dashboard" button)
