@@ -1,5 +1,9 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ40E v2014 -->
+<!-- TheraSocial Version PJ40E v2015 -->
+<!-- PJ6019: DUPLICATE TRIGGER FIX -->
+<!-- Backend fix - trigger updates now UPDATE existing triggers instead of creating duplicates -->
+<!-- Also all trigger queries now filter by is_active=True so deleted triggers stop firing -->
+<!-- After deploying, call POST /api/admin/cleanup-duplicate-triggers to remove existing duplicates -->
 <!-- PJ6018: ALERT EMAIL MODE CONFIGURATION -->
 <!-- Alert behavior is controlled by ALERT_EMAIL_MODE constant in backend (appchoice.py) -->
 <!-- Two modes available: -->
