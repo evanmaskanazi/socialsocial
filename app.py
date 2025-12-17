@@ -342,7 +342,7 @@ CACHE_BUST_VERSION = str(int(time.time()))
 #
 # To change: Simply edit the value below and redeploy.
 # =============================================================================
-ALERT_EMAIL_MODE = "new_alerts_only"  # Options: "new_alerts_only" or "daily_reminder"
+ALERT_EMAIL_MODE = "daily_reminder"  # Options: "new_alerts_only" or "daily_reminder"
 # =============================================================================
 
 from flask import (
