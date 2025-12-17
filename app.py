@@ -1,8 +1,28 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase 40E (Version 2014)
+Complete app.py for Social Social Platform - Phase 40E (Version 2015)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PJ6019 Changes (v2015):
+- CRITICAL FIX: Trigger updates now UPDATE existing triggers instead of creating duplicates
+  - ROOT CAUSE: POST /api/triggers always created new rows, even when updating days from 1 to 3
+  - This caused duplicate triggers (one with 1 day, one with 3 days) to both fire
+  - FIX: create_trigger() now checks for existing watcher/watched/parameter combination and updates it
+- CRITICAL FIX: All trigger queries now filter by is_active=True
+  - ROOT CAUSE: Trigger processing functions ignored is_active flag
+  - "Deleted" triggers (is_active=False) continued to fire indefinitely
+  - FIX: Added is_active=True filter to all ParameterTrigger queries in:
+    - process_parameter_triggers_async()
+    - process_parameter_triggers()
+    - check_parameter_triggers()
+    - run_background_trigger_check_for_watcher()
+    - cleanup_stale_trigger_alerts_for_user()
+- ADDED: /api/admin/cleanup-duplicate-triggers endpoint
+  - Finds all duplicate triggers (same watcher/watched/parameter)
+  - Keeps the one with highest consecutive_days
+  - Deactivates the rest
+  - Call this once after deploying to clean existing duplicates
 
 PJ6018 Changes (v2014):
 - FEATURE: Added ALERT_EMAIL_MODE configuration for trigger alert behavior
@@ -8078,9 +8098,10 @@ def process_parameter_triggers_async(user_id, param_snapshot):
         logger.info(f"[TRIGGER PROCESS ASYNC] ========================================")
         logger.info(f"[TRIGGER PROCESS ASYNC] PJ6008: Starting with fixed date parsing for user_id={user_id}")
         
-        # Find all triggers where someone is watching this user
-        all_triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
-        logger.info(f"[TRIGGER PROCESS ASYNC] Found {len(all_triggers)} trigger rows watching user {user_id}")
+        # Find all ACTIVE triggers where someone is watching this user
+        # PJ6019 FIX: Added is_active=True filter to exclude "deleted" triggers
+        all_triggers = ParameterTrigger.query.filter_by(watched_id=user_id, is_active=True).all()
+        logger.info(f"[TRIGGER PROCESS ASYNC] Found {len(all_triggers)} active trigger rows watching user {user_id}")
         
         if len(all_triggers) == 0:
             logger.info(f"[TRIGGER PROCESS ASYNC] No triggers found - no one is watching user {user_id}")
@@ -8438,9 +8459,10 @@ def process_parameter_triggers(user_id, params):
         logger.info(f"[TRIGGER PROCESS] process_parameter_triggers called for user_id={user_id}")
         logger.info(f"[TRIGGER PROCESS] Parameter values: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}")
         
-        # Find all triggers where someone is watching this user
-        all_triggers = ParameterTrigger.query.filter_by(watched_id=user_id).all()
-        logger.info(f"[TRIGGER PROCESS] Found {len(all_triggers)} trigger rows watching user {user_id}")
+        # Find all ACTIVE triggers where someone is watching this user
+        # PJ6019 FIX: Added is_active=True filter to exclude "deleted" triggers
+        all_triggers = ParameterTrigger.query.filter_by(watched_id=user_id, is_active=True).all()
+        logger.info(f"[TRIGGER PROCESS] Found {len(all_triggers)} active trigger rows watching user {user_id}")
         
         if len(all_triggers) == 0:
             logger.info(f"[TRIGGER PROCESS] No triggers found - no one is watching user {user_id}")
@@ -8768,8 +8790,9 @@ def cleanup_stale_trigger_alerts_for_user(affected_user_id):
         if not affected_user:
             return
 
-        # Find all watchers who have triggers for this user
-        triggers = ParameterTrigger.query.filter_by(watched_id=affected_user_id).all()
+        # Find all watchers who have ACTIVE triggers for this user
+        # PJ6019 FIX: Added is_active=True filter
+        triggers = ParameterTrigger.query.filter_by(watched_id=affected_user_id, is_active=True).all()
 
         for trigger in triggers:
             watcher_id = trigger.watcher_id
@@ -10641,8 +10664,9 @@ def check_parameter_triggers():
     """
     try:
         watcher_id = session.get('user_id')
+        # PJ6019 FIX: Added is_active=True filter to exclude "deleted" triggers
         triggers = db.session.execute(
-            select(ParameterTrigger).filter_by(watcher_id=watcher_id)
+            select(ParameterTrigger).filter_by(watcher_id=watcher_id, is_active=True)
         ).scalars().all()
         
         logger.info(f"[PJ815 DEBUG] ========================================")
@@ -11482,6 +11506,76 @@ def cleanup_all_trigger_privacy():
     except Exception as e:
         logger.error(f"Global cleanup error: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/admin/cleanup-duplicate-triggers', methods=['POST'])
+@login_required
+def cleanup_duplicate_triggers():
+    """
+    PJ6019: Clean up duplicate trigger rows that were created when users
+    updated their trigger settings (e.g., changed consecutive_days from 1 to 3).
+    
+    For each watcher/watched/parameter combination, keeps only the trigger
+    with the HIGHEST consecutive_days value and deactivates the rest.
+    """
+    try:
+        user_id = session.get('user_id')
+        current_user = db.session.get(User, user_id)
+        
+        logger.info(f"[TRIGGER CLEANUP] Starting duplicate trigger cleanup for user {user_id}")
+        
+        # Get all active triggers
+        all_triggers = ParameterTrigger.query.filter_by(is_active=True).all()
+        logger.info(f"[TRIGGER CLEANUP] Found {len(all_triggers)} active triggers")
+        
+        # Group by watcher_id, watched_id, parameter_name
+        trigger_groups = {}
+        for trigger in all_triggers:
+            key = (trigger.watcher_id, trigger.watched_id, trigger.parameter_name)
+            if key not in trigger_groups:
+                trigger_groups[key] = []
+            trigger_groups[key].append(trigger)
+        
+        duplicates_removed = 0
+        groups_with_duplicates = 0
+        
+        for key, triggers in trigger_groups.items():
+            if len(triggers) > 1:
+                groups_with_duplicates += 1
+                watcher_id, watched_id, param_name = key
+                
+                # Sort by consecutive_days descending, keep the one with highest days
+                triggers.sort(key=lambda t: t.consecutive_days or 0, reverse=True)
+                keeper = triggers[0]
+                
+                logger.info(f"[TRIGGER CLEANUP] Found {len(triggers)} duplicates for watcher={watcher_id}, watched={watched_id}, param={param_name}")
+                logger.info(f"[TRIGGER CLEANUP] Keeping trigger ID={keeper.id} with consecutive_days={keeper.consecutive_days}")
+                
+                # Deactivate all others
+                for trigger in triggers[1:]:
+                    logger.info(f"[TRIGGER CLEANUP] Deactivating duplicate trigger ID={trigger.id} with consecutive_days={trigger.consecutive_days}")
+                    trigger.is_active = False
+                    duplicates_removed += 1
+        
+        db.session.commit()
+        
+        logger.info(f"[TRIGGER CLEANUP] Complete: {duplicates_removed} duplicates removed from {groups_with_duplicates} groups")
+        
+        return jsonify({
+            'success': True,
+            'duplicates_removed': duplicates_removed,
+            'groups_affected': groups_with_duplicates,
+            'total_triggers_checked': len(all_triggers)
+        })
+        
+    except Exception as e:
+        logger.error(f"[TRIGGER CLEANUP] Error: {str(e)}")
+        logger.error(f"[TRIGGER CLEANUP] Traceback: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({
             'success': False,
@@ -12704,8 +12798,9 @@ def run_background_trigger_check_for_watcher(watcher_id):
     PJ816: This is extracted from check_parameter_triggers() to run for any watcher.
     """
     try:
+        # PJ6019 FIX: Added is_active=True filter to exclude "deleted" triggers
         triggers = db.session.execute(
-            select(ParameterTrigger).filter_by(watcher_id=watcher_id)
+            select(ParameterTrigger).filter_by(watcher_id=watcher_id, is_active=True)
         ).scalars().all()
         
         if not triggers:
@@ -14119,21 +14214,57 @@ def get_triggers():
 @app.route('/api/triggers', methods=['POST'])
 @login_required
 def create_trigger():
+    """
+    PJ6019 FIX: Create or UPDATE a trigger for watching a user's parameter.
+    
+    Previously, this always created new triggers, leading to duplicates when users
+    updated their trigger settings (e.g., changing from 1 day to 3 days). 
+    
+    Now it checks for existing triggers and updates them instead.
+    """
     try:
         data = request.get_json()
-        trigger = ParameterTrigger(
-            watcher_id=session.get('user_id'),
-            watched_id=data.get('watched_id'),
-            parameter_name=data.get('parameter_name'),
-            trigger_condition=data.get('condition'),
-            trigger_value=data.get('value'),
-            consecutive_days=data.get('consecutive_days')
-        )
-        db.session.add(trigger)
-        db.session.commit()
-        return jsonify({'message': 'Trigger created'}), 201
+        watcher_id = session.get('user_id')
+        watched_id = data.get('watched_id')
+        parameter_name = data.get('parameter_name')
+        trigger_condition = data.get('condition')
+        trigger_value = data.get('value')
+        consecutive_days = data.get('consecutive_days')
+        
+        logger.info(f"[TRIGGER CREATE/UPDATE] watcher={watcher_id}, watched={watched_id}, param={parameter_name}, days={consecutive_days}")
+        
+        # Check for existing trigger with same watcher/watched/parameter
+        existing_trigger = ParameterTrigger.query.filter_by(
+            watcher_id=watcher_id,
+            watched_id=watched_id,
+            parameter_name=parameter_name
+        ).first()
+        
+        if existing_trigger:
+            # Update existing trigger instead of creating duplicate
+            logger.info(f"[TRIGGER UPDATE] Found existing trigger ID={existing_trigger.id}, updating consecutive_days from {existing_trigger.consecutive_days} to {consecutive_days}")
+            existing_trigger.trigger_condition = trigger_condition
+            existing_trigger.trigger_value = trigger_value
+            existing_trigger.consecutive_days = consecutive_days
+            existing_trigger.is_active = True  # Reactivate if it was deleted
+            db.session.commit()
+            return jsonify({'message': 'Trigger updated', 'trigger_id': existing_trigger.id}), 200
+        else:
+            # Create new trigger
+            trigger = ParameterTrigger(
+                watcher_id=watcher_id,
+                watched_id=watched_id,
+                parameter_name=parameter_name,
+                trigger_condition=trigger_condition,
+                trigger_value=trigger_value,
+                consecutive_days=consecutive_days
+            )
+            db.session.add(trigger)
+            db.session.commit()
+            logger.info(f"[TRIGGER CREATE] Created new trigger ID={trigger.id}")
+            return jsonify({'message': 'Trigger created', 'trigger_id': trigger.id}), 201
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"[TRIGGER CREATE/UPDATE] Error: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed'}), 500
 
