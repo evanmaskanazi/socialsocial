@@ -1,5 +1,12 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PJ40E v2015 -->
+<!-- TheraSocial Version PJ40F v2016 -->
+<!-- PJ40F: FOLLOWLOG INVITE LINK FEATURE -->
+<!-- Invite page (/invite/{username}) now shows only one Follow button (no Dashboard button) -->
+<!-- Page looks identical whether logged in or logged out -->
+<!-- Follow button links to /followlog/{username} which handles redirect logic: -->
+<!--   If logged in: redirects to Following tab with invited user highlighted at top -->
+<!--   If not logged in: saves target to session, redirects to login, then to Following tab -->
+<!-- Frontend handles highlighting invited user with special styling in recommendations -->
 <!-- PJ6019: DUPLICATE TRIGGER FIX -->
 <!-- Backend fix - trigger updates now UPDATE existing triggers instead of creating duplicates -->
 <!-- Also all trigger queries now filter by is_active=True so deleted triggers stop firing -->
@@ -3727,6 +3734,23 @@ async function loadUserCity() {
             if (response && response.success) {
                 currentUser = response.user;
                 currentUserId = response.user.id;
+
+                // Check if there's a followlog target from invite link
+                const followlogTarget = response.followlog_target;
+                if (followlogTarget) {
+                    // Redirect to Following tab with this user at top
+                    console.log('[FOLLOWLOG] Redirecting to Following tab for user:', followlogTarget);
+                    showDashboard();
+                    loadNotificationSettings();
+                    // Small delay to ensure dashboard is ready, then switch to following view
+                    setTimeout(() => {
+                        showView('following');
+                        // Store the target username for the loadFollowing function to use
+                        window.followlogHighlightUser = followlogTarget;
+                        loadFollowing();
+                    }, 500);
+                    return;
+                }
 
                 // FIX #5: Check if user needs to fill diary before showing dashboard
                 const needsDiary = await checkAndRedirectToDiary();
@@ -7990,6 +8014,56 @@ async function loadFollowing() {
         if (!recommendedResponse.ok) throw new Error('Failed to load recommended');
         const recommendedData = await recommendedResponse.json();
 
+        // FOLLOWLOG: Check if there's a highlighted user from invite link
+        let highlightedUser = null;
+        const highlightUsername = window.followlogHighlightUser;
+        if (highlightUsername) {
+            console.log('[FOLLOWLOG] Looking for highlighted user:', highlightUsername);
+            // Clear the global variable so it doesn't persist
+            window.followlogHighlightUser = null;
+            
+            // Try to find this user in recommended or search for them
+            const foundInRecommended = (recommendedData.recommendations || []).find(
+                u => u.username.toLowerCase() === highlightUsername.toLowerCase()
+            );
+            
+            if (foundInRecommended) {
+                // Remove from recommendations array to avoid duplicate
+                recommendedData.recommendations = recommendedData.recommendations.filter(
+                    u => u.username.toLowerCase() !== highlightUsername.toLowerCase()
+                );
+                highlightedUser = foundInRecommended;
+                console.log('[FOLLOWLOG] Found user in recommendations');
+            } else {
+                // Check if already following
+                const foundInFollowing = (followingData.following || []).find(
+                    u => u.username.toLowerCase() === highlightUsername.toLowerCase()
+                );
+                
+                if (!foundInFollowing) {
+                    // Search for the user via API
+                    try {
+                        const searchResponse = await fetch(`/api/users/search?q=${encodeURIComponent(highlightUsername)}`, {
+                            credentials: 'include'
+                        });
+                        if (searchResponse.ok) {
+                            const searchData = await searchResponse.json();
+                            if (searchData.users && searchData.users.length > 0) {
+                                highlightedUser = searchData.users.find(
+                                    u => u.username.toLowerCase() === highlightUsername.toLowerCase()
+                                );
+                                console.log('[FOLLOWLOG] Found user via search');
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[FOLLOWLOG] Error searching for user:', e);
+                    }
+                } else {
+                    console.log('[FOLLOWLOG] User is already being followed');
+                }
+            }
+        }
+
         // Display following - PJN452: People You Follow - NO block button, only Unfollow + Following Back label
         const followingContainer = document.querySelector('#followingList');
         if (followingContainer) {
@@ -8047,7 +8121,15 @@ async function loadFollowing() {
         // PJ601: Fixed block/unblock toggle for recommended users
         const recommendedContainer = document.querySelector('#followingRecommendationsList');
         if (recommendedContainer) {
-            const recommendations = recommendedData.recommendations || [];
+            let recommendations = recommendedData.recommendations || [];
+            
+            // FOLLOWLOG: If there's a highlighted user from invite link, prepend them to recommendations
+            if (highlightedUser) {
+                console.log('[FOLLOWLOG] Adding highlighted user to top of recommendations:', highlightedUser.username);
+                // Mark this user as highlighted for special styling
+                highlightedUser.isHighlighted = true;
+                recommendations = [highlightedUser, ...recommendations];
+            }
             
             // PJ601: Fetch blocked users list for toggle functionality
             let blockedUserIds = new Set();
@@ -8076,8 +8158,17 @@ async function loadFollowing() {
                         : 'background: #ef4444; color: white;'; // Red for block
                     const dataI18n = isBlocked ? 'block.unblock_user' : 'block.block_user';
                     
+                    // FOLLOWLOG: Add special styling for highlighted user from invite link
+                    const highlightStyle = user.isHighlighted 
+                        ? 'border: 2px solid #667eea; background: linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 100%); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);'
+                        : '';
+                    const highlightBadge = user.isHighlighted 
+                        ? '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; display: inline-block;">Invited you to follow</div>'
+                        : '';
+                    
                     return `
-                    <div class="user-card" data-user-id="${user.id}">
+                    <div class="user-card" data-user-id="${user.id}" style="${highlightStyle}">
+                        ${highlightBadge}
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}; cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
                             ${escapeHtml(user.username.charAt(0).toUpperCase())}
                         </div>
@@ -10808,6 +10899,21 @@ window.addEventListener('DOMContentLoaded', async () => {
                 currentUser = data.user;
                 currentUserId = data.user.id;
                 showDashboard();
+                
+                // Check for followlog redirect parameters (view=following&highlight_user=username)
+                const viewParam = urlParams.get('view');
+                const highlightUser = urlParams.get('highlight_user');
+                if (viewParam === 'following' && highlightUser) {
+                    console.log('[FOLLOWLOG] URL params detected, redirecting to Following tab for user:', highlightUser);
+                    window.followlogHighlightUser = highlightUser;
+                    // Clear URL params after reading them
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Small delay then switch to following view
+                    setTimeout(() => {
+                        showView('following');
+                        loadFollowing();
+                    }, 500);
+                }
                 
                 // FIX: Sync language selector immediately after showing dashboard
                 setTimeout(() => {
