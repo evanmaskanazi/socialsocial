@@ -403,6 +403,24 @@ CACHE_BUST_VERSION = str(int(time.time()))
 # =============================================================================
 ALERT_EMAIL_MODE = "new_alerts_only"  # Options: "new_alerts_only" or "daily_reminder"
 DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 = midnight UTC = 2am Israeli
+
+# =============================================================================
+# MINIMUM TRIGGER DAYS CONFIGURATION (PI502alt)
+# =============================================================================
+# Minimum number of consecutive days required for trigger alerts.
+# This prevents overly sensitive monitoring (e.g., 1 bad day shouldn't trigger alarm).
+# 
+# Change this value to adjust the minimum threshold:
+# - 3 = Recommended (default) - catches real patterns, ignores single bad days
+# - 2 = More sensitive - may catch issues faster but also more false positives
+# - 4+ = Less sensitive - only alerts on longer patterns
+#
+# This affects:
+# - Trigger creation (enforces minimum when user creates trigger)
+# - Alert processing (filters out shorter patterns)
+# - Alert display (hides existing alerts below threshold)
+# =============================================================================
+MINIMUM_TRIGGER_DAYS = 3  # Configurable minimum - change this value as needed
 # =============================================================================
 
 from flask import (
@@ -5790,7 +5808,10 @@ def search_users():
 @app.route('/api/alerts', methods=['GET'])
 @login_required
 def get_alerts():
-    """Get user alerts - filters trigger/feed alerts to only show for followed users"""
+    """Get user alerts - filters trigger/feed alerts to only show for followed users
+    
+    PI502alt: Also filters out trigger alerts with consecutive days below MINIMUM_TRIGGER_DAYS
+    """
     try:
         user_id = session['user_id']
 
@@ -5810,14 +5831,24 @@ def get_alerts():
 
         # PJ401: Filter alerts based on following status
         # PJ704: CRITICAL FIX - Only filter 'trigger' category alerts by following status
-        # Follow and invite alerts (alert_category='follow') should ALWAYS show 
-        # since they notify you about someone following/inviting YOU
+        # PI502alt: Also filter trigger alerts below MINIMUM_TRIGGER_DAYS threshold
         filtered_alerts = []
         for alert in all_alerts:
             # Check if this alert has a source_user_id AND is a trigger/feed alert
             if alert.source_user_id and alert.alert_category in ('trigger', 'feed'):
                 # Only include trigger/feed alerts if user follows the source_user
                 if alert.source_user_id in following_set:
+                    # PI502alt: For trigger alerts, check if consecutive days meets minimum
+                    if alert.alert_category == 'trigger' and alert.content:
+                        # Parse consecutive days from content like "for 2 consecutive days"
+                        import re
+                        days_match = re.search(r'for (\d+) consecutive days?', alert.content)
+                        if days_match:
+                            alert_days = int(days_match.group(1))
+                            if alert_days < MINIMUM_TRIGGER_DAYS:
+                                # Skip alerts below minimum threshold
+                                logger.debug(f"[GET_ALERTS] Filtering out alert {alert.id} with {alert_days} days (< {MINIMUM_TRIGGER_DAYS} minimum)")
+                                continue
                     filtered_alerts.append(alert)
             else:
                 # Alerts without source_user_id OR with category 'follow', 'message', 'general' always show
@@ -8226,9 +8257,9 @@ def process_parameter_triggers_async(user_id, param_snapshot):
         # Process each trigger row
         for trigger in all_triggers:
             watcher_id = trigger.watcher_id
-            # PJ6008: Enforce minimum of 3 consecutive days - this is the key fix!
+            # PJ6008/PI502alt: Enforce minimum consecutive days using MINIMUM_TRIGGER_DAYS constant
             raw_consecutive_days = trigger.consecutive_days
-            consecutive_days = max(raw_consecutive_days or 3, 3)  # Minimum 3 days
+            consecutive_days = max(raw_consecutive_days or MINIMUM_TRIGGER_DAYS, MINIMUM_TRIGGER_DAYS)  # Use configurable minimum
             
             logger.info(f"[TRIGGER PROCESS ASYNC] Processing trigger for watcher {watcher_id}: raw_consecutive_days={raw_consecutive_days}, enforced={consecutive_days}")
             
@@ -8567,9 +8598,10 @@ def process_parameter_triggers(user_id, params):
         # PJ815: Process each trigger row individually
         for trigger in all_triggers:
             watcher_id = trigger.watcher_id
-            consecutive_days = trigger.consecutive_days or 3
+            # PI502alt: Use MINIMUM_TRIGGER_DAYS constant
+            consecutive_days = max(trigger.consecutive_days or MINIMUM_TRIGGER_DAYS, MINIMUM_TRIGGER_DAYS)
             
-            if consecutive_days < 1:
+            if consecutive_days < MINIMUM_TRIGGER_DAYS:
                 continue
                 
             if len(all_params) < consecutive_days:
@@ -10768,8 +10800,9 @@ def check_parameter_triggers():
             return False
 
         for trigger in triggers:
-            # Skip if no consecutive_days setting
-            if not trigger.consecutive_days or trigger.consecutive_days < 1:
+            # PI502alt: Skip if consecutive_days below minimum threshold
+            consecutive_days = max(trigger.consecutive_days or MINIMUM_TRIGGER_DAYS, MINIMUM_TRIGGER_DAYS)
+            if consecutive_days < MINIMUM_TRIGGER_DAYS:
                 continue
 
             watcher_circle = get_watcher_circle_level(trigger.watched_id, watcher_id)
@@ -10783,7 +10816,7 @@ def check_parameter_triggers():
                 ).order_by(SavedParameters.date.asc())
             ).scalars().all()
 
-            if len(parameters) < trigger.consecutive_days:
+            if len(parameters) < consecutive_days:
                 continue
 
             watched_user = db.session.get(User, trigger.watched_id)
@@ -12884,7 +12917,9 @@ def run_background_trigger_check_for_watcher(watcher_id):
             return False
 
         for trigger in triggers:
-            if not trigger.consecutive_days or trigger.consecutive_days < 1:
+            # PI502alt: Enforce minimum consecutive days
+            consecutive_days = max(trigger.consecutive_days or MINIMUM_TRIGGER_DAYS, MINIMUM_TRIGGER_DAYS)
+            if consecutive_days < MINIMUM_TRIGGER_DAYS:
                 continue
 
             watcher_circle = get_watcher_circle_level(trigger.watched_id, watcher_id)
@@ -12898,7 +12933,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 ).order_by(SavedParameters.date.asc())
             ).scalars().all()
 
-            if len(parameters) < trigger.consecutive_days:
+            if len(parameters) < consecutive_days:
                 continue
 
             watched_user = db.session.get(User, trigger.watched_id)
@@ -14340,6 +14375,7 @@ def get_triggers():
 def create_trigger():
     """
     PJ6019 FIX: Create or UPDATE a trigger for watching a user's parameter.
+    PI502alt: Enforces MINIMUM_TRIGGER_DAYS minimum for consecutive_days.
     
     Previously, this always created new triggers, leading to duplicates when users
     updated their trigger settings (e.g., changing from 1 day to 3 days). 
@@ -14355,7 +14391,13 @@ def create_trigger():
         trigger_value = data.get('value')
         consecutive_days = data.get('consecutive_days')
         
-        logger.info(f"[TRIGGER CREATE/UPDATE] watcher={watcher_id}, watched={watched_id}, param={parameter_name}, days={consecutive_days}")
+        # PI502alt: Enforce minimum consecutive days
+        if consecutive_days is None or consecutive_days == '' or consecutive_days == 0:
+            consecutive_days = MINIMUM_TRIGGER_DAYS  # Default to minimum
+        else:
+            consecutive_days = max(int(consecutive_days), MINIMUM_TRIGGER_DAYS)  # Enforce minimum
+        
+        logger.info(f"[TRIGGER CREATE/UPDATE] watcher={watcher_id}, watched={watched_id}, param={parameter_name}, days={consecutive_days} (min={MINIMUM_TRIGGER_DAYS})")
         
         # Check for existing trigger with same watcher/watched/parameter
         existing_trigger = ParameterTrigger.query.filter_by(
@@ -14402,6 +14444,18 @@ def delete_trigger(trigger_id):
         db.session.commit()
         return jsonify({'message': 'Deleted'}), 200
     return jsonify({'error': 'Not found'}), 404
+
+
+@app.route('/api/config/trigger-settings', methods=['GET'])
+def get_trigger_settings():
+    """
+    PI502alt: Get trigger configuration settings for frontend display.
+    Returns the minimum consecutive days required for triggers.
+    """
+    return jsonify({
+        'minimum_trigger_days': MINIMUM_TRIGGER_DAYS,
+        'alert_email_mode': ALERT_EMAIL_MODE
+    })
 
 
 @app.route('/api/users/shareable-link', methods=['GET'])
