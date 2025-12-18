@@ -8776,10 +8776,10 @@ function showAddTriggerModal() {
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">For how many days (optional, 3 days minimum):</label>
-                <input type="number" id="triggerDays" min="3" max="30"
+                <label style="display: block; margin-bottom: 5px;">For how many days (optional):</label>
+                <input type="number" id="triggerDays" min="1" max="30"
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
-                       placeholder="Leave blank for 3 days">
+                       placeholder="Leave blank for single occurrence">
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="document.getElementById('addTriggerModal').remove()">
@@ -8918,10 +8918,10 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">For how many days (optional, 3 days minimum):</label>
-                <input type="number" id="triggerDays" min="3" max="30"
+                <label style="display: block; margin-bottom: 5px;">For how many days (optional):</label>
+                <input type="number" id="triggerDays" min="1" max="30"
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
-                       placeholder="Leave blank for 3 days">
+                       placeholder="Leave blank for single occurrence">
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="document.getElementById('addTriggerModal').remove()">
