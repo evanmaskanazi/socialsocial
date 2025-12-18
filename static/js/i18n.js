@@ -502,9 +502,6 @@ const translations = {
 'trigger_add': 'Add Trigger',
 'trigger_remove': 'Remove',
 'trigger_no_triggers': 'No triggers set for this user',
-'trigger.days_label': 'For how many days (optional, 3 days minimum):',
-'trigger.days_placeholder': 'Leave blank for 3 days',
-'trigger.minimum_info': 'Minimum 3 consecutive days required',
  'block.block_user': 'Block',
     'block.unblock_user': 'Unblock',
     'block.block_confirm': 'Are you sure you want to block {username}? They will no longer be able to see your profile.',
@@ -1234,9 +1231,6 @@ const translations = {
 'trigger_add': 'הוסף התראה',
 'trigger_remove': 'הסר',
 'trigger_no_triggers': 'אין התראות מוגדרות עבור משתמש זה',
-'trigger.days_label': 'למשך כמה ימים (אופציונלי, 3 ימים מינימום):',
-'trigger.days_placeholder': 'השאר ריק עבור 3 ימים',
-'trigger.minimum_info': 'נדרשים לפחות 3 ימים רצופים',
 
  // Support page
     'support.title': 'מרכז תמיכה',
@@ -2215,9 +2209,6 @@ const translations = {
 'trigger_add': 'إضافة تنبيه',
 'trigger_remove': 'إزالة',
 'trigger_no_triggers': 'لم يتم تعيين تنبيهات لهذا المستخدم',
-'trigger.days_label': 'لكم عدد من الأيام (اختياري، 3 أيام كحد أدنى):',
-'trigger.days_placeholder': 'اتركه فارغًا لـ 3 أيام',
-'trigger.minimum_info': 'مطلوب 3 أيام متتالية كحد أدنى',
 
 
 'city.jerusalem_israel': 'القدس، إسرائيل',
@@ -3107,9 +3098,6 @@ const translations = {
 'trigger_add': 'Добавить оповещение',
 'trigger_remove': 'Удалить',
 'trigger_no_triggers': 'Для этого пользователя не установлено оповещений',
-'trigger.days_label': 'На сколько дней (необязательно, минимум 3 дня):',
-'trigger.days_placeholder': 'Оставьте пустым для 3 дней',
-'trigger.minimum_info': 'Требуется минимум 3 последовательных дня',
         // City names
   // Russian city translations - Israel, USA, UK only (MVP)
 'city.jerusalem': 'Иерусалим, Израиль',
