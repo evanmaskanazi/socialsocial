@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PI501 v501 -->
-<!-- PI501: Re-enabled email sending for genuinely NEW alerts -->
-<!-- PI500 was too aggressive - blocked ALL emails from scheduler -->
-<!-- Now: emails sent when alerts_created > 0 (new patterns only) -->
-<!-- Duplicate detection still prevents emails for existing patterns -->
+<!-- TheraSocial Version PI502 v502 -->
+<!-- PI502: PROPER TWO-MODE SYSTEM for trigger alert emails -->
+<!-- Mode 1 "new_alerts_only": NO emails from scheduler, only via job queue when watched user saves new data -->
+<!-- Mode 2 "daily_reminder": ONE email per day at DAILY_REMINDER_HOUR_UTC with all patterns -->
+<!-- This properly prevents daily spam while still allowing daily digest option -->
 <!-- PJ40F v2017: FIX - Followlog highlight now persists using sessionStorage -->
 <!-- Problem: Highlight was disappearing because loadFollowing() called multiple times -->
 <!-- Solution: Store highlight in sessionStorage, only clear on follow/navigate away/logout -->
