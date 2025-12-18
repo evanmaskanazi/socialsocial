@@ -1,22 +1,20 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PI500 (Version 500)
+Complete app.py for Social Social Platform - Phase PI501 (Version 501)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
+PI501 Changes (v501):
+- FIX: Re-enabled email sending for genuinely NEW alerts from scheduler
+- PI500 was too aggressive - it removed ALL email sending from scheduler
+- Now emails ARE sent when alerts_created > 0 (genuinely new patterns detected)
+- Duplicate detection still prevents emails for patterns that already have alerts
+- The key insight: if duplicate detection works, old patterns get SKIPPED (no alert created)
+- Only NEW patterns (never seen before) create alerts AND trigger emails
+- Log message now shows "PI501: Sending consolidated email" for new alerts
+
 PI500 Changes (v500):
-- CRITICAL FIX: Removed automatic email sending from background trigger scheduler
-- ROOT CAUSE: Emails were being sent every time the scheduler ran (every 5 minutes)
-  for ALL existing trigger patterns, even old ones from weeks ago
-- SYMPTOM: Users receiving daily emails at 02:00 Israeli time (00:00 UTC) for
-  old patterns like "Nov 19 - Nov 22" that hadn't changed
-- FIX: Background scheduler (run_background_trigger_check_for_watcher) now ONLY:
-  1. Creates database alerts for display in the UI
-  2. Does NOT send any emails
-- Emails are now ONLY sent when a watched user saves NEW parameters that create
-  NEW trigger patterns (via process_parameter_triggers_async in the job queue)
-- This ensures "new_alerts_only" mode works correctly: emails only for genuinely
-  new streaks, not repeated emails for historical patterns
+- REVERTED in PI501 - the fix was too aggressive and blocked all scheduler emails
 
 PJ40F Changes (v2017):
 - FIX: Frontend now uses sessionStorage to persist highlight across loadFollowing() calls
@@ -13225,15 +13223,24 @@ def run_background_trigger_check_for_watcher(watcher_id):
             logger.error(f"[TRIGGER SCHEDULER] Error committing alerts: {commit_err}")
             db.session.rollback()
         
-        # PI500 FIX: REMOVED automatic email sending from background scheduler
-        # Emails should ONLY be sent when a watched user saves NEW parameters
-        # (via process_parameter_triggers_async), not from the periodic scheduler.
-        # This prevents duplicate emails being sent every 24 hours for existing patterns.
-        # The scheduler now only creates database alerts for display in the UI.
-        if alerts_created > 0:
-            logger.info(f"[TRIGGER SCHEDULER] PI500: Created {alerts_created} alerts (NO emails sent - emails only on new data)")
+        # PI501 FIX: Send consolidated emails ONLY when genuinely new alerts were created
+        # The duplicate detection above ensures we only reach here for NEW patterns
+        # If alerts_created > 0, these are patterns that have never been seen before
+        emails_sent = 0
+        if alerts_created > 0 and triggered_params_by_user:
+            watcher = db.session.get(User, watcher_id)
+            user_language = watcher.preferred_language if watcher else 'en'
+            
+            for watched_username, triggered_params in triggered_params_by_user.items():
+                if triggered_params:
+                    logger.info(f"[TRIGGER SCHEDULER] PI501: Sending consolidated email to watcher {watcher_id} for {watched_username} with {len(triggered_params)} NEW params")
+                    if send_consolidated_wellness_alert_email(watcher_id, watched_username, triggered_params, user_language):
+                        emails_sent += 1
+                        logger.info(f"[TRIGGER SCHEDULER] ✅ Consolidated email sent successfully")
+                    else:
+                        logger.info(f"[TRIGGER SCHEDULER] ⚠️ Email not sent (user may have email_on_alert disabled)")
         
-        return {'alerts_created': alerts_created, 'duplicates_skipped': alerts_skipped_duplicate, 'emails_sent': 0}
+        return {'alerts_created': alerts_created, 'duplicates_skipped': alerts_skipped_duplicate, 'emails_sent': emails_sent}
         
     except Exception as e:
         logger.error(f"[TRIGGER SCHEDULER] Error checking triggers for watcher {watcher_id}: {e}")
