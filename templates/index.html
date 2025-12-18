@@ -4296,14 +4296,36 @@ async function submitConsent() {
             console.log('[LANG DEBUG]   profile.preferred_language:', profile.preferred_language);
             console.log('[LANG DEBUG]   backendLang (with fallback):', backendLang);
 
-            // CRITICAL FIX: ALWAYS trust backend as source of truth
-            // Never POST to backend from here - only POST when user explicitly changes selector
-            const savedLang = backendLang;
+            // PI503 FIX: Preserve user's pre-login language selection
+            // If user selected a language before login (stored in localStorage), keep it
+            // and update the backend to match. Only use backend language if no localStorage.
+            let savedLang;
+            if (currentLocalLang && currentLocalLang !== backendLang) {
+                // User had a different language before login - preserve it
+                savedLang = currentLocalLang;
+                console.log('[LANG DEBUG] PRESERVING pre-login language:', savedLang);
+                
+                // Update backend to match user's current selection
+                try {
+                    await fetch(`${API_URL}/user/language`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ language: savedLang }),
+                        credentials: 'include'
+                    });
+                    console.log('[LANG DEBUG] Backend updated to match pre-login selection');
+                } catch (e) {
+                    console.warn('[LANG DEBUG] Failed to update backend language:', e);
+                }
+            } else {
+                // No pre-login selection or same as backend - use backend
+                savedLang = backendLang;
+                console.log('[LANG DEBUG] USING backend language:', savedLang);
+            }
             
-            console.log('[LANG DEBUG] USING BACKEND LANGUAGE:', savedLang);
-            console.log('[LANG DEBUG] (localStorage was:', currentLocalLang, '- will be overwritten)');
+            console.log('[LANG DEBUG] Final language choice:', savedLang);
 
-            // Update localStorage to match backend (cache the source of truth)
+            // Update localStorage to match
             localStorage.setItem('selectedLanguage', savedLang);
             localStorage.setItem('userLanguage', savedLang);
             console.log('[LANG DEBUG] localStorage updated to:', savedLang);
@@ -8859,7 +8881,7 @@ async function createTrigger() {
 
         if (!response.ok) throw new Error('Failed to create trigger');
 
-        showNotification('Trigger created successfully', 'success');
+        showNotification(window.i18n ? window.i18n.translate('trigger_created_success') : 'Trigger created successfully', 'success');
         document.getElementById('addTriggerModal').remove();
         loadTriggers();
     } catch (error) {
@@ -8893,42 +8915,42 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
 
     modal.innerHTML = `
         <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
-            <h3>Add Trigger for ${targetUsername}</h3>
+            <h3>${window.i18n ? window.i18n.translate('trigger_modal_title').replace('{username}', targetUsername) : 'Add Trigger for ' + targetUsername}</h3>
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">Parameter:</label>
+                <label style="display: block; margin-bottom: 5px;">${window.i18n ? window.i18n.translate('trigger_parameter_label') : 'Parameter:'}</label>
                 <select id="triggerParameter" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="mood">Mood</option>
-                    <option value="sleep_quality">Sleep Quality</option>
-                    <option value="physical_activity">Physical Activity</option>
-                    <option value="anxiety">Anxiety</option>
-                    <option value="energy">Energy</option>
+                    <option value="mood">${window.i18n ? window.i18n.translate('trigger_parameter_mood') : 'Mood'}</option>
+                    <option value="sleep_quality">${window.i18n ? window.i18n.translate('trigger_parameter_sleep_quality') : 'Sleep Quality'}</option>
+                    <option value="physical_activity">${window.i18n ? window.i18n.translate('trigger_parameter_physical_activity') : 'Physical Activity'}</option>
+                    <option value="anxiety">${window.i18n ? window.i18n.translate('trigger_parameter_anxiety') : 'Anxiety'}</option>
+                    <option value="energy">${window.i18n ? window.i18n.translate('trigger_parameter_energy') : 'Energy'}</option>
                 </select>
             </div>
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">Alert when:</label>
+                <label style="display: block; margin-bottom: 5px;">${window.i18n ? window.i18n.translate('trigger_alert_when') : 'Alert when:'}</label>
                 <select id="triggerOperator" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="less_than">Less than</option>
-                    <option value="greater_than">Greater than</option>
-                    <option value="equals">Equals</option>
+                    <option value="less_than">${window.i18n ? window.i18n.translate('trigger_condition_less_than') : 'Less than'}</option>
+                    <option value="greater_than">${window.i18n ? window.i18n.translate('trigger_condition_greater_than') : 'Greater than'}</option>
+                    <option value="equals">${window.i18n ? window.i18n.translate('trigger_condition_equals') : 'Equals'}</option>
                 </select>
             </div>
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">Value (1-4):</label>
+                <label style="display: block; margin-bottom: 5px;">${window.i18n ? window.i18n.translate('trigger_value_label') : 'Value (1-4):'}</label>
                 <input type="number" id="triggerThreshold" min="1" max="4" value="2"
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">For how many days (optional, 3 days minimum):</label>
+                <label style="display: block; margin-bottom: 5px;">${window.i18n ? window.i18n.translate('trigger.days_label') : 'For how many days (optional, 3 days minimum):'}</label>
                 <input type="number" id="triggerDays" min="3" max="30"
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
-                       placeholder="Leave blank for 3 days">
+                       placeholder="${window.i18n ? window.i18n.translate('trigger.days_placeholder') : 'Leave blank for 3 days'}">
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="document.getElementById('addTriggerModal').remove()">
-                    Cancel
+                    ${window.i18n ? window.i18n.translate('trigger_cancel') : 'Cancel'}
                 </button>
                 <button class="btn btn-primary" onclick="createTriggerForUser(${targetUserId}, '${targetUsername}')">
-                    Create Trigger
+                    ${window.i18n ? window.i18n.translate('trigger_create') : 'Create Trigger'}
                 </button>
             </div>
         </div>
@@ -8963,7 +8985,7 @@ async function createTriggerForUser(targetId, targetUsername) {
 
         if (!response.ok) throw new Error('Failed to create trigger');
 
-        showNotification('Trigger created successfully', 'success');
+        showNotification(window.i18n ? window.i18n.translate('trigger_created_success') : 'Trigger created successfully', 'success');
         document.getElementById('addTriggerModal').remove();
         // Reload triggers in the modal with username
         loadTriggersForUser(targetId, targetUsername);
@@ -9420,7 +9442,8 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
     let parametersHtml = '';
 
     if (!parameters || parameters.length === 0) {
-        parametersHtml = '<p style="text-align: center; color: #666;">No data available for this period</p>';
+        const noDataMsg = window.i18n ? window.i18n.translate('parameters_no_data') : 'No data available for this period';
+        parametersHtml = `<p style="text-align: center; color: #666;">${noDataMsg}</p>`;
     } else {
         // Group parameters by date and display each one
         parametersHtml = '<div class="parameters-timeline">';
