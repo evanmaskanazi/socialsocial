@@ -1,20 +1,34 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PI501 (Version 501)
+Complete app.py for Social Social Platform - Phase PI502 (Version 502)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
+PI502 Changes (v502):
+- PROPER TWO-MODE SYSTEM for trigger alert emails:
+
+  MODE 1: "new_alerts_only" (recommended)
+  - Background scheduler creates alerts for UI display ONLY
+  - NO emails sent from background scheduler
+  - Emails ONLY sent when watched user saves NEW parameters that create NEW trigger patterns
+  - This is via process_parameter_triggers_async in the job queue
+  - Prevents daily spam emails for old patterns
+
+  MODE 2: "daily_reminder"  
+  - Background scheduler creates alerts for UI display
+  - ONE consolidated email sent per day at DAILY_REMINDER_HOUR_UTC (default: 0 = midnight UTC / 2am Israeli)
+  - Contains ALL current trigger patterns across all watched users
+  - Only sends once per day, not every 5 minutes
+  - Good for users who want a daily digest of all concerning patterns
+
+- Set ALERT_EMAIL_MODE near top of file to choose mode
+- Set DAILY_REMINDER_HOUR_UTC to control when daily reminder sends (0-23)
+
 PI501 Changes (v501):
-- FIX: Re-enabled email sending for genuinely NEW alerts from scheduler
-- PI500 was too aggressive - it removed ALL email sending from scheduler
-- Now emails ARE sent when alerts_created > 0 (genuinely new patterns detected)
-- Duplicate detection still prevents emails for patterns that already have alerts
-- The key insight: if duplicate detection works, old patterns get SKIPPED (no alert created)
-- Only NEW patterns (never seen before) create alerts AND trigger emails
-- Log message now shows "PI501: Sending consolidated email" for new alerts
+- REVERTED - re-enabled emails from scheduler but this caused daily spam
 
 PI500 Changes (v500):
-- REVERTED in PI501 - the fix was too aggressive and blocked all scheduler emails
+- PARTIALLY KEPT - no individual emails from scheduler, but added daily_reminder option
 
 PJ40F Changes (v2017):
 - FIX: Frontend now uses sessionStorage to persist highlight across loadFollowing() calls
@@ -372,23 +386,23 @@ CACHE_BUST_VERSION = str(int(time.time()))
 # =============================================================================
 # ALERT EMAIL MODE CONFIGURATION
 # =============================================================================
+# TRIGGER ALERT EMAIL CONFIGURATION (PI502)
+# =============================================================================
 # Choose how trigger alert emails are sent:
 #
-# "new_alerts_only" - Only email when a NEW pattern emerges that has NEVER been
-#                     seen before. Once an alert is created for a specific date
-#                     range (e.g., "Dec 07 - Dec 09"), no future emails will be
-#                     sent for that exact pattern, even if the watched user
-#                     saves parameters again.
+# "new_alerts_only" - Emails ONLY when watched user saves NEW parameters that
+#                     create NEW trigger patterns. Background scheduler does NOT
+#                     send emails - it only creates alerts for UI display.
+#                     This prevents daily spam for old patterns.
 #
-# "daily_reminder"  - Email each time the watched user saves parameters, as long
-#                     as concerning patterns exist and more than 24 hours have
-#                     passed since the last alert for that pattern. Acts as a
-#                     check-in reminder that the watched user is still showing
-#                     concerning levels.
+# "daily_reminder"  - ONE consolidated email per day at DAILY_REMINDER_HOUR_UTC.
+#                     Contains ALL current trigger patterns for all watched users.
+#                     Background scheduler sends this once per day, not every 5 min.
 #
-# To change: Simply edit the value below and redeploy.
+# To change: Edit the values below and redeploy.
 # =============================================================================
 ALERT_EMAIL_MODE = "new_alerts_only"  # Options: "new_alerts_only" or "daily_reminder"
+DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 = midnight UTC = 2am Israeli
 # =============================================================================
 
 from flask import (
@@ -13223,24 +13237,14 @@ def run_background_trigger_check_for_watcher(watcher_id):
             logger.error(f"[TRIGGER SCHEDULER] Error committing alerts: {commit_err}")
             db.session.rollback()
         
-        # PI501 FIX: Send consolidated emails ONLY when genuinely new alerts were created
-        # The duplicate detection above ensures we only reach here for NEW patterns
-        # If alerts_created > 0, these are patterns that have never been seen before
-        emails_sent = 0
-        if alerts_created > 0 and triggered_params_by_user:
-            watcher = db.session.get(User, watcher_id)
-            user_language = watcher.preferred_language if watcher else 'en'
-            
-            for watched_username, triggered_params in triggered_params_by_user.items():
-                if triggered_params:
-                    logger.info(f"[TRIGGER SCHEDULER] PI501: Sending consolidated email to watcher {watcher_id} for {watched_username} with {len(triggered_params)} NEW params")
-                    if send_consolidated_wellness_alert_email(watcher_id, watched_username, triggered_params, user_language):
-                        emails_sent += 1
-                        logger.info(f"[TRIGGER SCHEDULER] ✅ Consolidated email sent successfully")
-                    else:
-                        logger.info(f"[TRIGGER SCHEDULER] ⚠️ Email not sent (user may have email_on_alert disabled)")
+        # PI502: Background scheduler does NOT send emails directly
+        # - In "new_alerts_only" mode: emails sent via job queue when watched user saves new data
+        # - In "daily_reminder" mode: emails sent by run_trigger_scheduler at specific hour
+        # The scheduler here only creates alerts for UI display
+        if alerts_created > 0:
+            logger.info(f"[TRIGGER SCHEDULER] PI502: Created {alerts_created} alerts for UI (emails handled separately based on mode={ALERT_EMAIL_MODE})")
         
-        return {'alerts_created': alerts_created, 'duplicates_skipped': alerts_skipped_duplicate, 'emails_sent': emails_sent}
+        return {'alerts_created': alerts_created, 'duplicates_skipped': alerts_skipped_duplicate, 'emails_sent': 0, 'triggered_params_by_user': triggered_params_by_user}
         
     except Exception as e:
         logger.error(f"[TRIGGER SCHEDULER] Error checking triggers for watcher {watcher_id}: {e}")
@@ -13252,13 +13256,19 @@ def run_trigger_scheduler():
     """
     Background thread that checks triggers for ALL watchers every 5 minutes.
     This runs automatically on deployment - no external cron job needed.
-    Emails are sent automatically when trigger conditions are met.
+    
+    PI502: Email behavior depends on ALERT_EMAIL_MODE:
+    - "new_alerts_only": NO emails from scheduler (emails only via job queue)
+    - "daily_reminder": ONE email per watcher at DAILY_REMINDER_HOUR_UTC
     
     PJ816: This is the key fix - trigger emails no longer require watcher login.
     """
     global _trigger_scheduler_started
     
     logger.info("[TRIGGER SCHEDULER] Background trigger scheduler started")
+    
+    # Track if we've already sent daily reminder this hour (to prevent duplicates)
+    last_daily_reminder_hour = -1
     
     # Initial delay to let the app fully start
     time.sleep(30)
@@ -13269,8 +13279,10 @@ def run_trigger_scheduler():
             with app.app_context():
                 try:
                     now_utc = datetime.utcnow()
+                    current_hour = now_utc.hour
                     logger.info(f"[TRIGGER SCHEDULER] ========================================")
                     logger.info(f"[TRIGGER SCHEDULER] Starting trigger check at UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S')}")
+                    logger.info(f"[TRIGGER SCHEDULER] Mode: {ALERT_EMAIL_MODE}, Daily reminder hour: {DAILY_REMINDER_HOUR_UTC}")
                     
                     # Get all unique watchers who have triggers configured
                     all_watcher_ids = db.session.query(
@@ -13288,6 +13300,9 @@ def run_trigger_scheduler():
                         total_created = 0
                         total_skipped = 0
                         
+                        # PI502: Collect all triggered params for daily_reminder mode
+                        all_watcher_triggered_params = {}  # {watcher_id: {watched_username: [params]}}
+                        
                         for watcher_id in all_watcher_ids:
                             try:
                                 watcher = db.session.get(User, watcher_id)
@@ -13300,6 +13315,11 @@ def run_trigger_scheduler():
                                 total_created += created
                                 total_skipped += skipped
                                 
+                                # PI502: Collect triggered params for daily_reminder mode
+                                triggered_params_by_user = result.get('triggered_params_by_user', {})
+                                if triggered_params_by_user:
+                                    all_watcher_triggered_params[watcher_id] = triggered_params_by_user
+                                
                                 if created > 0:
                                     logger.info(f"[TRIGGER SCHEDULER] Watcher {watcher_name}: created={created}, skipped={skipped}")
                                     
@@ -13307,7 +13327,39 @@ def run_trigger_scheduler():
                                 logger.error(f"[TRIGGER SCHEDULER] Error processing watcher {watcher_id}: {watcher_err}")
                                 continue
                         
-                        logger.info(f"[TRIGGER SCHEDULER] Completed: total_created={total_created}, total_skipped={total_skipped}")
+                        # PI502: Handle daily_reminder email sending
+                        emails_sent = 0
+                        if ALERT_EMAIL_MODE == "daily_reminder":
+                            # Only send at the designated hour, and only once per hour
+                            if current_hour == DAILY_REMINDER_HOUR_UTC and last_daily_reminder_hour != current_hour:
+                                logger.info(f"[TRIGGER SCHEDULER] PI502 DAILY REMINDER: Sending daily digest emails at hour {current_hour} UTC")
+                                
+                                for watcher_id, triggered_by_user in all_watcher_triggered_params.items():
+                                    watcher = db.session.get(User, watcher_id)
+                                    if not watcher:
+                                        continue
+                                    user_language = watcher.preferred_language or 'en'
+                                    
+                                    for watched_username, triggered_params in triggered_by_user.items():
+                                        if triggered_params:
+                                            logger.info(f"[TRIGGER SCHEDULER] PI502: Sending daily digest to {watcher.username} for {watched_username} with {len(triggered_params)} params")
+                                            if send_consolidated_wellness_alert_email(watcher_id, watched_username, triggered_params, user_language):
+                                                emails_sent += 1
+                                                logger.info(f"[TRIGGER SCHEDULER] ✅ Daily digest email sent successfully")
+                                            else:
+                                                logger.info(f"[TRIGGER SCHEDULER] ⚠️ Email not sent (user may have email_on_alert disabled)")
+                                
+                                last_daily_reminder_hour = current_hour
+                                logger.info(f"[TRIGGER SCHEDULER] PI502 DAILY REMINDER: Sent {emails_sent} digest emails")
+                            else:
+                                if current_hour == DAILY_REMINDER_HOUR_UTC:
+                                    logger.info(f"[TRIGGER SCHEDULER] PI502: Skipping daily reminder - already sent this hour")
+                                else:
+                                    logger.info(f"[TRIGGER SCHEDULER] PI502: Not daily reminder hour (current={current_hour}, reminder={DAILY_REMINDER_HOUR_UTC})")
+                        else:
+                            logger.info(f"[TRIGGER SCHEDULER] PI502: Mode is new_alerts_only - no scheduler emails (emails via job queue only)")
+                        
+                        logger.info(f"[TRIGGER SCHEDULER] Completed: total_created={total_created}, total_skipped={total_skipped}, emails={emails_sent}")
                         logger.info(f"[TRIGGER SCHEDULER] ========================================")
                         
                 except Exception as inner_error:
