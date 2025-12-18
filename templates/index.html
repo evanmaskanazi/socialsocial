@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PI500 v500 -->
-<!-- PI500: FIXED automatic daily email sending for wellness alerts -->
-<!-- Problem: Background scheduler was sending emails for ALL existing patterns every run -->
-<!-- This caused daily emails at 02:00 Israeli time for old patterns like Nov 19-22 -->
-<!-- Solution: Removed email sending from run_background_trigger_check_for_watcher() -->
-<!-- Emails now ONLY sent when watched user saves NEW parameters creating NEW patterns -->
+<!-- TheraSocial Version PI501 v501 -->
+<!-- PI501: Re-enabled email sending for genuinely NEW alerts -->
+<!-- PI500 was too aggressive - blocked ALL emails from scheduler -->
+<!-- Now: emails sent when alerts_created > 0 (new patterns only) -->
+<!-- Duplicate detection still prevents emails for existing patterns -->
 <!-- PJ40F v2017: FIX - Followlog highlight now persists using sessionStorage -->
 <!-- Problem: Highlight was disappearing because loadFollowing() called multiple times -->
 <!-- Solution: Store highlight in sessionStorage, only clear on follow/navigate away/logout -->
