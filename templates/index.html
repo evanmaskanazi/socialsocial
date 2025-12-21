@@ -4008,7 +4008,7 @@ async function loadUserCity() {
   async function requestMagicLinkSignup() {
       const email = document.getElementById('magicLinkEmailInput').value;
       if (!email) {
-          alert('Please enter your email address');
+          showNotification('Please enter your email address', 'warning');
           return;
       }
       
@@ -4033,13 +4033,13 @@ async function loadUserCity() {
                   'ar': 'تم إرسال رابط السحر! تحقق من بريدك الإلكتروني.',
                   'ru': 'Магическая ссылка отправлена! Проверьте свою почту.'
               };
-              alert(successMessages[lang] || successMessages['en']);
+              showNotification(successMessages[lang] || successMessages['en'], 'success');
           } else {
-              alert(data.error || 'Failed to send magic link');
+              showNotification(data.error || 'Failed to send magic link', 'error');
           }
       } catch (error) {
           console.error('Magic link error:', error);
-          alert('Failed to send magic link. Please try again.');
+          showNotification('Failed to send magic link. Please try again.', 'error');
       }
   }
   
@@ -4084,14 +4084,14 @@ async function loadUserCity() {
                 const data = await response.json();
 
                 if (response.ok) {
-                    alert(window.i18n ? window.i18n.translate('auth.reset_link_sent') : 'Password reset link has been sent to your email');
+                    showNotification(window.i18n ? window.i18n.translate('auth.reset_link_sent') : 'Password reset link has been sent to your email', 'success');
                     showLogin();
                 } else {
-                    alert(data.error || (window.i18n ? window.i18n.translate('auth.reset_failed') : 'Failed to send reset link'));
+                    showNotification(data.error || (window.i18n ? window.i18n.translate('auth.reset_failed') : 'Failed to send reset link'), 'error');
                 }
             } catch (error) {
                 console.error('Forgot password error:', error);
-                alert(window.i18n ? window.i18n.translate('auth.error_occurred') : 'An error occurred. Please try again.');
+                showNotification(window.i18n ? window.i18n.translate('auth.error_occurred') : 'An error occurred. Please try again.', 'error');
             }
         });
 
@@ -4104,12 +4104,12 @@ async function loadUserCity() {
             const confirmPassword = document.getElementById('resetConfirmPassword').value;
 
             if (newPassword !== confirmPassword) {
-                alert(window.i18n ? window.i18n.translate('auth.passwords_no_match') : 'Passwords do not match');
+                showNotification(window.i18n ? window.i18n.translate('auth.passwords_no_match') : 'Passwords do not match', 'warning');
                 return;
             }
 
             if (newPassword.length < 12) {
-                alert(window.i18n ? window.i18n.translate('auth.password_too_short') : 'Password must be at least 12 characters');
+                showNotification(window.i18n ? window.i18n.translate('auth.password_too_short') : 'Password must be at least 12 characters', 'warning');
                 return;
             }
 
@@ -4120,7 +4120,7 @@ async function loadUserCity() {
             const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
 
             if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-                alert(window.i18n ? window.i18n.translate('auth.password_complexity') : 'Password must contain uppercase, lowercase, number, and special character');
+                showNotification(window.i18n ? window.i18n.translate('auth.password_complexity') : 'Password must contain uppercase, lowercase, number, and special character', 'warning');
                 return;
             }
 
@@ -4135,14 +4135,14 @@ async function loadUserCity() {
                 const data = await response.json();
 
                 if (response.ok) {
-                    alert(window.i18n ? window.i18n.translate('auth.password_reset_success') : 'Password has been reset successfully');
+                    showNotification(window.i18n ? window.i18n.translate('auth.password_reset_success') : 'Password has been reset successfully', 'success');
                     showLogin();
                 } else {
-                    alert(data.error || (window.i18n ? window.i18n.translate('auth.reset_failed') : 'Failed to reset password'));
+                    showNotification(data.error || (window.i18n ? window.i18n.translate('auth.reset_failed') : 'Failed to reset password'), 'error');
                 }
             } catch (error) {
                 console.error('Reset password error:', error);
-                alert(window.i18n ? window.i18n.translate('auth.error_occurred') : 'An error occurred. Please try again.');
+                showNotification(window.i18n ? window.i18n.translate('auth.error_occurred') : 'An error occurred. Please try again.', 'error');
             }
         });
 
@@ -6714,9 +6714,9 @@ window.addEventListener('languageChanged', () => {
 
             try {
                 await apiCall('/profile', 'PUT', profileData);
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ' successfully!');
+                showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ' successfully!', 'success');
             } catch (error) {
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+                showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
             }
         });
 
@@ -6726,15 +6726,15 @@ window.addEventListener('languageChanged', () => {
             const birthYear = parseInt(birthYearInput.value);
             
             if (isNaN(birthYear) || birthYear < 1900 || birthYear > 2025) {
-                alert(t('profile.birth_year_error') || 'Please enter a valid birth year (1900-2025)');
+                showNotification(t('profile.birth_year_error') || 'Please enter a valid birth year (1900-2025)', 'warning');
                 return;
             }
             
             try {
                 await apiCall('/profile', 'PUT', { birth_year: birthYear });
-                alert(t('profile.birth_year_updated') || 'Birth year updated successfully!');
+                showNotification(t('profile.birth_year_updated') || 'Birth year updated successfully!', 'success');
             } catch (error) {
-                alert(t('msg.error') || 'Error' + ': ' + error.message);
+                showNotification(t('msg.error') || 'Error' + ': ' + error.message, 'error');
             }
         }
         // Make updateBirthYear globally available
@@ -7566,12 +7566,12 @@ function updateCircleDisplay(type, members) {
     'close_friends': 'Close Friends',
     'family': 'Family'
 };
-alert(`${username} added to ${circleLabels[circleType]} circle!`);
+showNotification(`${username} added to ${circleLabels[circleType]} circle!`, 'success');
                 loadCircles();
                 document.getElementById('userSearchInput').value = '';
                 document.getElementById('searchResults').classList.remove('active');
             } catch (error) {
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+                showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
             }
         }
 
@@ -7586,7 +7586,7 @@ alert(`${username} added to ${circleLabels[circleType]} circle!`);
 
                 loadCircles();
             } catch (error) {
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+                showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
             }
         }
 
@@ -7726,7 +7726,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
         console.error('Invalid userId or username:', { userId, username });
         // Don't show error alert for unauthenticated users
         if (authToken) {
-            alert(window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error: Invalid user data');
+            showNotification(window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error: Invalid user data', 'error');
         }
         return;
     }
@@ -8154,7 +8154,7 @@ function clearParameterDisplays() {
 
     try {
         await apiCall('/parameters/save', 'POST', parameters);
-        alert((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ` for ${dateStr}`);
+        showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ` for ${dateStr}`, 'success');
 
         // Reload calendar to show saved dates
         if (typeof loadSavedDates === 'function') {
@@ -8164,7 +8164,7 @@ function clearParameterDisplays() {
             renderCalendar();
         }
     } catch (error) {
-        alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+        showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
     }
 }
 
@@ -8210,12 +8210,12 @@ function clearParameterDisplays() {
 
             console.log('Parameters loaded from', dateStr);
         } else {
-            alert((window.i18n && window.i18n.t ?
-                window.i18n.t('parameters.no_data') : 'No data') + ' for this date');
+            showNotification((window.i18n && window.i18n.t ?
+                window.i18n.t('parameters.no_data') : 'No data') + ' for this date', 'info');
         }
     } catch (error) {
-        alert((window.i18n && window.i18n.t ?
-            window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+        showNotification((window.i18n && window.i18n.t ?
+            window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
     }
 }
 
@@ -9128,7 +9128,7 @@ async function createTrigger() {
     const days = document.getElementById('triggerDays').value;
 
     if (!targetId) {
-        alert('Please select a user');
+        showNotification('Please select a user', 'warning');
         return;
     }
 
@@ -11002,10 +11002,10 @@ async function checkAndLoadTriggerAlerts() {
                     message: message
                 });
 
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.sent') : 'Message sent') + ' successfully!');
+                showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.sent') : 'Message sent') + ' successfully!', 'success');
                 document.getElementById('supportForm').reset();
             } catch (error) {
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+                showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
             }
         });
 
@@ -11100,17 +11100,17 @@ async function checkAndLoadTriggerAlerts() {
             const confirmPassword = document.getElementById('confirmNewPassword').value;
 
             if (!currentPassword || !newPassword || !confirmPassword) {
-                alert(window.i18n ? window.i18n.translate('home.fill_all_fields') : 'Please fill in all fields');
+                showNotification(window.i18n ? window.i18n.translate('home.fill_all_fields') : 'Please fill in all fields', 'warning');
                 return;
             }
 
             if (newPassword !== confirmPassword) {
-                alert(window.i18n ? window.i18n.translate('home.passwords_no_match') : 'New passwords do not match');
+                showNotification(window.i18n ? window.i18n.translate('home.passwords_no_match') : 'New passwords do not match', 'warning');
                 return;
             }
 
             if (newPassword.length < 12) {
-                alert(window.i18n ? window.i18n.translate('home.password_too_short') : 'Password must be at least 12 characters long');
+                showNotification(window.i18n ? window.i18n.translate('home.password_too_short') : 'Password must be at least 12 characters long', 'warning');
                 return;
             }
 
@@ -11121,7 +11121,7 @@ async function checkAndLoadTriggerAlerts() {
             const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
 
             if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-                alert(window.i18n ? window.i18n.translate('home.password_complexity') : 'Password must contain uppercase, lowercase, number, and special character');
+                showNotification(window.i18n ? window.i18n.translate('home.password_complexity') : 'Password must contain uppercase, lowercase, number, and special character', 'warning');
                 return;
             }
 
@@ -11132,16 +11132,16 @@ async function checkAndLoadTriggerAlerts() {
                 });
 
                 if (response.success) {
-                    alert(window.i18n ? window.i18n.translate('home.password_updated') : 'Password updated successfully');
+                    showNotification(window.i18n ? window.i18n.translate('home.password_updated') : 'Password updated successfully', 'success');
                     document.getElementById('currentPassword').value = '';
                     document.getElementById('newPassword').value = '';
                     document.getElementById('confirmNewPassword').value = '';
                 } else {
-                    alert(window.i18n ? window.i18n.translate('home.password_update_failed') : response.message || 'Failed to update password');
+                    showNotification(window.i18n ? window.i18n.translate('home.password_update_failed') : response.message || 'Failed to update password', 'error');
                 }
             } catch (error) {
                 console.error('Error updating password:', error);
-                alert(window.i18n ? window.i18n.translate('home.error_occurred') : 'An error occurred');
+                showNotification(window.i18n ? window.i18n.translate('home.error_occurred') : 'An error occurred', 'error');
             }
         }
 
@@ -11201,7 +11201,7 @@ async function checkAndLoadTriggerAlerts() {
             const userInput = prompt(doubleConfirm);
 
             if (userInput !== 'DELETE') {
-                alert(window.i18n ? window.i18n.translate('home.deletion_cancelled') : 'Account deletion cancelled');
+                showNotification(window.i18n ? window.i18n.translate('home.deletion_cancelled') : 'Account deletion cancelled', 'info');
                 return;
             }
 
@@ -11209,16 +11209,16 @@ async function checkAndLoadTriggerAlerts() {
                 const response = await apiCall('/user/delete-account', 'POST', {});
 
                 if (response.success) {
-                    alert(window.i18n ? window.i18n.translate('home.account_deleted') : 'Your account has been deleted');
+                    showNotification(window.i18n ? window.i18n.translate('home.account_deleted') : 'Your account has been deleted', 'success');
                     // Logout
                     document.getElementById('authContainer').style.display = 'flex';
                     document.getElementById('dashboard').classList.add('hidden');
                 } else {
-                    alert(window.i18n ? window.i18n.translate('home.deletion_failed') : response.message || 'Failed to delete account');
+                    showNotification(window.i18n ? window.i18n.translate('home.deletion_failed') : response.message || 'Failed to delete account', 'error');
                 }
             } catch (error) {
                 console.error('Error deleting account:', error);
-                alert(window.i18n ? window.i18n.translate('home.error_occurred') : 'An error occurred');
+                showNotification(window.i18n ? window.i18n.translate('home.error_occurred') : 'An error occurred', 'error');
             }
         }
 
