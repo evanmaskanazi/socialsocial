@@ -155,6 +155,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thera Social - Anonymous Wellness Community</title>
+    <!-- CHANGE 1: Security meta tags per ethics document -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com; frame-ancestors 'none';">
+    <meta name="robots" content="noindex, nofollow">
    <script src="/static/js/utilities.js"></script>
     <script src="/static/js/onboarding.js"></script>
     <script src="/static/js/triggers.js"></script>
@@ -2575,6 +2580,23 @@
                         </form>
                     </div>
 
+                    <!-- CHANGE 10: Data Export Section for Ethics Compliance -->
+                    <div id="dataExportSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                        <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.data_export">Export Your Data</h3>
+
+                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
+
+                        <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
+                            <span style="font-size: 24px;">📋</span>
+                            <div>
+                                <p style="color: #1E40AF; font-weight: 600; margin-bottom: 5px;" data-i18n="home.data_rights">Your Data Rights</p>
+                                <p style="color: #1E40AF; font-size: 14px;" data-i18n="home.data_rights_detail">You have the right to access and download your personal data at any time.</p>
+                            </div>
+                        </div>
+
+                        <button onclick="exportUserData()" class="btn" style="background: var(--primary); color: white; padding: 12px 24px; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer;" data-i18n="home.export_data_btn">Export My Data</button>
+                    </div>
+
                     <!-- Account Deletion Section -->
                     <div id="accountDeletionSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                         <h3 style="color: #EF4444; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.account_deletion">Account Deletion</h3>
@@ -3616,8 +3638,11 @@ async function loadUserCity() {
 
 
 
-        // API Helper
-        async function apiCall(endpoint, method = 'GET', body = null) {
+        // CHANGE 3: Enhanced API Helper with rate limiting and retry logic
+        async function apiCall(endpoint, method = 'GET', body = null, retryCount = 0) {
+            const MAX_RETRIES = 2;
+            const RETRY_DELAY = 1000; // 1 second
+            
             const options = {
                 method,
                 headers: {
@@ -3633,6 +3658,13 @@ async function loadUserCity() {
             try {
                 const response = await fetch(`${API_URL}${endpoint}`, options);
 
+                // CHANGE 3: Handle rate limiting with user feedback
+                if (response.status === 429) {
+                    const retryAfter = response.headers.get('Retry-After') || 60;
+                    showNotification(`Too many requests. Please wait ${retryAfter} seconds and try again.`, 'warning');
+                    return null;
+                }
+
                 if (response.status === 401) {
                     // Don't call showAuthContainer for login/register endpoints - let the form handle it
                     if (!endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
@@ -3640,15 +3672,37 @@ async function loadUserCity() {
                     }
                     return null;
                 }
+                
+                // CHANGE 3: Handle 503 (service unavailable) with retry
+                if (response.status === 503 && retryCount < MAX_RETRIES) {
+                    console.log(`Service unavailable, retrying in ${RETRY_DELAY}ms... (attempt ${retryCount + 1})`);
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+                    return apiCall(endpoint, method, body, retryCount + 1);
+                }
 
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error || 'API request failed');
+                    // CHANGE 3: Use reference_id from server for error tracking
+                    const errorMessage = data.error || 'API request failed';
+                    if (data.reference_id) {
+                        console.error(`API Error [${data.reference_id}]:`, errorMessage);
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 return data;
             } catch (error) {
+                // CHANGE 3: Handle network errors gracefully
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    console.error('Network error - server may be unavailable');
+                    if (retryCount < MAX_RETRIES) {
+                        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * 2));
+                        return apiCall(endpoint, method, body, retryCount + 1);
+                    }
+                    showNotification('Network error. Please check your connection.', 'error');
+                    return null;
+                }
                 console.error('API Error:', error);
                 throw error;
             }
@@ -3724,7 +3778,7 @@ async function loadUserCity() {
             safeApplyLanguage();
         });
 
-  // Login form handler (authForm is now only for login)
+  // CHANGE 4: Login form handler with enhanced client-side validation
   document.getElementById('authForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -3732,8 +3786,32 @@ async function loadUserCity() {
         const loginError = document.getElementById('loginErrorMessage');
         if (loginError) loginError.style.display = 'none';
 
-        const email = document.getElementById('emailInput').value;
+        const email = document.getElementById('emailInput').value.trim();
         const password = document.getElementById('passwordInput').value;
+
+        // CHANGE 4: Client-side validation
+        if (!email) {
+            showNotification('Please enter your email address', 'error');
+            return;
+        }
+        
+        // Basic email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showNotification('Please enter a valid email address', 'error');
+            return;
+        }
+        
+        if (!password) {
+            showNotification('Please enter your password', 'error');
+            return;
+        }
+        
+        // CHANGE 4: Prevent very long inputs
+        if (email.length > 120 || password.length > 128) {
+            showNotification('Invalid input length', 'error');
+            return;
+        }
 
         try {
             const response = await apiCall('/auth/login', 'POST', { email, password });
@@ -3812,17 +3890,76 @@ async function loadUserCity() {
     });
 
   // Signup form handler (traditional email/password signup)
+  // CHANGE 5: Signup form handler with enhanced validation
   document.getElementById('signupForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const email = document.getElementById('signupEmailInput').value;
+        const email = document.getElementById('signupEmailInput').value.trim();
         const password = document.getElementById('signupPasswordInput').value;
         const usernameInput = document.getElementById('signupUsernameInput').value;
+
+        // CHANGE 5: Comprehensive client-side validation
+        // Email validation
+        if (!email) {
+            showNotification('Please enter your email address', 'error');
+            return;
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showNotification('Please enter a valid email address', 'error');
+            return;
+        }
+        
+        if (email.length > 120) {
+            showNotification('Email address is too long', 'error');
+            return;
+        }
+        
+        // Password validation
+        if (!password) {
+            showNotification('Please enter a password', 'error');
+            return;
+        }
+        
+        if (password.length < 12) {
+            showNotification('Password must be at least 12 characters long', 'error');
+            return;
+        }
+        
+        if (password.length > 128) {
+            showNotification('Password is too long', 'error');
+            return;
+        }
+        
+        // Password complexity check
+        const hasUpper = /[A-Z]/.test(password);
+        const hasLower = /[a-z]/.test(password);
+        const hasDigit = /[0-9]/.test(password);
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        
+        if (!(hasUpper && hasLower && hasDigit && hasSpecial)) {
+            showNotification('Password must contain uppercase, lowercase, number, and special character', 'error');
+            return;
+        }
 
         // Handle username - can be blank, will use email prefix
         let username = usernameInput ? usernameInput.trim() : '';
         if (!username) {
-            username = email.split('@')[0];
+            username = email.split('@')[0].substring(0, 80);
+        }
+        
+        // Username validation
+        if (username.length > 80) {
+            showNotification('Username is too long (max 80 characters)', 'error');
+            return;
+        }
+        
+        // Only allow alphanumeric and underscore in username
+        const usernameRegex = /^[a-zA-Z0-9_]+$/;
+        if (!usernameRegex.test(username)) {
+            showNotification('Username can only contain letters, numbers, and underscores', 'error');
+            return;
         }
 
         try {
@@ -3859,11 +3996,11 @@ async function loadUserCity() {
                     loadNotificationSettings();
                 }
             } else {
-                alert('Registration failed. Please try again.');
+                showNotification('Registration failed. Please try again.', 'error');
             }
         } catch (error) {
             console.error('Signup error:', error);
-            alert(error.message || 'Registration failed. Please try again.');
+            showNotification(error.message || 'Registration failed. Please try again.', 'error');
         }
     });
 
@@ -4010,14 +4147,18 @@ async function loadUserCity() {
         });
 
 
+        // CHANGE 8: Enhanced logout with comprehensive session cleanup
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             try {
                 await apiCall('/auth/logout', 'POST');
             } catch (error) {
-                // Ignore logout errors
+                // Ignore logout errors - still proceed with local cleanup
+                console.log('Logout API call failed, proceeding with local cleanup');
             }
 
+            // CHANGE 8: Comprehensive local cleanup
             currentUser = null;
+            currentUserId = null;
             
             // FIX: Clear diary redirect check flag on logout
             if (typeof clearDiaryRedirectCheck === 'function') {
@@ -4029,6 +4170,34 @@ async function loadUserCity() {
             // FOLLOWLOG: Clear highlight on logout
             sessionStorage.removeItem('followlog_highlight_user');
             
+            // CHANGE 8: Clear all sensitive sessionStorage items
+            const sessionKeysToKeep = ['selectedLanguage']; // Keep language preference
+            const keysToRemove = [];
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (!sessionKeysToKeep.includes(key)) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => sessionStorage.removeItem(key));
+            
+            // CHANGE 8: Clear any cached user data from localStorage (except settings)
+            const localKeysToKeep = ['selectedLanguage', 'userLanguage', 'theme'];
+            const localKeysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('user_') && !localKeysToKeep.includes(key)) {
+                    localKeysToRemove.push(key);
+                }
+            }
+            localKeysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            // CHANGE 8: Clear any global message/notification variables
+            if (typeof currentRecipient !== 'undefined') {
+                currentRecipient = null;
+            }
+            
+            showNotification('You have been logged out successfully', 'success');
             showAuthContainer();
         });
 
@@ -5845,12 +6014,27 @@ document.addEventListener('click', function(e) {
             return div;
         }
 
+       // CHANGE 13: Enhanced post button with content validation
        document.getElementById('postBtn').addEventListener('click', async () => {
             const content = document.getElementById('postInput').value.trim();
             const visibility = document.getElementById('visibilitySelect').value;
+            const MAX_POST_LENGTH = 5000;
 
             if (!content) {
-                alert('Please enter some content before saving.');
+                showNotification('Please enter some content before saving.', 'warning');
+                return;
+            }
+
+            // CHANGE 13: Validate content length
+            if (content.length > MAX_POST_LENGTH) {
+                showNotification(`Post is too long. Maximum ${MAX_POST_LENGTH} characters allowed.`, 'error');
+                return;
+            }
+            
+            // CHANGE 13: Validate visibility value
+            const validVisibilities = ['general', 'close_friends', 'family', 'private'];
+            if (!validVisibilities.includes(visibility)) {
+                showNotification('Invalid visibility setting.', 'error');
                 return;
             }
 
@@ -5864,11 +6048,11 @@ document.addEventListener('click', function(e) {
                 });
 
                 const visibilityDisplay = visibility.replace('_', ' ').toUpperCase();
-                alert(`Saved successfully as ${visibilityDisplay}!`);
+                showNotification(`Saved successfully as ${visibilityDisplay}!`, 'success');
                 await loadFeedSavedDates();
                 renderFeedCalendar();
             } catch (error) {
-                alert((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message);
+                showNotification(error.message || 'Failed to save post', 'error');
             }
         });
 
@@ -5884,17 +6068,86 @@ document.addEventListener('click', function(e) {
 
         // Profile Functions
 
+// CHANGE 7: Enhanced toast-style notification system
 function showNotification(message, type = 'info') {
-    // Simple alert for now - you can enhance this later
-    alert(message);
+    // Create notification container if it doesn't exist
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 350px;';
+        document.body.appendChild(container);
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    // Style based on type
+    const colors = {
+        'success': { bg: '#10B981', text: '#fff', icon: '✓' },
+        'error': { bg: '#EF4444', text: '#fff', icon: '✕' },
+        'warning': { bg: '#F59E0B', text: '#fff', icon: '⚠' },
+        'info': { bg: '#3B82F6', text: '#fff', icon: 'ℹ' }
+    };
+    const style = colors[type] || colors.info;
+    
+    notification.style.cssText = `
+        background: ${style.bg};
+        color: ${style.text};
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideIn 0.3s ease-out;
+        font-size: 14px;
+        word-break: break-word;
+    `;
+    
+    // Add icon and message (escaped for security)
+    const icon = document.createElement('span');
+    icon.textContent = style.icon;
+    icon.style.cssText = 'font-size: 16px; flex-shrink: 0;';
+    
+    const text = document.createElement('span');
+    text.textContent = message; // textContent automatically escapes HTML
+    text.style.flex = '1';
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = 'background: none; border: none; color: inherit; font-size: 18px; cursor: pointer; padding: 0; margin-left: 8px; opacity: 0.8;';
+    closeBtn.onclick = () => notification.remove();
+    
+    notification.appendChild(icon);
+    notification.appendChild(text);
+    notification.appendChild(closeBtn);
+    container.appendChild(notification);
+    
+    // Auto-remove after 5 seconds (longer for errors)
+    const duration = type === 'error' ? 7000 : 5000;
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => notification.remove(), 300);
+    }, duration);
+}
 
-    // OR if you have a custom notification system, use it:
-    // For example: if you have a div with id="notification"
-    // const notif = document.getElementById('notification');
-    // notif.textContent = message;
-    // notif.className = type;
-    // notif.style.display = 'block';
-    // setTimeout(() => notif.style.display = 'none', 3000);
+// Add animation styles if not present
+if (!document.getElementById('notification-styles')) {
+    const styles = document.createElement('style');
+    styles.id = 'notification-styles';
+    styles.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(styles);
 }
 
 
@@ -7384,13 +7637,28 @@ alert(`${username} added to ${circleLabels[circleType]} circle!`);
             }
         }
 
+   // CHANGE 12: Enhanced loadConversations with loading state
    async function loadConversations() {
+    const container = document.getElementById('conversationsList');
+    
+    // Show loading state
+    if (container) {
+        container.innerHTML = `
+            <div style="padding: 40px; text-align: center; color: var(--gray);">
+                <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid var(--light); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p style="margin-top: 10px;">Loading conversations...</p>
+            </div>`;
+    }
+    
     try {
         const response = await apiCall('/messages/conversations');
         console.log('Conversations response:', response);
-        if (!response) return;
-
-        const container = document.getElementById('conversationsList');
+        if (!response) {
+            if (container) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--gray);">Unable to load conversations</div>';
+            }
+            return;
+        }
 
         // Cache translation strings
        const noConversationsText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_conversations') : 'No conversations yet';
@@ -7524,6 +7792,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
     let isMessageSending = false;
     let lastMessageSentTime = 0;
     const MESSAGE_DEBOUNCE_MS = 1000; // Minimum 1 second between messages
+    const MAX_MESSAGE_LENGTH = 5000; // CHANGE 6: Maximum message length
     
     async function sendMessageHandler() {
         // PJ812: Multiple layers of duplicate prevention
@@ -7544,13 +7813,19 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
         // Check if recipient is selected
         if (!currentRecipient || !currentRecipient.id) {
             const errorText = window.i18n && window.i18n.t ? window.i18n.t('messages.select_conversation') : 'Please select a conversation first';
-            alert(errorText);
+            showNotification(errorText, 'error');
             return;
         }
 
         const messageInput = document.getElementById('messageInput');
         const content = messageInput.value.trim();
         if (!content) return;
+
+        // CHANGE 6: Validate message length
+        if (content.length > MAX_MESSAGE_LENGTH) {
+            showNotification(`Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`, 'error');
+            return;
+        }
 
         // PJ812: Set all prevention mechanisms immediately
         isMessageSending = true;
@@ -7582,8 +7857,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
             if (!messageInput.value) {
                 messageInput.value = messageToSend;
             }
-            const errorText = window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error';
-            alert(errorText + ': ' + (error.message || 'Failed to send message'));
+            showNotification(error.message || 'Failed to send message', 'error');
         } finally {
             // PJ812: Reset flag after completion, but keep debounce time active
             isMessageSending = false;
@@ -10871,6 +11145,51 @@ async function checkAndLoadTriggerAlerts() {
             }
         }
 
+        // CHANGE 11: Data export function for ethics compliance
+        async function exportUserData() {
+            const lang = localStorage.getItem('selectedLanguage') || 'en';
+            const confirmMessages = {
+                'en': 'This will download a JSON file with all your personal data. Continue?',
+                'he': 'פעולה זו תוריד קובץ JSON עם כל הנתונים האישיים שלך. להמשיך?',
+                'ar': 'سيؤدي هذا إلى تنزيل ملف JSON يحتوي على جميع بياناتك الشخصية. هل تريد المتابعة؟',
+                'ru': 'Будет загружен JSON-файл со всеми вашими личными данными. Продолжить?'
+            };
+            
+            if (!confirm(confirmMessages[lang] || confirmMessages['en'])) {
+                return;
+            }
+            
+            showNotification('Preparing your data export...', 'info');
+            
+            try {
+                const response = await fetch('/api/user/export-data', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to export data');
+                }
+                
+                const data = await response.json();
+                
+                // Create downloadable file
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `therasocial_data_export_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showNotification('Your data has been exported successfully!', 'success');
+            } catch (error) {
+                console.error('Export error:', error);
+                showNotification('Failed to export data. Please try again.', 'error');
+            }
+        }
+
         async function requestAccountDeletion() {
             const confirmMsg = window.i18n ? window.i18n.translate('home.confirm_deletion') : 'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.';
 
@@ -10906,11 +11225,36 @@ async function checkAndLoadTriggerAlerts() {
 
 
 
-        // Utility Functions
+        // CHANGE 2: Enhanced utility functions with comprehensive XSS protection
         function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            // Convert to string if not already
+            const str = String(text);
+            // Use textContent approach for basic escaping
             const div = document.createElement('div');
-            div.textContent = text;
+            div.textContent = str;
             return div.innerHTML;
+        }
+        
+        // CHANGE 2: Additional sanitization for URLs
+        function sanitizeUrl(url) {
+            if (!url) return '';
+            // Only allow http, https, and relative URLs
+            const trimmed = String(url).trim();
+            if (trimmed.startsWith('javascript:') || 
+                trimmed.startsWith('data:') || 
+                trimmed.startsWith('vbscript:')) {
+                return '';
+            }
+            return trimmed;
+        }
+        
+        // CHANGE 2: Truncate text safely
+        function truncateText(text, maxLength = 100) {
+            if (!text) return '';
+            const str = String(text);
+            if (str.length <= maxLength) return str;
+            return str.substring(0, maxLength) + '...';
         }
 
 
@@ -10918,7 +11262,50 @@ async function checkAndLoadTriggerAlerts() {
         // Check authentication on load
     // Check authentication on load
 // Check authentication on load
+
+// CHANGE 9: Session activity monitoring for security
+const SESSION_TIMEOUT_WARNING = 6 * 60 * 60 * 1000; // 6 hours - warn before 7 day session expires
+const SESSION_CHECK_INTERVAL = 15 * 60 * 1000; // Check every 15 minutes
+let lastActivityTime = Date.now();
+let sessionCheckInterval = null;
+
+function updateLastActivity() {
+    lastActivityTime = Date.now();
+}
+
+function checkSessionActivity() {
+    if (!currentUser) return;
+    
+    const timeSinceActivity = Date.now() - lastActivityTime;
+    
+    // If user has been inactive for a long time, refresh session
+    if (timeSinceActivity > SESSION_TIMEOUT_WARNING) {
+        // Check if session is still valid
+        fetch(`${API_URL}/auth/session`, {
+            credentials: 'include'
+        }).then(response => {
+            if (!response.ok) {
+                // Session expired - show login
+                showNotification('Your session has expired. Please log in again.', 'warning');
+                currentUser = null;
+                showAuthContainer();
+            }
+        }).catch(() => {
+            // Network error - don't log out, just warn
+            showNotification('Unable to verify session. Please check your connection.', 'warning');
+        });
+    }
+}
+
+// Track user activity
+document.addEventListener('click', updateLastActivity);
+document.addEventListener('keypress', updateLastActivity);
+document.addEventListener('scroll', updateLastActivity);
+
 window.addEventListener('DOMContentLoaded', async () => {
+    
+    // Start session monitoring
+    sessionCheckInterval = setInterval(checkSessionActivity, SESSION_CHECK_INTERVAL);
 
 
 // Handle password reset token from URL
