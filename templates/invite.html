@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Join {{ invite_user.username }} on TheraSocial</title>
+    <!-- FIX 2: XSS escaping with | e filter -->
+    <title>Join {{ invite_user.username | e }} on TheraSocial</title>
+    <!-- FIX: Security meta tags -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <style>
         * {
             margin: 0;
@@ -99,6 +103,12 @@
             transform: scale(1.05);
         }
 
+        .action-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .action-button.secondary {
             background: white;
             color: #667eea;
@@ -129,6 +139,78 @@
             margin: 20px 0;
         }
 
+        /* FIX 1: Toast notification styles */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .toast.info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin-left: auto;
+            opacity: 0.8;
+        }
+
+        .toast-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
         @media (max-width: 768px) {
             .invite-container {
                 padding: 30px 20px;
@@ -151,31 +233,46 @@
                 width: 100%;
                 margin: 10px 0;
             }
+
+            .toast-container {
+                left: 10px;
+                right: 10px;
+            }
+
+            .toast {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- FIX 1: Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="invite-container">
         <div class="user-avatar-large">
-            {{ invite_user.username[0].upper() }}
+            <!-- FIX 2: XSS escaping -->
+            {{ invite_user.username[0].upper() | e }}
         </div>
 
-        <h1>Join {{ invite_user.username }}'s Wellness Journey</h1>
+        <!-- FIX 2: XSS escaping on all user data -->
+        <h1>Join {{ invite_user.username | e }}'s Wellness Journey</h1>
         <p class="subtitle">Follow their progress on TheraSocial</p>
 
         <div class="stats">
             <div class="stat">
-                <div class="stat-number">{{ follower_count }}</div>
+                <div class="stat-number">{{ follower_count | e }}</div>
                 <div class="stat-label">Followers</div>
             </div>
             <div class="stat">
-                <div class="stat-number">{{ following_count }}</div>
+                <div class="stat-number">{{ following_count | e }}</div>
                 <div class="stat-label">Following</div>
             </div>
         </div>
 
         <div class="description">
-            {{ invite_user.username }} is tracking their wellness journey and wants to share it with you.
+            <!-- FIX 2: XSS escaping -->
+            {{ invite_user.username | e }} is tracking their wellness journey and wants to share it with you.
             Join TheraSocial to follow their progress and support their mental health goals.
         </div>
 
@@ -192,14 +289,16 @@
                 <div class="status-badge pending">
                     ⏳ Request Pending
                 </div>
-                <p style="color: #666; margin-top: 10px;">Waiting for {{ invite_user.username }} to accept your request</p>
+                <!-- FIX 2: XSS escaping -->
+                <p style="color: #666; margin-top: 10px;">Waiting for {{ invite_user.username | e }} to accept your request</p>
                 <br>
                 <button class="action-button secondary" onclick="window.location.href='/'">
                     Go to Dashboard
                 </button>
             {% else %}
-                <button class="action-button" onclick="sendFollowRequest()">
-                    Follow {{ invite_user.username }}
+                <button class="action-button" id="followBtn" onclick="sendFollowRequest()">
+                    <!-- FIX 2: XSS escaping -->
+                    Follow {{ invite_user.username | e }}
                 </button>
                 <br>
                 <button class="action-button secondary" onclick="window.location.href='/'">
@@ -218,7 +317,52 @@
     </div>
 
     <script>
+        // FIX 1: Toast notification system (replaces alert())
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+            
+            // Use textContent for XSS safety
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = message;
+            
+            toast.innerHTML = `<span>${icon}</span>`;
+            toast.appendChild(messageSpan);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'toast-close';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => removeToast(toast);
+            toast.appendChild(closeBtn);
+            
+            container.appendChild(toast);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => removeToast(toast), 5000);
+        }
+
+        function removeToast(toast) {
+            if (!toast || !toast.parentNode) return;
+            toast.style.animation = 'slideOut 0.3s ease forwards';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }
+
         function sendFollowRequest() {
+            const btn = document.getElementById('followBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Sending...';
+            }
+
             fetch('/api/follow-requests', {
                 method: 'POST',
                 headers: {
@@ -226,21 +370,32 @@
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                    target_id: {{ invite_user.id }}
+                    target_id: {{ invite_user.id | e }}
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.message) {
-                    alert('Follow request sent successfully!');
-                    window.location.reload();
+                    // FIX 1: Use toast instead of alert()
+                    showNotification('Follow request sent successfully!', 'success');
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    alert(data.error || 'Failed to send request');
+                    // FIX 1: Use toast instead of alert()
+                    showNotification(data.error || 'Failed to send request', 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'Follow {{ invite_user.username | e }}';
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to send follow request');
+                // FIX 1: Use toast instead of alert()
+                showNotification('Failed to send follow request. Please try again.', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Follow {{ invite_user.username | e }}';
+                }
             });
         }
     </script>

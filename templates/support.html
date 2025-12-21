@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Support - TheraSocial</title>
+    <!-- FIX: Security meta tags -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <style>
         * {
             margin: 0;
@@ -191,6 +194,12 @@
             transform: scale(1.05);
         }
 
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .back-link {
             display: inline-block;
             margin-top: 30px;
@@ -205,9 +214,100 @@
         .back-link:hover {
             transform: scale(1.05);
         }
+
+        /* FIX 1: Toast notification styles */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .toast.warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .toast.info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin-left: auto;
+            opacity: 0.8;
+        }
+
+        .toast-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Form validation styles */
+        .form-group input.error,
+        .form-group textarea.error {
+            border-color: #ef4444;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
+    <!-- FIX 1: Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
         <div class="header">
             <div style="flex: 1;"></div>
@@ -308,28 +408,31 @@
 
         <div class="contact-form">
             <h2 style="color: #667eea; margin-bottom: 20px;" data-i18n="support.contact_title">Send Us a Message</h2>
-            <form id="supportForm">
+            <form id="supportForm" novalidate>
+                <!-- FIX 5: CSRF token field (populated by JavaScript) -->
+                <input type="hidden" id="csrf_token" name="csrf_token" value="">
+                
                 <div class="form-group">
                     <label for="name" data-i18n="support.name">Name</label>
-                    <input type="text" id="name" name="name" required>
+                    <input type="text" id="name" name="name" required maxlength="100">
                 </div>
 
                 <div class="form-group">
                     <label for="email" data-i18n="support.email_label">Email</label>
-                    <input type="email" id="email" name="email" required>
+                    <input type="email" id="email" name="email" required maxlength="120">
                 </div>
 
                 <div class="form-group">
                     <label for="subject" data-i18n="support.subject">Subject</label>
-                    <input type="text" id="subject" name="subject" required>
+                    <input type="text" id="subject" name="subject" required maxlength="200">
                 </div>
 
                 <div class="form-group">
                     <label for="message" data-i18n="support.message">Message</label>
-                    <textarea id="message" name="message" rows="5" required></textarea>
+                    <textarea id="message" name="message" rows="5" required maxlength="5000"></textarea>
                 </div>
 
-                <button type="submit" class="submit-btn" data-i18n="support.send">Send Message</button>
+                <button type="submit" class="submit-btn" id="submitBtn" data-i18n="support.send">Send Message</button>
             </form>
         </div>
 
@@ -340,7 +443,119 @@
 
     <script src="/static/js/i18n.js"></script>
     <script>
+        // FIX 1: Toast notification system (replaces alert())
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icons = {
+                success: '✓',
+                error: '✕',
+                warning: '⚠',
+                info: 'ℹ'
+            };
+            
+            // Use textContent for XSS safety
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = message;
+            
+            toast.innerHTML = `<span>${icons[type] || icons.info}</span>`;
+            toast.appendChild(messageSpan);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'toast-close';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => removeToast(toast);
+            toast.appendChild(closeBtn);
+            
+            container.appendChild(toast);
+
+            // Auto-remove after 6 seconds
+            setTimeout(() => removeToast(toast), 6000);
+        }
+
+        function removeToast(toast) {
+            if (!toast || !toast.parentNode) return;
+            toast.style.animation = 'slideOut 0.3s ease forwards';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }
+
+        // FIX 5: Fetch CSRF token on page load
+        async function fetchCSRFToken() {
+            try {
+                const response = await fetch('/api/csrf-token', {
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const tokenField = document.getElementById('csrf_token');
+                    if (tokenField && data.csrf_token) {
+                        tokenField.value = data.csrf_token;
+                    }
+                }
+            } catch (error) {
+                console.log('CSRF token fetch skipped (endpoint may not exist yet)');
+            }
+        }
+
+        // Client-side validation
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function validateForm() {
+            let isValid = true;
+            const fields = ['name', 'email', 'subject', 'message'];
+            
+            // Clear previous errors
+            document.querySelectorAll('.error-message').forEach(el => el.remove());
+            document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+            
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (!field) return;
+                
+                const value = field.value.trim();
+                let errorMsg = '';
+                
+                if (!value) {
+                    errorMsg = 'This field is required';
+                    isValid = false;
+                } else if (fieldId === 'email' && !validateEmail(value)) {
+                    errorMsg = 'Please enter a valid email address';
+                    isValid = false;
+                } else if (fieldId === 'name' && value.length < 2) {
+                    errorMsg = 'Name must be at least 2 characters';
+                    isValid = false;
+                } else if (fieldId === 'message' && value.length < 10) {
+                    errorMsg = 'Message must be at least 10 characters';
+                    isValid = false;
+                }
+                
+                if (errorMsg) {
+                    field.classList.add('error');
+                    const errorEl = document.createElement('div');
+                    errorEl.className = 'error-message';
+                    errorEl.textContent = errorMsg;
+                    field.parentNode.appendChild(errorEl);
+                }
+            });
+            
+            return isValid;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            // FIX 5: Fetch CSRF token
+            fetchCSRFToken();
+
             // Apply translations
             if (window.i18n) {
                 window.i18n.applyLanguage();
@@ -361,11 +576,22 @@
         document.getElementById('supportForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
+            // Client-side validation
+            if (!validateForm()) {
+                showNotification('Please fix the errors in the form', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+
             const formData = {
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                subject: document.getElementById('subject').value,
-                message: document.getElementById('message').value
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                subject: document.getElementById('subject').value.trim(),
+                message: document.getElementById('message').value.trim(),
+                csrf_token: document.getElementById('csrf_token').value
             };
 
             fetch('/api/support/contact', {
@@ -373,16 +599,33 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify(formData)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (response.status === 429) {
+                    throw new Error('Too many requests. Please wait a moment and try again.');
+                }
+                return response.json();
+            })
             .then(data => {
-                alert('Thank you for contacting us! We will respond within 24 hours.');
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                // FIX 1: Use toast instead of alert()
+                showNotification('Thank you for contacting us! We will respond within 24 hours.', 'success');
                 document.getElementById('supportForm').reset();
+                // Refresh CSRF token after successful submission
+                fetchCSRFToken();
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('There was an error sending your message. Please try again later.');
+                // FIX 1: Use toast instead of alert()
+                showNotification(error.message || 'There was an error sending your message. Please try again later.', 'error');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Message';
             });
         });
     </script>
