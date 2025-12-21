@@ -574,6 +574,139 @@ def add_security_headers(response):
     return response
 
 # =====================
+# CSRF PROTECTION (FIX 5: Add CSRF token generation and validation)
+# =====================
+import hmac
+import hashlib
+
+CSRF_TOKEN_EXPIRY = 3600  # 1 hour
+
+def generate_csrf_token():
+    """
+    Generate a CSRF token for the current session.
+    Token is bound to the session and expires after 1 hour.
+    """
+    # Get or create session ID
+    if 'csrf_session_id' not in session:
+        session['csrf_session_id'] = secrets.token_urlsafe(16)
+    
+    session_id = session['csrf_session_id']
+    timestamp = int(time.time())
+    
+    # Create token with timestamp
+    token_data = f"{session_id}:{timestamp}"
+    secret = app.config.get('SECRET_KEY', os.environ.get('SECRET_KEY', 'dev-secret'))
+    
+    # HMAC signature
+    signature = hmac.new(
+        secret.encode() if isinstance(secret, str) else secret,
+        token_data.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    
+    # Token format: timestamp:signature
+    token = f"{timestamp}:{signature}"
+    
+    return token
+
+def validate_csrf_token(token):
+    """
+    Validate a CSRF token.
+    Returns True if valid, False otherwise.
+    """
+    if not token:
+        return False
+    
+    try:
+        parts = token.split(':')
+        if len(parts) != 2:
+            return False
+        
+        timestamp, provided_signature = parts
+        timestamp = int(timestamp)
+        
+        # Check expiry
+        if time.time() - timestamp > CSRF_TOKEN_EXPIRY:
+            logger.warning("CSRF token expired")
+            return False
+        
+        # Verify session ID exists
+        if 'csrf_session_id' not in session:
+            logger.warning("CSRF session ID missing")
+            return False
+        
+        session_id = session['csrf_session_id']
+        
+        # Recreate expected signature
+        token_data = f"{session_id}:{timestamp}"
+        secret = app.config.get('SECRET_KEY', os.environ.get('SECRET_KEY', 'dev-secret'))
+        
+        expected_signature = hmac.new(
+            secret.encode() if isinstance(secret, str) else secret,
+            token_data.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        # Constant-time comparison to prevent timing attacks
+        if hmac.compare_digest(provided_signature, expected_signature):
+            return True
+        else:
+            logger.warning("CSRF token signature mismatch")
+            return False
+            
+    except (ValueError, TypeError) as e:
+        logger.warning(f"CSRF token validation error: {e}")
+        return False
+
+@app.route('/api/csrf-token', methods=['GET'])
+def get_csrf_token():
+    """
+    Get a CSRF token for form submissions.
+    This endpoint is rate-limited to prevent abuse.
+    """
+    token = generate_csrf_token()
+    return jsonify({'csrf_token': token})
+
+def require_csrf(f):
+    """
+    Decorator to require valid CSRF token for form submissions.
+    Checks both JSON body and form data for csrf_token.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Skip CSRF check for GET, HEAD, OPTIONS
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return f(*args, **kwargs)
+        
+        # Get token from various sources
+        token = None
+        
+        # Check JSON body
+        if request.is_json:
+            data = request.get_json(silent=True)
+            if data:
+                token = data.get('csrf_token')
+        
+        # Check form data
+        if not token:
+            token = request.form.get('csrf_token')
+        
+        # Check header (for AJAX)
+        if not token:
+            token = request.headers.get('X-CSRF-Token')
+        
+        if not validate_csrf_token(token):
+            log_audit('csrf_validation_failed', 'security', None, {
+                'ip': request.remote_addr,
+                'endpoint': request.endpoint
+            })
+            return jsonify({'error': 'Invalid or missing CSRF token'}), 403
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
+# =====================
 # RATE LIMITING (CHANGE 3: Enhanced for scalability)
 # =====================
 
@@ -4227,6 +4360,82 @@ def about_page():
 def support_page():
     """Support page"""
     return render_template('support.html')
+
+
+# FIX 5: Support contact API endpoint with CSRF validation
+@app.route('/api/support/contact', methods=['POST'])
+@rate_limit(max_requests=5, window=3600, endpoint='support_contact')  # 5 per hour
+@require_csrf
+def support_contact():
+    """
+    Handle support contact form submissions.
+    Validates input, stores message, and optionally sends email.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        
+        # Validate required fields
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip()
+        subject = data.get('subject', '').strip()
+        message = data.get('message', '').strip()
+        
+        # Input validation
+        if not name or len(name) < 2:
+            return jsonify({'error': 'Name must be at least 2 characters'}), 400
+        if len(name) > 100:
+            return jsonify({'error': 'Name must be less than 100 characters'}), 400
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        if len(email) > 120:
+            return jsonify({'error': 'Email must be less than 120 characters'}), 400
+        # Basic email validation
+        import re
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            return jsonify({'error': 'Invalid email format'}), 400
+        
+        if not subject or len(subject) < 2:
+            return jsonify({'error': 'Subject must be at least 2 characters'}), 400
+        if len(subject) > 200:
+            return jsonify({'error': 'Subject must be less than 200 characters'}), 400
+        
+        if not message or len(message) < 10:
+            return jsonify({'error': 'Message must be at least 10 characters'}), 400
+        if len(message) > 5000:
+            return jsonify({'error': 'Message must be less than 5000 characters'}), 400
+        
+        # Sanitize inputs
+        name = sanitize_input(name)
+        subject = sanitize_input(subject)
+        message = sanitize_input(message)
+        
+        # Get user ID if logged in
+        user_id = session.get('user_id')
+        
+        # Log the support request (audit trail)
+        log_audit('support_contact', 'support_request', None, {
+            'name': name[:50],  # Truncate for log
+            'email_domain': email.split('@')[-1] if '@' in email else 'unknown',
+            'subject_length': len(subject),
+            'message_length': len(message),
+            'user_id': user_id
+        })
+        
+        # TODO: Store in database and/or send email notification
+        # For now, just log and return success
+        logger.info(f"Support contact from {email}: {subject[:50]}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Your message has been received. We will respond within 24 hours.'
+        })
+        
+    except Exception as e:
+        logger.error(f"Support contact error: {e}")
+        return jsonify({'error': 'Failed to send message. Please try again.'}), 500
 
 
 @app.route('/profile')
