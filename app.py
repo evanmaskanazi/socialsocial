@@ -4364,7 +4364,7 @@ def support_page():
 
 # FIX 5: Support contact API endpoint with CSRF validation
 @app.route('/api/support/contact', methods=['POST'])
-@rate_limit(max_requests=5, window=3600, endpoint='support_contact')  # 5 per hour
+@rate_limit_endpoint(max_requests=5, window=3600, endpoint_name='support_contact')  # 5 per hour
 @require_csrf
 def support_contact():
     """
