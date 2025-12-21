@@ -43,6 +43,31 @@
     <script src="/static/js/circles-messages.js?v=704.0"></script>
     <script src="/static/js/feed-updates.js?v=202.0"></script>
 
+    <!-- MVP-FIX: Notification polyfill for circles.html -->
+    <script>
+    (function() {
+        if (typeof window.showNotification !== 'function') {
+            window.showNotification = function(message, type) {
+                type = type || 'info';
+                let container = document.getElementById('toastContainer');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'toastContainer';
+                    container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;';
+                    document.body.appendChild(container);
+                }
+                const colors = { success: '#10b981', error: '#ef4444', warning: '#f59e0b', info: '#3b82f6' };
+                const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+                const toast = document.createElement('div');
+                toast.style.cssText = 'padding:16px 24px;border-radius:12px;color:white;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.2);display:flex;align-items:center;gap:12px;max-width:350px;background:' + (colors[type] || colors.info);
+                toast.innerHTML = '<span>' + (icons[type] || icons.info) + '</span><span>' + message + '</span>';
+                container.appendChild(toast);
+                setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 5000);
+            };
+        }
+    })();
+    </script>
+
     <script>
         // SINGLE initialization flag to prevent race conditions
         let pageInitialized = false;
@@ -252,8 +277,13 @@ try {
                                 'ar': 'الحساب غير متاح',
                                 'ru': 'Аккаунт недоступен'
                             };
-                            alert(messages[lang] || messages['en']);
-                            window.location.href = '/?view=following';
+                            // MVP-FIX: Use toast instead of alert()
+                            if (typeof showNotification === 'function') {
+                                showNotification(messages[lang] || messages['en'], 'error');
+                            } else {
+                                console.warn(messages[lang] || messages['en']);
+                            }
+                            setTimeout(() => { window.location.href = '/?view=following'; }, 1500);
                             return;
                         }
                     }
@@ -275,8 +305,13 @@ try {
                                 'ar': 'الحساب غير متاح',
                                 'ru': 'Аккаунт недоступен'
                             };
-                            alert(messages[lang] || messages['en']);
-                            window.location.href = '/?view=following';
+                            // MVP-FIX: Use toast instead of alert()
+                            if (typeof showNotification === 'function') {
+                                showNotification(messages[lang] || messages['en'], 'error');
+                            } else {
+                                console.warn(messages[lang] || messages['en']);
+                            }
+                            setTimeout(() => { window.location.href = '/?view=following'; }, 1500);
                             return;
                         }
                     }
