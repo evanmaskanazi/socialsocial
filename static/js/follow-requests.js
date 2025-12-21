@@ -1,5 +1,73 @@
 // Complete Follow Requests Management for TheraSocial
 // follow-requests.js - Full Implementation
+// MVP-FIX: Replaced alert() with toast notifications
+
+// ============================================================
+// Notification Polyfill - ensures showNotification always works
+// ============================================================
+(function() {
+    if (typeof window.showNotification !== 'function') {
+        function ensureToastContainer() {
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;';
+                document.body.appendChild(container);
+            }
+            return container;
+        }
+
+        window.showNotification = function(message, type) {
+            type = type || 'info';
+            const container = ensureToastContainer();
+            
+            const toast = document.createElement('div');
+            const colors = {
+                success: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                error: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                warning: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                info: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+            };
+            
+            toast.style.cssText = 'padding:16px 24px;border-radius:12px;color:white;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.2);display:flex;align-items:center;gap:12px;max-width:350px;animation:toastSlideIn 0.3s ease;background:' + (colors[type] || colors.info);
+            
+            if (!document.getElementById('toastAnimStyles')) {
+                const style = document.createElement('style');
+                style.id = 'toastAnimStyles';
+                style.textContent = '@keyframes toastSlideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes toastSlideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}';
+                document.head.appendChild(style);
+            }
+            
+            const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+            const iconSpan = document.createElement('span');
+            iconSpan.textContent = icons[type] || icons.info;
+            toast.appendChild(iconSpan);
+            
+            const msgSpan = document.createElement('span');
+            msgSpan.textContent = message;
+            toast.appendChild(msgSpan);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '×';
+            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-left:auto;opacity:0.8;';
+            closeBtn.onclick = function() { removeToast(toast); };
+            toast.appendChild(closeBtn);
+            
+            container.appendChild(toast);
+            
+            function removeToast(t) {
+                if (!t || !t.parentNode) return;
+                t.style.animation = 'toastSlideOut 0.3s ease forwards';
+                setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
+            }
+            
+            setTimeout(function() { removeToast(toast); }, 5000);
+        };
+        
+        console.log('[follow-requests.js] Notification polyfill installed');
+    }
+})();
 
 class FollowRequestsManager {
     constructor() {
@@ -266,9 +334,12 @@ class FollowRequestsManager {
             showSuccess(message);
         } else if (typeof showError === 'function' && type === 'error') {
             showError(message);
+        } else if (typeof window.showNotification === 'function') {
+            // Use toast notification polyfill
+            window.showNotification(message, type);
         } else {
-            // Fallback alert
-            alert(message);
+            // Last resort: console log (should never reach here with polyfill)
+            console.log(`[${type.toUpperCase()}] ${message}`);
         }
     }
 

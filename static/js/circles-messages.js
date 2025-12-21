@@ -7,6 +7,77 @@
 // PJ704 Changes: Backend fix for alerts - no frontend changes needed
 // PJ702 Changes: Version sync with indexPhase702 and circlesPhase702
 // PJ703 Changes: Version sync - no functional changes needed for circles-messages.js
+// MVP-FIX: Replaced alert() with toast notifications
+
+// ============================================================
+// Notification Polyfill - ensures showNotification always works
+// ============================================================
+(function() {
+    if (typeof window.showNotification !== 'function') {
+        // Create toast container if it doesn't exist
+        function ensureToastContainer() {
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;';
+                document.body.appendChild(container);
+            }
+            return container;
+        }
+
+        window.showNotification = function(message, type) {
+            type = type || 'info';
+            const container = ensureToastContainer();
+            
+            const toast = document.createElement('div');
+            const colors = {
+                success: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                error: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                warning: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                info: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+            };
+            
+            toast.style.cssText = 'padding:16px 24px;border-radius:12px;color:white;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.2);display:flex;align-items:center;gap:12px;max-width:350px;animation:toastSlideIn 0.3s ease;background:' + (colors[type] || colors.info);
+            
+            // Add animation keyframes if not present
+            if (!document.getElementById('toastAnimStyles')) {
+                const style = document.createElement('style');
+                style.id = 'toastAnimStyles';
+                style.textContent = '@keyframes toastSlideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes toastSlideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}';
+                document.head.appendChild(style);
+            }
+            
+            const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+            
+            const iconSpan = document.createElement('span');
+            iconSpan.textContent = icons[type] || icons.info;
+            toast.appendChild(iconSpan);
+            
+            const msgSpan = document.createElement('span');
+            msgSpan.textContent = message;
+            toast.appendChild(msgSpan);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '×';
+            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-left:auto;opacity:0.8;';
+            closeBtn.onclick = function() { removeToast(toast); };
+            toast.appendChild(closeBtn);
+            
+            container.appendChild(toast);
+            
+            function removeToast(t) {
+                if (!t || !t.parentNode) return;
+                t.style.animation = 'toastSlideOut 0.3s ease forwards';
+                setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
+            }
+            
+            setTimeout(function() { removeToast(toast); }, 5000);
+        };
+        
+        console.log('[circles-messages.js] Notification polyfill installed');
+    }
+})();
 
 // Translation helper
 const translateCircle = (key) => {
@@ -2354,7 +2425,8 @@ async function viewUserProfileFromSearch(userId) {
                 if (typeof showNotification === 'function') {
                     showNotification(messages[lang] || messages['en'], 'error');
                 } else {
-                    alert(messages[lang] || messages['en']);
+                    // Fallback: showNotification polyfill should always be available
+                    console.warn('showNotification not available, message:', messages[lang] || messages['en']);
                 }
                 return;
             }
