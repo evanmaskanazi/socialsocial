@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version PI504 - Added onboarding.dont_show translation for all languages
 // Version PI503 - Added tutorial translations and nav.tutorial key for all languages
 // Version PJ703 - Fixed indentation for invite.alert_title and invite.alert_content keys
 const translations = {
@@ -118,6 +119,7 @@ const translations = {
         'onboarding.previous': 'Previous',
         'onboarding.skip': 'Skip Tour',
         'onboarding.finish': 'Get Started',
+        'onboarding.dont_show': "Don't show this tour again",
 
         // Common buttons
         'btn.signin': 'Sign In',
@@ -985,6 +987,7 @@ const translations = {
         'onboarding.previous': 'הקודם',
         'onboarding.skip': 'דלג על הסיור',
         'onboarding.finish': 'התחל',
+        'onboarding.dont_show': 'אל תציג סיור זה שוב',
 
         'parameters.positive1': "עבודה מדהימה! אתה עוקב אחר מסע הבריאות שלך בצורה יפהפייה! 💪",
         'parameters.positive2': "עבודה פנטסטית! המסירות שלך למודעות עצמית מעוררת השראה! ⭐",
@@ -1915,6 +1918,7 @@ const translations = {
         'onboarding.previous': 'السابق',
         'onboarding.skip': 'تخطي الجولة',
         'onboarding.finish': 'ابدأ',
+        'onboarding.dont_show': 'لا تظهر هذه الجولة مرة أخرى',
 
              'parameters.positive1': "عمل رائع! أنت تتابع رحلتك الصحية بشكل جميل! 💪",
         'parameters.positive2': "عمل رائع! إخلاصك للوعي الذاتي ملهم! ⭐",
@@ -2849,6 +2853,7 @@ const translations = {
         'onboarding.previous': 'Назад',
         'onboarding.skip': 'Пропустить тур',
         'onboarding.finish': 'Начать',
+        'onboarding.dont_show': 'Не показывать этот тур снова',
 
           'parameters.positive1': "Потрясающая работа! Вы прекрасно отслеживаете свой путь к здоровью! 💪",
         'parameters.positive2': "Фантастическая работа! Ваша преданность самосознанию вдохновляет! ⭐",
