@@ -1,8 +1,14 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PI502 (Version 502)
+Complete app.py for Social Social Platform - Phase PI503 (Version 503)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PI503 Changes (v503):
+- LANGUAGE TUTORIAL UPDATE:
+  - Added /api/onboarding/restart endpoint to allow users to restart tutorial
+  - Updated /api/onboarding/status to include preferred_language in response
+  - Tutorial button can now be clicked to restart onboarding in user's preferred language
 
 PI502 Changes (v502):
 - PROPER TWO-MODE SYSTEM for trigger alert emails:
@@ -4760,7 +4766,8 @@ def get_onboarding_status():
     return jsonify({
         'needs_onboarding': not user.has_completed_onboarding and not user.onboarding_dismissed,
         'has_completed': user.has_completed_onboarding,
-        'was_dismissed': user.onboarding_dismissed
+        'was_dismissed': user.onboarding_dismissed,
+        'preferred_language': user.preferred_language or 'en'
     })
 
 
@@ -4780,6 +4787,20 @@ def dismiss_onboarding():
     user.onboarding_dismissed = True
     db.session.commit()
     return jsonify({'message': 'Onboarding dismissed'}), 200
+
+
+@app.route('/api/onboarding/restart', methods=['POST'])
+@login_required
+def restart_onboarding():
+    """Reset onboarding flags so user can see tutorial again"""
+    user = User.query.get(session['user_id'])
+    user.has_completed_onboarding = False
+    user.onboarding_dismissed = False
+    db.session.commit()
+    return jsonify({
+        'message': 'Onboarding reset',
+        'preferred_language': user.preferred_language or 'en'
+    }), 200
 
 
 @app.route('/api/auth/session', methods=['GET'])
