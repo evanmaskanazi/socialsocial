@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version PI505 - No changes from PI504 (onboarding fix is in index.html)
 // Version PI504 - Added onboarding.dont_show translation for all languages
 // Version PI503 - Added tutorial translations and nav.tutorial key for all languages
 // Version PJ703 - Fixed indentation for invite.alert_title and invite.alert_content keys
