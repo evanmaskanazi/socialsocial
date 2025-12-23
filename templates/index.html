@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PI503 v503 -->
-<!-- PI503: LANGUAGE TUTORIAL UPDATE -->
+<!-- TheraSocial Version PI504 v504 -->
+<!-- PI504: INLINE ONBOARDING WITH I18N SUPPORT -->
+<!-- FIX: Tutorial now properly uses translations in all 4 languages -->
+<!-- Added InlineOnboarding system that uses i18n.t() for all text -->
 <!-- FIX 1: Desktop sidebar now shows icons matching mobile navigation (separate icon spans) -->
 <!-- FIX 2: Tutorial button added between language selector and logout button -->
 <!-- FIX 3: Tutorial uses current language selection when started -->
@@ -167,7 +169,24 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
    <script src="/static/js/utilities.js"></script>
+    <!-- Prevent external onboarding.js from auto-running - we use InlineOnboarding instead -->
+    <script>window.DISABLE_EXTERNAL_ONBOARDING = true;</script>
     <script src="/static/js/onboarding.js"></script>
+    <script>
+        // Override any functions the external onboarding.js might have set
+        // Our InlineOnboarding system will handle everything with proper i18n support
+        if (window.Onboarding) {
+            console.log('[InlineOnboarding] Overriding external Onboarding module');
+            const originalStart = window.Onboarding.start;
+            window.Onboarding.start = function(lang) {
+                console.log('[InlineOnboarding] External Onboarding.start called, redirecting to InlineOnboarding');
+                if (window.InlineOnboarding) {
+                    InlineOnboarding.language = lang || localStorage.getItem('selectedLanguage') || 'en';
+                    InlineOnboarding.show();
+                }
+            };
+        }
+    </script>
     <script src="/static/js/triggers.js"></script>
     <script src="/static/js/follow-requests.js"></script>
 
@@ -11416,6 +11435,16 @@ window.addEventListener('DOMContentLoaded', async () => {
                 console.log('[AUTH DEBUG] About to call loadNotificationSettings()');
                 loadNotificationSettings();
                 
+                // Initialize InlineOnboarding and check if we need to show it
+                // This runs after i18n is ready and user is authenticated
+                setTimeout(async () => {
+                    if (window.InlineOnboarding) {
+                        console.log('[InlineOnboarding] Initializing after authentication');
+                        await InlineOnboarding.init();
+                        await InlineOnboarding.checkAndShow();
+                    }
+                }, 800);
+                
                 // Verification: Check toggle states after a delay to detect if something resets them
                 setTimeout(() => {
                     console.log('[VERIFICATION] ========================================');
@@ -12188,6 +12217,340 @@ window.generateExcelReport = generateExcelReport;
 window.generatePdfReport = generatePdfReport;
 window.prepareEmailReport = prepareEmailReport;
 
+// ===== INLINE ONBOARDING SYSTEM (with i18n support) =====
+// This replaces the external onboarding.js to properly use translations
+
+const InlineOnboarding = {
+    currentStep: 0,
+    totalSteps: 8,
+    language: 'en',
+    overlay: null,
+    modal: null,
+    
+    // Get translation with fallback
+    t: function(key) {
+        if (window.i18n && window.i18n.t) {
+            return window.i18n.t(key);
+        }
+        // Fallback translations
+        const fallbacks = {
+            'onboarding.welcome': 'Welcome to TheraSocial!',
+            'onboarding.welcome_desc': 'Let us show you around the platform.',
+            'onboarding.home': 'Home',
+            'onboarding.home_desc': 'Your dashboard with progress tracking and insights.',
+            'onboarding.diary': 'Diary',
+            'onboarding.diary_desc': 'Track your daily wellness metrics like mood, energy, and sleep.',
+            'onboarding.feed': 'Feed',
+            'onboarding.feed_desc': 'Share updates and see posts from people you follow.',
+            'onboarding.circles': 'Circles',
+            'onboarding.circles_desc': 'Organize your connections into different trust levels.',
+            'onboarding.messages': 'Messages',
+            'onboarding.messages_desc': 'Send private messages to your connections.',
+            'onboarding.profile': 'Profile',
+            'onboarding.profile_desc': 'Customize your profile and privacy settings.',
+            'onboarding.alerts': 'Alerts',
+            'onboarding.alerts_desc': 'Set up wellness alerts to watch over people you care about.',
+            'onboarding.next': 'Next',
+            'onboarding.previous': 'Previous',
+            'onboarding.skip': 'Skip Tour',
+            'onboarding.finish': 'Get Started',
+            'onboarding.dont_show': "Don't show this tour again"
+        };
+        return fallbacks[key] || key;
+    },
+    
+    steps: [
+        { key: 'welcome', icon: '👋' },
+        { key: 'home', icon: '🏠', highlight: '.sidebar-item:nth-child(1)' },
+        { key: 'diary', icon: '📝', highlight: '.sidebar-item:nth-child(2)' },
+        { key: 'profile', icon: '👤', highlight: '.sidebar-item:nth-child(3)' },
+        { key: 'circles', icon: '⭕', highlight: '.sidebar-item:nth-child(4)' },
+        { key: 'messages', icon: '💬', highlight: '.sidebar-item:nth-child(5)' },
+        { key: 'alerts', icon: '📊', highlight: '.sidebar-item:nth-child(6)' },
+        { key: 'feed', icon: '📰', highlight: '.sidebar-item:nth-child(7)' }
+    ],
+    
+    init: async function() {
+        // Get current language
+        this.language = localStorage.getItem('selectedLanguage') || 'en';
+        console.log('[InlineOnboarding] Initialized with language:', this.language);
+    },
+    
+    checkAndShow: async function() {
+        try {
+            const response = await fetch('/api/onboarding/status', {
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                console.log('[InlineOnboarding] Status:', data);
+                
+                // Update language from API response
+                if (data.preferred_language) {
+                    this.language = data.preferred_language;
+                    console.log('[InlineOnboarding] Using language from API:', this.language);
+                }
+                
+                if (data.needs_onboarding) {
+                    // Small delay to ensure i18n is ready
+                    setTimeout(() => this.show(), 500);
+                }
+            }
+        } catch (error) {
+            console.error('[InlineOnboarding] Error checking status:', error);
+        }
+    },
+    
+    createOverlay: function() {
+        // Remove any existing overlay
+        const existing = document.getElementById('onboarding-overlay');
+        if (existing) existing.remove();
+        
+        // Create overlay
+        this.overlay = document.createElement('div');
+        this.overlay.id = 'onboarding-overlay';
+        this.overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // Create modal
+        this.modal = document.createElement('div');
+        this.modal.id = 'onboarding-modal';
+        this.modal.style.cssText = `
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+        `;
+        
+        this.overlay.appendChild(this.modal);
+        document.body.appendChild(this.overlay);
+    },
+    
+    show: function() {
+        console.log('[InlineOnboarding] Showing tour, language:', this.language);
+        this.currentStep = 0;
+        this.createOverlay();
+        this.renderStep();
+    },
+    
+    renderStep: function() {
+        const step = this.steps[this.currentStep];
+        const isFirst = this.currentStep === 0;
+        const isLast = this.currentStep === this.steps.length - 1;
+        
+        // Determine title and description keys
+        let titleKey, descKey;
+        if (step.key === 'welcome') {
+            titleKey = 'onboarding.welcome';
+            descKey = 'onboarding.welcome_desc';
+        } else {
+            titleKey = `onboarding.${step.key}`;
+            descKey = `onboarding.${step.key}_desc`;
+        }
+        
+        // Get direction for RTL languages
+        const isRTL = ['he', 'ar'].includes(this.language);
+        const dir = isRTL ? 'rtl' : 'ltr';
+        
+        this.modal.innerHTML = `
+            <button onclick="InlineOnboarding.close()" style="
+                position: absolute;
+                top: 12px;
+                ${isRTL ? 'left' : 'right'}: 12px;
+                background: none;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                color: #666;
+            ">&times;</button>
+            
+            <div style="font-size: 48px; margin-bottom: 16px;">${step.icon}</div>
+            
+            <h2 style="
+                margin: 0 0 12px 0;
+                font-size: 24px;
+                color: #333;
+                direction: ${dir};
+            ">${this.t(titleKey)}</h2>
+            
+            <p style="
+                margin: 0 0 24px 0;
+                color: #666;
+                font-size: 16px;
+                line-height: 1.5;
+                direction: ${dir};
+            ">${this.t(descKey)}</p>
+            
+            <!-- Progress dots -->
+            <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 24px;">
+                ${this.steps.map((_, i) => `
+                    <div style="
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 50%;
+                        background: ${i === this.currentStep ? '#6366f1' : '#e5e7eb'};
+                    "></div>
+                `).join('')}
+            </div>
+            
+            <!-- Buttons -->
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                ${!isFirst ? `
+                    <button onclick="InlineOnboarding.prev()" style="
+                        padding: 12px 24px;
+                        border: 1px solid #e5e7eb;
+                        background: white;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">${this.t('onboarding.previous')}</button>
+                ` : `
+                    <button onclick="InlineOnboarding.skip()" style="
+                        padding: 12px 24px;
+                        border: 1px solid #e5e7eb;
+                        background: white;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">${this.t('onboarding.skip')}</button>
+                `}
+                
+                <button onclick="InlineOnboarding.${isLast ? 'finish' : 'next'}()" style="
+                    padding: 12px 32px;
+                    border: none;
+                    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+                    color: white;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                ">${this.t(isLast ? 'onboarding.finish' : 'onboarding.next')}</button>
+            </div>
+            
+            ${isFirst ? `
+                <div style="margin-top: 20px;">
+                    <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 14px; color: #666;">
+                        <input type="checkbox" id="onboarding-dont-show" style="cursor: pointer;">
+                        <span>${this.t('onboarding.dont_show')}</span>
+                    </label>
+                </div>
+            ` : ''}
+        `;
+        
+        // Highlight sidebar item if specified
+        this.highlightElement(step.highlight);
+    },
+    
+    highlightElement: function(selector) {
+        // Remove previous highlights
+        document.querySelectorAll('.onboarding-highlight').forEach(el => {
+            el.classList.remove('onboarding-highlight');
+        });
+        
+        if (selector) {
+            const el = document.querySelector(selector);
+            if (el) {
+                el.classList.add('onboarding-highlight');
+                el.style.position = 'relative';
+                el.style.zIndex = '9999';
+                el.style.background = 'white';
+                el.style.borderRadius = '8px';
+                el.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.5)';
+            }
+        }
+    },
+    
+    next: function() {
+        if (this.currentStep < this.steps.length - 1) {
+            this.currentStep++;
+            this.renderStep();
+        }
+    },
+    
+    prev: function() {
+        if (this.currentStep > 0) {
+            this.currentStep--;
+            this.renderStep();
+        }
+    },
+    
+    skip: async function() {
+        const dontShow = document.getElementById('onboarding-dont-show');
+        if (dontShow && dontShow.checked) {
+            await this.dismiss();
+        }
+        this.close();
+    },
+    
+    finish: async function() {
+        await this.complete();
+        this.close();
+    },
+    
+    close: function() {
+        // Remove highlights
+        document.querySelectorAll('.onboarding-highlight').forEach(el => {
+            el.classList.remove('onboarding-highlight');
+            el.style.zIndex = '';
+            el.style.background = '';
+            el.style.boxShadow = '';
+        });
+        
+        if (this.overlay) {
+            this.overlay.remove();
+            this.overlay = null;
+            this.modal = null;
+        }
+    },
+    
+    complete: async function() {
+        try {
+            await fetch('/api/onboarding/complete', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            console.log('[InlineOnboarding] Completed');
+        } catch (error) {
+            console.error('[InlineOnboarding] Error completing:', error);
+        }
+    },
+    
+    dismiss: async function() {
+        try {
+            await fetch('/api/onboarding/dismiss', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            console.log('[InlineOnboarding] Dismissed');
+        } catch (error) {
+            console.error('[InlineOnboarding] Error dismissing:', error);
+        }
+    }
+};
+
+// Make globally available
+window.InlineOnboarding = InlineOnboarding;
+
+// Override the checkOnboardingStatus to use our inline version
+window.checkOnboardingStatus = function() {
+    console.log('[InlineOnboarding] checkOnboardingStatus called - using inline version');
+    InlineOnboarding.checkAndShow();
+};
+
 // ===== TUTORIAL FUNCTION =====
 // Starts the onboarding tutorial with the current language
 async function startTutorial() {
@@ -12205,34 +12568,23 @@ async function startTutorial() {
         if (response.ok) {
             console.log('[Tutorial] Onboarding flags reset successfully');
             
-            // Try to call onboarding functions if they exist
-            if (typeof window.Onboarding !== 'undefined' && typeof window.Onboarding.start === 'function') {
-                console.log('[Tutorial] Calling window.Onboarding.start()');
-                window.Onboarding.start(currentLang);
-                return;
-            } else if (typeof window.startOnboarding === 'function') {
-                console.log('[Tutorial] Calling window.startOnboarding()');
-                window.startOnboarding(currentLang);
-                return;
-            } else if (typeof startOnboardingTour === 'function') {
-                console.log('[Tutorial] Calling startOnboardingTour()');
-                startOnboardingTour(currentLang);
-                return;
-            } else if (typeof window.checkOnboardingStatus === 'function') {
-                console.log('[Tutorial] Calling window.checkOnboardingStatus()');
-                window.checkOnboardingStatus();
+            // Use our inline onboarding system with proper i18n support
+            if (window.InlineOnboarding) {
+                console.log('[Tutorial] Using InlineOnboarding with language:', currentLang);
+                InlineOnboarding.language = currentLang;
+                InlineOnboarding.show();
                 return;
             }
             
-            // Dispatch event in case onboarding.js listens for it
-            console.log('[Tutorial] Dispatching startTutorial event');
-            window.dispatchEvent(new CustomEvent('startTutorial', { 
-                detail: { language: currentLang } 
-            }));
+            // Fallback to external onboarding if available
+            if (typeof window.Onboarding !== 'undefined' && typeof window.Onboarding.start === 'function') {
+                console.log('[Tutorial] Falling back to window.Onboarding.start()');
+                window.Onboarding.start(currentLang);
+                return;
+            }
             
-            // If no onboarding function found, reload page to trigger normal onboarding check
-            // The page reload will cause onboarding.js to check status and show tutorial
-            console.log('[Tutorial] No onboarding function found, reloading page...');
+            // Last resort - reload page
+            console.log('[Tutorial] No onboarding system found, reloading page...');
             setTimeout(() => {
                 window.location.reload();
             }, 100);
