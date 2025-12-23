@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PI502 v502 -->
+<!-- TheraSocial Version PI503 v503 -->
+<!-- PI503: LANGUAGE TUTORIAL UPDATE -->
+<!-- FIX 1: Desktop sidebar now shows icons matching mobile navigation (separate icon spans) -->
+<!-- FIX 2: Tutorial button added between language selector and logout button -->
+<!-- FIX 3: Tutorial uses current language selection when started -->
+<!-- FIX 4: Added onboarding translations for all 4 languages (en, he, ar, ru) -->
+<!-- FIX 5: Added /api/onboarding/restart endpoint for tutorial button -->
 <!-- PI502: PROPER TWO-MODE SYSTEM for trigger alert emails -->
 <!-- Mode 1 "new_alerts_only": NO emails from scheduler, only via job queue when watched user saves new data -->
 <!-- Mode 2 "daily_reminder": ONE email per day at DAILY_REMINDER_HOUR_UTC with all patterns -->
@@ -579,6 +585,9 @@
             border-radius: 10px;
             cursor: pointer;
             transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .sidebar-item:hover {
@@ -588,6 +597,22 @@
         .sidebar-item.active {
             background: var(--primary);
             color: var(--white);
+        }
+
+        /* Sidebar icons - matching mobile style */
+        .sidebar-icon {
+            font-size: 18px;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-label {
+            flex: 1;
+        }
+
+        /* RTL support for sidebar */
+        [dir="rtl"] .sidebar-item {
+            flex-direction: row-reverse;
         }
 
         /* Main Content */
@@ -1804,6 +1829,7 @@
                     <option value="ar">العربية</option>
                     <option value="ru">Русский</option>
                 </select>
+                <button class="btn btn-primary" id="tutorialBtn" style="display: none; width: auto; margin-left: 10px; margin-right: 10px;" onclick="startTutorial()" data-i18n="nav.tutorial">Tutorial</button>
                 <button class="btn btn-primary" id="logoutBtn" style="display: none; width: auto;" data-i18n="nav.logout">Logout</button>
             </div>
         </div>
@@ -2276,35 +2302,42 @@
             <!-- Left Sidebar -->
           <aside class="sidebar">
                 <ul class="sidebar-menu">
-                    <li class="sidebar-item active" data-view="home" data-i18n="menu.home">
-                        🏠 Home
+                    <li class="sidebar-item active" data-view="home">
+                        <span class="sidebar-icon">🏠</span>
+                        <span class="sidebar-label" data-i18n="menu.home">Home</span>
                     </li>
-                    <li class="sidebar-item" data-view="feed" data-i18n="menu.feed">
-                        📱 Feed
+                    <li class="sidebar-item" data-view="feed">
+                        <span class="sidebar-icon">📝</span>
+                        <span class="sidebar-label" data-i18n="menu.feed">Feed</span>
                     </li>
-                    <li class="sidebar-item" data-view="profile" data-i18n="menu.profile">
-                        👤 Profile
+                    <li class="sidebar-item" data-view="profile">
+                        <span class="sidebar-icon">👤</span>
+                        <span class="sidebar-label" data-i18n="menu.profile">Profile</span>
                     </li>
-                    <li class="sidebar-item" data-view="circles" onclick="handleCirclesClick(event)" style="cursor: pointer;" data-i18n="menu.circles">
-                        👥 Circles
+                    <li class="sidebar-item" data-view="circles" onclick="handleCirclesClick(event)" style="cursor: pointer;">
+                        <span class="sidebar-icon">⭕</span>
+                        <span class="sidebar-label" data-i18n="menu.circles">Circles</span>
                     </li>
-                    <li class="sidebar-item" id="desktopMessagesNav" data-view="messages" data-i18n="menu.messages">
-                        💬 Messages
+                    <li class="sidebar-item" id="desktopMessagesNav" data-view="messages">
+                        <span class="sidebar-icon">💬</span>
+                        <span class="sidebar-label" data-i18n="menu.messages">Messages</span>
                     </li>
-                   <li class="sidebar-item" data-view="tracking" onclick="handleParametersClick(event)" style="cursor: pointer;">
-    📔 <span data-i18n="menu.diary">Diary</span>
-</li>
-
-<li class="sidebar-item" data-view="following" data-i18n="menu.following">
-    ➕ Following
-</li>
-<li class="sidebar-item" data-view="followers" data-i18n="menu.followers">
-    👥 Followers
-</li>
-<li class="sidebar-item" data-view="invite" onclick="showView('invite')" data-i18n="menu.invite">
-    👋 Invite
-</li>
-
+                    <li class="sidebar-item" data-view="tracking" onclick="handleParametersClick(event)" style="cursor: pointer;">
+                        <span class="sidebar-icon">📊</span>
+                        <span class="sidebar-label" data-i18n="menu.diary">Diary</span>
+                    </li>
+                    <li class="sidebar-item" data-view="following">
+                        <span class="sidebar-icon">➕</span>
+                        <span class="sidebar-label" data-i18n="menu.following">Following</span>
+                    </li>
+                    <li class="sidebar-item" data-view="followers">
+                        <span class="sidebar-icon">👥</span>
+                        <span class="sidebar-label" data-i18n="menu.followers">Followers</span>
+                    </li>
+                    <li class="sidebar-item" data-view="invite" onclick="showView('invite')">
+                        <span class="sidebar-icon">👋</span>
+                        <span class="sidebar-label" data-i18n="menu.invite">Invite</span>
+                    </li>
                 </ul>
             </aside>
 
@@ -4205,6 +4238,7 @@ async function loadUserCity() {
             hideAllViews();
             document.getElementById('authContainer').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('tutorialBtn').style.display = 'none';
             // PJ6001: Show nav links when logged out
             document.querySelectorAll('.auth-only-hide').forEach(el => el.style.display = '');
         }
@@ -4390,6 +4424,7 @@ async function submitConsent() {
     hideAllViews();
     document.getElementById('dashboard').style.display = 'block';
     document.getElementById('logoutBtn').style.display = 'block';
+    document.getElementById('tutorialBtn').style.display = 'block';
     // PJ6001: Hide nav links when logged in
     document.querySelectorAll('.auth-only-hide').forEach(el => el.style.display = 'none');
 
@@ -12152,6 +12187,51 @@ async function prepareEmailReport() {
 window.generateExcelReport = generateExcelReport;
 window.generatePdfReport = generatePdfReport;
 window.prepareEmailReport = prepareEmailReport;
+
+// ===== TUTORIAL FUNCTION =====
+// Starts the onboarding tutorial with the current language
+async function startTutorial() {
+    const currentLang = localStorage.getItem('selectedLanguage') || 'en';
+    console.log('[Tutorial] Starting tutorial with language:', currentLang);
+    
+    try {
+        // Reset onboarding flags so tutorial shows again
+        const response = await fetch('/api/onboarding/restart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            console.log('[Tutorial] Onboarding flags reset, starting tutorial');
+        }
+    } catch (error) {
+        console.log('[Tutorial] Could not reset onboarding flags:', error);
+    }
+    
+    // Check if onboarding module exists and has the start function
+    if (typeof window.Onboarding !== 'undefined' && typeof window.Onboarding.start === 'function') {
+        window.Onboarding.start(currentLang);
+    } else if (typeof window.startOnboarding === 'function') {
+        window.startOnboarding(currentLang);
+    } else if (typeof startOnboardingTour === 'function') {
+        startOnboardingTour(currentLang);
+    } else {
+        // Fallback - dispatch event that onboarding.js can listen for
+        console.log('[Tutorial] Dispatching startTutorial event');
+        window.dispatchEvent(new CustomEvent('startTutorial', { 
+            detail: { language: currentLang } 
+        }));
+        
+        // Also try to reload onboarding status which should trigger the tutorial
+        if (typeof checkOnboardingStatus === 'function') {
+            checkOnboardingStatus();
+        }
+    }
+}
+
+// Make tutorial function globally available
+window.startTutorial = startTutorial;
 </script>
 
 </body>
