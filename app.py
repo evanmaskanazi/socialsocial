@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PI504 (Version 504)
+Complete app.py for Social Social Platform - Phase PI505 (Version 505)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PI505 Changes (v505):
+- No backend changes - all fixes are in frontend (index.html)
+- Removed external onboarding.js to eliminate "flash" of old tutorial modal
+- InlineOnboarding system now sole handler of onboarding
 
 PI504 Changes (v504):
 - No backend changes - all fixes are in frontend (index.html, i18n.js)
