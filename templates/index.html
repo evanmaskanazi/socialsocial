@@ -12203,30 +12203,46 @@ async function startTutorial() {
         });
         
         if (response.ok) {
-            console.log('[Tutorial] Onboarding flags reset, starting tutorial');
+            console.log('[Tutorial] Onboarding flags reset successfully');
+            
+            // Try to call onboarding functions if they exist
+            if (typeof window.Onboarding !== 'undefined' && typeof window.Onboarding.start === 'function') {
+                console.log('[Tutorial] Calling window.Onboarding.start()');
+                window.Onboarding.start(currentLang);
+                return;
+            } else if (typeof window.startOnboarding === 'function') {
+                console.log('[Tutorial] Calling window.startOnboarding()');
+                window.startOnboarding(currentLang);
+                return;
+            } else if (typeof startOnboardingTour === 'function') {
+                console.log('[Tutorial] Calling startOnboardingTour()');
+                startOnboardingTour(currentLang);
+                return;
+            } else if (typeof window.checkOnboardingStatus === 'function') {
+                console.log('[Tutorial] Calling window.checkOnboardingStatus()');
+                window.checkOnboardingStatus();
+                return;
+            }
+            
+            // Dispatch event in case onboarding.js listens for it
+            console.log('[Tutorial] Dispatching startTutorial event');
+            window.dispatchEvent(new CustomEvent('startTutorial', { 
+                detail: { language: currentLang } 
+            }));
+            
+            // If no onboarding function found, reload page to trigger normal onboarding check
+            // The page reload will cause onboarding.js to check status and show tutorial
+            console.log('[Tutorial] No onboarding function found, reloading page...');
+            setTimeout(() => {
+                window.location.reload();
+            }, 100);
+        } else {
+            console.error('[Tutorial] Failed to reset onboarding flags');
+            showNotification('Failed to start tutorial', 'error');
         }
     } catch (error) {
-        console.log('[Tutorial] Could not reset onboarding flags:', error);
-    }
-    
-    // Check if onboarding module exists and has the start function
-    if (typeof window.Onboarding !== 'undefined' && typeof window.Onboarding.start === 'function') {
-        window.Onboarding.start(currentLang);
-    } else if (typeof window.startOnboarding === 'function') {
-        window.startOnboarding(currentLang);
-    } else if (typeof startOnboardingTour === 'function') {
-        startOnboardingTour(currentLang);
-    } else {
-        // Fallback - dispatch event that onboarding.js can listen for
-        console.log('[Tutorial] Dispatching startTutorial event');
-        window.dispatchEvent(new CustomEvent('startTutorial', { 
-            detail: { language: currentLang } 
-        }));
-        
-        // Also try to reload onboarding status which should trigger the tutorial
-        if (typeof checkOnboardingStatus === 'function') {
-            checkOnboardingStatus();
-        }
+        console.error('[Tutorial] Error:', error);
+        showNotification('Failed to start tutorial', 'error');
     }
 }
 
