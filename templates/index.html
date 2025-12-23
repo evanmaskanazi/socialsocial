@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PI504 v504 -->
-<!-- PI504: INLINE ONBOARDING WITH I18N SUPPORT -->
-<!-- FIX: Tutorial now properly uses translations in all 4 languages -->
-<!-- Added InlineOnboarding system that uses i18n.t() for all text -->
+<!-- TheraSocial Version PI505 v505 -->
+<!-- PI505: REMOVED EXTERNAL ONBOARDING.JS -->
+<!-- FIX: Eliminated tutorial "flash" by removing external onboarding.js entirely -->
+<!-- InlineOnboarding system handles all onboarding with proper i18n support -->
 <!-- FIX 1: Desktop sidebar now shows icons matching mobile navigation (separate icon spans) -->
 <!-- FIX 2: Tutorial button added between language selector and logout button -->
 <!-- FIX 3: Tutorial uses current language selection when started -->
@@ -169,24 +169,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
    <script src="/static/js/utilities.js"></script>
-    <!-- Prevent external onboarding.js from auto-running - we use InlineOnboarding instead -->
-    <script>window.DISABLE_EXTERNAL_ONBOARDING = true;</script>
-    <script src="/static/js/onboarding.js"></script>
-    <script>
-        // Override any functions the external onboarding.js might have set
-        // Our InlineOnboarding system will handle everything with proper i18n support
-        if (window.Onboarding) {
-            console.log('[InlineOnboarding] Overriding external Onboarding module');
-            const originalStart = window.Onboarding.start;
-            window.Onboarding.start = function(lang) {
-                console.log('[InlineOnboarding] External Onboarding.start called, redirecting to InlineOnboarding');
-                if (window.InlineOnboarding) {
-                    InlineOnboarding.language = lang || localStorage.getItem('selectedLanguage') || 'en';
-                    InlineOnboarding.show();
-                }
-            };
-        }
-    </script>
+    <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
     <script src="/static/js/follow-requests.js"></script>
 
