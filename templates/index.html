@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PI505 v505 -->
-<!-- PI505: REMOVED EXTERNAL ONBOARDING.JS -->
-<!-- FIX: Eliminated tutorial "flash" by removing external onboarding.js entirely -->
-<!-- InlineOnboarding system handles all onboarding with proper i18n support -->
+<!-- TheraSocial Version PI506 v506 -->
+<!-- PI506: FIXED TUTORIAL HIGHLIGHT CLEANUP -->
+<!-- FIX: Sidebar text no longer disappears during/after tutorial -->
+<!-- FIX: highlightElement now properly cleans up all inline styles -->
+<!-- FIX: Used data-view selectors instead of nth-child for reliability -->
 <!-- FIX 1: Desktop sidebar now shows icons matching mobile navigation (separate icon spans) -->
 <!-- FIX 2: Tutorial button added between language selector and logout button -->
 <!-- FIX 3: Tutorial uses current language selection when started -->
@@ -12244,13 +12245,13 @@ const InlineOnboarding = {
     
     steps: [
         { key: 'welcome', icon: '👋' },
-        { key: 'home', icon: '🏠', highlight: '.sidebar-item:nth-child(1)' },
-        { key: 'diary', icon: '📝', highlight: '.sidebar-item:nth-child(2)' },
-        { key: 'profile', icon: '👤', highlight: '.sidebar-item:nth-child(3)' },
-        { key: 'circles', icon: '⭕', highlight: '.sidebar-item:nth-child(4)' },
-        { key: 'messages', icon: '💬', highlight: '.sidebar-item:nth-child(5)' },
-        { key: 'alerts', icon: '📊', highlight: '.sidebar-item:nth-child(6)' },
-        { key: 'feed', icon: '📰', highlight: '.sidebar-item:nth-child(7)' }
+        { key: 'home', icon: '🏠', highlight: '.sidebar-item[data-view="home"]' },
+        { key: 'diary', icon: '📊', highlight: '.sidebar-item[data-view="tracking"]' },
+        { key: 'feed', icon: '📝', highlight: '.sidebar-item[data-view="feed"]' },
+        { key: 'circles', icon: '⭕', highlight: '.sidebar-item[data-view="circles"]' },
+        { key: 'messages', icon: '💬', highlight: '.sidebar-item[data-view="messages"]' },
+        { key: 'profile', icon: '👤', highlight: '.sidebar-item[data-view="profile"]' },
+        { key: 'alerts', icon: '🔔' }
     ],
     
     init: async function() {
@@ -12439,9 +12440,15 @@ const InlineOnboarding = {
     },
     
     highlightElement: function(selector) {
-        // Remove previous highlights
+        // Remove previous highlights AND their inline styles
         document.querySelectorAll('.onboarding-highlight').forEach(el => {
             el.classList.remove('onboarding-highlight');
+            // Reset ALL inline styles that were set
+            el.style.position = '';
+            el.style.zIndex = '';
+            el.style.background = '';
+            el.style.borderRadius = '';
+            el.style.boxShadow = '';
         });
         
         if (selector) {
@@ -12450,9 +12457,8 @@ const InlineOnboarding = {
                 el.classList.add('onboarding-highlight');
                 el.style.position = 'relative';
                 el.style.zIndex = '9999';
-                el.style.background = 'white';
-                el.style.borderRadius = '8px';
                 el.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.5)';
+                // Don't set background - it can interfere with sidebar styling
             }
         }
     },
@@ -12485,11 +12491,13 @@ const InlineOnboarding = {
     },
     
     close: function() {
-        // Remove highlights
+        // Remove highlights and ALL their inline styles
         document.querySelectorAll('.onboarding-highlight').forEach(el => {
             el.classList.remove('onboarding-highlight');
+            el.style.position = '';
             el.style.zIndex = '';
             el.style.background = '';
+            el.style.borderRadius = '';
             el.style.boxShadow = '';
         });
         
