@@ -1,20 +1,18 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase P95 (Version 595)
+Complete app.py for Social Social Platform - Phase P95 (Version 596)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
-P95 Changes (v595):
+P95 Changes (v596):
 - No backend changes - all fixes are in frontend (index.html)
-- Frontend FIX: Mobile navigation uses flex:0 1 auto with space-around
-- Frontend FIX: RTL-specific media queries for Hebrew/Arabic:
-  - <500px: min-width 36px, font-size 8px
-  - <360px: min-width 32px, font-size 7px (maximum compression)
-- Frontend FIX: Tour modal calculates width dynamically based on screen size
-- Frontend FIX: Language saved to backend immediately after login (prevents flash)
+- Frontend FIX: PRE-FETCH uses justLoggedIn flag to prevent overwriting language
+- Frontend FIX: PRE-FETCH checks both preferred_language AND language fields
+- Frontend FIX: Tour modal uses explicit left position (not transform) for RTL
+- Frontend FIX: Mobile nav uses flex:0 0 20% with !important for RTL
 
-P85 Changes (v585):
-- Previous attempt at RTL fixes (superseded by P95)
+P95 Changes (v595):
+- Previous RTL fixes (superseded by v596)
 
 PI504 Changes (v504):
 - No backend changes - all fixes are in frontend (index.html, i18n.js)
