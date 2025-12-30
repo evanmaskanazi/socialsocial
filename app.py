@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PI505 (Version 505)
+Complete app.py for Social Social Platform - Phase P75 (Version 575)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+P75 Changes (v575):
+- No backend changes - all fixes are in frontend (index.html)
+- Frontend FIX: Mobile navigation "More" button no longer cut off in Hebrew/RTL
+- Frontend FIX: Tour/onboarding modal no longer cut off on sides in Hebrew/RTL
+- Improved mobile nav flex layout to ensure all 5 tabs always visible
+- Improved onboarding modal RTL/mobile handling
 
 PI505 Changes (v505):
 - No backend changes - all fixes are in frontend (index.html)
