@@ -1,20 +1,17 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase P85 (Version 585)
+Complete app.py for Social Social Platform - Phase P95 (Version 595)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
-P85 Changes (v585):
+P95 Changes (v595):
 - No backend changes - all fixes are in frontend (index.html)
-- Frontend FIX: Mobile navigation shows ALL 5 buttons (Home, Feed, Diary, Messages, More) in Hebrew/RTL
-- Frontend FIX: Tour/onboarding modal fully visible in Hebrew/RTL - no cutoff on sides
-- Key fix: Removed conflicting flex-direction: row-reverse that was hiding items
-- Key fix: Proper modal sizing and centering for RTL languages
+- Frontend FIX: Mobile navigation - explicit width:20% per item ensures all 5 buttons visible
+- Frontend FIX: Tour modal - using transform:translate(-50%,-50%) centering instead of flexbox
+- This approach works reliably in both LTR and RTL modes
 
-PI505 Changes (v505):
-- No backend changes - all fixes are in frontend (index.html)
-- Removed external onboarding.js to eliminate "flash" of old tutorial modal
-- InlineOnboarding system now sole handler of onboarding
+P85 Changes (v585):
+- Previous attempt at RTL fixes (superseded by P95)
 
 PI504 Changes (v504):
 - No backend changes - all fixes are in frontend (index.html, i18n.js)
