@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P95 v595 -->
-<!-- P95: MOBILE HEBREW/RTL FIXES + LANGUAGE PERSISTENCE -->
-<!-- FIX 1: Mobile navigation - uses flex:0 1 auto with space-around for even distribution -->
-<!-- FIX 2: RTL-specific media queries: <500px and <360px for Hebrew/Arabic with tighter spacing -->
-<!-- FIX 3: Tour modal - dynamically calculates width based on screen size -->
-<!-- FIX 4: Language persistence - saves language to backend immediately after login -->
+<!-- TheraSocial Version P95 v596 -->
+<!-- P95: MOBILE HEBREW/RTL FIXES + LANGUAGE PERSISTENCE + MODAL CENTERING -->
+<!-- FIX 1: Mobile nav uses flex:0 0 20% with !important for RTL -->
+<!-- FIX 2: PRE-FETCH no longer overwrites localStorage after login (uses justLoggedIn flag) -->
+<!-- FIX 3: PRE-FETCH checks both preferred_language AND language fields from backend -->
+<!-- FIX 4: Tour modal uses explicit left position instead of transform for RTL compatibility -->
+<!-- FIX 5: Language saved to backend immediately after login -->
 <!-- PI506: FIXED TUTORIAL HIGHLIGHT CLEANUP -->
 <!-- FIX: Sidebar text no longer disappears during/after tutorial -->
 <!-- FIX: highlightElement now properly cleans up all inline styles -->
@@ -3412,6 +3413,15 @@
         window._lastLanguageSelectorInteraction = 0;
         window._updatingSelectorProgrammatically = false;
         
+        // P95 FIX: Check if user just logged in - if so, DON'T overwrite their language choice
+        const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+        if (justLoggedIn) {
+            console.log('[PRE-FETCH] User just logged in - preserving localStorage language choice');
+            sessionStorage.removeItem('justLoggedIn');
+            console.log('[PRE-FETCH] ========================================');
+            return; // Skip PRE-FETCH, keep user's selected language
+        }
+        
         // Use synchronous XHR to fetch backend language BEFORE i18n.js initializes
         // This is necessary because we need to set localStorage before i18n.js reads it
         try {
@@ -3422,16 +3432,22 @@
             
             if (xhr.status === 200) {
                 const profile = JSON.parse(xhr.responseText);
-                const backendLang = profile.preferred_language;
+                // P95 FIX: Check BOTH preferred_language and language fields
+                const backendLang = profile.preferred_language || profile.language;
                 
                 console.log('[PRE-FETCH] Backend language:', backendLang);
                 console.log('[PRE-FETCH] Current localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
                 
-                if (backendLang) {
+                // P95 FIX: Only update if backend has a value AND localStorage doesn't
+                // This ensures user's pre-login choice is preserved
+                const currentLocal = localStorage.getItem('selectedLanguage');
+                if (backendLang && (!currentLocal || currentLocal === backendLang)) {
                     // Set localStorage to match backend BEFORE i18n.js loads
                     localStorage.setItem('selectedLanguage', backendLang);
                     localStorage.setItem('userLanguage', backendLang);
                     console.log('[PRE-FETCH] SUCCESS: localStorage updated to backend value:', backendLang);
+                } else if (currentLocal && currentLocal !== backendLang) {
+                    console.log('[PRE-FETCH] Keeping localStorage value:', currentLocal, '(differs from backend:', backendLang, ')');
                 } else {
                     console.log('[PRE-FETCH] No backend language set, keeping localStorage');
                 }
@@ -3910,6 +3926,10 @@ async function loadUserCity() {
                 } catch (langErr) {
                     console.warn('[LOGIN] Failed to save language to backend:', langErr);
                 }
+                
+                // P95 FIX: Set flag to prevent PRE-FETCH from overwriting language on next page load
+                sessionStorage.setItem('justLoggedIn', 'true');
+                console.log('[LOGIN] Set justLoggedIn flag to preserve language choice');
 
                 // Check if there's a followlog target from invite link
                 const followlogTarget = response.followlog_target;
@@ -12368,14 +12388,18 @@ const InlineOnboarding = {
         const screenWidth = window.innerWidth;
         const modalWidth = Math.min(340, screenWidth - 32); // 16px margin on each side
         
-        // Create modal - P95 FIX: Use transform centering with calculated width
+        // P95 FIX: Calculate left position explicitly to avoid RTL transform issues
+        // When document is RTL, transform can behave unexpectedly
+        const leftPos = Math.max(16, (screenWidth - modalWidth) / 2);
+        
+        // Create modal - P95 FIX: Use explicit left position instead of transform for RTL compatibility
         this.modal = document.createElement('div');
         this.modal.id = 'onboarding-modal';
         this.modal.style.cssText = `
             position: fixed;
             top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            left: ${leftPos}px;
+            transform: translateY(-50%);
             background: white;
             border-radius: 16px;
             padding: 20px 16px;
