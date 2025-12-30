@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PI506 v506 -->
+<!-- TheraSocial Version P75 v575 -->
+<!-- P75: MOBILE HEBREW/RTL FIXES -->
+<!-- FIX 1: Mobile navigation "More" button no longer cut off in Hebrew/RTL mode -->
+<!-- FIX 2: Tour/onboarding modal no longer cut off on sides in Hebrew/RTL -->
+<!-- Mobile nav now uses flex-shrink: 0 and min-width to ensure all 5 tabs visible -->
+<!-- Onboarding modal now has better mobile sizing and RTL overflow handling -->
 <!-- PI506: FIXED TUTORIAL HIGHLIGHT CLEANUP -->
 <!-- FIX: Sidebar text no longer disappears during/after tutorial -->
 <!-- FIX: highlightElement now properly cleans up all inline styles -->
@@ -1274,6 +1279,9 @@
             z-index: 1000;
             padding: 8px 0;
             border-top: 1px solid #E5E7EB;
+            /* P75 FIX: Prevent horizontal overflow that cuts off "More" button */
+            overflow-x: visible;
+            overflow-y: visible;
         }
 
         .mobile-nav-menu {
@@ -1283,12 +1291,18 @@
             list-style: none;
             padding: 0;
             margin: 0;
+            /* P75 FIX: Ensure all items fit without scrolling */
+            width: 100%;
+            flex-wrap: nowrap;
         }
 
         .mobile-nav-item {
-            flex: 1;
+            /* P75 FIX: Use flex properties to ensure equal distribution */
+            flex: 1 1 0;
+            min-width: 0;
+            max-width: 20%;
             text-align: center;
-            padding: 8px 5px;
+            padding: 8px 2px;
             cursor: pointer;
             transition: all 0.3s;
             font-size: 12px;
@@ -1297,6 +1311,9 @@
             flex-direction: column;
             align-items: center;
             gap: 4px;
+            /* P75 FIX: Prevent items from being hidden */
+            flex-shrink: 0;
+            overflow: visible;
         }
 
         .mobile-nav-item.active {
@@ -1310,15 +1327,32 @@
         .mobile-nav-label {
             font-size: 11px;
             font-weight: 500;
+            /* P75 FIX: Allow text to wrap or shrink if needed */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
 
         /* RTL Support for Mobile Navigation */
         [dir="rtl"] .mobile-nav-menu {
             direction: rtl;
+            /* P75 FIX: Ensure RTL layout maintains all items visible */
+            flex-direction: row-reverse;
         }
 
         [dir="rtl"] .mobile-nav-item {
             direction: rtl;
+        }
+        
+        /* P75 FIX: Additional RTL mobile nav styles to prevent cutoff */
+        [dir="rtl"] .mobile-nav {
+            overflow-x: visible;
+        }
+        
+        [dir="rtl"] .mobile-nav-label {
+            /* Allow slightly smaller text in RTL if needed */
+            font-size: 10px;
         }
 
         @media (max-width: 768px) {
@@ -1403,6 +1437,24 @@
             
             .mobile-alerts-container .alerts-list {
                 max-height: none;
+            }
+            
+            /* P75 FIX: Mobile-specific onboarding styles */
+            #onboarding-overlay {
+                padding: 10px !important;
+            }
+            
+            #onboarding-modal {
+                padding: 20px !important;
+                max-width: calc(100vw - 20px) !important;
+                width: calc(100% - 20px) !important;
+            }
+            
+            /* P75 FIX: Ensure RTL onboarding modal stays within viewport */
+            [dir="rtl"] #onboarding-modal,
+            #onboarding-modal[style*="direction: rtl"] {
+                margin-left: auto;
+                margin-right: auto;
             }
         }
         
@@ -12290,6 +12342,9 @@ const InlineOnboarding = {
         const existing = document.getElementById('onboarding-overlay');
         if (existing) existing.remove();
         
+        // P75 FIX: Get RTL status for proper modal positioning
+        const isRTL = ['he', 'ar'].includes(this.language);
+        
         // Create overlay
         this.overlay = document.createElement('div');
         this.overlay.id = 'onboarding-overlay';
@@ -12297,6 +12352,8 @@ const InlineOnboarding = {
             position: fixed;
             top: 0;
             left: 0;
+            right: 0;
+            bottom: 0;
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.5);
@@ -12304,20 +12361,30 @@ const InlineOnboarding = {
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: auto;
+            padding: 20px;
+            box-sizing: border-box;
+            direction: ${isRTL ? 'rtl' : 'ltr'};
         `;
         
         // Create modal
         this.modal = document.createElement('div');
         this.modal.id = 'onboarding-modal';
+        // P75 FIX: Better sizing and overflow handling for RTL and mobile
         this.modal.style.cssText = `
             background: white;
             border-radius: 16px;
-            padding: 32px;
-            max-width: 480px;
-            width: 90%;
+            padding: 24px;
+            max-width: 420px;
+            width: calc(100% - 40px);
+            max-height: calc(100vh - 80px);
+            overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
             position: relative;
+            margin: auto;
+            box-sizing: border-box;
+            direction: ${isRTL ? 'rtl' : 'ltr'};
         `;
         
         this.overlay.appendChild(this.modal);
@@ -12350,6 +12417,12 @@ const InlineOnboarding = {
         const isRTL = ['he', 'ar'].includes(this.language);
         const dir = isRTL ? 'rtl' : 'ltr';
         
+        // P75 FIX: Update modal direction when rendering step
+        this.modal.style.direction = dir;
+        
+        // P75 FIX: Determine button order for RTL (reverse for proper visual order)
+        const flexDir = isRTL ? 'row-reverse' : 'row';
+        
         this.modal.innerHTML = `
             <button onclick="InlineOnboarding.close()" style="
                 position: absolute;
@@ -12360,23 +12433,28 @@ const InlineOnboarding = {
                 font-size: 24px;
                 cursor: pointer;
                 color: #666;
+                z-index: 1;
             ">&times;</button>
             
             <div style="font-size: 48px; margin-bottom: 16px;">${step.icon}</div>
             
             <h2 style="
                 margin: 0 0 12px 0;
-                font-size: 24px;
+                font-size: 22px;
                 color: #333;
                 direction: ${dir};
+                text-align: center;
+                word-wrap: break-word;
             ">${this.t(titleKey)}</h2>
             
             <p style="
                 margin: 0 0 24px 0;
                 color: #666;
-                font-size: 16px;
+                font-size: 15px;
                 line-height: 1.5;
                 direction: ${dir};
+                text-align: center;
+                word-wrap: break-word;
             ">${this.t(descKey)}</p>
             
             <!-- Progress dots -->
@@ -12391,8 +12469,8 @@ const InlineOnboarding = {
                 `).join('')}
             </div>
             
-            <!-- Buttons -->
-            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <!-- Buttons - P75 FIX: Better flex handling for RTL -->
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; flex-direction: ${flexDir};">
                 ${!isFirst ? `
                     <button onclick="InlineOnboarding.prev()" style="
                         padding: 12px 24px;
