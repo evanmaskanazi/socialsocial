@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase P75 (Version 575)
+Complete app.py for Social Social Platform - Phase P85 (Version 585)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
 
-P75 Changes (v575):
+P85 Changes (v585):
 - No backend changes - all fixes are in frontend (index.html)
-- Frontend FIX: Mobile navigation "More" button no longer cut off in Hebrew/RTL
-- Frontend FIX: Tour/onboarding modal no longer cut off on sides in Hebrew/RTL
-- Improved mobile nav flex layout to ensure all 5 tabs always visible
-- Improved onboarding modal RTL/mobile handling
+- Frontend FIX: Mobile navigation shows ALL 5 buttons (Home, Feed, Diary, Messages, More) in Hebrew/RTL
+- Frontend FIX: Tour/onboarding modal fully visible in Hebrew/RTL - no cutoff on sides
+- Key fix: Removed conflicting flex-direction: row-reverse that was hiding items
+- Key fix: Proper modal sizing and centering for RTL languages
 
 PI505 Changes (v505):
 - No backend changes - all fixes are in frontend (index.html)
