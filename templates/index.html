@@ -1277,9 +1277,8 @@
             background: var(--white);
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             z-index: 1000;
-            padding: 6px 0;
+            padding: 4px 0;
             border-top: 1px solid #E5E7EB;
-            /* P95 FIX: Ensure no horizontal scroll */
             overflow: hidden;
             width: 100%;
             box-sizing: border-box;
@@ -1291,18 +1290,18 @@
             padding: 0;
             margin: 0;
             width: 100%;
-            /* P95 FIX: Ensure items don't wrap and distribute evenly */
             flex-wrap: nowrap;
-            justify-content: space-around;
+            /* P95 FIX: Use space-evenly for equal distribution */
+            justify-content: space-evenly;
         }
 
         .mobile-nav-item {
-            /* P95 FIX: Flexible sizing - will shrink to fit */
-            flex: 0 1 auto;
-            min-width: 48px;
-            max-width: 80px;
+            /* P95 FIX: Force exactly 20% width for 5 items */
+            flex: 0 0 20%;
+            width: 20%;
+            max-width: 20%;
             text-align: center;
-            padding: 4px 2px;
+            padding: 4px 0;
             cursor: pointer;
             transition: all 0.3s;
             font-size: 12px;
@@ -1311,8 +1310,9 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
+            gap: 1px;
             box-sizing: border-box;
+            overflow: hidden;
         }
 
         .mobile-nav-item.active {
@@ -1331,58 +1331,29 @@
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 100%;
-            line-height: 1.2;
+            line-height: 1.1;
         }
 
-        /* RTL Support - P95 FIX: Only set direction, no flex changes */
-        /* The dir="rtl" on html element handles visual reordering automatically */
-        [dir="rtl"] .mobile-nav-menu {
-            /* No special rules needed - flexbox respects document direction */
+        /* P95 FIX: RTL languages ALWAYS get compact nav - no media query needed */
+        /* These rules apply to ALL screen sizes when in RTL mode */
+        [dir="rtl"] .mobile-nav {
+            padding: 3px 0;
         }
         
-        /* P95 FIX: Extra small screens (< 400px) - tighter layout for all languages */
-        @media (max-width: 400px) {
-            .mobile-nav-item {
-                min-width: 40px;
-                padding: 4px 1px;
-            }
-            .mobile-nav-icon {
-                font-size: 16px;
-            }
-            .mobile-nav-label {
-                font-size: 8px;
-            }
+        [dir="rtl"] .mobile-nav-item {
+            /* Force 20% width - exactly 5 items fit */
+            flex: 0 0 20% !important;
+            width: 20% !important;
+            max-width: 20% !important;
+            padding: 3px 0 !important;
         }
         
-        /* P95 FIX: RTL languages (Hebrew, Arabic) need even tighter spacing on small screens */
-        /* These languages have longer labels that can cause overflow */
-        @media (max-width: 500px) {
-            [dir="rtl"] .mobile-nav-item {
-                min-width: 36px;
-                max-width: 70px;
-                padding: 4px 1px;
-            }
-            [dir="rtl"] .mobile-nav-icon {
-                font-size: 16px;
-            }
-            [dir="rtl"] .mobile-nav-label {
-                font-size: 8px;
-            }
+        [dir="rtl"] .mobile-nav-icon {
+            font-size: 16px !important;
         }
         
-        /* P95 FIX: Very small RTL screens need maximum compression */
-        @media (max-width: 360px) {
-            [dir="rtl"] .mobile-nav-item {
-                min-width: 32px;
-                max-width: 60px;
-                padding: 2px 0;
-            }
-            [dir="rtl"] .mobile-nav-icon {
-                font-size: 14px;
-            }
-            [dir="rtl"] .mobile-nav-label {
-                font-size: 7px;
-            }
+        [dir="rtl"] .mobile-nav-label {
+            font-size: 8px !important;
         }
 
         @media (max-width: 768px) {
@@ -3882,6 +3853,11 @@ async function loadUserCity() {
   document.getElementById('authForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        // P95 FIX: Capture language IMMEDIATELY before ANY async operations
+        // Something else is resetting localStorage during async operations
+        const languageToSave = localStorage.getItem('selectedLanguage') || 'en';
+        console.log('[LOGIN] Captured language at START of login:', languageToSave);
+        
         // FIX #1: Hide any previous error message
         const loginError = document.getElementById('loginErrorMessage');
         if (loginError) loginError.style.display = 'none';
@@ -3921,17 +3897,16 @@ async function loadUserCity() {
                 currentUserId = response.user.id;
 
                 // P95 FIX: Save current language to backend IMMEDIATELY after login
-                // This ensures the language persists when redirected to diary page
-                const currentLang = localStorage.getItem('selectedLanguage') || 'en';
-                console.log('[LOGIN] Saving language preference to backend:', currentLang);
+                // Use the captured languageToSave variable (captured at START of handler)
+                console.log('[LOGIN] Saving captured language to backend:', languageToSave);
                 try {
                     await fetch('/api/user/language', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        body: JSON.stringify({ language: currentLang })
+                        body: JSON.stringify({ language: languageToSave })
                     });
-                    console.log('[LOGIN] Language saved to backend successfully');
+                    console.log('[LOGIN] Language saved to backend successfully:', languageToSave);
                 } catch (langErr) {
                     console.warn('[LOGIN] Failed to save language to backend:', langErr);
                 }
