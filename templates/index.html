@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P96 v596 -->
-<!-- P96: FIXED MOBILE NAV - Added !important to ALL base styles -->
-<!-- FIX 1: Mobile nav items forced to 20% width with !important on base styles -->
-<!-- FIX 2: PRE-FETCH no longer overwrites localStorage after login (uses justLoggedIn flag) -->
-<!-- FIX 3: Tour modal uses explicit left position instead of transform for RTL -->
-<!-- FIX 4: RTL selectors now include html[dir="rtl"] for better specificity -->
+<!-- TheraSocial Version P97 v597 -->
+<!-- P97: FIXED MODAL CENTERING + LARGER HEBREW BUTTONS + LANGUAGE PERSISTENCE -->
+<!-- FIX 1: Modal uses left:0;right:0;margin:auto for bulletproof RTL centering -->
+<!-- FIX 2: Hebrew nav icons 17px (was 16px), labels 9px (was 8px) - closer to English -->
+<!-- FIX 3: loadUserLanguage now checks BOTH preferred_language AND language fields -->
+<!-- FIX 4: loadUserLanguage checks justLoggedIn flag and skips backend fetch if set -->
+<!-- FIX 5: PRE-FETCH no longer removes flag - loadUserLanguage removes it instead -->
 <!-- PI506: FIXED TUTORIAL HIGHLIGHT CLEANUP -->
 <!-- FIX: Sidebar text no longer disappears during/after tutorial -->
 <!-- FIX: highlightElement now properly cleans up all inline styles -->
@@ -1338,7 +1339,7 @@
             line-height: 1.1;
         }
 
-        /* P96 FIX: RTL languages - smaller text to fit */
+        /* P97 FIX: RTL languages - slightly smaller but still readable */
         [dir="rtl"] .mobile-nav-item,
         html[dir="rtl"] .mobile-nav-item,
         body[dir="rtl"] .mobile-nav-item {
@@ -1350,12 +1351,12 @@
         
         [dir="rtl"] .mobile-nav-icon,
         html[dir="rtl"] .mobile-nav-icon {
-            font-size: 16px !important;
+            font-size: 17px !important;  /* Was 16px, English is 18px */
         }
         
         [dir="rtl"] .mobile-nav-label,
         html[dir="rtl"] .mobile-nav-label {
-            font-size: 8px !important;
+            font-size: 9px !important;   /* Same as English now */
         }
         
         /* P96 FIX: Very small screens - all languages */
@@ -3432,7 +3433,8 @@
         const justLoggedIn = sessionStorage.getItem('justLoggedIn');
         if (justLoggedIn) {
             console.log('[PRE-FETCH] User just logged in - preserving localStorage language choice');
-            sessionStorage.removeItem('justLoggedIn');
+            // P97 FIX: Do NOT remove flag here - let loadUserLanguage handle it
+            // This ensures both PRE-FETCH and loadUserLanguage can check the flag
             console.log('[PRE-FETCH] ========================================');
             return; // Skip PRE-FETCH, keep user's selected language
         }
@@ -4568,6 +4570,43 @@ async function submitConsent() {
     console.log('[LANG DEBUG] loadUserLanguage() STARTED');
     console.log('[LANG DEBUG] Timestamp:', new Date().toISOString());
     
+    // P97 FIX: Check if user just logged in - if so, trust localStorage completely
+    const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+    if (justLoggedIn) {
+        console.log('[LANG DEBUG] justLoggedIn flag detected - trusting localStorage');
+        sessionStorage.removeItem('justLoggedIn'); // Clear flag after using
+        
+        const savedLang = localStorage.getItem('selectedLanguage') || 'en';
+        console.log('[LANG DEBUG] Using localStorage language:', savedLang);
+        
+        // Just apply the language without fetching backend
+        if (window.i18n && window.i18n.setLanguage) {
+            await window.i18n.setLanguage(savedLang);
+        }
+        
+        // Set RTL for Hebrew/Arabic
+        const rtlLanguages = ['ar', 'he'];
+        if (rtlLanguages.includes(savedLang)) {
+            document.documentElement.setAttribute('dir', 'rtl');
+            document.body.setAttribute('dir', 'rtl');
+        } else {
+            document.documentElement.setAttribute('dir', 'ltr');
+            document.body.setAttribute('dir', 'ltr');
+        }
+        
+        // Update selector
+        const langSelector = document.getElementById('languageSelector');
+        if (langSelector) {
+            window._updatingSelectorProgrammatically = true;
+            langSelector.value = savedLang;
+            window._updatingSelectorProgrammatically = false;
+        }
+        
+        console.log('[LANG DEBUG] loadUserLanguage() COMPLETED (justLoggedIn path)');
+        console.log('[LANG DEBUG] ========================================');
+        return;
+    }
+    
     try {
         // Log current state BEFORE any changes
         const currentLocalLang = localStorage.getItem('selectedLanguage');
@@ -4587,10 +4626,13 @@ async function submitConsent() {
 
         if (response.ok) {
             const profile = await response.json();
-            const backendLang = profile.preferred_language || 'en';
+            // P97 FIX: Check BOTH preferred_language AND language fields (like PRE-FETCH does)
+            // Login saves to 'language' field, so we must check both!
+            const backendLang = profile.preferred_language || profile.language || 'en';
 
             console.log('[LANG DEBUG] Backend response:');
             console.log('[LANG DEBUG]   profile.preferred_language:', profile.preferred_language);
+            console.log('[LANG DEBUG]   profile.language:', profile.language);
             console.log('[LANG DEBUG]   backendLang (with fallback):', backendLang);
 
             // PI503 FIX: Preserve user's pre-login language selection
@@ -12399,21 +12441,21 @@ const InlineOnboarding = {
             z-index: 9998;
         `;
         
-        // P95 FIX: Calculate modal width based on screen size
+        // P97 FIX: Calculate modal width based on screen size
         const screenWidth = window.innerWidth;
         const modalWidth = Math.min(340, screenWidth - 32); // 16px margin on each side
         
-        // P95 FIX: Calculate left position explicitly to avoid RTL transform issues
-        // When document is RTL, transform can behave unexpectedly
-        const leftPos = Math.max(16, (screenWidth - modalWidth) / 2);
-        
-        // Create modal - P95 FIX: Use explicit left position instead of transform for RTL compatibility
+        // P97 FIX: Use margin:auto centering - works reliably in both LTR and RTL
+        // This method doesn't depend on left/transform calculations that break in RTL
         this.modal = document.createElement('div');
         this.modal.id = 'onboarding-modal';
         this.modal.style.cssText = `
             position: fixed;
             top: 50%;
-            left: ${leftPos}px;
+            left: 0;
+            right: 0;
+            margin-left: auto;
+            margin-right: auto;
             transform: translateY(-50%);
             background: white;
             border-radius: 16px;
