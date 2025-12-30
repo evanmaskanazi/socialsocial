@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <!-- TheraSocial Version P95 v595 -->
-<!-- P95: MOBILE HEBREW/RTL FIXES - CORRECTED -->
-<!-- FIX 1: Mobile navigation - uses flex:1 and direction:rtl (NOT row-reverse which cuts off items) -->
-<!-- FIX 2: Tour modal - uses transform centering for reliable positioning -->
+<!-- P95: MOBILE HEBREW/RTL FIXES + LANGUAGE PERSISTENCE -->
+<!-- FIX 1: Mobile navigation - uses flex:0 1 auto with space-around for even distribution -->
+<!-- FIX 2: RTL-specific media queries: <500px and <360px for Hebrew/Arabic with tighter spacing -->
+<!-- FIX 3: Tour modal - dynamically calculates width based on screen size -->
+<!-- FIX 4: Language persistence - saves language to backend immediately after login -->
 <!-- PI506: FIXED TUTORIAL HIGHLIGHT CLEANUP -->
 <!-- FIX: Sidebar text no longer disappears during/after tutorial -->
 <!-- FIX: highlightElement now properly cleans up all inline styles -->
@@ -1275,10 +1277,12 @@
             background: var(--white);
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             z-index: 1000;
-            padding: 8px 0;
+            padding: 6px 0;
             border-top: 1px solid #E5E7EB;
-            /* P95 FIX: Clip overflow to prevent horizontal scroll */
-            overflow-x: hidden;
+            /* P95 FIX: Ensure no horizontal scroll */
+            overflow: hidden;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .mobile-nav-menu {
@@ -1287,16 +1291,18 @@
             padding: 0;
             margin: 0;
             width: 100%;
-            /* P95 FIX: No flex-wrap, items must stay in one row */
+            /* P95 FIX: Ensure items don't wrap and distribute evenly */
             flex-wrap: nowrap;
+            justify-content: space-around;
         }
 
         .mobile-nav-item {
-            /* P95 FIX: Use flex: 1 to distribute evenly, not fixed 20% */
-            flex: 1 1 0;
-            min-width: 0;
+            /* P95 FIX: Flexible sizing - will shrink to fit */
+            flex: 0 1 auto;
+            min-width: 48px;
+            max-width: 80px;
             text-align: center;
-            padding: 6px 0;
+            padding: 4px 2px;
             cursor: pointer;
             transition: all 0.3s;
             font-size: 12px;
@@ -1304,6 +1310,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 2px;
             box-sizing: border-box;
         }
@@ -1313,24 +1320,69 @@
         }
 
         .mobile-nav-icon {
-            font-size: 20px;
+            font-size: 18px;
+            line-height: 1;
         }
 
         .mobile-nav-label {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 500;
-            /* P95 FIX: Prevent long labels from causing overflow */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 100%;
+            line-height: 1.2;
         }
 
-        /* RTL Support for Mobile Navigation */
-        /* P95 FIX: Do NOT use flex-direction: row-reverse - it causes items to be cut off on narrow screens */
-        /* Instead, just set direction: rtl which naturally reverses the visual order */
+        /* RTL Support - P95 FIX: Only set direction, no flex changes */
+        /* The dir="rtl" on html element handles visual reordering automatically */
         [dir="rtl"] .mobile-nav-menu {
-            direction: rtl;
+            /* No special rules needed - flexbox respects document direction */
+        }
+        
+        /* P95 FIX: Extra small screens (< 400px) - tighter layout for all languages */
+        @media (max-width: 400px) {
+            .mobile-nav-item {
+                min-width: 40px;
+                padding: 4px 1px;
+            }
+            .mobile-nav-icon {
+                font-size: 16px;
+            }
+            .mobile-nav-label {
+                font-size: 8px;
+            }
+        }
+        
+        /* P95 FIX: RTL languages (Hebrew, Arabic) need even tighter spacing on small screens */
+        /* These languages have longer labels that can cause overflow */
+        @media (max-width: 500px) {
+            [dir="rtl"] .mobile-nav-item {
+                min-width: 36px;
+                max-width: 70px;
+                padding: 4px 1px;
+            }
+            [dir="rtl"] .mobile-nav-icon {
+                font-size: 16px;
+            }
+            [dir="rtl"] .mobile-nav-label {
+                font-size: 8px;
+            }
+        }
+        
+        /* P95 FIX: Very small RTL screens need maximum compression */
+        @media (max-width: 360px) {
+            [dir="rtl"] .mobile-nav-item {
+                min-width: 32px;
+                max-width: 60px;
+                padding: 2px 0;
+            }
+            [dir="rtl"] .mobile-nav-icon {
+                font-size: 14px;
+            }
+            [dir="rtl"] .mobile-nav-label {
+                font-size: 7px;
+            }
         }
 
         @media (max-width: 768px) {
@@ -3867,6 +3919,22 @@ async function loadUserCity() {
             if (response && response.success) {
                 currentUser = response.user;
                 currentUserId = response.user.id;
+
+                // P95 FIX: Save current language to backend IMMEDIATELY after login
+                // This ensures the language persists when redirected to diary page
+                const currentLang = localStorage.getItem('selectedLanguage') || 'en';
+                console.log('[LOGIN] Saving language preference to backend:', currentLang);
+                try {
+                    await fetch('/api/user/language', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ language: currentLang })
+                    });
+                    console.log('[LOGIN] Language saved to backend successfully');
+                } catch (langErr) {
+                    console.warn('[LOGIN] Failed to save language to backend:', langErr);
+                }
 
                 // Check if there's a followlog target from invite link
                 const followlogTarget = response.followlog_target;
@@ -12302,6 +12370,10 @@ const InlineOnboarding = {
         const existing = document.getElementById('onboarding-overlay');
         if (existing) existing.remove();
         
+        // Also remove any orphaned modal
+        const existingModal = document.getElementById('onboarding-modal');
+        if (existingModal) existingModal.remove();
+        
         const isRTL = ['he', 'ar'].includes(this.language);
         
         // Create overlay
@@ -12317,7 +12389,11 @@ const InlineOnboarding = {
             z-index: 9998;
         `;
         
-        // Create modal - P95 FIX: Use transform centering, not flexbox
+        // P95 FIX: Calculate modal width based on screen size
+        const screenWidth = window.innerWidth;
+        const modalWidth = Math.min(340, screenWidth - 32); // 16px margin on each side
+        
+        // Create modal - P95 FIX: Use transform centering with calculated width
         this.modal = document.createElement('div');
         this.modal.id = 'onboarding-modal';
         this.modal.style.cssText = `
@@ -12327,9 +12403,11 @@ const InlineOnboarding = {
             transform: translate(-50%, -50%);
             background: white;
             border-radius: 16px;
-            padding: 24px 20px;
-            width: 340px;
-            max-width: calc(100vw - 40px);
+            padding: 20px 16px;
+            width: ${modalWidth}px;
+            max-width: calc(100vw - 32px);
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
             z-index: 9999;
