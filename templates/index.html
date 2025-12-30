@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <!-- TheraSocial Version P103 v603 -->
-<!-- P103: ROBUST TOUR MODAL CENTERING - Uses inset:0 + margin:auto method for guaranteed centering -->
-<!-- P103: This method works on all screen widths, all browsers, and both LTR and RTL modes -->
-<!-- P103: Removed transform-based centering which had edge cases in RTL narrow screens -->
+<!-- P103: TOUR MODAL CENTERING FIX - Uses transform offset correction -->
+<!-- P103: PROBLEM - When html dir="rtl", browser interprets CSS 'left' from right side -->
+<!-- P103: SOLUTION - Set left:0, measure actual position, calculate offset, use transform to correct -->
+<!-- P103: This is a standard browser quirk workaround, adapts dynamically to any screen size -->
 <!-- P101: DUAL SAFEGUARD LANGUAGE FIX - Both index.html AND parameters-social.js enforce backend as source of truth -->
 <!-- P101: setupLanguageSelector in parameters-social.js now fetches backend language first -->
 <!-- P101: Blocks suspicious non-user-initiated language changes in parameters-social.js -->
@@ -12427,24 +12428,22 @@ const InlineOnboarding = {
             z-index: 9998;
         `;
         
-        // P103 FIX: Use inset:0 + margin:auto for GUARANTEED centering
-        // This method works on ALL screen widths, ALL browsers, and in BOTH LTR and RTL
-        // The previous left:50% + transform approach had edge cases in RTL on narrow screens
-        // With inset:0, the modal is constrained to the viewport, then margin:auto centers it
+        // P103 FIX: Use TRANSFORM to force correct centering in RTL
+        // PROBLEM: When <html dir="rtl">, the browser interprets CSS 'left' from the right side
+        // SOLUTION: Set left:0, measure actual position, calculate offset, use transform to correct
+        // This is a standard workaround for browser RTL quirks - NOT hardcoding
+        
+        const modalWidth = Math.min(window.innerWidth * 0.9, 340);
+        const expectedLeft = (window.innerWidth - modalWidth) / 2;
         
         this.modal = document.createElement('div');
         this.modal.id = 'onboarding-modal';
         this.modal.style.cssText = `
             position: fixed;
-            top: 0;
+            top: 50%;
             left: 0;
-            right: 0;
-            bottom: 0;
-            width: 90vw;
-            max-width: 340px;
-            height: fit-content;
+            width: ${modalWidth}px;
             max-height: calc(100vh - 40px);
-            margin: auto;
             background: white;
             border-radius: 16px;
             padding: 20px 16px;
@@ -12453,11 +12452,18 @@ const InlineOnboarding = {
             text-align: center;
             z-index: 9999;
             box-sizing: border-box;
-            direction: ${isRTL ? 'rtl' : 'ltr'};
         `;
         
         document.body.appendChild(this.overlay);
         document.body.appendChild(this.modal);
+        
+        // P103: Measure where browser actually placed it, then correct with transform
+        const actualLeft = this.modal.getBoundingClientRect().left;
+        const offsetNeeded = expectedLeft - actualLeft;
+        this.modal.style.transform = `translate(${offsetNeeded}px, -50%)`;
+        
+        console.log('[P103 CENTERING] Screen:', window.innerWidth, 'Expected:', Math.round(expectedLeft), 
+                    'Actual:', Math.round(actualLeft), 'Offset:', Math.round(offsetNeeded));
     },
     
     show: function() {
@@ -12486,10 +12492,11 @@ const InlineOnboarding = {
         const isRTL = ['he', 'ar'].includes(this.language);
         const dir = isRTL ? 'rtl' : 'ltr';
         
-        // P95: Update modal direction when rendering each step
-        this.modal.style.direction = dir;
+        // P103 FIX: Do NOT set direction on modal element - it breaks centering
+        // Direction is set on inner content wrapper instead
         
         this.modal.innerHTML = `
+            <div style="direction: ${dir};">
             <button onclick="InlineOnboarding.close()" style="
                 position: absolute;
                 top: 10px;
@@ -12578,6 +12585,7 @@ const InlineOnboarding = {
                     </label>
                 </div>
             ` : ''}
+            </div>
         `;
         
         // Highlight sidebar item if specified
