@@ -1,6 +1,9 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P98 v598 -->
-<!-- P98: FIXED LANGUAGE CONSISTENCY + TOUR BOX CENTERING AT SMALL WIDTHS -->
+<!-- TheraSocial Version P101 v601 -->
+<!-- P101: DUAL SAFEGUARD LANGUAGE FIX - Both index.html AND parameters-social.js enforce backend as source of truth -->
+<!-- P101: setupLanguageSelector in parameters-social.js now fetches backend language first -->
+<!-- P101: Blocks suspicious non-user-initiated language changes in parameters-social.js -->
+<!-- P98/P99: Previous fixes maintained: PRE-FETCH backend source of truth, tour box RTL, navbar responsive -->
 <!-- FIX 1: loadUserLanguage NO LONGER overwrites backend - backend is SOURCE OF TRUTH -->
 <!-- FIX 2: Removed "preserve pre-login language" logic that was incorrectly updating backend -->
 <!-- FIX 3: Tour box now uses calc(50% - width/2) for guaranteed centering at all widths -->
