@@ -1,8 +1,18 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase P95 (Version 596)
+Complete app.py for Social Social Platform - Phase P98 (Version 598)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+P98 Changes (v598):
+- No backend changes - all fixes are in frontend (index.html)
+- Frontend FIX: loadUserLanguage now uses backend as SOURCE OF TRUTH
+- Frontend FIX: Removed "preserve pre-login language" logic that incorrectly overwrote backend
+- Frontend FIX: Tour box uses explicit left position for guaranteed centering at all widths
+- Frontend FIX: Modal max-width reduced for screens 360px and below
+
+P97 Changes (v597):
+- Previous fixes for modal RTL centering, Hebrew nav sizing, justLoggedIn flag
 
 P95 Changes (v596):
 - No backend changes - all fixes are in frontend (index.html)
@@ -10,9 +20,6 @@ P95 Changes (v596):
 - Frontend FIX: PRE-FETCH checks both preferred_language AND language fields
 - Frontend FIX: Tour modal uses explicit left position (not transform) for RTL
 - Frontend FIX: Mobile nav uses flex:0 0 20% with !important for RTL
-
-P95 Changes (v595):
-- Previous RTL fixes (superseded by v596)
 
 PI504 Changes (v504):
 - No backend changes - all fixes are in frontend (index.html, i18n.js)
