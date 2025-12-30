@@ -3,7 +3,9 @@
 <!-- P101: DUAL SAFEGUARD LANGUAGE FIX - Both index.html AND parameters-social.js enforce backend as source of truth -->
 <!-- P101: setupLanguageSelector in parameters-social.js now fetches backend language first -->
 <!-- P101: Blocks suspicious non-user-initiated language changes in parameters-social.js -->
-<!-- P98/P99: Previous fixes maintained: PRE-FETCH backend source of truth, tour box RTL, navbar responsive -->
+<!-- P101: TOUR BOX FIX - Changed from calculated leftPosition pixels to CSS centering -->
+<!-- P101: Tour modal now uses left:50% + transform:translate(-50%,-50%) for all screen widths -->
+<!-- P98/P99: Previous fixes maintained: PRE-FETCH backend source of truth, navbar responsive -->
 <!-- FIX 1: loadUserLanguage NO LONGER overwrites backend - backend is SOURCE OF TRUTH -->
 <!-- FIX 2: Removed "preserve pre-login language" logic that was incorrectly updating backend -->
 <!-- FIX 3: Tour box now uses calc(50% - width/2) for guaranteed centering at all widths -->
@@ -12424,37 +12426,30 @@ const InlineOnboarding = {
             z-index: 9998;
         `;
         
-        // P98 FIX: Calculate modal width and position for guaranteed centering on all screen sizes
-        const screenWidth = window.innerWidth;
-        // For very small screens (350px and below), use even smaller modal
-        const modalWidth = screenWidth <= 360 
-            ? Math.min(300, screenWidth - 24)  // 12px margin on each side for very small screens
-            : Math.min(340, screenWidth - 32); // 16px margin on each side for larger screens
+        // P101 FIX: Use CSS centering instead of calculated pixel position
+        // translate(-50%, -50%) works reliably at ALL screen widths and in RTL/LTR
+        // The old P98 approach calculated leftPosition in pixels which failed on resize/narrow screens
         
-        // P98 FIX: Calculate explicit left position for guaranteed centering
-        // This works reliably in both LTR and RTL modes
-        const leftPosition = Math.max(0, (screenWidth - modalWidth) / 2);
-        
-        // P98 FIX: Use explicit left position instead of margin:auto
-        // margin:auto can fail in RTL mode on some browsers
         this.modal = document.createElement('div');
         this.modal.id = 'onboarding-modal';
         this.modal.style.cssText = `
             position: fixed;
             top: 50%;
-            left: ${leftPosition}px;
-            transform: translateY(-50%);
+            left: 50%;
+            right: auto;
+            transform: translate(-50%, -50%);
             background: white;
             border-radius: 16px;
             padding: 20px 16px;
-            width: ${modalWidth}px;
-            max-width: calc(100vw - 24px);
+            width: 90vw;
+            max-width: 340px;
             max-height: calc(100vh - 40px);
             overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
             z-index: 9999;
             box-sizing: border-box;
+            margin: 0;
             direction: ${isRTL ? 'rtl' : 'ltr'};
         `;
         
