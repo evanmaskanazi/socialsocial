@@ -6,9 +6,12 @@ Auto-migrates on startup for seamless deployment
 
 P95 Changes (v595):
 - No backend changes - all fixes are in frontend (index.html)
-- Frontend FIX: Mobile navigation - uses flex:1 and direction:rtl (NOT flex-direction:row-reverse)
-- The row-reverse was causing Home button to be cut off on narrow phone screens
-- Frontend FIX: Tour modal - uses transform:translate(-50%,-50%) centering
+- Frontend FIX: Mobile navigation uses flex:0 1 auto with space-around
+- Frontend FIX: RTL-specific media queries for Hebrew/Arabic:
+  - <500px: min-width 36px, font-size 8px
+  - <360px: min-width 32px, font-size 7px (maximum compression)
+- Frontend FIX: Tour modal calculates width dynamically based on screen size
+- Frontend FIX: Language saved to backend immediately after login (prevents flash)
 
 P85 Changes (v585):
 - Previous attempt at RTL fixes (superseded by P95)
