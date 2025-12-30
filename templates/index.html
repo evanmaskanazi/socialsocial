@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P95 v596 -->
-<!-- P95: MOBILE HEBREW/RTL FIXES + LANGUAGE PERSISTENCE + MODAL CENTERING -->
-<!-- FIX 1: Mobile nav uses flex:0 0 20% with !important for RTL -->
+<!-- TheraSocial Version P96 v596 -->
+<!-- P96: FIXED MOBILE NAV - Added !important to ALL base styles -->
+<!-- FIX 1: Mobile nav items forced to 20% width with !important on base styles -->
 <!-- FIX 2: PRE-FETCH no longer overwrites localStorage after login (uses justLoggedIn flag) -->
-<!-- FIX 3: PRE-FETCH checks both preferred_language AND language fields from backend -->
-<!-- FIX 4: Tour modal uses explicit left position instead of transform for RTL compatibility -->
-<!-- FIX 5: Language saved to backend immediately after login -->
+<!-- FIX 3: Tour modal uses explicit left position instead of transform for RTL -->
+<!-- FIX 4: RTL selectors now include html[dir="rtl"] for better specificity -->
 <!-- PI506: FIXED TUTORIAL HIGHLIGHT CLEANUP -->
 <!-- FIX: Sidebar text no longer disappears during/after tutorial -->
 <!-- FIX: highlightElement now properly cleans up all inline styles -->
@@ -1280,39 +1279,43 @@
             z-index: 1000;
             padding: 4px 0;
             border-top: 1px solid #E5E7EB;
-            overflow: hidden;
-            width: 100%;
+            overflow: hidden !important;
+            width: 100% !important;
+            max-width: 100vw !important;
             box-sizing: border-box;
         }
 
         .mobile-nav-menu {
-            display: flex;
+            display: flex !important;
             list-style: none;
             padding: 0;
             margin: 0;
-            width: 100%;
-            flex-wrap: nowrap;
-            /* P95 FIX: Use space-evenly for equal distribution */
-            justify-content: space-evenly;
+            width: 100% !important;
+            max-width: 100% !important;
+            flex-wrap: nowrap !important;
+            /* P96 FIX: Use space-evenly for equal distribution */
+            justify-content: space-evenly !important;
+            box-sizing: border-box;
         }
 
         .mobile-nav-item {
-            /* P95 FIX: Force exactly 20% width for 5 items */
-            flex: 0 0 20%;
-            width: 20%;
-            max-width: 20%;
+            /* P96 FIX: Force exactly 20% width for 5 items - with !important */
+            flex: 0 0 20% !important;
+            width: 20% !important;
+            max-width: 20% !important;
+            min-width: 0 !important;
             text-align: center;
             padding: 4px 0;
             cursor: pointer;
             transition: all 0.3s;
             font-size: 12px;
             color: var(--gray);
-            display: flex;
+            display: flex !important;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 1px;
-            box-sizing: border-box;
+            box-sizing: border-box !important;
             overflow: hidden;
         }
 
@@ -1335,26 +1338,38 @@
             line-height: 1.1;
         }
 
-        /* P95 FIX: RTL languages ALWAYS get compact nav - no media query needed */
-        /* These rules apply to ALL screen sizes when in RTL mode */
-        [dir="rtl"] .mobile-nav {
-            padding: 3px 0;
-        }
-        
-        [dir="rtl"] .mobile-nav-item {
-            /* Force 20% width - exactly 5 items fit */
+        /* P96 FIX: RTL languages - smaller text to fit */
+        [dir="rtl"] .mobile-nav-item,
+        html[dir="rtl"] .mobile-nav-item,
+        body[dir="rtl"] .mobile-nav-item {
             flex: 0 0 20% !important;
             width: 20% !important;
             max-width: 20% !important;
             padding: 3px 0 !important;
         }
         
-        [dir="rtl"] .mobile-nav-icon {
+        [dir="rtl"] .mobile-nav-icon,
+        html[dir="rtl"] .mobile-nav-icon {
             font-size: 16px !important;
         }
         
-        [dir="rtl"] .mobile-nav-label {
+        [dir="rtl"] .mobile-nav-label,
+        html[dir="rtl"] .mobile-nav-label {
             font-size: 8px !important;
+        }
+        
+        /* P96 FIX: Very small screens - all languages */
+        @media (max-width: 400px) {
+            .mobile-nav-item {
+                flex: 0 0 20% !important;
+                width: 20% !important;
+            }
+            .mobile-nav-icon {
+                font-size: 15px !important;
+            }
+            .mobile-nav-label {
+                font-size: 7px !important;
+            }
         }
 
         @media (max-width: 768px) {
