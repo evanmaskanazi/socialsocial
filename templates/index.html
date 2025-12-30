@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!-- TheraSocial Version P95 v595 -->
 <!-- P95: MOBILE HEBREW/RTL FIXES - CORRECTED -->
-<!-- FIX 1: Mobile navigation ALL 5 buttons visible in Hebrew - using width:20% per item -->
-<!-- FIX 2: Tour modal fully visible - using transform centering instead of flexbox -->
+<!-- FIX 1: Mobile navigation - uses flex:1 and direction:rtl (NOT row-reverse which cuts off items) -->
+<!-- FIX 2: Tour modal - uses transform centering for reliable positioning -->
 <!-- PI506: FIXED TUTORIAL HIGHLIGHT CLEANUP -->
 <!-- FIX: Sidebar text no longer disappears during/after tutorial -->
 <!-- FIX: highlightElement now properly cleans up all inline styles -->
@@ -1277,6 +1277,8 @@
             z-index: 1000;
             padding: 8px 0;
             border-top: 1px solid #E5E7EB;
+            /* P95 FIX: Clip overflow to prevent horizontal scroll */
+            overflow-x: hidden;
         }
 
         .mobile-nav-menu {
@@ -1285,11 +1287,14 @@
             padding: 0;
             margin: 0;
             width: 100%;
+            /* P95 FIX: No flex-wrap, items must stay in one row */
+            flex-wrap: nowrap;
         }
 
         .mobile-nav-item {
-            /* P95 FIX: Explicit 20% width for exactly 5 items */
-            width: 20%;
+            /* P95 FIX: Use flex: 1 to distribute evenly, not fixed 20% */
+            flex: 1 1 0;
+            min-width: 0;
             text-align: center;
             padding: 6px 0;
             cursor: pointer;
@@ -1314,11 +1319,18 @@
         .mobile-nav-label {
             font-size: 10px;
             font-weight: 500;
+            /* P95 FIX: Prevent long labels from causing overflow */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
 
-        /* RTL Support for Mobile Navigation - P95 FIX */
+        /* RTL Support for Mobile Navigation */
+        /* P95 FIX: Do NOT use flex-direction: row-reverse - it causes items to be cut off on narrow screens */
+        /* Instead, just set direction: rtl which naturally reverses the visual order */
         [dir="rtl"] .mobile-nav-menu {
-            flex-direction: row-reverse;
+            direction: rtl;
         }
 
         @media (max-width: 768px) {
