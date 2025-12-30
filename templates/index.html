@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P85 v585 -->
-<!-- P85: MOBILE HEBREW/RTL FIXES - PROPER IMPLEMENTATION -->
-<!-- FIX 1: Mobile navigation now shows ALL 5 buttons (Home, Feed, Diary, Messages, More) in Hebrew/RTL -->
-<!-- FIX 2: Tour/onboarding modal fully visible in Hebrew/RTL - no cutoff -->
-<!-- Key changes: Fixed flex sizing, removed conflicting RTL rules, proper modal centering -->
+<!-- TheraSocial Version P95 v595 -->
+<!-- P95: MOBILE HEBREW/RTL FIXES - CORRECTED -->
+<!-- FIX 1: Mobile navigation ALL 5 buttons visible in Hebrew - using width:20% per item -->
+<!-- FIX 2: Tour modal fully visible - using transform centering instead of flexbox -->
 <!-- PI506: FIXED TUTORIAL HIGHLIGHT CLEANUP -->
 <!-- FIX: Sidebar text no longer disappears during/after tutorial -->
 <!-- FIX: highlightElement now properly cleans up all inline styles -->
@@ -1278,31 +1277,21 @@
             z-index: 1000;
             padding: 8px 0;
             border-top: 1px solid #E5E7EB;
-            /* P85 FIX: Prevent ANY horizontal scrolling - all 5 buttons must be visible */
-            overflow: hidden;
-            width: 100%;
         }
 
         .mobile-nav-menu {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
             list-style: none;
-            padding: 0 5px;
+            padding: 0;
             margin: 0;
-            /* P85 FIX: Force all items to fit in one row */
             width: 100%;
-            flex-wrap: nowrap;
-            overflow: hidden;
         }
 
         .mobile-nav-item {
-            /* P85 FIX: Equal width for all 5 items, allow shrinking */
-            flex: 1 1 20%;
-            min-width: 50px;
-            max-width: 72px;
+            /* P95 FIX: Explicit 20% width for exactly 5 items */
+            width: 20%;
             text-align: center;
-            padding: 6px 2px;
+            padding: 6px 0;
             cursor: pointer;
             transition: all 0.3s;
             font-size: 12px;
@@ -1311,8 +1300,7 @@
             flex-direction: column;
             align-items: center;
             gap: 2px;
-            /* P85 FIX: Allow shrinking but ensure minimum visibility */
-            overflow: hidden;
+            box-sizing: border-box;
         }
 
         .mobile-nav-item.active {
@@ -1321,34 +1309,16 @@
 
         .mobile-nav-icon {
             font-size: 20px;
-            flex-shrink: 0;
         }
 
         .mobile-nav-label {
             font-size: 10px;
             font-weight: 500;
-            /* P85 FIX: Truncate long labels to fit */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 100%;
-            display: block;
         }
 
-        /* RTL Support for Mobile Navigation */
-        /* P85 FIX: Only set direction, do NOT use flex-direction: row-reverse */
-        /* The direction: rtl property handles the visual order correctly */
+        /* RTL Support for Mobile Navigation - P95 FIX */
         [dir="rtl"] .mobile-nav-menu {
-            direction: rtl;
-        }
-
-        [dir="rtl"] .mobile-nav-item {
-            direction: rtl;
-        }
-        
-        /* P85 FIX: Slightly smaller labels for RTL languages (Hebrew/Arabic tend to be longer) */
-        [dir="rtl"] .mobile-nav-label {
-            font-size: 9px;
+            flex-direction: row-reverse;
         }
 
         @media (max-width: 768px) {
@@ -1433,18 +1403,6 @@
             
             .mobile-alerts-container .alerts-list {
                 max-height: none;
-            }
-            
-            /* P85 FIX: Mobile-specific onboarding modal styles */
-            #onboarding-overlay {
-                padding: 12px !important;
-            }
-            
-            #onboarding-modal {
-                max-width: calc(100vw - 24px) !important;
-                width: calc(100% - 24px) !important;
-                padding: 20px 16px !important;
-                margin: auto !important;
             }
         }
         
@@ -12332,51 +12290,43 @@ const InlineOnboarding = {
         const existing = document.getElementById('onboarding-overlay');
         if (existing) existing.remove();
         
-        // P85 FIX: Detect RTL for proper modal positioning
         const isRTL = ['he', 'ar'].includes(this.language);
         
         // Create overlay
         this.overlay = document.createElement('div');
         this.overlay.id = 'onboarding-overlay';
-        // P85 FIX: Use all four edges (inset) for proper positioning in RTL
         this.overlay.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            width: 100%;
-            height: 100%;
             background: rgba(0, 0, 0, 0.5);
             z-index: 9998;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            box-sizing: border-box;
-            overflow: auto;
         `;
         
-        // Create modal
+        // Create modal - P95 FIX: Use transform centering, not flexbox
         this.modal = document.createElement('div');
         this.modal.id = 'onboarding-modal';
-        // P85 FIX: Constrain width properly to prevent cutoff, especially on mobile
         this.modal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             background: white;
             border-radius: 16px;
             padding: 24px 20px;
-            max-width: 380px;
-            width: calc(100% - 32px);
+            width: 340px;
+            max-width: calc(100vw - 40px);
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
-            position: relative;
+            z-index: 9999;
             box-sizing: border-box;
-            margin: auto;
             direction: ${isRTL ? 'rtl' : 'ltr'};
         `;
         
-        this.overlay.appendChild(this.modal);
         document.body.appendChild(this.overlay);
+        document.body.appendChild(this.modal);
     },
     
     show: function() {
@@ -12405,7 +12355,7 @@ const InlineOnboarding = {
         const isRTL = ['he', 'ar'].includes(this.language);
         const dir = isRTL ? 'rtl' : 'ltr';
         
-        // P85 FIX: Update modal direction when rendering each step
+        // P95: Update modal direction when rendering each step
         this.modal.style.direction = dir;
         
         this.modal.innerHTML = `
@@ -12455,7 +12405,7 @@ const InlineOnboarding = {
                 `).join('')}
             </div>
             
-            <!-- Buttons - P85 FIX: Smaller padding for mobile fit -->
+            <!-- Buttons -->
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 ${!isFirst ? `
                     <button onclick="InlineOnboarding.prev()" style="
@@ -12565,10 +12515,14 @@ const InlineOnboarding = {
             el.style.boxShadow = '';
         });
         
+        // P95 FIX: Remove both overlay and modal (now siblings, not parent-child)
+        if (this.modal) {
+            this.modal.remove();
+            this.modal = null;
+        }
         if (this.overlay) {
             this.overlay.remove();
             this.overlay = null;
-            this.modal = null;
         }
     },
     
