@@ -989,78 +989,94 @@ function initializeParameters() {
     setTimeout(applyEmojisToPrivacySelectors, 150);
 }
 
-// Setup language selector
+// P101 FIX: Setup language selector with backend as source of truth
 async function setupLanguageSelector() {
-    console.log('[PS LANG DEBUG] ========================================');
-    console.log('[PS LANG DEBUG] setupLanguageSelector() STARTED');
-    console.log('[PS LANG DEBUG] Timestamp:', new Date().toISOString());
+    console.log('[PS LANG DEBUG P101] ========================================');
+    console.log('[PS LANG DEBUG P101] setupLanguageSelector() STARTED');
+    console.log('[PS LANG DEBUG P101] Timestamp:', new Date().toISOString());
     
     const selector = document.getElementById('languageSelector');
     if (!selector) {
-        console.error('[PS LANG DEBUG] ERROR: Selector not found!');
+        console.error('[PS LANG DEBUG P101] ERROR: Selector not found!');
         return;
     }
     
-    console.log('[PS LANG DEBUG] INITIAL STATE:');
-    console.log('[PS LANG DEBUG]   selector.value:', selector.value);
-    console.log('[PS LANG DEBUG]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
-    console.log('[PS LANG DEBUG]   i18n.currentLanguage:', window.i18n?.currentLanguage);
+    console.log('[PS LANG DEBUG P101] INITIAL STATE:');
+    console.log('[PS LANG DEBUG P101]   selector.value:', selector.value);
+    console.log('[PS LANG DEBUG P101]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+    console.log('[PS LANG DEBUG P101]   i18n.currentLanguage:', window.i18n?.currentLanguage);
 
-    // FIX #3: Fetch user's language preference from backend profile FIRST
+    // P101 FIX: Check justLoggedIn flag FIRST - if just logged in, trust localStorage
+    const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+    console.log('[PS LANG DEBUG P101] justLoggedIn flag:', justLoggedIn);
+    
+    let currentLang = null;
     let backendLang = null;
-    try {
-        console.log('[PS LANG DEBUG] Fetching backend profile...');
-        const profileResponse = await fetch('/api/user/profile', {
-            credentials: 'include'
-        });
-        if (profileResponse.ok) {
-            const profile = await profileResponse.json();
-            if (profile.preferred_language) {
-                backendLang = profile.preferred_language;
-                console.log('[PS LANG DEBUG] Backend language from profile:', backendLang);
+    
+    if (justLoggedIn) {
+        // User just logged in - localStorage was set at login time, trust it
+        currentLang = localStorage.getItem('selectedLanguage') || 'en';
+        console.log('[PS LANG DEBUG P101] justLoggedIn=true, using localStorage:', currentLang);
+    } else {
+        // Not just logged in - fetch from backend (SOURCE OF TRUTH)
+        try {
+            console.log('[PS LANG DEBUG P101] Fetching backend profile...');
+            const profileResponse = await fetch('/api/user/profile', {
+                credentials: 'include'
+            });
+            if (profileResponse.ok) {
+                const profile = await profileResponse.json();
+                backendLang = profile.preferred_language || profile.language;
+                console.log('[PS LANG DEBUG P101] Backend language from profile:', backendLang);
             } else {
-                console.log('[PS LANG DEBUG] No preferred_language in profile');
+                console.log('[PS LANG DEBUG P101] Profile fetch failed, status:', profileResponse.status);
+            }
+        } catch (e) {
+            console.error('[PS LANG DEBUG P101] Profile fetch error:', e);
+        }
+
+        // P101 FIX: Backend is SOURCE OF TRUTH - use it if available
+        if (backendLang) {
+            currentLang = backendLang;
+            // Update localStorage to MATCH backend (not vice versa!)
+            const oldLocal = localStorage.getItem('selectedLanguage');
+            if (oldLocal !== currentLang) {
+                console.log('[PS LANG DEBUG P101] Updating localStorage from', oldLocal, 'to', currentLang);
             }
         } else {
-            console.log('[PS LANG DEBUG] Profile fetch failed, status:', profileResponse.status);
+            // Fallback to localStorage only if backend unavailable
+            currentLang = localStorage.getItem('selectedLanguage') || 
+                          localStorage.getItem('userLanguage') ||
+                          (window.i18n?.getCurrentLanguage?.()) ||
+                          'en';
+            console.log('[PS LANG DEBUG P101] Backend unavailable, using fallback:', currentLang);
         }
-    } catch (e) {
-        console.error('[PS LANG DEBUG] Profile fetch error:', e);
     }
 
-    // CRITICAL: Backend is source of truth - use it if available
-    let currentLang = backendLang || 
-                      localStorage.getItem('selectedLanguage') || 
-                      localStorage.getItem('userLanguage') ||
-                      (window.i18n?.getCurrentLanguage?.()) ||
-                      'en';
-
-    console.log('[PS LANG DEBUG] Resolved language:', currentLang);
-    console.log('[PS LANG DEBUG]   backendLang:', backendLang);
-    console.log('[PS LANG DEBUG]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+    console.log('[PS LANG DEBUG P101] Resolved language:', currentLang);
 
     // Sync localStorage with the determined language
     localStorage.setItem('selectedLanguage', currentLang);
     localStorage.setItem('userLanguage', currentLang);
-    console.log('[PS LANG DEBUG] localStorage updated to:', currentLang);
+    console.log('[PS LANG DEBUG P101] localStorage updated to:', currentLang);
 
     // CRITICAL FIX: Set programmatic flag BEFORE setting selector value
-    console.log('[PS LANG DEBUG] Setting selector value with programmatic flag...');
+    console.log('[PS LANG DEBUG P101] Setting selector value with programmatic flag...');
     window._updatingSelectorProgrammatically = true;
     selector.value = currentLang;
     window._updatingSelectorProgrammatically = false;
-    console.log('[PS LANG DEBUG] Selector value set to:', selector.value);
+    console.log('[PS LANG DEBUG P101] Selector value set to:', selector.value);
 
     // Update i18n if available
     if (window.i18n && window.i18n.setLanguage) {
-        console.log('[PS LANG DEBUG] Calling i18n.setLanguage...');
+        console.log('[PS LANG DEBUG P101] Calling i18n.setLanguage...');
         await window.i18n.setLanguage(currentLang);
     }
 
     // Force a re-render of the selector to ensure it displays properly
     setTimeout(() => {
         if (!selector.value || selector.value === '') {
-            console.warn('[PS LANG DEBUG] Selector empty after timeout, forcing to:', currentLang);
+            console.warn('[PS LANG DEBUG P101] Selector empty after timeout, forcing to:', currentLang);
             window._updatingSelectorProgrammatically = true;
             selector.value = currentLang || 'en';
             window._updatingSelectorProgrammatically = false;
@@ -1069,24 +1085,24 @@ async function setupLanguageSelector() {
 
     // Track user interaction with the selector for this file too
     selector.addEventListener('mousedown', function() {
-        console.log('[PS LANG] User mousedown on selector');
+        console.log('[PS LANG P101] User mousedown on selector');
         window._userClickedLanguageSelector = true;
         window._lastLanguageSelectorInteraction = Date.now();
     });
 
     // Handle language change - only fires for USER-INITIATED changes
     selector.addEventListener('change', function() {
-        console.log('[PS CHANGE DEBUG] ========================================');
-        console.log('[PS CHANGE DEBUG] CHANGE EVENT FIRED');
-        console.log('[PS CHANGE DEBUG] Timestamp:', new Date().toISOString());
-        console.log('[PS CHANGE DEBUG] _updatingSelectorProgrammatically:', window._updatingSelectorProgrammatically);
-        console.log('[PS CHANGE DEBUG] _userClickedLanguageSelector:', window._userClickedLanguageSelector);
-        console.log('[PS CHANGE DEBUG] this.value:', this.value);
+        console.log('[PS CHANGE DEBUG P101] ========================================');
+        console.log('[PS CHANGE DEBUG P101] CHANGE EVENT FIRED');
+        console.log('[PS CHANGE DEBUG P101] Timestamp:', new Date().toISOString());
+        console.log('[PS CHANGE DEBUG P101] _updatingSelectorProgrammatically:', window._updatingSelectorProgrammatically);
+        console.log('[PS CHANGE DEBUG P101] _userClickedLanguageSelector:', window._userClickedLanguageSelector);
+        console.log('[PS CHANGE DEBUG P101] this.value:', this.value);
         
         // FIX: Skip if being updated programmatically
         if (window._updatingSelectorProgrammatically) {
-            console.log('[PS CHANGE DEBUG] Programmatic update - SKIPPING');
-            console.log('[PS CHANGE DEBUG] ========================================');
+            console.log('[PS CHANGE DEBUG P101] Programmatic update - SKIPPING');
+            console.log('[PS CHANGE DEBUG P101] ========================================');
             return;
         }
         
@@ -1094,35 +1110,35 @@ async function setupLanguageSelector() {
         const storedLang = localStorage.getItem('selectedLanguage');
         const timeSinceInteraction = Date.now() - (window._lastLanguageSelectorInteraction || 0);
         
-        console.log('[PS CHANGE DEBUG] New language:', newLang);
-        console.log('[PS CHANGE DEBUG] Stored language:', storedLang);
-        console.log('[PS CHANGE DEBUG] Time since interaction:', timeSinceInteraction, 'ms');
+        console.log('[PS CHANGE DEBUG P101] New language:', newLang);
+        console.log('[PS CHANGE DEBUG P101] Stored language:', storedLang);
+        console.log('[PS CHANGE DEBUG P101] Time since interaction:', timeSinceInteraction, 'ms');
         
         // FIX: Validate the new language - if empty, restore from localStorage
         if (!newLang || newLang === '') {
-            console.error('[PS CHANGE DEBUG] EMPTY LANGUAGE - restoring to:', storedLang || 'en');
+            console.error('[PS CHANGE DEBUG P101] EMPTY LANGUAGE - restoring to:', storedLang || 'en');
             window._updatingSelectorProgrammatically = true;
             this.value = storedLang || 'en';
             window._updatingSelectorProgrammatically = false;
-            console.log('[PS CHANGE DEBUG] ========================================');
+            console.log('[PS CHANGE DEBUG P101] ========================================');
             return;
         }
 
-        // FIX: Double-check that this is a real user interaction
-        // If not, skip the POST (interceptor should have handled it, but double-check)
+        // P101 FIX: Double-check that this is a real user interaction
+        // If not, block the change and restore to stored value
         const isRealUserInteraction = window._userClickedLanguageSelector && timeSinceInteraction < 10000;
         if (!isRealUserInteraction && newLang !== storedLang) {
-            console.error('[PS CHANGE DEBUG] SUSPICIOUS CHANGE BLOCKED!');
-            console.error('[PS CHANGE DEBUG]   Not a confirmed user interaction');
-            console.error('[PS CHANGE DEBUG]   Restoring to:', storedLang);
+            console.error('[PS CHANGE DEBUG P101] SUSPICIOUS CHANGE BLOCKED!');
+            console.error('[PS CHANGE DEBUG P101]   Not a confirmed user interaction');
+            console.error('[PS CHANGE DEBUG P101]   Restoring to:', storedLang);
             window._updatingSelectorProgrammatically = true;
             this.value = storedLang || 'en';
             window._updatingSelectorProgrammatically = false;
-            console.log('[PS CHANGE DEBUG] ========================================');
+            console.log('[PS CHANGE DEBUG P101] ========================================');
             return;
         }
 
-        console.log('[PS CHANGE DEBUG] Valid user-initiated change to:', newLang);
+        console.log('[PS CHANGE DEBUG P101] Valid user-initiated change to:', newLang);
         
         // Save to localStorage BEFORE any other actions
         localStorage.setItem('selectedLanguage', newLang);
@@ -1145,11 +1161,11 @@ async function setupLanguageSelector() {
         updateTranslations();
 
         // Send to server to save preference - ONLY for user-initiated changes
-        console.log('[PS CHANGE DEBUG] POSTing to /api/user/language:', newLang);
+        console.log('[PS CHANGE DEBUG P101] POSTing to /api/user/language:', newLang);
         if (window.fetch) {
             // CRITICAL: Set flag to allow this POST through the interceptor
             window._allowLanguagePost = true;
-            console.log('[PS CHANGE DEBUG] Set _allowLanguagePost = true');
+            console.log('[PS CHANGE DEBUG P101] Set _allowLanguagePost = true');
             
             fetch('/api/user/language', {
                 method: 'POST',
@@ -1157,16 +1173,16 @@ async function setupLanguageSelector() {
                 credentials: 'include',
                 body: JSON.stringify({ language: newLang })
             }).then(resp => {
-                console.log('[PS CHANGE DEBUG] POST response status:', resp.status);
+                console.log('[PS CHANGE DEBUG P101] POST response status:', resp.status);
             }).catch(err => {
-                console.error('[PS CHANGE DEBUG] POST error:', err);
+                console.error('[PS CHANGE DEBUG P101] POST error:', err);
             });
         }
         
         // Reset the user interaction flag
         window._userClickedLanguageSelector = false;
         
-        console.log('[PS CHANGE DEBUG] ========================================');
+        console.log('[PS CHANGE DEBUG P101] ========================================');
     });
 
     // Set initial RTL direction based on current language
@@ -1182,11 +1198,11 @@ async function setupLanguageSelector() {
         updateTranslations();
     }
     
-    console.log('[PS LANG DEBUG] FINAL STATE:');
-    console.log('[PS LANG DEBUG]   selector.value:', selector.value);
-    console.log('[PS LANG DEBUG]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
-    console.log('[PS LANG DEBUG] setupLanguageSelector() COMPLETED');
-    console.log('[PS LANG DEBUG] ========================================');
+    console.log('[PS LANG DEBUG P101] FINAL STATE:');
+    console.log('[PS LANG DEBUG P101]   selector.value:', selector.value);
+    console.log('[PS LANG DEBUG P101]   localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+    console.log('[PS LANG DEBUG P101] setupLanguageSelector() COMPLETED');
+    console.log('[PS LANG DEBUG P101] ========================================');
 }
 
 // Add parameter-specific styles
@@ -3318,4 +3334,4 @@ window.viewUserParameters = viewUserParameters;
 window.closeUserParametersModal = closeUserParametersModal;
 window.checkParameterAlerts = checkParameterAlerts;
 
-console.log('[PJ811] Parameters-social.js v1700 loaded - trigger alerts now persist in database');
+console.log('[PJ811] Parameters-social.js v1801 P101 loaded - trigger alerts now persist in database');
