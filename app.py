@@ -1,8 +1,14 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase P98 (Version 598)
+Complete app.py for Social Social Platform - Phase P101 (Version 601)
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+P101 Changes (v601):
+- No backend changes - dual safeguard language fix is in frontend files
+- index.html: Maintains P99 PRE-FETCH backend source of truth fix
+- parameters-social.js: NEW - setupLanguageSelector now uses backend as source of truth
+- parameters-social.js: NEW - Blocks suspicious non-user-initiated language changes
 
 P98 Changes (v598):
 - No backend changes - all fixes are in frontend (index.html)
