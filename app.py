@@ -6,9 +6,9 @@ Auto-migrates on startup for seamless deployment
 
 P95 Changes (v595):
 - No backend changes - all fixes are in frontend (index.html)
-- Frontend FIX: Mobile navigation - explicit width:20% per item ensures all 5 buttons visible
-- Frontend FIX: Tour modal - using transform:translate(-50%,-50%) centering instead of flexbox
-- This approach works reliably in both LTR and RTL modes
+- Frontend FIX: Mobile navigation - uses flex:1 and direction:rtl (NOT flex-direction:row-reverse)
+- The row-reverse was causing Home button to be cut off on narrow phone screens
+- Frontend FIX: Tour modal - uses transform:translate(-50%,-50%) centering
 
 P85 Changes (v585):
 - Previous attempt at RTL fixes (superseded by P95)
