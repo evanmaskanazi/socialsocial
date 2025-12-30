@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P97 v597 -->
+<!-- TheraSocial Version P98 v598 -->
+<!-- P98: FIXED LANGUAGE CONSISTENCY + TOUR BOX CENTERING AT SMALL WIDTHS -->
+<!-- FIX 1: loadUserLanguage NO LONGER overwrites backend - backend is SOURCE OF TRUTH -->
+<!-- FIX 2: Removed "preserve pre-login language" logic that was incorrectly updating backend -->
+<!-- FIX 3: Tour box now uses calc(50% - width/2) for guaranteed centering at all widths -->
+<!-- FIX 4: Modal max-width reduced for screens under 360px -->
 <!-- P97: FIXED MODAL CENTERING + LARGER HEBREW BUTTONS + LANGUAGE PERSISTENCE -->
-<!-- FIX 1: Modal uses left:0;right:0;margin:auto for bulletproof RTL centering -->
-<!-- FIX 2: Hebrew nav icons 17px (was 16px), labels 9px (was 8px) - closer to English -->
-<!-- FIX 3: loadUserLanguage now checks BOTH preferred_language AND language fields -->
-<!-- FIX 4: loadUserLanguage checks justLoggedIn flag and skips backend fetch if set -->
-<!-- FIX 5: PRE-FETCH no longer removes flag - loadUserLanguage removes it instead -->
+<!-- Previous fixes: Modal RTL centering, Hebrew nav sizing, justLoggedIn flag -->
 <!-- PI506: FIXED TUTORIAL HIGHLIGHT CLEANUP -->
 <!-- FIX: Sidebar text no longer disappears during/after tutorial -->
 <!-- FIX: highlightElement now properly cleans up all inline styles -->
@@ -4635,36 +4636,15 @@ async function submitConsent() {
             console.log('[LANG DEBUG]   profile.language:', profile.language);
             console.log('[LANG DEBUG]   backendLang (with fallback):', backendLang);
 
-            // PI503 FIX: Preserve user's pre-login language selection
-            // If user selected a language before login (stored in localStorage), keep it
-            // and update the backend to match. Only use backend language if no localStorage.
-            let savedLang;
-            if (currentLocalLang && currentLocalLang !== backendLang) {
-                // User had a different language before login - preserve it
-                savedLang = currentLocalLang;
-                console.log('[LANG DEBUG] PRESERVING pre-login language:', savedLang);
-                
-                // Update backend to match user's current selection
-                try {
-                    await fetch(`${API_URL}/user/language`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ language: savedLang }),
-                        credentials: 'include'
-                    });
-                    console.log('[LANG DEBUG] Backend updated to match pre-login selection');
-                } catch (e) {
-                    console.warn('[LANG DEBUG] Failed to update backend language:', e);
-                }
-            } else {
-                // No pre-login selection or same as backend - use backend
-                savedLang = backendLang;
-                console.log('[LANG DEBUG] USING backend language:', savedLang);
-            }
+            // P98 FIX: Backend is SOURCE OF TRUTH when user is already logged in
+            // DO NOT overwrite backend with localStorage - this was causing he->en switches
+            // The only time localStorage should take precedence is on justLoggedIn (handled above)
+            const savedLang = backendLang;
+            console.log('[LANG DEBUG] P98: Using BACKEND language (source of truth):', savedLang);
             
             console.log('[LANG DEBUG] Final language choice:', savedLang);
 
-            // Update localStorage to match
+            // Update localStorage to match backend
             localStorage.setItem('selectedLanguage', savedLang);
             localStorage.setItem('userLanguage', savedLang);
             console.log('[LANG DEBUG] localStorage updated to:', savedLang);
@@ -12441,27 +12421,31 @@ const InlineOnboarding = {
             z-index: 9998;
         `;
         
-        // P97 FIX: Calculate modal width based on screen size
+        // P98 FIX: Calculate modal width and position for guaranteed centering on all screen sizes
         const screenWidth = window.innerWidth;
-        const modalWidth = Math.min(340, screenWidth - 32); // 16px margin on each side
+        // For very small screens (350px and below), use even smaller modal
+        const modalWidth = screenWidth <= 360 
+            ? Math.min(300, screenWidth - 24)  // 12px margin on each side for very small screens
+            : Math.min(340, screenWidth - 32); // 16px margin on each side for larger screens
         
-        // P97 FIX: Use margin:auto centering - works reliably in both LTR and RTL
-        // This method doesn't depend on left/transform calculations that break in RTL
+        // P98 FIX: Calculate explicit left position for guaranteed centering
+        // This works reliably in both LTR and RTL modes
+        const leftPosition = Math.max(0, (screenWidth - modalWidth) / 2);
+        
+        // P98 FIX: Use explicit left position instead of margin:auto
+        // margin:auto can fail in RTL mode on some browsers
         this.modal = document.createElement('div');
         this.modal.id = 'onboarding-modal';
         this.modal.style.cssText = `
             position: fixed;
             top: 50%;
-            left: 0;
-            right: 0;
-            margin-left: auto;
-            margin-right: auto;
+            left: ${leftPosition}px;
             transform: translateY(-50%);
             background: white;
             border-radius: 16px;
             padding: 20px 16px;
             width: ${modalWidth}px;
-            max-width: calc(100vw - 32px);
+            max-width: calc(100vw - 24px);
             max-height: calc(100vh - 40px);
             overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
