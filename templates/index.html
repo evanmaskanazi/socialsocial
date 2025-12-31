@@ -12000,7 +12000,15 @@ async function updateProgressChart() {
         // Show placeholder if no data
         const insightsEl = document.getElementById('insightsContent');
         if (insightsEl) {
-            insightsEl.textContent = 'Start tracking your wellness to see insights here!';
+            // PL202: Use translated text instead of hardcoded English
+            const lang = localStorage.getItem('selectedLanguage') || 'en';
+            const startTrackingTexts = {
+                'en': 'Start tracking your wellness to see insights here!',
+                'he': 'התחל לעקוב אחר הבריאות שלך כדי לראות תובנות כאן!',
+                'ar': 'ابدأ بتتبع صحتك لرؤية الرؤى هنا!',
+                'ru': 'Начните отслеживать свое здоровье, чтобы увидеть здесь статистику!'
+            };
+            insightsEl.textContent = startTrackingTexts[lang] || startTrackingTexts['en'];
         }
     }
 }
