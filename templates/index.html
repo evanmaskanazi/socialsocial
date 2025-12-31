@@ -11997,10 +11997,9 @@ async function updateProgressChart() {
         updateCheckinSummary(data);
     } catch (error) {
         console.error('Progress chart error:', error);
-        // Show placeholder if no data
+        // Show placeholder if no data - PL203: Use translated text
         const insightsEl = document.getElementById('insightsContent');
         if (insightsEl) {
-            // PL202: Use translated text instead of hardcoded English
             const lang = localStorage.getItem('selectedLanguage') || 'en';
             const startTrackingTexts = {
                 'en': 'Start tracking your wellness to see insights here!',
@@ -12221,6 +12220,14 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         checkAndRedirectToDiary();
     }, 500);
+});
+
+// PL203: Refresh progress chart when language changes to update insights text
+window.addEventListener('languageChanged', () => {
+    console.log('[PROGRESS] Language changed, refreshing progress chart...');
+    if (document.getElementById('progressChart')) {
+        updateProgressChart();
+    }
 });
 
 // Make functions globally available
