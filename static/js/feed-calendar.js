@@ -1,8 +1,5 @@
 // Feed Calendar System with Circle Name Mapping Support
-// Complete version with all original functionality preserved
-
-// Translation helper
-// Feed Calendar System with Circle Name Mapping Support
+// Version P307 - Updated colors to P305 palette
 // Complete version with all original functionality preserved
 
 // Translation helper
@@ -76,7 +73,7 @@ function addCalendarToFeed() {
     // Create calendar container
     const calendarHtml = `
         <div class="calendar-container" style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h3 style="color: #6366f1; margin-bottom: 15px;">
+            <h3 style="color: #6B8BA4; margin-bottom: 15px;">
                 <i class="fas fa-calendar-alt"></i> <span data-i18n="feed.calendar_title">${t('feed.calendar_title')}</span>
             </h3>
 
@@ -97,7 +94,7 @@ function addCalendarToFeed() {
 
             <!-- Daily mood and notes -->
             <div class="daily-mood-section" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <h4 style="color: #6366f1; margin-bottom: 10px;" data-i18n="feed.mood_notes">${t('feed.mood_notes')}</h4>
+                <h4 style="color: #6B8BA4; margin-bottom: 10px;" data-i18n="feed.mood_notes">${t('feed.mood_notes')}</h4>
 
                 <div style="display: grid; gap: 15px;">
                     <div>
@@ -125,15 +122,15 @@ function addCalendarToFeed() {
 
             <!-- Activity summary -->
             <div class="activity-summary" style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px;">
+                <div class="stat-card" style="background: linear-gradient(135deg, #6B8BA4 0%, #B6A9C9 100%); color: white; padding: 15px; border-radius: 8px;">
                     <div style="font-size: 24px; font-weight: bold;" id="postCount">0</div>
                     <div style="opacity: 0.9;" data-i18n="feed.posts_today">${t('feed.posts_today')}</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 15px; border-radius: 8px;">
+                <div class="stat-card" style="background: linear-gradient(135deg, #AFC7D6 0%, #C17C74 100%); color: white; padding: 15px; border-radius: 8px;">
                     <div style="font-size: 24px; font-weight: bold;" id="messageCount">0</div>
                     <div style="opacity: 0.9;" data-i18n="feed.messages_sent">${t('feed.messages_sent')}</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 15px; border-radius: 8px;">
+                <div class="stat-card" style="background: linear-gradient(135deg, #9DB8A0 0%, #C7D9CC 100%); color: white; padding: 15px; border-radius: 8px;">
                     <div style="font-size: 24px; font-weight: bold;" id="commentCount">0</div>
                     <div style="opacity: 0.9;" data-i18n="feed.comments_made">${t('feed.comments_made')}</div>
                 </div>
@@ -141,7 +138,7 @@ function addCalendarToFeed() {
 
             <!-- Calendar view with saved dates -->
             <div class="saved-dates" style="margin-top: 20px;">
-                <h4 style="color: #6366f1; margin-bottom: 10px;">📅 <span data-i18n="feed.activity_history">${t('feed.activity_history')}</span></h4>
+                <h4 style="color: #6B8BA4; margin-bottom: 10px;">📅 <span data-i18n="feed.activity_history">${t('feed.activity_history')}</span></h4>
                 <div id="savedDatesList" style="display: flex; flex-wrap: wrap; gap: 5px;"></div>
             </div>
         </div>

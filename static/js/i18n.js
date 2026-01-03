@@ -1,5 +1,5 @@
 // Language detection and translation system with backend sync
-// Version PI505 - No changes from PI504 (onboarding fix is in index.html)
+// Version P306 - Added menu.progress and feed.my_feed translations for P305 navigation changes - No changes from PI504 (onboarding fix is in index.html)
 // Version PI504 - Added onboarding.dont_show translation for all languages
 // Version PI503 - Added tutorial translations and nav.tutorial key for all languages
 // Version PJ703 - Fixed indentation for invite.alert_title and invite.alert_content keys
@@ -20,6 +20,9 @@ const translations = {
         'menu.parameters': 'Diary',
         'menu.logout': 'Logout',
         'menu.invite': 'Invite',
+        'menu.progress': 'Progress',
+        'menu.home': 'Home',
+        'feed.my_feed': 'My Feed',
             'parameters.positive1': "Amazing work! You're tracking your wellness journey beautifully! 💪",
         'parameters.positive2': "Fantastic job! Your dedication to self-awareness is inspiring! ⭐",
         'parameters.positive3': "Wonderful! Every parameter logged is a step towards understanding yourself better! 🌈",
@@ -966,6 +969,9 @@ const translations = {
         'menu.parameters': 'פרמטרים',
         'menu.logout': 'התנתקות',
          'menu.invite': 'הזמן',
+        'menu.progress': 'התקדמות',
+        'menu.home': 'בית',
+        'feed.my_feed': 'הפיד שלי',
 
         // Onboarding/Tutorial (Hebrew)
         'onboarding.welcome': 'ברוכים הבאים ל-TheraSocial!',
@@ -1897,6 +1903,9 @@ const translations = {
         'menu.parameters': 'المعاملات',
         'menu.logout': 'تسجيل الخروج',
         'menu.invite': 'دعوة',
+        'menu.progress': 'التقدم',
+        'menu.home': 'الصفحة الرئيسية',
+        'feed.my_feed': 'موجزي',
 
         // Onboarding/Tutorial (Arabic)
         'onboarding.welcome': 'مرحباً بك في TheraSocial!',
@@ -2832,6 +2841,9 @@ const translations = {
         'menu.parameters': 'Параметры',
         'menu.logout': 'Выход',
         'menu.invite': 'Пригласить',
+        'menu.progress': 'Прогресс',
+        'menu.home': 'Главная',
+        'feed.my_feed': 'Моя лента',
 
         // Onboarding/Tutorial (Russian)
         'onboarding.welcome': 'Добро пожаловать в TheraSocial!',
