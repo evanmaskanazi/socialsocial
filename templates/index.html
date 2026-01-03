@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P103 v603 -->
+<!-- TheraSocial Version P305 v700 -->
+<!-- P305: MAJOR REDESIGN - Navigation restructure + Visual design overhaul -->
+<!-- P305: CHANGE 1 - Feed becomes Home page with Welcome/Mission section above Feed content -->
+<!-- P305: CHANGE 1 - New Progress tab with Location Settings and Your Progress sections -->
+<!-- P305: CHANGE 2 - New calming color palette: #6B8BA4, #AFC7D6, #9DB8A0, #C7D9CC, #B6A9C9, #F4F1EC, #E8E1D9, #E5E5E3 -->
+<!-- P305: CHANGE 2 - Wide and open layout with increased spacing and padding -->
+<!-- P305: CHANGE 2 - Dark mode support for evening/nighttime use -->
 <!-- P103: TOUR MODAL CENTERING FIX - Uses transform offset correction -->
 <!-- P103: PROBLEM - When html dir="rtl", browser interprets CSS 'left' from right side -->
 <!-- P103: SOLUTION - Set left:0, measure actual position, calculate offset, use transform to correct -->
@@ -396,23 +402,82 @@
         }
 
         :root {
-            --primary: #6B46C1;
-            --primary-dark: #553C9A;
-            --secondary: #EC4899;
-            --success: #10B981;
-            --warning: #F59E0B;
-            --danger: #EF4444;
-            --dark: #1F2937;
+            /* P305: New calming color palette for mental health platform */
+            --primary: #6B8BA4;
+            --primary-dark: #5A7A93;
+            --primary-light: #AFC7D6;
+            --secondary: #9DB8A0;
+            --secondary-light: #C7D9CC;
+            --accent: #B6A9C9;
+            --success: #9DB8A0;
+            --warning: #D4A574;
+            --danger: #C17C74;
+            --dark: #3D4852;
             --gray: #6B7280;
-            --light: #F9FAFB;
+            --light: #F4F1EC;
+            --light-warm: #E8E1D9;
             --white: #FFFFFF;
+            --border: #E5E5E3;
+            /* Wide and open layout */
+            --content-max-width: 1400px;
+            --content-padding: 30px;
+        }
+
+        /* P305: Dark mode support for evening/nighttime use */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #8FAFC4;
+                --primary-dark: #6B8BA4;
+                --primary-light: #AFC7D6;
+                --secondary: #A8C5AB;
+                --secondary-light: #C7D9CC;
+                --accent: #C4B8D6;
+                --success: #A8C5AB;
+                --warning: #D4B896;
+                --danger: #D49B94;
+                --dark: #E8E1D9;
+                --gray: #A0A4A8;
+                --light: #2D3748;
+                --light-warm: #374151;
+                --white: #1F2937;
+                --border: #4A5568;
+            }
+        }
+
+        /* Manual dark mode class for toggle support */
+        .dark-mode {
+            --primary: #8FAFC4;
+            --primary-dark: #6B8BA4;
+            --primary-light: #AFC7D6;
+            --secondary: #A8C5AB;
+            --secondary-light: #C7D9CC;
+            --accent: #C4B8D6;
+            --success: #A8C5AB;
+            --warning: #D4B896;
+            --danger: #D49B94;
+            --dark: #E8E1D9;
+            --gray: #A0A4A8;
+            --light: #2D3748;
+            --light-warm: #374151;
+            --white: #1F2937;
+            --border: #4A5568;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6B8BA4 0%, #B6A9C9 100%);
             min-height: 100vh;
             color: var(--dark);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%);
+            }
+        }
+
+        .dark-mode body, body.dark-mode {
+            background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%);
         }
 
         /* RTL Support */
@@ -436,16 +501,16 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: var(--content-max-width, 1400px);
             margin: 0 auto;
-            padding: 20px;
+            padding: var(--content-padding, 30px);
         }
 
-        /* Navigation */
+        /* Navigation - P305: Updated styling */
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -455,7 +520,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 30px;
+            padding: 16px 32px;
         }
 
         .logo {
@@ -482,9 +547,9 @@
         }
 
         .language-selector {
-            padding: 8px 12px;
+            padding: 8px 14px;
             border: 2px solid var(--primary);
-            border-radius: 8px;
+            border-radius: 10px;
             background: var(--white);
             color: var(--primary);
             font-weight: 600;
@@ -543,11 +608,11 @@
         .btn {
             padding: 12px 24px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
         }
 
         .btn-primary {
@@ -559,7 +624,7 @@
         .btn-primary:hover {
             background: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(107, 70, 193, 0.3);
+            box-shadow: 0 10px 20px rgba(107, 139, 164, 0.3);
         }
 
         .btn-secondary {
@@ -572,7 +637,7 @@
             background: var(--light);
         }
 
-        /* Dashboard */
+        /* Dashboard - P305: Wider, more open layout */
         .dashboard {
             display: none;
             margin-top: 20px;
@@ -580,16 +645,17 @@
 
         .dashboard-grid {
             display: grid;
-            grid-template-columns: 250px 1fr 300px;
-            gap: 20px;
+            grid-template-columns: 260px 1fr 320px;
+            gap: 25px;
         }
 
-        /* Sidebar */
+        /* Sidebar - P305: More spacious styling */
         .sidebar {
             background: var(--white);
-            border-radius: 15px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 24px;
             height: fit-content;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
         }
 
         .sidebar-menu {
@@ -597,14 +663,14 @@
         }
 
         .sidebar-item {
-            padding: 12px 16px;
-            margin-bottom: 5px;
-            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 8px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .sidebar-item:hover {
@@ -614,6 +680,7 @@
         .sidebar-item.active {
             background: var(--primary);
             color: var(--white);
+            box-shadow: 0 4px 12px rgba(107, 139, 164, 0.3);
         }
 
         /* Sidebar icons - matching mobile style */
@@ -632,19 +699,20 @@
             flex-direction: row-reverse;
         }
 
-        /* Main Content */
+        /* Main Content - P305: More spacious padding */
         .main-content {
             background: var(--white);
-            border-radius: 15px;
-            padding: 25px;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
         }
 
-        /* Feed - Enhanced with Calendar */
+        /* Feed - Enhanced with Calendar - P305: Softer colors */
         .feed-calendar-section {
             background: var(--light);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
         }
 
         .feed-calendar-header {
@@ -693,19 +761,25 @@
 
         .post-form {
             background: var(--light);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
         }
 
         .post-input {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #E5E7EB;
-            border-radius: 10px;
+            padding: 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
             resize: none;
-            min-height: 100px;
+            min-height: 120px;
             font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .post-input:focus {
+            border-color: var(--primary);
+            outline: none;
         }
 
         .post-actions {
@@ -774,12 +848,12 @@
             margin-bottom: 15px;
         }
 
-        /* Enhanced Profile Section */
+        /* Enhanced Profile Section - P305: Updated styling */
         .profile-section {
             background: var(--light);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
         }
 
         .profile-header {
@@ -791,7 +865,7 @@
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -829,7 +903,7 @@
         }
 
         .parameter-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             border-radius: 15px;
             padding: 20px;
             color: var(--white);
@@ -1177,12 +1251,13 @@
             border-radius: 10px;
         }
 
-        /* Right Sidebar */
+        /* Right Sidebar - P305: Updated styling */
         .right-sidebar {
             background: var(--white);
-            border-radius: 15px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 24px;
             height: fit-content;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
         }
 
         .alerts-list {
@@ -1785,7 +1860,7 @@
 }
 
 #edit-update-btn {
-    background-color: #667eea;
+    background-color: var(--primary);
     color: white;
     padding: 10px 20px;
     border: none;
@@ -1817,7 +1892,7 @@
 
 .share-link-card h3,
 .recommendations-card h3 {
-    color: #667eea;
+    color: var(--primary);
     margin-bottom: 10px;
 }
 
@@ -2204,7 +2279,7 @@
             </div>
 
  <div class="mission-section" style="margin-top: 40px;">
-                <h2 style="color: #667eea; margin-bottom: 20px;" data-i18n="about.team_title">Our Team & Story</h2>
+                <h2 style="color: var(--primary); margin-bottom: 20px;" data-i18n="about.team_title">Our Team & Story</h2>
 
                 <p style="margin-bottom: 20px;" data-i18n="about.team_intro">
                     The primary team behind this is CEO Benny Brandstetter and CTO Evan Askanazi.
@@ -2224,9 +2299,9 @@
 
                 <p>
                     <span data-i18n="about.find_team">You can find</span>
-                    <a href="https://www.linkedin.com/in/bennybrandst/" target="_blank" style="color: #667eea; text-decoration: none; font-weight: bold;">Benny Brandstetter</a>
+                    <a href="https://www.linkedin.com/in/bennybrandst/" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: bold;">Benny Brandstetter</a>
                     <span data-i18n="about.and"> and </span>
-                    <a href="https://www.linkedin.com/in/evan-askanazi/" target="_blank" style="color: #667eea; text-decoration: none; font-weight: bold;">Evan Askanazi</a>
+                    <a href="https://www.linkedin.com/in/evan-askanazi/" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: bold;">Evan Askanazi</a>
                     <span data-i18n="about.on_linkedin"> on LinkedIn</span>.
                 </p>
             </div>
@@ -2293,16 +2368,16 @@
 
     <!-- Dashboard -->
  <div id="dashboard" class="dashboard container">
-    <!-- Mobile Navigation Bar - PJ5002: Consolidated 5-tab navigation -->
+    <!-- Mobile Navigation Bar - P305: Consolidated 5-tab navigation -->
     <nav class="mobile-nav">
         <ul class="mobile-nav-menu">
-            <li class="mobile-nav-item" data-view="home" onclick="showView('home')">
+            <li class="mobile-nav-item active" data-view="home" onclick="showView('home')">
                 <span class="mobile-nav-icon">🏠</span>
                 <span class="mobile-nav-label" data-i18n="menu.home">Home</span>
             </li>
-            <li class="mobile-nav-item active" data-view="feed" onclick="showView('feed')">
-                <span class="mobile-nav-icon">📝</span>
-                <span class="mobile-nav-label" data-i18n="menu.feed">Feed</span>
+            <li class="mobile-nav-item" data-view="progress" onclick="showView('progress')">
+                <span class="mobile-nav-icon">📈</span>
+                <span class="mobile-nav-label" data-i18n="menu.progress">Progress</span>
             </li>
             <li class="mobile-nav-item" data-view="tracking" onclick="handleParametersClick(event)">
                 <span class="mobile-nav-icon">📊</span>
@@ -2369,9 +2444,9 @@
                         <span class="sidebar-icon">🏠</span>
                         <span class="sidebar-label" data-i18n="menu.home">Home</span>
                     </li>
-                    <li class="sidebar-item" data-view="feed">
-                        <span class="sidebar-icon">📝</span>
-                        <span class="sidebar-label" data-i18n="menu.feed">Feed</span>
+                    <li class="sidebar-item" data-view="progress">
+                        <span class="sidebar-icon">📈</span>
+                        <span class="sidebar-label" data-i18n="menu.progress">Progress</span>
                     </li>
                     <li class="sidebar-item" data-view="profile">
                         <span class="sidebar-icon">👤</span>
@@ -2406,31 +2481,76 @@
 
             <!-- Main Content Area -->
             <main class="main-content">
-                <!-- Home View (Settings) -->
+                <!-- Home View (P305: Combined Welcome/Mission + Feed) -->
               <div id="homeView" class="view">
-                  <h2 style="margin-bottom: 20px;" data-i18n="home.title">Home</h2>
+                  <h2 style="margin-bottom: 20px;" data-i18n="menu.home">Home</h2>
 
-                  <!-- Welcome Section -->
-                  <div class="content" style="background: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                      <p data-i18n="about.intro" style="line-height: 1.8; color: #4B5563; margin-bottom: 20px;">
+                  <!-- Welcome Section with Mission -->
+                  <div class="content" style="background: var(--light); padding: 28px; border-radius: 16px; margin-bottom: 28px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);">
+                      <p data-i18n="about.intro" style="line-height: 1.8; color: var(--dark); margin-bottom: 20px;">
                           Welcome to TheraSocial - a comprehensive platform designed to support both therapists and individuals on their wellness journey. We combine professional tools with personal tracking features to create a holistic approach to mental health and wellbeing.
                       </p>
 
-                      <div class="mission-section" style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%); border-radius: 10px;">
-                          <h2 style="color: #667eea; margin-bottom: 15px; font-size: 1.5rem;" data-i18n="about.mission_title">Our Mission</h2>
-                          <p data-i18n="about.mission_text" style="line-height: 1.8; color: #4B5563;">
+                      <div class="mission-section" style="margin-top: 25px; padding: 22px; background: linear-gradient(135deg, rgba(107, 139, 164, 0.15) 0%, rgba(182, 169, 201, 0.15) 100%); border-radius: 12px; border-left: 4px solid var(--primary);">
+                          <h2 style="color: var(--primary); margin-bottom: 15px; font-size: 1.5rem;" data-i18n="about.mission_title">Our Mission</h2>
+                          <p data-i18n="about.mission_text" style="line-height: 1.8; color: var(--dark);">
                               We believe in making mental health support accessible, organized, and effective. Our mission is to empower therapists with the tools they need to provide excellent care, while giving individuals the resources to track and improve their wellbeing.
                           </p>
                       </div>
                   </div>
 
-                <!-- City Selector Section -->
-                  <div class="city-selector-container" style="background: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                      <h3 style="color: #667eea; margin-bottom: 15px; font-size: 1.3rem;" data-i18n="home.location_settings">Location Settings</h3>
+                  <!-- Feed Section (My Feed) -->
+                  <div id="homeFeedSection">
+                      <h3 style="margin-bottom: 20px; color: var(--primary); font-size: 1.3rem;" data-i18n="feed.my_feed">My Feed</h3>
+                      <p style="color: var(--gray); margin-bottom: 20px;" data-i18n="feed.subtitle">Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.</p>
+
+                      <!-- Feed Calendar -->
+                      <div class="feed-calendar-section">
+                          <div class="feed-calendar-header">
+                              <button class="btn btn-secondary" onclick="feedPreviousMonth()" data-i18n="calendar.prev">←</button>
+                              <span id="feedCurrentMonth" style="font-weight: 600;">January 2025</span>
+                              <button class="btn btn-secondary" onclick="feedNextMonth()" data-i18n="calendar.next">→</button>
+                          </div>
+                          <div class="feed-calendar-grid" id="feedCalendarGrid"></div>
+                          <div style="text-align: center; margin-top: 15px;">
+                              <p><span data-i18n="feed.selected_date">Selected Date:</span> <strong id="feedSelectedDateDisplay" data-i18n="feed.today">Today</strong></p>
+                          </div>
+                      </div>
+
+                      <!-- Post Form -->
+                      <div class="post-form">
+                          <textarea class="post-input" data-i18n="feed.placeholder" placeholder="How are you feeling today?" id="postInput"></textarea>
+                          <div class="post-actions">
+                              <select class="visibility-select" id="visibilitySelect">
+                                  <option value="general" data-i18n="privacy.public">Public</option>
+                                  <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
+                                  <option value="family" data-i18n="privacy.class_a">Family</option>
+                                  <option value="private" data-i18n="privacy.private" selected>Private</option>
+                              </select>
+                              <div style="display: flex; gap: 10px;">
+                                  <button class="btn btn-primary" style="width: auto;" id="postBtn" data-i18n="feed.save_update">Save Update</button>
+                              </div>
+                          </div>
+                      </div>
+
+                      <!-- Posts Display Container -->
+                      <div class="feed-posts" id="feedPostsContainer" style="margin-top: 20px;">
+                          <!-- Posts will be displayed here -->
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Progress View (P305: New - Location + Progress sections) -->
+              <div id="progressView" class="view hidden">
+                  <h2 style="margin-bottom: 20px;" data-i18n="menu.progress">Progress</h2>
+
+                  <!-- City Selector Section -->
+                  <div class="city-selector-container" style="background: var(--light); padding: 28px; border-radius: 16px; margin-bottom: 28px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);">
+                      <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="home.location_settings">Location Settings</h3>
 
                       <div class="city-selector-wrapper" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
-                          <label style="font-weight: 600; color: #4B5563; min-width: 120px;" data-i18n="home.select_city">Select City:</label>
-                  <select id="homeCitySelector" class="city-selector" style="flex: 1; min-width: 250px; padding: 12px; border: 2px solid #E5E7EB; border-radius: 10px; font-size: 16px;">
+                          <label style="font-weight: 600; color: var(--dark); min-width: 120px;" data-i18n="home.select_city">Select City:</label>
+                  <select id="homeCitySelector" class="city-selector" style="flex: 1; min-width: 250px; padding: 12px; border: 2px solid var(--border); border-radius: 12px; font-size: 16px; background: var(--white);">
     <!-- Israel (10 cities) -->
     <option value="Jerusalem, Israel" data-i18n="city.jerusalem_israel">Jerusalem, Israel</option>
     <option value="Tel Aviv, Israel" data-i18n="city.tel_aviv_israel">Tel Aviv, Israel</option>
@@ -2487,18 +2607,18 @@
 </select>
                       </div>
 
-                      <div class="city-time-display" id="homeCityTimeDisplay" style="font-size: 24px; font-weight: bold; color: var(--primary); text-align: center; padding: 15px; background: var(--light); border-radius: 10px;">
+                      <div class="city-time-display" id="homeCityTimeDisplay" style="font-size: 24px; font-weight: bold; color: var(--primary); text-align: center; padding: 18px; background: var(--white); border-radius: 12px; box-shadow: 0 2px 8px rgba(107, 139, 164, 0.1);">
                           <!-- Time will be displayed here -->
                       </div>
                   </div>
 
                   <!-- Progress Chart Section -->
-                  <div id="progressChartSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                      <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="progress.title">Your Progress</h3>
+                  <div id="progressChartSection" class="settings-section" style="background: var(--light); padding: 28px; border-radius: 16px; margin-bottom: 28px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);">
+                      <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="progress.title">Your Progress</h3>
                       
                       <div style="text-align: center; margin-bottom: 20px;">
                           <label data-i18n="progress.view_progress" style="font-weight: 600; margin-right: 10px;">View Progress:</label>
-                          <select id="progressTimeRange" onchange="updateProgressChart()" style="padding: 10px 15px; border-radius: 8px; border: 2px solid #E5E7EB; font-size: 16px;">
+                          <select id="progressTimeRange" onchange="updateProgressChart()" style="padding: 10px 15px; border-radius: 10px; border: 2px solid var(--border); font-size: 16px; background: var(--white);">
                               <option value="7" data-i18n="progress.last_7_days">Last 7 days</option>
                               <option value="30" data-i18n="progress.last_30_days">Last 30 days</option>
                               <option value="90" data-i18n="progress.last_90_days">Last 90 days</option>
@@ -2508,21 +2628,21 @@
                       </div>
 
                       <!-- Progress Chart Container -->
-                      <div style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                      <div style="background: var(--white); padding: 24px; border-radius: 14px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(107, 139, 164, 0.08);">
                           <canvas id="progressChart" style="width: 100%; height: 300px;"></canvas>
                       </div>
 
                       <!-- Personalized Insights -->
-                      <div id="personalizedInsights" style="background: linear-gradient(135deg, #667eea11 0%, #764ba211 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #667eea;">
-                          <h4 style="margin-bottom: 10px; color: #667eea;" data-i18n="progress.insights_title">Personalized Insights</h4>
-                          <p id="insightsContent" style="color: #4B5563;">
+                      <div id="personalizedInsights" style="background: linear-gradient(135deg, rgba(107, 139, 164, 0.1) 0%, rgba(182, 169, 201, 0.1) 100%); padding: 22px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid var(--primary);">
+                          <h4 style="margin-bottom: 10px; color: var(--primary);" data-i18n="progress.insights_title">Personalized Insights</h4>
+                          <p id="insightsContent" style="color: var(--dark);">
                               <span data-i18n="progress.loading_insights">Loading insights...</span>
                           </p>
                       </div>
 
                       <!-- Daily Check-in Summary -->
-                      <div id="dailyCheckinSummary" style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #E5E7EB;">
-                          <h4 style="margin-bottom: 15px; color: #374151;" data-i18n="progress.daily_checkin">Daily Check-in Summary</h4>
+                      <div id="dailyCheckinSummary" style="background: var(--white); padding: 22px; border-radius: 14px; border: 1px solid var(--border);">
+                          <h4 style="margin-bottom: 15px; color: var(--dark);" data-i18n="progress.daily_checkin">Daily Check-in Summary</h4>
                           <div id="checkinStats" style="display: grid; gap: 10px;">
                               <p><span data-i18n="progress.total_checkins">Total check-ins:</span> <strong id="totalCheckins">0</strong></p>
                               <p><span data-i18n="progress.avg_mood">Average mood rating:</span> <strong id="avgMood">-</strong></p>
@@ -2533,65 +2653,23 @@
                       </div>
                       
                       <!-- Report Generation Section -->
-                      <div id="reportGeneration" style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #E5E7EB; margin-top: 20px;">
-                          <h4 style="margin-bottom: 10px; color: #374151;" data-i18n="reports.title">Generate Report</h4>
-                          <p style="margin-bottom: 15px; color: #6B7280; font-size: 0.9rem;" data-i18n="reports.description">Generate a comprehensive report of your check-ins for the past 7 days.</p>
+                      <div id="reportGeneration" style="background: var(--white); padding: 22px; border-radius: 14px; border: 1px solid var(--border); margin-top: 24px;">
+                          <h4 style="margin-bottom: 10px; color: var(--dark);" data-i18n="reports.title">Generate Report</h4>
+                          <p style="margin-bottom: 15px; color: var(--gray); font-size: 0.9rem;" data-i18n="reports.description">Generate a comprehensive report of your check-ins for the past 7 days.</p>
                           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                              <button class="btn" style="background: #667eea; color: white;" onclick="generateExcelReport()" data-i18n="reports.excel">
+                              <button class="btn" style="background: var(--primary); color: white;" onclick="generateExcelReport()" data-i18n="reports.excel">
                                   Generate Excel Report
                               </button>
-                              <button class="btn" style="background: #EC4899; color: white;" onclick="generatePdfReport()" data-i18n="reports.pdf">
+                              <button class="btn" style="background: var(--accent); color: white;" onclick="generatePdfReport()" data-i18n="reports.pdf">
                                   Generate PDF Report
                               </button>
-                              <button class="btn" style="background: #E5E7EB; color: #374151;" onclick="prepareEmailReport()" data-i18n="reports.email">
+                              <button class="btn" style="background: var(--light-warm); color: var(--dark);" onclick="prepareEmailReport()" data-i18n="reports.email">
                                   Prepare Email Report
                               </button>
                           </div>
                       </div>
                   </div>
               </div>
-              <!-- Feed View - Date-Based Journal -->
-<!-- Feed View - Date-Based Journal -->
-<div id="feedView" class="view">
-   <!-- City selector removed - now only in Home page -->
-
-    <h2 style="margin-bottom: 20px;" data-i18n="feed.title">Your Feed Journal</h2>
-    <p style="color: var(--gray); margin-bottom: 20px;" data-i18n="feed.subtitle">Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.</p>
-
-    <!-- Feed Calendar -->
-    <div class="feed-calendar-section">
-        <div class="feed-calendar-header">
-            <button class="btn btn-secondary" onclick="feedPreviousMonth()" data-i18n="calendar.prev">←</button>
-            <span id="feedCurrentMonth" style="font-weight: 600;">January 2025</span>
-            <button class="btn btn-secondary" onclick="feedNextMonth()" data-i18n="calendar.next">→</button>
-        </div>
-        <div class="feed-calendar-grid" id="feedCalendarGrid"></div>
-        <div style="text-align: center; margin-top: 15px;">
-            <p><span data-i18n="feed.selected_date">Selected Date:</span> <strong id="feedSelectedDateDisplay" data-i18n="feed.today">Today</strong></p>
-        </div>
-    </div>
-
-    <!-- Post Form -->
-    <div class="post-form">
-        <textarea class="post-input" data-i18n="feed.placeholder" placeholder="How are you feeling today?" id="postInput"></textarea>
-        <div class="post-actions">
- <select class="visibility-select" id="visibilitySelect">
-                <option value="general" data-i18n="privacy.public">Public</option>
-                <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
-                <option value="family" data-i18n="privacy.class_a">Family</option>
-                <option value="private" data-i18n="privacy.private" selected>Private</option>
-            </select>
-            <div style="display: flex; gap: 10px;">
-    <button class="btn btn-primary" style="width: auto;" id="postBtn" data-i18n="feed.save_update">Save Update</button>
-</div>
-        </div>
-    </div>
-
-    <!-- Posts Display Container -->
-    <div class="feed-posts" id="feedPostsContainer" style="margin-top: 20px;">
-        <!-- Posts will be displayed here -->
-    </div>
-</div>
 
                 <!-- Profile View (Enhanced with 5 fields) -->
                 <div id="profileView" class="view hidden">
@@ -2648,7 +2726,7 @@
 
                     <!-- Change Password Section -->
                     <div id="changePasswordSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-top: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                        <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.change_password">Change Password</h3>
+                        <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.change_password">Change Password</h3>
 
                         <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
                         <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
@@ -5284,7 +5362,7 @@ function showView(viewName) {
             case 'followers':
                 loadFollowers();
                 break;
-                 case 'invite':
+            case 'invite':
                 loadInviteView();
                 break;
             case 'alerts':
@@ -5292,6 +5370,20 @@ function showView(viewName) {
                 loadAlerts();
                 // Also sync mobile notification toggles with desktop toggles
                 syncMobileNotificationSettings();
+                break;
+            case 'home':
+                // P305: Home now includes Feed - initialize feed calendar and load feed
+                initFeedCalendar();
+                loadFeed();
+                break;
+            case 'progress':
+                // P305: Progress view - load progress chart data
+                if (typeof updateProgressChart === 'function') {
+                    updateProgressChart();
+                }
+                if (typeof updateCityTime === 'function') {
+                    updateCityTime();
+                }
                 break;
         }
     }
@@ -5381,7 +5473,7 @@ function loadUserRecommendations() {
                 const html = data.recommendations.map(user => `
                     <div class="user-card">
                         <div style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;" onclick="viewUserProfileFromInvite(${user.id})">
-                            <div class="user-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <div class="user-avatar" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">
                                 ${user.username.charAt(0).toUpperCase()}
                             </div>
                             <div class="user-info">
@@ -5561,7 +5653,7 @@ async function searchUsersToInviteInstant(query) {
                         return `
                         <div class="search-result-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
                             <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromInviteSearch(${user.id})">
-                                <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
+                                <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
                                     ${user.username.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
@@ -5571,7 +5663,7 @@ async function searchUsersToInviteInstant(query) {
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <button onclick="event.stopPropagation(); sendFollowRequestFromInviteSearch(${user.id})" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; width: auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <button onclick="event.stopPropagation(); sendFollowRequestFromInviteSearch(${user.id})" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; width: auto; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">
                                     ${sendRequestText}
                                 </button>
                             </div>
@@ -7388,11 +7480,11 @@ async function loadUserCircles(userId) {
                     <h3 style="color: #856404; margin-bottom: 1rem;">${t('circles.restricted_access', 'Restricted Access')}</h3>
                     <p style="font-size: 1.1rem; margin-bottom: 1.5rem; color: #333;">
                         ${username}'s ${t('circles.circles_visibility', 'circles visibility')} ${t('common.is_set_to', 'is set to')}:
-                        <strong style="color: #667eea;">${userPrivacyIcon} ${userPrivacyText}</strong>
+                        <strong style="color: var(--primary);">${userPrivacyIcon} ${userPrivacyText}</strong>
                     </p>
                     <p style="font-size: 1.1rem; margin-bottom: 1.5rem; color: #333;">
                         ${t('circles.your_access_level', 'Your access level')}:
-                        <strong style="color: #667eea;">${viewerAccessIcon} ${viewerAccessText}</strong>
+                        <strong style="color: var(--primary);">${viewerAccessIcon} ${viewerAccessText}</strong>
                     </p>
                     <p style="color: #856404;">
                         ${t('circles.insufficient_access', 'You do not have permission to view these circles. The user would need to add you to a higher access level.')}
@@ -7463,7 +7555,7 @@ async function loadUserCircles(userId) {
             // Create read-only visibility indicator
             const visibilityIndicator = document.createElement('div');
             visibilityIndicator.className = 'viewer-access-indicator';
-            visibilityIndicator.style.cssText = 'max-width: 600px; margin: 0 auto 30px; padding: 15px 20px; background: #f0f8ff; border-radius: 10px; text-align: center; border: 2px solid #667eea;';
+            visibilityIndicator.style.cssText = 'max-width: 600px; margin: 0 auto 30px; padding: 15px 20px; background: #f0f8ff; border-radius: 10px; text-align: center; border: 2px solid var(--primary);';
 
             const t = (key, fallback) => {
                 return window.i18n && window.i18n.translate ? window.i18n.translate(key) : fallback;
@@ -7484,7 +7576,7 @@ async function loadUserCircles(userId) {
             }
 
             visibilityIndicator.innerHTML = `
-                <strong style="color: #667eea;">${t('circles.your_access_level', 'Your Access Level')}:</strong>
+                <strong style="color: var(--primary);">${t('circles.your_access_level', 'Your Access Level')}:</strong>
                 <span style="font-size: 1.2em;">${accessIcon} ${accessLevelText}</span>
             `;
 
@@ -8644,10 +8736,10 @@ async function loadFollowing() {
                     
                     // FOLLOWLOG: Add special styling for highlighted user from invite link
                     const highlightStyle = user.isHighlighted 
-                        ? 'border: 2px solid #667eea; background: linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 100%); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);'
+                        ? 'border: 2px solid var(--primary); background: linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 100%); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);'
                         : '';
                     const highlightBadge = user.isHighlighted 
-                        ? '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; display: inline-block;">Invited you to follow</div>'
+                        ? '<div style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; display: inline-block;">Invited you to follow</div>'
                         : '';
                     
                     return `
@@ -10027,7 +10119,7 @@ function showLoadingModal() {
                         width: 50px;
                         height: 50px;
                         border: 4px solid #f3f3f3;
-                        border-top: 4px solid #667eea;
+                        border-top: 4px solid var(--primary);
                         border-radius: 50%;
                         animation: spin 1s linear infinite;
                         margin: 0 auto 1rem;
@@ -11772,7 +11864,7 @@ async function searchUsersToFollowInstant(query) {
                         return `
                         <div class="search-result-item" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
                             <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromSearch(${user.id})">
-                                <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
+                                <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
                                     ${user.username.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
@@ -12039,7 +12131,7 @@ function renderProgressChart(data) {
         {
             label: labels_t.mood,
             data: data.mood || [],
-            borderColor: '#667eea',
+            borderColor: 'var(--primary)',
             backgroundColor: 'rgba(102, 126, 234, 0.1)',
             tension: 0.3,
             fill: false
