@@ -1,21 +1,13 @@
 // Version P320 - Uses existing CIRCLE_EMOJIS, does not redeclare
 // feed-updates.js - Circle display name mappings
 // FIX: circles-messages.js already declares CIRCLE_EMOJIS with const
-// So we just use it if it exists, only create if missing
+// So we just reference it directly - no redeclaration
 
 (function() {
     'use strict';
     
-    // Use existing CIRCLE_EMOJIS or create if missing (wrapped in IIFE to avoid const conflict)
-    var emojis = (typeof CIRCLE_EMOJIS !== 'undefined') ? CIRCLE_EMOJIS : {
-        'private': '🔒',
-        'public': '🌍',
-        'general': '🌍',
-        'class_b': '👥',
-        'close_friends': '👥',
-        'class_a': '👨‍👩‍👧‍👦',
-        'family': '👨‍👩‍👧‍👦'
-    };
+    // Direct reference to existing CIRCLE_EMOJIS (from circles-messages.js)
+    var emojis = CIRCLE_EMOJIS;
 
     function getDisplayName(internalName) {
         return internalName;
