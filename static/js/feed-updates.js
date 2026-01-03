@@ -1,145 +1,137 @@
-// Version P318 - Exact copy of working P204 code
+// Version P320 - Uses existing CIRCLE_EMOJIS, does not redeclare
 // feed-updates.js - Circle display name mappings
+// FIX: circles-messages.js already declares CIRCLE_EMOJIS with const
+// So we just use it if it exists, only create if missing
 
-// Emoji map - NO trailing spaces
-const CIRCLE_EMOJIS = {
-    'private': '🔒',
-    'public': '🌍',
-    'general': '🌍',
-    'class_b': '👥',
-    'close_friends': '👥',
-    'class_a': '👨‍👩‍👧‍👦',
-    'family': '👨‍👩‍👧‍👦'
-};
-
-function getDisplayName(internalName) {
-    return internalName;
-}
-
-function getInternalName(displayName) {
-    const reverseMap = {
-        'Public': 'public',
-        'Close Friends': 'class_b',
-        'Family': 'class_a',
-        'Private': 'private'
+(function() {
+    'use strict';
+    
+    // Use existing CIRCLE_EMOJIS or create if missing (wrapped in IIFE to avoid const conflict)
+    var emojis = (typeof CIRCLE_EMOJIS !== 'undefined') ? CIRCLE_EMOJIS : {
+        'private': '🔒',
+        'public': '🌍',
+        'general': '🌍',
+        'class_b': '👥',
+        'close_friends': '👥',
+        'class_a': '👨‍👩‍👧‍👦',
+        'family': '👨‍👩‍👧‍👦'
     };
-    return reverseMap[displayName] || displayName;
-}
 
-// Remove all emojis from text
-function removeAllEmojis(text) {
-    if (!text) return '';
-    return text
-        .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{200D}\u{FE0F}\u{FE0E}]/ug, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-// Update all dropdowns and displays
-function updateCircleDisplays() {
-    console.log('Updating circle displays...');
-
-    // Fix circles page headers - ONLY if they exist
-    const circleHeaders = document.querySelectorAll('.circle-header h2, .circle-name');
-    if (circleHeaders.length > 0) {
-        circleHeaders.forEach(header => {
-            const currentText = removeAllEmojis(header.textContent);
-
-            // Get the internal value from the header's data attribute or text
-            let internalValue = header.getAttribute('data-circle-type');
-            if (!internalValue) {
-                // Fallback: guess from text
-                if (currentText.includes('General') || currentText.includes('Public')) {
-                    internalValue = 'public';
-                } else if (currentText.includes('Close Friends') || currentText.includes('Class B')) {
-                    internalValue = 'class_b';
-                } else if (currentText.includes('Family') || currentText.includes('Class A')) {
-                    internalValue = 'class_a';
-                }
-            }
-
-            // Let i18n handle the translation, we just add emoji
-            if (internalValue && window.i18n && window.i18n.translate) {
-                const i18nKey = `privacy.${internalValue}`;
-                const translatedText = window.i18n.translate(i18nKey);
-                const emoji = CIRCLE_EMOJIS[internalValue] || '';
-                header.textContent = emoji + (emoji ? ' ' : '') + removeAllEmojis(translatedText);
-            }
-        });
+    function getDisplayName(internalName) {
+        return internalName;
     }
 
-    // Update all circle selectors in feed AND parameters page
-    document.querySelectorAll('.circle-selector, .visibility-selector, select[name="circle"], .privacy-select, .visibility-select, #circlesPrivacySelect').forEach(selector => {
-        // Store current value
-        const currentValue = selector.value;
+    function getInternalName(displayName) {
+        var reverseMap = {
+            'Public': 'public',
+            'Close Friends': 'class_b',
+            'Family': 'class_a',
+            'Private': 'private'
+        };
+        return reverseMap[displayName] || displayName;
+    }
 
-        // Update all options
-        selector.querySelectorAll('option').forEach(option => {
-            const value = option.value;
-            const i18nKey = option.getAttribute('data-i18n');
-            const currentText = option.textContent;
+    // Remove all emojis from text
+    function removeAllEmojis(text) {
+        if (!text) return '';
+        return text
+            .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{200D}\u{FE0F}\u{FE0E}]/ug, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
 
-            // Check if this option has duplicate emojis
-            const emojiCount = (currentText.match(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/ug) || []).length;
+    // Update all dropdowns and displays
+    function updateCircleDisplays() {
+        console.log('Updating circle displays...');
 
-            // ALWAYS use i18n translation if available
-            if (i18nKey && window.i18n && window.i18n.translate) {
-                const translation = window.i18n.translate(i18nKey);
-                const cleanTranslation = removeAllEmojis(translation);
-                const emoji = CIRCLE_EMOJIS[value] || '';
+        // Fix circles page headers - ONLY if they exist
+        var circleHeaders = document.querySelectorAll('.circle-header h2, .circle-name');
+        if (circleHeaders.length > 0) {
+            circleHeaders.forEach(function(header) {
+                var currentText = removeAllEmojis(header.textContent);
 
-                // Set text with single emoji
-                option.textContent = emoji ? emoji + ' ' + cleanTranslation : cleanTranslation;
-            } else if (emojiCount > 1) {
-                // Fix duplicate emojis even without i18n
-                const cleanText = removeAllEmojis(currentText);
-                const emoji = CIRCLE_EMOJIS[value] || '';
-                option.textContent = emoji ? emoji + ' ' + cleanText : cleanText;
-            } else if (emojiCount === 0) {
-                // Add emoji if missing
-                const emoji = CIRCLE_EMOJIS[value] || '';
-                option.textContent = emoji ? emoji + ' ' + currentText.trim() : currentText.trim();
-            }
-            // If emojiCount === 1, leave it alone (already correct)
+                var internalValue = header.getAttribute('data-circle-type');
+                if (!internalValue) {
+                    if (currentText.includes('General') || currentText.includes('Public')) {
+                        internalValue = 'public';
+                    } else if (currentText.includes('Close Friends') || currentText.includes('Class B')) {
+                        internalValue = 'class_b';
+                    } else if (currentText.includes('Family') || currentText.includes('Class A')) {
+                        internalValue = 'class_a';
+                    }
+                }
+
+                if (internalValue && window.i18n && window.i18n.translate) {
+                    var i18nKey = 'privacy.' + internalValue;
+                    var translatedText = window.i18n.translate(i18nKey);
+                    var emoji = emojis[internalValue] || '';
+                    header.textContent = emoji + (emoji ? ' ' : '') + removeAllEmojis(translatedText);
+                }
+            });
+        }
+
+        // Update all circle selectors
+        document.querySelectorAll('.circle-selector, .visibility-selector, select[name="circle"], .privacy-select, .visibility-select, #circlesPrivacySelect').forEach(function(selector) {
+            var currentValue = selector.value;
+
+            selector.querySelectorAll('option').forEach(function(option) {
+                var value = option.value;
+                var i18nKey = option.getAttribute('data-i18n');
+                var currentText = option.textContent;
+
+                var matches = currentText.match(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/ug);
+                var emojiCount = matches ? matches.length : 0;
+
+                var emoji = emojis[value] || '';
+
+                if (i18nKey && window.i18n && window.i18n.translate) {
+                    var translation = window.i18n.translate(i18nKey);
+                    var cleanTranslation = removeAllEmojis(translation);
+                    option.textContent = emoji ? emoji + ' ' + cleanTranslation : cleanTranslation;
+                } else if (emojiCount > 1) {
+                    var cleanText = removeAllEmojis(currentText);
+                    option.textContent = emoji ? emoji + ' ' + cleanText : cleanText;
+                } else if (emojiCount === 0) {
+                    option.textContent = emoji ? emoji + ' ' + currentText.trim() : currentText.trim();
+                }
+            });
+
+            selector.value = currentValue;
         });
 
-        // Restore the selection
-        selector.value = currentValue;
-    });
+        console.log('✅ Circle displays updated');
+    }
 
-    console.log('✅ Circle displays updated');
-}
-
-// Export functions for use in other files
-if (typeof window !== 'undefined') {
+    // Export functions to window
     window.getDisplayName = getDisplayName;
     window.getInternalName = getInternalName;
     window.updateCircleDisplays = updateCircleDisplays;
     window.removeAllEmojis = removeAllEmojis;
-}
 
-// SIMPLIFIED initialization - only run once when DOM is ready
-let initialized = false;
+    // Initialize
+    var initialized = false;
+    
+    function initialize() {
+        if (initialized) return;
+        initialized = true;
+        console.log('Feed updates initializing...');
+        setTimeout(updateCircleDisplays, 100);
+        setTimeout(updateCircleDisplays, 300);
+        setTimeout(updateCircleDisplays, 500);
+        setTimeout(updateCircleDisplays, 1000);
+    }
 
-function initialize() {
-    if (initialized) return;
-    initialized = true;
-    console.log('Feed updates initializing...');
-    // Single delayed call to let i18n initialize first
-    setTimeout(updateCircleDisplays, 200);
-}
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        initialize();
+    } else {
+        document.addEventListener('DOMContentLoaded', initialize);
+    }
 
-document.addEventListener('DOMContentLoaded', initialize);
+    window.addEventListener('languageChanged', function() {
+        console.log('Language changed, updating circle displays');
+        updateCircleDisplays();
+        setTimeout(updateCircleDisplays, 200);
+    });
 
-// Update when language changes
-window.addEventListener('languageChanged', () => {
-    console.log('Language changed, updating circle displays');
-    updateCircleDisplays();
-});
-
-// Try to run immediately if DOM already ready
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initialize();
-}
-
-console.log('✅ feed-updates.js loaded');
+    console.log('✅ feed-updates.js loaded');
+})();
