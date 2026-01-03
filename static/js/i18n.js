@@ -1,5 +1,5 @@
 // Language detection and translation system with backend sync
-// Version P306 - Added menu.progress and feed.my_feed translations for P305 navigation changes - No changes from PI504 (onboarding fix is in index.html)
+// Version P308 - Removed emojis from privacy translations (feed-updates.js adds them) - Added menu.progress and feed.my_feed translations for P305 navigation changes - No changes from PI504 (onboarding fix is in index.html)
 // Version PI504 - Added onboarding.dont_show translation for all languages
 // Version PI503 - Added tutorial translations and nav.tutorial key for all languages
 // Version PJ703 - Fixed indentation for invite.alert_title and invite.alert_content keys
@@ -443,8 +443,8 @@ const translations = {
             'circles.remove_confirm': 'Remove this member from the circle?',
 
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': '🌍 Public',
-            'privacy.private': '🔒 Private',
+            'privacy.public': 'Public',
+            'privacy.private': 'Private',
 
             // Invite alerts
             'invite.alert_title': 'New Invitation',
@@ -567,8 +567,8 @@ const translations = {
 'circles.visibility_class_a': 'Family 👨‍👩‍👧‍👦',
 'circles.title_class_b': 'Close Friends 👥',
 'circles.title_class_a': 'Family 👨‍👩‍👧‍👦',
-'privacy.class_b': 'Close Friends 👥',
-'privacy.class_a': 'Family 👨‍👩‍👧‍👦',
+'privacy.class_b': 'Close Friends',
+'privacy.class_a': 'Family',
 
 // Parameters/Diary page title
 'parameters.title': 'Diary',
@@ -1272,8 +1272,8 @@ const translations = {
 'circles.visibility_class_a': 'משפחה 👨‍👩‍👧‍👦',
 'circles.title_class_b': 'חברים קרובים 👥',
 'circles.title_class_a': 'משפחה 👨‍👩‍👧‍👦',
-'privacy.class_b': 'חברים קרובים 👥',
-'privacy.class_a': 'משפחה 👨‍👩‍👧‍👦',
+'privacy.class_b': 'חברים קרובים',
+'privacy.class_a': 'משפחה',
 'auth.username_placeholder': 'בחר שם משתמש',
 'about.team_title': 'הצוות והסיפור שלנו',
 'about.team_intro': 'הצוות העיקרי מאחורי הפלטפורמה הוא המנכ"ל בני ברנדשטטר והמנהל הטכנולוגי אוון אסקנזי.',
@@ -1755,9 +1755,9 @@ const translations = {
             'circles.remove_confirm': 'להסיר את החבר הזה מהמעגל?',
 
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': '🌍 ציבורי',
+            'privacy.public': 'ציבורי',
 
-'privacy.private': '🔒 פרטי',
+'privacy.private': 'פרטי',
 
         // Parameters page
 
@@ -2219,8 +2219,8 @@ const translations = {
 'circles.visibility_class_a': 'العائلة 👨‍👩‍👧‍👦',
 'circles.title_class_b': 'الأصدقاء المقربون 👥',
 'circles.title_class_a': 'العائلة  👨‍👩‍👧‍👦',
-'privacy.class_b': 'الأصدقاء المقربون 👥',
-'privacy.class_a': 'العائلة 👨‍👩‍👧‍👦',
+'privacy.class_b': 'الأصدقاء المقربون',
+'privacy.class_a': 'العائلة',
     'block.block_user': 'حظر',
     'block.unblock_user': 'إلغاء الحظر',
     'block.block_confirm': 'هل أنت متأكد أنك تريد حظر {username}؟ لن يتمكنوا من رؤية ملفك الشخصي بعد الآن.',
@@ -2714,9 +2714,9 @@ const translations = {
             'circles.remove_confirm': 'إزالة هذا العضو من الدائرة؟',
 
             // Privacy levels (for parameters - aligned with circles)
-           'privacy.public': '🌍 عام',
+           'privacy.public': 'عام',
 
-'privacy.private': '🔒 خاص',
+'privacy.private': 'خاص',
 
 
         // Profile page
@@ -3080,8 +3080,8 @@ const translations = {
 'circles.visibility_class_a': 'Семья 👨‍👩‍👧‍👦',
 'circles.title_class_b': 'Близкие друзья 👥',
 'circles.title_class_a': 'Семья 👨‍👩‍👧‍👦',
-'privacy.class_b': 'Близкие друзья 👥',
-'privacy.class_a': 'Семья 👨‍👩‍👧‍👦',
+'privacy.class_b': 'Близкие друзья',
+'privacy.class_a': 'Семья',
 
 // Parameters/Diary page title
 
@@ -3628,9 +3628,9 @@ const translations = {
             'circles.remove_confirm': 'Удалить этого участника из круга?',
 
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': '🌍 Публичный',
+            'privacy.public': 'Публичный',
 
-'privacy.private': '🔒 Приватный',
+'privacy.private': 'Приватный',
 
         // Parameters page
 
