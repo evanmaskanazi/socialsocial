@@ -1,3 +1,6 @@
+// P305 Version 1900 - Navigation restructure and visual design changes (frontend-only)
+// No backend changes - all changes are in index.html
+// P305: Feed becomes Home page, new Progress tab, new color palette, dark mode support
 // PJ816 Version 1800 - CRITICAL FIX: Trigger emails now sent without watcher login
 // ROOT CAUSE: check_parameter_triggers() required login and only ran on polling
 // FIX: Added background trigger scheduler that runs every 5 minutes
@@ -3334,4 +3337,4 @@ window.viewUserParameters = viewUserParameters;
 window.closeUserParametersModal = closeUserParametersModal;
 window.checkParameterAlerts = checkParameterAlerts;
 
-console.log('[PJ811] Parameters-social.js v1801 P101 loaded - trigger alerts now persist in database');
+console.log('[P305] Parameters-social.js v1900 P305 loaded - navigation restructure and visual design update');
