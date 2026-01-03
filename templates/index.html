@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P310 v702 -->
+<!-- TheraSocial Version P315 v702 -->
+<!-- P315: Reverted to P204 approach - NO emojis in HTML options, feed-updates.js adds them dynamically -->
 <!-- P310: Fixed circle emojis not showing - added emojis to ALL circleNames/circleLabels objects -->
-<!-- P308: Fixed feed not loading on login, fixed double emoji issue -->
 <!-- P307: Fixed diary layering bug - removed duplicate static calendar from trackingView -->
 <!-- P306: Fixed feed loading in Home view -->
 <!-- P305: MAJOR REDESIGN - Navigation restructure + Visual design overhaul -->
@@ -2526,10 +2526,10 @@
                           <textarea class="post-input" data-i18n="feed.placeholder" placeholder="How are you feeling today?" id="postInput"></textarea>
                           <div class="post-actions">
                               <select class="visibility-select" id="visibilitySelect">
-                                  <option value="general" data-i18n="privacy.public">🌍 Public</option>
-                                  <option value="close_friends" data-i18n="privacy.class_b">👥 Close Friends</option>
-                                  <option value="family" data-i18n="privacy.class_a">👨‍👩‍👧‍👦 Family</option>
-                                  <option value="private" data-i18n="privacy.private" selected>🔒 Private</option>
+                                  <option value="general" data-i18n="privacy.public">Public</option>
+                                  <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
+                                  <option value="family" data-i18n="privacy.class_a">Family</option>
+                                  <option value="private" data-i18n="privacy.private" selected>Private</option>
                               </select>
                               <div style="display: flex; gap: 10px;">
                                   <button class="btn btn-primary" style="width: auto;" id="postBtn" data-i18n="feed.save_update">Save Update</button>
@@ -7782,9 +7782,9 @@ function updateCircleDisplay(type, members) {
                             </div>
                            <select onclick="event.stopPropagation();" onchange="addToCircle(${user.id}, this.value, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" style="width: 100%;">
     <option value="">${(window.i18n && window.i18n.t ? window.i18n.t('circles.add_to') : 'Add to circle...')}</option>
-   <option value="general" data-i18n="privacy.public">🌍 Public</option>
-    <option value="close_friends" data-i18n="privacy.class_b">👥 Close Friends</option>
-    <option value="family" data-i18n="privacy.class_a">👨‍👩‍👧‍👦 Family</option>
+   <option value="general" data-i18n="privacy.public">Public</option>
+    <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
+    <option value="family" data-i18n="privacy.class_a">Family</option>
 </select>
                         </div>
                     `}).join('');
