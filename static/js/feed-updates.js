@@ -1,6 +1,5 @@
+// Version P318 - Exact copy of working P204 code
 // feed-updates.js - Circle display name mappings
-// Version P315 - Reverted to P204 approach: NO emojis in HTML, add dynamically
-// P204 logic works because i18n runs first, then we add emojis after
 
 // Emoji map - NO trailing spaces
 const CIRCLE_EMOJIS = {
@@ -38,7 +37,7 @@ function removeAllEmojis(text) {
 
 // Update all dropdowns and displays
 function updateCircleDisplays() {
-    console.log('[P315] Updating circle displays...');
+    console.log('Updating circle displays...');
 
     // Fix circles page headers - ONLY if they exist
     const circleHeaders = document.querySelectorAll('.circle-header h2, .circle-name');
@@ -108,7 +107,7 @@ function updateCircleDisplays() {
         selector.value = currentValue;
     });
 
-    console.log('[P315] ✅ Circle displays updated');
+    console.log('✅ Circle displays updated');
 }
 
 // Export functions for use in other files
@@ -125,7 +124,7 @@ let initialized = false;
 function initialize() {
     if (initialized) return;
     initialized = true;
-    console.log('[P315] Feed updates initializing...');
+    console.log('Feed updates initializing...');
     // Single delayed call to let i18n initialize first
     setTimeout(updateCircleDisplays, 200);
 }
@@ -134,7 +133,7 @@ document.addEventListener('DOMContentLoaded', initialize);
 
 // Update when language changes
 window.addEventListener('languageChanged', () => {
-    console.log('[P315] Language changed, updating circle displays');
+    console.log('Language changed, updating circle displays');
     updateCircleDisplays();
 });
 
@@ -143,4 +142,4 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     initialize();
 }
 
-console.log('[P315] ✅ feed-updates.js loaded');
+console.log('✅ feed-updates.js loaded');
