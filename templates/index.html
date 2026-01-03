@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P309 v702 -->
+<!-- TheraSocial Version P310 v702 -->
+<!-- P310: Fixed circle emojis not showing - added emojis to ALL circleNames/circleLabels objects -->
 <!-- P308: Fixed feed not loading on login, fixed double emoji issue -->
 <!-- P307: Fixed diary layering bug - removed duplicate static calendar from trackingView -->
 <!-- P306: Fixed feed loading in Home view -->
@@ -5890,13 +5891,13 @@ async function loadUserFeedForDate(userId, dateStr) {
         }
 
         const circleNames = {
-            1: 'Public',
-            2: 'Close Friends',
-            3: 'Family',
-            'general': 'Public',
-            'close_friends': 'Close Friends',
-            'family': 'Family',
-            'private': 'Private'
+            1: '🌍 Public',
+            2: '👥 Close Friends',
+            3: '👨‍👩‍👧‍👦 Family',
+            'general': '🌍 Public',
+            'close_friends': '👥 Close Friends',
+            'family': '👨‍👩‍👧‍👦 Family',
+            'private': '🔒 Private'
         };
 
         if (data.posts && data.posts.length > 0) {
@@ -5905,7 +5906,7 @@ async function loadUserFeedForDate(userId, dateStr) {
                     <div class="post-header">
                         <span class="post-category">${post.category || 'General'}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
-                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || 'Public'})</span>` : ''}
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
                     </div>
                     <div class="post-content">${post.content}</div>
                     ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
@@ -7662,15 +7663,15 @@ function updateCircleDisplay(type, members) {
     if (type === 'general') {
         containerId = 'generalMembers';
         countId = 'generalCount';
-        displayLabel = 'Public';
+        displayLabel = '🌍 Public';
     } else if (type === 'close_friends') {
         containerId = 'closeFriendsMembers';
         countId = 'closeFriendsCount';
-        displayLabel = 'Close Friends';
+        displayLabel = '👥 Close Friends';
     } else {
         containerId = 'familyMembers';
         countId = 'familyCount';
-        displayLabel = 'Family';
+        displayLabel = '👨‍👩‍👧‍👦 Family';
     }
 
     const container = document.getElementById(containerId);
@@ -7805,9 +7806,9 @@ function updateCircleDisplay(type, members) {
                 });
 
                 const circleLabels = {
-    'general': 'Public',
-    'close_friends': 'Close Friends',
-    'family': 'Family'
+    'general': '🌍 Public',
+    'close_friends': '👥 Close Friends',
+    'family': '👨‍👩‍👧‍👦 Family'
 };
 showNotification(`${username} added to ${circleLabels[circleType]} circle!`, 'success');
                 loadCircles();
@@ -10625,13 +10626,13 @@ async function loadUserFeed(userId) {
         }
 
         const circleNames = {
-            1: 'Public',
-            2: 'Close Friends',
-            3: 'Family',
-            'general': 'Public',
-            'close_friends': 'Close Friends',
-            'family': 'Family',
-            'private': 'Private'
+            1: '🌍 Public',
+            2: '👥 Close Friends',
+            3: '👨‍👩‍👧‍👦 Family',
+            'general': '🌍 Public',
+            'close_friends': '👥 Close Friends',
+            'family': '👨‍👩‍👧‍👦 Family',
+            'private': '🔒 Private'
         };
 
         if (data.posts && data.posts.length > 0) {
@@ -10640,7 +10641,7 @@ async function loadUserFeed(userId) {
                     <div class="post-header">
                         <span class="post-category">${post.category || 'General'}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
-                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || 'Public'})</span>` : ''}
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
                     </div>
                     <div class="post-content">${post.content}</div>
                     ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
