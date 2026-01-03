@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P307 v702 -->
+<!-- TheraSocial Version P308 v702 -->
+<!-- P308: Fixed feed not loading on login, fixed double emoji issue -->
 <!-- P307: Fixed diary layering bug - removed duplicate static calendar from trackingView -->
 <!-- P306: Fixed feed loading in Home view -->
 <!-- P305: MAJOR REDESIGN - Navigation restructure + Visual design overhaul -->
@@ -4609,6 +4610,7 @@ async function submitConsent() {
     }
 
   initFeedCalendar();
+    loadFeed();  // P308 FIX: Load feed posts on initial login
     loadUserCity();
 
     // FIXED: Only call updateCityTime if selector exists
