@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P305 v700 -->
+<!-- TheraSocial Version P307 v702 -->
+<!-- P307: Fixed diary layering bug - removed duplicate static calendar from trackingView -->
+<!-- P306: Fixed feed loading in Home view -->
 <!-- P305: MAJOR REDESIGN - Navigation restructure + Visual design overhaul -->
 <!-- P305: CHANGE 1 - Feed becomes Home page with Welcome/Mission section above Feed content -->
 <!-- P305: CHANGE 1 - New Progress tab with Location Settings and Your Progress sections -->
@@ -2893,18 +2895,7 @@
                 <div id="trackingView" class="view hidden">
                     <h2 style="margin-bottom: 20px;" data-i18n="parameters.title">Wellness Parameters</h2>
 
-                    <div class="calendar-section">
-                        <div class="calendar-header">
-                            <button class="btn btn-secondary" onclick="previousMonth()" data-i18n="calendar.prev">←</button>
-                            <span id="currentMonth" style="font-weight: 600;">January 2025</span>
-                            <button class="btn btn-secondary" onclick="nextMonth()" data-i18n="calendar.next">→</button>
-                        </div>
-                        <div class="calendar-grid" id="calendarGrid"></div>
-                        <div style="text-align: center; margin-top: 15px;">
-                            <p><span data-i18n="parameters.selected_date">Selected Date:</span> <strong id="selectedDateDisplay" data-i18n="feed.today">Today</strong></p>
-                        </div>
-                    </div>
-
+                    <!-- P307: Static calendar removed - parameters-social.js generates its own calendar inside parametersContainer -->
                     <div id="parametersContainer" class="parameter-grid">
                         <div class="parameter-card">
                             <div class="parameter-name" data-i18n="parameters.mood">Mood</div>
@@ -4984,12 +4975,13 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             loadUserFeed(viewingUserId);
                         } else {
                             // Initialize home view for own account
-                            // Initialize home view for own account
                             console.log('[DEBUG] Home clicked - showing static home page, resetting viewingUserId');
                             viewingUserId = null;
                             window.viewingUserId = null;
                             initializeHomeView();
-                            initializeHomeView();
+                            // P306 FIX: Initialize feed calendar and load feed posts
+                            initFeedCalendar();
+                            loadFeed();
                         }
                         break;
              case 'feed':
