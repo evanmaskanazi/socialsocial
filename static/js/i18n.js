@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version PL405 - Database migration fix version (no i18n changes from PL400)
 // Version PL400 - Added cookie consent, privacy dashboard, and GDPR compliance translations
 // Version P308 - Removed emojis from privacy translations (feed-updates.js adds them) - Added menu.progress and feed.my_feed translations for P305 navigation changes - No changes from PI504 (onboarding fix is in index.html)
 // Version PI504 - Added onboarding.dont_show translation for all languages
