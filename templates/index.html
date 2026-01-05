@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version P318 v702 -->
+<!-- TheraSocial Version PL400 v800 -->
+<!-- PL400: GDPR / Israeli Privacy Protection Law / US Security Compliance Update -->
+<!-- PL400: Cookie consent banner for GDPR/ePrivacy compliance -->
+<!-- PL400: Privacy dashboard UI for data transparency -->
+<!-- PL400: Enhanced consent management with granular controls -->
+<!-- PL400: Privacy region selection for applicable law determination -->
+<!-- PL400: Data processing transparency disclosures -->
 <!-- P315: Reverted to P204 approach - NO emojis in HTML options, feed-updates.js adds them dynamically -->
 <!-- P310: Fixed circle emojis not showing - added emojis to ALL circleNames/circleLabels objects -->
 <!-- P307: Fixed diary layering bug - removed duplicate static calendar from trackingView -->
@@ -1957,6 +1963,117 @@
     </style>
 </head>
 <body>
+    <!-- PL400: Cookie Consent Banner (GDPR/ePrivacy Compliance) -->
+    <div id="cookieConsentBanner" class="cookie-consent-banner" style="display: none;">
+        <div class="cookie-consent-content">
+            <div class="cookie-consent-text">
+                <h4 data-i18n="cookies.title">Cookie Preferences</h4>
+                <p data-i18n="cookies.description">We use cookies to enhance your experience. Essential cookies are required for the site to function. You can choose which optional cookies to accept.</p>
+            </div>
+            <div class="cookie-consent-options">
+                <label class="cookie-option">
+                    <input type="checkbox" id="cookieEssential" checked disabled>
+                    <span data-i18n="cookies.essential">Essential (Required)</span>
+                </label>
+                <label class="cookie-option">
+                    <input type="checkbox" id="cookieFunctional">
+                    <span data-i18n="cookies.functional">Functional</span>
+                </label>
+                <label class="cookie-option">
+                    <input type="checkbox" id="cookieAnalytics">
+                    <span data-i18n="cookies.analytics">Analytics</span>
+                </label>
+            </div>
+            <div class="cookie-consent-buttons">
+                <button class="btn btn-secondary" onclick="saveCookieConsent(false)" data-i18n="cookies.reject_optional">Essential Only</button>
+                <button class="btn btn-primary" onclick="saveCookieConsent(true)" data-i18n="cookies.accept_all">Accept All</button>
+                <button class="btn btn-secondary" onclick="saveCustomCookieConsent()" data-i18n="cookies.save_preferences">Save Preferences</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PL400: Cookie Consent Banner Styles -->
+    <style>
+        .cookie-consent-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--gray-dark, #374151);
+            color: white;
+            padding: 20px;
+            z-index: 9999;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+        }
+        .cookie-consent-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 20px;
+        }
+        .cookie-consent-text {
+            flex: 2;
+            min-width: 300px;
+        }
+        .cookie-consent-text h4 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+        }
+        .cookie-consent-text p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .cookie-consent-options {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            min-width: 200px;
+        }
+        .cookie-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .cookie-option input[disabled] {
+            cursor: not-allowed;
+        }
+        .cookie-consent-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .cookie-consent-buttons .btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        @media (max-width: 768px) {
+            .cookie-consent-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            .cookie-consent-options {
+                justify-content: center;
+            }
+            .cookie-consent-buttons {
+                justify-content: center;
+                width: 100%;
+            }
+        }
+        [dir="rtl"] .cookie-consent-content {
+            text-align: right;
+        }
+        [dir="rtl"] .cookie-option {
+            flex-direction: row-reverse;
+        }
+    </style>
+
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-content">
@@ -2161,6 +2278,32 @@
                 <input type="checkbox" id="waiverClaims" required>
                 <span data-i18n="consent.waiver">I understand and accept the terms of service</span>
             </label>
+            
+            <!-- PL400: GDPR Additional Optional Consents -->
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                <p style="font-size: 14px; color: #666; margin-bottom: 10px;" data-i18n="consent.optional_title">Optional preferences (can be changed anytime in Privacy Settings):</p>
+                
+                <label class="consent-item">
+                    <input type="checkbox" id="marketingConsent">
+                    <span data-i18n="consent.marketing">I agree to receive marketing communications</span>
+                </label>
+                
+                <label class="consent-item">
+                    <input type="checkbox" id="analyticsConsent" checked>
+                    <span data-i18n="consent.analytics">I allow usage analytics to improve the service</span>
+                </label>
+                
+                <label class="consent-item">
+                    <input type="checkbox" id="thirdPartySharing">
+                    <span data-i18n="consent.third_party">I agree to data sharing with service partners</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- PL400: Privacy Rights Notice -->
+        <div style="background: #f0f9ff; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; color: #1e40af;">
+            <strong data-i18n="consent.rights_title">Your Privacy Rights:</strong>
+            <span data-i18n="consent.rights_text">You can access, export, or delete your data anytime from Privacy Settings. You can withdraw optional consents at any time.</span>
         </div>
 
         <div class="consent-actions">
@@ -4555,7 +4698,11 @@ async function submitConsent() {
         team_declaration: document.getElementById('teamDeclaration').checked,
         responsible_use: document.getElementById('responsibleUse').checked,
         waiver_claims: document.getElementById('waiverClaims').checked,
-        language: document.getElementById('languageSelector').value
+        language: document.getElementById('languageSelector').value,
+        // PL400: GDPR additional consent fields
+        marketing_consent: document.getElementById('marketingConsent')?.checked || false,
+        analytics_consent: document.getElementById('analyticsConsent')?.checked || true,
+        third_party_sharing: document.getElementById('thirdPartySharing')?.checked || false
     };
 
     // Check required consents
@@ -4590,6 +4737,62 @@ async function submitConsent() {
         document.getElementById('consentError').style.display = 'block';
     }
 }
+
+// PL400: Cookie Consent Functions
+async function checkCookieConsent() {
+    // Check if cookie consent has been given
+    const consentCookie = localStorage.getItem('cookieConsentGiven');
+    if (!consentCookie) {
+        document.getElementById('cookieConsentBanner').style.display = 'block';
+    }
+}
+
+async function saveCookieConsent(acceptAll) {
+    const preferences = {
+        functional: acceptAll,
+        analytics: acceptAll,
+        marketing: acceptAll
+    };
+    
+    try {
+        await fetch('/api/privacy/cookie-consent', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(preferences)
+        });
+    } catch (e) {
+        console.log('Cookie consent save failed:', e);
+    }
+    
+    localStorage.setItem('cookieConsentGiven', 'true');
+    localStorage.setItem('cookiePreferences', JSON.stringify(preferences));
+    document.getElementById('cookieConsentBanner').style.display = 'none';
+}
+
+async function saveCustomCookieConsent() {
+    const preferences = {
+        functional: document.getElementById('cookieFunctional')?.checked || false,
+        analytics: document.getElementById('cookieAnalytics')?.checked || false,
+        marketing: false // We don't use marketing cookies
+    };
+    
+    try {
+        await fetch('/api/privacy/cookie-consent', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(preferences)
+        });
+    } catch (e) {
+        console.log('Cookie consent save failed:', e);
+    }
+    
+    localStorage.setItem('cookieConsentGiven', 'true');
+    localStorage.setItem('cookiePreferences', JSON.stringify(preferences));
+    document.getElementById('cookieConsentBanner').style.display = 'none';
+}
+
+// Check cookie consent on page load
+document.addEventListener('DOMContentLoaded', checkCookieConsent);
 
 
 
