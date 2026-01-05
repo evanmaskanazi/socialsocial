@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PL400 (Version 800)
-PL400: GDPR, Israeli Privacy Protection Law, and US Security Compliance Update
+Complete app.py for Social Social Platform - Phase PL405 (Version 805)
+PL405: Database migration fix for GDPR privacy columns
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
+
+PL405 Changes (v805) - PRIVACY MIGRATION FIX:
+=============================================
+- Added `import secrets` for cookie consent session ID generation
+- Added ensure_privacy_schema() migration function
+- Automatically adds privacy_region and data_processing_restricted columns to users table
+- Fixes login/auth errors caused by missing columns
 
 PL400 Changes (v800) - PRIVACY COMPLIANCE UPDATE:
 =================================================
@@ -467,6 +474,7 @@ import pytz
 from datetime import datetime, timedelta, date
 from functools import wraps
 import time
+import secrets
 from collections import defaultdict
 
 # Cache busting timestamp - updates on every app restart
@@ -2321,6 +2329,74 @@ def ensure_notification_settings_schema():
         # Don't raise - allow app to start even if this fails
 
 
+def ensure_privacy_schema():
+    """
+    PL405: Ensure users table has privacy-related columns
+    Adds privacy_region and data_processing_restricted columns if missing
+    """
+    # Guard: Skip if already run in this process
+    if hasattr(ensure_privacy_schema, '_completed'):
+        return
+
+    try:
+        with app.app_context():
+            # Check if table exists
+            inspector = inspect(db.engine)
+            if 'users' not in inspector.get_table_names():
+                logger.info("users table doesn't exist yet, will be created by migrations")
+                return
+
+            # Get existing columns
+            existing_columns = {col['name'] for col in inspector.get_columns('users')}
+            logger.info(f"[PL405] Existing columns in users: {len(existing_columns)} columns")
+
+            # Check if we're using PostgreSQL or SQLite
+            is_postgres = 'postgresql' in str(db.engine.url)
+
+            # Define required privacy columns with their types
+            required_columns = {
+                'privacy_region': "VARCHAR(20) DEFAULT 'other'",
+                'data_processing_restricted': 'BOOLEAN DEFAULT FALSE'
+            }
+
+            # Add missing columns
+            missing_columns = set(required_columns.keys()) - existing_columns
+
+            if missing_columns:
+                logger.info(f"[PL405] Adding missing privacy columns to users: {missing_columns}")
+
+                with db.engine.connect() as connection:
+                    for column_name in missing_columns:
+                        column_type = required_columns[column_name]
+
+                        if is_postgres:
+                            # PostgreSQL syntax with IF NOT EXISTS
+                            alter_query = text(
+                                f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+                        else:
+                            # SQLite syntax (no IF NOT EXISTS)
+                            alter_query = text(
+                                f"ALTER TABLE users ADD COLUMN {column_name} {column_type}")
+
+                        try:
+                            connection.execute(alter_query)
+                            connection.commit()
+                            logger.info(f"[PL405] Added column to users: {column_name}")
+                        except Exception as e:
+                            logger.error(f"[PL405] Error adding column {column_name}: {e}")
+
+                logger.info("[PL405] Successfully added all missing privacy columns to users")
+            else:
+                logger.info("[PL405] All required privacy columns exist in users")
+
+        # Mark as completed for this process
+        ensure_privacy_schema._completed = True
+
+    except Exception as e:
+        logger.error(f"[PL405] Error ensuring privacy schema: {str(e)}")
+        # Don't raise - allow app to start even if this fails
+
+
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
     # Guard: Skip if already run in this process
@@ -3555,6 +3631,7 @@ def init_database():
                 ensure_database_schema()
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
+                ensure_privacy_schema()  # ← PL405: Privacy columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 logger.info("Database schema created successfully")
                 create_admin_user()
@@ -3569,6 +3646,7 @@ def init_database():
                 ensure_database_schema()
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
+                ensure_privacy_schema()  # ← PL405: Privacy columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 create_test_users()
                 create_test_follows()
@@ -3625,6 +3703,7 @@ def init_database():
                 logger.info("Created database tables as fallback")
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
+                ensure_privacy_schema()  # ← PL405: Privacy columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 create_admin_user()
                 create_test_users()
