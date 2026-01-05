@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version PL400 - Added cookie consent, privacy dashboard, and GDPR compliance translations
 // Version P308 - Removed emojis from privacy translations (feed-updates.js adds them) - Added menu.progress and feed.my_feed translations for P305 navigation changes - No changes from PI504 (onboarding fix is in index.html)
 // Version PI504 - Added onboarding.dont_show translation for all languages
 // Version PI503 - Added tutorial translations and nav.tutorial key for all languages
@@ -947,6 +948,42 @@ const translations = {
     'email.fill_diary': 'Fill Out Daily Diary',
     'email.unsubscribe_reminder': 'To stop receiving these reminders, turn off daily email reminders in your alert settings.',
 
+    // PL400: Cookie Consent
+    'cookies.title': 'Cookie Preferences',
+    'cookies.description': 'We use cookies to enhance your experience. Essential cookies are required for the site to function. You can choose which optional cookies to accept.',
+    'cookies.essential': 'Essential (Required)',
+    'cookies.functional': 'Functional',
+    'cookies.analytics': 'Analytics',
+    'cookies.marketing': 'Marketing',
+    'cookies.reject_optional': 'Essential Only',
+    'cookies.accept_all': 'Accept All',
+    'cookies.save_preferences': 'Save Preferences',
+
+    // PL400: GDPR Consent Additions
+    'consent.optional_title': 'Optional preferences (can be changed anytime in Privacy Settings):',
+    'consent.marketing': 'I agree to receive marketing communications',
+    'consent.analytics': 'I allow usage analytics to improve the service',
+    'consent.third_party': 'I agree to data sharing with service partners',
+    'consent.rights_title': 'Your Privacy Rights:',
+    'consent.rights_text': 'You can access, export, or delete your data anytime from Privacy Settings. You can withdraw optional consents at any time.',
+
+    // PL400: Privacy Dashboard
+    'privacy.dashboard_title': 'Privacy Dashboard',
+    'privacy.your_rights': 'Your Rights',
+    'privacy.data_summary': 'Your Data Summary',
+    'privacy.consents': 'Your Consents',
+    'privacy.retention_info': 'Data Retention',
+    'privacy.manage_consents': 'Manage Consents',
+    'privacy.withdraw_consent': 'Withdraw Consent',
+    'privacy.restrict_processing': 'Restrict Processing',
+    'privacy.data_export': 'Export Your Data',
+    'privacy.delete_account': 'Delete Account',
+    'privacy.applicable_law': 'Applicable Privacy Law',
+    'privacy.region_eu': 'European Union (GDPR)',
+    'privacy.region_israel': 'Israel (Privacy Protection Law)',
+    'privacy.region_us': 'United States',
+    'privacy.region_other': 'General Privacy Standards',
+
         // Message notifications
         'msg.loaded': 'Parameters loaded successfully',
         'msg.saved': 'Parameters saved successfully',
@@ -1880,6 +1917,42 @@ const translations = {
     'email.diary_reminder': 'אל תשכח למלא את פרמטרי הבריאות שלך להיום!',
     'email.fill_diary': 'מלא יומן יומי',
     'email.unsubscribe_reminder': 'כדי להפסיק לקבל תזכורות אלה, כבה את התזכורות היומיות בהגדרות ההתראות שלך.',
+
+    // PL400: Cookie Consent (Hebrew)
+    'cookies.title': 'העדפות עוגיות',
+    'cookies.description': 'אנו משתמשים בעוגיות כדי לשפר את חוויית השימוש שלך. עוגיות חיוניות נדרשות לתפקוד האתר. באפשרותך לבחור אילו עוגיות אופציונליות לקבל.',
+    'cookies.essential': 'חיוניות (נדרש)',
+    'cookies.functional': 'פונקציונליות',
+    'cookies.analytics': 'אנליטיקה',
+    'cookies.marketing': 'שיווק',
+    'cookies.reject_optional': 'חיוניות בלבד',
+    'cookies.accept_all': 'קבל הכל',
+    'cookies.save_preferences': 'שמור העדפות',
+
+    // PL400: GDPR Consent Additions (Hebrew)
+    'consent.optional_title': 'העדפות אופציונליות (ניתן לשנות בכל עת בהגדרות פרטיות):',
+    'consent.marketing': 'אני מסכים לקבל תקשורת שיווקית',
+    'consent.analytics': 'אני מאפשר אנליטיקת שימוש לשיפור השירות',
+    'consent.third_party': 'אני מסכים לשיתוף נתונים עם שותפי שירות',
+    'consent.rights_title': 'זכויות הפרטיות שלך:',
+    'consent.rights_text': 'באפשרותך לגשת, לייצא או למחוק את הנתונים שלך בכל עת מהגדרות הפרטיות. באפשרותך לבטל הסכמות אופציונליות בכל עת.',
+
+    // PL400: Privacy Dashboard (Hebrew)
+    'privacy.dashboard_title': 'לוח בקרת פרטיות',
+    'privacy.your_rights': 'הזכויות שלך',
+    'privacy.data_summary': 'סיכום הנתונים שלך',
+    'privacy.consents': 'ההסכמות שלך',
+    'privacy.retention_info': 'שמירת נתונים',
+    'privacy.manage_consents': 'נהל הסכמות',
+    'privacy.withdraw_consent': 'בטל הסכמה',
+    'privacy.restrict_processing': 'הגבל עיבוד',
+    'privacy.data_export': 'ייצא את הנתונים שלך',
+    'privacy.delete_account': 'מחק חשבון',
+    'privacy.applicable_law': 'חוק פרטיות רלוונטי',
+    'privacy.region_eu': 'האיחוד האירופי (GDPR)',
+    'privacy.region_israel': 'ישראל (חוק הגנת הפרטיות)',
+    'privacy.region_us': 'ארצות הברית',
+    'privacy.region_other': 'תקני פרטיות כלליים',
 
         // Message notifications
         'msg.loaded': 'הפרמטרים נטענו בהצלחה',
@@ -2818,6 +2891,42 @@ const translations = {
     'email.fill_diary': 'ملء اليومية اليومية',
     'email.unsubscribe_reminder': 'لإيقاف تلقي هذه التذكيرات، قم بإيقاف تشغيل التذكيرات اليومية في إعدادات التنبيهات.',
 
+    // PL400: Cookie Consent (Arabic)
+    'cookies.title': 'تفضيلات ملفات تعريف الارتباط',
+    'cookies.description': 'نستخدم ملفات تعريف الارتباط لتحسين تجربتك. ملفات تعريف الارتباط الأساسية ضرورية لعمل الموقع. يمكنك اختيار ملفات تعريف الارتباط الاختيارية التي تريد قبولها.',
+    'cookies.essential': 'أساسية (مطلوبة)',
+    'cookies.functional': 'وظيفية',
+    'cookies.analytics': 'تحليلية',
+    'cookies.marketing': 'تسويقية',
+    'cookies.reject_optional': 'الأساسية فقط',
+    'cookies.accept_all': 'قبول الكل',
+    'cookies.save_preferences': 'حفظ التفضيلات',
+
+    // PL400: GDPR Consent Additions (Arabic)
+    'consent.optional_title': 'تفضيلات اختيارية (يمكن تغييرها في أي وقت من إعدادات الخصوصية):',
+    'consent.marketing': 'أوافق على تلقي الاتصالات التسويقية',
+    'consent.analytics': 'أسمح بتحليلات الاستخدام لتحسين الخدمة',
+    'consent.third_party': 'أوافق على مشاركة البيانات مع شركاء الخدمة',
+    'consent.rights_title': 'حقوق الخصوصية الخاصة بك:',
+    'consent.rights_text': 'يمكنك الوصول إلى بياناتك أو تصديرها أو حذفها في أي وقت من إعدادات الخصوصية. يمكنك سحب الموافقات الاختيارية في أي وقت.',
+
+    // PL400: Privacy Dashboard (Arabic)
+    'privacy.dashboard_title': 'لوحة الخصوصية',
+    'privacy.your_rights': 'حقوقك',
+    'privacy.data_summary': 'ملخص بياناتك',
+    'privacy.consents': 'موافقاتك',
+    'privacy.retention_info': 'الاحتفاظ بالبيانات',
+    'privacy.manage_consents': 'إدارة الموافقات',
+    'privacy.withdraw_consent': 'سحب الموافقة',
+    'privacy.restrict_processing': 'تقييد المعالجة',
+    'privacy.data_export': 'تصدير بياناتك',
+    'privacy.delete_account': 'حذف الحساب',
+    'privacy.applicable_law': 'قانون الخصوصية المعمول به',
+    'privacy.region_eu': 'الاتحاد الأوروبي (GDPR)',
+    'privacy.region_israel': 'إسرائيل (قانون حماية الخصوصية)',
+    'privacy.region_us': 'الولايات المتحدة',
+    'privacy.region_other': 'معايير الخصوصية العامة',
+
         // Message notifications
         'msg.loaded': 'تم تحميل المعاملات بنجاح',
         'msg.saved': 'تم حفظ المعاملات بنجاح',
@@ -3754,6 +3863,42 @@ const translations = {
     'email.diary_reminder': 'Не забудьте записать ваши показатели здоровья за сегодня!',
     'email.fill_diary': 'Заполнить дневник',
     'email.unsubscribe_reminder': 'Чтобы перестать получать эти напоминания, отключите ежедневные напоминания в настройках уведомлений.',
+
+    // PL400: Cookie Consent (Russian)
+    'cookies.title': 'Настройки файлов cookie',
+    'cookies.description': 'Мы используем файлы cookie для улучшения вашего опыта. Необходимые файлы cookie требуются для работы сайта. Вы можете выбрать, какие дополнительные файлы cookie принять.',
+    'cookies.essential': 'Необходимые (Обязательно)',
+    'cookies.functional': 'Функциональные',
+    'cookies.analytics': 'Аналитические',
+    'cookies.marketing': 'Маркетинговые',
+    'cookies.reject_optional': 'Только необходимые',
+    'cookies.accept_all': 'Принять все',
+    'cookies.save_preferences': 'Сохранить настройки',
+
+    // PL400: GDPR Consent Additions (Russian)
+    'consent.optional_title': 'Дополнительные настройки (можно изменить в любое время в настройках конфиденциальности):',
+    'consent.marketing': 'Я согласен получать маркетинговые сообщения',
+    'consent.analytics': 'Я разрешаю аналитику использования для улучшения сервиса',
+    'consent.third_party': 'Я согласен на обмен данными с партнерами сервиса',
+    'consent.rights_title': 'Ваши права на конфиденциальность:',
+    'consent.rights_text': 'Вы можете получить доступ к своим данным, экспортировать или удалить их в любое время в настройках конфиденциальности. Вы можете отозвать дополнительные согласия в любое время.',
+
+    // PL400: Privacy Dashboard (Russian)
+    'privacy.dashboard_title': 'Панель конфиденциальности',
+    'privacy.your_rights': 'Ваши права',
+    'privacy.data_summary': 'Сводка ваших данных',
+    'privacy.consents': 'Ваши согласия',
+    'privacy.retention_info': 'Хранение данных',
+    'privacy.manage_consents': 'Управление согласиями',
+    'privacy.withdraw_consent': 'Отозвать согласие',
+    'privacy.restrict_processing': 'Ограничить обработку',
+    'privacy.data_export': 'Экспорт ваших данных',
+    'privacy.delete_account': 'Удалить аккаунт',
+    'privacy.applicable_law': 'Применимый закон о конфиденциальности',
+    'privacy.region_eu': 'Европейский Союз (GDPR)',
+    'privacy.region_israel': 'Израиль (Закон о защите конфиденциальности)',
+    'privacy.region_us': 'США',
+    'privacy.region_other': 'Общие стандарты конфиденциальности',
 
         // Message notifications
         'msg.loaded': 'Параметры успешно загружены',
