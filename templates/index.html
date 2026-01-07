@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PL405 v805 -->
+<!-- TheraSocial Version PL406 v806 -->
+<!-- PL406: Fixed Progress Chart - CSP was blocking Chart.js from cdn.jsdelivr.net -->
 <!-- PL405: Database migration fix for GDPR privacy columns -->
 <!-- PL400: GDPR / Israeli Privacy Protection Law / US Security Compliance Update -->
 <!-- PL400: Cookie consent banner for GDPR/ePrivacy compliance -->
@@ -198,7 +199,7 @@
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
