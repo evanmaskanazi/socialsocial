@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PL405 (Version 805)
+Complete app.py for Social Social Platform - Phase PL406 (Version 806)
+PL406: Fixed Progress Chart - CSP was blocking Chart.js from cdn.jsdelivr.net
 PL405: Database migration fix for GDPR privacy columns
 With Flask-Migrate and SQLAlchemy 2.0 style queries
 Auto-migrates on startup for seamless deployment
@@ -667,7 +668,8 @@ def add_security_headers(response):
     if is_production:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     # Content Security Policy
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com"
+    # PL406: Added cdn.jsdelivr.net to script-src to allow Chart.js library for progress charts
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com"
     return response
 
 # =====================
