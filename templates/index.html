@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PL407 SCREEN FIX v807 -->
+<!-- TheraSocial Version PL407 SCREEN FIX v808 -->
+<!-- PL407 SCREEN FIX v808: Added generic ?view= URL parameter handling for Diary page redirects -->
+<!-- PL407 SCREEN FIX v808: Now handles ?view=invite, ?view=following, etc. from /parameters page -->
 <!-- PL407 SCREEN FIX: Fixed view navigation issue where Home showed with Invite/Following -->
 <!-- PL407 SCREEN FIX: Enhanced CSS with explicit .view.hidden rules ensuring display:none -->
 <!-- PL407 SCREEN FIX: Fixed view indentation - followingView, followersView, inviteView, alertsView now properly nested -->
@@ -11905,6 +11907,31 @@ window.addEventListener('DOMContentLoaded', async () => {
                         showView('following');
                         loadFollowing();
                     }, 500);
+                }
+                // SCREEN FIX: Handle generic ?view= parameter for redirects from Diary page
+                // This handles ?view=invite, ?view=following (without highlight_user), etc.
+                else if (viewParam) {
+                    const validViews = ['home', 'progress', 'profile', 'circles', 'messages', 
+                                       'tracking', 'following', 'followers', 'invite', 'alerts'];
+                    if (validViews.includes(viewParam)) {
+                        console.log('[SCREEN FIX] URL ?view= param detected, switching to:', viewParam);
+                        // Clear URL params after reading them
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        // Small delay then switch to requested view
+                        setTimeout(() => {
+                            showView(viewParam);
+                            // Load appropriate data for the view
+                            if (viewParam === 'following') loadFollowing();
+                            else if (viewParam === 'followers') loadFollowers();
+                            else if (viewParam === 'invite') loadInviteView();
+                            else if (viewParam === 'profile') loadProfile();
+                            else if (viewParam === 'circles') loadCircles();
+                            else if (viewParam === 'messages') loadConversations();
+                            else if (viewParam === 'alerts') loadAlerts();
+                        }, 500);
+                    } else {
+                        console.warn('[SCREEN FIX] Invalid view param:', viewParam);
+                    }
                 }
                 
                 // FIX: Sync language selector immediately after showing dashboard
