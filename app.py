@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PL409 LINK FIX (Version 809)
+Complete app.py for Social Social Platform - Phase PL410 LINK2 FIX (Version 810)
+PL410 LINK2 FIX: Fixed consent flow for magic link and returning users
+- check_session endpoint now returns needs_consent flag
+- New accounts via magic link will always see consent modal
+
 PL409 LINK FIX: Fixed password reset and magic link issues
 - CRITICAL: Added missing @app.route decorator for forgot_password endpoint
 - Updated CORS ALLOWED_ORIGINS to include therasocial.org
@@ -5160,13 +5164,20 @@ def restart_onboarding():
 
 @app.route('/api/auth/session', methods=['GET'])
 def check_session():
-    """Check if user is logged in"""
+    """Check if user is logged in - LINK2 FIX: Also returns needs_consent flag"""
     if 'user_id' in session:
         user = db.session.get(User, session['user_id'])
         if user and user.is_active:
+            # LINK2 FIX: Check if user has completed consent
+            consent = db.session.execute(
+                select(UserConsent).filter_by(user_id=user.id)
+            ).scalar_one_or_none()
+            needs_consent = consent is None
+            
             return jsonify({
                 'authenticated': True,
-                'user': user.to_dict()
+                'user': user.to_dict(),
+                'needs_consent': needs_consent  # LINK2 FIX: Frontend can check this
             })
 
     return jsonify({'authenticated': False}), 401
