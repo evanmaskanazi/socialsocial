@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version PL406 - Added invite.search_users and invite.search_placeholder translations for all languages
 // Version PL405 - Database migration fix version (no i18n changes from PL400)
 // Version PL400 - Added cookie consent, privacy dashboard, and GDPR compliance translations
 // Version P308 - Removed emojis from privacy translations (feed-updates.js adds them) - Added menu.progress and feed.my_feed translations for P305 navigation changes - No changes from PI504 (onboarding fix is in index.html)
@@ -659,6 +660,8 @@ const translations = {
 'invite.suggested': 'Suggested People to Invite',
 'invite.suggested_description': 'Based on your location and connections',
 'invite.send_request': 'Send Request',
+'invite.search_users': 'Search users to invite',
+'invite.search_placeholder': 'Enter username or email to invite',
  'invite.find_people': '🔍 Find People to Follow',
  'invite.view_public': '👁️ View Your Public Invite Page',
   'auth.create_account': 'Create Account',
@@ -1410,6 +1413,8 @@ const translations = {
 'invite.suggested': 'אנשים מומלצים להזמנה',
 'invite.suggested_description': 'מבוסס על המיקום והקשרים שלך',
 'invite.send_request': 'שלח בקשה',
+'invite.search_users': 'חפש משתמשים להזמנה',
+'invite.search_placeholder': 'הכנס שם משתמש או אימייל להזמנה',
 'menu.more': 'עוד',
 'menu.social': 'חברתי',
 
@@ -2241,6 +2246,8 @@ const translations = {
 'invite.suggested': 'أشخاص مقترحون للدعوة',
 'invite.suggested_description': 'بناءً على موقعك واتصالاتك',
 'invite.send_request': 'إرسال طلب',
+'invite.search_users': 'البحث عن مستخدمين للدعوة',
+'invite.search_placeholder': 'أدخل اسم المستخدم أو البريد الإلكتروني للدعوة',
 'invite.legacy_alert_content': 'دعاك شخص ما لمتابعته',
 'menu.home': 'الصفحة الرئيسية',
 'home.title': 'الصفحة الرئيسية',
@@ -3276,6 +3283,8 @@ const translations = {
 'invite.suggested': 'Рекомендуемые люди для приглашения',
 'invite.suggested_description': 'На основе вашего местоположения и связей',
 'invite.send_request': 'Отправить запрос',
+'invite.search_users': 'Поиск пользователей для приглашения',
+'invite.search_placeholder': 'Введите имя пользователя или email для приглашения',
 'menu.home': 'Главная',
 'home.title': 'Главная',
 'home.location_settings': 'Настройки местоположения',
