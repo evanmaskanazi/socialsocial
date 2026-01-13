@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version PL410 LINK2 - Same as PL409 (no i18n changes for consent fix)
 // Version PL409 LINK FIX - Added home.data_export, home.data_export_desc, home.data_rights, home.data_rights_detail, home.export_data_btn translations
 // Version PL406 - Added invite.search_users and invite.search_placeholder translations for all languages
 // Version PL405 - Database migration fix version (no i18n changes from PL400)
