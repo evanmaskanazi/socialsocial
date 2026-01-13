@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version PL409 LINK FIX - Added home.data_export, home.data_export_desc, home.data_rights, home.data_rights_detail, home.export_data_btn translations
 // Version PL406 - Added invite.search_users and invite.search_placeholder translations for all languages
 // Version PL405 - Database migration fix version (no i18n changes from PL400)
 // Version PL400 - Added cookie consent, privacy dashboard, and GDPR compliance translations
@@ -695,6 +696,11 @@ const translations = {
 'home.account_deleted': 'Your account has been deleted',
 'home.deletion_failed': 'Failed to delete account',
 'home.error_occurred': 'An error occurred',
+'home.data_export': 'Export Your Data',
+'home.data_export_desc': 'Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.',
+'home.data_rights': 'Your Data Rights',
+'home.data_rights_detail': 'You have the right to access and download your personal data at any time.',
+'home.export_data_btn': 'Export My Data',
 'parameters.title': 'Parameters',
 'parameters.set_alert_triggers': 'Set Alert Triggers',
 'parameters.alert_triggers_description': 'Get notified when {username}\'s wellness parameters are concerning',
@@ -1478,6 +1484,11 @@ const translations = {
 'home.account_deleted': 'חשבונך נמחק',
 'home.deletion_failed': 'מחיקת החשבון נכשלה',
 'home.error_occurred': 'אירעה שגיאה',
+'home.data_export': 'ייצוא הנתונים שלך',
+'home.data_export_desc': 'הורד עותק של כל הנתונים האישיים שלך המאוחסנים ב-TheraSocial. זה כולל את הפרופיל שלך, רשומות יומן הבריאות, הודעות ועוד.',
+'home.data_rights': 'זכויות הנתונים שלך',
+'home.data_rights_detail': 'יש לך את הזכות לגשת ולהוריד את הנתונים האישיים שלך בכל עת.',
+'home.export_data_btn': 'ייצא את הנתונים שלי',
 // City names
       // Hebrew city translations
 'city.jerusalem': 'ירושלים, ישראל',
@@ -2353,7 +2364,11 @@ const translations = {
 'home.account_deleted': 'تم حذف حسابك',
 'home.deletion_failed': 'فشل حذف الحساب',
 'home.error_occurred': 'حدث خطأ',
-'home.error_occurred': 'حدث خطأ',
+'home.data_export': 'تصدير بياناتك',
+'home.data_export_desc': 'قم بتنزيل نسخة من جميع بياناتك الشخصية المخزنة على TheraSocial. يشمل ذلك ملفك الشخصي، وإدخالات مذكرة الصحة، والرسائل، والمزيد.',
+'home.data_rights': 'حقوق بياناتك',
+'home.data_rights_detail': 'لديك الحق في الوصول إلى بياناتك الشخصية وتنزيلها في أي وقت.',
+'home.export_data_btn': 'تصدير بياناتي',
 'alert_trigger_parameter': 'المعيار',
 'alert_trigger_condition': 'الشرط',
 'alert_trigger_value': 'القيمة',
@@ -3315,7 +3330,11 @@ const translations = {
 'home.account_deleted': 'Ваш аккаунт был удален',
 'home.deletion_failed': 'Не удалось удалить аккаунт',
 'home.error_occurred': 'Произошла ошибка',
-'home.error_occurred': 'Произошла ошибка',
+'home.data_export': 'Экспорт ваших данных',
+'home.data_export_desc': 'Загрузите копию всех ваших персональных данных, хранящихся в TheraSocial. Сюда входят ваш профиль, записи дневника здоровья, сообщения и многое другое.',
+'home.data_rights': 'Ваши права на данные',
+'home.data_rights_detail': 'Вы имеете право получить доступ к своим персональным данным и загрузить их в любое время.',
+'home.export_data_btn': 'Экспортировать мои данные',
 
 'parameters.set_alert_triggers': 'Настроить оповещения',
 'parameters.alert_triggers_description': 'Получайте уведомления, когда параметры здоровья {username} вызывают беспокойство',
