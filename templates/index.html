@@ -2331,11 +2331,14 @@
     }
     .modal-content {
         background-color: #fefefe;
-        margin: 10% auto;
+        margin: 5% auto;
         padding: 30px;
         border-radius: 10px;
         width: 90%;
         max-width: 500px;
+        /* QA FIX: Added max-height and overflow-y so consent form scrolls on smaller screens */
+        max-height: 85vh;
+        overflow-y: auto;
     }
     .consent-item {
         display: block;
