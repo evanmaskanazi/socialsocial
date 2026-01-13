@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PL406 (Version 806)
+Complete app.py for Social Social Platform - Phase PL409 LINK FIX (Version 809)
+PL409 LINK FIX: Fixed password reset and magic link issues
+- CRITICAL: Added missing @app.route decorator for forgot_password endpoint
+- Updated CORS ALLOWED_ORIGINS to include therasocial.org
+- Updated CSP connect-src to include cdn.jsdelivr.net for Chart.js source maps
+- Updated all APP_URL defaults from localhost to therasocial.org
+
 PL406: Fixed Progress Chart - CSP was blocking Chart.js from cdn.jsdelivr.net
 PL405: Database migration fix for GDPR privacy columns
 With Flask-Migrate and SQLAlchemy 2.0 style queries
@@ -651,8 +657,10 @@ migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite
 
 # CHANGE 1: Enhanced CORS with explicit origins and security headers
 CORS(app, supports_credentials=True, origins=[
-    os.environ.get('APP_URL', 'http://localhost:5000'),
-    'https://socialsocial-72gn.onrender.com'
+    os.environ.get('APP_URL', 'https://therasocial.org'),
+    'https://therasocial.org',
+    'https://www.therasocial.org',
+    'https://socialsocial-72gn.onrender.com'  # Keep for backwards compatibility during transition
 ], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 Session(app)
 
@@ -669,7 +677,8 @@ def add_security_headers(response):
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     # Content Security Policy
     # PL406: Added cdn.jsdelivr.net to script-src to allow Chart.js library for progress charts
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com"
+    # LINK FIX: Added cdn.jsdelivr.net to connect-src for source maps
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net"
     return response
 
 # =====================
@@ -961,7 +970,7 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
     """Send password reset email in user's preferred language using Flask-Mail"""
     try:
         t = get_email_translations(user_language)
-        reset_link = f"{os.environ.get('APP_URL', 'http://localhost:5000')}?reset_token={reset_token}"
+        reset_link = f"{os.environ.get('APP_URL', 'https://therasocial.org')}?reset_token={reset_token}"
 
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
@@ -1092,7 +1101,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
         }
 
         t = translations.get(user_language, translations['en'])
-        magic_link = f"{os.environ.get('APP_URL', 'http://localhost:5000')}?magic_token={magic_token}"
+        magic_link = f"{os.environ.get('APP_URL', 'https://therasocial.org')}?magic_token={magic_token}"
 
         html_content = f"""<html><body>
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -1191,7 +1200,7 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
     logger.info(f"[SMTP MESSAGE] to: {recipient_email}, sender: {sender_name}, language: {user_language}")
     try:
         t = get_new_message_email_translations(user_language)
-        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
         messages_link = f"{app_url}/#messages"
 
         is_rtl = user_language in ['he', 'ar']
@@ -1445,7 +1454,7 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
     logger.info(f"[SMTP ALERT] to: {user_email}, title: {alert_title}, language: {user_language}")
     try:
         t = get_alert_notification_email_translations(user_language)
-        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
 
         # PJ706: Translate alert title and content if they are translation keys
         translated_title, translated_content = translate_alert_content(alert_title, alert_content, user_language)
@@ -1583,7 +1592,7 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         t = get_daily_diary_reminder_translations(user_language)
         logger.info(f"[DAILY REMINDER] Got translations for language: {user_language}")
         
-        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
         diary_link = f"{app_url}/diary-redirect"  # PJ40E: Use redirect route for proper login handling
         logger.info(f"[DAILY REMINDER] App URL: {app_url}")
         logger.info(f"[DAILY REMINDER] Diary link: {diary_link}")
@@ -1978,7 +1987,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         }
         
         t = translations.get(user_language, translations['en'])
-        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
@@ -2108,7 +2117,7 @@ def send_notification_email(user_email, notification_title, notification_content
     """PJ6001: Send email for notifications (messages, followers, invites) - separate from alerts"""
     try:
         t = get_notification_email_translations(user_language)
-        app_url = os.environ.get('APP_URL', 'http://localhost:5000')
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
 
         # PJ6003: Translate notification title and content if they contain translation keys
         translated_title, translated_content = translate_alert_content(notification_title, notification_content, user_language)
@@ -6529,6 +6538,7 @@ def set_privacy_region():
 
 
 
+@app.route('/api/auth/forgot-password', methods=['POST'])
 @rate_limit(max_attempts=5, window_minutes=60)
 def forgot_password():
     """Request password reset with language support"""
