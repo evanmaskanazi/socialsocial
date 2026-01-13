@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PL406 v806 -->
+<!-- TheraSocial Version PL407 SCREEN FIX v807 -->
+<!-- PL407 SCREEN FIX: Fixed view navigation issue where Home showed with Invite/Following -->
+<!-- PL407 SCREEN FIX: Enhanced CSS with explicit .view.hidden rules ensuring display:none -->
+<!-- PL407 SCREEN FIX: Fixed view indentation - followingView, followersView, inviteView, alertsView now properly nested -->
+<!-- PL407 SCREEN FIX: Enhanced showView() to explicitly hide ALL views by ID before showing target -->
+<!-- PL407 SCREEN FIX: Enhanced sidebar-item handler with same robust view hiding approach -->
+<!-- PL407 SCREEN FIX: Added inline style display:none as backup to .hidden class -->
 <!-- PL406: Fixed Progress Chart - CSP was blocking Chart.js from cdn.jsdelivr.net -->
 <!-- PL405: Database migration fix for GDPR privacy columns -->
 <!-- PL400: GDPR / Israeli Privacy Protection Law / US Security Compliance Update -->
@@ -1726,6 +1732,27 @@
         .hidden {
             display: none !important;
         }
+        
+        /* SCREEN FIX: Explicit view hiding - ensure only one view is visible at a time */
+        .view.hidden {
+            display: none !important;
+            visibility: hidden !important;
+        }
+        
+        /* SCREEN FIX: Ensure specific views are hidden when they have .hidden class */
+        #homeView.hidden,
+        #progressView.hidden,
+        #profileView.hidden,
+        #circlesView.hidden,
+        #messagesView.hidden,
+        #trackingView.hidden,
+        #followingView.hidden,
+        #followersView.hidden,
+        #inviteView.hidden,
+        #alertsView.hidden {
+            display: none !important;
+            visibility: hidden !important;
+        }
 
         /* Animations */
         @keyframes fadeIn {
@@ -3090,8 +3117,8 @@
                     <div id="insights"></div>
                 </div>
 
-<!-- Following View -->
-<div id="followingView" class="view hidden">
+              <!-- Following View -->
+              <div id="followingView" class="view hidden">
     <h2 style="margin-bottom: 20px;" data-i18n="following.title">Following</h2>
 
     <!-- ADD THIS SEARCH BAR HERE (right after the H2, before Recommendations Section) -->
@@ -3141,21 +3168,19 @@
 
     <!-- Following List -->
     <div>
-        <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="following.your_following">People You Follow</h3>
-        <div id="followingList"></div>
-    </div>
+                  <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="following.your_following">People You Follow</h3>
+                  <div id="followingList"></div>
+              </div>
+              </div>
 
+              <!-- Followers View -->
+              <div id="followersView" class="view hidden">
+                  <h2 style="margin-bottom: 20px;" data-i18n="followers.title">Followers</h2>
+                  <div id="followersList"></div>
+              </div>
 
-</div>
-
-<!-- Followers View -->
-<div id="followersView" class="view hidden">
-    <h2 style="margin-bottom: 20px;" data-i18n="followers.title">Followers</h2>
-    <div id="followersList"></div>
-</div>
-
-<!-- Invite View -->
-<div id="inviteView" class="view hidden">
+              <!-- Invite View -->
+              <div id="inviteView" class="view hidden">
     <h2 style="margin-bottom: 20px;" data-i18n="invite.title">Invite Friends to Your Wellness Journey</h2>
 
     <div class="invite-section">
@@ -3219,16 +3244,16 @@
             </div>
             <!-- End of PJ702 search bar -->
 
-            <div id="recommendationsList" class="recommendations-list">
-                <div class="loading">Loading recommendations...</div>
-            </div>
-        </div>
-    </div>
-</div>
+                    <div id="recommendationsList" class="recommendations-list">
+                        <div class="loading">Loading recommendations...</div>
+                    </div>
+                </div>
+              </div>
+              </div>
 
 
-<!-- Mobile Alerts View (only visible on mobile) -->
-<div id="alertsView" class="view hidden">
+              <!-- Mobile Alerts View (only visible on mobile) -->
+              <div id="alertsView" class="view hidden">
     <h2 style="margin-bottom: 20px;" data-i18n="alerts.title">Alerts</h2>
     
     <!-- PJ6001: Email Options for Mobile -->
@@ -3307,10 +3332,10 @@
     <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div class="alerts-list" id="mobileNotificationsList"></div>
         <div id="mobileNoNotificationsMessage" style="display: none; text-align: center; padding: 20px; color: #666;">
-            <span data-i18n="notifications.no_notifications">No notifications to display</span>
-        </div>
-    </div>
-</div>
+                    <span data-i18n="notifications.no_notifications">No notifications to display</span>
+                </div>
+              </div>
+              </div>
 
 
            </main>
@@ -5088,16 +5113,24 @@ function safeApplyLanguage(lang) {
 }
 window.safeApplyLanguage = safeApplyLanguage;
 
-    // Hide feed view on initial dashboard load (feed should only show when Feed tab is clicked)
-    const feedView = document.getElementById('feedView');
-    if (feedView) {
-        feedView.classList.add('hidden');
-    }
+    // SCREEN FIX: Hide ALL views on initial dashboard load, then show only homeView
+    const allViewIds = ['homeView', 'progressView', 'profileView', 'circlesView', 'messagesView', 
+                        'trackingView', 'followingView', 'followersView', 'inviteView', 'alertsView', 'feedView'];
+    
+    allViewIds.forEach(viewId => {
+        const view = document.getElementById(viewId);
+        if (view) {
+            view.classList.add('hidden');
+            view.style.display = 'none';
+        }
+    });
 
     // Show home view by default
     const homeView = document.getElementById('homeView');
     if (homeView) {
         homeView.classList.remove('hidden');
+        homeView.style.display = '';  // Remove inline style to let CSS take over
+        console.log('[SCREEN FIX] Dashboard loaded - showing homeView');
     }
 
            // Note: loadAlerts() now called from DOMContentLoaded after i18n check
@@ -5155,13 +5188,23 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
         document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
         item.classList.add('active');
 
-        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+        // SCREEN FIX: Enhanced view hiding in sidebar handler
+        const allViewIds = ['homeView', 'progressView', 'profileView', 'circlesView', 'messagesView', 
+                            'trackingView', 'followingView', 'followersView', 'inviteView', 'alertsView'];
         
-        // QA FIX: Explicitly ensure homeView is hidden when navigating to other views
-        const homeView = document.getElementById('homeView');
-        if (homeView) {
-            homeView.classList.add('hidden');
-        }
+        allViewIds.forEach(viewId => {
+            const view = document.getElementById(viewId);
+            if (view) {
+                view.classList.add('hidden');
+                view.style.display = 'none';  // Double-ensure with inline style
+            }
+        });
+        
+        // Also hide by class selector
+        document.querySelectorAll('.view').forEach(v => {
+            v.classList.add('hidden');
+            v.style.display = 'none';
+        });
 
       const view = item.dataset.view;
 
@@ -5173,7 +5216,13 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
             window.viewingUserId = null;
         }
 
-        document.getElementById(`${view}View`).classList.remove('hidden');
+        // SCREEN FIX: Show target view and remove inline style
+        const targetView = document.getElementById(`${view}View`);
+        if (targetView) {
+            targetView.classList.remove('hidden');
+            targetView.style.display = '';  // Remove inline style to let CSS take over
+            console.log('[SCREEN FIX - SIDEBAR] Showing view:', view + 'View');
+        }
 
         // Update mobile nav active state
         document.querySelectorAll('.mobile-nav-item').forEach(mobileItem => {
@@ -5459,11 +5508,33 @@ function showView(viewName) {
         }
     });
 
-    // Show/hide views
-    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    // SCREEN FIX: Enhanced view hiding - explicitly hide ALL views by ID to ensure complete hiding
+    const allViewIds = ['homeView', 'progressView', 'profileView', 'circlesView', 'messagesView', 
+                        'trackingView', 'followingView', 'followersView', 'inviteView', 'alertsView'];
+    
+    allViewIds.forEach(viewId => {
+        const view = document.getElementById(viewId);
+        if (view) {
+            view.classList.add('hidden');
+            view.style.display = 'none';  // Double-ensure with inline style
+            console.log('[SCREEN FIX] Explicitly hid view:', viewId);
+        }
+    });
+    
+    // Also hide any views found by class selector (belt and suspenders approach)
+    document.querySelectorAll('.view').forEach(v => {
+        v.classList.add('hidden');
+        v.style.display = 'none';
+    });
+    
+    // Now show ONLY the target view
     const selectedView = document.getElementById(`${viewName}View`);
     if (selectedView) {
         selectedView.classList.remove('hidden');
+        selectedView.style.display = '';  // Remove inline style to let CSS take over
+        console.log('[SCREEN FIX] Showing view:', viewName + 'View');
+    } else {
+        console.error('[SCREEN FIX] View not found:', viewName + 'View');
     }
 
     // Load view content - check if viewing another user
