@@ -28,7 +28,4 @@ if __name__ == '__main__':
     
     from app import app, db
     initialize_database()
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    
-    from app import app, db
-    initialize_database()
+    # QA FIX (LOW): Removed duplicate lines that were here

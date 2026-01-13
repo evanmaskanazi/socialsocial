@@ -601,7 +601,8 @@ app.config['DEBUG'] = not is_production
 # Secret key configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 if is_production and app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
-    print("WARNING: Using default SECRET_KEY in production!")
+    # QA FIX (HIGH): Enforce SECRET_KEY in production - exit instead of just warning
+    raise RuntimeError("CRITICAL: SECRET_KEY environment variable must be set in production! Generate with: python -c \"import secrets; print(secrets.token_hex(32))\"")
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///social.db')
@@ -650,10 +651,11 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite
 
 # CHANGE 1: Enhanced CORS with explicit origins and security headers
-CORS(app, supports_credentials=True, origins=[
-    os.environ.get('APP_URL', 'http://localhost:5000'),
-    'https://socialsocial-72gn.onrender.com'
-], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+# QA FIX (MEDIUM): Only include localhost origins in development mode
+cors_origins = ['https://socialsocial-72gn.onrender.com']
+if not is_production:
+    cors_origins.append(os.environ.get('APP_URL', 'http://localhost:5000'))
+CORS(app, supports_credentials=True, origins=cors_origins, methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 Session(app)
 
 # Security headers middleware (Ethics Doc: Privacy and Security by Design)
