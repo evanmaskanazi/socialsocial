@@ -5156,6 +5156,12 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
         item.classList.add('active');
 
         document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+        
+        // QA FIX: Explicitly ensure homeView is hidden when navigating to other views
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+            homeView.classList.add('hidden');
+        }
 
       const view = item.dataset.view;
 
@@ -5402,6 +5408,16 @@ window.showViewFromMore = showViewFromMore;
 
 function showView(viewName) {
     console.log('[DEBUG] showView called:', viewName, 'viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+    
+    // QA FIX: Explicitly hide homeView when navigating to ANY other view
+    // This fixes the issue where both homeView and target view were showing after P305 redesign
+    if (viewName !== 'home') {
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+            homeView.classList.add('hidden');
+            console.log('[QA FIX] Explicitly hid homeView before showing:', viewName);
+        }
+    }
     
     // FOLLOWLOG: Clear highlight when navigating away from Following view
     if (viewName !== 'following') {
