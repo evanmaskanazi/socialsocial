@@ -1,6 +1,13 @@
+// P305 Version 1901 - EMOJI FIX: Prevent emojis from disappearing after save
 // P305 Version 1900 - Navigation restructure and visual design changes (frontend-only)
 // No backend changes - all changes are in index.html
 // P305: Feed becomes Home page, new Progress tab, new color palette, dark mode support
+//
+// P305 v1901 EMOJI FIX:
+// - ROOT CAUSE: showInviteCTA() called window.i18n.applyLanguage() globally
+// - This triggered translation updates that cleared emoji spans
+// - FIX: Only apply translations to the CTA element, not entire page
+// - FIX: Added restoreParameterEmojis() as safeguard after translation updates
 // PJ816 Version 1800 - CRITICAL FIX: Trigger emails now sent without watcher login
 // ROOT CAUSE: check_parameter_triggers() required login and only ran on polling
 // FIX: Added background trigger scheduler that runs every 5 minutes
@@ -404,6 +411,34 @@ const PARAMETER_CATEGORIES = [
         max: 4
     }
 ];
+
+// P305 v1901 EMOJI FIX: Function to restore parameter emojis after any translation update
+function restoreParameterEmojis() {
+    console.log('[EMOJI FIX] Restoring parameter emojis...');
+    PARAMETER_CATEGORIES.forEach(category => {
+        // Find emoji span by data-category attribute
+        const emojiSpan = document.querySelector(`.parameter-item .parameter-emoji[data-category="${category.id}"]`);
+        if (emojiSpan && emojiSpan.textContent !== category.emoji) {
+            console.log(`[EMOJI FIX] Restoring emoji for ${category.id}: ${category.emoji}`);
+            emojiSpan.textContent = category.emoji;
+        }
+        
+        // Fallback: check by position if data-category not set
+        const parameterItems = document.querySelectorAll('.parameter-item');
+        parameterItems.forEach((item, index) => {
+            if (index < PARAMETER_CATEGORIES.length) {
+                const emojiSpanInItem = item.querySelector('.parameter-emoji');
+                if (emojiSpanInItem && !emojiSpanInItem.textContent.trim()) {
+                    console.log(`[EMOJI FIX] Restoring missing emoji at index ${index}: ${PARAMETER_CATEGORIES[index].emoji}`);
+                    emojiSpanInItem.textContent = PARAMETER_CATEGORIES[index].emoji;
+                }
+            }
+        });
+    });
+}
+
+// Export restoreParameterEmojis globally
+window.restoreParameterEmojis = restoreParameterEmojis;
 
 // Add translations for parameters
 const addParameterTranslations = () => {
@@ -825,7 +860,7 @@ function initializeParameters() {
     return `
         <div class="parameter-item">
             <div class="parameter-header">
-                <span class="parameter-emoji">${category.emoji}</span>
+                <span class="parameter-emoji" data-category="${category.id}">${category.emoji}</span>
                 <div class="parameter-info">
                     <span class="parameter-name" data-i18n="${category.nameKey}">${category.nameKey}</span>
                     <span class="tooltip-icon" data-tooltip-key="tooltip.${category.id}" onclick="showTooltip('${category.id}', event)" title="">ⓘ</span>
@@ -990,6 +1025,13 @@ function initializeParameters() {
 
     // Apply emojis to privacy selectors after a brief delay
     setTimeout(applyEmojisToPrivacySelectors, 150);
+    
+    // P305 v1901 EMOJI FIX: Restore emojis after initialization completes
+    setTimeout(() => {
+        if (typeof restoreParameterEmojis === 'function') {
+            restoreParameterEmojis();
+        }
+    }, 300);
 }
 
 // P101 FIX: Setup language selector with backend as source of truth
@@ -2350,6 +2392,13 @@ async function saveParameters() {
                 dot.style.cssText = 'color: #10b981; font-size: 8px; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);';
                 currentDayElement.appendChild(dot);
             }
+            
+            // P305 v1901 EMOJI FIX: Restore emojis after save completes
+            setTimeout(() => {
+                if (typeof restoreParameterEmojis === 'function') {
+                    restoreParameterEmojis();
+                }
+            }, 200);
         } else {
             window.showMessage(pt('error.saving') + ': ' + (result.message || 'Unknown error'), 'error');
         }
@@ -2556,6 +2605,13 @@ function updateTranslations() {
 
     // Update calendar to reflect new language
     updateCalendar();
+    
+    // P305 v1901 EMOJI FIX: Restore emojis after translation update
+    setTimeout(() => {
+        if (typeof restoreParameterEmojis === 'function') {
+            restoreParameterEmojis();
+        }
+    }, 50);
 }
 
 // Get random positive message
@@ -2648,10 +2704,21 @@ function showInviteCTA() {
             // Insert before calendar
             calendarSection.parentNode.insertBefore(ctaDiv, calendarSection);
 
-            // Apply translations if i18n is available
-            if (window.i18n && window.i18n.applyLanguage) {
-                window.i18n.applyLanguage();
-            }
+            // P305 v1901 EMOJI FIX: Apply translations ONLY to the CTA element, not globally
+            // This prevents the global applyLanguage from clearing emojis
+            ctaDiv.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (key && window.i18n && window.i18n.translate) {
+                    element.textContent = window.i18n.translate(key);
+                }
+            });
+            
+            // P305 v1901 EMOJI FIX: Restore emojis after CTA insertion as extra safeguard
+            setTimeout(() => {
+                if (typeof restoreParameterEmojis === 'function') {
+                    restoreParameterEmojis();
+                }
+            }, 100);
 
             // Auto-hide after 15 seconds
             setTimeout(() => {
@@ -2701,8 +2768,14 @@ function findPeopleToFollow() {
 
 
 // Listen for language changes and reapply emojis
+// P305 v1901 EMOJI FIX: Listen for language changes and restore emojis
 window.addEventListener('languageChanged', () => {
     setTimeout(applyEmojisToPrivacySelectors, 50);
+    setTimeout(() => {
+        if (typeof restoreParameterEmojis === 'function') {
+            restoreParameterEmojis();
+        }
+    }, 100);
 });
 
 // Initialize on DOM ready (with safety checks)
@@ -3337,4 +3410,4 @@ window.viewUserParameters = viewUserParameters;
 window.closeUserParametersModal = closeUserParametersModal;
 window.checkParameterAlerts = checkParameterAlerts;
 
-console.log('[P305] Parameters-social.js v1900 P305 loaded - navigation restructure and visual design update');
+console.log('[P305] Parameters-social.js v1901 P305 loaded - EMOJI FIX applied');
