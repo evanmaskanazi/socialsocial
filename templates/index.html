@@ -1,7 +1,8 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version PL410 LINK2 FIX v810 -->
+<!-- PL410 LINK2 FIX: Fixed magic link consent flow - new accounts now properly show consent modal -->
+<!-- PL410 LINK2 FIX: checkMagicToken() now awaited and returns flag to stop session check when consent needed -->
 <!-- TheraSocial Version PL409 LINK FIX v809 -->
-<!-- PL409 LINK FIX: Paired with app_link.py for password reset and magic link fixes -->
-<!-- TheraSocial Version PL408 - Added i18n placeholder attributes for search inputs -->
 <!-- PL408: Added data-i18n-placeholder to followSearchInput and inviteSearchInput -->
 <!-- TheraSocial Version PL407 SCREEN FIX v808 -->
 <!-- PL407 SCREEN FIX v808: Added generic ?view= URL parameter handling for Diary page redirects -->
@@ -4654,6 +4655,7 @@ async function requestMagicLink() {
 }
 
 // Check for magic token on page load
+// LINK2 FIX: Returns true if consent modal is shown (to stop further page initialization)
 async function checkMagicToken() {
     const params = new URLSearchParams(window.location.search);
     const magicToken = params.get('magic_token');
@@ -4679,11 +4681,13 @@ async function checkMagicToken() {
                     sessionStorage.setItem('suggestedUsername', data.suggested_username);
                 }
 
-                // Go straight to consent (username is optional there)
+                // LINK2 FIX: If consent needed, show modal and return true to stop further processing
                 if (data.needs_consent) {
                     showConsentModal();
+                    return true; // Signal that consent modal is shown - don't proceed with session check
                 } else {
                     window.location.reload();
+                    return true; // Reloading, so still stop further processing
                 }
             } else {
                 showNotification(data.error || 'Invalid or expired link', 'error');
@@ -4692,6 +4696,7 @@ async function checkMagicToken() {
             showNotification('Verification failed', 'error');
         }
     }
+    return false; // No magic token or error - proceed normally
 }
 
 // Show consent modal with optional username
@@ -11866,8 +11871,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         return; // Don't proceed with normal login check
     }
 
-    // Check for magic link token
-    checkMagicToken();
+    // LINK2 FIX: Await checkMagicToken and return if consent modal is shown
+    const magicTokenHandled = await checkMagicToken();
+    if (magicTokenHandled) {
+        console.log('[LINK2 FIX] Magic token processed, consent modal shown - stopping further initialization');
+        return; // Don't proceed with session check - let user complete consent first
+    }
 
     // Wait for i18n to be ready (max 1 second)
     let i18nReady = false;
@@ -11896,6 +11905,17 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (response.ok) {
             const data = await response.json();
             if (data && data.authenticated) {
+                // LINK2 FIX: Check if user needs to complete consent before showing dashboard
+                if (data.needs_consent) {
+                    console.log('[LINK2 FIX] User authenticated but needs consent - showing consent modal');
+                    // Store user info for consent form
+                    if (data.user && data.user.email) {
+                        sessionStorage.setItem('userEmail', data.user.email);
+                    }
+                    showConsentModal();
+                    return; // Don't proceed to dashboard
+                }
+                
                 currentUser = data.user;
                 currentUserId = data.user.id;
                 showDashboard();
