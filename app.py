@@ -1,6 +1,31 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - Phase PL410 LINK2 FIX (Version 810)
+Complete app.py for Social Social Platform - V1V2 Version (V1 to V2 High-Priority Fixes)
+
+V1V2 Changes:
+=============
+- FIX: Magic link expiry changed from 5 years to 10 minutes
+- FIX: MINIMUM_TRIGGER_DAYS changed from 3 to 1 for immediate contact triggers
+- Forgot password endpoint already exists, now wired to magic link option in frontend
+
+Based on USERFIX Version 2.0 Round 2 (UserfixRnd2)
+16 User Experience Improvements - COMPLETE with duplicate endpoint fixes
+
+UserfixRnd2 Changes:
+===================
+- FIXED: Removed duplicate /api/parameters/dates endpoint (line ~10893) - now uses USERFIX-2 enhanced version
+- FIXED: Removed duplicate /api/parameters/insights endpoint (line ~10902) - now uses USERFIX-4 enhanced version
+
+USERFIX Changes:
+================
+- USERFIX-1: Friends' Daily Updates Feed API (/api/feed/friends-updates)
+- USERFIX-2: Streak Tracking API (/api/parameters/streak)
+- USERFIX-2: Heatmap Dates API (/api/parameters/dates) - NEW in v2.0
+- USERFIX-4: Weekly Insights API (/api/parameters/insights)
+- USERFIX-9: Gratitude Field support (added to SavedParameters model and save_parameters endpoint)
+- USERFIX-11: Last Seen Indicator support (added to /api/following and /api/recommendations)
+
+Based on Phase PL410 LINK2 FIX (Version 810)
 PL410 LINK2 FIX: Fixed consent flow for magic link and returning users
 - check_session endpoint now returns needs_consent flag
 - New accounts via magic link will always see consent modal
@@ -528,7 +553,9 @@ DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 =
 # - Alert processing (filters out shorter patterns)
 # - Alert display (hides existing alerts below threshold)
 # =============================================================================
-MINIMUM_TRIGGER_DAYS = 3  # Configurable minimum - change this value as needed
+# V1V2 FIX: Changed from 3 to 1 to allow immediate contact triggers
+# Users can now set triggers that fire after just 1 day of concerning patterns
+MINIMUM_TRIGGER_DAYS = 1  # Configurable minimum - change this value as needed
 # =============================================================================
 
 from flask import (
@@ -2511,7 +2538,8 @@ def ensure_saved_parameters_schema():
                 'sleep_quality': 'INTEGER',
                 'physical_activity': 'INTEGER',
                 'anxiety': 'INTEGER',
-                'updated_at': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+                'updated_at': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+                'gratitude': 'TEXT'  # USERFIX-9: One Good Thing Today field
             }
 
             # Privacy columns (will be added if missing, with private default)
@@ -3326,6 +3354,7 @@ class SavedParameters(db.Model):
     physical_activity_privacy = db.Column(db.String(20), default='private')
     anxiety_privacy = db.Column(db.String(20), default='private')
     notes = db.Column(db.Text)
+    gratitude = db.Column(db.Text)  # USERFIX-9: One Good Thing Today field
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     # REMOVED: privacy = db.Column(db.JSON)  # This line should be removed/commented
@@ -3352,7 +3381,8 @@ class SavedParameters(db.Model):
                 'sleep_quality_privacy': self.sleep_quality_privacy,
                 'physical_activity_privacy': self.physical_activity_privacy,
                 'anxiety_privacy': self.anxiety_privacy,
-                'notes': self.notes
+                'notes': self.notes,
+                'gratitude': self.gratitude  # USERFIX-9
             })
         else:
             for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
@@ -5416,7 +5446,8 @@ def request_magic_link():
 
         import secrets
         magic_token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(days=1825)
+        # V1V2 FIX: Magic link limited to 10 minutes (was 5 years)
+        expires_at = datetime.utcnow() + timedelta(minutes=10)
 
         token_record = MagicLoginToken(
             user_id=user.id,
@@ -9631,6 +9662,10 @@ def save_parameters():
         if 'notes' in data:
             params.notes = data['notes']
 
+        # USERFIX-9: Add gratitude field support
+        if 'gratitude' in data:
+            params.gratitude = data.get('gratitude', '')
+
         params.updated_at = datetime.utcnow()
         db.session.add(params)
         db.session.commit()
@@ -10872,65 +10907,22 @@ def cleanup_all_stale_trigger_alerts():
         return 0
 
 
-@app.route('/api/parameters/dates', methods=['GET'])
-@login_required
-def get_parameter_dates():
-    """Get all dates that have saved parameters for the current user"""
-    try:
-        user_id = session.get('user_id')
-
-        # Get all parameter dates for this user using SQLAlchemy ORM
-        params = SavedParameters.query.filter_by(user_id=user_id).all()
-
-        # Extract just the dates
-        dates = [param.date.strftime('%Y-%m-%d') if hasattr(param.date, 'strftime') else str(param.date)
-                 for param in params if param.date]
-
-        return jsonify({
-            'success': True,
-            'dates': dates
-        })
-
-    except Exception as e:
-        logger.error(f"Get parameter dates error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'dates': []
-        })
+# USERFIX-RND2: Removed duplicate endpoint - USERFIX-2 version at end of file provides better heatmap data
+# Original get_parameter_dates moved to USERFIX section with enhanced levels support
+# @app.route('/api/parameters/dates', methods=['GET'])
+# @login_required
+# def get_parameter_dates_ORIGINAL():
+#     """Get all dates that have saved parameters for the current user"""
+#     # ... REMOVED - See USERFIX-2 enhanced version at line ~16605 ...
 
 
-@app.route('/api/parameters/insights')
-@login_required
-def get_insights():
-    """Get parameter insights"""
-    try:
-        user_id = session['user_id']
-
-        # Get last 30 days - SQLAlchemy 2.0 style
-        thirty_days_ago = datetime.now().date() - timedelta(days=30)
-        params_stmt = select(SavedParameters).filter(
-            SavedParameters.user_id == user_id,
-            SavedParameters.date >= thirty_days_ago
-        )
-        params = db.session.execute(params_stmt).scalars().all()
-
-        if not params:
-            return jsonify({'message': 'No data available for insights'})
-
-        # Calculate insights
-        avg_sleep = sum(p.sleep_hours for p in params if p.sleep_hours) / len(params) if params else 0
-        moods = [p.mood for p in params if p.mood]
-
-        return jsonify({
-            'average_sleep': round(avg_sleep, 1),
-            'total_entries': len(params),
-            'most_common_mood': max(moods, key=moods.count) if moods else 'N/A',
-            'streak': calculate_streak(params)
-        })
-
-    except Exception as e:
-        logger.error(f"Get insights error: {str(e)}")
-        return jsonify({'message': 'Failed to get insights'})
+# USERFIX-RND2: Removed duplicate endpoint - USERFIX-4 version at end of file provides detailed insights
+# Original get_insights moved to USERFIX section with trends, tips, and personalized messages
+# @app.route('/api/parameters/insights')
+# @login_required
+# def get_insights_ORIGINAL():
+#     """Get parameter insights"""
+#     # ... REMOVED - See USERFIX-4 enhanced version at line ~16777 ...
 
 
 @app.route('/api/parameters/today-status')
@@ -13977,13 +13969,19 @@ def get_following():
         for follow in follows:
             followed_user = db.session.get(User, follow.followed_id)
             if followed_user:
+                # USERFIX-11: Include last_login for last-seen indicator
+                last_login_str = None
+                if followed_user.last_login:
+                    last_login_str = followed_user.last_login.isoformat() if hasattr(followed_user.last_login, 'isoformat') else str(followed_user.last_login)
+                
                 following.append({
                     'id': followed_user.id,
                     'username': followed_user.username,
                     'email': followed_user.email,
                     'note': follow.follow_note,  # ADD THIS FIELD
                     'selected_city': followed_user.selected_city,
-                    'created_at': follow.created_at.isoformat()
+                    'created_at': follow.created_at.isoformat(),
+                    'last_login': last_login_str  # USERFIX-11
                 })
 
         return jsonify({
@@ -15368,12 +15366,17 @@ def get_recommendations():
             for city_user in same_city_users:
                 if not user.is_following(city_user) and city_user.id not in seen_ids:
                     seen_ids.add(city_user.id)
+                    # USERFIX-11: Include last_login for last-seen indicator
+                    last_login_str = None
+                    if city_user.last_login:
+                        last_login_str = city_user.last_login.isoformat() if hasattr(city_user.last_login, 'isoformat') else str(city_user.last_login)
                     recommendations.append({
                         'id': city_user.id,
                         'username': city_user.username,
                         'email': city_user.email,
                         'selected_city': city_user.selected_city,
-                        'reason': 'Same city'
+                        'reason': 'Same city',
+                        'last_login': last_login_str  # USERFIX-11
                     })
 
         # PRIORITY 2: Friends of friends (only if not enough same-city users)
@@ -15410,12 +15413,18 @@ def get_recommendations():
                         if potential_user.selected_city == user.selected_city:
                             reason = 'Same city & friend of friend'
 
+                        # USERFIX-11: Include last_login for last-seen indicator
+                        last_login_str = None
+                        if potential_user.last_login:
+                            last_login_str = potential_user.last_login.isoformat() if hasattr(potential_user.last_login, 'isoformat') else str(potential_user.last_login)
+
                         recommendations.append({
                             'id': potential_user.id,
                             'username': potential_user.username,
                             'email': potential_user.email,
                             'selected_city': potential_user.selected_city,
-                            'reason': reason
+                            'reason': reason,
+                            'last_login': last_login_str  # USERFIX-11
                         })
 
         return jsonify({'recommendations': recommendations[:20]})
@@ -16495,6 +16504,342 @@ def _background_init():
         # Still mark as complete so app doesn't hang
         with _init_lock:
             _init_complete = True
+
+
+# ============================================================================
+# USERFIX API ROUTES
+# ============================================================================
+
+# USERFIX-2: Streak Tracking API
+@app.route('/api/parameters/streak', methods=['GET'])
+@login_required
+def get_user_streak():
+    """Calculate and return the user's current streak"""
+    user_id = session.get('user_id')
+    
+    try:
+        # Get all dates with parameters for this user, sorted descending
+        result = db.session.execute(text("""
+            SELECT DISTINCT date 
+            FROM saved_parameters 
+            WHERE user_id = :user_id 
+            ORDER BY date DESC
+        """), {'user_id': user_id})
+        
+        dates = [row[0] for row in result.fetchall()]
+        
+        if not dates:
+            return jsonify({'streak': 0, 'is_new_record': False})
+        
+        # Convert to date objects if they're strings
+        date_objects = []
+        for d in dates:
+            if isinstance(d, str):
+                date_objects.append(datetime.strptime(d, '%Y-%m-%d').date())
+            else:
+                date_objects.append(d)
+        
+        # Calculate streak
+        today = datetime.now().date()
+        yesterday = today - timedelta(days=1)
+        
+        # Check if most recent entry is today or yesterday
+        most_recent = date_objects[0]
+        if most_recent != today and most_recent != yesterday:
+            return jsonify({'streak': 0, 'is_new_record': False})
+        
+        streak = 1
+        current_check = most_recent
+        
+        for i in range(1, len(date_objects)):
+            prev_date = date_objects[i]
+            diff = (current_check - prev_date).days
+            
+            if diff == 1:
+                streak += 1
+                current_check = prev_date
+            elif diff == 0:
+                # Same date, skip
+                continue
+            else:
+                break
+        
+        return jsonify({
+            'streak': streak,
+            'is_new_record': False,
+            'last_checkin': most_recent.isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"[STREAK] Error calculating streak: {e}")
+        return jsonify({'streak': 0, 'is_new_record': False, 'error': str(e)})
+
+
+# USERFIX-2: Heatmap Dates API (needed for heatmap visualization)
+@app.route('/api/parameters/dates', methods=['GET'])
+@login_required
+def get_parameter_dates():
+    """Get all dates where user has saved parameters (for heatmap)"""
+    user_id = session.get('user_id')
+    
+    try:
+        # Get date range from query params (default: last 84 days for 12-week heatmap)
+        days = request.args.get('days', 84, type=int)
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        result = db.session.execute(text("""
+            SELECT DISTINCT date, 
+                   CASE WHEN mood IS NOT NULL THEN 1 ELSE 0 END +
+                   CASE WHEN energy IS NOT NULL THEN 1 ELSE 0 END +
+                   CASE WHEN sleep_quality IS NOT NULL THEN 1 ELSE 0 END +
+                   CASE WHEN physical_activity IS NOT NULL THEN 1 ELSE 0 END +
+                   CASE WHEN anxiety IS NOT NULL THEN 1 ELSE 0 END as param_count
+            FROM saved_parameters 
+            WHERE user_id = :user_id 
+              AND date >= :start_date 
+              AND date <= :end_date
+            ORDER BY date DESC
+        """), {
+            'user_id': user_id, 
+            'start_date': start_date.isoformat(), 
+            'end_date': end_date.isoformat()
+        })
+        
+        rows = result.fetchall()
+        
+        # Return dates with their completion levels (1-4 for heatmap intensity)
+        dates = []
+        date_levels = {}
+        for row in rows:
+            date_str = row[0]
+            param_count = row[1] or 0
+            # Map param count to level: 0=0, 1-2=1, 3=2, 4=3, 5=4
+            if param_count == 0:
+                level = 0
+            elif param_count <= 2:
+                level = 1
+            elif param_count == 3:
+                level = 2
+            elif param_count == 4:
+                level = 3
+            else:
+                level = 4
+            dates.append(date_str)
+            date_levels[date_str] = level
+        
+        return jsonify({
+            'dates': dates,
+            'levels': date_levels,
+            'total_days': len(dates)
+        })
+        
+    except Exception as e:
+        logger.error(f"[DATES] Error getting parameter dates: {e}")
+        return jsonify({'dates': [], 'levels': {}, 'error': str(e)})
+
+
+# USERFIX-1: Friends' Daily Updates Feed API
+@app.route('/api/feed/friends-updates', methods=['GET'])
+@login_required
+def get_friends_updates():
+    """Get wellness check-ins from followed users"""
+    user_id = session.get('user_id')
+    
+    try:
+        # Get list of users this person is following
+        followed_result = db.session.execute(text("""
+            SELECT followed_id FROM follows WHERE follower_id = :user_id
+        """), {'user_id': user_id})
+        
+        followed_ids = [row[0] for row in followed_result.fetchall()]
+        
+        if not followed_ids:
+            return jsonify({'updates': []})
+        
+        updates = []
+        
+        for followed_id in followed_ids:
+            # Get circle level for privacy filtering
+            circle_result = db.session.execute(text("""
+                SELECT circle_type FROM circles 
+                WHERE user_id = :target_id AND circle_user_id = :viewer_id
+                ORDER BY CASE 
+                    WHEN circle_type = 'class_a' THEN 1
+                    WHEN circle_type = 'class_b' THEN 2
+                    WHEN circle_type = 'public' THEN 3
+                    ELSE 4
+                END
+                LIMIT 1
+            """), {'target_id': followed_id, 'viewer_id': user_id})
+            
+            circle_row = circle_result.fetchone()
+            circle_level = circle_row[0] if circle_row else 'public'
+            
+            # Define privacy hierarchy
+            privacy_levels = {
+                'class_a': ['class_a', 'class_b', 'public'],
+                'class_b': ['class_b', 'public'],
+                'public': ['public'],
+                'private': []
+            }
+            visible_privacy = privacy_levels.get(circle_level, ['public'])
+            
+            # Get most recent parameters
+            params_result = db.session.execute(text("""
+                SELECT date, mood, energy, sleep_quality, physical_activity, anxiety, notes,
+                       mood_privacy, energy_privacy, sleep_quality_privacy, 
+                       physical_activity_privacy, anxiety_privacy
+                FROM saved_parameters 
+                WHERE user_id = :user_id 
+                ORDER BY date DESC 
+                LIMIT 1
+            """), {'user_id': followed_id})
+            
+            params_row = params_result.fetchone()
+            
+            if params_row:
+                # Get user info
+                user_result = db.session.execute(text("""
+                    SELECT id, username, last_login 
+                    FROM users WHERE id = :user_id
+                """), {'user_id': followed_id})
+                
+                user_info = user_result.fetchone()
+                
+                if user_info:
+                    # Calculate last seen days
+                    last_seen_days = 999
+                    if user_info[2]:
+                        last_login = user_info[2]
+                        if isinstance(last_login, str):
+                            last_login = datetime.fromisoformat(last_login)
+                        last_seen_days = (datetime.now() - last_login).days
+                    
+                    # Build update with privacy filtering
+                    update = {
+                        'user_id': user_info[0],
+                        'username': user_info[1],
+                        'date': params_row[0],
+                        'last_seen_days': last_seen_days
+                    }
+                    
+                    # Add parameters based on privacy
+                    param_names = ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']
+                    for i, param in enumerate(param_names):
+                        value = params_row[i + 1]
+                        privacy = params_row[i + 7] if len(params_row) > i + 7 else 'private'
+                        
+                        if privacy in visible_privacy:
+                            update[param] = value
+                        else:
+                            update[param] = None
+                    
+                    updates.append(update)
+        
+        # Sort by date, most recent first
+        updates.sort(key=lambda x: x.get('date', ''), reverse=True)
+        
+        return jsonify({'updates': updates[:20]})
+        
+    except Exception as e:
+        logger.error(f"[FRIENDS UPDATES] Error: {e}")
+        return jsonify({'updates': [], 'error': str(e)})
+
+
+# USERFIX-4: Weekly Insights API
+@app.route('/api/parameters/insights', methods=['GET'])
+@login_required
+def get_weekly_insights():
+    """Get personalized insights based on parameter data"""
+    user_id = session.get('user_id')
+    days = request.args.get('days', 7, type=int)
+    
+    try:
+        # Get parameters for the specified period
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        result = db.session.execute(text("""
+            SELECT date, mood, energy, sleep_quality, physical_activity, anxiety
+            FROM saved_parameters 
+            WHERE user_id = :user_id 
+              AND date >= :start_date 
+              AND date <= :end_date
+            ORDER BY date DESC
+        """), {'user_id': user_id, 'start_date': start_date.isoformat(), 'end_date': end_date.isoformat()})
+        
+        rows = result.fetchall()
+        
+        if not rows:
+            return jsonify({
+                'avgMood': None,
+                'moodChange': None,
+                'insight': 'Start tracking your daily wellness to see insights here.',
+                'tip': 'Complete your daily check-in to build your streak!'
+            })
+        
+        # Calculate averages
+        moods = [r[1] for r in rows if r[1] is not None]
+        energies = [r[2] for r in rows if r[2] is not None]
+        sleeps = [r[3] for r in rows if r[3] is not None]
+        activities = [r[4] for r in rows if r[4] is not None]
+        
+        avg_mood = sum(moods) / len(moods) if moods else None
+        avg_energy = sum(energies) / len(energies) if energies else None
+        avg_sleep = sum(sleeps) / len(sleeps) if sleeps else None
+        avg_activity = sum(activities) / len(activities) if activities else None
+        
+        # Calculate change from previous period
+        prev_start = start_date - timedelta(days=days)
+        prev_result = db.session.execute(text("""
+            SELECT AVG(mood) as avg_mood
+            FROM saved_parameters 
+            WHERE user_id = :user_id 
+              AND date >= :start_date 
+              AND date < :end_date
+        """), {'user_id': user_id, 'start_date': prev_start.isoformat(), 'end_date': start_date.isoformat()})
+        
+        prev_row = prev_result.fetchone()
+        prev_avg_mood = prev_row[0] if prev_row and prev_row[0] else None
+        
+        mood_change = None
+        if avg_mood is not None and prev_avg_mood is not None:
+            mood_change = avg_mood - prev_avg_mood
+        
+        # Generate personalized insight
+        insight = "Keep tracking to see your patterns!"
+        tip = "Regular check-ins help you understand your wellness journey."
+        
+        consistency = len(rows) / days
+        if consistency >= 0.8:
+            insight = "Great job! You've been consistent with your check-ins this week."
+        elif consistency >= 0.5:
+            insight = "Good progress! Keep building your daily check-in habit."
+        
+        if avg_mood is not None:
+            if avg_mood >= 3.5:
+                tip = "Your mood has been great! Keep doing what works for you."
+            elif avg_mood >= 2.5:
+                tip = "Your mood is steady. Consider activities that boost your energy."
+            else:
+                tip = "Reach out to friends or try activities you enjoy. You're not alone."
+        
+        return jsonify({
+            'avgMood': round(avg_mood, 2) if avg_mood else None,
+            'avgEnergy': round(avg_energy, 2) if avg_energy else None,
+            'avgSleep': round(avg_sleep, 2) if avg_sleep else None,
+            'avgActivity': round(avg_activity, 2) if avg_activity else None,
+            'moodChange': round(mood_change, 2) if mood_change else None,
+            'totalCheckins': len(rows),
+            'insight': insight,
+            'tip': tip
+        })
+        
+    except Exception as e:
+        logger.error(f"[INSIGHTS] Error: {e}")
+        return jsonify({'error': str(e)})
+
 
 if __name__ == '__main__':
     # Initialize database
