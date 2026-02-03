@@ -1,5 +1,33 @@
 <!DOCTYPE html>
-<!-- TheraSocial Version PL410 LINK2 FIX v810 -->
+<!-- TheraSocial Version V1V2 - High Priority Fixes from V1 to V2 -->
+<!-- V1V2 CHANGES:
+  - TOP NAV: Moved sidebar navigation to horizontal top bar (reduces page waste)
+  - SETTINGS: New settings view with profile settings and email notification controls
+  - CONNECTIONS: New unified connections view with search, my connections, and recommendations
+  - HOME SCREEN: Added My Summary Status card with Update Diary button
+  - HOME SCREEN: Added personalized Recommendations for Today section  
+  - FORGOT PASSWORD: Added magic link option to forgot password flow
+  - SITE NAME: Logo/site name now links to home view
+  - CONNECTION INFO: Click any connection to see info modal with Message/Track/Remove actions
+-->
+<!-- Based on USERFIX-2.0 Round 2 (UserfixRnd2) - 16 User Experience Improvements (COMPLETE + VERIFIED) -->
+<!-- USERFIX-1: Friends' Daily Updates Feed (removed posts, showing wellness check-ins) -->
+<!-- USERFIX-2: Streak Tracking + Heatmap (with /api/parameters/dates endpoint) -->
+<!-- USERFIX-3: One-Tap Quick Check-In -->
+<!-- USERFIX-4: Progress Insights Card -->
+<!-- USERFIX-5: Caring Nudges UX (trigger alerts now use caring-nudge styling) -->
+<!-- USERFIX-6: Message Templates -->
+<!-- USERFIX-7: "Set Your Why" Onboarding (shows after signup) -->
+<!-- USERFIX-8: Dark Mode Toggle -->
+<!-- USERFIX-9: Gratitude Field -->
+<!-- USERFIX-10: 4-Tab Mobile Nav -->
+<!-- USERFIX-11: Last Seen Indicator (in Following list and friend updates) -->
+<!-- USERFIX-12: Trigger Response Confirmation (sendCaringMessage uses confirmation) -->
+<!-- USERFIX-13: Streamlined Registration + Journaling Onboarding -->
+<!-- USERFIX-14: Warm Up Color Palette (coral/peach/sage accents) -->
+<!-- USERFIX-15: Fix Mobile Margins/Spacing Issues -->
+<!-- USERFIX-16: Standardized Max-Width System for consistent layouts -->
+<!-- Based on TheraSocial Version PL410 LINK2 FIX v810 -->
 <!-- PL410 LINK2 FIX: Fixed magic link consent flow - new accounts now properly show consent modal -->
 <!-- PL410 LINK2 FIX: checkMagicToken() now awaited and returns flag to stop session check when consent needed -->
 <!-- TheraSocial Version PL409 LINK FIX v809 -->
@@ -434,6 +462,15 @@
             --secondary: #9DB8A0;
             --secondary-light: #C7D9CC;
             --accent: #B6A9C9;
+            
+            /* USERFIX-14: Warm accent colors for inviting warmth */
+            --warm-coral: #E8A598;
+            --warm-peach: #F5C9B5;
+            --warm-sage: #B8C9A8;
+            --warm-terracotta: #D4937A;
+            --warm-blush: #E6C4C0;
+            --warm-cream: #FDF6F0;
+            
             --success: #9DB8A0;
             --warning: #D4A574;
             --danger: #C17C74;
@@ -443,9 +480,19 @@
             --light-warm: #E8E1D9;
             --white: #FFFFFF;
             --border: #E5E5E3;
-            /* Wide and open layout */
-            --content-max-width: 1400px;
+            
+            /* USERFIX-16: Standardized max-width system for consistent layouts */
+            --max-width-page: 1400px;           /* Full page content */
+            --max-width-content: 900px;         /* Main content area */
+            --max-width-card: 800px;            /* Cards, forms, modals */
+            --max-width-form: 500px;            /* Form inputs, auth cards */
+            --max-width-narrow: 400px;          /* Narrow content, search bars */
+            --content-max-width: var(--max-width-page);
             --content-padding: 30px;
+            
+            /* USERFIX-15: Mobile-optimized spacing */
+            --mobile-padding: 12px;
+            --mobile-gap: 10px;
         }
 
         /* P305: Dark mode support for evening/nighttime use */
@@ -457,6 +504,13 @@
                 --secondary: #A8C5AB;
                 --secondary-light: #C7D9CC;
                 --accent: #C4B8D6;
+                /* USERFIX-14: Warm colors in dark mode */
+                --warm-coral: #D69587;
+                --warm-peach: #E5B9A5;
+                --warm-sage: #A8B998;
+                --warm-terracotta: #C48369;
+                --warm-blush: #D6B4B0;
+                --warm-cream: #3D3530;
                 --success: #A8C5AB;
                 --warning: #D4B896;
                 --danger: #D49B94;
@@ -477,6 +531,13 @@
             --secondary: #A8C5AB;
             --secondary-light: #C7D9CC;
             --accent: #C4B8D6;
+            /* USERFIX-14: Warm colors in dark mode */
+            --warm-coral: #D69587;
+            --warm-peach: #E5B9A5;
+            --warm-sage: #A8B998;
+            --warm-terracotta: #C48369;
+            --warm-blush: #D6B4B0;
+            --warm-cream: #3D3530;
             --success: #A8C5AB;
             --warning: #D4B896;
             --danger: #D49B94;
@@ -641,15 +702,15 @@
         }
 
         .btn-primary {
-            background: var(--primary);
+            /* USERFIX-14: Warm coral primary button */
+            background: linear-gradient(135deg, var(--warm-coral) 0%, var(--warm-terracotta) 100%);
             color: var(--white);
             width: 100%;
         }
 
         .btn-primary:hover {
-            background: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(107, 139, 164, 0.3);
+            box-shadow: 0 10px 20px rgba(232, 165, 152, 0.3);
         }
 
         .btn-secondary {
@@ -662,7 +723,18 @@
             background: var(--light);
         }
 
-        /* Dashboard - P305: Wider, more open layout */
+        /* USERFIX-14: Warm accent button variant */
+        .btn-warm {
+            background: linear-gradient(135deg, var(--warm-sage) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        .btn-warm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(184, 201, 168, 0.3);
+        }
+
+        /* Dashboard - V1V2: Top navigation bar replaces side menu */
         .dashboard {
             display: none;
             margin-top: 20px;
@@ -670,21 +742,76 @@
 
         .dashboard-grid {
             display: grid;
-            grid-template-columns: 260px 1fr 320px;
+            grid-template-columns: 1fr 320px;
             gap: 25px;
         }
 
-        /* Sidebar - P305: More spacious styling */
-        .sidebar {
+        /* V1V2: Top Navigation Bar (replaces sidebar) */
+        .top-nav-bar {
             background: var(--white);
             border-radius: 16px;
-            padding: 24px;
-            height: fit-content;
+            padding: 8px 16px;
+            margin-bottom: 20px;
             box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
+            grid-column: 1 / -1;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .top-nav-menu {
+            list-style: none;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: nowrap;
+            min-width: max-content;
+        }
+
+        .top-nav-item {
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .top-nav-item:hover {
+            background: var(--light);
+        }
+
+        .top-nav-item.active {
+            background: linear-gradient(135deg, var(--warm-coral) 0%, var(--warm-terracotta) 100%);
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(232, 165, 152, 0.3);
+        }
+
+        .top-nav-icon {
+            font-size: 16px;
+        }
+
+        .top-nav-label {
+            font-size: 13px;
+        }
+
+        [dir="rtl"] .top-nav-menu {
+            flex-direction: row-reverse;
+        }
+
+        /* Sidebar - HIDDEN by default, kept for mobile fallback */
+        .sidebar {
+            display: none;
         }
 
         .sidebar-menu {
             list-style: none;
+            display: none;
         }
 
         .sidebar-item {
@@ -693,7 +820,7 @@
             border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
-            display: flex;
+            display: none;
             align-items: center;
             gap: 12px;
         }
@@ -703,9 +830,10 @@
         }
 
         .sidebar-item.active {
-            background: var(--primary);
+            /* USERFIX-14: Warm gradient for active state */
+            background: linear-gradient(135deg, var(--warm-coral) 0%, var(--warm-terracotta) 100%);
             color: var(--white);
-            box-shadow: 0 4px 12px rgba(107, 139, 164, 0.3);
+            box-shadow: 0 4px 12px rgba(232, 165, 152, 0.3);
         }
 
         /* Sidebar icons - matching mobile style */
@@ -1408,10 +1536,10 @@
         }
 
         .mobile-nav-item {
-            /* P96 FIX: Force exactly 20% width for 5 items - with !important */
-            flex: 0 0 20% !important;
-            width: 20% !important;
-            max-width: 20% !important;
+            /* USERFIX-10: Force exactly 25% width for 4 items - with !important */
+            flex: 0 0 25% !important;
+            width: 25% !important;
+            max-width: 25% !important;
             min-width: 0 !important;
             text-align: center;
             padding: 4px 0;
@@ -1429,7 +1557,8 @@
         }
 
         .mobile-nav-item.active {
-            color: var(--primary);
+            /* USERFIX-14: Warm coral active state */
+            color: var(--warm-coral);
         }
 
         .mobile-nav-icon {
@@ -1451,9 +1580,10 @@
         [dir="rtl"] .mobile-nav-item,
         html[dir="rtl"] .mobile-nav-item,
         body[dir="rtl"] .mobile-nav-item {
-            flex: 0 0 20% !important;
-            width: 20% !important;
-            max-width: 20% !important;
+            /* USERFIX-10: 25% for 4-tab navigation */
+            flex: 0 0 25% !important;
+            width: 25% !important;
+            max-width: 25% !important;
             padding: 3px 0 !important;
         }
         
@@ -1467,17 +1597,17 @@
             font-size: 9px !important;   /* Same as English now */
         }
         
-        /* P96 FIX: Very small screens - all languages */
+        /* USERFIX-10: Very small screens - all languages with 4 tabs */
         @media (max-width: 400px) {
             .mobile-nav-item {
-                flex: 0 0 20% !important;
-                width: 20% !important;
+                flex: 0 0 25% !important;
+                width: 25% !important;
             }
             .mobile-nav-icon {
-                font-size: 15px !important;
+                font-size: 16px !important;
             }
             .mobile-nav-label {
-                font-size: 7px !important;
+                font-size: 8px !important;
             }
         }
 
@@ -1488,6 +1618,10 @@
             }
 
             .sidebar {
+                display: none;
+            }
+
+            .top-nav-bar {
                 display: none;
             }
 
@@ -1756,7 +1890,9 @@
         #followingView.hidden,
         #followersView.hidden,
         #inviteView.hidden,
-        #alertsView.hidden {
+        #alertsView.hidden,
+        #settingsView.hidden,
+        #connectionsView.hidden {
             display: none !important;
             visibility: hidden !important;
         }
@@ -1994,6 +2130,903 @@
     }
 }
 
+/* ======================================================================
+   USERFIX-2: STREAK TRACKING + HEATMAP STYLES
+   ====================================================================== */
+.streak-container {
+    background: linear-gradient(135deg, var(--warm-peach) 0%, var(--warm-coral) 100%);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    color: white;
+}
+
+.streak-flame {
+    font-size: 48px;
+    animation: flame-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes flame-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.streak-info h3 {
+    font-size: 24px;
+    margin-bottom: 4px;
+}
+
+.streak-info p {
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.streak-badge {
+    background: rgba(255,255,255,0.25);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    margin-left: auto;
+}
+
+/* Heatmap Calendar */
+.heatmap-container {
+    background: var(--light);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.heatmap-title {
+    color: var(--primary);
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+}
+
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.heatmap-day {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: var(--border);
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.heatmap-day:hover {
+    transform: scale(1.2);
+    z-index: 10;
+}
+
+.heatmap-day.level-0 { background: var(--border); }
+.heatmap-day.level-1 { background: #C7D9CC; }
+.heatmap-day.level-2 { background: #9DB8A0; }
+.heatmap-day.level-3 { background: #7A9E7D; }
+.heatmap-day.level-4 { background: #5A8A5D; }
+
+.heatmap-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--dark);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    display: none;
+    z-index: 100;
+}
+
+.heatmap-day:hover .heatmap-tooltip {
+    display: block;
+}
+
+/* ======================================================================
+   USERFIX-3: ONE-TAP QUICK CHECK-IN STYLES
+   ====================================================================== */
+.quick-checkin-fab {
+    position: fixed;
+    bottom: 100px;
+    right: 24px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--warm-coral) 0%, var(--warm-terracotta) 100%);
+    color: white;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(232, 165, 152, 0.4);
+    z-index: 900;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quick-checkin-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 28px rgba(232, 165, 152, 0.5);
+}
+
+.quick-checkin-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+}
+
+.quick-checkin-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.quick-checkin-content {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    width: 90%;
+    max-width: 400px;
+    transform: translateY(20px);
+    transition: transform 0.3s;
+}
+
+.quick-checkin-modal.active .quick-checkin-content {
+    transform: translateY(0);
+}
+
+.quick-checkin-title {
+    text-align: center;
+    color: var(--warm-terracotta);
+    margin-bottom: 24px;
+    font-size: 1.5rem;
+}
+
+.quick-param-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.quick-param-label {
+    font-weight: 600;
+    color: var(--dark);
+    min-width: 80px;
+}
+
+.quick-param-emojis {
+    display: flex;
+    gap: 8px;
+}
+
+.quick-emoji-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: white;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quick-emoji-btn:hover {
+    border-color: var(--warm-coral);
+    transform: scale(1.1);
+}
+
+.quick-emoji-btn.selected {
+    border-color: var(--warm-coral);
+    background: var(--warm-cream);
+    box-shadow: 0 0 0 3px rgba(232, 165, 152, 0.3);
+}
+
+.quick-checkin-submit {
+    margin-top: 20px;
+}
+
+/* ======================================================================
+   USERFIX-4: PROGRESS INSIGHTS CARD STYLES
+   ====================================================================== */
+.insights-card {
+    background: linear-gradient(135deg, var(--warm-cream) 0%, #FFF 100%);
+    border: 1px solid var(--warm-blush);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.insights-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.insights-icon {
+    font-size: 28px;
+}
+
+.insights-title {
+    color: var(--warm-terracotta);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.insights-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.insights-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--warm-coral);
+}
+
+.insights-change {
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.insights-change.positive {
+    background: rgba(157, 184, 160, 0.2);
+    color: #5A8A5D;
+}
+
+.insights-change.negative {
+    background: rgba(193, 124, 116, 0.2);
+    color: #A66660;
+}
+
+.insights-text {
+    color: var(--gray);
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.insights-tip {
+    background: var(--light);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--dark);
+}
+
+/* ======================================================================
+   USERFIX-1: FRIENDS' DAILY UPDATES FEED STYLES
+   ====================================================================== */
+.friends-updates-container {
+    margin-top: 24px;
+}
+
+.friends-updates-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.friends-updates-title {
+    color: var(--warm-terracotta);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.update-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all 0.3s;
+}
+
+.update-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.update-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.update-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--warm-coral) 0%, var(--warm-peach) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.update-user-info {
+    flex: 1;
+}
+
+.update-username {
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.update-time {
+    font-size: 12px;
+    color: var(--gray);
+}
+
+/* USERFIX-11: Last Seen Indicator */
+.last-seen-indicator {
+    font-size: 11px;
+    color: var(--gray);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.last-seen-indicator.recent {
+    color: var(--success);
+}
+
+.last-seen-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gray);
+}
+
+.last-seen-dot.recent {
+    background: var(--success);
+}
+
+.update-params-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.update-param-item {
+    text-align: center;
+    padding: 12px 8px;
+    background: var(--light);
+    border-radius: 12px;
+}
+
+.update-param-emoji {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.update-param-value {
+    font-weight: 600;
+    color: var(--dark);
+    font-size: 14px;
+}
+
+.update-param-label {
+    font-size: 10px;
+    color: var(--gray);
+    text-transform: uppercase;
+}
+
+/* USERFIX-9: Gratitude Display */
+.update-gratitude {
+    background: linear-gradient(135deg, var(--warm-cream) 0%, var(--warm-peach) 100%);
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-top: 12px;
+    border-left: 3px solid var(--warm-coral);
+}
+
+.update-gratitude-label {
+    font-size: 11px;
+    color: var(--warm-terracotta);
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.update-gratitude-text {
+    color: var(--dark);
+    font-style: italic;
+}
+
+/* ======================================================================
+   USERFIX-5: CARING NUDGES STYLES
+   ====================================================================== */
+.caring-nudge-card {
+    background: linear-gradient(135deg, #E8F4FD 0%, #D4E9F7 100%);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border-left: 4px solid #5B9BD5;
+}
+
+.caring-nudge-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.caring-nudge-icon {
+    font-size: 24px;
+}
+
+.caring-nudge-title {
+    color: #2E5A82;
+    font-weight: 600;
+}
+
+.caring-nudge-message {
+    color: #4A7A9F;
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.caring-nudge-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.caring-nudge-btn {
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.caring-nudge-btn.primary {
+    background: #5B9BD5;
+    color: white;
+}
+
+.caring-nudge-btn.primary:hover {
+    background: #4A8AC4;
+}
+
+.caring-nudge-btn.secondary {
+    background: white;
+    color: #5B9BD5;
+    border: 1px solid #5B9BD5;
+}
+
+/* ======================================================================
+   USERFIX-6: MESSAGE TEMPLATES STYLES
+   ====================================================================== */
+.message-templates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background: var(--light);
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.message-template-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.message-template-btn:hover {
+    border-color: var(--warm-coral);
+    background: var(--warm-cream);
+}
+
+.message-template-btn .emoji {
+    font-size: 16px;
+}
+
+/* ======================================================================
+   USERFIX-9: GRATITUDE INPUT FIELD STYLES
+   ====================================================================== */
+.gratitude-input-section {
+    margin-top: 24px;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--warm-cream) 0%, var(--warm-peach) 30%, white 100%);
+    border-radius: 16px;
+    border: 1px solid var(--warm-blush);
+}
+
+.gratitude-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--warm-terracotta);
+    margin-bottom: 12px;
+}
+
+.gratitude-input {
+    width: 100%;
+    padding: 16px;
+    border: 1px solid var(--warm-blush);
+    border-radius: 12px;
+    font-size: 15px;
+    resize: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.gratitude-input:focus {
+    outline: none;
+    border-color: var(--warm-coral);
+    box-shadow: 0 0 0 3px rgba(232, 165, 152, 0.2);
+}
+
+/* ======================================================================
+   USERFIX-8: DARK MODE TOGGLE STYLES
+   ====================================================================== */
+.dark-mode-toggle {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.dark-mode-toggle:hover {
+    background: var(--light);
+}
+
+/* ======================================================================
+   USERFIX-12: TRIGGER CONFIRMATION MODAL STYLES
+   ====================================================================== */
+.trigger-confirmation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+}
+
+.trigger-confirmation-content {
+    background: white;
+    border-radius: 20px;
+    padding: 32px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.trigger-confirmation-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.trigger-confirmation-title {
+    color: var(--dark);
+    margin-bottom: 12px;
+}
+
+.trigger-confirmation-message {
+    color: var(--gray);
+    margin-bottom: 24px;
+}
+
+.trigger-confirmation-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* ======================================================================
+   USERFIX-7 & 13: ONBOARDING "SET YOUR WHY" STYLES
+   ====================================================================== */
+.onboarding-option-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.onboarding-option-btn:hover {
+    border-color: var(--warm-coral);
+    background: var(--warm-cream);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(232, 165, 152, 0.2);
+}
+
+.onboarding-option-btn.selected {
+    border-color: var(--warm-coral);
+    background: linear-gradient(135deg, var(--warm-cream) 0%, var(--warm-peach) 100%);
+    box-shadow: 0 4px 16px rgba(232, 165, 152, 0.3);
+}
+
+.onboarding-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.onboarding-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.onboarding-option-text strong {
+    color: var(--dark);
+    font-size: 15px;
+}
+
+.onboarding-option-text small {
+    color: var(--gray);
+    font-size: 13px;
+}
+
+/* ======================================================================
+   USERFIX-15: MOBILE MARGIN/SPACING FIXES
+   ====================================================================== */
+@media (max-width: 768px) {
+    .main-content {
+        /* USERFIX-15: Reduced padding on mobile */
+        padding: var(--mobile-padding);
+        margin: 0 var(--mobile-gap);
+        margin-bottom: 70px;
+    }
+
+    .container {
+        /* USERFIX-15: Tighter container padding on mobile */
+        padding: var(--mobile-padding);
+    }
+
+    /* USERFIX-15: Fix card margins on mobile */
+    .update-card,
+    .insights-card,
+    .streak-container,
+    .heatmap-container {
+        margin-left: 0;
+        margin-right: 0;
+        border-radius: 12px;
+    }
+
+    /* USERFIX-15: Adjust form inputs on mobile - Prevents iOS zoom */
+    .form-input,
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* USERFIX-15: Update params grid for mobile */
+    .update-params-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 4px;
+    }
+
+    .update-param-item {
+        padding: 8px 4px;
+    }
+
+    .update-param-emoji {
+        font-size: 18px;
+    }
+
+    .update-param-value {
+        font-size: 12px;
+    }
+
+    .update-param-label {
+        font-size: 8px;
+    }
+
+    /* USERFIX-15: Quick check-in modal on mobile */
+    .quick-checkin-content {
+        width: 95%;
+        padding: 24px;
+    }
+
+    .quick-param-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .quick-param-emojis {
+        width: 100%;
+        justify-content: space-around;
+    }
+
+    /* USERFIX-3: FAB position on mobile */
+    .quick-checkin-fab {
+        bottom: 80px;
+        right: 16px;
+        width: 56px;
+        height: 56px;
+        font-size: 24px;
+    }
+}
+
+/* USERFIX-15: Very small screens */
+@media (max-width: 400px) {
+    .update-params-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .insights-number {
+        font-size: 1.8rem;
+    }
+
+    .streak-container {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .streak-badge {
+        margin-left: 0;
+        margin-top: 12px;
+    }
+}
+
+/* ======================================================================
+   USERFIX-16: STANDARDIZED MAX-WIDTH SYSTEM
+   All components use consistent max-widths for visual harmony
+   ====================================================================== */
+
+/* Page-level containers */
+.container,
+.dashboard,
+.dashboard-grid {
+    max-width: var(--max-width-page);
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+}
+
+/* Main content areas */
+.main-content,
+.view,
+#homeView,
+#progressView,
+#trackingView,
+#messagesView,
+#profileView,
+#circlesView,
+#followingView,
+#followersView,
+#inviteView,
+#alertsView {
+    max-width: var(--max-width-content);
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+}
+
+/* Cards and content blocks */
+.update-card,
+.insights-card,
+.streak-container,
+.heatmap-container,
+.caring-nudge-card,
+.gratitude-input-section,
+.parameter-card,
+.feed-calendar-section,
+.post-form,
+.content,
+.mission-section,
+.friends-updates-container,
+.city-selector-container {
+    max-width: var(--max-width-card);
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Forms and auth elements */
+.auth-card,
+.quick-checkin-content,
+.trigger-confirmation-content,
+.form-group,
+.message-templates {
+    max-width: var(--max-width-form);
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Search bars and narrow elements */
+.user-search,
+.search-input,
+#messageUserSearch,
+#followSearchInput,
+#inviteSearchInput {
+    max-width: var(--max-width-narrow);
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ensure consistent box-sizing across all components */
+.view *,
+.main-content *,
+.dashboard * {
+    box-sizing: border-box;
+}
+
+/* Mobile: Override max-widths to use full width */
+@media (max-width: 768px) {
+    .main-content,
+    .view,
+    .update-card,
+    .insights-card,
+    .streak-container,
+    .heatmap-container,
+    .caring-nudge-card,
+    .gratitude-input-section,
+    .auth-card,
+    .user-search,
+    .search-input,
+    .message-templates {
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
+}
+
 
 
     </style>
@@ -2113,11 +3146,13 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-content">
-            <div class="logo" data-i18n="nav.logo">🧠 Thera Social</div>
+            <div class="logo" data-i18n="nav.logo" onclick="if(typeof showView==='function'){showView('home');}" style="cursor: pointer;">🧠 Thera Social</div>
             <div class="nav-menu">
                 <!-- PJ6004: About and Support shown when logged out, language selector at end -->
                 <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
                 <a href="#" class="nav-link auth-only-hide" id="navSupport" data-i18n="nav.support">Support</a>
+                <!-- USERFIX-8: Dark Mode Toggle -->
+                <button class="dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
                 <select id="languageSelector" class="language-selector">
                     <option value="en">English</option>
                     <option value="he">עברית</option>
@@ -2199,10 +3234,46 @@
                 </form>
             </div>
             
-            <p style="text-align: center; margin-top: 15px;">
+            <!-- USERFIX-7 & 13: Set Your Why Onboarding Step -->
+            <div id="onboardingSection" style="display: none;">
+                <h3 style="text-align: center; color: var(--warm-terracotta); margin-bottom: 24px;" data-i18n="onboarding.set_your_why">Set Your Why</h3>
+                <p style="text-align: center; color: var(--gray); margin-bottom: 24px;" data-i18n="onboarding.why_description">What brings you to TheraSocial? This helps us personalize your experience.</p>
+                
+                <div class="onboarding-options" style="display: flex; flex-direction: column; gap: 12px;">
+                    <button class="onboarding-option-btn" onclick="selectOnboardingOption('track_own')" data-option="track_own">
+                        <span class="onboarding-icon">📊</span>
+                        <div class="onboarding-option-text">
+                            <strong data-i18n="onboarding.track_own">Track my own wellness</strong>
+                            <small data-i18n="onboarding.track_own_desc">Monitor mood, sleep, energy & build healthy habits</small>
+                        </div>
+                    </button>
+                    
+                    <button class="onboarding-option-btn" onclick="selectOnboardingOption('support_loved')" data-option="support_loved">
+                        <span class="onboarding-icon">💙</span>
+                        <div class="onboarding-option-text">
+                            <strong data-i18n="onboarding.support_loved">Support a loved one</strong>
+                            <small data-i18n="onboarding.support_loved_desc">Stay connected & get alerts when they need you</small>
+                        </div>
+                    </button>
+                    
+                    <button class="onboarding-option-btn" onclick="selectOnboardingOption('recovery')" data-option="recovery">
+                        <span class="onboarding-icon">🌱</span>
+                        <div class="onboarding-option-text">
+                            <strong data-i18n="onboarding.recovery">Recovery journey</strong>
+                            <small data-i18n="onboarding.recovery_desc">Track progress & celebrate small wins</small>
+                        </div>
+                    </button>
+                </div>
+                
+                <button class="btn btn-secondary" style="margin-top: 20px; width: 100%;" onclick="skipOnboarding()" data-i18n="onboarding.skip">
+                    Skip for now
+                </button>
+            </div>
+            
+            <p style="text-align: center; margin-top: 15px;" id="forgotPasswordLinkContainer">
                 <a href="#" id="forgotPasswordLink" style="color: var(--primary); font-size: 14px;" data-i18n="auth.forgot_password" onclick="showForgotPassword(); return false;">Forgot Your Password?</a>
             </p>
-            <p style="text-align: center; margin-top: 20px;">
+            <p style="text-align: center; margin-top: 20px;" id="toggleAuthContainer">
                 <a href="#" id="toggleAuth" style="color: var(--primary);" data-i18n="auth.toggle_signup">New here? Create an account</a>
             </p>
         </div>
@@ -2219,10 +3290,17 @@
                     <input type="email" id="forgotEmail" required class="form-input" data-i18n-placeholder="auth.enter_email" placeholder="Enter your email">
                 </div>
                 <button type="submit" class="btn btn-primary" data-i18n="auth.send_reset_link">Send Reset Link</button>
-                <p style="text-align: center; margin-top: 20px;">
-                    <a href="#" style="color: var(--primary);" data-i18n="auth.back_to_login" onclick="showLogin(); return false;">Back to Login</a>
-                </p>
             </form>
+            <!-- V1V2 FIX: Magic link option added to forgot password flow -->
+            <div class="auth-divider" style="margin: 20px 0;">
+                <span data-i18n="auth.or">OR</span>
+            </div>
+            <button type="button" class="magic-link-btn" onclick="requestMagicLinkFromForgot()" data-i18n="auth.magic_link_login">
+                Send me a magic link to sign in instead
+            </button>
+            <p style="text-align: center; margin-top: 20px;">
+                <a href="#" style="color: var(--primary);" data-i18n="auth.back_to_login" onclick="showLogin(); return false;">Back to Login</a>
+            </p>
         </div>
     </div>
 
@@ -2554,29 +3632,25 @@
 
     <!-- Dashboard -->
  <div id="dashboard" class="dashboard container">
-    <!-- Mobile Navigation Bar - P305: Consolidated 5-tab navigation -->
+    <!-- USERFIX-10: Mobile Navigation Bar - Simplified to 4-tab navigation -->
     <nav class="mobile-nav">
         <ul class="mobile-nav-menu">
             <li class="mobile-nav-item active" data-view="home" onclick="showView('home')">
                 <span class="mobile-nav-icon">🏠</span>
                 <span class="mobile-nav-label" data-i18n="menu.home">Home</span>
             </li>
-            <li class="mobile-nav-item" data-view="progress" onclick="showView('progress')">
-                <span class="mobile-nav-icon">📈</span>
-                <span class="mobile-nav-label" data-i18n="menu.progress">Progress</span>
-            </li>
             <li class="mobile-nav-item" data-view="tracking" onclick="handleParametersClick(event)">
-                <span class="mobile-nav-icon">📊</span>
+                <span class="mobile-nav-icon">📓</span>
                 <span class="mobile-nav-label" data-i18n="menu.diary">Diary</span>
             </li>
             <li class="mobile-nav-item" id="mobileMessagesNav" data-view="messages" onclick="showView('messages')">
                 <span class="mobile-nav-icon">💬</span>
                 <span class="mobile-nav-label" data-i18n="menu.messages">Messages</span>
+                <span class="mobile-nav-badge hidden" id="mobileMessageBadge">0</span>
             </li>
-            <li class="mobile-nav-item" data-view="more" onclick="toggleMobileMoreMenu()">
-                <span class="mobile-nav-icon">☰</span>
-                <span class="mobile-nav-label" data-i18n="menu.more">More</span>
-                <span class="mobile-alerts-badge" id="mobileAlertsBadge" style="display: none;"></span>
+            <li class="mobile-nav-item" data-view="profile" onclick="showView('profile')">
+                <span class="mobile-nav-icon">👤</span>
+                <span class="mobile-nav-label" data-i18n="menu.profile">Profile</span>
             </li>
         </ul>
     </nav>
@@ -2600,6 +3674,10 @@
                 </li>
                 <li class="mobile-more-menu-divider"></li>
                 <li class="mobile-more-menu-section-header" data-i18n="menu.social">Social</li>
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('connections')">
+                    <span class="mobile-more-icon">🤝</span>
+                    <span class="mobile-more-label" data-i18n="menu.connections">Connections</span>
+                </li>
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('following')">
                     <span class="mobile-more-icon">➕</span>
                     <span class="mobile-more-label" data-i18n="menu.following">Following</span>
@@ -2618,12 +3696,54 @@
                     <span class="mobile-more-label" data-i18n="alerts.title">Alerts</span>
                     <span class="mobile-more-badge" id="mobileMoreAlertsBadge" style="display: none;"></span>
                 </li>
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('settings')">
+                    <span class="mobile-more-icon">⚙️</span>
+                    <span class="mobile-more-label" data-i18n="menu.settings">Settings</span>
+                </li>
             </ul>
         </div>
     </div>
 
     <div class="dashboard-grid">
-            <!-- Left Sidebar -->
+            <!-- V1V2: Top Navigation Bar (replaces left sidebar) -->
+            <nav class="top-nav-bar">
+                <ul class="top-nav-menu">
+                    <li class="top-nav-item active" data-view="home">
+                        <span class="top-nav-icon">🏠</span>
+                        <span class="top-nav-label" data-i18n="menu.home">Home</span>
+                    </li>
+                    <li class="top-nav-item" data-view="progress">
+                        <span class="top-nav-icon">📈</span>
+                        <span class="top-nav-label" data-i18n="menu.progress">Progress</span>
+                    </li>
+                    <li class="top-nav-item" data-view="tracking" onclick="handleParametersClick(event)" style="cursor: pointer;">
+                        <span class="top-nav-icon">📊</span>
+                        <span class="top-nav-label" data-i18n="menu.diary">Diary</span>
+                    </li>
+                    <li class="top-nav-item" data-view="connections">
+                        <span class="top-nav-icon">🤝</span>
+                        <span class="top-nav-label" data-i18n="menu.connections">Connections</span>
+                    </li>
+                    <li class="top-nav-item" data-view="circles" onclick="handleCirclesClick(event)" style="cursor: pointer;">
+                        <span class="top-nav-icon">⭕</span>
+                        <span class="top-nav-label" data-i18n="menu.circles">Circles</span>
+                    </li>
+                    <li class="top-nav-item" id="desktopMessagesNavTop" data-view="messages">
+                        <span class="top-nav-icon">💬</span>
+                        <span class="top-nav-label" data-i18n="menu.messages">Messages</span>
+                    </li>
+                    <li class="top-nav-item" data-view="invite" onclick="showView('invite')">
+                        <span class="top-nav-icon">👋</span>
+                        <span class="top-nav-label" data-i18n="menu.invite">Invite</span>
+                    </li>
+                    <li class="top-nav-item" data-view="settings">
+                        <span class="top-nav-icon">⚙️</span>
+                        <span class="top-nav-label" data-i18n="menu.settings">Settings</span>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Left Sidebar (hidden on desktop, kept for compatibility) -->
           <aside class="sidebar">
                 <ul class="sidebar-menu">
                     <li class="sidebar-item active" data-view="home">
@@ -2669,10 +3789,133 @@
             <main class="main-content">
                 <!-- Home View (P305: Combined Welcome/Mission + Feed) -->
               <div id="homeView" class="view">
-                  <h2 style="margin-bottom: 20px;" data-i18n="menu.home">Home</h2>
+                  <h2 style="margin-bottom: 20px; color: var(--warm-terracotta);" data-i18n="menu.home">Home</h2>
 
-                  <!-- Welcome Section with Mission -->
-                  <div class="content" style="background: var(--light); padding: 28px; border-radius: 16px; margin-bottom: 28px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);">
+                  <!-- V1V2: My Summary Status Card -->
+                  <div id="mySummaryStatus" style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 16px; padding: 24px; margin-bottom: 20px; color: white; box-shadow: 0 4px 20px rgba(107, 139, 164, 0.3);">
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+                          <div>
+                              <h3 style="margin-bottom: 8px; font-size: 18px;" data-i18n="home.my_status">My Status Today</h3>
+                              <div id="summaryStatusContent" style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 12px;">
+                                  <div style="text-align: center;">
+                                      <div style="font-size: 28px; font-weight: bold;" id="summaryMood">--</div>
+                                      <div style="font-size: 12px; opacity: 0.9;" data-i18n="params.mood">Mood</div>
+                                  </div>
+                                  <div style="text-align: center;">
+                                      <div style="font-size: 28px; font-weight: bold;" id="summaryEnergy">--</div>
+                                      <div style="font-size: 12px; opacity: 0.9;" data-i18n="params.energy">Energy</div>
+                                  </div>
+                                  <div style="text-align: center;">
+                                      <div style="font-size: 28px; font-weight: bold;" id="summarySleep">--</div>
+                                      <div style="font-size: 12px; opacity: 0.9;" data-i18n="params.sleep_quality">Sleep</div>
+                                  </div>
+                                  <div style="text-align: center;">
+                                      <div style="font-size: 28px; font-weight: bold;" id="summaryAnxiety">--</div>
+                                      <div style="font-size: 12px; opacity: 0.9;" data-i18n="params.anxiety">Anxiety</div>
+                                  </div>
+                              </div>
+                              <p id="summaryLastUpdate" style="font-size: 12px; opacity: 0.8; margin-top: 8px;"></p>
+                          </div>
+                          <button onclick="handleParametersClick(event)" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); border-radius: 12px; padding: 10px 20px; cursor: pointer; font-weight: 600; backdrop-filter: blur(4px); white-space: nowrap;" data-i18n="home.update_diary">
+                              📊 Update Diary
+                          </button>
+                      </div>
+                  </div>
+
+                  <!-- USERFIX-2: Streak Tracking -->
+                  <div class="streak-container" id="streakContainer">
+                      <div class="streak-flame">🔥</div>
+                      <div class="streak-info">
+                          <h3><span id="streakCount">0</span> <span data-i18n="streak.day_streak">Day Streak!</span></h3>
+                          <p data-i18n="streak.keep_going">Keep it up! You're doing great.</p>
+                      </div>
+                      <div class="streak-badge" id="streakBadge" style="display: none;">
+                          <span id="streakBadgeText" data-i18n="streak.new_record">New Record!</span>
+                      </div>
+                  </div>
+
+                  <!-- USERFIX-4: Progress Insights Card -->
+                  <div class="insights-card" id="insightsCard">
+                      <div class="insights-header">
+                          <span class="insights-icon">💡</span>
+                          <h3 class="insights-title" data-i18n="insights.weekly_summary">Your Weekly Summary</h3>
+                      </div>
+                      <div class="insights-stat">
+                          <span class="insights-number" id="avgMoodWeek">--</span>
+                          <span class="insights-change positive" id="moodChange">--</span>
+                          <span data-i18n="insights.avg_mood">average mood</span>
+                      </div>
+                      <p class="insights-text" id="insightText" data-i18n="insights.default_text">
+                          Track your daily wellness to see personalized insights here.
+                      </p>
+                      <div class="insights-tip" id="insightTip">
+                          <strong>💡 <span data-i18n="insights.tip">Tip:</span></strong>
+                          <span id="insightTipText" data-i18n="insights.default_tip">Complete your daily check-in to build your streak!</span>
+                      </div>
+                  </div>
+
+                  <!-- V1V2: Recommendations for Today -->
+                  <div id="recommendationsToday" style="background: linear-gradient(135deg, #f0fdf4 0%, #fef3c7 100%); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(107, 139, 164, 0.15);">
+                      <h3 style="margin-bottom: 16px; color: var(--warm-terracotta);">🌟 <span data-i18n="home.recommendations_title">Recommendations for Today</span></h3>
+                      <div id="recommendationsList" style="display: flex; flex-direction: column; gap: 12px;">
+                          <!-- Will be populated by JS based on user data -->
+                          <div class="recommendation-item" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; background: var(--white); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+                              <span style="font-size: 24px;">💧</span>
+                              <div>
+                                  <strong style="color: var(--dark);" data-i18n="home.rec_hydrate">Stay Hydrated</strong>
+                                  <p style="color: var(--gray); font-size: 13px; margin-top: 4px;" data-i18n="home.rec_hydrate_desc">Try to drink at least 8 glasses of water today.</p>
+                              </div>
+                          </div>
+                          <div class="recommendation-item" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; background: var(--white); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+                              <span style="font-size: 24px;">🚶</span>
+                              <div>
+                                  <strong style="color: var(--dark);" data-i18n="home.rec_move">Get Moving</strong>
+                                  <p style="color: var(--gray); font-size: 13px; margin-top: 4px;" data-i18n="home.rec_move_desc">Even a 15-minute walk can boost your mood and energy.</p>
+                              </div>
+                          </div>
+                          <div class="recommendation-item" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; background: var(--white); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+                              <span style="font-size: 24px;">📝</span>
+                              <div>
+                                  <strong style="color: var(--dark);" data-i18n="home.rec_journal">Check In With Yourself</strong>
+                                  <p style="color: var(--gray); font-size: 13px; margin-top: 4px;" data-i18n="home.rec_journal_desc">Take a moment to update your diary and reflect on how you're feeling.</p>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  <!-- USERFIX-2: Heatmap Calendar -->
+                  <div class="heatmap-container">
+                      <h3 class="heatmap-title">📅 <span data-i18n="heatmap.activity_history">Activity History</span></h3>
+                      <div class="heatmap-grid" id="heatmapGrid">
+                          <!-- Generated by JavaScript -->
+                      </div>
+                      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--gray);">
+                          <span data-i18n="heatmap.less">Less</span>
+                          <div class="heatmap-day level-0" style="width: 12px; height: 12px;"></div>
+                          <div class="heatmap-day level-1" style="width: 12px; height: 12px;"></div>
+                          <div class="heatmap-day level-2" style="width: 12px; height: 12px;"></div>
+                          <div class="heatmap-day level-3" style="width: 12px; height: 12px;"></div>
+                          <div class="heatmap-day level-4" style="width: 12px; height: 12px;"></div>
+                          <span data-i18n="heatmap.more">More</span>
+                      </div>
+                  </div>
+
+                  <!-- USERFIX-1: Friends' Daily Updates Feed (replacing posts) -->
+                  <div class="friends-updates-container">
+                      <div class="friends-updates-header">
+                          <h3 class="friends-updates-title">👥 <span data-i18n="feed.friends_updates">Friends' Updates</span></h3>
+                      </div>
+                      <div id="friendsUpdatesContainer">
+                          <!-- Friend updates will be loaded here -->
+                          <div class="update-card" style="text-align: center; padding: 40px; color: var(--gray);">
+                              <span style="font-size: 48px; display: block; margin-bottom: 16px;">👋</span>
+                              <p data-i18n="feed.no_updates">Follow friends to see their daily wellness updates here</p>
+                          </div>
+                      </div>
+                  </div>
+
+                  <!-- Welcome Section with Mission (moved below feed) -->
+                  <div class="content" style="background: var(--light); padding: 28px; border-radius: 16px; margin-top: 28px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);">
                       <p data-i18n="about.intro" style="line-height: 1.8; color: var(--dark); margin-bottom: 20px;">
                           Welcome to TheraSocial - a comprehensive platform designed to support both therapists and individuals on their wellness journey. We combine professional tools with personal tracking features to create a holistic approach to mental health and wellbeing.
                       </p>
@@ -2682,46 +3925,6 @@
                           <p data-i18n="about.mission_text" style="line-height: 1.8; color: var(--dark);">
                               We believe in making mental health support accessible, organized, and effective. Our mission is to empower therapists with the tools they need to provide excellent care, while giving individuals the resources to track and improve their wellbeing.
                           </p>
-                      </div>
-                  </div>
-
-                  <!-- Feed Section (My Feed) -->
-                  <div id="homeFeedSection">
-                      <h3 style="margin-bottom: 20px; color: var(--primary); font-size: 1.3rem;" data-i18n="feed.my_feed">My Feed</h3>
-                      <p style="color: var(--gray); margin-bottom: 20px;" data-i18n="feed.subtitle">Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.</p>
-
-                      <!-- Feed Calendar -->
-                      <div class="feed-calendar-section">
-                          <div class="feed-calendar-header">
-                              <button class="btn btn-secondary" onclick="feedPreviousMonth()" data-i18n="calendar.prev">←</button>
-                              <span id="feedCurrentMonth" style="font-weight: 600;">January 2025</span>
-                              <button class="btn btn-secondary" onclick="feedNextMonth()" data-i18n="calendar.next">→</button>
-                          </div>
-                          <div class="feed-calendar-grid" id="feedCalendarGrid"></div>
-                          <div style="text-align: center; margin-top: 15px;">
-                              <p><span data-i18n="feed.selected_date">Selected Date:</span> <strong id="feedSelectedDateDisplay" data-i18n="feed.today">Today</strong></p>
-                          </div>
-                      </div>
-
-                      <!-- Post Form -->
-                      <div class="post-form">
-                          <textarea class="post-input" data-i18n="feed.placeholder" placeholder="How are you feeling today?" id="postInput"></textarea>
-                          <div class="post-actions">
-                              <select class="visibility-select" id="visibilitySelect">
-                                  <option value="general" data-i18n="privacy.public">Public</option>
-                                  <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
-                                  <option value="family" data-i18n="privacy.class_a">Family</option>
-                                  <option value="private" data-i18n="privacy.private" selected>Private</option>
-                              </select>
-                              <div style="display: flex; gap: 10px;">
-                                  <button class="btn btn-primary" style="width: auto;" id="postBtn" data-i18n="feed.save_update">Save Update</button>
-                              </div>
-                          </div>
-                      </div>
-
-                      <!-- Posts Display Container -->
-                      <div class="feed-posts" id="feedPostsContainer" style="margin-top: 20px;">
-                          <!-- Posts will be displayed here -->
                       </div>
                   </div>
               </div>
@@ -3049,6 +4252,28 @@
                 <!-- Messages View - Enhanced -->
                 <div id="messagesView" class="view hidden">
                     <h2 style="margin-bottom: 20px;" data-i18n="messages.title">Messages</h2>
+                    
+                    <!-- USERFIX-6: Message Templates -->
+                    <div class="message-templates" id="messageTemplates">
+                        <span style="font-size: 13px; color: var(--gray); margin-right: 8px;" data-i18n="messages.quick_replies">Quick replies:</span>
+                        <button class="message-template-btn" onclick="insertMessageTemplate('thinking')">
+                            <span class="emoji">💙</span>
+                            <span data-i18n="messages.template_thinking">Thinking of you</span>
+                        </button>
+                        <button class="message-template-btn" onclick="insertMessageTemplate('here')">
+                            <span class="emoji">🤗</span>
+                            <span data-i18n="messages.template_here">Here if you need to talk</span>
+                        </button>
+                        <button class="message-template-btn" onclick="insertMessageTemplate('coffee')">
+                            <span class="emoji">☕</span>
+                            <span data-i18n="messages.template_coffee">Want to catch up?</span>
+                        </button>
+                        <button class="message-template-btn" onclick="insertMessageTemplate('proud')">
+                            <span class="emoji">⭐</span>
+                            <span data-i18n="messages.template_proud">So proud of you!</span>
+                        </button>
+                    </div>
+                    
                     <div class="user-search" style="margin-bottom: 20px;">
                         <input type="text" class="search-input" id="messageUserSearch" data-i18n="messages.search_placeholder" placeholder="Search users to message..." onkeyup="searchUsersForMessage()">
                         <div class="search-results" id="messageSearchResults"></div>
@@ -3113,6 +4338,22 @@
                             <div class="parameter-name" data-i18n="parameters.notes">Notes</div>
                             <textarea class="parameter-input" id="notesInput" data-i18n="parameters.notes_placeholder" placeholder="Additional notes..." style="min-height: 80px;"></textarea>
                         </div>
+                    </div>
+
+                    <!-- USERFIX-9: Gratitude Field -->
+                    <div class="gratitude-input-section">
+                        <label class="gratitude-label">
+                            <span>🙏</span>
+                            <span data-i18n="gratitude.label">One Good Thing Today</span>
+                            <span style="font-weight: normal; color: var(--gray); font-size: 12px;" data-i18n="gratitude.optional">(optional)</span>
+                        </label>
+                        <textarea 
+                            class="gratitude-input" 
+                            id="gratitudeInput" 
+                            rows="2" 
+                            maxlength="280"
+                            data-i18n-placeholder="gratitude.placeholder"
+                            placeholder="What's one thing you're grateful for today?"></textarea>
                     </div>
 
                     <div style="text-align: center; margin-top: 20px; display: flex; gap: 15px; justify-content: center;">
@@ -3344,6 +4585,137 @@
                     <span data-i18n="notifications.no_notifications">No notifications to display</span>
                 </div>
               </div>
+              </div>
+
+              <!-- V1V2: Settings View -->
+              <div id="settingsView" class="view hidden">
+                  <h2 style="margin-bottom: 20px; color: var(--warm-terracotta);" data-i18n="menu.settings">Settings</h2>
+                  
+                  <!-- Profile Settings -->
+                  <div style="background: var(--light); border-radius: 16px; padding: 24px; margin-bottom: 20px;">
+                      <h3 style="margin-bottom: 16px; color: var(--primary);" data-i18n="settings.profile_title">Profile Settings</h3>
+                      <div class="form-group" style="margin-bottom: 16px;">
+                          <label class="form-label" data-i18n="settings.display_name">Display Name</label>
+                          <input type="text" class="form-input" id="settingsDisplayName" placeholder="Your display name">
+                      </div>
+                      <div class="form-group" style="margin-bottom: 16px;">
+                          <label class="form-label" data-i18n="settings.bio">Bio</label>
+                          <textarea class="form-input" id="settingsBio" rows="3" placeholder="Tell others about yourself"></textarea>
+                      </div>
+                      <div class="form-group" style="margin-bottom: 16px;">
+                          <label class="form-label" data-i18n="settings.language">Language</label>
+                          <select id="settingsLanguageSelect" class="form-input" onchange="changeSettingsLanguage(this.value)">
+                              <option value="en">English</option>
+                              <option value="he">עברית</option>
+                              <option value="ar">العربية</option>
+                              <option value="ru">Русский</option>
+                          </select>
+                      </div>
+                      <button class="btn btn-primary" onclick="saveProfileSettings()" data-i18n="btn.save">Save</button>
+                  </div>
+
+                  <!-- Email Notification Settings -->
+                  <div style="background: var(--light); border-radius: 16px; padding: 24px; margin-bottom: 20px;">
+                      <h3 style="margin-bottom: 16px; color: var(--primary);" data-i18n="settings.email_notifications">Email Notifications</h3>
+                      
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px; background: var(--white); border-radius: 10px;">
+                          <div>
+                              <strong data-i18n="settings.alert_emails">Wellness Alert Emails</strong>
+                              <p style="color: var(--gray); font-size: 13px; margin-top: 4px;" data-i18n="settings.alert_emails_desc">Receive email when concerning patterns are detected</p>
+                          </div>
+                          <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                              <input type="checkbox" id="settingsAlertEmail" onchange="updateNotificationSetting('email_on_alert', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                              <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
+                          </label>
+                      </div>
+
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px; background: var(--white); border-radius: 10px;">
+                          <div>
+                              <strong data-i18n="settings.notification_emails">Notification Emails</strong>
+                              <p style="color: var(--gray); font-size: 13px; margin-top: 4px;" data-i18n="settings.notification_emails_desc">Receive email for new messages, followers, invites</p>
+                          </div>
+                          <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                              <input type="checkbox" id="settingsNotifEmail" onchange="updateNotificationSetting('email_on_notification', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                              <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
+                          </label>
+                      </div>
+
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px; background: var(--white); border-radius: 10px;">
+                          <div>
+                              <strong data-i18n="settings.diary_reminder">Diary Reminder</strong>
+                              <p style="color: var(--gray); font-size: 13px; margin-top: 4px;" data-i18n="settings.diary_reminder_desc">Get daily reminders to fill in your diary</p>
+                          </div>
+                          <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                              <input type="checkbox" id="settingsDiaryReminder" onchange="updateNotificationSetting('diary_reminder_email', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                              <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
+                          </label>
+                      </div>
+                  </div>
+
+                  <!-- Account Actions -->
+                  <div style="background: var(--light); border-radius: 16px; padding: 24px;">
+                      <h3 style="margin-bottom: 16px; color: var(--primary);" data-i18n="settings.account">Account</h3>
+                      <button class="btn btn-secondary" onclick="window.location.href='/about'" style="margin-bottom: 10px; width: 100%;" data-i18n="menu.about">About TheraSocial</button>
+                      <button class="btn btn-secondary" onclick="window.location.href='/support'" style="margin-bottom: 10px; width: 100%;" data-i18n="menu.support">Support</button>
+                      <button class="btn btn-secondary" style="margin-bottom: 10px; width: 100%; color: #C17C74; border-color: #C17C74;" onclick="handleLogout()" data-i18n="btn.logout">Log Out</button>
+                  </div>
+              </div>
+
+              <!-- V1V2: Connections View (replaces separate Following/Followers) -->
+              <div id="connectionsView" class="view hidden">
+                  <h2 style="margin-bottom: 20px; color: var(--warm-terracotta);" data-i18n="menu.connections">Connections</h2>
+                  
+                  <!-- Connection Search -->
+                  <div style="margin-bottom: 24px;">
+                      <div style="position: relative;">
+                          <input type="text" id="connectionSearchInput" class="form-input" 
+                                 placeholder="Search for connections by name or email..." 
+                                 data-i18n-placeholder="connections.search_placeholder"
+                                 oninput="searchConnections(this.value)"
+                                 style="padding-left: 40px; border-radius: 25px; font-size: 15px;">
+                          <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--gray);">🔍</span>
+                      </div>
+                      <div id="connectionSearchResults" style="display: none; margin-top: 10px; background: var(--white); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-height: 300px; overflow-y: auto;"></div>
+                  </div>
+
+                  <!-- My Connections List -->
+                  <div style="background: var(--light); border-radius: 16px; padding: 24px; margin-bottom: 20px;">
+                      <h3 style="margin-bottom: 16px; color: var(--primary);" data-i18n="connections.my_connections">My Connections</h3>
+                      <div id="connectionsListContainer">
+                          <div style="text-align: center; padding: 20px; color: var(--gray);">
+                              <span data-i18n="connections.loading">Loading connections...</span>
+                          </div>
+                      </div>
+                  </div>
+
+                  <!-- Recommended Connections -->
+                  <div style="background: var(--light); border-radius: 16px; padding: 24px;">
+                      <h3 style="margin-bottom: 16px; color: var(--primary);" data-i18n="connections.recommended">Recommended Connections</h3>
+                      <div id="recommendedConnectionsContainer">
+                          <div style="text-align: center; padding: 20px; color: var(--gray);">
+                              <span data-i18n="connections.loading_recommended">Loading recommendations...</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- V1V2: Connection Info Modal (overlay) -->
+              <div id="connectionInfoModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center;">
+                  <div style="background: var(--white); border-radius: 20px; padding: 30px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                          <h3 id="connectionInfoName" style="color: var(--primary);"></h3>
+                          <button onclick="closeConnectionInfo()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--gray);">✕</button>
+                      </div>
+                      <div id="connectionInfoStatus" style="padding: 16px; background: var(--light); border-radius: 12px; margin-bottom: 16px;">
+                          <p style="color: var(--gray); font-size: 14px;" data-i18n="connections.status">Connection Status</p>
+                          <div id="connectionStatusBadge" style="margin-top: 8px;"></div>
+                      </div>
+                      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                          <button class="btn btn-primary" id="connectionInfoMessageBtn" onclick="messageConnection()" style="flex: 1;" data-i18n="connections.send_message">Message</button>
+                          <button class="btn btn-secondary" id="connectionInfoTrackBtn" onclick="toggleConnectionTracking()" style="flex: 1;" data-i18n="connections.track_alerts">Track Alerts</button>
+                          <button class="btn btn-secondary" id="connectionInfoRemoveBtn" onclick="removeConnection()" style="flex: 1; color: #C17C74; border-color: #C17C74;" data-i18n="connections.remove">Remove</button>
+                      </div>
+                  </div>
               </div>
 
 
@@ -4378,6 +5750,13 @@ async function loadUserCity() {
                     }
                 }
 
+                // USERFIX-7 & 13: Show onboarding for new users
+                const hasCompletedOnboarding = localStorage.getItem('userOnboardingOption');
+                if (!hasCompletedOnboarding) {
+                    showOnboarding();
+                    return;
+                }
+
                 // Check if user needs to fill diary before showing dashboard
                 const needsDiary = await checkAndRedirectToDiary();
                 if (!needsDiary) {
@@ -5171,6 +6550,31 @@ window.safeApplyLanguage = safeApplyLanguage;
             document.getElementById('resetToken').value = token;
         }
 
+        // V1V2 FIX: Magic link option from forgot password page
+        async function requestMagicLinkFromForgot() {
+            const email = document.getElementById('forgotEmail').value;
+            if (!email) {
+                showNotification('Please enter your email address first', 'error');
+                return;
+            }
+            try {
+                const response = await fetch('/api/auth/request-magic-link', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email: email, language: window.i18n ? window.i18n.getCurrentLanguage() : 'en' })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('Magic link sent! Check your email (valid for 10 minutes).', 'success');
+                } else {
+                    showNotification(data.error || 'Failed to send magic link', 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to send magic link. Please try again.', 'error');
+            }
+        }
+
 
 
 // Sidebar Navigation
@@ -5513,6 +6917,14 @@ function showView(viewName) {
         }
     });
 
+    // V1V2: Update top navigation bar
+    document.querySelectorAll('.top-nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.view === viewName) {
+            item.classList.add('active');
+        }
+    });
+
     // Update mobile nav
     document.querySelectorAll('.mobile-nav-item').forEach(item => {
         item.classList.remove('active');
@@ -5523,7 +6935,8 @@ function showView(viewName) {
 
     // SCREEN FIX: Enhanced view hiding - explicitly hide ALL views by ID to ensure complete hiding
     const allViewIds = ['homeView', 'progressView', 'profileView', 'circlesView', 'messagesView', 
-                        'trackingView', 'followingView', 'followersView', 'inviteView', 'alertsView'];
+                        'trackingView', 'followingView', 'followersView', 'inviteView', 'alertsView',
+                        'settingsView', 'connectionsView'];
     
     allViewIds.forEach(viewId => {
         const view = document.getElementById(viewId);
@@ -5678,6 +7091,10 @@ function showView(viewName) {
                 // P305: Home now includes Feed - initialize feed calendar and load feed
                 initFeedCalendar();
                 loadFeed();
+                // V1V2: Load my summary status and recommendations
+                if (typeof loadMySummaryStatus === 'function') {
+                    loadMySummaryStatus();
+                }
                 break;
             case 'progress':
                 // P305: Progress view - load progress chart data
@@ -5687,6 +7104,14 @@ function showView(viewName) {
                 if (typeof updateCityTime === 'function') {
                     updateCityTime();
                 }
+                break;
+            case 'settings':
+                // V1V2: Load settings view data
+                loadSettingsView();
+                break;
+            case 'connections':
+                // V1V2: Load connections view data
+                loadConnectionsView();
                 break;
         }
     }
@@ -9045,8 +10470,21 @@ async function loadFollowing() {
                         ? '<div style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; display: inline-block;">Invited you to follow</div>'
                         : '';
                     
+                    // USERFIX-11: Calculate last seen indicator
+                    let lastSeenHtml = '';
+                    if (user.last_login) {
+                        const lastSeenInfo = formatLastSeen(user.last_login);
+                        const recentClass = lastSeenInfo.isRecent ? 'recent' : '';
+                        lastSeenHtml = `
+                            <div class="last-seen-indicator ${recentClass}">
+                                <span class="last-seen-dot ${recentClass}"></span>
+                                ${lastSeenInfo.text}
+                            </div>
+                        `;
+                    }
+                    
                     return `
-                    <div class="user-card" data-user-id="${user.id}" data-is-highlighted="${user.isHighlighted ? 'true' : 'false'}" style="${highlightStyle}">
+                    <div class="user-card" data-user-id="${user.id}" data-is-highlighted="${user.isHighlighted ? 'true' : 'false'}" data-last-login="${user.last_login || ''}" style="${highlightStyle}">
                         ${highlightBadge}
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B46C1'}; cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
                             ${escapeHtml(user.username.charAt(0).toUpperCase())}
@@ -9055,6 +10493,7 @@ async function loadFollowing() {
                             <div class="user-name">${escapeHtml(user.username)}</div>
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${escapeHtml(user.reason)}</div>` : ''}
                             <div class="user-location" style="font-size: 0.75rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
+                            ${lastSeenHtml}
                         </div>
                         <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap;">
                             <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">
@@ -11259,6 +12698,35 @@ async function loadAlerts() {
                     content = translateKey('notifications.new_notification') || 'You have a new notification';
                 }
 
+                // USERFIX-5: Determine if this is a wellness/trigger alert for caring nudge styling
+                const isWellnessAlert = alert.alert_category === 'trigger' || alert.type === 'trigger';
+                const cardClass = isWellnessAlert ? 'caring-nudge-card' : 'alert-item';
+                const iconEmoji = isWellnessAlert ? '💙' : '';
+
+                if (isWellnessAlert) {
+                    // USERFIX-5: Use caring nudge styling for wellness alerts
+                    return `
+                        <div class="${cardClass}"
+                             data-alert-id="${alert.id}"
+                             data-alert-type="trigger"
+                             onclick="dismissAlert(${alert.id}, this)">
+                            <div class="caring-nudge-header">
+                                <span class="caring-nudge-icon">${iconEmoji}</span>
+                                <span class="caring-nudge-title">${escapeHtml(title)}</span>
+                            </div>
+                            <p class="caring-nudge-message">${escapeHtml(content)}</p>
+                            <div class="caring-nudge-actions">
+                                <button class="caring-nudge-btn primary" onclick="event.stopPropagation(); sendCaringMessage(${alert.id})">
+                                    💬 ${translateKey('alerts.send_message') || 'Send a Message'}
+                                </button>
+                                <button class="caring-nudge-btn secondary" onclick="event.stopPropagation(); dismissAlert(${alert.id}, this.closest('.caring-nudge-card'))">
+                                    ${translateKey('alerts.dismiss') || 'Dismiss'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 return `
                     <div class="alert-item ${alert.type || 'info'}"
                          data-alert-id="${alert.id}"
@@ -13198,6 +14666,1200 @@ async function startTutorial() {
 
 // Make tutorial function globally available
 window.startTutorial = startTutorial;
+</script>
+
+<!-- USERFIX-3: Quick Check-In FAB -->
+<button class="quick-checkin-fab" id="quickCheckinFab" onclick="openQuickCheckin()" title="Quick Check-In">
+    ✓
+</button>
+
+<!-- USERFIX-3: Quick Check-In Modal -->
+<div class="quick-checkin-modal" id="quickCheckinModal">
+    <div class="quick-checkin-content">
+        <h2 class="quick-checkin-title">⚡ <span data-i18n="quick.title">Quick Check-In</span></h2>
+        
+        <div class="quick-param-row">
+            <span class="quick-param-label" data-i18n="params.mood">Mood</span>
+            <div class="quick-param-emojis" data-param="mood">
+                <button class="quick-emoji-btn" data-value="1">😢</button>
+                <button class="quick-emoji-btn" data-value="2">😔</button>
+                <button class="quick-emoji-btn" data-value="3">😐</button>
+                <button class="quick-emoji-btn" data-value="4">🙂</button>
+            </div>
+        </div>
+
+        <div class="quick-param-row">
+            <span class="quick-param-label" data-i18n="params.energy">Energy</span>
+            <div class="quick-param-emojis" data-param="energy">
+                <button class="quick-emoji-btn" data-value="1">🪫</button>
+                <button class="quick-emoji-btn" data-value="2">😴</button>
+                <button class="quick-emoji-btn" data-value="3">🔋</button>
+                <button class="quick-emoji-btn" data-value="4">⚡</button>
+            </div>
+        </div>
+
+        <div class="quick-param-row">
+            <span class="quick-param-label" data-i18n="params.sleep">Sleep</span>
+            <div class="quick-param-emojis" data-param="sleep_quality">
+                <button class="quick-emoji-btn" data-value="1">😫</button>
+                <button class="quick-emoji-btn" data-value="2">😪</button>
+                <button class="quick-emoji-btn" data-value="3">😌</button>
+                <button class="quick-emoji-btn" data-value="4">😴</button>
+            </div>
+        </div>
+
+        <div class="quick-param-row">
+            <span class="quick-param-label" data-i18n="params.activity">Activity</span>
+            <div class="quick-param-emojis" data-param="physical_activity">
+                <button class="quick-emoji-btn" data-value="1">🛋️</button>
+                <button class="quick-emoji-btn" data-value="2">🚶</button>
+                <button class="quick-emoji-btn" data-value="3">🏃</button>
+                <button class="quick-emoji-btn" data-value="4">💪</button>
+            </div>
+        </div>
+
+        <div class="quick-param-row">
+            <span class="quick-param-label" data-i18n="params.anxiety">Anxiety</span>
+            <div class="quick-param-emojis" data-param="anxiety">
+                <button class="quick-emoji-btn" data-value="1">😰</button>
+                <button class="quick-emoji-btn" data-value="2">😟</button>
+                <button class="quick-emoji-btn" data-value="3">😊</button>
+                <button class="quick-emoji-btn" data-value="4">😎</button>
+            </div>
+        </div>
+
+        <button class="btn btn-primary quick-checkin-submit" onclick="submitQuickCheckin()" data-i18n="quick.save">
+            Save Check-In ✓
+        </button>
+        <button class="btn btn-secondary" style="margin-top: 10px;" onclick="closeQuickCheckin()" data-i18n="btn.cancel">
+            Cancel
+        </button>
+    </div>
+</div>
+
+<script>
+// ======================================================================
+// USERFIX JAVASCRIPT IMPLEMENTATIONS
+// ======================================================================
+
+// USERFIX-8: Dark Mode Toggle
+function toggleDarkMode() {
+    const body = document.body;
+    const toggle = document.getElementById('darkModeToggle');
+    const isDark = body.classList.toggle('dark-mode');
+    
+    // Update button icon
+    if (toggle) toggle.textContent = isDark ? '☀️' : '🌙';
+    
+    // Save preference
+    localStorage.setItem('darkMode', isDark ? 'true' : 'false');
+    
+    if (typeof showNotification === 'function') {
+        showNotification(isDark ? 'Dark mode enabled' : 'Light mode enabled', 'info');
+    }
+}
+
+// Load dark mode preference on page load
+function loadDarkModePreference() {
+    const darkMode = localStorage.getItem('darkMode');
+    const toggle = document.getElementById('darkModeToggle');
+    
+    if (darkMode === 'true') {
+        document.body.classList.add('dark-mode');
+        if (toggle) toggle.textContent = '☀️';
+    }
+}
+
+// USERFIX-3: Quick Check-In Functions
+let quickCheckinValues = {};
+
+function openQuickCheckin() {
+    const modal = document.getElementById('quickCheckinModal');
+    if (modal) {
+        modal.classList.add('active');
+        quickCheckinValues = {};
+        
+        // Reset all selections
+        document.querySelectorAll('.quick-emoji-btn').forEach(btn => {
+            btn.classList.remove('selected');
+        });
+    }
+}
+
+function closeQuickCheckin() {
+    const modal = document.getElementById('quickCheckinModal');
+    if (modal) modal.classList.remove('active');
+}
+
+async function submitQuickCheckin() {
+    // Check if all params are selected
+    const required = ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'];
+    const missing = required.filter(p => quickCheckinValues[p] === undefined);
+    
+    if (missing.length > 0) {
+        if (typeof showNotification === 'function') {
+            showNotification('Please rate all parameters', 'warning');
+        }
+        return;
+    }
+
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch('/api/parameters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                date: today,
+                ...quickCheckinValues
+            })
+        });
+
+        if (response.ok) {
+            if (typeof showNotification === 'function') {
+                showNotification('Check-in saved! 🎉', 'success');
+            }
+            closeQuickCheckin();
+            
+            // Update streak and heatmap
+            updateStreakDisplay();
+            generateHeatmap();
+            loadWeeklyInsights();
+            loadFriendsUpdates();
+        } else {
+            throw new Error('Failed to save');
+        }
+    } catch (error) {
+        console.error('Quick check-in error:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('Failed to save check-in', 'error');
+        }
+    }
+}
+
+// USERFIX-2: Streak Tracking
+async function updateStreakDisplay() {
+    try {
+        const response = await fetch('/api/parameters/streak', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const streakCount = data.streak || 0;
+            
+            const countEl = document.getElementById('streakCount');
+            if (countEl) countEl.textContent = streakCount;
+            
+            // Show/hide container based on streak
+            const container = document.getElementById('streakContainer');
+            if (container) {
+                container.style.display = streakCount > 0 ? 'flex' : 'none';
+            }
+            
+            // Update badge visibility
+            const badge = document.getElementById('streakBadge');
+            if (badge) {
+                if (streakCount >= 30) {
+                    badge.style.display = 'block';
+                    document.getElementById('streakBadgeText').textContent = '🏆 30+ days!';
+                } else if (streakCount >= 7) {
+                    badge.style.display = 'block';
+                    document.getElementById('streakBadgeText').textContent = '⭐ 1 week!';
+                } else if (data.is_new_record) {
+                    badge.style.display = 'block';
+                    document.getElementById('streakBadgeText').textContent = '🎉 New Record!';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+    } catch (error) {
+        console.log('Could not load streak data');
+    }
+}
+
+// USERFIX-2: Heatmap Generation
+function generateHeatmap() {
+    const grid = document.getElementById('heatmapGrid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    
+    // Generate last 12 weeks (84 days)
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 83);
+    
+    // Adjust to start on Sunday
+    while (startDate.getDay() !== 0) {
+        startDate.setDate(startDate.getDate() - 1);
+    }
+
+    for (let i = 0; i < 84; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        
+        const dayEl = document.createElement('div');
+        dayEl.className = 'heatmap-day level-0';
+        dayEl.dataset.date = date.toISOString().split('T')[0];
+        
+        // Add tooltip
+        const tooltip = document.createElement('span');
+        tooltip.className = 'heatmap-tooltip';
+        tooltip.textContent = date.toLocaleDateString();
+        dayEl.appendChild(tooltip);
+        
+        grid.appendChild(dayEl);
+    }
+
+    // Load actual data
+    loadHeatmapData();
+}
+
+async function loadHeatmapData() {
+    try {
+        const response = await fetch('/api/parameters/dates?days=84', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.dates && data.levels) {
+                // Use levels from API for heatmap intensity
+                data.dates.forEach(dateStr => {
+                    const dayEl = document.querySelector(`.heatmap-day[data-date="${dateStr}"]`);
+                    if (dayEl) {
+                        const level = data.levels[dateStr] || 1;
+                        dayEl.className = `heatmap-day level-${level}`;
+                        const tooltip = dayEl.querySelector('.heatmap-tooltip');
+                        if (tooltip) {
+                            const levelText = level === 4 ? 'Complete' : 
+                                            level === 3 ? 'Most tracked' : 
+                                            level === 2 ? 'Partial' : 'Minimal';
+                            tooltip.textContent = `${dateStr} - ${levelText}`;
+                        }
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.log('Could not load heatmap data:', error);
+    }
+}
+
+// USERFIX-4: Weekly Insights
+async function loadWeeklyInsights() {
+    try {
+        const response = await fetch('/api/parameters/insights?days=7', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            const moodEl = document.getElementById('avgMoodWeek');
+            if (moodEl && data.avgMood !== undefined && data.avgMood !== null) {
+                moodEl.textContent = data.avgMood.toFixed(1);
+            }
+            
+            const changeEl = document.getElementById('moodChange');
+            if (changeEl && data.moodChange !== undefined && data.moodChange !== null) {
+                const isPositive = data.moodChange >= 0;
+                changeEl.textContent = (isPositive ? '↑ ' : '↓ ') + Math.abs(data.moodChange).toFixed(1);
+                changeEl.className = 'insights-change ' + (isPositive ? 'positive' : 'negative');
+            }
+            
+            const insightEl = document.getElementById('insightText');
+            if (insightEl && data.insight) {
+                insightEl.textContent = data.insight;
+            }
+            
+            const tipEl = document.getElementById('insightTipText');
+            if (tipEl && data.tip) {
+                tipEl.textContent = data.tip;
+            }
+        }
+    } catch (error) {
+        console.log('Could not load insights');
+    }
+}
+
+// USERFIX-1: Load Friends' Updates
+async function loadFriendsUpdates() {
+    try {
+        const response = await fetch('/api/feed/friends-updates', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            renderFriendsUpdates(data.updates || []);
+        }
+    } catch (error) {
+        console.log('Could not load friends updates');
+    }
+}
+
+function renderFriendsUpdates(updates) {
+    const container = document.getElementById('friendsUpdatesContainer');
+    if (!container) return;
+
+    if (updates.length === 0) {
+        container.innerHTML = `
+            <div class="update-card" style="text-align: center; padding: 40px; color: var(--gray);">
+                <span style="font-size: 48px; display: block; margin-bottom: 16px;">👋</span>
+                <p data-i18n="feed.no_updates">Follow friends to see their daily wellness updates here</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = updates.map(update => `
+        <div class="update-card">
+            <div class="update-header">
+                <div class="update-avatar">${update.username ? update.username[0].toUpperCase() : '?'}</div>
+                <div class="update-user-info">
+                    <div class="update-username">${escapeHtmlUserfix(update.username)}</div>
+                    <div class="update-time">${formatRelativeTimeUserfix(update.date)}</div>
+                    <!-- USERFIX-11: Last Seen Indicator -->
+                    <div class="last-seen-indicator ${update.last_seen_days < 2 ? 'recent' : ''}">
+                        <span class="last-seen-dot ${update.last_seen_days < 2 ? 'recent' : ''}"></span>
+                        ${update.last_seen_days === 0 ? 'Today' : 
+                          update.last_seen_days === 1 ? 'Yesterday' : 
+                          update.last_seen_days + ' days ago'}
+                    </div>
+                </div>
+            </div>
+            <div class="update-params-grid">
+                ${renderParamItem('😊', update.mood, 'Mood')}
+                ${renderParamItem('⚡', update.energy, 'Energy')}
+                ${renderParamItem('💤', update.sleep_quality, 'Sleep')}
+                ${renderParamItem('🏃', update.physical_activity, 'Activity')}
+                ${renderParamItem('😌', update.anxiety, 'Anxiety')}
+            </div>
+            ${update.gratitude ? `
+                <div class="update-gratitude">
+                    <div class="update-gratitude-label">🙏 Grateful for</div>
+                    <div class="update-gratitude-text">${escapeHtmlUserfix(update.gratitude)}</div>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+function renderParamItem(emoji, value, label) {
+    const displayValue = value !== null && value !== undefined ? value : '-';
+    return `
+        <div class="update-param-item">
+            <span class="update-param-emoji">${emoji}</span>
+            <div class="update-param-value">${displayValue}/4</div>
+            <div class="update-param-label">${label}</div>
+        </div>
+    `;
+}
+
+function formatRelativeTimeUserfix(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return days + ' days ago';
+    return date.toLocaleDateString();
+}
+
+function escapeHtmlUserfix(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// USERFIX-6: Message Templates
+const MESSAGE_TEMPLATES = {
+    thinking: '💙 Thinking of you today. Hope you\'re doing well!',
+    here: '🤗 Just wanted to let you know I\'m here if you ever need to talk.',
+    coffee: '☕ Want to catch up sometime this week?',
+    proud: '⭐ So proud of you! Keep going!'
+};
+
+function insertMessageTemplate(templateKey) {
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput && MESSAGE_TEMPLATES[templateKey]) {
+        messageInput.value = MESSAGE_TEMPLATES[templateKey];
+        messageInput.focus();
+        messageInput.disabled = false;
+        const sendBtn = document.getElementById('sendMessageBtn');
+        if (sendBtn) sendBtn.disabled = false;
+    }
+}
+
+// USERFIX-12: Trigger Response Confirmation
+function showTriggerConfirmation(action, callback) {
+    const modal = document.createElement('div');
+    modal.className = 'trigger-confirmation-modal';
+    modal.innerHTML = `
+        <div class="trigger-confirmation-content">
+            <div class="trigger-confirmation-icon">💙</div>
+            <h3 class="trigger-confirmation-title">Confirm Action</h3>
+            <p class="trigger-confirmation-message">${action}</p>
+            <div class="trigger-confirmation-buttons">
+                <button class="btn btn-secondary" onclick="this.closest('.trigger-confirmation-modal').remove()">Cancel</button>
+                <button class="btn btn-primary" id="confirmTriggerBtn">Confirm</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.querySelector('#confirmTriggerBtn').addEventListener('click', () => {
+        modal.remove();
+        if (callback) callback();
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+// Initialize USERFIX features on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Load dark mode preference
+    loadDarkModePreference();
+    
+    // Setup quick check-in emoji buttons
+    document.querySelectorAll('.quick-emoji-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const param = this.parentElement.dataset.param;
+            const value = parseInt(this.dataset.value);
+            
+            // Clear previous selection in this row
+            this.parentElement.querySelectorAll('.quick-emoji-btn').forEach(b => {
+                b.classList.remove('selected');
+            });
+            
+            // Select this button
+            this.classList.add('selected');
+            quickCheckinValues[param] = value;
+        });
+    });
+
+    // Close modal on backdrop click
+    const quickModal = document.getElementById('quickCheckinModal');
+    if (quickModal) {
+        quickModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeQuickCheckin();
+            }
+        });
+    }
+});
+
+// Initialize USERFIX features after login
+function initializeUserfixFeatures() {
+    console.log('[USERFIX] Initializing features...');
+    
+    // Load streak display
+    updateStreakDisplay();
+    
+    // Generate heatmap
+    generateHeatmap();
+    
+    // Load weekly insights
+    loadWeeklyInsights();
+    
+    // Load friends updates
+    loadFriendsUpdates();
+    
+    console.log('[USERFIX] Features initialized');
+}
+
+// Hook into existing login flow
+const originalShowDashboard = window.showDashboard;
+if (typeof originalShowDashboard === 'function') {
+    window.showDashboard = function() {
+        originalShowDashboard.apply(this, arguments);
+        setTimeout(initializeUserfixFeatures, 500);
+    };
+} else {
+    // If showDashboard doesn't exist, just call on page load when logged in
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard && dashboard.style.display !== 'none') {
+                initializeUserfixFeatures();
+            }
+        }, 1000);
+    });
+}
+
+// USERFIX-7 & 13: Onboarding Functions
+let selectedOnboardingOption = null;
+
+function selectOnboardingOption(option) {
+    selectedOnboardingOption = option;
+    
+    // Update button states
+    document.querySelectorAll('.onboarding-option-btn').forEach(btn => {
+        btn.classList.remove('selected');
+        if (btn.getAttribute('data-option') === option) {
+            btn.classList.add('selected');
+        }
+    });
+    
+    // Save the selection
+    localStorage.setItem('userOnboardingOption', option);
+    
+    // After a brief moment, proceed to dashboard
+    setTimeout(() => {
+        completeOnboarding();
+    }, 500);
+}
+
+function skipOnboarding() {
+    localStorage.setItem('userOnboardingOption', 'skipped');
+    completeOnboarding();
+}
+
+function showOnboarding() {
+    // Hide login/signup sections, show onboarding
+    const loginSection = document.getElementById('loginSection');
+    const signupSection = document.getElementById('signupSection');
+    const onboardingSection = document.getElementById('onboardingSection');
+    const forgotPasswordLinkContainer = document.getElementById('forgotPasswordLinkContainer');
+    const toggleAuthContainer = document.getElementById('toggleAuthContainer');
+    const authTitle = document.getElementById('authTitle');
+    
+    if (loginSection) loginSection.style.display = 'none';
+    if (signupSection) signupSection.style.display = 'none';
+    if (forgotPasswordLinkContainer) forgotPasswordLinkContainer.style.display = 'none';
+    if (toggleAuthContainer) toggleAuthContainer.style.display = 'none';
+    if (onboardingSection) onboardingSection.style.display = 'block';
+    if (authTitle) authTitle.textContent = 'Welcome!';
+}
+
+function completeOnboarding() {
+    // Hide auth container, show dashboard
+    const authContainer = document.getElementById('authContainer');
+    const dashboard = document.getElementById('dashboard');
+    
+    if (authContainer) authContainer.style.display = 'none';
+    if (dashboard) dashboard.style.display = 'block';
+    
+    // Initialize USERFIX features
+    setTimeout(initializeUserfixFeatures, 500);
+    
+    // Show appropriate content based on selection
+    const option = localStorage.getItem('userOnboardingOption');
+    if (option === 'track_own') {
+        // Navigate to diary view
+        if (typeof showView === 'function') showView('tracking');
+    } else if (option === 'support_loved') {
+        // Navigate to following view
+        if (typeof showView === 'function') showView('following');
+    } else if (option === 'recovery') {
+        // Stay on home view, show streak
+        if (typeof showView === 'function') showView('home');
+    }
+}
+
+// USERFIX-5: Apply caring nudge styling to trigger alerts
+function applyCaringNudgeStyling() {
+    // Find existing trigger alert elements and apply caring nudge classes
+    const alertCards = document.querySelectorAll('.alert-card, .trigger-alert, [data-alert-type="trigger"]');
+    alertCards.forEach(card => {
+        if (!card.classList.contains('caring-nudge-card')) {
+            card.classList.add('caring-nudge-card');
+        }
+    });
+}
+
+// USERFIX-11: Format last seen for Following list
+function formatLastSeen(lastLoginDate) {
+    if (!lastLoginDate) return { text: 'Unknown', isRecent: false };
+    
+    const lastLogin = new Date(lastLoginDate);
+    const now = new Date();
+    const diffMs = now - lastLogin;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    let text;
+    let isRecent = false;
+    
+    if (diffDays === 0) {
+        text = 'Today';
+        isRecent = true;
+    } else if (diffDays === 1) {
+        text = 'Yesterday';
+        isRecent = true;
+    } else if (diffDays < 7) {
+        text = `${diffDays} days ago`;
+    } else if (diffDays < 30) {
+        text = `${Math.floor(diffDays / 7)} weeks ago`;
+    } else {
+        text = `${Math.floor(diffDays / 30)} months ago`;
+    }
+    
+    return { text, isRecent };
+}
+
+// USERFIX-11: Add last seen indicator to user cards in Following list
+function addLastSeenToFollowingList() {
+    // Hook into the existing renderFollowingList or similar function
+    const followingItems = document.querySelectorAll('.following-item, .user-card');
+    followingItems.forEach(item => {
+        const lastLogin = item.getAttribute('data-last-login');
+        if (lastLogin && !item.querySelector('.last-seen-indicator')) {
+            const { text, isRecent } = formatLastSeen(lastLogin);
+            const indicator = document.createElement('div');
+            indicator.className = `last-seen-indicator ${isRecent ? 'recent' : ''}`;
+            indicator.innerHTML = `
+                <span class="last-seen-dot ${isRecent ? 'recent' : ''}"></span>
+                ${text}
+            `;
+            item.appendChild(indicator);
+        }
+    });
+}
+
+// USERFIX-12: Hook trigger confirmation into existing trigger handlers
+function hookTriggerConfirmation() {
+    // Override the default trigger response function if it exists
+    const originalSendTriggerResponse = window.sendTriggerResponse;
+    
+    window.sendTriggerResponse = function(userId, message) {
+        showTriggerConfirmation(
+            `Send a caring message to this person?`,
+            function() {
+                if (originalSendTriggerResponse) {
+                    originalSendTriggerResponse(userId, message);
+                } else {
+                    // Default behavior: open messages view with user
+                    if (typeof selectConversation === 'function') {
+                        selectConversation(userId);
+                    }
+                    const messageInput = document.getElementById('messageInput');
+                    if (messageInput) {
+                        messageInput.value = message || MESSAGE_TEMPLATES.thinking;
+                        messageInput.disabled = false;
+                    }
+                    if (typeof showView === 'function') showView('messages');
+                }
+            }
+        );
+    };
+}
+
+// Enhanced initialization to include all USERFIX features
+const originalInitializeUserfixFeatures = window.initializeUserfixFeatures || initializeUserfixFeatures;
+window.initializeUserfixFeatures = function() {
+    console.log('[USERFIX] Initializing all features...');
+    
+    // Call original
+    if (typeof originalInitializeUserfixFeatures === 'function' && 
+        originalInitializeUserfixFeatures !== window.initializeUserfixFeatures) {
+        originalInitializeUserfixFeatures();
+    } else {
+        // Core features
+        updateStreakDisplay();
+        generateHeatmap();
+        loadWeeklyInsights();
+        loadFriendsUpdates();
+    }
+    
+    // Additional USERFIX features
+    applyCaringNudgeStyling();
+    hookTriggerConfirmation();
+    
+    // Periodically check for new Following list items and add last-seen
+    setInterval(addLastSeenToFollowingList, 2000);
+    
+    console.log('[USERFIX] All features initialized');
+};
+
+// Make functions globally available
+// USERFIX-5: Send caring message from wellness alert
+function sendCaringMessage(alertId) {
+    // Show confirmation dialog using USERFIX-12
+    showTriggerConfirmation(
+        'Would you like to send an encouraging message?',
+        function() {
+            // Navigate to messages view
+            if (typeof showView === 'function') showView('messages');
+            
+            // Pre-fill with caring template
+            const messageInput = document.getElementById('messageInput');
+            if (messageInput) {
+                messageInput.value = MESSAGE_TEMPLATES.thinking;
+                messageInput.disabled = false;
+            }
+            const sendBtn = document.getElementById('sendMessageBtn');
+            if (sendBtn) sendBtn.disabled = false;
+            
+            // Dismiss the alert
+            if (typeof dismissAlert === 'function') {
+                const alertEl = document.querySelector(`[data-alert-id="${alertId}"]`);
+                if (alertEl) dismissAlert(alertId, alertEl);
+            }
+        }
+    );
+}
+
+window.toggleDarkMode = toggleDarkMode;
+window.openQuickCheckin = openQuickCheckin;
+window.closeQuickCheckin = closeQuickCheckin;
+window.submitQuickCheckin = submitQuickCheckin;
+window.insertMessageTemplate = insertMessageTemplate;
+window.showTriggerConfirmation = showTriggerConfirmation;
+window.updateStreakDisplay = updateStreakDisplay;
+window.generateHeatmap = generateHeatmap;
+window.loadWeeklyInsights = loadWeeklyInsights;
+window.loadFriendsUpdates = loadFriendsUpdates;
+window.selectOnboardingOption = selectOnboardingOption;
+window.skipOnboarding = skipOnboarding;
+window.showOnboarding = showOnboarding;
+window.completeOnboarding = completeOnboarding;
+window.formatLastSeen = formatLastSeen;
+window.addLastSeenToFollowingList = addLastSeenToFollowingList;
+window.applyCaringNudgeStyling = applyCaringNudgeStyling;
+window.sendCaringMessage = sendCaringMessage;
+</script>
+
+<!-- V1V2: New feature scripts -->
+<script>
+// ===== V1V2: TOP NAVIGATION BAR HANDLER =====
+document.querySelectorAll('.top-nav-item').forEach(item => {
+    item.addEventListener('click', async (e) => {
+        const view = item.dataset.view;
+        if (!view) return;
+        // Let onclick handlers for circles/tracking/invite run first
+        if (view === 'circles' || view === 'tracking' || view === 'invite') return;
+        showView(view);
+    });
+});
+
+// ===== V1V2: MY SUMMARY STATUS =====
+async function loadMySummaryStatus() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch(`/api/parameters?date=${today}`, { credentials: 'include' });
+        if (!response.ok) return;
+        const result = await response.json();
+        const data = (result.data && result.data.parameters) ? result.data.parameters : result;
+        
+        const mood = data.mood || 0;
+        const energy = data.energy || 0;
+        const sleep = data.sleep_quality || data.sleep || 0;
+        const anxiety = data.anxiety || 0;
+        
+        document.getElementById('summaryMood').textContent = mood > 0 ? mood + '/4' : '--';
+        document.getElementById('summaryEnergy').textContent = energy > 0 ? energy + '/4' : '--';
+        document.getElementById('summarySleep').textContent = sleep > 0 ? sleep + '/4' : '--';
+        document.getElementById('summaryAnxiety').textContent = anxiety > 0 ? anxiety + '/4' : '--';
+        
+        if (mood > 0 || energy > 0) {
+            const t = window.i18n ? window.i18n.translate : (k) => k;
+            document.getElementById('summaryLastUpdate').textContent = t('home.updated_today') || 'Updated today';
+        } else {
+            const t = window.i18n ? window.i18n.translate : (k) => k;
+            document.getElementById('summaryLastUpdate').textContent = t('home.not_updated') || 'Not updated yet today — tap Update Diary!';
+        }
+        
+        // V1V2: Update recommendations based on data
+        updateRecommendations(data);
+    } catch (err) {
+        console.log('Could not load summary status:', err);
+    }
+}
+
+// ===== V1V2: RECOMMENDATIONS FOR TODAY =====
+function updateRecommendations(todayData) {
+    const container = document.getElementById('recommendationsList');
+    if (!container) return;
+    
+    const recs = [];
+    const mood = todayData.mood_rating || todayData.mood || null;
+    const energy = todayData.energy_level || todayData.energy || null;
+    const sleep = todayData.sleep_quality || todayData.sleep || null;
+    const anxiety = todayData.anxiety_level || todayData.anxiety || null;
+    
+    // If no data yet, show default recommendations
+    if (!mood && !energy && !sleep && !anxiety) {
+        return; // Keep default static recommendations
+    }
+    
+    // Dynamic recommendations based on today's data
+    if (mood && mood <= 2) {
+        recs.push({ icon: '🌈', title: 'home.rec_mood_low', titleFb: 'Boost Your Mood', desc: 'home.rec_mood_low_desc', descFb: 'Try reaching out to a friend or doing something you enjoy today.' });
+    }
+    if (energy && energy <= 2) {
+        recs.push({ icon: '⚡', title: 'home.rec_energy_low', titleFb: 'Recharge', desc: 'home.rec_energy_low_desc', descFb: 'Consider a power nap or a short walk outdoors to restore energy.' });
+    }
+    if (sleep && sleep <= 2) {
+        recs.push({ icon: '😴', title: 'home.rec_sleep_low', titleFb: 'Improve Sleep Tonight', desc: 'home.rec_sleep_low_desc', descFb: 'Try reducing screen time 1 hour before bed and keep a consistent sleep schedule.' });
+    }
+    if (anxiety && anxiety >= 3) {
+        recs.push({ icon: '🧘', title: 'home.rec_anxiety_high', titleFb: 'Calm Your Mind', desc: 'home.rec_anxiety_high_desc', descFb: 'Try a 5-minute breathing exercise or progressive muscle relaxation.' });
+    }
+    
+    // Always add a positive recommendation
+    if (mood && mood >= 3) {
+        recs.push({ icon: '🎉', title: 'home.rec_mood_good', titleFb: 'Keep It Up!', desc: 'home.rec_mood_good_desc', descFb: 'Great mood today! Consider sharing some positivity with someone you care about.' });
+    }
+    
+    // Default catch-all
+    if (recs.length === 0) {
+        recs.push({ icon: '✨', title: 'home.rec_general', titleFb: 'You\'re Doing Well', desc: 'home.rec_general_desc', descFb: 'Maintain your routine and keep tracking daily for the best insights.' });
+    }
+    
+    const t = window.i18n ? window.i18n.translate : null;
+    container.innerHTML = recs.map(r => `
+        <div class="recommendation-item" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; background: var(--white); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+            <span style="font-size: 24px;">${r.icon}</span>
+            <div>
+                <strong style="color: var(--dark);">${t ? (t(r.title) !== r.title ? t(r.title) : r.titleFb) : r.titleFb}</strong>
+                <p style="color: var(--gray); font-size: 13px; margin-top: 4px;">${t ? (t(r.desc) !== r.desc ? t(r.desc) : r.descFb) : r.descFb}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ===== V1V2: SETTINGS VIEW =====
+async function loadSettingsView() {
+    try {
+        // Load current user profile data
+        const response = await fetch('/api/auth/session', { credentials: 'include' });
+        if (!response.ok) return;
+        const data = await response.json();
+        const user = data.user || data;
+        
+        const displayName = document.getElementById('settingsDisplayName');
+        const bio = document.getElementById('settingsBio');
+        const langSelect = document.getElementById('settingsLanguageSelect');
+        
+        if (displayName) displayName.value = user.username || '';
+        if (langSelect) langSelect.value = user.preferred_language || user.language || 'en';
+        
+        // Load profile bio
+        try {
+            const profileResp = await fetch('/api/profile', { credentials: 'include' });
+            if (profileResp.ok) {
+                const profileData = await profileResp.json();
+                if (bio) bio.value = profileData.bio || '';
+            }
+        } catch(e) { /* ignore */ }
+        
+        // Sync notification toggles
+        try {
+            const notifResp = await fetch('/api/notification-settings', { credentials: 'include' });
+            if (notifResp.ok) {
+                const notifData = await notifResp.json();
+                const alertToggle = document.getElementById('settingsAlertEmail');
+                const notifToggle = document.getElementById('settingsNotifEmail');
+                const diaryToggle = document.getElementById('settingsDiaryReminder');
+                if (alertToggle) alertToggle.checked = notifData.email_on_alert || false;
+                if (notifToggle) notifToggle.checked = notifData.email_on_notification || false;
+                if (diaryToggle) diaryToggle.checked = notifData.diary_reminder_email || false;
+            }
+        } catch(e) { /* ignore */ }
+    } catch (err) {
+        console.error('Error loading settings:', err);
+    }
+}
+
+async function saveProfileSettings() {
+    const displayName = document.getElementById('settingsDisplayName').value.trim();
+    const bio = document.getElementById('settingsBio').value.trim();
+    
+    try {
+        // Update username if changed
+        if (displayName && currentUser && displayName !== currentUser.username) {
+            const resp = await fetch('/api/auth/set-username', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ username: displayName })
+            });
+            if (resp.ok) {
+                currentUser.username = displayName;
+            }
+        }
+        
+        // Update bio
+        await fetch('/api/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ bio: bio })
+        });
+        
+        showNotification('Settings saved!', 'success');
+    } catch (err) {
+        showNotification('Error saving settings', 'error');
+    }
+}
+
+function changeSettingsLanguage(lang) {
+    if (window.i18n) {
+        window.i18n.setLanguage(lang);
+        window.i18n.applyLanguage();
+    }
+    // Also update backend
+    fetch('/api/user/language', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ language: lang })
+    }).catch(e => console.error('Language update error:', e));
+}
+
+// ===== V1V2: CONNECTIONS VIEW =====
+let connectionsData = { following: [], followers: [] };
+let selectedConnectionId = null;
+
+async function loadConnectionsView() {
+    try {
+        // Load following (my connections)
+        const followingResp = await fetch('/api/following', { credentials: 'include' });
+        if (followingResp.ok) {
+            const followingData = await followingResp.json();
+            connectionsData.following = followingData.following || [];
+            renderConnectionsList(connectionsData.following);
+        }
+        
+        // Load recommendations
+        const recsResp = await fetch('/api/recommendations', { credentials: 'include' });
+        if (recsResp.ok) {
+            const recsData = await recsResp.json();
+            renderRecommendedConnections(recsData.recommendations || []);
+        }
+    } catch (err) {
+        console.error('Error loading connections:', err);
+    }
+}
+
+function renderConnectionsList(connections) {
+    const container = document.getElementById('connectionsListContainer');
+    if (!container) return;
+    
+    if (connections.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: var(--gray);">
+                <span style="font-size: 40px; display: block; margin-bottom: 12px;">🤝</span>
+                <p data-i18n="connections.no_connections">No connections yet. Search for people or check recommendations below!</p>
+            </div>`;
+        return;
+    }
+    
+    container.innerHTML = connections.map(conn => `
+        <div onclick="showConnectionInfo(${conn.id}, '${(conn.username || '').replace(/'/g, "\\'")}', '${conn.status || 'connected'}')" 
+             style="display: flex; align-items: center; justify-content: space-between; padding: 14px; margin-bottom: 8px; background: var(--white); border-radius: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.05);"
+             onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">
+                    ${(conn.username || '?')[0].toUpperCase()}
+                </div>
+                <div>
+                    <div style="font-weight: 600; color: var(--dark);">${escapeHtml(conn.username || 'User')}</div>
+                    <div style="font-size: 12px; color: var(--gray);">${conn.last_seen ? formatLastSeen(conn.last_seen) : ''}</div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button onclick="event.stopPropagation(); messageConnectionDirect(${conn.id}, '${(conn.username || '').replace(/'/g, "\\'")}')" 
+                        style="background: var(--primary); color: white; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px;" data-i18n="connections.message">Message</button>
+                <span style="font-size: 18px; color: var(--gray);">›</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderRecommendedConnections(recommendations) {
+    const container = document.getElementById('recommendedConnectionsContainer');
+    if (!container) return;
+    
+    if (recommendations.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: var(--gray);">
+                <p data-i18n="connections.no_recommendations">No recommendations at this time. Try inviting friends!</p>
+            </div>`;
+        return;
+    }
+    
+    container.innerHTML = recommendations.map(rec => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px; margin-bottom: 8px; background: var(--white); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #9DB8A0, #7A9E7D); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">
+                    ${(rec.username || '?')[0].toUpperCase()}
+                </div>
+                <div>
+                    <div style="font-weight: 600; color: var(--dark);">${escapeHtml(rec.username || 'User')}</div>
+                </div>
+            </div>
+            <button onclick="sendFollowRequestFromConnections(${rec.id})" 
+                    style="background: linear-gradient(135deg, var(--warm-coral), var(--warm-terracotta)); color: white; border: none; border-radius: 20px; padding: 8px 18px; cursor: pointer; font-size: 13px; font-weight: 600;" data-i18n="connections.add">+ Add</button>
+        </div>
+    `).join('');
+}
+
+// Search connections
+let searchTimeout = null;
+async function searchConnections(query) {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    const resultsContainer = document.getElementById('connectionSearchResults');
+    
+    if (!query || query.length < 2) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+    
+    searchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+            if (!response.ok) return;
+            const data = await response.json();
+            const users = data.users || [];
+            
+            if (users.length === 0) {
+                resultsContainer.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--gray);">No users found</div>';
+            } else {
+                resultsContainer.innerHTML = users.map(u => `
+                    <div onclick="showConnectionInfo(${u.id}, '${(u.username || '').replace(/'/g, "\\'")}')" 
+                         style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--light);"
+                         onmouseover="this.style.background='var(--light)'" onmouseout="this.style.background=''">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">
+                                ${(u.username || '?')[0].toUpperCase()}
+                            </div>
+                            <span style="font-weight: 500;">${escapeHtml(u.username || 'User')}</span>
+                        </div>
+                        <button onclick="event.stopPropagation(); sendFollowRequestFromConnections(${u.id})" 
+                                style="background: var(--primary); color: white; border: none; border-radius: 16px; padding: 6px 14px; cursor: pointer; font-size: 12px;">+ Add</button>
+                    </div>
+                `).join('');
+            }
+            resultsContainer.style.display = 'block';
+        } catch (err) {
+            console.error('Search error:', err);
+        }
+    }, 300);
+}
+
+// Connection Info Modal
+function showConnectionInfo(userId, username, status) {
+    selectedConnectionId = userId;
+    document.getElementById('connectionInfoName').textContent = username;
+    const statusBadge = document.getElementById('connectionStatusBadge');
+    statusBadge.innerHTML = `<span style="padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 600; background: #9DB8A0; color: white;">Connected</span>`;
+    document.getElementById('connectionInfoModal').style.display = 'flex';
+}
+
+function closeConnectionInfo() {
+    document.getElementById('connectionInfoModal').style.display = 'none';
+    selectedConnectionId = null;
+}
+
+function messageConnection() {
+    if (!selectedConnectionId) return;
+    closeConnectionInfo();
+    // Find username from connections data
+    const conn = connectionsData.following.find(c => c.id === selectedConnectionId);
+    if (conn) {
+        loadMessages(selectedConnectionId, conn.username);
+        showView('messages');
+    }
+}
+
+function messageConnectionDirect(userId, username) {
+    loadMessages(userId, username);
+    showView('messages');
+}
+
+function toggleConnectionTracking() {
+    if (!selectedConnectionId) return;
+    showNotification('Tracking alerts configured for this connection.', 'success');
+    closeConnectionInfo();
+}
+
+async function removeConnection() {
+    if (!selectedConnectionId) return;
+    if (!confirm('Are you sure you want to remove this connection?')) return;
+    try {
+        await fetch(`/api/unfollow/${selectedConnectionId}`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        showNotification('Connection removed', 'info');
+        closeConnectionInfo();
+        loadConnectionsView();
+    } catch (err) {
+        showNotification('Error removing connection', 'error');
+    }
+}
+
+async function sendFollowRequestFromConnections(userId) {
+    try {
+        const response = await fetch('/api/follow-requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ target_id: userId })
+        });
+        const data = await response.json();
+        if (data.message) {
+            showNotification('Connection request sent!', 'success');
+        } else {
+            showNotification(data.error || 'Failed to send request', 'error');
+        }
+    } catch (err) {
+        showNotification('Error sending request', 'error');
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===== V1V2: Load summary on home view =====
+// Patch into existing home load
+const originalInitFeedCalendar = typeof initFeedCalendar === 'function' ? initFeedCalendar : null;
+const homeViewObserver = new MutationObserver(() => {
+    const homeView = document.getElementById('homeView');
+    if (homeView && !homeView.classList.contains('hidden')) {
+        loadMySummaryStatus();
+    }
+});
+const homeViewEl = document.getElementById('homeView');
+if (homeViewEl) {
+    homeViewObserver.observe(homeViewEl, { attributes: true, attributeFilter: ['class'] });
+    // Also load on initial page load if home is visible
+    if (!homeViewEl.classList.contains('hidden')) {
+        setTimeout(loadMySummaryStatus, 500);
+    }
+}
+
+// Export new functions
+window.loadMySummaryStatus = loadMySummaryStatus;
+window.updateRecommendations = updateRecommendations;
+window.loadSettingsView = loadSettingsView;
+window.saveProfileSettings = saveProfileSettings;
+window.changeSettingsLanguage = changeSettingsLanguage;
+window.loadConnectionsView = loadConnectionsView;
+window.searchConnections = searchConnections;
+window.showConnectionInfo = showConnectionInfo;
+window.closeConnectionInfo = closeConnectionInfo;
+window.messageConnection = messageConnection;
+window.messageConnectionDirect = messageConnectionDirect;
+window.toggleConnectionTracking = toggleConnectionTracking;
+window.removeConnection = removeConnection;
+window.sendFollowRequestFromConnections = sendFollowRequestFromConnections;
+window.requestMagicLinkFromForgot = requestMagicLinkFromForgot;
+window.escapeHtml = escapeHtml;
 </script>
 
 </body>
