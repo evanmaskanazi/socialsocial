@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version USERFIX - Added USERFIX translations: onboarding (set_your_why, track_own, support_loved, recovery), streak, heatmap, quick check-in, insights, feed.friends_updates, message templates, gratitude field
 // Version PL410 LINK2 - Same as PL409 (no i18n changes for consent fix)
 // Version PL409 LINK FIX - Added home.data_export, home.data_export_desc, home.data_rights, home.data_rights_detail, home.export_data_btn translations
 // Version PL406 - Added invite.search_users and invite.search_placeholder translations for all languages
@@ -129,6 +130,56 @@ const translations = {
         'onboarding.skip': 'Skip Tour',
         'onboarding.finish': 'Get Started',
         'onboarding.dont_show': "Don't show this tour again",
+        
+        // USERFIX-7 & 13: "Set Your Why" Onboarding
+        'onboarding.set_your_why': 'Set Your Why',
+        'onboarding.why_description': 'What brings you to TheraSocial? This helps us personalize your experience.',
+        'onboarding.track_own': 'Track my own wellness',
+        'onboarding.track_own_desc': 'Monitor mood, sleep, energy & build healthy habits',
+        'onboarding.support_loved': 'Support a loved one',
+        'onboarding.support_loved_desc': 'Stay connected & get alerts when they need you',
+        'onboarding.recovery': 'Recovery journey',
+        'onboarding.recovery_desc': 'Track progress & celebrate small wins',
+        
+        // USERFIX-2: Streak & Heatmap
+        'streak.day_streak': 'Day Streak',
+        'streak.keep_going': 'Keep it going!',
+        'streak.new_record': 'New record!',
+        'heatmap.activity_history': 'Activity History',
+        'heatmap.less': 'Less',
+        'heatmap.more': 'More',
+        
+        // USERFIX-3: Quick Check-In
+        'quick.title': 'Quick Check-In',
+        'quick.save': 'Save Check-In',
+        
+        // USERFIX-4: Progress Insights
+        'insights.weekly_summary': 'Weekly Summary',
+        'insights.avg_mood': 'Avg Mood',
+        'insights.tip': 'Tip',
+        'insights.default_text': 'Track daily to see your patterns',
+        'insights.default_tip': 'Complete your daily check-in!',
+        'progress.insights_title': 'Your Insights',
+        'progress.loading_insights': 'Loading insights...',
+        'progress.total_checkins': 'Total Check-ins',
+        'progress.daily_checkin': 'Daily Check-in',
+        'progress.update': 'Update',
+        'parameters.insights': 'Insights',
+        
+        // USERFIX-1: Friends Updates Feed
+        'feed.friends_updates': "Friends' Updates",
+        'feed.no_updates': 'No updates from friends yet',
+        
+        // USERFIX-6: Message Templates
+        'messages.quick_replies': 'Quick replies:',
+        'messages.template_thinking': 'Thinking of you 💙',
+        'messages.template_here': 'Here if you need to talk 🤗',
+        'messages.template_coffee': 'Want to catch up? ☕',
+        'messages.template_proud': 'Proud of you! 🌟',
+        
+        // USERFIX-9: Gratitude Field
+        'gratitude.label': 'One Good Thing Today',
+        'gratitude.optional': '(optional)',
 
         // Common buttons
         'btn.signin': 'Sign In',
@@ -487,6 +538,63 @@ const translations = {
         'parameters.saved': 'Diary saved successfully',
         'parameters.loaded': 'Loaded diary from',
         'menu.diary': 'Diary',
+// V1V2: New menu items
+'menu.settings': 'Settings',
+'menu.connections': 'Connections',
+// V1V2: Home summary status
+'home.my_status': 'My Status Today',
+'home.update_diary': '📊 Update Diary',
+'home.updated_today': 'Updated today',
+'home.not_updated': 'Not updated yet today — tap Update Diary!',
+// V1V2: Recommendations
+'home.recommendations_title': 'Recommendations for Today',
+'home.rec_hydrate': 'Stay Hydrated',
+'home.rec_hydrate_desc': 'Try to drink at least 8 glasses of water today.',
+'home.rec_move': 'Get Moving',
+'home.rec_move_desc': 'Even a 15-minute walk can boost your mood and energy.',
+'home.rec_journal': 'Check In With Yourself',
+'home.rec_journal_desc': 'Take a moment to update your diary and reflect on how you\'re feeling.',
+'home.rec_mood_low': 'Boost Your Mood',
+'home.rec_mood_low_desc': 'Try reaching out to a friend or doing something you enjoy today.',
+'home.rec_energy_low': 'Recharge',
+'home.rec_energy_low_desc': 'Consider a power nap or a short walk outdoors to restore energy.',
+'home.rec_sleep_low': 'Improve Sleep Tonight',
+'home.rec_sleep_low_desc': 'Try reducing screen time 1 hour before bed and keep a consistent sleep schedule.',
+'home.rec_anxiety_high': 'Calm Your Mind',
+'home.rec_anxiety_high_desc': 'Try a 5-minute breathing exercise or progressive muscle relaxation.',
+'home.rec_mood_good': 'Keep It Up!',
+'home.rec_mood_good_desc': 'Great mood today! Consider sharing some positivity with someone you care about.',
+'home.rec_general': 'You\'re Doing Well',
+'home.rec_general_desc': 'Maintain your routine and keep tracking daily for the best insights.',
+// V1V2: Settings
+'settings.profile_title': 'Profile Settings',
+'settings.display_name': 'Display Name',
+'settings.bio': 'Bio',
+'settings.language': 'Language',
+'settings.email_notifications': 'Email Notifications',
+'settings.alert_emails': 'Wellness Alert Emails',
+'settings.alert_emails_desc': 'Receive email when concerning patterns are detected',
+'settings.notification_emails': 'Notification Emails',
+'settings.notification_emails_desc': 'Receive email for new messages, followers, invites',
+'settings.diary_reminder': 'Diary Reminder',
+'settings.diary_reminder_desc': 'Get daily reminders to fill in your diary',
+'settings.account': 'Account',
+// V1V2: Connections
+'connections.search_placeholder': 'Search for connections by name or email...',
+'connections.my_connections': 'My Connections',
+'connections.recommended': 'Recommended Connections',
+'connections.loading': 'Loading connections...',
+'connections.loading_recommended': 'Loading recommendations...',
+'connections.no_connections': 'No connections yet. Search for people or check recommendations below!',
+'connections.no_recommendations': 'No recommendations at this time. Try inviting friends!',
+'connections.add': '+ Add',
+'connections.message': 'Message',
+'connections.send_message': 'Message',
+'connections.track_alerts': 'Track Alerts',
+'connections.remove': 'Remove',
+'connections.status': 'Connection Status',
+// V1V2: Magic link
+'auth.magic_link_login': 'Send me a magic link to sign in instead',
 'progress.title': 'Your Progress',
 'progress.view_progress': 'View Progress:',
 'progress.last_7_days': 'Last 7 days',
@@ -1043,6 +1151,56 @@ const translations = {
         'onboarding.skip': 'דלג על הסיור',
         'onboarding.finish': 'התחל',
         'onboarding.dont_show': 'אל תציג סיור זה שוב',
+        
+        // USERFIX-7 & 13: "Set Your Why" Onboarding
+        'onboarding.set_your_why': 'הגדר את הסיבה שלך',
+        'onboarding.why_description': 'מה מביא אותך ל-TheraSocial? זה עוזר לנו להתאים את החוויה שלך.',
+        'onboarding.track_own': 'לעקוב אחרי הבריאות שלי',
+        'onboarding.track_own_desc': 'לנטר מצב רוח, שינה, אנרגיה ולבנות הרגלים בריאים',
+        'onboarding.support_loved': 'לתמוך באדם אהוב',
+        'onboarding.support_loved_desc': 'להישאר מחובר ולקבל התראות כשהם צריכים אותך',
+        'onboarding.recovery': 'מסע החלמה',
+        'onboarding.recovery_desc': 'לעקוב אחרי התקדמות ולחגוג ניצחונות קטנים',
+        
+        // USERFIX-2: Streak & Heatmap
+        'streak.day_streak': 'רצף ימים',
+        'streak.keep_going': 'המשך כך!',
+        'streak.new_record': 'שיא חדש!',
+        'heatmap.activity_history': 'היסטוריית פעילות',
+        'heatmap.less': 'פחות',
+        'heatmap.more': 'יותר',
+        
+        // USERFIX-3: Quick Check-In
+        'quick.title': 'צ\'ק-אין מהיר',
+        'quick.save': 'שמור צ\'ק-אין',
+        
+        // USERFIX-4: Progress Insights
+        'insights.weekly_summary': 'סיכום שבועי',
+        'insights.avg_mood': 'מצב רוח ממוצע',
+        'insights.tip': 'טיפ',
+        'insights.default_text': 'עקוב יומי כדי לראות את הדפוסים שלך',
+        'insights.default_tip': 'השלם את הצ\'ק-אין היומי שלך!',
+        'progress.insights_title': 'התובנות שלך',
+        'progress.loading_insights': 'טוען תובנות...',
+        'progress.total_checkins': 'סה"כ צ\'ק-אינים',
+        'progress.daily_checkin': 'צ\'ק-אין יומי',
+        'progress.update': 'עדכן',
+        'parameters.insights': 'תובנות',
+        
+        // USERFIX-1: Friends Updates Feed
+        'feed.friends_updates': 'עדכוני חברים',
+        'feed.no_updates': 'אין עדיין עדכונים מחברים',
+        
+        // USERFIX-6: Message Templates
+        'messages.quick_replies': 'תשובות מהירות:',
+        'messages.template_thinking': 'חושב עליך 💙',
+        'messages.template_here': 'כאן אם אתה צריך לדבר 🤗',
+        'messages.template_coffee': 'רוצה להתעדכן? ☕',
+        'messages.template_proud': 'גאה בך! 🌟',
+        
+        // USERFIX-9: Gratitude Field
+        'gratitude.label': 'דבר טוב אחד היום',
+        'gratitude.optional': '(אופציונלי)',
 
         'parameters.positive1': "עבודה מדהימה! אתה עוקב אחר מסע הבריאות שלך בצורה יפהפייה! 💪",
         'parameters.positive2': "עבודה פנטסטית! המסירות שלך למודעות עצמית מעוררת השראה! ⭐",
@@ -1297,6 +1455,44 @@ const translations = {
 
 
         'menu.diary': 'יומן',
+// V1V2: Hebrew translations
+'menu.settings': 'הגדרות',
+'menu.connections': 'חיבורים',
+'home.my_status': 'המצב שלי היום',
+'home.update_diary': '📊 עדכן יומן',
+'home.updated_today': 'עודכן היום',
+'home.not_updated': 'לא עודכן עדיין היום — לחץ עדכן יומן!',
+'home.recommendations_title': 'המלצות להיום',
+'home.rec_hydrate': 'שתו מים',
+'home.rec_hydrate_desc': 'נסו לשתות לפחות 8 כוסות מים היום.',
+'home.rec_move': 'תזוזו',
+'home.rec_move_desc': 'אפילו הליכה של 15 דקות יכולה לשפר את מצב הרוח והאנרגיה.',
+'home.rec_journal': 'בדקו את עצמכם',
+'home.rec_journal_desc': 'קחו רגע לעדכן את היומן ולהרהר איך אתם מרגישים.',
+'settings.profile_title': 'הגדרות פרופיל',
+'settings.display_name': 'שם תצוגה',
+'settings.bio': 'אודות',
+'settings.language': 'שפה',
+'settings.email_notifications': 'התראות אימייל',
+'settings.alert_emails': 'אימייל התראות רווחה',
+'settings.alert_emails_desc': 'קבלו אימייל כשמזוהים דפוסים מדאיגים',
+'settings.notification_emails': 'אימייל התראות',
+'settings.notification_emails_desc': 'קבלו אימייל על הודעות חדשות, עוקבים, הזמנות',
+'settings.diary_reminder': 'תזכורת יומן',
+'settings.diary_reminder_desc': 'קבלו תזכורות יומיות למילוי היומן',
+'settings.account': 'חשבון',
+'connections.search_placeholder': 'חפשו חיבורים לפי שם או אימייל...',
+'connections.my_connections': 'החיבורים שלי',
+'connections.recommended': 'חיבורים מומלצים',
+'connections.no_connections': 'אין חיבורים עדיין. חפשו אנשים או בדקו את ההמלצות למטה!',
+'connections.no_recommendations': 'אין המלצות כרגע. נסו להזמין חברים!',
+'connections.add': '+ הוסף',
+'connections.message': 'הודעה',
+'connections.send_message': 'הודעה',
+'connections.track_alerts': 'מעקב התראות',
+'connections.remove': 'הסר',
+'connections.status': 'סטטוס חיבור',
+'auth.magic_link_login': 'שלחו לי קישור קסם להתחברות במקום',
 'progress.title': 'ההתקדמות שלך',
 'progress.view_progress': 'צפה בהתקדמות:',
 'progress.last_7_days': '7 ימים אחרונים',
@@ -2020,6 +2216,56 @@ const translations = {
         'onboarding.skip': 'تخطي الجولة',
         'onboarding.finish': 'ابدأ',
         'onboarding.dont_show': 'لا تظهر هذه الجولة مرة أخرى',
+        
+        // USERFIX-7 & 13: "Set Your Why" Onboarding
+        'onboarding.set_your_why': 'حدد سببك',
+        'onboarding.why_description': 'ما الذي يجلبك إلى TheraSocial؟ هذا يساعدنا على تخصيص تجربتك.',
+        'onboarding.track_own': 'تتبع صحتي الخاصة',
+        'onboarding.track_own_desc': 'راقب المزاج والنوم والطاقة وبناء عادات صحية',
+        'onboarding.support_loved': 'دعم شخص عزيز',
+        'onboarding.support_loved_desc': 'ابق على اتصال واحصل على تنبيهات عندما يحتاجونك',
+        'onboarding.recovery': 'رحلة التعافي',
+        'onboarding.recovery_desc': 'تتبع التقدم واحتفل بالانتصارات الصغيرة',
+        
+        // USERFIX-2: Streak & Heatmap
+        'streak.day_streak': 'سلسلة الأيام',
+        'streak.keep_going': 'استمر!',
+        'streak.new_record': 'رقم قياسي جديد!',
+        'heatmap.activity_history': 'سجل النشاط',
+        'heatmap.less': 'أقل',
+        'heatmap.more': 'أكثر',
+        
+        // USERFIX-3: Quick Check-In
+        'quick.title': 'تسجيل سريع',
+        'quick.save': 'حفظ التسجيل',
+        
+        // USERFIX-4: Progress Insights
+        'insights.weekly_summary': 'ملخص أسبوعي',
+        'insights.avg_mood': 'متوسط المزاج',
+        'insights.tip': 'نصيحة',
+        'insights.default_text': 'تتبع يومياً لرؤية أنماطك',
+        'insights.default_tip': 'أكمل تسجيلك اليومي!',
+        'progress.insights_title': 'رؤاك',
+        'progress.loading_insights': 'جاري تحميل الرؤى...',
+        'progress.total_checkins': 'إجمالي التسجيلات',
+        'progress.daily_checkin': 'تسجيل يومي',
+        'progress.update': 'تحديث',
+        'parameters.insights': 'رؤى',
+        
+        // USERFIX-1: Friends Updates Feed
+        'feed.friends_updates': 'تحديثات الأصدقاء',
+        'feed.no_updates': 'لا توجد تحديثات من الأصدقاء بعد',
+        
+        // USERFIX-6: Message Templates
+        'messages.quick_replies': 'ردود سريعة:',
+        'messages.template_thinking': 'أفكر فيك 💙',
+        'messages.template_here': 'هنا إذا احتجت للتحدث 🤗',
+        'messages.template_coffee': 'هل تريد اللحاق؟ ☕',
+        'messages.template_proud': 'فخور بك! 🌟',
+        
+        // USERFIX-9: Gratitude Field
+        'gratitude.label': 'شيء جيد واحد اليوم',
+        'gratitude.optional': '(اختياري)',
 
              'parameters.positive1': "عمل رائع! أنت تتابع رحلتك الصحية بشكل جميل! 💪",
         'parameters.positive2': "عمل رائع! إخلاصك للوعي الذاتي ملهم! ⭐",
@@ -2289,6 +2535,27 @@ const translations = {
 'home.double_confirm': 'هذا هو تحذيرك الأخير. اكتب DELETE لتأكيد حذف الحساب.',
 
 'menu.diary': 'المذكرة',
+// V1V2: Arabic translations
+'menu.settings': 'الإعدادات',
+'menu.connections': 'الاتصالات',
+'home.my_status': 'حالتي اليوم',
+'home.update_diary': '📊 تحديث المذكرة',
+'home.updated_today': 'تم التحديث اليوم',
+'home.not_updated': 'لم يتم التحديث بعد اليوم',
+'home.recommendations_title': 'توصيات اليوم',
+'settings.profile_title': 'إعدادات الملف الشخصي',
+'settings.display_name': 'اسم العرض',
+'settings.bio': 'نبذة',
+'settings.language': 'اللغة',
+'settings.email_notifications': 'إشعارات البريد الإلكتروني',
+'settings.account': 'الحساب',
+'connections.search_placeholder': 'البحث عن اتصالات بالاسم أو البريد الإلكتروني...',
+'connections.my_connections': 'اتصالاتي',
+'connections.recommended': 'اتصالات مقترحة',
+'connections.add': '+ إضافة',
+'connections.message': 'رسالة',
+'connections.remove': 'إزالة',
+'auth.magic_link_login': 'أرسل لي رابطًا سحريًا لتسجيل الدخول بدلاً من ذلك',
 'progress.title': 'تقدمك',
 'progress.view_progress': 'عرض التقدم:',
 'progress.last_7_days': 'آخر 7 أيام',
@@ -3000,6 +3267,56 @@ const translations = {
         'onboarding.skip': 'Пропустить тур',
         'onboarding.finish': 'Начать',
         'onboarding.dont_show': 'Не показывать этот тур снова',
+        
+        // USERFIX-7 & 13: "Set Your Why" Onboarding
+        'onboarding.set_your_why': 'Определите свою цель',
+        'onboarding.why_description': 'Что привело вас в TheraSocial? Это поможет нам персонализировать ваш опыт.',
+        'onboarding.track_own': 'Отслеживать своё здоровье',
+        'onboarding.track_own_desc': 'Следите за настроением, сном, энергией и формируйте здоровые привычки',
+        'onboarding.support_loved': 'Поддержать близкого человека',
+        'onboarding.support_loved_desc': 'Оставайтесь на связи и получайте уведомления, когда им нужна помощь',
+        'onboarding.recovery': 'Путь восстановления',
+        'onboarding.recovery_desc': 'Отслеживайте прогресс и отмечайте маленькие победы',
+        
+        // USERFIX-2: Streak & Heatmap
+        'streak.day_streak': 'Дней подряд',
+        'streak.keep_going': 'Продолжайте!',
+        'streak.new_record': 'Новый рекорд!',
+        'heatmap.activity_history': 'История активности',
+        'heatmap.less': 'Меньше',
+        'heatmap.more': 'Больше',
+        
+        // USERFIX-3: Quick Check-In
+        'quick.title': 'Быстрая отметка',
+        'quick.save': 'Сохранить отметку',
+        
+        // USERFIX-4: Progress Insights
+        'insights.weekly_summary': 'Недельный обзор',
+        'insights.avg_mood': 'Среднее настроение',
+        'insights.tip': 'Совет',
+        'insights.default_text': 'Отмечайтесь ежедневно, чтобы увидеть паттерны',
+        'insights.default_tip': 'Завершите ежедневную отметку!',
+        'progress.insights_title': 'Ваши инсайты',
+        'progress.loading_insights': 'Загрузка инсайтов...',
+        'progress.total_checkins': 'Всего отметок',
+        'progress.daily_checkin': 'Ежедневная отметка',
+        'progress.update': 'Обновить',
+        'parameters.insights': 'Инсайты',
+        
+        // USERFIX-1: Friends Updates Feed
+        'feed.friends_updates': 'Обновления друзей',
+        'feed.no_updates': 'Пока нет обновлений от друзей',
+        
+        // USERFIX-6: Message Templates
+        'messages.quick_replies': 'Быстрые ответы:',
+        'messages.template_thinking': 'Думаю о тебе 💙',
+        'messages.template_here': 'Здесь, если нужно поговорить 🤗',
+        'messages.template_coffee': 'Хочешь поболтать? ☕',
+        'messages.template_proud': 'Горжусь тобой! 🌟',
+        
+        // USERFIX-9: Gratitude Field
+        'gratitude.label': 'Одна хорошая вещь сегодня',
+        'gratitude.optional': '(необязательно)',
 
           'parameters.positive1': "Потрясающая работа! Вы прекрасно отслеживаете свой путь к здоровью! 💪",
         'parameters.positive2': "Фантастическая работа! Ваша преданность самосознанию вдохновляет! ⭐",
@@ -3146,6 +3463,27 @@ const translations = {
     'auth.invalid_credentials': 'Вы ввели неверное имя пользователя или пароль',
 
     'menu.diary': 'Дневник',
+// V1V2: Russian translations
+'menu.settings': 'Настройки',
+'menu.connections': 'Связи',
+'home.my_status': 'Мой статус сегодня',
+'home.update_diary': '📊 Обновить дневник',
+'home.updated_today': 'Обновлено сегодня',
+'home.not_updated': 'Ещё не обновлено сегодня',
+'home.recommendations_title': 'Рекомендации на сегодня',
+'settings.profile_title': 'Настройки профиля',
+'settings.display_name': 'Отображаемое имя',
+'settings.bio': 'О себе',
+'settings.language': 'Язык',
+'settings.email_notifications': 'Уведомления по электронной почте',
+'settings.account': 'Аккаунт',
+'connections.search_placeholder': 'Поиск связей по имени или email...',
+'connections.my_connections': 'Мои связи',
+'connections.recommended': 'Рекомендуемые связи',
+'connections.add': '+ Добавить',
+'connections.message': 'Сообщение',
+'connections.remove': 'Удалить',
+'auth.magic_link_login': 'Отправить мне магическую ссылку для входа',
 'progress.title': 'Ваш прогресс',
 'progress.view_progress': 'Просмотр прогресса:',
 'progress.last_7_days': 'Последние 7 дней',
