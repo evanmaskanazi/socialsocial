@@ -224,16 +224,17 @@ Storage.prototype.setItem = function(key, value) {
     <script>
         console.log('Parameters page loading...');
 
-        // PJ6021: Override goHome function from parameters-social.js to prevent logout
-        // The original goHome was calling something that logged the user out
+        // V1 FIX 1: Override goHome/goToHome to navigate back to main app without logout
+        // Set a flag so index.html knows we're coming from diary (authenticated transition)
         window.goHome = function() {
             console.log('[DIARY] goHome called - navigating to main app');
+            sessionStorage.setItem('returning_from_diary', 'true');
             window.location.href = '/';
         };
         
-        // Also override any goToHome variant
         window.goToHome = function() {
             console.log('[DIARY] goToHome called - navigating to main app');
+            sessionStorage.setItem('returning_from_diary', 'true');
             window.location.href = '/';
         };
 

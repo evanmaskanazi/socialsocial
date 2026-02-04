@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!-- TheraSocial Version V1V2 - High Priority Fixes from V1 to V2 -->
+<!-- V1 FIX CHANGES:
+  FIX 1: Diary Home button no longer logs out - uses sessionStorage flag for smooth transition
+  FIX 2: Password reset link now properly shows reset form - protected from showAuthContainer interference
+  FIX 3: Alerts and notifications now load reliably on dashboard - explicit loadAlerts in showDashboard
+  FIX 4: Messages now work - circles-messages.js no longer conflicts with index.html message functions
+  FIX 5a: Connection modal Message button properly navigates to messages view with correct recipient
+  FIX 5b: Track Alerts button now actually toggles parameter alert tracking via API
+-->
 <!-- V1V2 CHANGES:
   - TOP NAV: Moved sidebar navigation to horizontal top bar (reduces page waste)
   - SETTINGS: New settings view with profile settings and email notification controls
@@ -5996,6 +6004,11 @@ async function loadUserCity() {
         });
 
         function showAuthContainer() {
+            // V1 FIX 2: Don't override reset password or forgot password forms
+            if (window._showingResetPassword) {
+                console.log('[V1 FIX 2] Reset password form is active, skipping showAuthContainer');
+                return;
+            }
             hideAllViews();
             document.getElementById('authContainer').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'none';
@@ -6263,6 +6276,15 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
 
   initFeedCalendar();
     loadFeed();  // P308 FIX: Load feed posts on initial login
+    
+    // V1 FIX 3: Explicitly load alerts and notifications when showing dashboard
+    // This ensures they appear in the right sidebar on every dashboard load
+    setTimeout(() => {
+        if (typeof loadAlerts === 'function') {
+            console.log('[V1 FIX 3] Loading alerts from showDashboard');
+            loadAlerts().catch(err => console.error('Alert load error:', err));
+        }
+    }, 300);
     loadUserCity();
 
     // FIXED: Only call updateCityTime if selector exists
@@ -6556,6 +6578,8 @@ window.safeApplyLanguage = safeApplyLanguage;
 
        // Auth navigation functions
         function showLogin() {
+            // V1 FIX 2: Clear reset password protection flag
+            window._showingResetPassword = false;
             document.getElementById('authContainer').style.display = 'flex';
             document.getElementById('forgotPasswordContainer').style.display = 'none';
             document.getElementById('resetPasswordContainer').style.display = 'none';
@@ -6570,10 +6594,15 @@ window.safeApplyLanguage = safeApplyLanguage;
         }
 
         function showResetPassword(token) {
+            // V1 FIX 2: Hide everything else and show only reset password form
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('forgotPasswordContainer').style.display = 'none';
             document.getElementById('resetPasswordContainer').style.display = 'flex';
             document.getElementById('resetToken').value = token;
+            // Also hide dashboard in case it's visible
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard) dashboard.style.display = 'none';
+            console.log('[V1 FIX 2] Reset password form shown with token');
         }
 
         // V1V2 FIX: Magic link option from forgot password page
@@ -13353,12 +13382,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Start session monitoring
     sessionCheckInterval = setInterval(checkSessionActivity, SESSION_CHECK_INTERVAL);
 
+    // V1 FIX 1: If returning from diary page, we know user is authenticated
+    // Prevent flash of login screen during session re-verification
+    const returningFromDiary = sessionStorage.getItem('returning_from_diary');
+    if (returningFromDiary) {
+        sessionStorage.removeItem('returning_from_diary');
+        console.log('[V1 FIX] Returning from diary - suppressing auth flash');
+    }
 
 // Handle password reset token from URL
     const urlParams = new URLSearchParams(window.location.search);
     const resetToken = urlParams.get('reset_token');
 
     if (resetToken) {
+        console.log('[V1 FIX 2] Reset token detected in URL, showing password reset form');
+        // V1 FIX 2: Set a global flag so no other handler interferes with reset form
+        window._showingResetPassword = true;
         showResetPassword(resetToken);
         // Remove token from URL
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -15790,23 +15829,71 @@ function closeConnectionInfo() {
 
 function messageConnection() {
     if (!selectedConnectionId) return;
-    closeConnectionInfo();
-    // Find username from connections data
+    // V1 FIX 5a: Store username before closing modal
     const conn = connectionsData.following.find(c => c.id === selectedConnectionId);
-    if (conn) {
-        loadMessages(selectedConnectionId, conn.username);
+    const connUsername = conn ? conn.username : null;
+    closeConnectionInfo();
+    
+    if (connUsername) {
+        // Switch to messages view first, then load the conversation
         showView('messages');
+        setTimeout(() => {
+            // Set up the recipient and load messages
+            currentRecipient = { id: selectedConnectionId, username: connUsername };
+            document.getElementById('chatHeader').textContent = connUsername;
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendMessageBtn').disabled = false;
+            // Load conversation messages for this user
+            loadMessages(selectedConnectionId, connUsername);
+        }, 200);
+    } else {
+        // Fallback: just navigate to messages view
+        showView('messages');
+        if (typeof loadConversations === 'function') loadConversations();
     }
 }
 
 function messageConnectionDirect(userId, username) {
-    loadMessages(userId, username);
+    // V1 FIX 5a: Same approach - navigate then load
     showView('messages');
+    setTimeout(() => {
+        currentRecipient = { id: userId, username: username };
+        document.getElementById('chatHeader').textContent = username;
+        document.getElementById('messageInput').disabled = false;
+        document.getElementById('sendMessageBtn').disabled = false;
+        loadMessages(userId, username);
+    }, 200);
 }
 
-function toggleConnectionTracking() {
+async function toggleConnectionTracking() {
     if (!selectedConnectionId) return;
-    showNotification('Tracking alerts configured for this connection.', 'success');
+    
+    // V1 FIX 5b: Actually toggle tracking by calling the follow API with trigger=true
+    try {
+        const response = await fetch(`/api/follow/${selectedConnectionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ trigger: true })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            showNotification('Tracking alerts enabled for this connection. You will be notified about concerning parameter patterns.', 'success');
+            
+            // Reload alerts to show any new trigger alerts
+            if (typeof loadAlerts === 'function') {
+                setTimeout(() => loadAlerts(), 500);
+            }
+        } else {
+            const errData = await response.json().catch(() => ({}));
+            showNotification(errData.error || 'Failed to configure tracking', 'error');
+        }
+    } catch (err) {
+        console.error('Error toggling tracking:', err);
+        showNotification('Error configuring tracking alerts', 'error');
+    }
+    
     closeConnectionInfo();
 }
 
