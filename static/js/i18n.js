@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version V4 - Added params.sleep, params.exercise, params.stress translations for all 4 languages (referenced by Home "My Status Today" card)
 // Version PL410 LINK2 - Same as PL409 (no i18n changes for consent fix)
 // Version PL409 LINK FIX - Added home.data_export, home.data_export_desc, home.data_rights, home.data_rights_detail, home.export_data_btn translations
 // Version PL406 - Added invite.search_users and invite.search_placeholder translations for all languages
@@ -433,6 +434,10 @@ const translations = {
     'params.sleep_quality': 'sleep quality',
     'params.physical_activity': 'physical activity',
     'params.anxiety': 'anxiety',
+    // V4: Missing params keys referenced by Home page "My Status Today" card
+    'params.sleep': 'Sleep',
+    'params.exercise': 'Exercise',
+    'params.stress': 'Stress',
 
     // About page
     'about.title': 'About TheraSocial',
@@ -1178,6 +1183,10 @@ const translations = {
     'params.sleep_quality': 'איכות שינה',
     'params.physical_activity': 'פעילות גופנית',
     'params.anxiety': 'חרדה',
+    // V4: Missing params keys
+    'params.sleep': 'שינה',
+    'params.exercise': 'פעילות גופנית',
+    'params.stress': 'מתח',
 
         'block.block_user': 'חסום',
     'block.unblock_user': 'בטל חסימה',
@@ -2372,6 +2381,10 @@ const translations = {
     'params.sleep_quality': 'جودة النوم',
     'params.physical_activity': 'النشاط البدني',
     'params.anxiety': 'القلق',
+    // V4: Missing params keys
+    'params.sleep': 'النوم',
+    'params.exercise': 'التمارين',
+    'params.stress': 'التوتر',
 'invite.copy': 'نسخ الرابط',
 'invite.email': 'البريد الإلكتروني',
 'invite.sms': 'رسالة نصية',
@@ -3235,6 +3248,10 @@ const translations = {
     'params.sleep_quality': 'качество сна',
     'params.physical_activity': 'физическая активность',
     'params.anxiety': 'тревожность',
+    // V4: Missing params keys
+    'params.sleep': 'Сон',
+    'params.exercise': 'Упражнения',
+    'params.stress': 'Стресс',
     'support.quick_help': 'Быстрая помощь',
     'support.faq_link': 'Часто задаваемые вопросы',
     'support.help_center': 'Центр помощи',
