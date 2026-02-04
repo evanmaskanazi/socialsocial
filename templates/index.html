@@ -6000,6 +6000,14 @@ async function loadUserCity() {
             }
             
             showNotification('You have been logged out successfully', 'success');
+            // V12 FIX 2: Clear form fields and error before showing auth container
+            // This prevents browser autofill from auto-submitting stale credentials
+            const loginErr = document.getElementById('loginErrorMessage');
+            if (loginErr) loginErr.style.display = 'none';
+            const emailInput = document.getElementById('emailInput');
+            const passwordInput = document.getElementById('passwordInput');
+            if (emailInput) emailInput.value = '';
+            if (passwordInput) passwordInput.value = '';
             showAuthContainer();
         });
 
@@ -6013,6 +6021,9 @@ async function loadUserCity() {
             document.getElementById('authContainer').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('tutorialBtn').style.display = 'none';
+            // V12 FIX 2: Always hide login error message to prevent stale error flash
+            const loginError = document.getElementById('loginErrorMessage');
+            if (loginError) loginError.style.display = 'none';
             // PJ6001: Show nav links when logged out
             document.querySelectorAll('.auth-only-hide').forEach(el => el.style.display = '');
         }
@@ -13382,12 +13393,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Start session monitoring
     sessionCheckInterval = setInterval(checkSessionActivity, SESSION_CHECK_INTERVAL);
 
-    // V1 FIX 1: If returning from diary page, we know user is authenticated
-    // Prevent flash of login screen during session re-verification
+    // V12 FIX 1: If returning from diary page, we know user is authenticated
+    // IMMEDIATELY hide auth container to prevent login screen flash during session re-verification
     const returningFromDiary = sessionStorage.getItem('returning_from_diary');
     if (returningFromDiary) {
         sessionStorage.removeItem('returning_from_diary');
-        console.log('[V1 FIX] Returning from diary - suppressing auth flash');
+        console.log('[V12 FIX 1] Returning from diary - hiding auth container immediately');
+        const authCont = document.getElementById('authContainer');
+        if (authCont) authCont.style.display = 'none';
+        // Also hide any stale login error message
+        const loginErr = document.getElementById('loginErrorMessage');
+        if (loginErr) loginErr.style.display = 'none';
     }
 
 // Handle password reset token from URL
