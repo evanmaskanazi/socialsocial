@@ -1,10 +1,5 @@
-// USERFIX Version 2.0 Round 2 (UserfixRnd2) - 16 User Experience Improvements
-// USERFIX-2: Streak Tracking support
-// USERFIX-3: One-Tap Quick Check-In support
-// USERFIX-9: Gratitude Field support
-// USERFIX-13: Streamlined Registration + Journaling Onboarding support
-//
-// Based on P305 Version 1901 - EMOJI FIX: Prevent emojis from disappearing after save
+// V2 Version 1902 - V2 compatibility: findPeopleToFollow → Connections/Recommended tab
+// P305 Version 1901 - EMOJI FIX: Prevent emojis from disappearing after save
 // P305 Version 1900 - Navigation restructure and visual design changes (frontend-only)
 // No backend changes - all changes are in index.html
 // P305: Feed becomes Home page, new Progress tab, new color palette, dark mode support
@@ -2377,7 +2372,6 @@ function selectRating(categoryId, value) {
 
 async function saveParameters() {
     const notes = document.getElementById('notesInput')?.value || '';
-    const gratitude = document.getElementById('gratitudeInput')?.value || '';  // USERFIX-9
     const dateStr = formatDate(currentDate);
 
     // Save state before submitting
@@ -2401,8 +2395,7 @@ async function saveParameters() {
         sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
         physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
         anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
-        notes: notes,
-        gratitude: gratitude  // USERFIX-9
+        notes: notes
     };
 
     try {
@@ -2512,12 +2505,6 @@ async function loadParameters(showMsg = true) {
                 notesInput.value = result.data.notes;
             }
 
-            // USERFIX-9: Load gratitude field
-            const gratitudeInput = document.getElementById('gratitudeInput');
-            if (gratitudeInput) {
-                gratitudeInput.value = result.data.gratitude || '';
-            }
-
             // Save to session storage for persistence
           const state = {
     ...selectedRatings,
@@ -2526,8 +2513,7 @@ async function loadParameters(showMsg = true) {
     sleep_quality_privacy: result.data.sleep_quality_privacy || 'private',
     physical_activity_privacy: result.data.physical_activity_privacy || 'private',
     anxiety_privacy: result.data.anxiety_privacy || 'private',
-    notes: result.data.notes || '',
-    gratitude: result.data.gratitude || ''  // USERFIX-9
+    notes: result.data.notes || ''
 };
 sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
 
@@ -2809,11 +2795,17 @@ function showInviteTab() {
 }
 
 function findPeopleToFollow() {
-    // Redirect to main page with following view
+    // V2: Navigate to Connections view with Recommended tab
     if (typeof showView === 'function') {
-        showView('following');
+        showView('connections');
+        // Switch to Recommended tab after view loads
+        setTimeout(() => {
+            if (typeof switchConnectionTab === 'function') {
+                switchConnectionTab('recommended');
+            }
+        }, 100);
     } else {
-        window.location.href = '/?view=following';
+        window.location.href = '/?view=connections';
     }
 }
 
@@ -3461,4 +3453,4 @@ window.viewUserParameters = viewUserParameters;
 window.closeUserParametersModal = closeUserParametersModal;
 window.checkParameterAlerts = checkParameterAlerts;
 
-console.log('[P305] Parameters-social.js v1901 P305 loaded - EMOJI FIX applied');
+console.log('[V2] Parameters-social.js v1902 V2 loaded - EMOJI FIX applied, Connections nav updated');
