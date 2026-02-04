@@ -23,7 +23,7 @@
   - BACKEND: /api/user/summary endpoint for home dashboard
   - PRESERVED: All existing auth flow, message sending, alert loading, diary home button
 -->
-<!-- TheraSocial Version PL410 LINK2 FIX v810 -->
+<!-- TheraSocial Version V4 - Fixed: (1) Connection Info "View Full Profile" button navigating to own profile (closeConnectionInfo nulled userId before use), (2) Same bug in "Send Message" button. Previous: PL410 LINK2 FIX v810 -->
 <!-- PL410 LINK2 FIX: Fixed magic link consent flow - new accounts now properly show consent modal -->
 <!-- PL410 LINK2 FIX: checkMagicToken() now awaited and returns flag to stop session check when consent needed -->
 <!-- TheraSocial Version PL409 LINK FIX v809 -->
@@ -13738,21 +13738,25 @@ async function toggleConnectionAlert() {
 
 function messageFromConnectionInfo() {
     if (!currentConnectionInfoUserId) return;
+    // V4 FIX: Save userId before closeConnectionInfo() sets it to null
+    const userId = currentConnectionInfoUserId;
     const username = document.getElementById('connInfoUsername').textContent;
     closeConnectionInfo();
     // Navigate to messages and load conversation with this user
     showView('messages');
     setTimeout(() => {
         if (typeof loadMessages === 'function') {
-            loadMessages(currentConnectionInfoUserId, username);
+            loadMessages(userId, username);
         }
     }, 300);
 }
 
 function viewProfileFromConnectionInfo() {
     if (!currentConnectionInfoUserId) return;
+    // V4 FIX: Save userId before closeConnectionInfo() sets it to null
+    const userId = currentConnectionInfoUserId;
     closeConnectionInfo();
-    viewUserProfile(currentConnectionInfoUserId);
+    viewUserProfile(userId);
 }
 
 async function removeConnectionFromInfo() {
