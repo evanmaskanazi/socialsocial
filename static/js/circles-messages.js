@@ -2072,6 +2072,19 @@ async function updateCirclesPrivacy(privacyLevel) {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
+    // V1 FIX 4: Only run circles-messages.js initialization on standalone pages (/messages, /circles)
+    // On index.html, the inline scripts handle messages/circles with their own functions
+    // Running both causes function override conflicts (especially loadMessages)
+    const isStandalonePage = window.location.pathname === '/messages' || 
+                             window.location.pathname === '/circles' ||
+                             document.getElementById('messagesContainer') !== null ||
+                             document.getElementById('circlesContainer') !== null;
+    
+    if (!isStandalonePage) {
+        console.log('[circles-messages.js] Skipping initialization on index page to prevent conflicts');
+        return;
+    }
+    
     // Wait for i18n
     await waitForI18n();
 
