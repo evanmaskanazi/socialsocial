@@ -3069,7 +3069,8 @@ class User(db.Model):
             'has_completed_onboarding': self.has_completed_onboarding,
             'shareable_link_token': self.shareable_link_token,
             'circles_privacy': self.circles_privacy or 'private',
-            'birth_year': self.birth_year or 1985  # PJ6001: Birth year field
+            'birth_year': self.birth_year or 1985,  # PJ6001: Birth year field
+            'selected_city': self.selected_city or ''  # V3: Include city for settings page
         }
 
 
@@ -5202,15 +5203,38 @@ def check_session():
 # USER & PROFILE ROUTES
 # =====================
 
-@app.route('/api/user/profile', methods=['GET'])
+@app.route('/api/user/profile', methods=['GET', 'PUT'])
 @login_required
 def get_current_user():
-    """Get current user info"""
+    """Get or update current user info"""
     user = db.session.get(User, session['user_id'])
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    return jsonify(user.to_dict())
+    if request.method == 'GET':
+        return jsonify(user.to_dict())
+
+    elif request.method == 'PUT':
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        if 'username' in data:
+            new_username = sanitize_input(data['username'].strip())[:80]
+            if new_username and new_username != user.username:
+                # Check if username is already taken
+                existing = db.session.execute(
+                    select(User).filter(User.username == new_username, User.id != user.id)
+                ).scalar_one_or_none()
+                if existing:
+                    return jsonify({'error': 'Username already taken'}), 400
+                user.username = new_username
+        
+        if 'selected_city' in data:
+            user.selected_city = sanitize_input(data['selected_city'].strip())[:100]
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Profile updated'})
 
 
 @app.route('/api/user/language', methods=['POST'])
@@ -11032,8 +11056,8 @@ def get_user_summary():
         
         # Get latest parameters entry
         latest_entry = db.session.execute(
-            select(SavedParameters).filter_by(user_id=user_id).order_by(SavedParameters.date.desc())
-        ).scalar_one_or_none()
+            select(SavedParameters).filter_by(user_id=user_id).order_by(SavedParameters.date.desc()).limit(1)
+        ).scalars().first()
         
         latest_params = {}
         if latest_entry:
@@ -11072,8 +11096,8 @@ def get_user_summary():
             select(SavedParameters).filter(
                 SavedParameters.user_id == user_id,
                 SavedParameters.date == client_date
-            )
-        ).scalar_one_or_none()
+            ).limit(1)
+        ).scalars().first()
         
         has_entry_today = today_entry is not None
         completed_today = False
