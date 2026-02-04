@@ -1802,6 +1802,25 @@
             visibility: hidden !important;
         }
 
+        /* V3: Settings toggle switch styles */
+        .settings-toggle-slider::before {
+            content: "";
+            position: absolute;
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .3s;
+        }
+        input:checked + .settings-toggle-slider {
+            background-color: var(--primary) !important;
+        }
+        input:checked + .settings-toggle-slider::before {
+            transform: translateX(24px);
+        }
+
         /* Animations */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -3265,23 +3284,67 @@
               <div id="settingsView" class="view hidden">
                   <h2 style="margin-bottom: 20px;" data-i18n="menu.settings">Settings</h2>
 
-                  <!-- Profile Settings -->
-                  <div style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.profile_settings">Profile Settings</h3>
-                      <div style="display: flex; flex-direction: column; gap: 12px;">
-                          <div>
-                              <label style="font-weight: 600; color: var(--dark); display: block; margin-bottom: 4px;" data-i18n="settings.display_name">Display Name</label>
-                              <input type="text" id="settingsDisplayName" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;" placeholder="Your display name">
+                  <!-- V3: Full Profile Section (matches profileView layout from ProfileRight) -->
+                  <div class="profile-section" style="margin-bottom: 20px;">
+                      <div class="profile-header">
+                          <div class="profile-avatar" id="settingsProfileAvatar">U</div>
+                          <h3 id="settingsProfileUsername">Username</h3>
+                      </div>
+
+                      <div class="profile-fields">
+                          <!-- Account Fields -->
+                          <div class="form-group">
+                              <label class="form-label" data-i18n="settings.display_name">Display Name</label>
+                              <input type="text" class="form-input" id="settingsDisplayName" placeholder="Your display name">
                           </div>
-                          <div>
-                              <label style="font-weight: 600; color: var(--dark); display: block; margin-bottom: 4px;" data-i18n="settings.email">Email</label>
-                              <input type="email" id="settingsEmail" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px; background: #f0f0f0;" readonly>
+
+                          <div class="form-group">
+                              <label class="form-label" data-i18n="settings.email">Email</label>
+                              <input type="email" class="form-input" id="settingsEmail" style="background: #f0f0f0;" readonly>
                           </div>
-                          <div>
-                              <label style="font-weight: 600; color: var(--dark); display: block; margin-bottom: 4px;" data-i18n="settings.city">City</label>
-                              <input type="text" id="settingsCity" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;" placeholder="Your city">
+
+                          <div class="form-group">
+                              <label class="form-label" data-i18n="settings.city">City</label>
+                              <input type="text" class="form-input" id="settingsCity" placeholder="Your city">
                           </div>
-                          <button class="btn btn-primary" style="width: auto; align-self: flex-start;" onclick="saveProfileSettings()" data-i18n="btn.save">Save</button>
+
+                          <!-- Birth Year -->
+                          <div class="form-group">
+                              <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
+                              <input type="number" class="form-input" id="settingsBirthYear" 
+                                     min="1900" max="2025" maxlength="4"
+                                     placeholder="YYYY" style="width: 120px;">
+                          </div>
+
+                          <!-- Profile Fields (matching ProfileRight layout) -->
+                          <div class="form-group">
+                              <label class="form-label" data-i18n="profile.bio">Bio</label>
+                              <textarea class="profile-textarea" id="settingsBio" data-i18n-placeholder="profile.bio_placeholder" placeholder="Tell us about yourself..." maxlength="500"></textarea>
+                          </div>
+
+                          <div class="form-group">
+                              <label class="form-label" data-i18n="profile.interests">Interests</label>
+                              <textarea class="profile-textarea" id="settingsInterests" data-i18n-placeholder="profile.interests_placeholder" placeholder="What are you interested in?" maxlength="300"></textarea>
+                          </div>
+
+                          <div class="form-group">
+                              <label class="form-label" data-i18n="profile.occupation">Occupation</label>
+                              <input type="text" class="form-input" id="settingsOccupation" data-i18n-placeholder="profile.occupation_placeholder" placeholder="What do you do?">
+                          </div>
+
+                          <div class="form-group">
+                              <label class="form-label" data-i18n="profile.goals">My Goals</label>
+                              <textarea class="profile-textarea" id="settingsGoals" data-i18n-placeholder="profile.goals_placeholder" placeholder="What are your personal or professional goals?" maxlength="300"></textarea>
+                          </div>
+
+                          <div class="form-group">
+                              <label class="form-label" data-i18n="profile.hobbies">Favorite Hobbies</label>
+                              <textarea class="profile-textarea" id="settingsHobbies" data-i18n-placeholder="profile.hobbies_placeholder" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
+                          </div>
+                      </div>
+
+                      <div style="text-align: center; margin-top: 30px;">
+                          <button class="btn btn-primary" style="width: 200px;" onclick="saveProfileSettings()" data-i18n="profile.save">Save Profile</button>
                       </div>
                   </div>
 
@@ -3291,30 +3354,55 @@
                       <div style="display: flex; flex-direction: column; gap: 16px;">
                           <div style="display: flex; justify-content: space-between; align-items: center;">
                               <span data-i18n="settings.email_on_alert">Email me when I receive alerts</span>
-                              <label class="toggle-switch" style="position: relative; display: inline-block; width: 50px; height: 26px;">
-                                  <input type="checkbox" id="settingsEmailOnAlert" style="opacity: 0; width: 0; height: 0;">
-                                  <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s;" onclick="this.previousElementSibling.checked = !this.previousElementSibling.checked; syncSettingsToggles();"></span>
+                              <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                  <input type="checkbox" id="settingsEmailOnAlert" onchange="syncSettingsToggles()" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                  <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
                               </label>
                           </div>
                           <div style="display: flex; justify-content: space-between; align-items: center;">
                               <span data-i18n="settings.daily_diary_reminder">Daily diary reminder</span>
-                              <label class="toggle-switch" style="position: relative; display: inline-block; width: 50px; height: 26px;">
-                                  <input type="checkbox" id="settingsDiaryReminder" style="opacity: 0; width: 0; height: 0;">
-                                  <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s;" onclick="this.previousElementSibling.checked = !this.previousElementSibling.checked; syncSettingsToggles();"></span>
+                              <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                  <input type="checkbox" id="settingsDiaryReminder" onchange="syncSettingsToggles()" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                  <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
                               </label>
                           </div>
                       </div>
                   </div>
 
                   <!-- Change Password -->
-                  <div style="background: var(--light); padding: 24px; border-radius: 16px;">
+                  <div style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.change_password">Change Password</h3>
+                      <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
+                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
                       <div style="display: flex; flex-direction: column; gap: 12px;">
-                          <input type="password" id="settingsCurrentPassword" placeholder="Current password" style="padding: 10px; border: 2px solid var(--border); border-radius: 8px;">
-                          <input type="password" id="settingsNewPassword" placeholder="New password" style="padding: 10px; border: 2px solid var(--border); border-radius: 8px;">
-                          <input type="password" id="settingsConfirmPassword" placeholder="Confirm new password" style="padding: 10px; border: 2px solid var(--border); border-radius: 8px;">
+                          <div>
+                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
+                              <input type="password" id="settingsCurrentPassword" placeholder="Current password" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;">
+                          </div>
+                          <div>
+                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
+                              <input type="password" id="settingsNewPassword" placeholder="New password" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;">
+                          </div>
+                          <div>
+                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
+                              <input type="password" id="settingsConfirmPassword" placeholder="Confirm new password" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;">
+                          </div>
                           <button class="btn btn-primary" style="width: auto; align-self: flex-start;" onclick="changePasswordFromSettings()" data-i18n="settings.update_password">Update Password</button>
                       </div>
+                  </div>
+
+                  <!-- Export Your Data -->
+                  <div style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="home.data_export">Export Your Data</h3>
+                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
+                      <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
+                          <span style="font-size: 1.5rem;">📋</span>
+                          <div>
+                              <p style="font-weight: 600; color: #1D4ED8;" data-i18n="home.data_rights_title">Your Data Rights</p>
+                              <p style="color: #1E40AF; font-size: 0.9rem;" data-i18n="home.data_rights_desc">You have the right to access and download your personal data at any time.</p>
+                          </div>
+                      </div>
+                      <button class="btn btn-primary" onclick="exportUserData()" data-i18n="home.export_button">Export My Data</button>
                   </div>
               </div>
 
@@ -5592,6 +5680,14 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                             window.viewingUserId = null;
                             loadFollowers();
                         }
+                        break;
+                    case 'connections':
+                        // V3 FIX: Load connections data when sidebar item is clicked
+                        loadConnections();
+                        break;
+                    case 'settings':
+                        // V3 FIX: Load settings data when sidebar item is clicked
+                        loadSettings();
                         break;
                 }
     });
@@ -13678,28 +13774,48 @@ document.addEventListener('click', (e) => {
 });
 
 
-// --- V2: SETTINGS VIEW ---
+// --- V3: SETTINGS VIEW (Full profile editing + account settings) ---
 async function loadSettings() {
+    console.log('[V3] Loading settings view...');
     try {
-        const response = await fetch('/api/user/profile', { credentials: 'include' });
-        if (response.ok) {
-            const profile = await response.json();
-            document.getElementById('settingsDisplayName').value = profile.username || '';
-            document.getElementById('settingsEmail').value = profile.email || '';
-            document.getElementById('settingsCity').value = profile.selected_city || '';
+        // Load account data (username, email, selected_city, birth_year)
+        const userResponse = await fetch('/api/user/profile', { credentials: 'include' });
+        if (userResponse.ok) {
+            const userData = await userResponse.json();
+            document.getElementById('settingsDisplayName').value = userData.username || '';
+            document.getElementById('settingsEmail').value = userData.email || '';
+            document.getElementById('settingsCity').value = userData.selected_city || '';
+            document.getElementById('settingsBirthYear').value = userData.birth_year || '';
+            
+            // Update avatar and username display
+            const avatar = document.getElementById('settingsProfileAvatar');
+            const uname = document.getElementById('settingsProfileUsername');
+            if (avatar && userData.username) avatar.textContent = userData.username.charAt(0).toUpperCase();
+            if (uname && userData.username) uname.textContent = userData.username;
         }
 
-        // Load notification settings
-        const notifResponse = await fetch('/api/user/notification-settings', { credentials: 'include' });
+        // Load profile data (bio, interests, occupation, goals, hobbies)
+        const profileResponse = await fetch('/api/profile', { credentials: 'include' });
+        if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            document.getElementById('settingsBio').value = profileData.bio || '';
+            document.getElementById('settingsInterests').value = profileData.interests || '';
+            document.getElementById('settingsOccupation').value = profileData.occupation || '';
+            document.getElementById('settingsGoals').value = profileData.goals || '';
+            document.getElementById('settingsHobbies').value = profileData.favorite_hobbies || '';
+        }
+
+        // Load notification settings (V3: correct endpoint)
+        const notifResponse = await fetch('/api/notification-settings', { credentials: 'include' });
         if (notifResponse.ok) {
             const notif = await notifResponse.json();
             const emailToggle = document.getElementById('settingsEmailOnAlert');
             const diaryToggle = document.getElementById('settingsDiaryReminder');
             if (emailToggle) emailToggle.checked = notif.email_on_alert || false;
-            if (diaryToggle) diaryToggle.checked = notif.daily_diary_reminder || false;
+            if (diaryToggle) diaryToggle.checked = notif.email_daily_diary_reminder || false;
         }
     } catch (error) {
-        console.error('Error loading settings:', error);
+        console.error('[V3] Error loading settings:', error);
     }
 }
 
@@ -13707,30 +13823,61 @@ async function saveProfileSettings() {
     try {
         const username = document.getElementById('settingsDisplayName').value.trim();
         const city = document.getElementById('settingsCity').value.trim();
+        const birthYear = document.getElementById('settingsBirthYear').value;
+        const bio = document.getElementById('settingsBio').value.trim();
+        const interests = document.getElementById('settingsInterests').value.trim();
+        const occupation = document.getElementById('settingsOccupation').value.trim();
+        const goals = document.getElementById('settingsGoals').value.trim();
+        const hobbies = document.getElementById('settingsHobbies').value.trim();
 
-        const response = await fetch('/api/user/profile', {
+        // Save profile fields (bio, interests, occupation, goals, hobbies, birth_year) to /api/profile
+        const profileResponse = await fetch('/api/profile', {
             method: 'PUT',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, selected_city: city })
+            body: JSON.stringify({
+                bio: bio,
+                interests: interests,
+                occupation: occupation,
+                goals: goals,
+                favorite_hobbies: hobbies,
+                birth_year: birthYear ? parseInt(birthYear) : null
+            })
         });
 
-        if (response.ok) {
+        // Save account fields (username, selected_city) to /api/user/profile
+        const accountResponse = await fetch('/api/user/profile', {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, selected_city: city })
+        });
+
+        if (profileResponse.ok && accountResponse.ok) {
             showNotification('Profile updated successfully!', 'success');
-            // Update the displayed username
+            // Update displayed username in settings avatar and other places
             if (currentUser) {
                 currentUser.username = username;
-                const avatar = document.getElementById('profileAvatar');
-                const uname = document.getElementById('profileUsername');
-                if (avatar) avatar.textContent = username[0].toUpperCase();
-                if (uname) uname.textContent = username;
             }
+            const settingsAvatar = document.getElementById('settingsProfileAvatar');
+            const settingsUname = document.getElementById('settingsProfileUsername');
+            if (settingsAvatar && username) settingsAvatar.textContent = username[0].toUpperCase();
+            if (settingsUname && username) settingsUname.textContent = username;
+            // Also update profileView avatar if it exists
+            const profileAvatar = document.getElementById('profileAvatar');
+            const profileUsername = document.getElementById('profileUsername');
+            if (profileAvatar && username) profileAvatar.textContent = username[0].toUpperCase();
+            if (profileUsername && username) profileUsername.textContent = username;
         } else {
-            const data = await response.json();
-            showNotification(data.error || 'Failed to update profile', 'error');
+            let errorMsg = 'Failed to update profile';
+            try {
+                const errData = await (profileResponse.ok ? accountResponse : profileResponse).json();
+                errorMsg = errData.error || errorMsg;
+            } catch(e) {}
+            showNotification(errorMsg, 'error');
         }
     } catch (error) {
-        console.error('Save settings error:', error);
+        console.error('[V3] Save settings error:', error);
         showNotification('Failed to save settings', 'error');
     }
 }
@@ -13740,17 +13887,18 @@ async function syncSettingsToggles() {
         const emailOn = document.getElementById('settingsEmailOnAlert')?.checked || false;
         const diaryOn = document.getElementById('settingsDiaryReminder')?.checked || false;
 
-        await fetch('/api/user/notification-settings', {
+        // V3: Use correct endpoint /api/notification-settings
+        await fetch('/api/notification-settings', {
             method: 'PUT',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 email_on_alert: emailOn,
-                daily_diary_reminder: diaryOn
+                email_daily_diary_reminder: diaryOn
             })
         });
 
-        // Sync with other toggle instances on page
+        // Sync with other toggle instances on page (sidebar toggles)
         const otherEmailToggle = document.getElementById('emailOnAlertToggle');
         const otherDiaryToggle = document.getElementById('dailyDiaryReminderToggle');
         if (otherEmailToggle) otherEmailToggle.checked = emailOn;
