@@ -16619,7 +16619,9 @@ def get_parameter_dates():
         dates = []
         date_levels = {}
         for row in rows:
-            date_str = row[0]
+            # V13 FIX 7: Ensure date is a string for JSON serialization
+            raw_date = row[0]
+            date_str = raw_date.isoformat() if hasattr(raw_date, 'isoformat') else str(raw_date)
             param_count = row[1] or 0
             # Map param count to level: 0=0, 1-2=1, 3=2, 4=3, 5=4
             if param_count == 0:
