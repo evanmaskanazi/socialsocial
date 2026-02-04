@@ -2847,6 +2847,12 @@ def auto_migrate_database():
                         conn.execute(text("ALTER TABLE follows ADD COLUMN follow_note VARCHAR(300)"))
                         conn.commit()
                         logger.info("✓ Added follow_note column to follows table")
+                    # V1 FIX 5b: Add follow_trigger column for tracking alerts
+                    if 'follow_trigger' not in columns:
+                        logger.info("Adding follow_trigger column to follows table...")
+                        conn.execute(text("ALTER TABLE follows ADD COLUMN follow_trigger BOOLEAN DEFAULT FALSE"))
+                        conn.commit()
+                        logger.info("✓ Added follow_trigger column to follows table")
 
                 # Create or update parameter_triggers table
                 if 'parameter_triggers' not in inspector.get_table_names():
@@ -3488,6 +3494,7 @@ class Follow(db.Model):
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     follow_note = db.Column(db.String(300))  # New field for follow notes
+    follow_trigger = db.Column(db.Boolean, default=False)  # V1 FIX 5b: Track parameter alerts for this connection
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     follower = db.relationship('User', foreign_keys=[follower_id], backref='following')
