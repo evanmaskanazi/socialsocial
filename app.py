@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V2 UX Overhaul
+Complete app.py for Social Social Platform - V4
+V4 Changes:
+- FIX: /api/parameters/user/<user_id> now enforces per-parameter privacy (was returning all params to any follower)
+- FIX: Removed /api/debug/parameters/<user_id> endpoint (no privacy filtering, marked as temporary)
+- No other backend changes (i18n and connection profile fixes were frontend-only)
 V2 Changes:
 - MINIMUM_TRIGGER_DAYS changed from 3 to 1 (immediate contact triggers)
 - Magic link expiry changed from 5 years to 10 minutes
@@ -7333,45 +7337,7 @@ def check_param_visibility(param_privacy, viewer_circle_level):
     return False
 
 
-@app.route('/api/debug/parameters/<int:user_id>')
-@login_required
-def debug_parameters(user_id):
-    """Temporary debug endpoint - DELETE after fixing"""
-    try:
-        # Get ALL parameters for this user (no date filter)
-        query = text("""
-            SELECT date, mood, energy, sleep_quality, 
-                   physical_activity, anxiety, notes, user_id
-            FROM saved_parameters
-            WHERE user_id = :user_id
-            ORDER BY date DESC
-            LIMIT 10
-        """)
-
-        result = db.session.execute(query, {'user_id': user_id})
-        rows = result.fetchall()
-
-        parameters = []
-        for row in rows:
-            parameters.append({
-                'date': str(row[0]),  # Convert to string to see exact format
-                'date_type': type(row[0]).__name__,
-                'mood': row[1],
-                'energy': row[2],
-                'sleep_quality': row[3],
-                'physical_activity': row[4],
-                'anxiety': row[5],
-                'notes': row[6],
-                'user_id': row[7]
-            })
-
-        return jsonify({
-            'count': len(parameters),
-            'data': parameters
-        }), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# V4: Removed /api/debug/parameters/<user_id> endpoint (no privacy filtering, no frontend callers)
 
 
 @app.route('/api/users/search')
@@ -14192,7 +14158,7 @@ def get_following():
 @app.route('/api/parameters/user/<int:user_id>', methods=['GET'])
 @login_required
 def get_user_parameters_for_triggers(user_id):
-    """Get parameters for viewing in trigger modal"""
+    """Get parameters for viewing in trigger modal - V4 FIX: respects per-parameter privacy settings"""
     try:
         viewer_id = session.get('user_id')
 
@@ -14205,6 +14171,38 @@ def get_user_parameters_for_triggers(user_id):
             if not follow:
                 return jsonify({'error': 'Not authorized'}), 403
 
+        # V4 FIX: Determine viewer's circle level for privacy filtering
+        circle_level = 'public'  # Default for non-circle followers
+        if viewer_id != user_id:
+            circle = db.session.execute(
+                select(Circle).filter_by(
+                    user_id=user_id,
+                    circle_user_id=viewer_id
+                )
+            ).scalars().first()
+            if circle:
+                type_mapping = {
+                    'public': 'public',
+                    'general': 'public',
+                    'class_b': 'class_b',
+                    'close_friends': 'class_b',
+                    'class_a': 'class_a',
+                    'family': 'class_a'
+                }
+                circle_level = type_mapping.get(circle.circle_type, 'public')
+        else:
+            # User viewing own parameters - full access
+            circle_level = 'class_a'
+
+        # V4 FIX: Map parameter names to their privacy column names
+        privacy_map = {
+            'mood': 'mood_privacy',
+            'energy': 'energy_privacy',
+            'sleep_quality': 'sleep_quality_privacy',
+            'physical_activity': 'physical_activity_privacy',
+            'anxiety': 'anxiety_privacy'
+        }
+
         # Get last 30 days
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
 
@@ -14215,15 +14213,18 @@ def get_user_parameters_for_triggers(user_id):
 
         result = {'parameters': []}
         for param in parameters:
-            # Add each parameter as separate entry
+            # Add each parameter as separate entry - V4 FIX: only if privacy allows
             for param_name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
                 value = getattr(param, param_name, None)
                 if value:
-                    result['parameters'].append({
-                        'date': param.date.isoformat() if hasattr(param.date, 'isoformat') else str(param.date),
-                        'parameter_name': param_name,
-                        'value': value
-                    })
+                    # V4 FIX: Check privacy before including this parameter
+                    param_privacy = getattr(param, privacy_map[param_name], 'private') or 'private'
+                    if check_param_visibility(param_privacy, circle_level):
+                        result['parameters'].append({
+                            'date': param.date.isoformat() if hasattr(param.date, 'isoformat') else str(param.date),
+                            'parameter_name': param_name,
+                            'value': value
+                        })
 
         return jsonify(result), 200
 
