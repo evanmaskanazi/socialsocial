@@ -432,6 +432,8 @@ const translations = {
 // PJ6003 - Wellness Alert Translations
     'alerts.wellness_alert_for': 'Wellness Alert for {username}',
     'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
+    'alerts.send_message': 'Send a Message',
+    'alerts.dismiss': 'Dismiss',
 
     // PJ6003 - Notification Translations (for alerts list rendering)
     'alerts.new_message_from': 'New message from {username}',
@@ -959,14 +961,8 @@ const translations = {
     'alerts.parameter_alert': '{parameter} has been at concerning levels',
     'alerts.consecutive_days': 'for {days} consecutive days',
     'alerts.date_range': '({start} - {end})',
-
-    // Notification types
-    'notifications.new_message': 'New message from {username}',
-    'notifications.message_sent': 'Message sent',
-    'notifications.new_follower': '{username} started following you',
-    'notifications.you_have_new_follower': 'You have a new follower!',
-    'notifications.new_invitation': 'New Invitation',
-    'notifications.invitation_content': '{username} has invited you to follow them',
+    'alerts.send_message': 'Send a Message',
+    'alerts.dismiss': 'Dismiss',
 
     // Invite page
     'invite.join_journey': "Join {username}'s Wellness Journey",
@@ -1234,14 +1230,8 @@ const translations = {
     'alerts.parameter_alert': '{parameter} היה ברמות מדאיגות',
     'alerts.consecutive_days': 'במשך {days} ימים רצופים',
     'alerts.date_range': '({start} - {end})',
-
-    // Notification types
-    'notifications.new_message': 'הודעה חדשה מ-{username}',
-    'notifications.message_sent': 'הודעה נשלחה',
-    'notifications.new_follower': '{username} התחיל/ה לעקוב אחריך',
-    'notifications.you_have_new_follower': 'יש לך עוקב/ת חדש/ה!',
-    'notifications.new_invitation': 'הזמנה חדשה',
-    'notifications.invitation_content': '{username} הזמין/ה אותך לעקוב אחריו/ה',
+    'alerts.send_message': 'שלח הודעה',
+    'alerts.dismiss': 'התעלם',
 
     // Invite page
     'invite.join_journey': 'הצטרף/י למסע הבריאות של {username}',
@@ -1261,6 +1251,8 @@ const translations = {
          // PJ6003 - Wellness Alert Translations
     'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
     'alerts.wellness_content': "{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})",
+    'alerts.send_message': 'שלח הודעה',
+    'alerts.dismiss': 'התעלם',
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'הודעה חדשה מ-{username}',
@@ -2352,14 +2344,8 @@ const translations = {
     'alerts.parameter_alert': 'كان {parameter} في مستويات مقلقة',
     'alerts.consecutive_days': 'لمدة {days} أيام متتالية',
     'alerts.date_range': '({start} - {end})',
-
-    // Notification types
-    'notifications.new_message': 'رسالة جديدة من {username}',
-    'notifications.message_sent': 'تم إرسال الرسالة',
-    'notifications.new_follower': 'بدأ {username} بمتابعتك',
-    'notifications.you_have_new_follower': 'لديك متابع جديد!',
-    'notifications.new_invitation': 'دعوة جديدة',
-    'notifications.invitation_content': 'دعاك {username} لمتابعته',
+    'alerts.send_message': 'إرسال رسالة',
+    'alerts.dismiss': 'تجاهل',
 
     // Invite page
     'invite.join_journey': 'انضم إلى رحلة {username} الصحية',
@@ -2474,6 +2460,8 @@ const translations = {
  // PJ6003 - Wellness Alert Translations
     'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
     'alerts.wellness_content': "كان {param} لـ {username} في مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})",
+    'alerts.send_message': 'إرسال رسالة',
+    'alerts.dismiss': 'تجاهل',
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'رسالة جديدة من {username}',
@@ -3376,6 +3364,8 @@ const translations = {
  // PJ6003 - Wellness Alert Translations
     'alerts.wellness_alert_for': 'Предупреждение о здоровье для {username}',
     'alerts.wellness_content': "{param} пользователя {username} был на тревожном уровне в течение {days} дней подряд ({dateRange})",
+    'alerts.send_message': 'Отправить сообщение',
+    'alerts.dismiss': 'Отклонить',
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'Новое сообщение от {username}',
@@ -3523,14 +3513,8 @@ const translations = {
     'alerts.parameter_alert': '{parameter} был на тревожном уровне',
     'alerts.consecutive_days': 'в течение {days} дней подряд',
     'alerts.date_range': '({start} - {end})',
-
-    // Notification types
-    'notifications.new_message': 'Новое сообщение от {username}',
-    'notifications.message_sent': 'Сообщение отправлено',
-    'notifications.new_follower': '{username} подписался на вас',
-    'notifications.you_have_new_follower': 'У вас новый подписчик!',
-    'notifications.new_invitation': 'Новое приглашение',
-    'notifications.invitation_content': '{username} пригласил(а) вас подписаться',
+    'alerts.send_message': 'Отправить сообщение',
+    'alerts.dismiss': 'Отклонить',
 
     // Invite page
     'invite.join_journey': 'Присоединяйтесь к пути здоровья {username}',
