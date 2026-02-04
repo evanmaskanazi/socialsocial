@@ -653,8 +653,10 @@
         }
 
         /* Auth Forms */
+        /* V13 FIX 1: Default to display:none to prevent login flash on authenticated navigation */
+        /* showAuthContainer() sets display:flex when session check explicitly fails */
         .auth-container {
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             min-height: calc(100vh - 70px);
@@ -6000,7 +6002,7 @@ async function loadUserCity() {
             }
             
             showNotification('You have been logged out successfully', 'success');
-            // V12 FIX 2: Clear form fields and error before showing auth container
+            // V13 FIX 3: Clear form fields and error before showing auth container
             // This prevents browser autofill from auto-submitting stale credentials
             const loginErr = document.getElementById('loginErrorMessage');
             if (loginErr) loginErr.style.display = 'none';
@@ -6021,7 +6023,7 @@ async function loadUserCity() {
             document.getElementById('authContainer').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('tutorialBtn').style.display = 'none';
-            // V12 FIX 2: Always hide login error message to prevent stale error flash
+            // V13 FIX 4: Always hide login error to prevent stale error flash
             const loginError = document.getElementById('loginErrorMessage');
             if (loginError) loginError.style.display = 'none';
             // PJ6001: Show nav links when logged out
@@ -7072,9 +7074,11 @@ function showView(viewName) {
                 loadUserFollowers(viewingUserId);
                 break;
             case 'messages':
-                // Don't allow viewing another user's messages
-                showNotification('Cannot view another user\'s messages', 'error');
-                showView('following');
+                // V13 FIX 5c: Reset to own context and show messages instead of blocking
+                viewingUserId = null;
+                window.viewingUserId = null;
+                console.log('[V13 FIX 5c] Reset viewingUserId for messages view');
+                loadConversations();
                 break;
             default:
                 // For other views, go back to own profile
@@ -7119,7 +7123,19 @@ function showView(viewName) {
                 loadCircles();
                 break;
             case 'messages':
+                // V13 FIX 5a: Reset viewingUserId when going to messages
+                // This prevents "Cannot view another user's messages" block
+                // if user was previously viewing someone else's profile
+                viewingUserId = null;
+                window.viewingUserId = null;
                 loadConversations();
+                // V13 FIX 5b: Ensure send button event listener is active
+                const msgSendBtn = document.getElementById('sendMessageBtn');
+                if (msgSendBtn && !msgSendBtn._v13HandlerAttached) {
+                    msgSendBtn.addEventListener('click', sendMessageHandler);
+                    msgSendBtn._v13HandlerAttached = true;
+                    console.log('[V13 FIX 5b] Re-attached sendMessageBtn click handler');
+                }
                 break;
             case 'parameters':
             case 'tracking':
@@ -9838,6 +9854,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
     const MAX_MESSAGE_LENGTH = 5000; // CHANGE 6: Maximum message length
     
     async function sendMessageHandler() {
+        console.log('[V13 MSG] sendMessageHandler called, currentRecipient:', currentRecipient, 'isMessageSending:', isMessageSending);
         // PJ812: Multiple layers of duplicate prevention
         const now = Date.now();
         
@@ -9908,9 +9925,18 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
         }
     }
     
-    document.getElementById('sendMessageBtn').addEventListener('click', sendMessageHandler);
+    // V13 FIX 5e: Wrapped in try-catch so failure doesn't halt script execution
+    try {
+        document.getElementById('sendMessageBtn').addEventListener('click', sendMessageHandler);
+        // V13 FIX 5d: Mark handler as attached
+        document.getElementById('sendMessageBtn')._v13HandlerAttached = true;
+        console.log('[V13] sendMessageBtn click handler attached successfully');
+    } catch (e) {
+        console.error('[V13] Failed to attach sendMessageBtn handler:', e);
+    }
 
-        // PJ812: Use keydown instead of keypress for more reliable Enter detection
+    // PJ812: Use keydown instead of keypress for more reliable Enter detection
+    try {
         document.getElementById('messageInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -9919,6 +9945,10 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
                 sendMessageHandler();
             }
         });
+        console.log('[V13] messageInput keydown handler attached successfully');
+    } catch (e) {
+        console.error('[V13] Failed to attach messageInput handler:', e);
+    }
 
         // Parameters/Tracking Functions
         // Parameters/Tracking Functions
@@ -13393,15 +13423,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Start session monitoring
     sessionCheckInterval = setInterval(checkSessionActivity, SESSION_CHECK_INTERVAL);
 
-    // V12 FIX 1: If returning from diary page, we know user is authenticated
-    // IMMEDIATELY hide auth container to prevent login screen flash during session re-verification
+    // V13 FIX 1: If returning from diary page, we know user is authenticated
+    // authContainer is already hidden by CSS default (display:none), 
+    // but clear the flag and log for debugging
     const returningFromDiary = sessionStorage.getItem('returning_from_diary');
     if (returningFromDiary) {
         sessionStorage.removeItem('returning_from_diary');
-        console.log('[V12 FIX 1] Returning from diary - hiding auth container immediately');
+        console.log('[V13 FIX 1] Returning from diary - auth container already hidden by CSS default');
+        // Extra safety: ensure auth container stays hidden
         const authCont = document.getElementById('authContainer');
         if (authCont) authCont.style.display = 'none';
-        // Also hide any stale login error message
         const loginErr = document.getElementById('loginErrorMessage');
         if (loginErr) loginErr.style.display = 'none';
     }
