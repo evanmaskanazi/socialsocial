@@ -14106,6 +14106,105 @@ def get_follow_trigger_status(user_id):
         return jsonify({'error': 'Failed to get trigger status'}), 500
 
 
+# VINTER2: Dedicated endpoint for Friends' Daily Updates
+# Replaces the N+1 frontend approach (which only checked first 10 users)
+@app.route('/api/friends-updates')
+@login_required
+def get_friends_updates():
+    """Get latest parameter updates from all followed users, respecting privacy.
+    Returns up to 20 users who have visible parameter data, sorted by most recent."""
+    try:
+        user_id = session.get('user_id')
+        
+        # Get ALL users the current user follows (no limit - we need to check all)
+        follows = db.session.execute(
+            select(Follow).filter_by(follower_id=user_id)
+        ).scalars().all()
+        
+        if not follows:
+            return jsonify({'updates': []}), 200
+        
+        today = date.today()
+        seven_days_ago = today - timedelta(days=7)
+        
+        updates = []
+        for follow in follows:
+            followed_user = db.session.get(User, follow.followed_id)
+            if not followed_user:
+                continue
+            
+            # Determine viewer's circle level for privacy filtering
+            circle_level = 'public'
+            circle = db.session.execute(
+                select(Circle).filter_by(
+                    user_id=follow.followed_id,
+                    circle_user_id=user_id
+                )
+            ).scalars().first()
+            if circle:
+                type_mapping = {
+                    'public': 'public', 'general': 'public',
+                    'class_b': 'class_b', 'close_friends': 'class_b',
+                    'class_a': 'class_a', 'family': 'class_a'
+                }
+                circle_level = type_mapping.get(circle.circle_type, 'public')
+            
+            # Get the latest parameter entry within the last 7 days
+            latest_params = SavedParameters.query.filter(
+                SavedParameters.user_id == follow.followed_id,
+                SavedParameters.date >= seven_days_ago
+            ).order_by(SavedParameters.date.desc()).first()
+            
+            if not latest_params:
+                continue
+            
+            # Build visible parameters list respecting privacy
+            privacy_map = {
+                'mood': 'mood_privacy', 'energy': 'energy_privacy',
+                'sleep_quality': 'sleep_quality_privacy',
+                'physical_activity': 'physical_activity_privacy',
+                'anxiety': 'anxiety_privacy'
+            }
+            
+            visible_params = []
+            for param_name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
+                value = getattr(latest_params, param_name, None)
+                if value:
+                    param_privacy = getattr(latest_params, privacy_map[param_name], 'public') or 'public'
+                    if check_param_visibility(param_privacy, circle_level):
+                        visible_params.append({
+                            'parameter_name': param_name,
+                            'value': value
+                        })
+            
+            if visible_params:
+                param_date = latest_params.date
+                date_str = param_date.isoformat() if hasattr(param_date, 'isoformat') else str(param_date)
+                updates.append({
+                    'user': {
+                        'id': followed_user.id,
+                        'username': followed_user.username,
+                        'selected_city': followed_user.selected_city,
+                        'follows_you': Follow.query.filter_by(
+                            follower_id=followed_user.id,
+                            followed_id=user_id
+                        ).first() is not None
+                    },
+                    'date': date_str,
+                    'params': visible_params
+                })
+        
+        # Sort by date descending, limit to 20
+        updates.sort(key=lambda x: x['date'], reverse=True)
+        updates = updates[:20]
+        
+        return jsonify({'updates': updates}), 200
+    
+    except Exception as e:
+        logger.error(f"Friends updates error: {str(e)}")
+        return jsonify({'error': 'Failed to load friends updates'}), 500
+
+
 @app.route('/api/following')
 @login_required
 @rate_limit_endpoint(max_requests=60, window=60)  # 60 requests per minute
@@ -14132,12 +14231,18 @@ def get_following():
         for follow in follows:
             followed_user = db.session.get(User, follow.followed_id)
             if followed_user:
+                # VINTER2: Check if this user follows back
+                follows_back = Follow.query.filter_by(
+                    follower_id=followed_user.id,
+                    followed_id=user_id
+                ).first() is not None
                 following.append({
                     'id': followed_user.id,
                     'username': followed_user.username,
                     'email': followed_user.email,
                     'note': follow.follow_note,  # ADD THIS FIELD
                     'follow_trigger': getattr(follow, 'follow_trigger', False) or False,  # V2: alert tracking status
+                    'follows_you': follows_back,  # VINTER2: whether this user follows you back
                     'selected_city': followed_user.selected_city,
                     'created_at': follow.created_at.isoformat()
                 })
@@ -14218,7 +14323,9 @@ def get_user_parameters_for_triggers(user_id):
                 value = getattr(param, param_name, None)
                 if value:
                     # V4 FIX: Check privacy before including this parameter
-                    param_privacy = getattr(param, privacy_map[param_name], 'private') or 'private'
+                    # VINTER FIX: Use 'public' as default for NULL privacy (matches get_hierarchical_parameters behavior)
+                    # Previously defaulted to 'private' which blocked all Friends Daily Updates visibility
+                    param_privacy = getattr(param, privacy_map[param_name], 'public') or 'public'
                     if check_param_visibility(param_privacy, circle_level):
                         result['parameters'].append({
                             'date': param.date.isoformat() if hasattr(param.date, 'isoformat') else str(param.date),
