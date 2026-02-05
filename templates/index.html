@@ -3420,11 +3420,14 @@
                       <div style="background: var(--light); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
                           <div style="display: flex; justify-content: space-between; align-items: center;">
                               <span style="font-weight: 600;" data-i18n="connections.status">Connection Status</span>
-                              <span id="connInfoStatus" style="background: var(--sage); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">Following</span>
+                              <div id="connInfoStatusContainer" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                  <span id="connInfoStatus" style="background: var(--sage); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">Following</span>
+                              </div>
                           </div>
                       </div>
 
-                      <!-- Track Alerts Toggle -->
+                      <!-- Track Alerts Toggle - COMMENTED OUT: follow_trigger is disconnected from ParameterTrigger system.
+                           Alert tracking is done via diary page trigger setup. Can be re-enabled when connected.
                       <div style="background: var(--peach-light); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
                           <div style="display: flex; justify-content: space-between; align-items: center;">
                               <span style="font-weight: 600;" data-i18n="connections.track_alerts">🔔 Track Alerts</span>
@@ -3432,6 +3435,7 @@
                           </div>
                           <p style="font-size: 0.8rem; color: var(--gray); margin-top: 8px;" data-i18n="connections.track_alerts_desc">Get notified about changes in this person's wellness parameters.</p>
                       </div>
+                      -->
 
                       <!-- Action Buttons -->
                       <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -9781,10 +9785,10 @@ function showBlockedMessage() {
     const lang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage') || 'en';
     // PJ501: Changed message to "Account Not Available"
     const messages = {
-        'en': { title: 'Account Not Available', button: 'Back to Following' },
-        'he': { title: 'חשבון לא זמין', button: 'חזרה למעקב' },
-        'ar': { title: 'الحساب غير متاح', button: 'العودة إلى المتابعة' },
-        'ru': { title: 'Аккаунт недоступен', button: 'Назад к подпискам' }
+        'en': { title: 'Account Not Available', button: 'Back to Connections' },
+        'he': { title: 'חשבון לא זמין', button: 'חזרה לחיבורים' },
+        'ar': { title: 'الحساب غير متاح', button: 'العودة إلى الاتصالات' },
+        'ru': { title: 'Аккаунт недоступен', button: 'Назад к подключениям' }
     };
     const msg = messages[lang] || messages['en'];
     
@@ -9833,13 +9837,11 @@ function closeBlockedMessage() {
     if (overlay) {
         overlay.remove();
     }
-    // Navigate back to following tab
-    showSection('social');
-    setTimeout(() => {
-        const followingTab = document.querySelector('[onclick*="showSocialTab"][onclick*="following"]') || 
-                            document.querySelector('.social-tab[data-tab="following"]');
-        if (followingTab) followingTab.click();
-    }, 100);
+    // Navigate back to connections view
+    viewingUserId = null;
+    window.viewingUserId = null;
+    showView('connections');
+    loadConnections();
 }
 
 // ========== BLOCK USER FUNCTIONS - END ==========
@@ -11353,11 +11355,11 @@ function addBackToFollowingButton(viewId) {
 
     const backButton = document.createElement('button');
     backButton.className = 'btn-secondary back-to-following-btn';
-    backButton.textContent = pt('common.back_to_following') || '← Back to Following';
-    backButton.setAttribute('data-i18n', 'common.back_to_following');
+    backButton.textContent = pt('common.back_to_connections') || '← Back to Connections';
+    backButton.setAttribute('data-i18n', 'common.back_to_connections');
     backButton.style.marginBottom = '1rem';
   backButton.onclick = () => {
-        console.log('[DEBUG] Back to Following clicked, resetting viewingUserId');
+        console.log('[DEBUG] Back to Connections clicked, resetting viewingUserId');
         // CRITICAL: Reset viewingUserId BEFORE calling showView
         viewingUserId = null;
         window.viewingUserId = null;
@@ -11425,11 +11427,11 @@ function addBackToFollowingButton(viewId) {
         // Show messages nav visibility (restore own account view)
         updateMessagesNavVisibility();
 
-        // Navigate to following view and load current user's following list
-        showView('following');
+        // Navigate to connections view and load connections list
+        showView('connections');
 
-        // Force reload of current user's following data
-        loadFollowing();
+        // Force reload of connections data
+        loadConnections();
     };
 
     view.insertBefore(backButton, view.firstChild);
@@ -13561,7 +13563,7 @@ async function loadConnections() {
             const connections = followingData.following || [];
             if (connections.length > 0) {
                 myConnectionsList.innerHTML = connections.map(user => `
-                    <div class="user-card" style="cursor: pointer; border-left: 3px solid ${user.follow_trigger ? 'var(--coral)' : 'transparent'};" onclick="openConnectionInfo(${user.id}, '${escapeHtml(user.username)}', '${escapeHtml(user.selected_city || user.city || 'Unknown')}', '${user.avatar_color || '#6B8BA4'}', ${user.follow_trigger || false})">
+                    <div class="user-card" style="cursor: pointer; border-left: 3px solid transparent;" onclick="openConnectionInfo(${user.id}, '${escapeHtml(user.username)}', '${escapeHtml(user.selected_city || user.city || 'Unknown')}', '${user.avatar_color || '#6B8BA4'}', false, ${user.follows_you || false})">
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B8BA4'};">
                             ${escapeHtml(user.username.charAt(0).toUpperCase())}
                         </div>
@@ -13570,7 +13572,7 @@ async function loadConnections() {
                             <div class="user-location" style="font-size: 0.8rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 6px;">
-                            ${user.follow_trigger ? '<span style="color: var(--coral); font-size: 0.75rem;">🔔</span>' : ''}
+                            ${user.follows_you ? '<span style="color: var(--primary); font-size: 0.7rem; padding: 2px 8px; background: rgba(107,70,193,0.1); border-radius: 10px;">Follows You</span>' : ''}
                             <span style="color: var(--gray); font-size: 1.2rem;">›</span>
                         </div>
                     </div>
@@ -13677,23 +13679,25 @@ async function searchConnectionsInstant(query) {
 }
 
 // --- V2: CONNECTION INFO MODAL ---
-function openConnectionInfo(userId, username, city, avatarColor, hasTrigger) {
+function openConnectionInfo(userId, username, city, avatarColor, hasTrigger, followsYou) {
     currentConnectionInfoUserId = userId;
     document.getElementById('connInfoUsername').textContent = username;
     document.getElementById('connInfoAvatar').textContent = username.charAt(0).toUpperCase();
     document.getElementById('connInfoAvatar').style.background = avatarColor || 'var(--primary)';
     document.getElementById('connInfoCity').textContent = '📍 ' + city;
-    document.getElementById('connInfoStatus').textContent = 'Following';
 
-    const trackBtn = document.getElementById('connInfoTrackBtn');
-    if (hasTrigger) {
-        trackBtn.textContent = '🔔 Tracking';
-        trackBtn.style.background = 'var(--coral)';
-        trackBtn.style.color = 'white';
+    // VINTER2: Show "Follows You" indicator alongside "Following"
+    const statusContainer = document.getElementById('connInfoStatusContainer');
+    if (statusContainer) {
+        let statusHTML = '';
+        if (followsYou) {
+            statusHTML += '<span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">' + (pt('connections.follows_you') || 'Follows You') + '</span>';
+        }
+        statusHTML += '<span id="connInfoStatus" style="background: var(--sage); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">Following</span>';
+        statusContainer.innerHTML = statusHTML;
     } else {
-        trackBtn.textContent = 'Enable';
-        trackBtn.style.background = 'var(--peach-light)';
-        trackBtn.style.color = 'var(--dark)';
+        // Fallback if container not found
+        document.getElementById('connInfoStatus').textContent = 'Following';
     }
 
     const modal = document.getElementById('connectionInfoModal');
@@ -14062,39 +14066,20 @@ async function quickCheckin(moodValue) {
     }
 }
 
-// V2: Friends daily updates
+// VINTER2: Friends daily updates - uses dedicated backend endpoint
+// Replaces the old N+1 approach that only checked first 10 users
 async function loadFriendsUpdates() {
     try {
         const listDiv = document.getElementById('friendsUpdatesList');
         if (!listDiv) return;
 
-        const response = await fetch('/api/following', { credentials: 'include' });
-        if (!response.ok) return;
-        const data = await response.json();
-
-        const following = data.following || [];
-        if (following.length === 0) {
-            listDiv.innerHTML = '<p style="color: var(--gray); text-align: center; padding: 20px;">Follow some users to see their updates here.</p>';
+        const response = await fetch('/api/friends-updates', { credentials: 'include' });
+        if (!response.ok) {
+            listDiv.innerHTML = '<p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_updates">No updates from your connections yet today.</p>';
             return;
         }
-
-        // For each followed user, get their latest status if available
-        const updates = [];
-        for (const user of following.slice(0, 10)) { // Limit to 10 connections
-            try {
-                const statusResp = await fetch(`/api/parameters/user/${user.id}`, { credentials: 'include' });
-                if (statusResp.ok) {
-                    const statusData = await statusResp.json();
-                    const params = statusData.parameters || [];
-                    if (params.length > 0) {
-                        // Get the latest date's entries
-                        const latestDate = params[0].date;
-                        const latestParams = params.filter(p => p.date === latestDate);
-                        updates.push({ user, date: latestDate, params: latestParams });
-                    }
-                }
-            } catch (e) { /* skip */ }
-        }
+        const data = await response.json();
+        const updates = data.updates || [];
 
         if (updates.length === 0) {
             listDiv.innerHTML = '<p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_updates">No updates from your connections yet today.</p>';
@@ -14107,8 +14092,8 @@ async function loadFriendsUpdates() {
         listDiv.innerHTML = updates.map(u => {
             const paramDisplay = u.params.map(p => `${paramLabels[p.parameter_name] || p.parameter_name}: ${emojis[p.value] || p.value}`).join(' · ');
             return `
-                <div style="background: var(--light); padding: 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="openConnectionInfo(${u.user.id}, '${escapeHtml(u.user.username)}', '${escapeHtml(u.user.selected_city || 'Unknown')}', '${u.user.avatar_color || '#6B8BA4'}', ${u.user.follow_trigger || false})">
-                    <div style="width: 40px; height: 40px; border-radius: 50%; background: ${u.user.avatar_color || '#6B8BA4'}; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">${escapeHtml(u.user.username.charAt(0).toUpperCase())}</div>
+                <div style="background: var(--light); padding: 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="openConnectionInfo(${u.user.id}, '${escapeHtml(u.user.username)}', '${escapeHtml(u.user.selected_city || 'Unknown')}', '#6B8BA4', false, ${u.user.follows_you || false})">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #6B8BA4; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">${escapeHtml(u.user.username.charAt(0).toUpperCase())}</div>
                     <div style="flex: 1;">
                         <div style="font-weight: 600; color: var(--dark); font-size: 0.9rem;">${escapeHtml(u.user.username)}</div>
                         <div style="font-size: 0.8rem; color: var(--gray);">${paramDisplay || 'Updated ' + u.date}</div>
@@ -14118,7 +14103,7 @@ async function loadFriendsUpdates() {
             `;
         }).join('');
     } catch (error) {
-        console.error('[V2] Error loading friends updates:', error);
+        console.error('[VINTER2] Error loading friends updates:', error);
     }
 }
 
