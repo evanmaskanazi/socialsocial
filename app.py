@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 Complete app.py for Social Social Platform - V4
+V1.5 is New
 V4 Changes:
 - FIX: /api/parameters/user/<user_id> now enforces per-parameter privacy (was returning all params to any follower)
 - FIX: Removed /api/debug/parameters/<user_id> endpoint (no privacy filtering, marked as temporary)
