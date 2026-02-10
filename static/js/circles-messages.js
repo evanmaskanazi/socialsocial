@@ -435,7 +435,7 @@ window.circlesHTML = `
 
         <!-- Language Selector -->
         <div style="text-align: center; margin-bottom: 20px;">
-            <label for="languageSelect" style="margin-right: 10px; color: #8898aa;" data-i18n="settings.language">Language:</label>
+            <label for="languageSelect" style="margin-inline-end: 10px; color: #8898aa;" data-i18n="settings.language">Language:</label>
             <select id="languageSelect" onchange="window.i18n.setLanguage(this.value)" style="padding: 8px 15px; border: 2px solid #dfe1e6; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
                 <option value="en">English</option>
                 <option value="he">עברית (Hebrew)</option>

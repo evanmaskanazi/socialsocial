@@ -2079,7 +2079,9 @@
             .alert-item,
             .follow-card,
             .user-card,
-            .city-selector-container {
+            .city-selector-container,
+            .settings-section,
+            .settings-card {
                 width: 100%;
                 max-width: 100%;
                 box-sizing: border-box;
@@ -2113,6 +2115,23 @@
                 min-width: 0 !important;
                 max-width: 100% !important;
                 box-sizing: border-box;
+            }
+
+            /* Modals: reduced padding on mobile */
+            .modal-content {
+                padding: var(--card-padding) !important;
+            }
+
+            /* Connection info modal inner content */
+            .connection-info-inner {
+                padding: var(--card-padding);
+                max-width: 100%;
+                width: 95%;
+            }
+
+            /* Follow actions: stack on mobile */
+            .follow-actions-container {
+                flex-wrap: wrap !important;
             }
         }
 
@@ -2915,7 +2934,7 @@
                       <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="home.location_settings">Location Settings</h3>
 
                       <div class="city-selector-wrapper" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
-                          <label style="font-weight: 600; color: var(--dark); min-width: 120px;" data-i18n="home.select_city">Select City:</label>
+                          <label style="font-weight: 600; color: var(--dark);" data-i18n="home.select_city">Select City:</label>
                   <select id="homeCitySelector" class="city-selector">
     <!-- Israel (10 cities) -->
     <option value="Jerusalem, Israel" data-i18n="city.jerusalem_israel">Jerusalem, Israel</option>
@@ -3408,7 +3427,7 @@
                   </div>
 
                   <!-- Email Notification Settings -->
-                  <div style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                  <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.notification_settings">Email Notification Settings</h3>
                       <div style="display: flex; flex-direction: column; gap: 16px;">
                           <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -3429,7 +3448,7 @@
                   </div>
 
                   <!-- Change Password -->
-                  <div style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                  <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.change_password">Change Password</h3>
                       <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
                       <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
@@ -3451,7 +3470,7 @@
                   </div>
 
                   <!-- Export Your Data -->
-                  <div style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                  <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="home.data_export">Export Your Data</h3>
                       <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
                       <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
@@ -3467,7 +3486,7 @@
 
               <!-- V2: Connection Info Modal -->
               <div id="connectionInfoModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center;">
-                  <div style="background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                  <div class="connection-info-inner" style="background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                           <h3 id="connInfoUsername" style="color: var(--primary);">Connection</h3>
                           <button onclick="closeConnectionInfo()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray);">✕</button>
@@ -9456,7 +9475,7 @@ async function loadFollowing() {
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${escapeHtml(user.reason)}</div>` : ''}
                             <div class="user-location" style="font-size: 0.75rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
-                        <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap;">
+                        <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center;">
                             <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">
                                 ${pt('following.follow') || 'Follow'}
                             </button>

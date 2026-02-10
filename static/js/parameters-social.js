@@ -2182,7 +2182,7 @@ function followFromParameters(userId, username) {
                     <input type="checkbox" id="followTrigger" style="
                         width: 20px;
                         height: 20px;
-                        margin-right: 0.75rem;
+                        margin-inline-end: 0.75rem;
                         cursor: pointer;
                     " checked>
                     <div>
@@ -2921,7 +2921,7 @@ function displayUserParameters(data, userId, username) {
             const color = getValueColor(param.parameter_name, value);
 
             html += `
-                <div style="padding: 10px; background: white; border-radius: 8px; border-left: 3px solid ${color};">
+                <div style="padding: 10px; background: white; border-radius: 8px; border-inline-start: 3px solid ${color};">
                     <div style="font-size: 12px; color: #666;">${icon} ${param.parameter_name}</div>
                     <div style="font-size: 18px; font-weight: bold; color: ${color};">${value}/4</div>
                 </div>
@@ -3005,7 +3005,7 @@ function addTriggerSettings(container, userId, username) {
                 checkbox.type = 'checkbox';
                 checkbox.id = `trigger-${param.name}`;
                 checkbox.checked = triggers[param.name + '_alert'] || false;
-                checkbox.style.cssText = 'margin-right: 10px;';
+                checkbox.style.cssText = 'margin-inline-end: 10px;';
 
                 const label = document.createElement('label');
                 label.htmlFor = `trigger-${param.name}`;
@@ -3016,7 +3016,7 @@ function addTriggerSettings(container, userId, username) {
                     align-items: center;
                 `;
                 label.innerHTML = `
-                    <span style="font-size: 20px; margin-right: 10px;">${param.icon}</span>
+                    <span style="font-size: 20px; margin-inline-end: 10px;">${param.icon}</span>
                     <span style="font-weight: 500;">${param.label}</span>
                 `;
 
