@@ -349,10 +349,6 @@
 }
 
 @media (max-width: 768px) {
-    .user-card {
-        padding: 0.75rem;
-    }
-
     .user-avatar {
         width: 40px;
         height: 40px;
@@ -1546,8 +1542,8 @@
 
             .main-content {
                 margin-bottom: 60px; /* Prevent content being hidden behind nav */
-                border-radius: 15px 15px 0 0;
-                padding: 16px; /* V2: Fix mobile margins/spacing */
+                border-radius: 0;
+                padding: var(--mobile-padding);
             }
 
             .messages-container {
@@ -2061,7 +2057,55 @@
     }
 }
 
+        /* ================================================== */
+        /* Step 2: Comprehensive mobile width consistency      */
+        /* ================================================== */
+        @media (max-width: 768px) {
+            /* All cards/sections/containers: full width, consistent padding */
+            .parameter-card,
+            .profile-section,
+            .share-link-card,
+            .recommendations-card,
+            .feed-calendar-section,
+            .alert-item,
+            .follow-card,
+            .user-card,
+            .city-selector-container {
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+                padding: var(--card-padding);
+            }
 
+            /* All buttons: full width on mobile */
+            .btn,
+            .btn-primary,
+            .btn-secondary {
+                width: 100% !important;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            /* Parameter grid collapses to single column */
+            .parameter-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Span-2 cards collapse to span-1 */
+            .parameter-card[style*="grid-column: span 2"] {
+                grid-column: span 1 !important;
+            }
+
+            /* All text inputs, selects, textareas: full width */
+            input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+            select,
+            textarea {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                box-sizing: border-box;
+            }
+        }
 
     </style>
 </head>
