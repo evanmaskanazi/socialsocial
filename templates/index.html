@@ -549,17 +549,6 @@
             flex-direction: row-reverse;
         }
 
-        [dir="rtl"] .avatar,
-        [dir="rtl"] .member-avatar {
-            margin-right: 0;
-            margin-left: 12px;
-        }
-
-        [dir="rtl"] .post-header .avatar {
-            margin-right: 0;
-            margin-left: 12px;
-        }
-
         .container {
             max-width: var(--content-max-width, 1400px);
             margin: 0 auto;
@@ -891,7 +880,7 @@
             justify-content: center;
             color: var(--white);
             font-weight: bold;
-            margin-right: 12px;
+            margin-inline-end: 12px;
         }
 
         .post-meta {
@@ -1115,7 +1104,7 @@
             align-items: center;
             justify-content: center;
             font-size: 14px;
-            margin-right: 12px;
+            margin-inline-end: 12px;
         }
 
         .member-name {
@@ -1191,13 +1180,8 @@
 
         .conversations-list {
             width: 300px;
-            border-right: 1px solid #E5E7EB;
+            border-inline-end: 1px solid #E5E7EB;
             overflow-y: auto;
-        }
-
-        [dir="rtl"] .conversations-list {
-            border-right: none;
-            border-left: 1px solid #E5E7EB;
         }
 
         .conversation-item {
@@ -1336,7 +1320,7 @@
     background: var(--light);
     border-radius: 10px;
     margin-bottom: 10px;
-    border-left: 4px solid var(--warning);
+    border-inline-start: 4px solid var(--warning);
     cursor: pointer;
     transition: background-color 0.2s, opacity 0.3s;
     position: relative;
@@ -1350,27 +1334,12 @@
     opacity: 1 !important;
 }
 
-[dir="rtl"] .alert-item {
-    border-left: none;
-    border-right: 4px solid var(--warning);
-}
-
         .alert-item.high {
-            border-left-color: var(--danger);
-        }
-
-        [dir="rtl"] .alert-item.high {
-            border-left-color: transparent;
-            border-right-color: var(--danger);
+            border-inline-start-color: var(--danger);
         }
 
         .alert-item.low {
-            border-left-color: var(--success);
-        }
-
-        [dir="rtl"] .alert-item.low {
-            border-left-color: transparent;
-            border-right-color: var(--success);
+            border-inline-start-color: var(--success);
         }
 
         /* About and Support Pages */
@@ -1736,14 +1705,9 @@
         
         .mobile-more-icon {
             font-size: 20px;
-            margin-right: 15px;
+            margin-inline-end: 15px;
             width: 28px;
             text-align: center;
-        }
-        
-        [dir="rtl"] .mobile-more-icon {
-            margin-right: 0;
-            margin-left: 15px;
         }
         
         .mobile-more-label {
@@ -2214,7 +2178,7 @@
             }
         }
         [dir="rtl"] .cookie-consent-content {
-            text-align: right;
+            text-align: end;
         }
         [dir="rtl"] .cookie-option {
             flex-direction: row-reverse;
