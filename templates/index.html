@@ -478,6 +478,13 @@
             /* Wide and open layout */
             --content-max-width: 1400px;
             --content-padding: 30px;
+            /* Step 1: Universal mobile width system */
+            --mobile-padding: 16px;
+            --mobile-content-width: calc(100vw - (var(--mobile-padding) * 2));
+            --mobile-max-content: 600px;
+            --card-padding: 16px;
+            --card-border-radius: 12px;
+            --element-gap: 12px;
         }
 
         /* P305: Dark mode support for evening/nighttime use */
