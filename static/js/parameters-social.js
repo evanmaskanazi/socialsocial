@@ -1348,6 +1348,8 @@ function addParameterStyles() {
             border-radius: 15px;
             padding: 30px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            max-width: 100%;
         }
 
         .date-section {
@@ -1399,6 +1401,7 @@ function addParameterStyles() {
             grid-template-columns: repeat(7, 1fr);
             gap: 8px;
             margin-top: 15px;
+            max-width: 100%;
         }
 
         .calendar-day {
@@ -1409,6 +1412,8 @@ function addParameterStyles() {
             cursor: pointer;
             background: white;
             transition: all 0.3s ease;
+            box-sizing: border-box;
+            min-width: 0;
         }
 
         .calendar-day:hover {
@@ -1625,6 +1630,7 @@ function addParameterStyles() {
             border-radius: 8px;
             font-size: 1em;
             resize: vertical;
+            box-sizing: border-box;
         }
 
         .action-buttons {
@@ -1643,6 +1649,7 @@ function addParameterStyles() {
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-sizing: border-box;
         }
 
         .btn-primary {
@@ -1752,20 +1759,68 @@ function addParameterStyles() {
 
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
-            .parameters-page { padding: 10px; }
-            .parameters-card { padding: 20px; }
+            .parameters-page {
+                padding: 10px;
+                overflow-x: hidden;
+                max-width: 100vw;
+                box-sizing: border-box;
+            }
+            .parameters-card {
+                padding: 15px;
+                overflow: hidden;
+                box-sizing: border-box;
+                max-width: 100%;
+            }
             .rating-button {
                 width: 50px;
                 height: 50px;
                 font-size: 1.1em;
             }
-            .action-buttons { flex-direction: column; }
-            .btn { width: 100%; }
+            .action-buttons {
+                flex-direction: column;
+                padding: 0;
+            }
+            .btn {
+                width: 100%;
+                box-sizing: border-box;
+            }
             .language-selector-wrapper {
                 position: relative;
                 top: 0;
                 right: 0;
                 margin-bottom: 20px;
+            }
+            .notes-section textarea {
+                width: 100%;
+                box-sizing: border-box;
+                max-width: 100%;
+            }
+            .calendar-grid {
+                gap: 4px;
+            }
+            .calendar-day {
+                padding: 6px 2px;
+                font-size: 0.85em;
+            }
+            .date-controls {
+                gap: 10px;
+                flex-wrap: nowrap;
+            }
+            .calendar-display {
+                font-size: 1.1em;
+                min-width: 140px;
+            }
+            .date-nav-btn {
+                width: 36px;
+                height: 36px;
+                flex-shrink: 0;
+            }
+            .parameter-item {
+                padding: 15px;
+                overflow: hidden;
+            }
+            .rating-buttons {
+                flex-wrap: wrap;
             }
         }
 
