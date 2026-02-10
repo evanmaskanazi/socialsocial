@@ -50,7 +50,7 @@
             
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '×';
-            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-left:auto;opacity:0.8;';
+            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-inline-start:auto;opacity:0.8;';
             closeBtn.onclick = function() { removeToast(toast); };
             toast.appendChild(closeBtn);
             

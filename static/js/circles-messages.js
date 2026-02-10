@@ -60,7 +60,7 @@
             
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '×';
-            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-left:auto;opacity:0.8;';
+            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-inline-start:auto;opacity:0.8;';
             closeBtn.onclick = function() { removeToast(toast); };
             toast.appendChild(closeBtn);
             
@@ -1065,7 +1065,7 @@ async function searchUsers() {
                             ${detailLine}
                         </div>
                     </div>
-                    <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-left: 10px; flex-shrink: 0;" onclick="event.stopPropagation()">
+                    <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-inline-start: 10px; flex-shrink: 0;" onclick="event.stopPropagation()">
                         <option value="">Add to circle...</option>
                         <option value="public" data-i18n="circles.public">Public</option>
                         <option value="class_b" data-i18n="circles.class_b">Close Friends</option>
@@ -1830,7 +1830,7 @@ function updateConversationsList() {
                 <div class="conversation-info">
                     <div class="conversation-name">
                         ${escapeHtml(conv.name)}
-                        <span style="font-size: 12px; color: #8898aa; margin-left: 10px;">${timeDisplay}</span>
+                        <span style="font-size: 12px; color: #8898aa; margin-inline-start: 10px;">${timeDisplay}</span>
                     </div>
                     <div class="conversation-preview">${escapeHtml(messagePreview.substring(0, 50))}${messagePreview.length > 50 ? '...' : ''}</div>
                 </div>

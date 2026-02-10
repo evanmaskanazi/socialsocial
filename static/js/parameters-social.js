@@ -149,7 +149,7 @@ const TRIGGER_ALERT_DISPLAY_MODE = 'standard';  // Change to 'overlay' for yello
             
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '×';
-            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-left:auto;opacity:0.8;';
+            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-inline-start:auto;opacity:0.8;';
             closeBtn.onclick = function() { removeToast(toast); };
             toast.appendChild(closeBtn);
             
@@ -1462,12 +1462,7 @@ function addParameterStyles() {
 
         .parameter-emoji {
             font-size: 2em;
-            margin-right: 15px;
-        }
-
-        [dir="rtl"] .parameter-emoji {
-            margin-right: 0;
-            margin-left: 15px;
+            margin-inline-end: 15px;
         }
 
         .parameter-info {
@@ -1493,7 +1488,7 @@ function addParameterStyles() {
             font-size: 12px;
             font-weight: bold;
             cursor: pointer;
-            margin-left: 8px;
+            margin-inline-start: 8px;
             vertical-align: middle;
             transition: all 0.2s ease;
             font-style: normal;
@@ -1502,11 +1497,6 @@ function addParameterStyles() {
         .tooltip-icon:hover {
             background: #764ba2;
             transform: scale(1.1);
-        }
-
-        [dir="rtl"] .tooltip-icon {
-            margin-left: 0;
-            margin-right: 8px;
         }
 
         .tooltip-modal {
@@ -3034,7 +3024,7 @@ function addTriggerSettings(container, userId, username) {
                 thresholdInfo.style.cssText = `
                     font-size: 12px;
                     color: #6c757d;
-                    margin-left: auto;
+                    margin-inline-start: auto;
                 `;
 
                 if (param.name === 'anxiety') {

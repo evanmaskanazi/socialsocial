@@ -325,8 +325,8 @@
 
 .follow-actions-container {
     display: flex;
-    gap: 4px;
-    align-items: stretch;
+    gap: 0.5rem;
+    align-items: center;
     flex-direction: column;
 }
 
@@ -2990,7 +2990,7 @@
                               <option value="90" data-i18n="progress.last_90_days">Last 90 days</option>
                               <option value="365" data-i18n="progress.last_year">Last year</option>
                           </select>
-                          <button onclick="updateProgressChart()" class="btn btn-secondary" style="margin-left: 10px; padding: 10px 20px;" data-i18n="progress.update">Update</button>
+                          <button onclick="updateProgressChart()" class="btn btn-secondary" style="margin-inline-start: 10px; padding: 10px 20px;" data-i18n="progress.update">Update</button>
                       </div>
 
                       <!-- Progress Chart Container -->
@@ -6614,7 +6614,7 @@ async function loadUserFeedForDate(userId, dateStr) {
                     <div class="post-header">
                         <span class="post-category">${post.category || 'General'}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
-                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
                     </div>
                     <div class="post-content">${post.content}</div>
                     ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
@@ -6624,7 +6624,7 @@ async function loadUserFeedForDate(userId, dateStr) {
                                 <span class="like-icon">${post.user_liked ? '❤️' : '🤍'}</span>
                                 <span class="like-count">${post.likes_count || 0}</span>
                             </button>
-                            <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-left: 1rem;">
+                            <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-inline-start: 1rem;">
                                 💬 <span class="comment-count">${post.comments_count || 0}</span>
                             </button>
                         </div>
@@ -6949,7 +6949,7 @@ document.addEventListener('click', function(e) {
                             <span class="like-icon">${post.user_liked ? '❤️' : '🤍'}</span>
                             <span class="like-count">${post.reactions_count || 0}</span>
                         </button>
-                        <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-left: 1rem;">
+                        <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-inline-start: 1rem;">
                             💬 <span class="comment-count">${post.comments_count || 0}</span>
                         </button>
                     </div>
@@ -7069,7 +7069,7 @@ function showNotification(message, type = 'info') {
     
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '×';
-    closeBtn.style.cssText = 'background: none; border: none; color: inherit; font-size: 18px; cursor: pointer; padding: 0; margin-left: 8px; opacity: 0.8;';
+    closeBtn.style.cssText = 'background: none; border: none; color: inherit; font-size: 18px; cursor: pointer; padding: 0; margin-inline-start: 8px; opacity: 0.8;';
     closeBtn.onclick = () => notification.remove();
     
     notification.appendChild(icon);
@@ -9356,7 +9356,7 @@ async function loadFollowing() {
                             <div class="user-name">${escapeHtml(user.username)}</div>
                             <div class="user-location">${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
-                        <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-direction: column;">
+                        <div class="follow-actions-container">
                             <button class="btn-secondary unfollow-btn" data-user-id="${user.id}" data-i18n="following.unfollow">
                                 ${pt('following.unfollow') || 'Unfollow'}
                             </button>
@@ -9932,7 +9932,7 @@ async function loadTriggers() {
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <strong>${trigger.target_username}</strong>
-                        <span style="color: var(--gray); margin-left: 10px;">
+                        <span style="color: var(--gray); margin-inline-start: 10px;">
                             ${trigger.parameter}: ${trigger.operator} ${trigger.threshold}
                         </span>
                     </div>
@@ -10708,14 +10708,14 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                     parametersHtml += `
                         <div class="param-item" style="padding: 8px; background: white; border-radius: 5px;">
                             <span style="font-size: 0.9em; color: #666;">${label}:</span>
-                            <strong style="margin-left: 5px; color: #333;">${param[key]}/4</strong>
+                            <strong style="margin-inline-start: 5px; color: #333;">${param[key]}/4</strong>
                         </div>
                     `;
                 } else {
                     parametersHtml += `
                         <div class="param-item" style="padding: 8px; background: white; border-radius: 5px; opacity: 0.5;">
                             <span style="font-size: 0.9em; color: #999;">${label}:</span>
-                            <span style="margin-left: 5px; color: #999;">Private</span>
+                            <span style="margin-inline-start: 5px; color: #999;">Private</span>
                         </div>
                     `;
                 }
@@ -11347,7 +11347,7 @@ async function loadUserFeed(userId) {
                     <div class="post-header">
                         <span class="post-category">${post.category || 'General'}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
-                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
                     </div>
                     <div class="post-content">${post.content}</div>
                     ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
@@ -11357,7 +11357,7 @@ async function loadUserFeed(userId) {
                                 <span class="like-icon">${post.user_liked ? '❤️' : '🤍'}</span>
                                 <span class="like-count">${post.likes_count || 0}</span>
                             </button>
-                            <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-left: 1rem;">
+                            <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-inline-start: 1rem;">
                                 💬 <span class="comment-count">${post.comments_count || 0}</span>
                             </button>
                         </div>
