@@ -541,7 +541,7 @@ DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 =
 # - Alert processing (filters out shorter patterns)
 # - Alert display (hides existing alerts below threshold)
 # =============================================================================
-MINIMUM_TRIGGER_DAYS = 1  # V2 FIX: Changed from 3 to 1 for immediate contact triggers
+MINIMUM_TRIGGER_DAYS = 3  # Reverted to match frontend minimum display
 # =============================================================================
 
 from flask import (
