@@ -4429,6 +4429,11 @@ def create_test_users():
                 db.session.add(profile)
                 created_count += 1
                 logger.info(f"Created test user: {user_data['username']}")
+            else:
+                # FIX10J: Repair any sample usernames corrupted by consent flow
+                if existing_user.username != user_data['username']:
+                    logger.info(f"Repairing username: {existing_user.username} -> {user_data['username']}")
+                    existing_user.username = user_data['username']
 
         if created_count > 0:
             db.session.commit()
@@ -5593,9 +5598,9 @@ def save_consent():
         # Handle username if provided with consent
         username = data.get('username', '').strip()
         if username:
-            # If blank, use email prefix
-            if not username:
-                username = user.email.split('@')[0]
+            # FIX10J: Reject email-format usernames - use prefix instead
+            if '@' in username:
+                username = username.split('@')[0]
 
             # Check if username is available
             existing = db.session.execute(
