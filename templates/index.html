@@ -1,4 +1,14 @@
 <!DOCTYPE html>
+<!-- Fix10C: Settings Tab Restructure + Incognito Mode Fix -->
+<!-- Fix10C CHANGES:
+  1. Renamed "Profile" tab to "Settings" and moved to rightmost position in sidebar/mobile nav
+  2. Settings view has two sub-tabs: Profile and Notification (matches wireframe design)
+  3. Profile sub-tab: Birth year, Bio, Interests, Occupation, Goals, Hobbies, Timezone (new), + Change Password, Export Data, Invitation, Account Deletion
+  4. Notification sub-tab: New notification toggle, New Alerts toggle, Diary Daily reminder toggle with time picker
+  5. Translated "Settings" label in all 4 languages (en/he/ar/ru) via inline i18n extension
+  6. Fixed incognito mode: Removed prefers-color-scheme:dark auto-detection; dark mode now only via manual toggle
+  7. Added timezone field to User model and /api/user/profile endpoint
+-->
 <!-- TheraSocial Version V2 - UX Overhaul (V1 to V2 High Priority Fixes + CheckList) -->
 <!-- V2 CHANGES (NON-INVASIVE - preserves all existing auth, message, alert flows):
   - NAV: Sidebar converted to horizontal top navigation bar (reduces page waste)
@@ -483,26 +493,8 @@
             --element-gap: 12px;
         }
 
-        /* P305: Dark mode support for evening/nighttime use */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --primary: #8FAFC4;
-                --primary-dark: #6B8BA4;
-                --primary-light: #AFC7D6;
-                --secondary: #A8C5AB;
-                --secondary-light: #C7D9CC;
-                --accent: #C4B8D6;
-                --success: #A8C5AB;
-                --warning: #D4B896;
-                --danger: #D49B94;
-                --dark: #E8E1D9;
-                --gray: #A0A4A8;
-                --light: #2D3748;
-                --light-warm: #374151;
-                --white: #1F2937;
-                --border: #4A5568;
-            }
-        }
+        /* Fix10C: Removed @media (prefers-color-scheme: dark) auto CSS variable override
+           Dark mode variables are now only applied via the manual .dark-mode class toggle */
 
         /* Manual dark mode class for toggle support */
         .dark-mode {
@@ -530,11 +522,8 @@
             color: var(--dark);
         }
 
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%);
-            }
-        }
+        /* Fix10C: Removed @media (prefers-color-scheme: dark) auto-detection
+           Dark mode is now only activated via the manual toggle (.dark-mode class) */
 
         .dark-mode body, body.dark-mode {
             background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%);
@@ -1947,6 +1936,26 @@
             transform: translateX(24px);
         }
 
+        /* Fix10C: Settings sub-tab button styles */
+        .settings-sub-btn:hover {
+            opacity: 0.85;
+        }
+        @media (max-width: 768px) {
+            #settingsSubNav {
+                flex-direction: row !important;
+                min-width: unset !important;
+                width: 100%;
+                margin-bottom: 15px;
+            }
+            #settingsSubNav .settings-sub-btn {
+                flex: 1;
+                text-align: center !important;
+            }
+            #settingsView > div:first-of-type {
+                flex-direction: column !important;
+            }
+        }
+
         /* Animations */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -2870,7 +2879,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq3_q">How do I update my profile?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Go to the Profile tab to update your bio, interests, occupation, goals, and favorite hobbies. These help others understand you better.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Go to the Settings tab to update your bio, interests, occupation, goals, and favorite hobbies. These help others understand you better.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -2938,10 +2947,6 @@
                 <button class="mobile-more-close-btn" onclick="closeMobileMoreMenu()">✕</button>
             </div>
             <ul class="mobile-more-menu-list">
-                <li class="mobile-more-menu-item" onclick="showViewFromMore('profile')">
-                    <span class="mobile-more-icon">👤</span>
-                    <span class="mobile-more-label" data-i18n="menu.profile">Profile</span>
-                </li>
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('circles')">
                     <span class="mobile-more-icon">⭕</span>
                     <span class="mobile-more-label" data-i18n="menu.circles">Circles</span>
@@ -2957,11 +2962,11 @@
                     <span class="mobile-more-label" data-i18n="menu.invite">Invite</span>
                 </li>
                 <li class="mobile-more-menu-divider"></li>
-                <!-- Settings hidden: consolidated into Profile -->
-                <!--<li class="mobile-more-menu-item" onclick="showViewFromMore('settings')">
+                <!-- Fix10C: Settings tab (renamed from Profile, moved after Invite) -->
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('settings')">
                     <span class="mobile-more-icon">⚙️</span>
                     <span class="mobile-more-label" data-i18n="menu.settings">Settings</span>
-                </li>-->
+                </li>
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('alerts')">
                     <span class="mobile-more-icon">🔔</span>
                     <span class="mobile-more-label" data-i18n="alerts.title">Alerts</span>
@@ -2983,10 +2988,6 @@
                         <span class="sidebar-icon">📈</span>
                         <span class="sidebar-label" data-i18n="menu.progress">Progress</span>
                     </li>
-                    <li class="sidebar-item" data-view="profile">
-                        <span class="sidebar-icon">👤</span>
-                        <span class="sidebar-label" data-i18n="menu.profile">Profile</span>
-                    </li>
                     <li class="sidebar-item" data-view="circles" onclick="handleCirclesClick(event)" style="cursor: pointer;">
                         <span class="sidebar-icon">⭕</span>
                         <span class="sidebar-label" data-i18n="menu.circles">Circles</span>
@@ -3007,11 +3008,11 @@
                         <span class="sidebar-icon">👋</span>
                         <span class="sidebar-label" data-i18n="menu.invite">Invite</span>
                     </li>
-                    <!-- Settings hidden: consolidated into Profile -->
-                    <!--<li class="sidebar-item" data-view="settings">
+                    <!-- Fix10C: Settings tab (renamed from Profile, moved to rightmost) -->
+                    <li class="sidebar-item" data-view="settings">
                         <span class="sidebar-icon">⚙️</span>
                         <span class="sidebar-label" data-i18n="menu.settings">Settings</span>
-                    </li>-->
+                    </li>
                 </ul>
             </aside>
 
@@ -3595,143 +3596,231 @@
               </div>
 
               <!-- V2: Settings View -->
+              <!-- Fix10C: Restructured Settings View with Profile/Notification sub-tabs -->
               <div id="settingsView" class="view hidden">
                   <h2 style="margin-bottom: 20px;" data-i18n="menu.settings">Settings</h2>
 
-                  <!-- V3: Full Profile Section (matches profileView layout from ProfileRight) -->
-                  <div class="profile-section" style="margin-bottom: 20px;">
-                      <div class="profile-header">
-                          <div class="profile-avatar" id="settingsProfileAvatar">U</div>
-                          <h3 id="settingsProfileUsername">Username</h3>
+                  <div style="display: flex; gap: 20px; align-items: flex-start;">
+                      <!-- Left panel: sub-tab buttons -->
+                      <div id="settingsSubNav" style="min-width: 140px; background: var(--light); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
+                          <button class="settings-sub-btn active" id="settingsSubProfile" onclick="switchSettingsTab('profile')" 
+                                  data-i18n="menu.profile" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: var(--primary); color: white; transition: all 0.2s;">
+                              Profile
+                          </button>
+                          <button class="settings-sub-btn" id="settingsSubNotification" onclick="switchSettingsTab('notification')"
+                                  data-i18n="settings.notification_btn" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
+                              Notification
+                          </button>
                       </div>
 
-                      <div class="profile-fields">
-                          <!-- Account Fields -->
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="settings.display_name">Display Name</label>
-                              <input type="text" class="form-input" id="settingsDisplayName" placeholder="Your display name">
+                      <!-- Right panel: content area -->
+                      <div style="flex: 1; min-width: 0;">
+
+                          <!-- ===== PROFILE SUB-TAB ===== -->
+                          <div id="settingsProfilePanel">
+                              <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="settings.profile_info">Profile Info</h3>
+                              <div class="profile-section" style="margin-bottom: 20px;">
+                                  <div class="profile-header">
+                                      <div class="profile-avatar" id="settingsProfileAvatar">U</div>
+                                      <h3 id="settingsProfileUsername">Username</h3>
+                                  </div>
+
+                                  <div class="profile-fields">
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
+                                          <input type="number" class="form-input" id="settingsBirthYear" 
+                                                 min="1900" max="2025" maxlength="4"
+                                                 placeholder="YYYY">
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.bio">Bio</label>
+                                          <textarea class="profile-textarea" id="settingsBio" data-i18n-placeholder="profile.bio_placeholder" placeholder="Tell us about yourself..." maxlength="500"></textarea>
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.interests">Interests</label>
+                                          <textarea class="profile-textarea" id="settingsInterests" data-i18n-placeholder="profile.interests_placeholder" placeholder="What are you interested in?" maxlength="300"></textarea>
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.occupation">Occupation</label>
+                                          <input type="text" class="form-input" id="settingsOccupation" data-i18n-placeholder="profile.occupation_placeholder" placeholder="What do you do?">
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.goals">My Goals</label>
+                                          <textarea class="profile-textarea" id="settingsGoals" data-i18n-placeholder="profile.goals_placeholder" placeholder="What are your personal or professional goals?" maxlength="300"></textarea>
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.hobbies">Favorite Hobbies</label>
+                                          <textarea class="profile-textarea" id="settingsHobbies" data-i18n-placeholder="profile.hobbies_placeholder" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
+                                      </div>
+
+                                      <!-- Fix10C: Timezone dropdown (new field from wireframe) -->
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.timezone">Timezone</label>
+                                          <select class="form-input" id="settingsTimezone" style="cursor: pointer;">
+                                              <option value="">Select timezone...</option>
+                                              <option value="Pacific/Honolulu">Hawaii (UTC-10)</option>
+                                              <option value="America/Anchorage">Alaska (UTC-9)</option>
+                                              <option value="America/Los_Angeles">Pacific (UTC-8)</option>
+                                              <option value="America/Denver">Mountain (UTC-7)</option>
+                                              <option value="America/Chicago">Central (UTC-6)</option>
+                                              <option value="America/New_York">Eastern (UTC-5)</option>
+                                              <option value="America/Sao_Paulo">São Paulo (UTC-3)</option>
+                                              <option value="Atlantic/Reykjavik">GMT (UTC+0)</option>
+                                              <option value="Europe/London">London (UTC+0/+1)</option>
+                                              <option value="Europe/Paris">Central Europe (UTC+1)</option>
+                                              <option value="Europe/Athens">Eastern Europe (UTC+2)</option>
+                                              <option value="Asia/Jerusalem">Israel (UTC+2/+3)</option>
+                                              <option value="Europe/Moscow">Moscow (UTC+3)</option>
+                                              <option value="Asia/Dubai">Gulf (UTC+4)</option>
+                                              <option value="Asia/Kolkata">India (UTC+5:30)</option>
+                                              <option value="Asia/Bangkok">Indochina (UTC+7)</option>
+                                              <option value="Asia/Shanghai">China (UTC+8)</option>
+                                              <option value="Asia/Tokyo">Japan (UTC+9)</option>
+                                              <option value="Australia/Sydney">Sydney (UTC+10/+11)</option>
+                                              <option value="Pacific/Auckland">New Zealand (UTC+12/+13)</option>
+                                          </select>
+                                      </div>
+                                  </div>
+
+                                  <div style="text-align: center; margin-top: 30px;">
+                                      <button class="btn btn-primary" onclick="saveProfileSettings()" data-i18n="profile.save">Save Profile</button>
+                                  </div>
+                              </div>
+
+                              <!-- G-5: Dark Mode / Appearance Toggle -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.appearance">Appearance</h3>
+                                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                                      <div>
+                                          <span style="font-weight: 600;" data-i18n="settings.dark_mode">Dark Mode</span>
+                                          <p style="color: #6B7280; font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings.dark_mode_desc">Switch between light and dark themes</p>
+                                      </div>
+                                      <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsDarkModeToggle" onchange="toggleDarkMode(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                          <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                              </div>
+
+                              <!-- Change Password -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.change_password">Change Password</h3>
+                                  <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 8 characters with an uppercase letter and a special character.</p>
+                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail"></p>
+                                  <div style="display: flex; flex-direction: column; gap: 12px;">
+                                      <div>
+                                          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
+                                          <input type="password" id="settingsCurrentPassword" class="form-input" placeholder="Current password">
+                                      </div>
+                                      <div>
+                                          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
+                                          <input type="password" id="settingsNewPassword" class="form-input" placeholder="New password">
+                                      </div>
+                                      <div>
+                                          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
+                                          <input type="password" id="settingsConfirmPassword" class="form-input" placeholder="Confirm new password">
+                                      </div>
+                                      <button class="btn btn-primary" style="width: auto; align-self: flex-start;" onclick="changePasswordFromSettings()" data-i18n="settings.update_password">Update Password</button>
+                                  </div>
+                              </div>
+
+                              <!-- Export Your Data -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="home.data_export">Export Your Data</h3>
+                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
+                                  <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
+                                      <span style="font-size: 1.5rem;">📋</span>
+                                      <div>
+                                          <p style="font-weight: 600; color: #1D4ED8;" data-i18n="home.data_rights_title">Your Data Rights</p>
+                                          <p style="color: #1E40AF; font-size: 0.9rem;" data-i18n="home.data_rights_desc">You have the right to access and download your personal data at any time.</p>
+                                      </div>
+                                  </div>
+                                  <button class="btn btn-primary" onclick="exportUserData()" data-i18n="home.export_button">Export My Data</button>
+                              </div>
+
+                              <!-- Invitation -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="menu.invite">Invitation</h3>
+                                  <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="settings.invitation_desc">Invite friends to join TheraSocial and build your support network.</p>
+                                  <button class="btn btn-primary" onclick="showView('invite')" data-i18n="settings.invite_btn">Go to Invitations</button>
+                              </div>
+
+                              <!-- Account Deletion -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: #EF4444; margin-bottom: 15px;" data-i18n="home.account_deletion">Account Deletion</h3>
+                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.deletion_warning">Request deletion of your account and all associated data</p>
+                                  <div style="background: #FEF3C7; border: 2px solid #F59E0B; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
+                                      <span style="font-size: 24px;">⚠️</span>
+                                      <div>
+                                          <p style="color: #92400E; font-weight: 600; margin-bottom: 5px;" data-i18n="home.deletion_permanent">This action cannot be undone</p>
+                                          <p style="color: #92400E; font-size: 14px;" data-i18n="home.deletion_permanent_detail">All your data will be permanently deleted.</p>
+                                      </div>
+                                  </div>
+                                  <button onclick="requestAccountDeletion()" class="btn" style="background: #EF4444; color: white; padding: 12px 24px; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer;" data-i18n="home.delete_account">Delete Account</button>
+                              </div>
                           </div>
 
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="settings.email">Email</label>
-                              <input type="email" class="form-input" id="settingsEmail" style="background: #f0f0f0;" readonly>
+                          <!-- ===== NOTIFICATION SUB-TAB ===== -->
+                          <div id="settingsNotificationPanel" style="display: none;">
+                              <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="settings.notification_settings">Email Notification Options</h3>
+
+                              <!-- New Notification toggle -->
+                              <div class="settings-card" style="background: var(--light); padding: 20px; border-radius: 16px; margin-bottom: 16px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                                      <span style="font-weight: 600;" data-i18n="notifications.email_on_notification">New notification</span>
+                                      <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsEmailOnNotification" onchange="updateNotificationSetting('email_on_notification', this.checked); syncAllNotificationToggles();" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                          <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                              </div>
+
+                              <!-- New Alerts toggle -->
+                              <div class="settings-card" style="background: var(--light); padding: 20px; border-radius: 16px; margin-bottom: 16px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                                      <span style="font-weight: 600;" data-i18n="settings.email_on_alert">New Alerts</span>
+                                      <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsEmailOnAlert" onchange="updateNotificationSetting('email_on_alert', this.checked); syncAllNotificationToggles();" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                          <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                              </div>
+
+                              <!-- Diary Daily Reminder toggle -->
+                              <div class="settings-card" style="background: var(--light); padding: 20px; border-radius: 16px; margin-bottom: 16px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                                      <span style="font-weight: 600;" data-i18n="settings.daily_diary_reminder">Diary Daily reminder</span>
+                                      <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsDiaryReminder" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked); syncAllNotificationToggles(); toggleSettingsReminderTime(this.checked);" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                          <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                                  <!-- Reminder Time (shown when diary reminder is on) -->
+                                  <div id="settingsReminderTimeContainer" style="display: none; margin-top: 12px; padding: 12px; background: rgba(107, 139, 164, 0.1); border-radius: 10px;">
+                                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                                          <span data-i18n="notifications.reminder_time">Reminder time</span>
+                                          <div style="display: flex; align-items: center; gap: 8px;">
+                                              <input type="text" id="settingsReminderTimeInput" 
+                                                  value="20:00" 
+                                                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                                                  maxlength="5"
+                                                  placeholder="HH:MM"
+                                                  onchange="updateDiaryReminderTime(this.value)"
+                                                  onkeyup="formatTimeInput(this)"
+                                                  style="padding: 6px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-size: 14px; background: var(--card-bg, #fff); color: var(--text-primary, #333); width: 70px; text-align: center; font-family: monospace;">
+                                              <span style="font-size: 11px; color: #888;">(24h)</span>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
                           </div>
 
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="settings.city">City</label>
-                              <input type="text" class="form-input" id="settingsCity" placeholder="Your city">
-                          </div>
-
-                          <!-- Birth Year -->
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
-                              <input type="number" class="form-input" id="settingsBirthYear" 
-                                     min="1900" max="2025" maxlength="4"
-                                     placeholder="YYYY">
-                          </div>
-
-                          <!-- Profile Fields (matching ProfileRight layout) -->
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.bio">Bio</label>
-                              <textarea class="profile-textarea" id="settingsBio" data-i18n-placeholder="profile.bio_placeholder" placeholder="Tell us about yourself..." maxlength="500"></textarea>
-                          </div>
-
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.interests">Interests</label>
-                              <textarea class="profile-textarea" id="settingsInterests" data-i18n-placeholder="profile.interests_placeholder" placeholder="What are you interested in?" maxlength="300"></textarea>
-                          </div>
-
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.occupation">Occupation</label>
-                              <input type="text" class="form-input" id="settingsOccupation" data-i18n-placeholder="profile.occupation_placeholder" placeholder="What do you do?">
-                          </div>
-
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.goals">My Goals</label>
-                              <textarea class="profile-textarea" id="settingsGoals" data-i18n-placeholder="profile.goals_placeholder" placeholder="What are your personal or professional goals?" maxlength="300"></textarea>
-                          </div>
-
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.hobbies">Favorite Hobbies</label>
-                              <textarea class="profile-textarea" id="settingsHobbies" data-i18n-placeholder="profile.hobbies_placeholder" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
-                          </div>
                       </div>
-
-                      <div style="text-align: center; margin-top: 30px;">
-                          <button class="btn btn-primary" onclick="saveProfileSettings()" data-i18n="profile.save">Save Profile</button>
-                      </div>
-                  </div>
-
-                  <!-- G-5: Dark Mode / Appearance Toggle -->
-                  <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.appearance">Appearance</h3>
-                      <div style="display: flex; justify-content: space-between; align-items: center;">
-                          <div>
-                              <span style="font-weight: 600;" data-i18n="settings.dark_mode">Dark Mode</span>
-                              <p style="color: #6B7280; font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings.dark_mode_desc">Switch between light and dark themes</p>
-                          </div>
-                          <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
-                              <input type="checkbox" id="settingsDarkModeToggle" onchange="toggleDarkMode(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute;">
-                              <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
-                          </label>
-                      </div>
-                  </div>
-
-                  <!-- Email Notification Settings -->
-                  <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.notification_settings">Email Notification Settings</h3>
-                      <div style="display: flex; flex-direction: column; gap: 16px;">
-                          <div style="display: flex; justify-content: space-between; align-items: center;">
-                              <span data-i18n="settings.email_on_alert">Email me when I receive alerts</span>
-                              <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
-                                  <input type="checkbox" id="settingsEmailOnAlert" onchange="syncSettingsToggles()" style="opacity: 0; width: 0; height: 0; position: absolute;">
-                                  <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
-                              </label>
-                          </div>
-                          <div style="display: flex; justify-content: space-between; align-items: center;">
-                              <span data-i18n="settings.daily_diary_reminder">Daily diary reminder</span>
-                              <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
-                                  <input type="checkbox" id="settingsDiaryReminder" onchange="syncSettingsToggles()" style="opacity: 0; width: 0; height: 0; position: absolute;">
-                                  <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
-                              </label>
-                          </div>
-                      </div>
-                  </div>
-
-                  <!-- Change Password -->
-                  <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.change_password">Change Password</h3>
-                      <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 8 characters with an uppercase letter and a special character.</p>
-                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail"></p>
-                      <div style="display: flex; flex-direction: column; gap: 12px;">
-                          <div>
-                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
-                              <input type="password" id="settingsCurrentPassword" class="form-input" placeholder="Current password">
-                          </div>
-                          <div>
-                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
-                              <input type="password" id="settingsNewPassword" class="form-input" placeholder="New password">
-                          </div>
-                          <div>
-                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
-                              <input type="password" id="settingsConfirmPassword" class="form-input" placeholder="Confirm new password">
-                          </div>
-                          <button class="btn btn-primary" style="width: auto; align-self: flex-start;" onclick="changePasswordFromSettings()" data-i18n="settings.update_password">Update Password</button>
-                      </div>
-                  </div>
-
-                  <!-- Export Your Data -->
-                  <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="home.data_export">Export Your Data</h3>
-                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
-                      <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
-                          <span style="font-size: 1.5rem;">📋</span>
-                          <div>
-                              <p style="font-weight: 600; color: #1D4ED8;" data-i18n="home.data_rights_title">Your Data Rights</p>
-                              <p style="color: #1E40AF; font-size: 0.9rem;" data-i18n="home.data_rights_desc">You have the right to access and download your personal data at any time.</p>
-                          </div>
-                      </div>
-                      <button class="btn btn-primary" onclick="exportUserData()" data-i18n="home.export_button">Export My Data</button>
                   </div>
               </div>
 
@@ -4395,6 +4484,66 @@
     </script>
     
     <script src="/static/js/i18n.js"></script>
+    <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
+    <script>
+    (function() {
+        const fix10cTranslations = {
+            en: {
+                'menu.settings': 'Settings',
+                'settings.notification_btn': 'Notification',
+                'settings.profile_info': 'Profile Info',
+                'settings.invitation_desc': 'Invite friends to join TheraSocial and build your support network.',
+                'settings.invite_btn': 'Go to Invitations',
+                'profile.timezone': 'Timezone',
+                'settings.notification_settings': 'Email Notification Options'
+            },
+            he: {
+                'menu.settings': 'הגדרות',
+                'settings.notification_btn': 'התראות',
+                'settings.profile_info': 'פרטי פרופיל',
+                'settings.invitation_desc': 'הזמן חברים להצטרף ל-TheraSocial ולבנות את רשת התמיכה שלך.',
+                'settings.invite_btn': 'עבור להזמנות',
+                'profile.timezone': 'אזור זמן',
+                'settings.notification_settings': 'אפשרויות התראה במייל'
+            },
+            ar: {
+                'menu.settings': 'الإعدادات',
+                'settings.notification_btn': 'الإشعارات',
+                'settings.profile_info': 'معلومات الملف الشخصي',
+                'settings.invitation_desc': 'ادعُ الأصدقاء للانضمام إلى TheraSocial وبناء شبكة الدعم الخاصة بك.',
+                'settings.invite_btn': 'انتقل إلى الدعوات',
+                'profile.timezone': 'المنطقة الزمنية',
+                'settings.notification_settings': 'خيارات الإشعار عبر البريد'
+            },
+            ru: {
+                'menu.settings': 'Настройки',
+                'settings.notification_btn': 'Уведомления',
+                'settings.profile_info': 'Информация профиля',
+                'settings.invitation_desc': 'Пригласите друзей присоединиться к TheraSocial и создайте свою сеть поддержки.',
+                'settings.invite_btn': 'Перейти к приглашениям',
+                'profile.timezone': 'Часовой пояс',
+                'settings.notification_settings': 'Настройки уведомлений по email'
+            }
+        };
+        // Extend i18n when ready
+        function extendI18n() {
+            if (window.i18n && window.i18n.translations) {
+                Object.keys(fix10cTranslations).forEach(lang => {
+                    if (!window.i18n.translations[lang]) window.i18n.translations[lang] = {};
+                    Object.assign(window.i18n.translations[lang], fix10cTranslations[lang]);
+                });
+                console.log('[Fix10C] Extended i18n with settings/notification translations');
+            } else {
+                // Store for later use if i18n not yet ready
+                window._fix10cTranslations = fix10cTranslations;
+            }
+        }
+        // Try immediately, then also after load
+        extendI18n();
+        document.addEventListener('DOMContentLoaded', extendI18n);
+        window.addEventListener('load', extendI18n);
+    })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Global variables needed by parameters-social.js - MUST be declared first
@@ -6287,8 +6436,9 @@ function showView(viewName) {
                 loadFeed();
                 break;
             case 'profile':
-                loadProfile();
-                break;
+                // Fix10C: Own profile is now inside Settings tab
+                showView('settings');
+                return;
             case 'circles':
                 // Reset viewingUserId if returning to own circles
                 if (viewingUserId === null || viewingUserId === currentUserId) {
@@ -14136,16 +14286,19 @@ document.addEventListener('click', (e) => {
 
 // --- V3: SETTINGS VIEW (Full profile editing + account settings) ---
 async function loadSettings() {
-    console.log('[V3] Loading settings view...');
+    console.log('[Fix10C] Loading settings view...');
     try {
-        // Load account data (username, email, selected_city, birth_year)
+        // Load account data (username, email, selected_city, birth_year, timezone)
         const userResponse = await fetch('/api/user/profile', { credentials: 'include' });
         if (userResponse.ok) {
             const userData = await userResponse.json();
-            document.getElementById('settingsDisplayName').value = userData.username || '';
-            document.getElementById('settingsEmail').value = userData.email || '';
-            document.getElementById('settingsCity').value = userData.selected_city || '';
-            document.getElementById('settingsBirthYear').value = userData.birth_year || '';
+            // Fix10C: Removed display_name/email/city fields from settings (now profile-only)
+            const birthYearEl = document.getElementById('settingsBirthYear');
+            if (birthYearEl) birthYearEl.value = userData.birth_year || '';
+            
+            // Fix10C: Load timezone
+            const tzEl = document.getElementById('settingsTimezone');
+            if (tzEl && userData.timezone) tzEl.value = userData.timezone;
             
             // Update avatar and username display
             const avatar = document.getElementById('settingsProfileAvatar');
@@ -14165,30 +14318,107 @@ async function loadSettings() {
             document.getElementById('settingsHobbies').value = profileData.favorite_hobbies || '';
         }
 
-        // Load notification settings (V3: correct endpoint)
+        // Load notification settings
         const notifResponse = await fetch('/api/notification-settings', { credentials: 'include' });
         if (notifResponse.ok) {
             const notif = await notifResponse.json();
-            const emailToggle = document.getElementById('settingsEmailOnAlert');
+            const alertToggle = document.getElementById('settingsEmailOnAlert');
+            const notifToggle = document.getElementById('settingsEmailOnNotification');
             const diaryToggle = document.getElementById('settingsDiaryReminder');
-            if (emailToggle) emailToggle.checked = notif.email_on_alert || false;
-            if (diaryToggle) diaryToggle.checked = notif.email_daily_diary_reminder || false;
+            if (alertToggle) alertToggle.checked = notif.email_on_alert || false;
+            if (notifToggle) notifToggle.checked = notif.email_on_notification || false;
+            if (diaryToggle) {
+                diaryToggle.checked = notif.email_daily_diary_reminder || false;
+                toggleSettingsReminderTime(diaryToggle.checked);
+            }
+            // Load reminder time
+            const timeInput = document.getElementById('settingsReminderTimeInput');
+            if (timeInput && notif.diary_reminder_time) {
+                timeInput.value = notif.diary_reminder_time;
+            }
         }
+
+        // Sync dark mode toggle
+        const isDark = document.body.classList.contains('dark-mode');
+        const dmToggle = document.getElementById('settingsDarkModeToggle');
+        if (dmToggle) dmToggle.checked = isDark;
+
     } catch (error) {
-        console.error('[V3] Error loading settings:', error);
+        console.error('[Fix10C] Error loading settings:', error);
+    }
+}
+
+// Fix10C: Switch between Profile and Notification sub-tabs in Settings
+function switchSettingsTab(tab) {
+    const profilePanel = document.getElementById('settingsProfilePanel');
+    const notifPanel = document.getElementById('settingsNotificationPanel');
+    const profileBtn = document.getElementById('settingsSubProfile');
+    const notifBtn = document.getElementById('settingsSubNotification');
+    
+    if (tab === 'profile') {
+        profilePanel.style.display = '';
+        notifPanel.style.display = 'none';
+        profileBtn.style.background = 'var(--primary)';
+        profileBtn.style.color = 'white';
+        notifBtn.style.background = 'transparent';
+        notifBtn.style.color = 'var(--dark)';
+    } else {
+        profilePanel.style.display = 'none';
+        notifPanel.style.display = '';
+        notifBtn.style.background = 'var(--primary)';
+        notifBtn.style.color = 'white';
+        profileBtn.style.background = 'transparent';
+        profileBtn.style.color = 'var(--dark)';
+    }
+}
+
+// Fix10C: Show/hide reminder time input based on diary reminder toggle
+function toggleSettingsReminderTime(isChecked) {
+    const container = document.getElementById('settingsReminderTimeContainer');
+    if (container) {
+        container.style.display = isChecked ? 'block' : 'none';
+    }
+}
+
+// Fix10C: Sync notification toggles across all views (settings, alerts, right sidebar)
+function syncAllNotificationToggles() {
+    const settingsAlert = document.getElementById('settingsEmailOnAlert');
+    const settingsNotif = document.getElementById('settingsEmailOnNotification');
+    const settingsDiary = document.getElementById('settingsDiaryReminder');
+    
+    // Sync to right sidebar toggles
+    const rsAlert = document.getElementById('emailOnAlertToggle');
+    const rsNotif = document.getElementById('emailOnNotificationToggle');
+    const rsDiary = document.getElementById('dailyDiaryReminderToggle');
+    
+    // Sync to mobile toggles
+    const mAlert = document.getElementById('mobileEmailOnAlertToggle');
+    const mNotif = document.getElementById('mobileEmailOnNotificationToggle');
+    const mDiary = document.getElementById('mobileDailyDiaryReminderToggle');
+    
+    if (settingsAlert) {
+        if (rsAlert) rsAlert.checked = settingsAlert.checked;
+        if (mAlert) mAlert.checked = settingsAlert.checked;
+    }
+    if (settingsNotif) {
+        if (rsNotif) rsNotif.checked = settingsNotif.checked;
+        if (mNotif) mNotif.checked = settingsNotif.checked;
+    }
+    if (settingsDiary) {
+        if (rsDiary) rsDiary.checked = settingsDiary.checked;
+        if (mDiary) mDiary.checked = settingsDiary.checked;
     }
 }
 
 async function saveProfileSettings() {
     try {
-        const username = document.getElementById('settingsDisplayName').value.trim();
-        const city = document.getElementById('settingsCity').value.trim();
         const birthYear = document.getElementById('settingsBirthYear').value;
         const bio = document.getElementById('settingsBio').value.trim();
         const interests = document.getElementById('settingsInterests').value.trim();
         const occupation = document.getElementById('settingsOccupation').value.trim();
         const goals = document.getElementById('settingsGoals').value.trim();
         const hobbies = document.getElementById('settingsHobbies').value.trim();
+        const timezone = document.getElementById('settingsTimezone').value;
 
         // Save profile fields (bio, interests, occupation, goals, hobbies, birth_year) to /api/profile
         const profileResponse = await fetch('/api/profile', {
@@ -14205,29 +14435,18 @@ async function saveProfileSettings() {
             })
         });
 
-        // Save account fields (username, selected_city) to /api/user/profile
+        // Fix10C: Save timezone to user profile
+        const accountBody = {};
+        if (timezone) accountBody.timezone = timezone;
         const accountResponse = await fetch('/api/user/profile', {
             method: 'PUT',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: username, selected_city: city })
+            body: JSON.stringify(accountBody)
         });
 
         if (profileResponse.ok && accountResponse.ok) {
             showNotification('Profile updated successfully!', 'success');
-            // Update displayed username in settings avatar and other places
-            if (currentUser) {
-                currentUser.username = username;
-            }
-            const settingsAvatar = document.getElementById('settingsProfileAvatar');
-            const settingsUname = document.getElementById('settingsProfileUsername');
-            if (settingsAvatar && username) settingsAvatar.textContent = username[0].toUpperCase();
-            if (settingsUname && username) settingsUname.textContent = username;
-            // Also update profileView avatar if it exists
-            const profileAvatar = document.getElementById('profileAvatar');
-            const profileUsername = document.getElementById('profileUsername');
-            if (profileAvatar && username) profileAvatar.textContent = username[0].toUpperCase();
-            if (profileUsername && username) profileUsername.textContent = username;
         } else {
             let errorMsg = 'Failed to update profile';
             try {
