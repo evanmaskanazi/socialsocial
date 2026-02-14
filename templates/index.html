@@ -1741,16 +1741,19 @@
         }
         
         /* PJ5002: Mobile More Menu Styles */
+        /* FIX10J2: RTL-proof - uses inset:0 + width:100vw to prevent RTL direction shift */
         .mobile-more-menu {
             position: fixed;
             top: 0;
-            left: 0;
-            right: 0;
+            left: 0 !important;
+            right: 0 !important;
             bottom: 0;
+            width: 100vw !important;
             z-index: 2000;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
+            direction: ltr; /* Reset direction on overlay container to prevent RTL shift */
         }
         
         .mobile-more-menu.hidden {
@@ -1760,9 +1763,10 @@
         .mobile-more-menu-backdrop {
             position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
+            left: 0 !important;
+            right: 0 !important;
             bottom: 0;
+            width: 100%;
             background: rgba(0, 0, 0, 0.5);
             animation: fadeInBackdrop 0.2s ease;
         }
@@ -1777,11 +1781,16 @@
             background: white;
             border-radius: 20px 20px 0 0;
             max-height: 70vh;
-            width: 100%;
+            width: 100vw !important;
             overflow-y: auto;
             animation: slideUpSheet 0.3s ease;
             padding-bottom: 20px;
             box-sizing: border-box;
+        }
+        
+        /* FIX10J2: Restore RTL text direction inside sheet content */
+        [dir="rtl"] .mobile-more-menu-sheet {
+            direction: rtl;
         }
         
         @keyframes slideUpSheet {
@@ -1887,17 +1896,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* RTL support for More menu */
-        [dir="rtl"] .mobile-more-menu-header {
-            flex-direction: row-reverse;
-        }
-        [dir="rtl"] .mobile-more-menu-item {
-            flex-direction: row-reverse;
-        }
-        [dir="rtl"] .mobile-more-icon {
-            margin-inline-start: 15px;
-            margin-inline-end: 0;
-        }
+        /* RTL support for More menu - text direction restored via direction:rtl on sheet */
         [dir="rtl"] .mobile-more-menu-section-header {
             text-align: right;
         }
