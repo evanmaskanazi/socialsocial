@@ -1659,7 +1659,7 @@
             .navbar {
                 padding: 0;
                 width: 100%;
-                overflow: hidden;
+                overflow-x: hidden;
             }
 
             .nav-content {
@@ -1686,18 +1686,19 @@
                 padding: 4px 8px;
             }
 
-            /* Keep language selector visible */
+            /* Keep language selector visible - compact on mobile */
             .language-selector {
-                padding: 4px 8px;
-                font-size: 12px;
+                padding: 2px 6px;
+                font-size: 11px;
+                border-width: 1.5px;
             }
             
-            /* Ensure Tutorial and Logout buttons fit on mobile */
+            /* Tutorial and Logout buttons - slightly larger for mobile usability */
             #tutorialBtn, #logoutBtn {
-                font-size: 12px !important;
-                padding: 4px 8px !important;
-                margin-left: 4px !important;
-                margin-right: 4px !important;
+                font-size: 13px !important;
+                padding: 6px 12px !important;
+                margin-left: 3px !important;
+                margin-right: 3px !important;
             }
             
             /* Mobile Alerts View Styles */
@@ -1776,9 +1777,11 @@
             background: white;
             border-radius: 20px 20px 0 0;
             max-height: 70vh;
+            width: 100%;
             overflow-y: auto;
             animation: slideUpSheet 0.3s ease;
             padding-bottom: 20px;
+            box-sizing: border-box;
         }
         
         @keyframes slideUpSheet {
@@ -1882,6 +1885,21 @@
             color: var(--gray);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+
+        /* RTL support for More menu */
+        [dir="rtl"] .mobile-more-menu-header {
+            flex-direction: row-reverse;
+        }
+        [dir="rtl"] .mobile-more-menu-item {
+            flex-direction: row-reverse;
+        }
+        [dir="rtl"] .mobile-more-icon {
+            margin-inline-start: 15px;
+            margin-inline-end: 0;
+        }
+        [dir="rtl"] .mobile-more-menu-section-header {
+            text-align: right;
         }
 
         .hidden {
