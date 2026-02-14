@@ -119,5 +119,24 @@
             }
         });
     </script>
+
+    <!-- MS-6: Orientation change viewport recalculation -->
+    <script>
+    (function() {
+        function recalcViewport() {
+            const container = document.getElementById('messagesContainer');
+            if (container) {
+                container.style.maxHeight = window.innerHeight - 20 + 'px';
+            }
+            // Force repaint on orientation change
+            document.body.style.minHeight = window.innerHeight + 'px';
+        }
+        window.addEventListener('orientationchange', function() {
+            setTimeout(recalcViewport, 100);
+            setTimeout(recalcViewport, 300);
+        });
+        window.addEventListener('resize', recalcViewport);
+    })();
+    </script>
 </body>
 </html>

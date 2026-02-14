@@ -2294,6 +2294,18 @@
             [dir="rtl"] .bottom-nav {
                 flex-direction: row-reverse;
             }
+            /* MS-7: Remove grey line/border artifacts above profile and between views */
+            #profileView, #profileView .profile-section {
+                border-top: none !important;
+                box-shadow: none;
+            }
+            .view + .view, .view {
+                border-top: none !important;
+            }
+            .main-content > .view {
+                border: none !important;
+            }
+            }
         }
 
     </style>
@@ -2443,8 +2455,8 @@
             <form id="authForm">
                 <div id="loginSection">
                     <div class="form-group">
-                        <label class="form-label" data-i18n="auth.email">Email</label>
-                        <input type="email" class="form-input" id="emailInput" autocomplete="email" required>
+                        <label class="form-label" data-i18n="auth.email_or_username">Email or Username</label>
+                        <input type="text" class="form-input" id="emailInput" autocomplete="username" required>
                     </div>
 
                     <div class="form-group" id="passwordGroup">
@@ -2975,6 +2987,13 @@
                 <!-- Home View (P305: Combined Welcome/Mission + Feed) -->
               <div id="homeView" class="view">
                   <h2 style="margin-bottom: 20px;" data-i18n="menu.home">Home</h2>
+
+                  <!-- HS-5: Dismissable welcome card -->
+                  <div id="welcomeCard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 24px; border-radius: 16px; margin-bottom: 20px; position: relative; display: none;">
+                      <button onclick="dismissWelcomeCard()" style="position: absolute; top: 10px; right: 14px; background: none; border: none; color: rgba(255,255,255,0.8); font-size: 1.3rem; cursor: pointer; line-height: 1;" title="Dismiss">✕</button>
+                      <h3 style="margin: 0 0 8px 0; font-size: 1.1rem;" data-i18n="home.welcome_title">Welcome to TheraSocial!</h3>
+                      <p style="margin: 0; font-size: 0.9rem; opacity: 0.9; line-height: 1.5;" data-i18n="home.welcome_message">Track your daily wellness, connect with friends, and grow together. Start by updating your diary or exploring your connections.</p>
+                  </div>
 
                   <!-- V2: My Summary Status Card -->
                   <div id="summaryStatusCard" style="background: linear-gradient(135deg, var(--peach-light) 0%, var(--sage-light) 100%); padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.12);">
@@ -4745,16 +4764,11 @@ async function loadUserCity() {
 
         // CHANGE 4: Client-side validation
         if (!email) {
-            showNotification('Please enter your email address', 'error');
+            showNotification('Please enter your email or username', 'error');
             return;
         }
         
-        // Basic email format validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            showNotification('Please enter a valid email address', 'error');
-            return;
-        }
+        // FD-3: Skip email format check - backend accepts username or email
         
         if (!password) {
             showNotification('Please enter your password', 'error');
@@ -14195,6 +14209,27 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initDarkModeToggle);
 } else {
     initDarkModeToggle();
+}
+
+// HS-5: Dismissable welcome card
+function dismissWelcomeCard() {
+    const card = document.getElementById('welcomeCard');
+    if (card) card.style.display = 'none';
+    localStorage.setItem('therasocial_welcome_dismissed', 'true');
+}
+
+function initWelcomeCard() {
+    const dismissed = localStorage.getItem('therasocial_welcome_dismissed');
+    const card = document.getElementById('welcomeCard');
+    if (card && !dismissed) {
+        card.style.display = 'block';
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWelcomeCard);
+} else {
+    initWelcomeCard();
 }
 
 async function syncSettingsToggles() {
