@@ -119,9 +119,93 @@
         [dir="rtl"] .action-buttons {
             flex-direction: row-reverse;
         }
+
+        /* MS-4/MS-5: Mobile responsive fixes */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .parameters-page, .calendar-container, .diary-card,
+            .rating-container, .action-buttons, .form-group {
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                overflow-x: hidden !important;
+            }
+
+            .calendar-grid, .calendar-table, table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                font-size: 14px;
+            }
+
+            .calendar-grid td, .calendar-grid th,
+            .calendar-table td, .calendar-table th {
+                padding: 6px 2px !important;
+                min-width: 0 !important;
+            }
+
+            .rating-buttons {
+                flex-wrap: wrap;
+                gap: 4px;
+                justify-content: center;
+            }
+
+            .rating-button {
+                min-width: 36px !important;
+                padding: 6px 8px !important;
+                font-size: 13px !important;
+            }
+
+            .date-controls {
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+            }
+
+            .action-buttons {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .action-buttons button, .action-buttons .btn {
+                flex: 1 1 auto;
+                min-width: 100px;
+                font-size: 14px !important;
+                padding: 10px 12px !important;
+            }
+
+            textarea, input[type="text"], input[type="number"] {
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .rating-button {
+                min-width: 30px !important;
+                padding: 5px 6px !important;
+                font-size: 12px !important;
+            }
+        }
+
+        /* MS-4: RTL symmetry fixes */
+        [dir="rtl"] .date-controls button {
+            direction: rtl;
+        }
+
+        [dir="rtl"] .calendar-grid {
+            direction: rtl;
+        }
+
+        [dir="rtl"] textarea, [dir="rtl"] input {
+            text-align: right;
+        }
     </style>
 </head>
 <body>
+    <!-- G-5: Apply dark mode from localStorage -->
+    <script>if(localStorage.getItem('therasocial_dark_mode')==='true')document.body.classList.add('dark-mode');</script>
     <div id="loadingMessage"><span class="loading-spinner"></span>Loading diary...</div>
     <div id="errorMessage"></div>
     <div id="parametersContainer"></div>

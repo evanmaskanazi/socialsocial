@@ -26,9 +26,48 @@
         .dark-mode body, body.dark-mode {
             background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%);
         }
+
+        /* MS-5: Mobile responsive containment */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        #messagesContainer {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            #messagesContainer {
+                padding: 0;
+            }
+            .message-card, .messages-container, .chat-container {
+                max-width: 100% !important;
+                overflow-x: hidden !important;
+                box-sizing: border-box !important;
+            }
+            .message-input, textarea, input {
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+        }
+
+        /* MS-5: Orientation change viewport recalculation */
+        @media (orientation: landscape) and (max-height: 500px) {
+            body {
+                padding: 5px;
+            }
+            #messagesContainer {
+                max-height: calc(100vh - 10px);
+                overflow-y: auto;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- G-5: Apply dark mode from localStorage -->
+    <script>if(localStorage.getItem('therasocial_dark_mode')==='true')document.body.classList.add('dark-mode');</script>
     <div id="messagesContainer">Loading...</div>
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/circles-messages.js?v=9.0"></script>

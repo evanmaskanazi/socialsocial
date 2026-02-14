@@ -49,6 +49,8 @@
     </style>
 </head>
 <body>
+    <!-- G-5: Apply dark mode from localStorage -->
+    <script>if(localStorage.getItem('therasocial_dark_mode')==='true')document.body.classList.add('dark-mode');</script>
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 

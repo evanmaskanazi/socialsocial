@@ -2261,6 +2261,39 @@
             .follow-actions-container {
                 flex-wrap: wrap !important;
             }
+
+            /* MS-4/MS-5: Calendar and content overflow containment */
+            .feed-calendar-section .calendar-grid,
+            .calendar-container, .calendar-table, table.calendar {
+                width: 100% !important;
+                max-width: 100% !important;
+                table-layout: fixed !important;
+                overflow: hidden !important;
+            }
+            .calendar-day, .calendar-cell {
+                overflow: hidden;
+                word-break: break-all;
+                padding: 4px 2px !important;
+            }
+            .view {
+                max-width: 100% !important;
+                overflow-x: hidden !important;
+            }
+            /* MS-4: Nav overflow fix */
+            .bottom-nav, .mobile-bottom-nav {
+                overflow-x: hidden !important;
+                flex-wrap: nowrap !important;
+            }
+            .bottom-nav-item, .mobile-nav-item {
+                flex-shrink: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            /* MS-4: RTL nav symmetry */
+            [dir="rtl"] .bottom-nav {
+                flex-direction: row-reverse;
+            }
         }
 
     </style>
@@ -2509,7 +2542,7 @@
                <div class="form-group">
                     <label class="form-label" data-i18n="auth.new_password">New Password</label>
                     <input type="password" id="resetNewPassword" name="new_password" autocomplete="new-password" required class="form-input" data-i18n-placeholder="auth.enter_new_password" placeholder="Enter new password">
-                    <small style="color: #6B7280; display: block; margin-top: 5px;" data-i18n="auth.password_requirements">Password must be at least 12 characters with uppercase, lowercase, number, and special character.</small>
+                    <small style="color: #6B7280; display: block; margin-top: 5px;" data-i18n="auth.password_requirements">Password must be at least 8 characters with an uppercase letter and a special character.</small>
                 </div>
                 <div class="form-group">
                     <label class="form-label" data-i18n="auth.confirm_password">Confirm Password</label>
@@ -3004,6 +3037,14 @@
                       </div>
                   </div>
 
+                  <!-- HS-4: My Connections Status List -->
+                  <div id="connectionStatusSection" style="margin-bottom: 24px;">
+                      <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="home.connection_status">My Connections Status</h3>
+                      <div id="connectionStatusList" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                          <p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_connections">No connections yet.</p>
+                      </div>
+                  </div>
+
                   <!-- V2: Alerts & Notifications preview on Home -->
                   <div id="homeAlertsSection" style="margin-bottom: 24px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="alerts.title">Alerts & Notifications</h3>
@@ -3241,8 +3282,8 @@
                     <div id="changePasswordSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-top: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                         <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.change_password">Change Password</h3>
 
-                        <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
-                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
+                        <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 8 characters with an uppercase letter and a special character.</p>
+                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail"></p>
 
                         <form id="changePasswordForm" onsubmit="updatePassword(); return false;" autocomplete="off">
                             <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true">
@@ -3554,6 +3595,21 @@
                       </div>
                   </div>
 
+                  <!-- G-5: Dark Mode / Appearance Toggle -->
+                  <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.appearance">Appearance</h3>
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <div>
+                              <span style="font-weight: 600;" data-i18n="settings.dark_mode">Dark Mode</span>
+                              <p style="color: #6B7280; font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings.dark_mode_desc">Switch between light and dark themes</p>
+                          </div>
+                          <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                              <input type="checkbox" id="settingsDarkModeToggle" onchange="toggleDarkMode(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                              <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                          </label>
+                      </div>
+                  </div>
+
                   <!-- Email Notification Settings -->
                   <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.notification_settings">Email Notification Settings</h3>
@@ -3578,8 +3634,8 @@
                   <!-- Change Password -->
                   <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.change_password">Change Password</h3>
-                      <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
-                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
+                      <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 8 characters with an uppercase letter and a special character.</p>
+                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail"></p>
                       <div style="display: flex; flex-direction: column; gap: 12px;">
                           <div>
                               <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
@@ -4839,8 +4895,8 @@ async function loadUserCity() {
             return;
         }
         
-        if (password.length < 12) {
-            showNotification('Password must be at least 12 characters long', 'error');
+        if (password.length < 8) {
+            showNotification('Password must be at least 8 characters with an uppercase letter and a special character', 'error');
             return;
         }
         
@@ -4856,7 +4912,7 @@ async function loadUserCity() {
         const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
         
         if (!(hasUpper && hasLower && hasDigit && hasSpecial)) {
-            showNotification('Password must contain uppercase, lowercase, number, and special character', 'error');
+            showNotification('Password must have an uppercase letter and a special character', 'error');
             return;
         }
 
@@ -5025,8 +5081,8 @@ async function loadUserCity() {
                 return;
             }
 
-            if (newPassword.length < 12) {
-                showNotification(window.i18n ? window.i18n.translate('auth.password_too_short') : 'Password must be at least 12 characters', 'warning');
+            if (newPassword.length < 8) {
+                showNotification(window.i18n ? window.i18n.translate('auth.password_too_short') : 'Password must be at least 8 characters with an uppercase letter and a special character', 'warning');
                 return;
             }
 
@@ -5037,7 +5093,7 @@ async function loadUserCity() {
             const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
 
             if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-                showNotification(window.i18n ? window.i18n.translate('auth.password_complexity') : 'Password must contain uppercase, lowercase, number, and special character', 'warning');
+                showNotification(window.i18n ? window.i18n.translate('auth.password_complexity') : 'Password must have an uppercase letter and a special character', 'warning');
                 return;
             }
 
@@ -12206,8 +12262,8 @@ async function checkAndLoadTriggerAlerts() {
                 return;
             }
 
-            if (newPassword.length < 12) {
-                showNotification(window.i18n ? window.i18n.translate('home.password_too_short') : 'Password must be at least 12 characters long', 'warning');
+            if (newPassword.length < 8) {
+                showNotification(window.i18n ? window.i18n.translate('home.password_too_short') : 'Password must be at least 8 characters with an uppercase letter and a special character', 'warning');
                 return;
             }
 
@@ -12218,7 +12274,7 @@ async function checkAndLoadTriggerAlerts() {
             const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
 
             if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-                showNotification(window.i18n ? window.i18n.translate('home.password_complexity') : 'Password must contain uppercase, lowercase, number, and special character', 'warning');
+                showNotification(window.i18n ? window.i18n.translate('home.password_complexity') : 'Password must have an uppercase letter and a special character', 'warning');
                 return;
             }
 
@@ -12288,38 +12344,54 @@ async function checkAndLoadTriggerAlerts() {
         }
 
         async function requestAccountDeletion() {
-            const confirmMsg = window.i18n ? window.i18n.translate('home.confirm_deletion') : 'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.';
+            const confirmMsg = window.i18n ? window.i18n.translate('home.confirm_deletion') : 'Are you sure you want to request account deletion? A confirmation email will be sent to your email address.';
 
             if (!confirm(confirmMsg)) {
-                return;
-            }
-
-            const doubleConfirm = window.i18n ? window.i18n.translate('home.double_confirm') : 'This is your final warning. Type DELETE to confirm account deletion.';
-            const userInput = prompt(doubleConfirm);
-
-            if (userInput !== 'DELETE') {
-                showNotification(window.i18n ? window.i18n.translate('home.deletion_cancelled') : 'Account deletion cancelled', 'info');
                 return;
             }
 
             try {
                 const response = await apiCall('/user/delete-account', 'POST', {});
 
-                if (response.success) {
-                    showNotification(window.i18n ? window.i18n.translate('home.account_deleted') : 'Your account has been deleted', 'success');
-                    // Logout
-                    document.getElementById('authContainer').style.display = 'flex';
-                    document.getElementById('dashboard').classList.add('hidden');
+                if (response.success && response.email_sent) {
+                    showNotification(window.i18n ? window.i18n.translate('home.deletion_email_sent') : 'A confirmation email has been sent. Please check your email to confirm account deletion.', 'info');
                 } else {
-                    showNotification(window.i18n ? window.i18n.translate('home.deletion_failed') : response.message || 'Failed to delete account', 'error');
+                    showNotification(response.message || 'Failed to request account deletion', 'error');
                 }
             } catch (error) {
-                console.error('Error deleting account:', error);
+                console.error('Error requesting account deletion:', error);
                 showNotification(window.i18n ? window.i18n.translate('home.error_occurred') : 'An error occurred', 'error');
             }
         }
 
-
+        // FD-1: Handle delete_token from confirmation email
+        (function checkDeleteToken() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const deleteToken = urlParams.get('delete_token');
+            if (deleteToken) {
+                // Remove token from URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                // Ask final confirmation
+                if (confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) {
+                    fetch('/api/user/confirm-delete-account', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        credentials: 'include',
+                        body: JSON.stringify({token: deleteToken})
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Your account has been deleted.');
+                            window.location.href = '/';
+                        } else {
+                            alert(data.error || 'Failed to delete account. The link may have expired.');
+                        }
+                    })
+                    .catch(() => alert('Error processing deletion. Please try again.'));
+                }
+            }
+        })();
 
 
         // CHANGE 2: Enhanced utility functions with comprehensive XSS protection
@@ -14096,6 +14168,35 @@ async function saveProfileSettings() {
     }
 }
 
+// G-5: Dark mode toggle
+function toggleDarkMode(enabled) {
+    if (enabled) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('therasocial_dark_mode', 'true');
+    } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('therasocial_dark_mode', 'false');
+    }
+}
+
+function initDarkModeToggle() {
+    const saved = localStorage.getItem('therasocial_dark_mode');
+    const toggle = document.getElementById('settingsDarkModeToggle');
+    if (saved === 'true') {
+        document.body.classList.add('dark-mode');
+        if (toggle) toggle.checked = true;
+    } else if (toggle) {
+        toggle.checked = document.body.classList.contains('dark-mode');
+    }
+}
+
+// Initialize dark mode on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDarkModeToggle);
+} else {
+    initDarkModeToggle();
+}
+
 async function syncSettingsToggles() {
     try {
         const emailOn = document.getElementById('settingsEmailOnAlert')?.checked || false;
@@ -14272,6 +14373,64 @@ async function quickCheckin(moodValue) {
     }
 }
 
+// HS-4: Connection status list - shows all connections with activity indicators
+async function loadConnectionStatusList() {
+    try {
+        const listDiv = document.getElementById('connectionStatusList');
+        if (!listDiv) return;
+
+        const response = await apiCall('/connections', 'GET');
+        const connections = response.connections || response.following || [];
+
+        if (!connections.length) {
+            listDiv.innerHTML = '<p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_connections">No connections yet.</p>';
+            return;
+        }
+
+        // Sort: recently active first
+        connections.sort((a, b) => {
+            const aTime = a.last_active || a.last_login || '';
+            const bTime = b.last_active || b.last_login || '';
+            return bTime.localeCompare(aTime);
+        });
+
+        listDiv.innerHTML = connections.map(conn => {
+            const name = escapeHtml(conn.display_name || conn.username || 'User');
+            const avatar = name.charAt(0).toUpperCase();
+            const lastActive = conn.last_active || conn.last_login || null;
+            let statusDot = '#9CA3AF';
+            let statusText = 'Offline';
+
+            if (lastActive) {
+                const diff = (Date.now() - new Date(lastActive).getTime()) / 60000;
+                if (diff < 15) {
+                    statusDot = '#10B981'; statusText = 'Active now';
+                } else if (diff < 60) {
+                    statusDot = '#F59E0B'; statusText = Math.round(diff) + 'm ago';
+                } else if (diff < 1440) {
+                    statusDot = '#F59E0B'; statusText = Math.round(diff/60) + 'h ago';
+                } else {
+                    statusText = Math.round(diff/1440) + 'd ago';
+                }
+            }
+
+            return '<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light, #f9fafb); border-radius: 12px; cursor: pointer;" onclick="if(typeof showConnectionInfo===\'function\') showConnectionInfo(' + (conn.id || 0) + ')">' +
+                '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + avatar + '</div>' +
+                '<div style="flex: 1; min-width: 0;">' +
+                '<div style="font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + name + '</div>' +
+                '<div style="font-size: 0.8rem; color: var(--gray);">' + escapeHtml(conn.bio || conn.occupation || '') + '</div>' +
+                '</div>' +
+                '<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">' +
+                '<span style="width: 8px; height: 8px; border-radius: 50%; background: ' + statusDot + '; display: inline-block;"></span>' +
+                '<span style="font-size: 0.75rem; color: var(--gray);">' + statusText + '</span>' +
+                '</div></div>';
+        }).join('');
+
+    } catch (error) {
+        console.error('Error loading connection status list:', error);
+    }
+}
+
 // VINTER2: Friends daily updates - uses dedicated backend endpoint
 // Replaces the old N+1 approach that only checked first 10 users
 async function loadFriendsUpdates() {
@@ -14432,6 +14591,7 @@ function loadV2HomeFeatures() {
     loadHomeSummary();
     loadFriendsUpdates();
     loadHomeAlerts();
+    loadConnectionStatusList();
 }
 
 // Patch: When home view loads, also load V2 features
