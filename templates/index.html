@@ -1657,33 +1657,47 @@
 
             /* Adjust navbar on mobile */
             .navbar {
-                padding: 10px 15px;
+                padding: 0;
+                width: 100%;
+                overflow: hidden;
             }
 
             .nav-content {
-                padding: 10px 15px;
+                padding: 8px 10px;
+                flex-wrap: wrap;
+                gap: 6px;
             }
 
             .logo {
-                font-size: 20px;
+                font-size: 18px;
             }
 
             .nav-menu {
-                gap: 10px;
+                gap: 6px;
+                flex-wrap: wrap;
+                justify-content: flex-end;
             }
 
             /* PJ6010: MOBILE FIX - Show About and Support links on mobile */
             /* Previously hidden, now visible with responsive styling */
             .nav-link {
                 display: inline-block;
-                font-size: 14px;
-                padding: 6px 10px;
+                font-size: 12px;
+                padding: 4px 8px;
             }
 
             /* Keep language selector visible */
             .language-selector {
-                padding: 6px 10px;
-                font-size: 14px;
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            
+            /* Ensure Tutorial and Logout buttons fit on mobile */
+            #tutorialBtn, #logoutBtn {
+                font-size: 12px !important;
+                padding: 4px 8px !important;
+                margin-left: 4px !important;
+                margin-right: 4px !important;
             }
             
             /* Mobile Alerts View Styles */
