@@ -5060,28 +5060,33 @@ def register():
 @app.route('/api/auth/login', methods=['POST'])
 @rate_limit(max_attempts=10, window_minutes=15)
 def login():
-    """User login with audit logging"""
+    """User login with audit logging - FD-3: Accepts email or username"""
     try:
         data = request.json
-        email = data.get('email', '').strip().lower()
+        login_id = data.get('email', '').strip().lower()  # field name kept for backward compat
         password = data.get('password', '')
 
-        if not email or not password:
-            return jsonify({'error': 'Email and password required'}), 400
+        if not login_id or not password:
+            return jsonify({'error': 'Email/username and password required'}), 400
 
         # CHANGE 7: Input length validation
-        if len(email) > 120 or len(password) > 128:
+        if len(login_id) > 120 or len(password) > 128:
             return jsonify({'error': 'Invalid input length'}), 400
 
-        # Find user - SQLAlchemy 2.0 style
+        # FD-3: Find user by email or username
         user = db.session.execute(
-            select(User).filter_by(email=email)
+            select(User).filter_by(email=login_id)
         ).scalar_one_or_none()
+
+        if not user:
+            user = db.session.execute(
+                select(User).filter_by(username=login_id)
+            ).scalar_one_or_none()
 
         if not user or not user.check_password(password):
             # CHANGE 7: Audit log failed login attempt (Ethics: Security)
             log_audit('login_failed', 'user', user.id if user else None, None, 
-                     {'email': email[:50], 'reason': 'invalid_credentials'})
+                     {'email': login_id[:50], 'reason': 'invalid_credentials'})
             return jsonify({'error': 'Invalid credentials'}), 401
 
         if not user.is_active:
