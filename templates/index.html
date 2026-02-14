@@ -14582,7 +14582,7 @@ async function changePasswordFromSettings() {
     }
 
     try {
-        const response = await fetch('/api/auth/change-password', {
+        const response = await fetch('/api/user/change-password', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
