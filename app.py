@@ -9615,11 +9615,11 @@ def get_parameters():
                         'anxiety': int(params.anxiety) if params.anxiety else 0
                     },
                     # ADD ALL PRIVACY SETTINGS HERE
-                    'mood_privacy': params.mood_privacy or 'public',
-                    'energy_privacy': params.energy_privacy or 'public',
-                    'sleep_quality_privacy': params.sleep_quality_privacy or 'public',
-                    'physical_activity_privacy': params.physical_activity_privacy or 'public',
-                    'anxiety_privacy': params.anxiety_privacy or 'public',
+                    'mood_privacy': params.mood_privacy or 'private',
+                    'energy_privacy': params.energy_privacy or 'private',
+                    'sleep_quality_privacy': params.sleep_quality_privacy or 'private',
+                    'physical_activity_privacy': params.physical_activity_privacy or 'private',
+                    'anxiety_privacy': params.anxiety_privacy or 'private',
                     'notes': params.notes or ''
                 }
             })
@@ -9635,11 +9635,11 @@ def get_parameters():
                         'anxiety': 0
                     },
                     # ADD DEFAULT PRIVACY SETTINGS
-                    'mood_privacy': 'public',
-                    'energy_privacy': 'public',
-                    'sleep_quality_privacy': 'public',
-                    'physical_activity_privacy': 'public',
-                    'anxiety_privacy': 'public',
+                    'mood_privacy': 'private',
+                    'energy_privacy': 'private',
+                    'sleep_quality_privacy': 'private',
+                    'physical_activity_privacy': 'private',
+                    'anxiety_privacy': 'private',
                     'notes': ''
                 }
             })
