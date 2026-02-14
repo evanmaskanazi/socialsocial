@@ -14414,8 +14414,8 @@ async function loadConnectionStatusList() {
         const listDiv = document.getElementById('connectionStatusList');
         if (!listDiv) return;
 
-        const response = await apiCall('/connections', 'GET');
-        const connections = response.connections || response.following || [];
+        const response = await apiCall('/following', 'GET');
+        const connections = response.following || [];
 
         if (!connections.length) {
             listDiv.innerHTML = '<p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_connections">No connections yet.</p>';
