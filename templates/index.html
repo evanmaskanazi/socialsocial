@@ -4005,8 +4005,9 @@
               <div id="alertsView" class="view hidden">
     <h2 style="margin-bottom: 20px;" data-i18n="alerts.title">Alerts</h2>
     
-    <!-- PJ6001: Email Options for Mobile -->
-    <div id="mobileNotificationSettingsPanel" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <!-- Fix10C: Email Options panel hidden on mobile too (now in Settings > Notification sub-tab)
+         Kept in DOM with display:none so JS toggle syncing still works -->
+    <div id="mobileNotificationSettingsPanel" style="display: none; background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
         
         <!-- Email on Alert Toggle (Wellness Alerts) -->
@@ -4090,8 +4091,9 @@
            </main>
             <!-- Right Sidebar -->
             <aside class="right-sidebar">
-                <!-- PJ6001: Email Options (renamed from Email Notifications) -->
-                <div id="notificationSettingsPanel" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <!-- Fix10C: Email Options panel hidden (now in Settings > Notification sub-tab)
+                     Kept in DOM with display:none so JS toggle syncing still works -->
+                <div id="notificationSettingsPanel" style="display: none; background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
                     
                     <!-- Email on Alert Toggle (Wellness Alerts only) -->
