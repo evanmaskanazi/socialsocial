@@ -5382,19 +5382,10 @@ def change_password():
         if not user.check_password(current_password):
             return jsonify({'error': 'Current password is incorrect'}), 401
 
-        # Validate new password
-        if len(new_password) < 12:
-            return jsonify({'error': 'Password must be at least 12 characters long'}), 400
-
-        # Check complexity
+        # SF-5: Validate new password - 8 chars min, uppercase + special char required
         import re
-        has_upper = bool(re.search(r'[A-Z]', new_password))
-        has_lower = bool(re.search(r'[a-z]', new_password))
-        has_digit = bool(re.search(r'[0-9]', new_password))
-        has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password))
-
-        if not (has_upper and has_lower and has_digit and has_special):
-            return jsonify({'error': 'Password must contain uppercase, lowercase, number, and special character'}), 400
+        if not re.match(r'^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$', new_password):
+            return jsonify({'error': 'Password must be at least 8 characters with an uppercase letter and a special character'}), 400
 
         # Update password
         user.set_password(new_password)
@@ -5687,7 +5678,7 @@ def save_consent():
 @app.route('/api/user/delete-account', methods=['POST'])
 @login_required
 def delete_account():
-    """Delete user account and all associated data"""
+    """FD-1: Request account deletion - sends confirmation email with token"""
     try:
         user_id = session['user_id']
         user = db.session.get(User, user_id)
@@ -5695,17 +5686,114 @@ def delete_account():
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        # Log the deletion
-        logger.info(f"Deleting account for user {user.id} ({user.username})")
+        # Generate deletion confirmation token (reuse PasswordResetToken model)
+        deletion_token = generate_token()
+        token_record = PasswordResetToken(
+            user_id=user.id,
+            token=deletion_token,
+            expires_at=datetime.utcnow() + timedelta(hours=1)
+        )
+        db.session.add(token_record)
+        db.session.commit()
+
+        # Send confirmation email
+        try:
+            user_language = getattr(user, 'language', 'en') or 'en'
+            confirm_link = f"{os.environ.get('APP_URL', 'https://therasocial.org')}?delete_token={deletion_token}"
+            is_rtl = user_language in ['he', 'ar']
+            text_dir = 'rtl' if is_rtl else 'ltr'
+            text_align = 'right' if is_rtl else 'left'
+
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="background: #EF4444; padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 24px;">TheraSocial - Account Deletion</h1>
+                    </div>
+                    <div style="padding: 40px 30px;">
+                        <h2 style="color: #333; margin-top: 0;">Confirm Account Deletion</h2>
+                        <p style="color: #666; line-height: 1.6;">You requested to delete your TheraSocial account. This action is permanent and cannot be undone.</p>
+                        <p style="color: #666; line-height: 1.6;">Click the button below to confirm deletion:</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{confirm_link}" style="background: #EF4444; color: white; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                Confirm Deletion
+                            </a>
+                        </div>
+                        <p style="color: #999; font-size: 13px; margin-top: 30px;">This link expires in 1 hour.</p>
+                        <p style="color: #999; font-size: 13px;">If you did not request this, you can safely ignore this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = 'TheraSocial - Confirm Account Deletion'
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = user.email
+            msg.attach(MIMEText(f"Confirm account deletion: {confirm_link}", 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
+
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], user.email, msg.as_string())
+
+            logger.info(f"Account deletion confirmation email sent to {user.email}")
+        except Exception as email_err:
+            logger.error(f"Failed to send deletion email: {email_err}")
+            # Still return success - token is saved, user can retry
         
-        # CHANGE 13: Audit log for account deletion (Ethics: Accountability)
+        return jsonify({
+            'success': True,
+            'message': 'A confirmation email has been sent. Please check your email to confirm account deletion.',
+            'email_sent': True
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error requesting account deletion: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to request account deletion'}), 500
+
+
+@app.route('/api/user/confirm-delete-account', methods=['POST'])
+def confirm_delete_account():
+    """FD-1: Confirm and execute account deletion using emailed token"""
+    try:
+        data = request.get_json()
+        token = data.get('token') if data else request.args.get('delete_token')
+
+        if not token:
+            return jsonify({'error': 'Deletion token required'}), 400
+
+        token_record = db.session.execute(
+            select(PasswordResetToken).filter_by(token=token, used=False)
+        ).scalar_one_or_none()
+
+        if not token_record:
+            return jsonify({'error': 'Invalid or expired deletion token'}), 400
+
+        if datetime.utcnow() > token_record.expires_at:
+            return jsonify({'error': 'Deletion token has expired'}), 400
+
+        user = db.session.get(User, token_record.user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        logger.info(f"Confirming account deletion for user {user.id} ({user.username})")
         log_audit('account_deleted', 'user', user.id, user.id, {'username': user.username})
 
-        # Delete user (cascade will handle related data)
+        token_record.used = True
         db.session.delete(user)
         db.session.commit()
 
-        # Clear session
         session.clear()
 
         return jsonify({
@@ -5714,7 +5802,7 @@ def delete_account():
         }), 200
 
     except Exception as e:
-        logger.error(f"Error deleting account: {e}")
+        logger.error(f"Error confirming account deletion: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to delete account'}), 500
 
@@ -6664,21 +6752,11 @@ def reset_password():
         if datetime.utcnow() > token_record.expires_at:
             return jsonify({'error': 'Reset token has expired'}), 400
 
-        # Validate new password
-        if len(new_password) < 12:
-            return jsonify({'error': 'Password must be at least 12 characters long'}), 400
-
-        # Check complexity
+        # SF-5: Validate new password - 8 chars min, uppercase + special char required
         import re
-        has_upper = bool(re.search(r'[A-Z]', new_password))
-        has_lower = bool(re.search(r'[a-z]', new_password))
-        has_digit = bool(re.search(r'[0-9]', new_password))
-        has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password))
+        if not re.match(r'^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$', new_password):
+            return jsonify({'error': 'Password must be at least 8 characters with an uppercase letter and a special character'}), 400
 
-        if not (has_upper and has_lower and has_digit and has_special):
-            return jsonify({'error': 'Password must contain uppercase, lowercase, number, and special character'}), 400
-
-        # Get user and update password
         user = db.session.get(User, token_record.user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
