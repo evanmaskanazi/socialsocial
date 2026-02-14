@@ -3607,6 +3607,10 @@
                                   data-i18n="menu.profile" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: var(--primary); color: white; transition: all 0.2s;">
                               Profile
                           </button>
+                          <button class="settings-sub-btn" id="settingsSubAccount" onclick="switchSettingsTab('account')"
+                                  data-i18n="settings.account_btn" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
+                              Account
+                          </button>
                           <button class="settings-sub-btn" id="settingsSubNotification" onclick="switchSettingsTab('notification')"
                                   data-i18n="settings.notification_btn" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
                               Notification
@@ -3691,6 +3695,10 @@
                                       <button class="btn btn-primary" onclick="saveProfileSettings()" data-i18n="profile.save">Save Profile</button>
                                   </div>
                               </div>
+                          </div>
+
+                          <!-- ===== ACCOUNT SUB-TAB ===== -->
+                          <div id="settingsAccountPanel" style="display: none;">
 
                               <!-- G-5: Dark Mode / Appearance Toggle -->
                               <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
@@ -4493,6 +4501,7 @@
             en: {
                 'menu.settings': 'Settings',
                 'settings.notification_btn': 'Notification',
+                'settings.account_btn': 'Account',
                 'settings.profile_info': 'Profile Info',
                 'settings.invitation_desc': 'Invite friends to join TheraSocial and build your support network.',
                 'settings.invite_btn': 'Go to Invitations',
@@ -4502,6 +4511,7 @@
             he: {
                 'menu.settings': 'הגדרות',
                 'settings.notification_btn': 'התראות',
+                'settings.account_btn': 'חשבון',
                 'settings.profile_info': 'פרטי פרופיל',
                 'settings.invitation_desc': 'הזמן חברים להצטרף ל-TheraSocial ולבנות את רשת התמיכה שלך.',
                 'settings.invite_btn': 'עבור להזמנות',
@@ -4511,6 +4521,7 @@
             ar: {
                 'menu.settings': 'الإعدادات',
                 'settings.notification_btn': 'الإشعارات',
+                'settings.account_btn': 'الحساب',
                 'settings.profile_info': 'معلومات الملف الشخصي',
                 'settings.invitation_desc': 'ادعُ الأصدقاء للانضمام إلى TheraSocial وبناء شبكة الدعم الخاصة بك.',
                 'settings.invite_btn': 'انتقل إلى الدعوات',
@@ -4520,6 +4531,7 @@
             ru: {
                 'menu.settings': 'Настройки',
                 'settings.notification_btn': 'Уведомления',
+                'settings.account_btn': 'Аккаунт',
                 'settings.profile_info': 'Информация профиля',
                 'settings.invitation_desc': 'Пригласите друзей присоединиться к TheraSocial и создайте свою сеть поддержки.',
                 'settings.invite_btn': 'Перейти к приглашениям',
@@ -14350,27 +14362,39 @@ async function loadSettings() {
     }
 }
 
-// Fix10C: Switch between Profile and Notification sub-tabs in Settings
+// Fix10C: Switch between Profile, Account, and Notification sub-tabs in Settings
 function switchSettingsTab(tab) {
     const profilePanel = document.getElementById('settingsProfilePanel');
+    const accountPanel = document.getElementById('settingsAccountPanel');
     const notifPanel = document.getElementById('settingsNotificationPanel');
     const profileBtn = document.getElementById('settingsSubProfile');
+    const accountBtn = document.getElementById('settingsSubAccount');
     const notifBtn = document.getElementById('settingsSubNotification');
     
-    if (tab === 'profile') {
-        profilePanel.style.display = '';
-        notifPanel.style.display = 'none';
-        profileBtn.style.background = 'var(--primary)';
-        profileBtn.style.color = 'white';
-        notifBtn.style.background = 'transparent';
-        notifBtn.style.color = 'var(--dark)';
-    } else {
-        profilePanel.style.display = 'none';
-        notifPanel.style.display = '';
-        notifBtn.style.background = 'var(--primary)';
-        notifBtn.style.color = 'white';
-        profileBtn.style.background = 'transparent';
-        profileBtn.style.color = 'var(--dark)';
+    // Hide all panels
+    profilePanel.style.display = 'none';
+    accountPanel.style.display = 'none';
+    notifPanel.style.display = 'none';
+    
+    // Reset all buttons
+    const inactiveStyle = { background: 'transparent', color: 'var(--dark)' };
+    [profileBtn, accountBtn, notifBtn].forEach(btn => {
+        btn.style.background = inactiveStyle.background;
+        btn.style.color = inactiveStyle.color;
+    });
+    
+    // Activate selected tab
+    const activeBtn = tab === 'profile' ? profileBtn : tab === 'account' ? accountBtn : notifBtn;
+    const activePanel = tab === 'profile' ? profilePanel : tab === 'account' ? accountPanel : notifPanel;
+    activeBtn.style.background = 'var(--primary)';
+    activeBtn.style.color = 'white';
+    activePanel.style.display = '';
+
+    // Sync dark mode toggle when switching to account tab
+    if (tab === 'account') {
+        const isDark = document.body.classList.contains('dark-mode');
+        const dmToggle = document.getElementById('settingsDarkModeToggle');
+        if (dmToggle) dmToggle.checked = isDark;
     }
 }
 
