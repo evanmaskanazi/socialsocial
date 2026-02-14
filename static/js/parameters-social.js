@@ -1822,6 +1822,29 @@ function addParameterStyles() {
             .rating-buttons {
                 flex-wrap: wrap;
             }
+
+            /* MS-4/MS-5: Additional mobile overflow containment */
+            .calendar-grid {
+                max-width: 100% !important;
+                overflow: hidden;
+            }
+            .calendar-day {
+                overflow: hidden;
+                word-break: break-all;
+            }
+            .action-buttons {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .action-buttons button {
+                flex: 1 1 auto;
+                min-width: 80px;
+                font-size: 13px;
+            }
+            .notes-section, .diary-card, .form-group {
+                max-width: 100% !important;
+                overflow: hidden;
+            }
         }
 
 
@@ -2360,7 +2383,10 @@ function selectDate(date) {
     if (notesInput) {
         notesInput.value = '';
     }
-    // Don't auto-load - user must click Load button
+    // FD-2: Auto-load saved data for selected date
+    if (typeof loadParameters === 'function') {
+        loadParameters(false);
+    }
 }
 
 function previousMonth() {
