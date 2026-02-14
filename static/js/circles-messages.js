@@ -1679,6 +1679,17 @@ const messagesHTML = `
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        /* MS-6: Orientation change viewport handling */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .messages-container {
+                height: calc(100vh - 10px);
+                max-height: calc(100vh - 10px);
+            }
+            .conversations-sidebar {
+                max-height: calc(100vh - 30px);
+            }
+        }
     </style>
 
     <div class="conversations-sidebar">
@@ -2561,3 +2572,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('Circles-messages.js PJ703 - UPDATED with following features');
+
+// MS-6: Orientation change viewport recalculation for messages
+(function() {
+    function recalcMessagesViewport() {
+        const container = document.getElementById('messagesContainer') || document.querySelector('.messages-container');
+        if (container) {
+            container.style.maxHeight = window.innerHeight - 20 + 'px';
+        }
+        const chatContainer = document.querySelector('.chat-messages');
+        if (chatContainer) {
+            chatContainer.style.maxHeight = (window.innerHeight - 150) + 'px';
+        }
+    }
+    window.addEventListener('orientationchange', function() {
+        setTimeout(recalcMessagesViewport, 100);
+        setTimeout(recalcMessagesViewport, 300);
+    });
+    window.addEventListener('resize', recalcMessagesViewport);
+})();
