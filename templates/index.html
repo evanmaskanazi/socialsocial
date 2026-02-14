@@ -2926,10 +2926,11 @@
                     <span class="mobile-more-label" data-i18n="menu.invite">Invite</span>
                 </li>
                 <li class="mobile-more-menu-divider"></li>
-                <li class="mobile-more-menu-item" onclick="showViewFromMore('settings')">
+                <!-- Settings hidden: consolidated into Profile -->
+                <!--<li class="mobile-more-menu-item" onclick="showViewFromMore('settings')">
                     <span class="mobile-more-icon">⚙️</span>
                     <span class="mobile-more-label" data-i18n="menu.settings">Settings</span>
-                </li>
+                </li>-->
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('alerts')">
                     <span class="mobile-more-icon">🔔</span>
                     <span class="mobile-more-label" data-i18n="alerts.title">Alerts</span>
@@ -2975,10 +2976,11 @@
                         <span class="sidebar-icon">👋</span>
                         <span class="sidebar-label" data-i18n="menu.invite">Invite</span>
                     </li>
-                    <li class="sidebar-item" data-view="settings">
+                    <!-- Settings hidden: consolidated into Profile -->
+                    <!--<li class="sidebar-item" data-view="settings">
                         <span class="sidebar-icon">⚙️</span>
                         <span class="sidebar-label" data-i18n="menu.settings">Settings</span>
-                    </li>
+                    </li>-->
                 </ul>
             </aside>
 
@@ -3294,6 +3296,21 @@
 
                         <div style="text-align: center; margin-top: 30px;">
                             <button class="btn btn-primary" id="updateProfileBtn" data-i18n="profile.save">Save Profile</button>
+                        </div>
+                    </div>
+
+                    <!-- G-5: Appearance / Dark Mode (moved from Settings to Profile) -->
+                    <div id="profileAppearanceSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-top: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="settings.appearance">Appearance</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: 600;" data-i18n="settings.dark_mode">Dark Mode</span>
+                                <p style="color: #6B7280; font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings.dark_mode_desc">Switch to dark theme for comfortable nighttime use</p>
+                            </div>
+                            <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                <input type="checkbox" id="profileDarkModeToggle" onchange="toggleDarkMode(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                            </label>
                         </div>
                     </div>
 
@@ -7831,11 +7848,15 @@ window.addEventListener('languageChanged', () => {
                 // Show Change Password and Delete Account sections when viewing own profile
                 const changePasswordSection = document.getElementById('changePasswordSection');
                 const accountDeletionSection = document.getElementById('accountDeletionSection');
+                const profileAppearance = document.getElementById('profileAppearanceSection');
                 if (changePasswordSection) {
                     changePasswordSection.style.display = '';
                 }
                 if (accountDeletionSection) {
                     accountDeletionSection.style.display = '';
+                }
+                if (profileAppearance) {
+                    profileAppearance.style.display = '';
                 }
 
                 // Re-enable profile fields for own profile
@@ -11212,11 +11233,15 @@ async function loadUserProfileView(userId) {
         // Hide Change Password and Delete Account sections when viewing another user
         const changePasswordSection = document.getElementById('changePasswordSection');
         const accountDeletionSection = document.getElementById('accountDeletionSection');
+        const profileAppearance = document.getElementById('profileAppearanceSection');
         if (changePasswordSection) {
             changePasswordSection.style.display = 'none';
         }
         if (accountDeletionSection) {
             accountDeletionSection.style.display = 'none';
+        }
+        if (profileAppearance) {
+            profileAppearance.style.display = 'none';
         }
 
     } catch (error) {
@@ -11666,11 +11691,15 @@ function addBackToFollowingButton(viewId) {
             // Show Change Password and Delete Account sections
             const changePasswordSection = document.getElementById('changePasswordSection');
             const accountDeletionSection = document.getElementById('accountDeletionSection');
+            const profileAppearance = document.getElementById('profileAppearanceSection');
             if (changePasswordSection) {
                 changePasswordSection.style.display = '';
             }
             if (accountDeletionSection) {
                 accountDeletionSection.style.display = '';
+            }
+            if (profileAppearance) {
+                profileAppearance.style.display = '';
             }
         }
 
@@ -14196,11 +14225,15 @@ function toggleDarkMode(enabled) {
 function initDarkModeToggle() {
     const saved = localStorage.getItem('therasocial_dark_mode');
     const toggle = document.getElementById('settingsDarkModeToggle');
+    const profileToggle = document.getElementById('profileDarkModeToggle');
     if (saved === 'true') {
         document.body.classList.add('dark-mode');
         if (toggle) toggle.checked = true;
-    } else if (toggle) {
-        toggle.checked = document.body.classList.contains('dark-mode');
+        if (profileToggle) profileToggle.checked = true;
+    } else {
+        const isDark = document.body.classList.contains('dark-mode');
+        if (toggle) toggle.checked = isDark;
+        if (profileToggle) profileToggle.checked = isDark;
     }
 }
 
