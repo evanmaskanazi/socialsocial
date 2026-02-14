@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4
+Complete app.py for Social Social Platform - V4 Fix10C
+Fix10C Changes:
+- Added 'timezone' column to User model and /api/user/profile PUT handler
+- Database migration for timezone column (PostgreSQL + SQLite)
+- timezone included in User.to_dict() response
 V4 Changes:
 - FIX: /api/parameters/user/<user_id> now enforces per-parameter privacy (was returning all params to any follower)
 - FIX: Removed /api/debug/parameters/<user_id> endpoint (no privacy filtering, marked as temporary)
@@ -2977,6 +2981,7 @@ class User(db.Model):
     shareable_link_token = db.Column(db.String(100), unique=True)
     circles_privacy = db.Column(db.String(20), default='private')
     birth_year = db.Column(db.Integer, default=1985)  # PJ6001: Birth year field
+    timezone = db.Column(db.String(100), default='')  # Fix10C: User timezone preference
     # PL400: Privacy region for determining applicable privacy law
     privacy_region = db.Column(db.String(20), default='other')  # 'eu', 'israel', 'us', 'other'
     data_processing_restricted = db.Column(db.Boolean, default=False)  # GDPR Art. 18 restriction flag
@@ -3074,7 +3079,8 @@ class User(db.Model):
             'shareable_link_token': self.shareable_link_token,
             'circles_privacy': self.circles_privacy or 'private',
             'birth_year': self.birth_year or 1985,  # PJ6001: Birth year field
-            'selected_city': self.selected_city or ''  # V3: Include city for settings page
+            'selected_city': self.selected_city or '',  # V3: Include city for settings page
+            'timezone': self.timezone or ''  # Fix10C: User timezone
         }
 
 
@@ -3614,6 +3620,13 @@ def ensure_database_schema():
                 else:
                     logger.debug("✓ circles_privacy column already exists")  # Changed to debug
 
+                # Fix10C: Add timezone column to users table
+                if 'timezone' not in user_columns:
+                    logger.info("Adding timezone column to users table...")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN timezone VARCHAR(100) DEFAULT ''"))
+                    conn.commit()
+                    logger.info("timezone column added successfully")
+
             else:
                 # SQLite - Check and add visibility column to posts table
                 result = conn.execute(text("PRAGMA table_info(posts)"))
@@ -3636,6 +3649,13 @@ def ensure_database_schema():
                     logger.info("circles_privacy column added successfully")
                 else:
                     logger.debug("✓ circles_privacy column already exists")  # Changed to debug
+
+                # Fix10C: Add timezone column to users table (SQLite)
+                if 'timezone' not in user_columns:
+                    logger.info("Adding timezone column to users table...")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN timezone VARCHAR(100) DEFAULT ''"))
+                    conn.commit()
+                    logger.info("timezone column added successfully")
 
         # Mark as completed for this process
         ensure_database_schema._completed = True
@@ -5246,6 +5266,10 @@ def get_current_user():
         
         if 'selected_city' in data:
             user.selected_city = sanitize_input(data['selected_city'].strip())[:100]
+        
+        # Fix10C: Handle timezone update
+        if 'timezone' in data:
+            user.timezone = sanitize_input(data['timezone'].strip())[:100] if data['timezone'] else ''
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Profile updated'})
