@@ -1088,7 +1088,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'Hello',
                 'request_text': 'Click the link below to sign in to TheraSocial:',
                 'button_text': 'Sign In',
-                'expire_text': 'This link will expire in 5 years or until a new one is generated',
+                'expire_text': 'This link will expire in 10 minutes or until a new one is generated',
                 'ignore_text': 'If you did not request this, please ignore this email.'
             },
             'he': {
@@ -1096,7 +1096,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'שלום',
                 'request_text': 'לחץ על הקישור למטה כדי להתחבר:',
                 'button_text': 'התחבר',
-                'expire_text': 'קישור זה יפוג תוקפו בעוד 5 שנים או עד שייווצר קישור חדש',
+                'expire_text': 'קישור זה יפוג תוקפו בעוד 10 דקות או עד שייווצר קישור חדש',
                 'ignore_text': 'אם לא ביקשת זאת, התעלם מאימייל זה.'
             },
             'ar': {
@@ -1104,7 +1104,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'مرحبا',
                 'request_text': 'انقر على الرابط أدناه لتسجيل الدخول:',
                 'button_text': 'تسجيل الدخول',
-                'expire_text': 'سينتهي هذا الرابط خلال 5 سنوات أو حتى يتم إنشاء رابط جديد',
+                'expire_text': 'سينتهي هذا الرابط خلال 10 دقائق أو حتى يتم إنشاء رابط جديد',
                 'ignore_text': 'إذا لم تطلب هذا، تجاهل هذا البريد.'
             },
             'ru': {
@@ -1112,7 +1112,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'Здравствуйте',
                 'request_text': 'Нажмите на ссылку ниже для входа:',
                 'button_text': 'Войти',
-                'expire_text': 'Эта ссылка истечет через 5 лет или пока не будет создана новая.',
+                'expire_text': 'Эта ссылка истечет через 10 минут или пока не будет создана новая.',
                 'ignore_text': 'Если вы не запрашивали это, проигнорируйте.'
             }
         }
