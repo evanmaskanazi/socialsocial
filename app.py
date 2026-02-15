@@ -11492,8 +11492,8 @@ def get_user_progress(user_id):
         else:
             circle_level = 'class_a'
         
-        # Privacy hierarchy
-        privacy_levels = {'public': 0, 'class_b': 1, 'class_a': 2}
+        # Privacy hierarchy - Check10: Added 'private': 3 so private params are never visible
+        privacy_levels = {'public': 0, 'class_b': 1, 'class_a': 2, 'private': 3}
         viewer_level = privacy_levels.get(circle_level, 0)
         
         def can_see(privacy_setting):
