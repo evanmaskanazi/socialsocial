@@ -149,7 +149,7 @@ const TRIGGER_ALERT_DISPLAY_MODE = 'standard';  // Change to 'overlay' for yello
             
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '×';
-            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-left:auto;opacity:0.8;';
+            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-inline-start:auto;opacity:0.8;';
             closeBtn.onclick = function() { removeToast(toast); };
             toast.appendChild(closeBtn);
             
@@ -1348,6 +1348,8 @@ function addParameterStyles() {
             border-radius: 15px;
             padding: 30px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            max-width: 100%;
         }
 
         .date-section {
@@ -1399,6 +1401,7 @@ function addParameterStyles() {
             grid-template-columns: repeat(7, 1fr);
             gap: 8px;
             margin-top: 15px;
+            max-width: 100%;
         }
 
         .calendar-day {
@@ -1409,6 +1412,8 @@ function addParameterStyles() {
             cursor: pointer;
             background: white;
             transition: all 0.3s ease;
+            box-sizing: border-box;
+            min-width: 0;
         }
 
         .calendar-day:hover {
@@ -1462,12 +1467,7 @@ function addParameterStyles() {
 
         .parameter-emoji {
             font-size: 2em;
-            margin-right: 15px;
-        }
-
-        [dir="rtl"] .parameter-emoji {
-            margin-right: 0;
-            margin-left: 15px;
+            margin-inline-end: 15px;
         }
 
         .parameter-info {
@@ -1493,7 +1493,7 @@ function addParameterStyles() {
             font-size: 12px;
             font-weight: bold;
             cursor: pointer;
-            margin-left: 8px;
+            margin-inline-start: 8px;
             vertical-align: middle;
             transition: all 0.2s ease;
             font-style: normal;
@@ -1502,11 +1502,6 @@ function addParameterStyles() {
         .tooltip-icon:hover {
             background: #764ba2;
             transform: scale(1.1);
-        }
-
-        [dir="rtl"] .tooltip-icon {
-            margin-left: 0;
-            margin-right: 8px;
         }
 
         .tooltip-modal {
@@ -1635,6 +1630,7 @@ function addParameterStyles() {
             border-radius: 8px;
             font-size: 1em;
             resize: vertical;
+            box-sizing: border-box;
         }
 
         .action-buttons {
@@ -1653,6 +1649,7 @@ function addParameterStyles() {
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-sizing: border-box;
         }
 
         .btn-primary {
@@ -1762,20 +1759,91 @@ function addParameterStyles() {
 
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
-            .parameters-page { padding: 10px; }
-            .parameters-card { padding: 20px; }
+            .parameters-page {
+                padding: 10px;
+                overflow-x: hidden;
+                max-width: 100vw;
+                box-sizing: border-box;
+            }
+            .parameters-card {
+                padding: 15px;
+                overflow: hidden;
+                box-sizing: border-box;
+                max-width: 100%;
+            }
             .rating-button {
                 width: 50px;
                 height: 50px;
                 font-size: 1.1em;
             }
-            .action-buttons { flex-direction: column; }
-            .btn { width: 100%; }
+            .action-buttons {
+                flex-direction: column;
+                padding: 0;
+            }
+            .btn {
+                width: 100%;
+                box-sizing: border-box;
+            }
             .language-selector-wrapper {
                 position: relative;
                 top: 0;
                 right: 0;
                 margin-bottom: 20px;
+            }
+            .notes-section textarea {
+                width: 100%;
+                box-sizing: border-box;
+                max-width: 100%;
+            }
+            .calendar-grid {
+                gap: 4px;
+            }
+            .calendar-day {
+                padding: 6px 2px;
+                font-size: 0.85em;
+            }
+            .date-controls {
+                gap: 10px;
+                flex-wrap: nowrap;
+            }
+            .calendar-display {
+                font-size: 1.1em;
+                min-width: 140px;
+            }
+            .date-nav-btn {
+                width: 36px;
+                height: 36px;
+                flex-shrink: 0;
+            }
+            .parameter-item {
+                padding: 15px;
+                overflow: hidden;
+            }
+            .rating-buttons {
+                flex-wrap: wrap;
+            }
+
+            /* MS-4/MS-5: Additional mobile overflow containment */
+            .calendar-grid {
+                max-width: 100% !important;
+                overflow: hidden;
+            }
+            .calendar-day {
+                overflow: hidden;
+                word-break: break-all;
+            }
+            .action-buttons {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .action-buttons button {
+                flex: 1 1 auto;
+                min-width: 80px;
+                font-size: 13px;
+            }
+            .notes-section, .diary-card, .form-group {
+                max-width: 100% !important;
+                overflow: hidden;
             }
         }
 
@@ -2192,7 +2260,7 @@ function followFromParameters(userId, username) {
                     <input type="checkbox" id="followTrigger" style="
                         width: 20px;
                         height: 20px;
-                        margin-right: 0.75rem;
+                        margin-inline-end: 0.75rem;
                         cursor: pointer;
                     " checked>
                     <div>
@@ -2315,7 +2383,10 @@ function selectDate(date) {
     if (notesInput) {
         notesInput.value = '';
     }
-    // Don't auto-load - user must click Load button
+    // FD-2: Auto-load saved data for selected date
+    if (typeof loadParameters === 'function') {
+        loadParameters(false);
+    }
 }
 
 function previousMonth() {
@@ -2931,7 +3002,7 @@ function displayUserParameters(data, userId, username) {
             const color = getValueColor(param.parameter_name, value);
 
             html += `
-                <div style="padding: 10px; background: white; border-radius: 8px; border-left: 3px solid ${color};">
+                <div style="padding: 10px; background: white; border-radius: 8px; border-inline-start: 3px solid ${color};">
                     <div style="font-size: 12px; color: #666;">${icon} ${param.parameter_name}</div>
                     <div style="font-size: 18px; font-weight: bold; color: ${color};">${value}/4</div>
                 </div>
@@ -3015,7 +3086,7 @@ function addTriggerSettings(container, userId, username) {
                 checkbox.type = 'checkbox';
                 checkbox.id = `trigger-${param.name}`;
                 checkbox.checked = triggers[param.name + '_alert'] || false;
-                checkbox.style.cssText = 'margin-right: 10px;';
+                checkbox.style.cssText = 'margin-inline-end: 10px;';
 
                 const label = document.createElement('label');
                 label.htmlFor = `trigger-${param.name}`;
@@ -3026,7 +3097,7 @@ function addTriggerSettings(container, userId, username) {
                     align-items: center;
                 `;
                 label.innerHTML = `
-                    <span style="font-size: 20px; margin-right: 10px;">${param.icon}</span>
+                    <span style="font-size: 20px; margin-inline-end: 10px;">${param.icon}</span>
                     <span style="font-weight: 500;">${param.label}</span>
                 `;
 
@@ -3034,7 +3105,7 @@ function addTriggerSettings(container, userId, username) {
                 thresholdInfo.style.cssText = `
                     font-size: 12px;
                     color: #6c757d;
-                    margin-left: auto;
+                    margin-inline-start: auto;
                 `;
 
                 if (param.name === 'anxiety') {

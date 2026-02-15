@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4
+Complete app.py for Social Social Platform - V4 Fix10C
+Fix10C Changes:
+- Added 'timezone' column to User model and /api/user/profile PUT handler
+- Database migration for timezone column (PostgreSQL + SQLite)
+- timezone included in User.to_dict() response
 V4 Changes:
 - FIX: /api/parameters/user/<user_id> now enforces per-parameter privacy (was returning all params to any follower)
 - FIX: Removed /api/debug/parameters/<user_id> endpoint (no privacy filtering, marked as temporary)
@@ -541,7 +545,7 @@ DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 =
 # - Alert processing (filters out shorter patterns)
 # - Alert display (hides existing alerts below threshold)
 # =============================================================================
-MINIMUM_TRIGGER_DAYS = 1  # V2 FIX: Changed from 3 to 1 for immediate contact triggers
+MINIMUM_TRIGGER_DAYS = 3  # Reverted to match frontend minimum display
 # =============================================================================
 
 from flask import (
@@ -1088,7 +1092,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'Hello',
                 'request_text': 'Click the link below to sign in to TheraSocial:',
                 'button_text': 'Sign In',
-                'expire_text': 'This link will expire in 5 years or until a new one is generated',
+                'expire_text': 'This link will expire in 10 minutes or until a new one is generated',
                 'ignore_text': 'If you did not request this, please ignore this email.'
             },
             'he': {
@@ -1096,7 +1100,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'שלום',
                 'request_text': 'לחץ על הקישור למטה כדי להתחבר:',
                 'button_text': 'התחבר',
-                'expire_text': 'קישור זה יפוג תוקפו בעוד 5 שנים או עד שייווצר קישור חדש',
+                'expire_text': 'קישור זה יפוג תוקפו בעוד 10 דקות או עד שייווצר קישור חדש',
                 'ignore_text': 'אם לא ביקשת זאת, התעלם מאימייל זה.'
             },
             'ar': {
@@ -1104,7 +1108,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'مرحبا',
                 'request_text': 'انقر على الرابط أدناه لتسجيل الدخول:',
                 'button_text': 'تسجيل الدخول',
-                'expire_text': 'سينتهي هذا الرابط خلال 5 سنوات أو حتى يتم إنشاء رابط جديد',
+                'expire_text': 'سينتهي هذا الرابط خلال 10 دقائق أو حتى يتم إنشاء رابط جديد',
                 'ignore_text': 'إذا لم تطلب هذا، تجاهل هذا البريد.'
             },
             'ru': {
@@ -1112,7 +1116,7 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
                 'hello': 'Здравствуйте',
                 'request_text': 'Нажмите на ссылку ниже для входа:',
                 'button_text': 'Войти',
-                'expire_text': 'Эта ссылка истечет через 5 лет или пока не будет создана новая.',
+                'expire_text': 'Эта ссылка истечет через 10 минут или пока не будет создана новая.',
                 'ignore_text': 'Если вы не запрашивали это, проигнорируйте.'
             }
         }
@@ -2977,6 +2981,7 @@ class User(db.Model):
     shareable_link_token = db.Column(db.String(100), unique=True)
     circles_privacy = db.Column(db.String(20), default='private')
     birth_year = db.Column(db.Integer, default=1985)  # PJ6001: Birth year field
+    timezone = db.Column(db.String(100), default='')  # Fix10C: User timezone preference
     # PL400: Privacy region for determining applicable privacy law
     privacy_region = db.Column(db.String(20), default='other')  # 'eu', 'israel', 'us', 'other'
     data_processing_restricted = db.Column(db.Boolean, default=False)  # GDPR Art. 18 restriction flag
@@ -3074,7 +3079,8 @@ class User(db.Model):
             'shareable_link_token': self.shareable_link_token,
             'circles_privacy': self.circles_privacy or 'private',
             'birth_year': self.birth_year or 1985,  # PJ6001: Birth year field
-            'selected_city': self.selected_city or ''  # V3: Include city for settings page
+            'selected_city': self.selected_city or '',  # V3: Include city for settings page
+            'timezone': self.timezone or ''  # Fix10C: User timezone
         }
 
 
@@ -3614,6 +3620,13 @@ def ensure_database_schema():
                 else:
                     logger.debug("✓ circles_privacy column already exists")  # Changed to debug
 
+                # Fix10C: Add timezone column to users table
+                if 'timezone' not in user_columns:
+                    logger.info("Adding timezone column to users table...")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN timezone VARCHAR(100) DEFAULT ''"))
+                    conn.commit()
+                    logger.info("timezone column added successfully")
+
             else:
                 # SQLite - Check and add visibility column to posts table
                 result = conn.execute(text("PRAGMA table_info(posts)"))
@@ -3636,6 +3649,13 @@ def ensure_database_schema():
                     logger.info("circles_privacy column added successfully")
                 else:
                     logger.debug("✓ circles_privacy column already exists")  # Changed to debug
+
+                # Fix10C: Add timezone column to users table (SQLite)
+                if 'timezone' not in user_columns:
+                    logger.info("Adding timezone column to users table...")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN timezone VARCHAR(100) DEFAULT ''"))
+                    conn.commit()
+                    logger.info("timezone column added successfully")
 
         # Mark as completed for this process
         ensure_database_schema._completed = True
@@ -4429,6 +4449,11 @@ def create_test_users():
                 db.session.add(profile)
                 created_count += 1
                 logger.info(f"Created test user: {user_data['username']}")
+            else:
+                # FIX10J: Repair any sample usernames corrupted by consent flow
+                if existing_user.username != user_data['username']:
+                    logger.info(f"Repairing username: {existing_user.username} -> {user_data['username']}")
+                    existing_user.username = user_data['username']
 
         if created_count > 0:
             db.session.commit()
@@ -5060,28 +5085,33 @@ def register():
 @app.route('/api/auth/login', methods=['POST'])
 @rate_limit(max_attempts=10, window_minutes=15)
 def login():
-    """User login with audit logging"""
+    """User login with audit logging - FD-3: Accepts email or username"""
     try:
         data = request.json
-        email = data.get('email', '').strip().lower()
+        login_id = data.get('email', '').strip().lower()  # field name kept for backward compat
         password = data.get('password', '')
 
-        if not email or not password:
-            return jsonify({'error': 'Email and password required'}), 400
+        if not login_id or not password:
+            return jsonify({'error': 'Email/username and password required'}), 400
 
         # CHANGE 7: Input length validation
-        if len(email) > 120 or len(password) > 128:
+        if len(login_id) > 120 or len(password) > 128:
             return jsonify({'error': 'Invalid input length'}), 400
 
-        # Find user - SQLAlchemy 2.0 style
+        # FD-3: Find user by email or username
         user = db.session.execute(
-            select(User).filter_by(email=email)
+            select(User).filter_by(email=login_id)
         ).scalar_one_or_none()
+
+        if not user:
+            user = db.session.execute(
+                select(User).filter_by(username=login_id)
+            ).scalar_one_or_none()
 
         if not user or not user.check_password(password):
             # CHANGE 7: Audit log failed login attempt (Ethics: Security)
             log_audit('login_failed', 'user', user.id if user else None, None, 
-                     {'email': email[:50], 'reason': 'invalid_credentials'})
+                     {'email': login_id[:50], 'reason': 'invalid_credentials'})
             return jsonify({'error': 'Invalid credentials'}), 401
 
         if not user.is_active:
@@ -5237,6 +5267,10 @@ def get_current_user():
         if 'selected_city' in data:
             user.selected_city = sanitize_input(data['selected_city'].strip())[:100]
         
+        # Fix10C: Handle timezone update
+        if 'timezone' in data:
+            user.timezone = sanitize_input(data['timezone'].strip())[:100] if data['timezone'] else ''
+        
         db.session.commit()
         return jsonify({'success': True, 'message': 'Profile updated'})
 
@@ -5382,19 +5416,10 @@ def change_password():
         if not user.check_password(current_password):
             return jsonify({'error': 'Current password is incorrect'}), 401
 
-        # Validate new password
-        if len(new_password) < 12:
-            return jsonify({'error': 'Password must be at least 12 characters long'}), 400
-
-        # Check complexity
+        # SF-5: Validate new password - 8 chars min, uppercase + special char required
         import re
-        has_upper = bool(re.search(r'[A-Z]', new_password))
-        has_lower = bool(re.search(r'[a-z]', new_password))
-        has_digit = bool(re.search(r'[0-9]', new_password))
-        has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password))
-
-        if not (has_upper and has_lower and has_digit and has_special):
-            return jsonify({'error': 'Password must contain uppercase, lowercase, number, and special character'}), 400
+        if not re.match(r'^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$', new_password):
+            return jsonify({'error': 'Password must be at least 8 characters with an uppercase letter and a special character'}), 400
 
         # Update password
         user.set_password(new_password)
@@ -5597,9 +5622,9 @@ def save_consent():
         # Handle username if provided with consent
         username = data.get('username', '').strip()
         if username:
-            # If blank, use email prefix
-            if not username:
-                username = user.email.split('@')[0]
+            # FIX10J: Reject email-format usernames - use prefix instead
+            if '@' in username:
+                username = username.split('@')[0]
 
             # Check if username is available
             existing = db.session.execute(
@@ -5687,7 +5712,7 @@ def save_consent():
 @app.route('/api/user/delete-account', methods=['POST'])
 @login_required
 def delete_account():
-    """Delete user account and all associated data"""
+    """FD-1: Request account deletion - sends confirmation email with token"""
     try:
         user_id = session['user_id']
         user = db.session.get(User, user_id)
@@ -5695,17 +5720,114 @@ def delete_account():
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        # Log the deletion
-        logger.info(f"Deleting account for user {user.id} ({user.username})")
+        # Generate deletion confirmation token (reuse PasswordResetToken model)
+        deletion_token = generate_token()
+        token_record = PasswordResetToken(
+            user_id=user.id,
+            token=deletion_token,
+            expires_at=datetime.utcnow() + timedelta(hours=1)
+        )
+        db.session.add(token_record)
+        db.session.commit()
+
+        # Send confirmation email
+        try:
+            user_language = getattr(user, 'language', 'en') or 'en'
+            confirm_link = f"{os.environ.get('APP_URL', 'https://therasocial.org')}?delete_token={deletion_token}"
+            is_rtl = user_language in ['he', 'ar']
+            text_dir = 'rtl' if is_rtl else 'ltr'
+            text_align = 'right' if is_rtl else 'left'
+
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="background: #EF4444; padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 24px;">TheraSocial - Account Deletion</h1>
+                    </div>
+                    <div style="padding: 40px 30px;">
+                        <h2 style="color: #333; margin-top: 0;">Confirm Account Deletion</h2>
+                        <p style="color: #666; line-height: 1.6;">You requested to delete your TheraSocial account. This action is permanent and cannot be undone.</p>
+                        <p style="color: #666; line-height: 1.6;">Click the button below to confirm deletion:</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{confirm_link}" style="background: #EF4444; color: white; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                Confirm Deletion
+                            </a>
+                        </div>
+                        <p style="color: #999; font-size: 13px; margin-top: 30px;">This link expires in 1 hour.</p>
+                        <p style="color: #999; font-size: 13px;">If you did not request this, you can safely ignore this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = 'TheraSocial - Confirm Account Deletion'
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = user.email
+            msg.attach(MIMEText(f"Confirm account deletion: {confirm_link}", 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
+
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], user.email, msg.as_string())
+
+            logger.info(f"Account deletion confirmation email sent to {user.email}")
+        except Exception as email_err:
+            logger.error(f"Failed to send deletion email: {email_err}")
+            # Still return success - token is saved, user can retry
         
-        # CHANGE 13: Audit log for account deletion (Ethics: Accountability)
+        return jsonify({
+            'success': True,
+            'message': 'A confirmation email has been sent. Please check your email to confirm account deletion.',
+            'email_sent': True
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error requesting account deletion: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to request account deletion'}), 500
+
+
+@app.route('/api/user/confirm-delete-account', methods=['POST'])
+def confirm_delete_account():
+    """FD-1: Confirm and execute account deletion using emailed token"""
+    try:
+        data = request.get_json()
+        token = data.get('token') if data else request.args.get('delete_token')
+
+        if not token:
+            return jsonify({'error': 'Deletion token required'}), 400
+
+        token_record = db.session.execute(
+            select(PasswordResetToken).filter_by(token=token, used=False)
+        ).scalar_one_or_none()
+
+        if not token_record:
+            return jsonify({'error': 'Invalid or expired deletion token'}), 400
+
+        if datetime.utcnow() > token_record.expires_at:
+            return jsonify({'error': 'Deletion token has expired'}), 400
+
+        user = db.session.get(User, token_record.user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        logger.info(f"Confirming account deletion for user {user.id} ({user.username})")
         log_audit('account_deleted', 'user', user.id, user.id, {'username': user.username})
 
-        # Delete user (cascade will handle related data)
+        token_record.used = True
         db.session.delete(user)
         db.session.commit()
 
-        # Clear session
         session.clear()
 
         return jsonify({
@@ -5714,7 +5836,7 @@ def delete_account():
         }), 200
 
     except Exception as e:
-        logger.error(f"Error deleting account: {e}")
+        logger.error(f"Error confirming account deletion: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to delete account'}), 500
 
@@ -6664,21 +6786,11 @@ def reset_password():
         if datetime.utcnow() > token_record.expires_at:
             return jsonify({'error': 'Reset token has expired'}), 400
 
-        # Validate new password
-        if len(new_password) < 12:
-            return jsonify({'error': 'Password must be at least 12 characters long'}), 400
-
-        # Check complexity
+        # SF-5: Validate new password - 8 chars min, uppercase + special char required
         import re
-        has_upper = bool(re.search(r'[A-Z]', new_password))
-        has_lower = bool(re.search(r'[a-z]', new_password))
-        has_digit = bool(re.search(r'[0-9]', new_password))
-        has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password))
+        if not re.match(r'^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$', new_password):
+            return jsonify({'error': 'Password must be at least 8 characters with an uppercase letter and a special character'}), 400
 
-        if not (has_upper and has_lower and has_digit and has_special):
-            return jsonify({'error': 'Password must contain uppercase, lowercase, number, and special character'}), 400
-
-        # Get user and update password
         user = db.session.get(User, token_record.user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -9532,11 +9644,11 @@ def get_parameters():
                         'anxiety': int(params.anxiety) if params.anxiety else 0
                     },
                     # ADD ALL PRIVACY SETTINGS HERE
-                    'mood_privacy': params.mood_privacy or 'public',
-                    'energy_privacy': params.energy_privacy or 'public',
-                    'sleep_quality_privacy': params.sleep_quality_privacy or 'public',
-                    'physical_activity_privacy': params.physical_activity_privacy or 'public',
-                    'anxiety_privacy': params.anxiety_privacy or 'public',
+                    'mood_privacy': params.mood_privacy or 'private',
+                    'energy_privacy': params.energy_privacy or 'private',
+                    'sleep_quality_privacy': params.sleep_quality_privacy or 'private',
+                    'physical_activity_privacy': params.physical_activity_privacy or 'private',
+                    'anxiety_privacy': params.anxiety_privacy or 'private',
                     'notes': params.notes or ''
                 }
             })
@@ -9552,11 +9664,11 @@ def get_parameters():
                         'anxiety': 0
                     },
                     # ADD DEFAULT PRIVACY SETTINGS
-                    'mood_privacy': 'public',
-                    'energy_privacy': 'public',
-                    'sleep_quality_privacy': 'public',
-                    'physical_activity_privacy': 'public',
-                    'anxiety_privacy': 'public',
+                    'mood_privacy': 'private',
+                    'energy_privacy': 'private',
+                    'sleep_quality_privacy': 'private',
+                    'physical_activity_privacy': 'private',
+                    'anxiety_privacy': 'private',
                     'notes': ''
                 }
             })

@@ -60,7 +60,7 @@
             
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '×';
-            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-left:auto;opacity:0.8;';
+            closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-inline-start:auto;opacity:0.8;';
             closeBtn.onclick = function() { removeToast(toast); };
             toast.appendChild(closeBtn);
             
@@ -435,7 +435,7 @@ window.circlesHTML = `
 
         <!-- Language Selector -->
         <div style="text-align: center; margin-bottom: 20px;">
-            <label for="languageSelect" style="margin-right: 10px; color: #8898aa;" data-i18n="settings.language">Language:</label>
+            <label for="languageSelect" style="margin-inline-end: 10px; color: #8898aa;" data-i18n="settings.language">Language:</label>
             <select id="languageSelect" onchange="window.i18n.setLanguage(this.value)" style="padding: 8px 15px; border: 2px solid #dfe1e6; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
                 <option value="en">English</option>
                 <option value="he">עברית (Hebrew)</option>
@@ -1065,7 +1065,7 @@ async function searchUsers() {
                             ${detailLine}
                         </div>
                     </div>
-                    <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-left: 10px; flex-shrink: 0;" onclick="event.stopPropagation()">
+                    <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-inline-start: 10px; flex-shrink: 0;" onclick="event.stopPropagation()">
                         <option value="">Add to circle...</option>
                         <option value="public" data-i18n="circles.public">Public</option>
                         <option value="class_b" data-i18n="circles.class_b">Close Friends</option>
@@ -1679,6 +1679,17 @@ const messagesHTML = `
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        /* MS-6: Orientation change viewport handling */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .messages-container {
+                height: calc(100vh - 10px);
+                max-height: calc(100vh - 10px);
+            }
+            .conversations-sidebar {
+                max-height: calc(100vh - 30px);
+            }
+        }
     </style>
 
     <div class="conversations-sidebar">
@@ -1830,7 +1841,7 @@ function updateConversationsList() {
                 <div class="conversation-info">
                     <div class="conversation-name">
                         ${escapeHtml(conv.name)}
-                        <span style="font-size: 12px; color: #8898aa; margin-left: 10px;">${timeDisplay}</span>
+                        <span style="font-size: 12px; color: #8898aa; margin-inline-start: 10px;">${timeDisplay}</span>
                     </div>
                     <div class="conversation-preview">${escapeHtml(messagePreview.substring(0, 50))}${messagePreview.length > 50 ? '...' : ''}</div>
                 </div>
@@ -2561,3 +2572,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('Circles-messages.js PJ703 - UPDATED with following features');
+
+// MS-6: Orientation change viewport recalculation for messages
+(function() {
+    function recalcMessagesViewport() {
+        const container = document.getElementById('messagesContainer') || document.querySelector('.messages-container');
+        if (container) {
+            container.style.maxHeight = window.innerHeight - 20 + 'px';
+        }
+        const chatContainer = document.querySelector('.chat-messages');
+        if (chatContainer) {
+            chatContainer.style.maxHeight = (window.innerHeight - 150) + 'px';
+        }
+    }
+    window.addEventListener('orientationchange', function() {
+        setTimeout(recalcMessagesViewport, 100);
+        setTimeout(recalcMessagesViewport, 300);
+    });
+    window.addEventListener('resize', recalcMessagesViewport);
+})();
