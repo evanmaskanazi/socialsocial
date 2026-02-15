@@ -4591,7 +4591,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js?v=1901"></script>
-   <script src="/static/js/circles-messages.js?v=702.0"></script>
+   <script src="/static/js/circles-messages.js?v=10Link"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -6059,13 +6059,10 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 
       const view = item.dataset.view;
 
-        // Reset viewing context ONLY for following, followers, messages, and invite
-        // Keep viewingUserId for feed, profile, circles, parameters, tracking so user can navigate between viewed user's data
-       if (['following', 'followers', 'messages', 'invite'].includes(view)) {
-            console.log('[NAV] Resetting viewingUserId for main nav:', view);
-            viewingUserId = null;
-            window.viewingUserId = null;
-        }
+        // 10Link: Reset viewingUserId for ALL nav items - top bar always goes to user's own content
+        console.log('[NAV] Resetting viewingUserId for nav click:', view);
+        viewingUserId = null;
+        window.viewingUserId = null;
 
         // SCREEN FIX: Show target view and remove inline style
         const targetView = document.getElementById(`${view}View`);
@@ -6340,7 +6337,15 @@ window.showViewFromMore = showViewFromMore;
 // ===============================================
 
 
-function showView(viewName) {
+function showView(viewName, resetContext) {
+    // 10Link: resetContext defaults to true - nav clicks always reset to user's own content
+    // Pass resetContext=false when programmatically showing another user's profile
+    if (resetContext === undefined || resetContext === true) {
+        console.log('[NAV] showView resetting viewingUserId for:', viewName);
+        viewingUserId = null;
+        window.viewingUserId = null;
+    }
+    
     console.log('[DEBUG] showView called:', viewName, 'viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
     
     // QA FIX: Explicitly hide homeView when navigating to ANY other view
@@ -6367,15 +6372,7 @@ function showView(viewName) {
         syncLanguageSelector();
     }
     
-    // UPDATED BEHAVIOR: When viewing another user, ALL tabs maintain viewing context
-    // Only the "Back to Following" button should reset to current user's account
-    // This provides a consistent experience when navigating between tabs while viewing someone else
-
-    // REMOVED: The automatic reset behavior for certain views
-    // The viewingUserId is now only reset by:
-    // 1. The "Back to Following" button click handler
-    // 2. Calling loadProfile() for own profile
-    // 3. Explicitly setting viewingUserId = null
+    // 10Link: viewingUserId reset is handled by the resetContext parameter above
 
     // Update desktop sidebar
     document.querySelectorAll('.sidebar-item').forEach(item => {
@@ -8137,6 +8134,20 @@ window.addEventListener('languageChanged', () => {
                 if (triggerBtn) triggerBtn.remove();
                 const checkinBtn = document.getElementById('profileCheckinHistoryBtn');
                 if (checkinBtn) checkinBtn.remove();
+                
+                // 10Link: Restore profile-header to original non-flex layout
+                const ownProfileHeader = document.querySelector('#profileView .profile-header');
+                if (ownProfileHeader) {
+                    ownProfileHeader.style.display = '';
+                    ownProfileHeader.style.alignItems = '';
+                    ownProfileHeader.style.gap = '';
+                    ownProfileHeader.style.flexWrap = '';
+                    ownProfileHeader.style.justifyContent = '';
+                }
+                const ownAvatar = document.querySelector('#profileView .profile-avatar');
+                if (ownAvatar) {
+                    ownAvatar.style.margin = '';
+                }
 
             } catch (error) {
                 console.error('Failed to load profile:', error);
@@ -10998,9 +11009,8 @@ async function viewUserProfile(userId, allowPreview = false) {
             // currentUserId = sessionData.id || sessionData.user_id;
         }
 
-        // Show profile view first
-       // Show profile view first
-showView('profile');
+        // Show profile view first - 10Link: pass false to preserve viewingUserId
+showView('profile', false);
 
 // Hide messages tab when viewing another user
 updateMessagesNavVisibility();
@@ -11422,7 +11432,13 @@ async function loadUserProfileView(userId) {
             profileHeaderDiv.style.flexWrap = 'wrap';
             profileHeaderDiv.style.justifyContent = 'center';
             
-            // Trigger button - placed to the left of username
+            // Fix avatar margin - the default CSS has margin: 0 auto 15px which breaks flex layout
+            const avatarEl = profileHeaderDiv.querySelector('.profile-avatar');
+            if (avatarEl) {
+                avatarEl.style.margin = '0';
+            }
+            
+            // Trigger button - placed to the left of avatar
             const triggerBtn = document.createElement('button');
             triggerBtn.id = 'profileTriggerBtn';
             triggerBtn.className = 'btn';
@@ -11440,9 +11456,8 @@ async function loadUserProfileView(userId) {
             checkinBtn.onclick = function() { showUserCheckinHistory(userId, userData.username); };
             
             // Insert: trigger button before avatar, checkin button after username
-            const avatar = profileHeaderDiv.querySelector('.profile-avatar');
-            if (avatar) {
-                profileHeaderDiv.insertBefore(triggerBtn, avatar);
+            if (avatarEl) {
+                profileHeaderDiv.insertBefore(triggerBtn, avatarEl);
             }
             profileHeaderDiv.appendChild(checkinBtn);
         }
