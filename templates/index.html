@@ -12850,7 +12850,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                 // This handles ?view=invite, ?view=following (without highlight_user), etc.
                 else if (viewParam) {
                     const validViews = ['home', 'progress', 'profile', 'circles', 'messages', 
-                                       'tracking', 'following', 'followers', 'invite', 'alerts'];
+                                       'tracking', 'following', 'followers', 'invite', 'alerts',
+                                       'connections', 'settings'];
                     if (validViews.includes(viewParam)) {
                         console.log('[SCREEN FIX] URL ?view= param detected, switching to:', viewParam);
                         // Clear URL params after reading them
@@ -12866,6 +12867,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                             else if (viewParam === 'circles') loadCircles();
                             else if (viewParam === 'messages') loadConversations();
                             else if (viewParam === 'alerts') loadAlerts();
+                            else if (viewParam === 'connections') loadConnections();
+                            else if (viewParam === 'settings') loadSettings();
                         }, 500);
                     } else {
                         console.warn('[SCREEN FIX] Invalid view param:', viewParam);
