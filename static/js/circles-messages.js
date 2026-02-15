@@ -3,6 +3,7 @@
 // 10Link: Circle member names now clickable to navigate to profile (uses /?view=profile&user_id=)
 // 10LinkN: Confirmed createMemberElement has clickable names - actual fix was in index.html updateCircleDisplay()
 // 10LinkN2: Fixed color from var(--primary) to hardcoded #667eea - var(--primary) resolves to muted gray #6B8BA4
+// 10LinkN3: Fixed THIRD rendering path - updateCircleDisplay() at line ~1158 also had plain member-name without onclick
 // PJ501 Changes: Added block check to viewUserProfileFromSearch, Fixed Block button translation
 // PJ601 Changes: Block/Unblock toggle in search results
 // PJ602 Changes: Fixed Follow button width
@@ -1178,7 +1179,10 @@ function updateCircleDisplay(circleType, members, containerId, countId) {
             return `
                 <div class="member-item">
                     <div class="user-avatar">${member.username[0].toUpperCase()}</div>
-                    <div class="member-name">${escapeHtml(member.username)}</div>
+                    <div class="member-name" style="cursor: pointer; color: #667eea; font-weight: 600;"
+                         onclick="window.location.href='/?view=profile&user_id=${member.id}'"
+                         onmouseover="this.style.textDecoration='underline'"
+                         onmouseout="this.style.textDecoration='none'">${escapeHtml(member.username)}</div>
                     <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${circleType}')" data-i18n="btn.remove">${t('btn.remove', 'Remove')}</button>
                 </div>
             `;
@@ -2582,7 +2586,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
 });
 
-console.log('Circles-messages.js 10LinkN2 - Hardcoded #667eea link color for circle member names');
+console.log('Circles-messages.js 10LinkN3 - All 3 member-name rendering paths now have onclick + #667eea');
 
 // MS-6: Orientation change viewport recalculation for messages
 (function() {
