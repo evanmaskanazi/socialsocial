@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 Complete app.py for Social Social Platform - V4 Fix10C
+
 Fix10C Changes:
 - Added 'timezone' column to User model and /api/user/profile PUT handler
 - Database migration for timezone column (PostgreSQL + SQLite)
