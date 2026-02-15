@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<!-- Fix10B: Nav Bar Consistency + Triggers Button -->
+<!--
+  Fix10B Changes:
+  1. Diary page nav bar now matches home sidebar: Home, Progress, Circles, Messages, Diary, Connections, Invite, Settings
+  2. Diary button ALWAYS navigates to user's own diary (/parameters), even when viewing another user
+  3. New "Triggers" button added to sidebar (after Settings) - only visible when viewing another user's profile
+  4. Triggers button shows other user's accessible parameters and trigger settings (previously done by Diary button)
+  5. Mobile more menu also includes Triggers item when viewing another user
+-->
 <!-- Fix10C: Settings Tab Restructure + Incognito Mode Fix -->
 <!-- Fix10C CHANGES:
   1. Renamed "Profile" tab to "Settings" and moved to rightmost position in sidebar/mobile nav
@@ -2967,6 +2976,11 @@
                     <span class="mobile-more-icon">⚙️</span>
                     <span class="mobile-more-label" data-i18n="menu.settings">Settings</span>
                 </li>
+                <!-- Fix10B: Triggers - only visible when viewing another user -->
+                <li class="mobile-more-menu-item" id="mobileTriggersNav" onclick="handleTriggersClick(event); closeMobileMoreMenu();" style="display: none;">
+                    <span class="mobile-more-icon">🔔</span>
+                    <span class="mobile-more-label" data-i18n="menu.triggers">Triggers</span>
+                </li>
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('alerts')">
                     <span class="mobile-more-icon">🔔</span>
                     <span class="mobile-more-label" data-i18n="alerts.title">Alerts</span>
@@ -3012,6 +3026,11 @@
                     <li class="sidebar-item" data-view="settings">
                         <span class="sidebar-icon">⚙️</span>
                         <span class="sidebar-label" data-i18n="menu.settings">Settings</span>
+                    </li>
+                    <!-- Fix10B: Triggers tab - only visible when viewing another user's profile -->
+                    <li class="sidebar-item" id="triggersNavItem" data-view="triggers" onclick="handleTriggersClick(event)" style="display: none; cursor: pointer;">
+                        <span class="sidebar-icon">🔔</span>
+                        <span class="sidebar-label" data-i18n="menu.triggers">Triggers</span>
                     </li>
                 </ul>
             </aside>
@@ -4500,6 +4519,7 @@
         const fix10cTranslations = {
             en: {
                 'menu.settings': 'Settings',
+                'menu.triggers': 'Triggers',
                 'settings.notification_btn': 'Notification',
                 'settings.account_btn': 'Account',
                 'settings.profile_info': 'Profile Info',
@@ -4510,6 +4530,7 @@
             },
             he: {
                 'menu.settings': 'הגדרות',
+                'menu.triggers': 'טריגרים',
                 'settings.notification_btn': 'התראות',
                 'settings.account_btn': 'חשבון',
                 'settings.profile_info': 'פרטי פרופיל',
@@ -4520,6 +4541,7 @@
             },
             ar: {
                 'menu.settings': 'الإعدادات',
+                'menu.triggers': 'المحفزات',
                 'settings.notification_btn': 'الإشعارات',
                 'settings.account_btn': 'الحساب',
                 'settings.profile_info': 'معلومات الملف الشخصي',
@@ -4530,6 +4552,7 @@
             },
             ru: {
                 'menu.settings': 'Настройки',
+                'menu.triggers': 'Триггеры',
                 'settings.notification_btn': 'Уведомления',
                 'settings.account_btn': 'Аккаунт',
                 'settings.profile_info': 'Информация профиля',
@@ -5993,6 +6016,12 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
             return;
         }
         
+        // Fix10B: Skip triggers handler - it has its own onclick handler
+        if (item.dataset.view === 'triggers') {
+            console.log('[DEBUG] Skipping generic handler for triggers item');
+            return;
+        }
+        
         // PJ602: Skip circles handler - it has its own onclick="handleCirclesClick" handler
         // This prevents double-calling loadUserCircles and double 403 messages
         if (item.dataset.view === 'circles') {
@@ -6186,7 +6215,8 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 
 
 
-// Handle parameters click - redirect to /parameters page for own data, show trackingView for other users
+// Fix10B: Handle parameters click - ALWAYS redirect to /parameters page for own diary
+// Viewing other user's triggers is now handled by handleTriggersClick
 function handleParametersClick(event) {
     // Stop event propagation to prevent both handlers from firing
     if (event) {
@@ -6194,28 +6224,53 @@ function handleParametersClick(event) {
         event.preventDefault();
     }
 
-    console.log('[DEBUG] handleParametersClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+    console.log('[DEBUG] handleParametersClick called - always redirecting to own diary');
+    window.location.href = '/parameters';
+}
+
+// Fix10B: Handle triggers click - view another user's accessible parameters and set triggers
+function handleTriggersClick(event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
+    console.log('[DEBUG] handleTriggersClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
 
     if (viewingUserId !== null && viewingUserId !== currentUserId) {
-        // Viewing another user - show their parameters in modal
-        console.log('[DEBUG] Fetching profile for user:', viewingUserId);
+        // Viewing another user - show their parameters/triggers in modal
+        console.log('[DEBUG] Fetching profile for triggers, user:', viewingUserId);
         fetch(`/api/users/${viewingUserId}/profile`, { credentials: 'include' })
             .then(r => {
                 console.log('[DEBUG] Profile fetch status:', r.status);
                 return r.ok ? r.json() : Promise.reject('Failed to fetch profile');
             })
             .then(data => {
-                console.log('[DEBUG] Profile data received, calling viewUserParameters');
+                console.log('[DEBUG] Profile data received, calling viewUserParameters for triggers');
                 viewUserParameters(viewingUserId, data.username || 'User');
             })
             .catch(err => {
-                console.error('[DEBUG] Error in handleParametersClick:', err);
-                showNotification('Error loading parameters', 'error');
+                console.error('[DEBUG] Error in handleTriggersClick:', err);
+                showNotification('Error loading triggers', 'error');
             });
     } else {
-        // Viewing own parameters - redirect to full parameters page
-        console.log('[DEBUG] Redirecting to /parameters for own data');
-        window.location.href = '/parameters';
+        console.log('[DEBUG] handleTriggersClick called but not viewing another user - ignoring');
+    }
+}
+
+// Fix10B: Show/hide Triggers nav item based on whether viewing another user
+function updateTriggersNavVisibility() {
+    const desktopTriggersNav = document.getElementById('triggersNavItem');
+    const mobileTriggersNav = document.getElementById('mobileTriggersNav');
+
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        // Viewing another user - show triggers
+        if (desktopTriggersNav) desktopTriggersNav.style.display = '';
+        if (mobileTriggersNav) mobileTriggersNav.style.display = '';
+    } else {
+        // Viewing own profile - hide triggers
+        if (desktopTriggersNav) desktopTriggersNav.style.display = 'none';
+        if (mobileTriggersNav) mobileTriggersNav.style.display = 'none';
     }
 }
 
@@ -6390,21 +6445,28 @@ function showView(viewName) {
                 break;
             case 'parameters':
           case 'tracking':
-    // Get username first, then view parameters in modal
-    fetch(`/api/users/${viewingUserId}/profile`, {
-        credentials: 'include'
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch profile');
-        return response.json();
-    })
-    .then(data => {
-        viewUserParameters(viewingUserId, data.username || 'User');
-    })
-    .catch(error => {
-        console.error('Error loading user parameters:', error);
-        showNotification('Error loading parameters', 'error');
-    });
+    // Fix10B: Diary always goes to own diary page
+    console.log('[DEBUG] showView tracking/parameters - redirecting to own diary');
+    window.location.href = '/parameters';
+    break;
+          case 'triggers':
+    // Fix10B: Triggers shows other user's accessible parameters
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        fetch(`/api/users/${viewingUserId}/profile`, {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch profile');
+            return response.json();
+        })
+        .then(data => {
+            viewUserParameters(viewingUserId, data.username || 'User');
+        })
+        .catch(error => {
+            console.error('Error loading user triggers:', error);
+            showNotification('Error loading triggers', 'error');
+        });
+    }
     break;
             case 'following':
                 loadUserFollowing(viewingUserId);
@@ -6465,20 +6527,9 @@ function showView(viewName) {
                 break;
             case 'parameters':
             case 'tracking':
-                // Initialize parameters calendar
-                if (typeof initializeCalendar === 'function') {
-                    initializeCalendar();
-                }
-                // Initialize parameter options (1-4 buttons)
-                if (typeof createParameterOptions === 'function') {
-                    setTimeout(function() {
-                        createParameterOptions('moodInput', 'mood');
-                        createParameterOptions('sleepInput', 'sleep');
-                        createParameterOptions('exerciseInput', 'exercise');
-                        createParameterOptions('stressInput', 'stress');
-                        createParameterOptions('socialInput', 'social');
-                    }, 100);
-                }
+                // Fix10B: Diary always redirects to own parameters page
+                console.log('[DEBUG] showView own tracking/parameters - redirecting to /parameters');
+                window.location.href = '/parameters';
                 break;
             case 'following':
                 loadFollowing();
@@ -10950,6 +11001,9 @@ showView('profile');
 // Hide messages tab when viewing another user
 updateMessagesNavVisibility();
 
+// Fix10B: Show triggers tab when viewing another user
+updateTriggersNavVisibility();
+
     } catch (error) {
         console.error('Error viewing user profile:', error);
         showNotification('Failed to load user profile', 'error');
@@ -11926,6 +11980,9 @@ function addBackToFollowingButton(viewId) {
 
         // Show messages nav visibility (restore own account view)
         updateMessagesNavVisibility();
+
+        // Fix10B: Hide triggers nav when going back to own account
+        updateTriggersNavVisibility();
 
         // Navigate to connections view and load connections list
         showView('connections');
