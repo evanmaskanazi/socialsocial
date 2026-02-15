@@ -2,6 +2,7 @@
 // Complete Fixed Version with null safety and proper error handling
 // 10Link: Circle member names now clickable to navigate to profile (uses /?view=profile&user_id=)
 // 10LinkN: Confirmed createMemberElement has clickable names - actual fix was in index.html updateCircleDisplay()
+// 10LinkN2: Fixed color from var(--primary) to hardcoded #667eea - var(--primary) resolves to muted gray #6B8BA4
 // PJ501 Changes: Added block check to viewUserProfileFromSearch, Fixed Block button translation
 // PJ601 Changes: Block/Unblock toggle in search results
 // PJ602 Changes: Fixed Follow button width
@@ -834,7 +835,7 @@ async function loadCircleRecommendations() {
                         ${(user.username || "U")[0].toUpperCase()}
                     </div>
                     <div style="flex-grow: 1;">
-                        <div style="font-weight: 600; color: var(--primary, #667eea); cursor: pointer;" 
+                        <div style="font-weight: 600; color: #667eea; cursor: pointer;" 
                              onclick="window.location.href='/?view=profile&user_id=${user.id}'"
                              onmouseover="this.style.textDecoration='underline'" 
                              onmouseout="this.style.textDecoration='none'">${user.username}</div>
@@ -936,7 +937,7 @@ function createMemberElement(member, circleType) {
     const displayName = member.display_name || member.username || member.email || 'U';
     memberDiv.innerHTML = `
         <div class="user-avatar">${displayName[0].toUpperCase()}</div>
-        <div class="member-name" style="cursor: pointer; color: var(--primary, #667eea);" 
+        <div class="member-name" style="cursor: pointer; color: #667eea; font-weight: 600;" 
              onclick="window.location.href='/?view=profile&user_id=${member.id}'"
              onmouseover="this.style.textDecoration='underline'" 
              onmouseout="this.style.textDecoration='none'">${displayName}</div>
@@ -2581,7 +2582,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
 });
 
-console.log('Circles-messages.js 10LinkN - Circle member names clickable in both circles-messages.js AND index.html');
+console.log('Circles-messages.js 10LinkN2 - Hardcoded #667eea link color for circle member names');
 
 // MS-6: Orientation change viewport recalculation for messages
 (function() {
