@@ -1,5 +1,6 @@
 // Circles and Messages Management System with i18n support
 // Complete Fixed Version with null safety and proper error handling
+// 10Link: Circle member names now clickable to navigate to profile (uses /?view=profile&user_id=)
 // PJ501 Changes: Added block check to viewUserProfileFromSearch, Fixed Block button translation
 // PJ601 Changes: Block/Unblock toggle in search results
 // PJ602 Changes: Fixed Follow button width
@@ -927,9 +928,14 @@ window.showCircleAddMenu = showCircleAddMenu;
 function createMemberElement(member, circleType) {
     const memberDiv = document.createElement('div');
     memberDiv.className = 'member-item';
+    // 10Link: Make member name clickable to view their profile (same pattern as circles search)
+    const displayName = member.display_name || member.username || member.email || 'U';
     memberDiv.innerHTML = `
-        <div class="user-avatar">${(member.display_name || member.username || member.email || 'U')[0].toUpperCase()}</div>
-        <div class="member-name">${member.display_name || member.username || member.email}</div>
+        <div class="user-avatar">${displayName[0].toUpperCase()}</div>
+        <div class="member-name" style="cursor: pointer; color: var(--primary, #667eea);" 
+             onclick="window.location.href='/?view=profile&user_id=${member.id}'"
+             onmouseover="this.style.textDecoration='underline'" 
+             onmouseout="this.style.textDecoration='none'">${displayName}</div>
         <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${circleType}')">Remove</button>
     `;
     return memberDiv;
