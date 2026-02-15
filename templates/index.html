@@ -4591,7 +4591,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js?v=1901"></script>
-   <script src="/static/js/circles-messages.js?v=10Link.2"></script>
+   <script src="/static/js/circles-messages.js?v=10LinkN"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -8941,7 +8941,10 @@ function updateCircleDisplay(type, members) {
         container.innerHTML = members.map(member => `
             <div class="member-item">
                 <div class="member-avatar">${escapeHtml(member.username[0].toUpperCase())}</div>
-                <span class="member-name">${escapeHtml(member.username)}</span>
+                <span class="member-name" style="cursor: pointer; color: var(--primary, #667eea);" 
+                      onclick="window.location.href='/?view=profile&user_id=${member.id}'"
+                      onmouseover="this.style.textDecoration='underline'" 
+                      onmouseout="this.style.textDecoration='none'">${escapeHtml(member.username)}</span>
                 ${!isReadOnly ? `<button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${t('circles.remove')}</button>` : ''}
             </div>
         `).join('');
