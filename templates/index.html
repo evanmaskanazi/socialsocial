@@ -11413,14 +11413,14 @@ async function loadUserProfileView(userId) {
         const existingCheckinBtn = document.getElementById('profileCheckinHistoryBtn');
         if (existingCheckinBtn) existingCheckinBtn.remove();
         
-        const profileHeader = document.querySelector('#profileView .profile-header');
-        if (profileHeader && userId !== currentUserId) {
+        const profileHeaderDiv = document.querySelector('#profileView .profile-header');
+        if (profileHeaderDiv && userId !== currentUserId) {
             // Make profile header a flex row with proper alignment
-            profileHeader.style.display = 'flex';
-            profileHeader.style.alignItems = 'center';
-            profileHeader.style.gap = '12px';
-            profileHeader.style.flexWrap = 'wrap';
-            profileHeader.style.justifyContent = 'center';
+            profileHeaderDiv.style.display = 'flex';
+            profileHeaderDiv.style.alignItems = 'center';
+            profileHeaderDiv.style.gap = '12px';
+            profileHeaderDiv.style.flexWrap = 'wrap';
+            profileHeaderDiv.style.justifyContent = 'center';
             
             // Trigger button - placed to the left of username
             const triggerBtn = document.createElement('button');
@@ -11440,11 +11440,11 @@ async function loadUserProfileView(userId) {
             checkinBtn.onclick = function() { showUserCheckinHistory(userId, userData.username); };
             
             // Insert: trigger button before avatar, checkin button after username
-            const avatar = profileHeader.querySelector('.profile-avatar');
+            const avatar = profileHeaderDiv.querySelector('.profile-avatar');
             if (avatar) {
-                profileHeader.insertBefore(triggerBtn, avatar);
+                profileHeaderDiv.insertBefore(triggerBtn, avatar);
             }
-            profileHeader.appendChild(checkinBtn);
+            profileHeaderDiv.appendChild(checkinBtn);
         }
 
         // Populate all profile fields with user data
