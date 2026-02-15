@@ -1,6 +1,7 @@
 // Circles and Messages Management System with i18n support
 // Complete Fixed Version with null safety and proper error handling
 // 10Link: Circle member names now clickable to navigate to profile (uses /?view=profile&user_id=)
+// 10LinkN: Confirmed createMemberElement has clickable names - actual fix was in index.html updateCircleDisplay()
 // PJ501 Changes: Added block check to viewUserProfileFromSearch, Fixed Block button translation
 // PJ601 Changes: Block/Unblock toggle in search results
 // PJ602 Changes: Fixed Follow button width
@@ -2580,7 +2581,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
 });
 
-console.log('Circles-messages.js PJ703 - UPDATED with following features');
+console.log('Circles-messages.js 10LinkN - Circle member names clickable in both circles-messages.js AND index.html');
 
 // MS-6: Orientation change viewport recalculation for messages
 (function() {
