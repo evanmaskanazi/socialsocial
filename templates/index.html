@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!-- Fix10B: Nav Bar Consistency + Triggers Button -->
+<!--
+  Fix10B Changes:
+  1. Diary page nav bar now matches home sidebar: Home, Progress, Circles, Messages, Diary, Connections, Invite, Settings
+  2. Diary button ALWAYS navigates to user's own diary (/parameters), even when viewing another user
+  3. New "Triggers" button added to sidebar (after Settings) - only visible when viewing another user's profile
+  4. Triggers button shows other user's accessible parameters and trigger settings (previously done by Diary button)
+  5. Mobile more menu also includes Triggers item when viewing another user
+-->
+<!-- Fix10C: Settings Tab Restructure + Incognito Mode Fix -->
+<!-- Fix10C CHANGES:
+  1. Renamed "Profile" tab to "Settings" and moved to rightmost position in sidebar/mobile nav
+  2. Settings view has two sub-tabs: Profile and Notification (matches wireframe design)
+  3. Profile sub-tab: Birth year, Bio, Interests, Occupation, Goals, Hobbies, Timezone (new), + Change Password, Export Data, Invitation, Account Deletion
+  4. Notification sub-tab: New notification toggle, New Alerts toggle, Diary Daily reminder toggle with time picker
+  5. Translated "Settings" label in all 4 languages (en/he/ar/ru) via inline i18n extension
+  6. Fixed incognito mode: Removed prefers-color-scheme:dark auto-detection; dark mode now only via manual toggle
+  7. Added timezone field to User model and /api/user/profile endpoint
+-->
 <!-- TheraSocial Version V2 - UX Overhaul (V1 to V2 High Priority Fixes + CheckList) -->
 <!-- V2 CHANGES (NON-INVASIVE - preserves all existing auth, message, alert flows):
   - NAV: Sidebar converted to horizontal top navigation bar (reduces page waste)
@@ -325,8 +344,8 @@
 
 .follow-actions-container {
     display: flex;
-    gap: 4px;
-    align-items: stretch;
+    gap: 0.5rem;
+    align-items: center;
     flex-direction: column;
 }
 
@@ -349,10 +368,6 @@
 }
 
 @media (max-width: 768px) {
-    .user-card {
-        padding: 0.75rem;
-    }
-
     .user-avatar {
         width: 40px;
         height: 40px;
@@ -478,28 +493,17 @@
             /* Wide and open layout */
             --content-max-width: 1400px;
             --content-padding: 30px;
+            /* Step 1: Universal mobile width system */
+            --mobile-padding: 16px;
+            --mobile-content-width: calc(100vw - (var(--mobile-padding) * 2));
+            --mobile-max-content: 600px;
+            --card-padding: 16px;
+            --card-border-radius: 12px;
+            --element-gap: 12px;
         }
 
-        /* P305: Dark mode support for evening/nighttime use */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --primary: #8FAFC4;
-                --primary-dark: #6B8BA4;
-                --primary-light: #AFC7D6;
-                --secondary: #A8C5AB;
-                --secondary-light: #C7D9CC;
-                --accent: #C4B8D6;
-                --success: #A8C5AB;
-                --warning: #D4B896;
-                --danger: #D49B94;
-                --dark: #E8E1D9;
-                --gray: #A0A4A8;
-                --light: #2D3748;
-                --light-warm: #374151;
-                --white: #1F2937;
-                --border: #4A5568;
-            }
-        }
+        /* Fix10C: Removed @media (prefers-color-scheme: dark) auto CSS variable override
+           Dark mode variables are now only applied via the manual .dark-mode class toggle */
 
         /* Manual dark mode class for toggle support */
         .dark-mode {
@@ -527,11 +531,8 @@
             color: var(--dark);
         }
 
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%);
-            }
-        }
+        /* Fix10C: Removed @media (prefers-color-scheme: dark) auto-detection
+           Dark mode is now only activated via the manual toggle (.dark-mode class) */
 
         .dark-mode body, body.dark-mode {
             background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%);
@@ -544,17 +545,6 @@
 
         [dir="rtl"] .nav-menu {
             flex-direction: row-reverse;
-        }
-
-        [dir="rtl"] .avatar,
-        [dir="rtl"] .member-avatar {
-            margin-right: 0;
-            margin-left: 12px;
-        }
-
-        [dir="rtl"] .post-header .avatar {
-            margin-right: 0;
-            margin-left: 12px;
         }
 
         .container {
@@ -888,7 +878,7 @@
             justify-content: center;
             color: var(--white);
             font-weight: bold;
-            margin-right: 12px;
+            margin-inline-end: 12px;
         }
 
         .post-meta {
@@ -1112,7 +1102,7 @@
             align-items: center;
             justify-content: center;
             font-size: 14px;
-            margin-right: 12px;
+            margin-inline-end: 12px;
         }
 
         .member-name {
@@ -1188,13 +1178,8 @@
 
         .conversations-list {
             width: 300px;
-            border-right: 1px solid #E5E7EB;
+            border-inline-end: 1px solid #E5E7EB;
             overflow-y: auto;
-        }
-
-        [dir="rtl"] .conversations-list {
-            border-right: none;
-            border-left: 1px solid #E5E7EB;
         }
 
         .conversation-item {
@@ -1333,7 +1318,7 @@
     background: var(--light);
     border-radius: 10px;
     margin-bottom: 10px;
-    border-left: 4px solid var(--warning);
+    border-inline-start: 4px solid var(--warning);
     cursor: pointer;
     transition: background-color 0.2s, opacity 0.3s;
     position: relative;
@@ -1347,27 +1332,12 @@
     opacity: 1 !important;
 }
 
-[dir="rtl"] .alert-item {
-    border-left: none;
-    border-right: 4px solid var(--warning);
-}
-
         .alert-item.high {
-            border-left-color: var(--danger);
-        }
-
-        [dir="rtl"] .alert-item.high {
-            border-left-color: transparent;
-            border-right-color: var(--danger);
+            border-inline-start-color: var(--danger);
         }
 
         .alert-item.low {
-            border-left-color: var(--success);
-        }
-
-        [dir="rtl"] .alert-item.low {
-            border-left-color: transparent;
-            border-right-color: var(--success);
+            border-inline-start-color: var(--success);
         }
 
         /* About and Support Pages */
@@ -1539,51 +1509,194 @@
 
             .main-content {
                 margin-bottom: 60px; /* Prevent content being hidden behind nav */
-                border-radius: 15px 15px 0 0;
-                padding: 16px; /* V2: Fix mobile margins/spacing */
+                border-radius: 0;
+                padding: var(--mobile-padding);
+            }
+
+            /* === MOBILE MESSAGES - Full viewport containment === */
+            #messagesView {
+                display: flex !important;
+                flex-direction: column;
+                height: calc(100vh - 140px);
+                max-height: calc(100vh - 140px);
+                overflow: hidden;
+            }
+
+            #messagesView.hidden {
+                display: none !important;
+            }
+
+            #messagesView > h2 {
+                flex-shrink: 0;
+                margin-bottom: 10px !important;
+                font-size: 1.3em;
+            }
+
+            #messagesView > .user-search {
+                flex-shrink: 0;
+                margin-bottom: 10px !important;
             }
 
             .messages-container {
+                flex: 1;
+                min-height: 0;
                 flex-direction: column;
-                margin-bottom: 60px;
+                margin-bottom: 0;
+                height: auto;
+                overflow: hidden;
             }
 
             .conversations-list {
                 width: 100%;
-                height: 200px;
+                height: 160px;
+                max-height: 160px;
+                min-height: 100px;
                 border-right: none;
+                border-bottom: 2px solid #E5E7EB;
+                flex-shrink: 0;
+                overflow-y: auto;
+            }
+
+            .conversation-item {
+                padding: 10px 12px;
+            }
+
+            .chat-area {
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            .chat-header {
+                padding: 10px 12px;
+                flex-shrink: 0;
+            }
+
+            .messages-list {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                padding: 10px;
+            }
+
+            /* Template panel - compact scrollable strip */
+            #messageTemplatePanel {
+                max-height: 100px;
+                overflow-y: auto;
+                flex-shrink: 0;
+                padding: 8px !important;
+                margin: 0 !important;
+                border-top: 1px solid #E5E7EB;
                 border-bottom: 1px solid #E5E7EB;
+                background: #f9fafb !important;
+            }
+
+            #messageTemplatePanel button {
+                font-size: 0.72rem !important;
+                padding: 5px 10px !important;
+                white-space: nowrap !important;
+                display: inline-block !important;
+                width: auto !important;
+                max-width: none !important;
+            }
+
+            /* Input area - single compact row pinned at bottom */
+            .message-input-area {
+                padding: 8px 10px;
+                flex-shrink: 0;
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                gap: 6px;
+                align-items: center;
+                border-top: 1px solid #E5E7EB;
+            }
+
+            .message-input {
+                flex: 1 1 auto;
+                min-width: 0;
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+
+            /* CRITICAL: Override the global .btn-primary { width: 100% } for message buttons */
+            .message-input-area .btn,
+            .message-input-area button {
+                width: auto !important;
+                min-width: auto !important;
+                max-width: none !important;
+                flex: 0 0 auto !important;
+                padding: 8px 14px;
+                font-size: 0.85rem;
+            }
+
+            #msgTemplateBtn {
+                width: auto !important;
+                padding: 8px 10px !important;
+                flex: 0 0 auto !important;
+            }
+
+            /* Message bubbles on mobile */
+            .message-bubble {
+                max-width: 85%;
+                font-size: 14px;
+                padding: 10px 12px;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+
+            /* Prevent any view from overflowing horizontally */
+            .view {
+                overflow-x: hidden;
+                max-width: 100%;
             }
 
             /* Adjust navbar on mobile */
             .navbar {
-                padding: 10px 15px;
+                padding: 0;
+                width: 100%;
+                overflow-x: hidden;
             }
 
             .nav-content {
-                padding: 10px 15px;
+                padding: 8px 10px;
+                flex-wrap: wrap;
+                gap: 6px;
             }
 
             .logo {
-                font-size: 20px;
+                font-size: 18px;
             }
 
             .nav-menu {
-                gap: 10px;
+                gap: 6px;
+                flex-wrap: wrap;
+                justify-content: flex-end;
             }
 
             /* PJ6010: MOBILE FIX - Show About and Support links on mobile */
             /* Previously hidden, now visible with responsive styling */
             .nav-link {
                 display: inline-block;
-                font-size: 14px;
-                padding: 6px 10px;
+                font-size: 12px;
+                padding: 4px 8px;
             }
 
-            /* Keep language selector visible */
+            /* Keep language selector visible - compact on mobile */
             .language-selector {
-                padding: 6px 10px;
-                font-size: 14px;
+                padding: 2px 6px;
+                font-size: 11px;
+                border-width: 1.5px;
+            }
+            
+            /* Tutorial and Logout buttons - slightly larger for mobile usability */
+            #tutorialBtn, #logoutBtn {
+                font-size: 13px !important;
+                padding: 6px 12px !important;
+                margin-left: 3px !important;
+                margin-right: 3px !important;
             }
             
             /* Mobile Alerts View Styles */
@@ -1626,16 +1739,19 @@
         }
         
         /* PJ5002: Mobile More Menu Styles */
+        /* FIX10J2: RTL-proof - uses inset:0 + width:100vw to prevent RTL direction shift */
         .mobile-more-menu {
             position: fixed;
             top: 0;
-            left: 0;
-            right: 0;
+            left: 0 !important;
+            right: 0 !important;
             bottom: 0;
+            width: 100vw !important;
             z-index: 2000;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
+            direction: ltr; /* Reset direction on overlay container to prevent RTL shift */
         }
         
         .mobile-more-menu.hidden {
@@ -1645,9 +1761,10 @@
         .mobile-more-menu-backdrop {
             position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
+            left: 0 !important;
+            right: 0 !important;
             bottom: 0;
+            width: 100%;
             background: rgba(0, 0, 0, 0.5);
             animation: fadeInBackdrop 0.2s ease;
         }
@@ -1662,9 +1779,16 @@
             background: white;
             border-radius: 20px 20px 0 0;
             max-height: 70vh;
+            width: 100vw !important;
             overflow-y: auto;
             animation: slideUpSheet 0.3s ease;
             padding-bottom: 20px;
+            box-sizing: border-box;
+        }
+        
+        /* FIX10J2: Restore RTL text direction inside sheet content */
+        [dir="rtl"] .mobile-more-menu-sheet {
+            direction: rtl;
         }
         
         @keyframes slideUpSheet {
@@ -1733,14 +1857,9 @@
         
         .mobile-more-icon {
             font-size: 20px;
-            margin-right: 15px;
+            margin-inline-end: 15px;
             width: 28px;
             text-align: center;
-        }
-        
-        [dir="rtl"] .mobile-more-icon {
-            margin-right: 0;
-            margin-left: 15px;
         }
         
         .mobile-more-label {
@@ -1773,6 +1892,11 @@
             color: var(--gray);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+
+        /* RTL support for More menu - text direction restored via direction:rtl on sheet */
+        [dir="rtl"] .mobile-more-menu-section-header {
+            text-align: right;
         }
 
         .hidden {
@@ -1819,6 +1943,26 @@
         }
         input:checked + .settings-toggle-slider::before {
             transform: translateX(24px);
+        }
+
+        /* Fix10C: Settings sub-tab button styles */
+        .settings-sub-btn:hover {
+            opacity: 0.85;
+        }
+        @media (max-width: 768px) {
+            #settingsSubNav {
+                flex-direction: row !important;
+                min-width: unset !important;
+                width: 100%;
+                margin-bottom: 15px;
+            }
+            #settingsSubNav .settings-sub-btn {
+                flex: 1;
+                text-align: center !important;
+            }
+            #settingsView > div:first-of-type {
+                flex-direction: column !important;
+            }
         }
 
         /* Animations */
@@ -2054,7 +2198,164 @@
     }
 }
 
+        /* Step 4: Classes replacing inline styles */
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid var(--border);
+            border-radius: 25px;
+            font-size: 16px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
 
+        .city-selector {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            background: var(--white);
+        }
+
+        .conn-tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--gray);
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .conn-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        /* ================================================== */
+        /* Step 2: Comprehensive mobile width consistency      */
+        /* ================================================== */
+        @media (max-width: 768px) {
+            /* All cards/sections/containers: full width, consistent padding */
+            .parameter-card,
+            .profile-section,
+            .share-link-card,
+            .recommendations-card,
+            .feed-calendar-section,
+            .alert-item,
+            .follow-card,
+            .user-card,
+            .city-selector-container,
+            .settings-section,
+            .settings-card {
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+                padding: var(--card-padding);
+            }
+
+            /* All buttons: full width on mobile */
+            .btn,
+            .btn-primary,
+            .btn-secondary {
+                width: 100% !important;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            /* Parameter grid collapses to single column */
+            .parameter-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Span-2 cards collapse to span-1 */
+            .parameter-card[style*="grid-column: span 2"] {
+                grid-column: span 1 !important;
+            }
+
+            /* All text inputs, selects, textareas: full width */
+            input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+            select,
+            textarea {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                box-sizing: border-box;
+            }
+
+            /* Modals: reduced padding on mobile */
+            .modal-content {
+                padding: var(--card-padding) !important;
+            }
+
+            /* Connection info modal inner content */
+            .connection-info-inner {
+                padding: var(--card-padding);
+                max-width: 100%;
+                width: 95%;
+            }
+
+            /* Follow actions: stack on mobile */
+            .follow-actions-container {
+                flex-wrap: wrap !important;
+            }
+
+            /* MS-4/MS-5: Calendar and content overflow containment */
+            .feed-calendar-section .calendar-grid,
+            .calendar-container, .calendar-table, table.calendar {
+                width: 100% !important;
+                max-width: 100% !important;
+                table-layout: fixed !important;
+                overflow: hidden !important;
+            }
+            .calendar-day, .calendar-cell {
+                overflow: hidden;
+                word-break: break-all;
+                padding: 4px 2px !important;
+            }
+            .view {
+                max-width: 100% !important;
+                overflow-x: hidden !important;
+            }
+            /* MS-4: Nav overflow fix */
+            .bottom-nav, .mobile-bottom-nav {
+                overflow-x: hidden !important;
+                flex-wrap: nowrap !important;
+            }
+            .bottom-nav-item, .mobile-nav-item {
+                flex-shrink: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            /* MS-4: RTL nav symmetry */
+            [dir="rtl"] .bottom-nav {
+                flex-direction: row-reverse;
+            }
+            /* MS-7: Remove grey line/border artifacts above profile and between views */
+            #profileView, #profileView .profile-section {
+                border-top: none !important;
+                box-shadow: none;
+            }
+            .view + .view, .view {
+                border-top: none !important;
+            }
+            .main-content > .view {
+                border: none !important;
+            }
+            }
+        }
 
     </style>
 </head>
@@ -2163,7 +2464,7 @@
             }
         }
         [dir="rtl"] .cookie-consent-content {
-            text-align: right;
+            text-align: end;
         }
         [dir="rtl"] .cookie-option {
             flex-direction: row-reverse;
@@ -2203,8 +2504,8 @@
             <form id="authForm">
                 <div id="loginSection">
                     <div class="form-group">
-                        <label class="form-label" data-i18n="auth.email">Email</label>
-                        <input type="email" class="form-input" id="emailInput" autocomplete="email" required>
+                        <label class="form-label" data-i18n="auth.email_or_username">Email or Username</label>
+                        <input type="text" class="form-input" id="emailInput" autocomplete="username" required>
                     </div>
 
                     <div class="form-group" id="passwordGroup">
@@ -2302,7 +2603,7 @@
                <div class="form-group">
                     <label class="form-label" data-i18n="auth.new_password">New Password</label>
                     <input type="password" id="resetNewPassword" name="new_password" autocomplete="new-password" required class="form-input" data-i18n-placeholder="auth.enter_new_password" placeholder="Enter new password">
-                    <small style="color: #6B7280; display: block; margin-top: 5px;" data-i18n="auth.password_requirements">Password must be at least 12 characters with uppercase, lowercase, number, and special character.</small>
+                    <small style="color: #6B7280; display: block; margin-top: 5px;" data-i18n="auth.password_requirements">Password must be at least 8 characters with an uppercase letter and a special character.</small>
                 </div>
                 <div class="form-group">
                     <label class="form-label" data-i18n="auth.confirm_password">Confirm Password</label>
@@ -2344,7 +2645,7 @@
             <input type="number" id="consentBirthYear" class="form-input"
                    placeholder="YYYY" min="1900" max="2025" maxlength="4"
                    data-i18n-placeholder="profile.birth_year_placeholder"
-                   style="width: 120px;" required>
+                   required>
             <small style="color: #666; display: block; margin-top: 5px;" data-i18n="profile.birth_year_hint">Enter your birth year (4 digits)</small>
         </div>
 
@@ -2559,7 +2860,7 @@
 
 
             <div style="text-align: center; margin-top: 30px;">
-                <button class="btn btn-primary" style="width: 200px;" onclick="goHome()" data-i18n="btn.getstarted">Get Started</button>
+                <button class="btn btn-primary" onclick="goHome()" data-i18n="btn.getstarted">Get Started</button>
             </div>
         </div>
     </div>
@@ -2587,7 +2888,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq3_q">How do I update my profile?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Go to the Profile tab to update your bio, interests, occupation, goals, and favorite hobbies. These help others understand you better.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Go to the Settings tab to update your bio, interests, occupation, goals, and favorite hobbies. These help others understand you better.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -2612,7 +2913,7 @@
             </div>
 
             <div style="text-align: center; margin-top: 30px;">
-                <button class="btn btn-secondary" style="width: 200px;" onclick="goHome()" data-i18n="btn.back">Back to Home</button>
+                <button class="btn btn-secondary" onclick="goHome()" data-i18n="btn.back">Back to Home</button>
             </div>
         </div>
     </div>
@@ -2655,10 +2956,6 @@
                 <button class="mobile-more-close-btn" onclick="closeMobileMoreMenu()">✕</button>
             </div>
             <ul class="mobile-more-menu-list">
-                <li class="mobile-more-menu-item" onclick="showViewFromMore('profile')">
-                    <span class="mobile-more-icon">👤</span>
-                    <span class="mobile-more-label" data-i18n="menu.profile">Profile</span>
-                </li>
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('circles')">
                     <span class="mobile-more-icon">⭕</span>
                     <span class="mobile-more-label" data-i18n="menu.circles">Circles</span>
@@ -2674,9 +2971,15 @@
                     <span class="mobile-more-label" data-i18n="menu.invite">Invite</span>
                 </li>
                 <li class="mobile-more-menu-divider"></li>
+                <!-- Fix10C: Settings tab (renamed from Profile, moved after Invite) -->
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('settings')">
                     <span class="mobile-more-icon">⚙️</span>
                     <span class="mobile-more-label" data-i18n="menu.settings">Settings</span>
+                </li>
+                <!-- Fix10B: Triggers - only visible when viewing another user -->
+                <li class="mobile-more-menu-item" id="mobileTriggersNav" onclick="handleTriggersClick(event); closeMobileMoreMenu();" style="display: none;">
+                    <span class="mobile-more-icon">🔔</span>
+                    <span class="mobile-more-label" data-i18n="menu.triggers">Triggers</span>
                 </li>
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('alerts')">
                     <span class="mobile-more-icon">🔔</span>
@@ -2699,10 +3002,6 @@
                         <span class="sidebar-icon">📈</span>
                         <span class="sidebar-label" data-i18n="menu.progress">Progress</span>
                     </li>
-                    <li class="sidebar-item" data-view="profile">
-                        <span class="sidebar-icon">👤</span>
-                        <span class="sidebar-label" data-i18n="menu.profile">Profile</span>
-                    </li>
                     <li class="sidebar-item" data-view="circles" onclick="handleCirclesClick(event)" style="cursor: pointer;">
                         <span class="sidebar-icon">⭕</span>
                         <span class="sidebar-label" data-i18n="menu.circles">Circles</span>
@@ -2723,9 +3022,15 @@
                         <span class="sidebar-icon">👋</span>
                         <span class="sidebar-label" data-i18n="menu.invite">Invite</span>
                     </li>
+                    <!-- Fix10C: Settings tab (renamed from Profile, moved to rightmost) -->
                     <li class="sidebar-item" data-view="settings">
                         <span class="sidebar-icon">⚙️</span>
                         <span class="sidebar-label" data-i18n="menu.settings">Settings</span>
+                    </li>
+                    <!-- Fix10B: Triggers tab - only visible when viewing another user's profile -->
+                    <li class="sidebar-item" id="triggersNavItem" data-view="triggers" onclick="handleTriggersClick(event)" style="display: none; cursor: pointer;">
+                        <span class="sidebar-icon">🔔</span>
+                        <span class="sidebar-label" data-i18n="menu.triggers">Triggers</span>
                     </li>
                 </ul>
             </aside>
@@ -2735,6 +3040,13 @@
                 <!-- Home View (P305: Combined Welcome/Mission + Feed) -->
               <div id="homeView" class="view">
                   <h2 style="margin-bottom: 20px;" data-i18n="menu.home">Home</h2>
+
+                  <!-- HS-5: Dismissable welcome card -->
+                  <div id="welcomeCard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 24px; border-radius: 16px; margin-bottom: 20px; position: relative; display: none;">
+                      <button onclick="dismissWelcomeCard()" style="position: absolute; top: 10px; right: 14px; background: none; border: none; color: rgba(255,255,255,0.8); font-size: 1.3rem; cursor: pointer; line-height: 1;" title="Dismiss">✕</button>
+                      <h3 style="margin: 0 0 8px 0; font-size: 1.1rem;" data-i18n="home.welcome_title">Welcome to TheraSocial!</h3>
+                      <p style="margin: 0; font-size: 0.9rem; opacity: 0.9; line-height: 1.5;" data-i18n="home.welcome_message">Track your daily wellness, connect with friends, and grow together. Start by updating your diary or exploring your connections.</p>
+                  </div>
 
                   <!-- V2: My Summary Status Card -->
                   <div id="summaryStatusCard" style="background: linear-gradient(135deg, var(--peach-light) 0%, var(--sage-light) 100%); padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.12);">
@@ -2797,6 +3109,14 @@
                       </div>
                   </div>
 
+                  <!-- HS-4: My Connections Status List -->
+                  <div id="connectionStatusSection" style="margin-bottom: 24px;">
+                      <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="home.connection_status">My Connections Status</h3>
+                      <div id="connectionStatusList" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                          <p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_connections">No connections yet.</p>
+                      </div>
+                  </div>
+
                   <!-- V2: Alerts & Notifications preview on Home -->
                   <div id="homeAlertsSection" style="margin-bottom: 24px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="alerts.title">Alerts & Notifications</h3>
@@ -2855,8 +3175,8 @@
                       <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="home.location_settings">Location Settings</h3>
 
                       <div class="city-selector-wrapper" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
-                          <label style="font-weight: 600; color: var(--dark); min-width: 120px;" data-i18n="home.select_city">Select City:</label>
-                  <select id="homeCitySelector" class="city-selector" style="flex: 1; min-width: 250px; padding: 12px; border: 2px solid var(--border); border-radius: 12px; font-size: 16px; background: var(--white);">
+                          <label style="font-weight: 600; color: var(--dark);" data-i18n="home.select_city">Select City:</label>
+                  <select id="homeCitySelector" class="city-selector">
     <!-- Israel (10 cities) -->
     <option value="Jerusalem, Israel" data-i18n="city.jerusalem_israel">Jerusalem, Israel</option>
     <option value="Tel Aviv, Israel" data-i18n="city.tel_aviv_israel">Tel Aviv, Israel</option>
@@ -2930,7 +3250,7 @@
                               <option value="90" data-i18n="progress.last_90_days">Last 90 days</option>
                               <option value="365" data-i18n="progress.last_year">Last year</option>
                           </select>
-                          <button onclick="updateProgressChart()" class="btn btn-secondary" style="margin-left: 10px; padding: 10px 20px;" data-i18n="progress.update">Update</button>
+                          <button onclick="updateProgressChart()" class="btn btn-secondary" style="margin-inline-start: 10px; padding: 10px 20px;" data-i18n="progress.update">Update</button>
                       </div>
 
                       <!-- Progress Chart Container -->
@@ -2991,9 +3311,9 @@
                             <div class="form-group" id="birthYearSection">
                                 <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
                                 <div style="display: flex; align-items: center; gap: 10px;">
-                                    <input type="number" class="form-input" id="profileBirthYear" 
+                                    <input type="number" class="form-input" id="profileBirthYear"
                                            min="1900" max="2025" maxlength="4"
-                                           placeholder="YYYY" style="width: 120px;">
+                                           placeholder="YYYY">
                                     <button type="button" class="btn btn-secondary" id="birthYearUpdateBtn" style="padding: 8px 16px;" 
                                             onclick="updateBirthYear()" data-i18n="profile.update_birth_year">Update</button>
                                 </div>
@@ -3026,7 +3346,22 @@
                         </div>
 
                         <div style="text-align: center; margin-top: 30px;">
-                            <button class="btn btn-primary" style="width: 200px;" id="updateProfileBtn" data-i18n="profile.save">Save Profile</button>
+                            <button class="btn btn-primary" id="updateProfileBtn" data-i18n="profile.save">Save Profile</button>
+                        </div>
+                    </div>
+
+                    <!-- G-5: Appearance / Dark Mode (moved from Settings to Profile) -->
+                    <div id="profileAppearanceSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-top: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="settings.appearance">Appearance</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: 600;" data-i18n="settings.dark_mode">Dark Mode</span>
+                                <p style="color: #6B7280; font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings.dark_mode_desc">Switch to dark theme for comfortable nighttime use</p>
+                            </div>
+                            <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                <input type="checkbox" id="profileDarkModeToggle" onchange="toggleDarkMode(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                            </label>
                         </div>
                     </div>
 
@@ -3034,25 +3369,25 @@
                     <div id="changePasswordSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; margin-top: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                         <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.change_password">Change Password</h3>
 
-                        <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
-                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
+                        <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 8 characters with an uppercase letter and a special character.</p>
+                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail"></p>
 
                         <form id="changePasswordForm" onsubmit="updatePassword(); return false;" autocomplete="off">
                             <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true">
                             <div style="display: grid; gap: 15px;">
                                 <div>
                                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
-                                    <input type="password" id="currentPassword" name="current_password" autocomplete="current-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
+                                    <input type="password" id="currentPassword" name="current_password" autocomplete="current-password" class="form-input">
                                 </div>
 
                                 <div>
                                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
-                                    <input type="password" id="newPassword" name="new_password" autocomplete="new-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
+                                    <input type="password" id="newPassword" name="new_password" autocomplete="new-password" class="form-input">
                                 </div>
 
                                 <div>
                                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
-                                    <input type="password" id="confirmNewPassword" name="confirm_password" autocomplete="new-password" class="form-input" style="width: 100%; padding: 12px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 16px;">
+                                    <input type="password" id="confirmNewPassword" name="confirm_password" autocomplete="new-password" class="form-input">
                                 </div>
 
                                 <button type="submit" class="btn btn-primary" style="padding: 12px 24px; font-size: 16px; font-weight: 600;" data-i18n="home.update_password">Update Password</button>
@@ -3209,7 +3544,7 @@
                         <div class="parameter-card">
                             <div class="parameter-name" data-i18n="parameters.sleep">Sleep</div>
                             <div style="display: flex; align-items: center; gap: 10px;">
-                                <input type="number" class="parameter-input" id="sleepInput" data-i18n="parameters.sleep_placeholder" placeholder="Hours" min="0" max="24" step="0.5" style="width: 100px;">
+                                <input type="number" class="parameter-input" id="sleepInput" data-i18n="parameters.sleep_placeholder" placeholder="Hours" min="0" max="24" step="0.5">
                                 <span style="color: white; font-weight: 600;" id="sleepDisplay"><span>0</span> <span data-i18n="parameters.sleep_hours">Hours</span></span>
                             </div>
                         </div>
@@ -3236,8 +3571,8 @@
                     </div>
 
                     <div style="text-align: center; margin-top: 20px; display: flex; gap: 15px; justify-content: center;">
-                        <button class="btn btn-primary" style="width: 200px;" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
-                        <button class="btn btn-secondary" style="width: 200px;" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
+                        <button class="btn btn-primary" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
+                        <button class="btn btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
                     </div>
 
                     <h3 style="margin-top: 30px; margin-bottom: 15px;" data-i18n="parameters.insights">Insights</h3>
@@ -3251,9 +3586,8 @@
                   <!-- Connection Search -->
                   <div style="margin: 0 0 20px 0;">
                       <div style="position: relative; max-width: 600px; margin: 0 auto;">
-                          <input type="text" id="connectionSearchInput" placeholder="Search for new connections..."
+                          <input type="text" id="connectionSearchInput" class="search-input" placeholder="Search for new connections..."
                               data-i18n-placeholder="connections.search_placeholder"
-                              style="width: 100%; padding: 12px 20px; border: 2px solid var(--border); border-radius: 25px; font-size: 16px; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05);"
                               oninput="searchConnectionsInstant(this.value)">
                       </div>
                       <div id="connectionSearchResults" style="display: none; background: white; border-radius: 12px; margin-top: 1rem; padding: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin-left: auto; margin-right: auto;"></div>
@@ -3261,8 +3595,8 @@
 
                   <!-- Connection Tabs -->
                   <div style="display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border);">
-                      <button class="conn-tab active" onclick="switchConnectionTab('myConnections')" data-tab="myConnections" style="flex: 1; padding: 12px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--primary); border-bottom: 3px solid var(--primary); transition: all 0.2s;" data-i18n="connections.my_connections">My Connections</button>
-                      <button class="conn-tab" onclick="switchConnectionTab('recommendations')" data-tab="recommendations" style="flex: 1; padding: 12px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--gray); border-bottom: 3px solid transparent; transition: all 0.2s;" data-i18n="connections.recommended">Recommended</button>
+                      <button class="conn-tab active" onclick="switchConnectionTab('myConnections')" data-tab="myConnections" data-i18n="connections.my_connections">My Connections</button>
+                      <button class="conn-tab" onclick="switchConnectionTab('recommendations')" data-tab="recommendations" data-i18n="connections.recommended">Recommended</button>
                   </div>
 
                   <!-- My Connections List -->
@@ -3281,134 +3615,245 @@
               </div>
 
               <!-- V2: Settings View -->
+              <!-- Fix10C: Restructured Settings View with Profile/Notification sub-tabs -->
               <div id="settingsView" class="view hidden">
                   <h2 style="margin-bottom: 20px;" data-i18n="menu.settings">Settings</h2>
 
-                  <!-- V3: Full Profile Section (matches profileView layout from ProfileRight) -->
-                  <div class="profile-section" style="margin-bottom: 20px;">
-                      <div class="profile-header">
-                          <div class="profile-avatar" id="settingsProfileAvatar">U</div>
-                          <h3 id="settingsProfileUsername">Username</h3>
+                  <div style="display: flex; gap: 20px; align-items: flex-start;">
+                      <!-- Left panel: sub-tab buttons -->
+                      <div id="settingsSubNav" style="min-width: 140px; background: var(--light); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
+                          <button class="settings-sub-btn active" id="settingsSubProfile" onclick="switchSettingsTab('profile')" 
+                                  data-i18n="menu.profile" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: var(--primary); color: white; transition: all 0.2s;">
+                              Profile
+                          </button>
+                          <button class="settings-sub-btn" id="settingsSubAccount" onclick="switchSettingsTab('account')"
+                                  data-i18n="settings.account_btn" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
+                              Account
+                          </button>
+                          <button class="settings-sub-btn" id="settingsSubNotification" onclick="switchSettingsTab('notification')"
+                                  data-i18n="settings.notification_btn" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
+                              Notification
+                          </button>
                       </div>
 
-                      <div class="profile-fields">
-                          <!-- Account Fields -->
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="settings.display_name">Display Name</label>
-                              <input type="text" class="form-input" id="settingsDisplayName" placeholder="Your display name">
+                      <!-- Right panel: content area -->
+                      <div style="flex: 1; min-width: 0;">
+
+                          <!-- ===== PROFILE SUB-TAB ===== -->
+                          <div id="settingsProfilePanel">
+                              <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="settings.profile_info">Profile Info</h3>
+                              <div class="profile-section" style="margin-bottom: 20px;">
+                                  <div class="profile-header">
+                                      <div class="profile-avatar" id="settingsProfileAvatar">U</div>
+                                      <h3 id="settingsProfileUsername">Username</h3>
+                                  </div>
+
+                                  <div class="profile-fields">
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
+                                          <input type="number" class="form-input" id="settingsBirthYear" 
+                                                 min="1900" max="2025" maxlength="4"
+                                                 placeholder="YYYY">
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.bio">Bio</label>
+                                          <textarea class="profile-textarea" id="settingsBio" data-i18n-placeholder="profile.bio_placeholder" placeholder="Tell us about yourself..." maxlength="500"></textarea>
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.interests">Interests</label>
+                                          <textarea class="profile-textarea" id="settingsInterests" data-i18n-placeholder="profile.interests_placeholder" placeholder="What are you interested in?" maxlength="300"></textarea>
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.occupation">Occupation</label>
+                                          <input type="text" class="form-input" id="settingsOccupation" data-i18n-placeholder="profile.occupation_placeholder" placeholder="What do you do?">
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.goals">My Goals</label>
+                                          <textarea class="profile-textarea" id="settingsGoals" data-i18n-placeholder="profile.goals_placeholder" placeholder="What are your personal or professional goals?" maxlength="300"></textarea>
+                                      </div>
+
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.hobbies">Favorite Hobbies</label>
+                                          <textarea class="profile-textarea" id="settingsHobbies" data-i18n-placeholder="profile.hobbies_placeholder" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
+                                      </div>
+
+                                      <!-- Fix10C: Timezone dropdown (new field from wireframe) -->
+                                      <div class="form-group">
+                                          <label class="form-label" data-i18n="profile.timezone">Timezone</label>
+                                          <select class="form-input" id="settingsTimezone" style="cursor: pointer;">
+                                              <option value="">Select timezone...</option>
+                                              <option value="Pacific/Honolulu">Hawaii (UTC-10)</option>
+                                              <option value="America/Anchorage">Alaska (UTC-9)</option>
+                                              <option value="America/Los_Angeles">Pacific (UTC-8)</option>
+                                              <option value="America/Denver">Mountain (UTC-7)</option>
+                                              <option value="America/Chicago">Central (UTC-6)</option>
+                                              <option value="America/New_York">Eastern (UTC-5)</option>
+                                              <option value="America/Sao_Paulo">São Paulo (UTC-3)</option>
+                                              <option value="Atlantic/Reykjavik">GMT (UTC+0)</option>
+                                              <option value="Europe/London">London (UTC+0/+1)</option>
+                                              <option value="Europe/Paris">Central Europe (UTC+1)</option>
+                                              <option value="Europe/Athens">Eastern Europe (UTC+2)</option>
+                                              <option value="Asia/Jerusalem">Israel (UTC+2/+3)</option>
+                                              <option value="Europe/Moscow">Moscow (UTC+3)</option>
+                                              <option value="Asia/Dubai">Gulf (UTC+4)</option>
+                                              <option value="Asia/Kolkata">India (UTC+5:30)</option>
+                                              <option value="Asia/Bangkok">Indochina (UTC+7)</option>
+                                              <option value="Asia/Shanghai">China (UTC+8)</option>
+                                              <option value="Asia/Tokyo">Japan (UTC+9)</option>
+                                              <option value="Australia/Sydney">Sydney (UTC+10/+11)</option>
+                                              <option value="Pacific/Auckland">New Zealand (UTC+12/+13)</option>
+                                          </select>
+                                      </div>
+                                  </div>
+
+                                  <div style="text-align: center; margin-top: 30px;">
+                                      <button class="btn btn-primary" onclick="saveProfileSettings()" data-i18n="profile.save">Save Profile</button>
+                                  </div>
+                              </div>
                           </div>
 
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="settings.email">Email</label>
-                              <input type="email" class="form-input" id="settingsEmail" style="background: #f0f0f0;" readonly>
+                          <!-- ===== ACCOUNT SUB-TAB ===== -->
+                          <div id="settingsAccountPanel" style="display: none;">
+
+                              <!-- G-5: Dark Mode / Appearance Toggle -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.appearance">Appearance</h3>
+                                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                                      <div>
+                                          <span style="font-weight: 600;" data-i18n="settings.dark_mode">Dark Mode</span>
+                                          <p style="color: #6B7280; font-size: 0.85rem; margin: 4px 0 0 0;" data-i18n="settings.dark_mode_desc">Switch between light and dark themes</p>
+                                      </div>
+                                      <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsDarkModeToggle" onchange="toggleDarkMode(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                          <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                              </div>
+
+                              <!-- Change Password -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.change_password">Change Password</h3>
+                                  <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 8 characters with an uppercase letter and a special character.</p>
+                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail"></p>
+                                  <div style="display: flex; flex-direction: column; gap: 12px;">
+                                      <div>
+                                          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
+                                          <input type="password" id="settingsCurrentPassword" class="form-input" placeholder="Current password">
+                                      </div>
+                                      <div>
+                                          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
+                                          <input type="password" id="settingsNewPassword" class="form-input" placeholder="New password">
+                                      </div>
+                                      <div>
+                                          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
+                                          <input type="password" id="settingsConfirmPassword" class="form-input" placeholder="Confirm new password">
+                                      </div>
+                                      <button class="btn btn-primary" style="width: auto; align-self: flex-start;" onclick="changePasswordFromSettings()" data-i18n="settings.update_password">Update Password</button>
+                                  </div>
+                              </div>
+
+                              <!-- Export Your Data -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="home.data_export">Export Your Data</h3>
+                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
+                                  <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
+                                      <span style="font-size: 1.5rem;">📋</span>
+                                      <div>
+                                          <p style="font-weight: 600; color: #1D4ED8;" data-i18n="home.data_rights_title">Your Data Rights</p>
+                                          <p style="color: #1E40AF; font-size: 0.9rem;" data-i18n="home.data_rights_desc">You have the right to access and download your personal data at any time.</p>
+                                      </div>
+                                  </div>
+                                  <button class="btn btn-primary" onclick="exportUserData()" data-i18n="home.export_button">Export My Data</button>
+                              </div>
+
+                              <!-- Invitation -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="menu.invite">Invitation</h3>
+                                  <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="settings.invitation_desc">Invite friends to join TheraSocial and build your support network.</p>
+                                  <button class="btn btn-primary" onclick="showView('invite')" data-i18n="settings.invite_btn">Go to Invitations</button>
+                              </div>
+
+                              <!-- Account Deletion -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: #EF4444; margin-bottom: 15px;" data-i18n="home.account_deletion">Account Deletion</h3>
+                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.deletion_warning">Request deletion of your account and all associated data</p>
+                                  <div style="background: #FEF3C7; border: 2px solid #F59E0B; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
+                                      <span style="font-size: 24px;">⚠️</span>
+                                      <div>
+                                          <p style="color: #92400E; font-weight: 600; margin-bottom: 5px;" data-i18n="home.deletion_permanent">This action cannot be undone</p>
+                                          <p style="color: #92400E; font-size: 14px;" data-i18n="home.deletion_permanent_detail">All your data will be permanently deleted.</p>
+                                      </div>
+                                  </div>
+                                  <button onclick="requestAccountDeletion()" class="btn" style="background: #EF4444; color: white; padding: 12px 24px; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer;" data-i18n="home.delete_account">Delete Account</button>
+                              </div>
                           </div>
 
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="settings.city">City</label>
-                              <input type="text" class="form-input" id="settingsCity" placeholder="Your city">
+                          <!-- ===== NOTIFICATION SUB-TAB ===== -->
+                          <div id="settingsNotificationPanel" style="display: none;">
+                              <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="settings.notification_settings">Email Notification Options</h3>
+
+                              <!-- New Notification toggle -->
+                              <div class="settings-card" style="background: var(--light); padding: 20px; border-radius: 16px; margin-bottom: 16px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                                      <span style="font-weight: 600;" data-i18n="notifications.email_on_notification">New notification</span>
+                                      <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsEmailOnNotification" onchange="updateNotificationSetting('email_on_notification', this.checked); syncAllNotificationToggles();" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                          <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                              </div>
+
+                              <!-- New Alerts toggle -->
+                              <div class="settings-card" style="background: var(--light); padding: 20px; border-radius: 16px; margin-bottom: 16px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                                      <span style="font-weight: 600;" data-i18n="settings.email_on_alert">New Alerts</span>
+                                      <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsEmailOnAlert" onchange="updateNotificationSetting('email_on_alert', this.checked); syncAllNotificationToggles();" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                          <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                              </div>
+
+                              <!-- Diary Daily Reminder toggle -->
+                              <div class="settings-card" style="background: var(--light); padding: 20px; border-radius: 16px; margin-bottom: 16px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                                      <span style="font-weight: 600;" data-i18n="settings.daily_diary_reminder">Diary Daily reminder</span>
+                                      <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsDiaryReminder" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked); syncAllNotificationToggles(); toggleSettingsReminderTime(this.checked);" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                          <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                                  <!-- Reminder Time (shown when diary reminder is on) -->
+                                  <div id="settingsReminderTimeContainer" style="display: none; margin-top: 12px; padding: 12px; background: rgba(107, 139, 164, 0.1); border-radius: 10px;">
+                                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                                          <span data-i18n="notifications.reminder_time">Reminder time</span>
+                                          <div style="display: flex; align-items: center; gap: 8px;">
+                                              <input type="text" id="settingsReminderTimeInput" 
+                                                  value="20:00" 
+                                                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                                                  maxlength="5"
+                                                  placeholder="HH:MM"
+                                                  onchange="updateDiaryReminderTime(this.value)"
+                                                  onkeyup="formatTimeInput(this)"
+                                                  style="padding: 6px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-size: 14px; background: var(--card-bg, #fff); color: var(--text-primary, #333); width: 70px; text-align: center; font-family: monospace;">
+                                              <span style="font-size: 11px; color: #888;">(24h)</span>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
                           </div>
 
-                          <!-- Birth Year -->
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
-                              <input type="number" class="form-input" id="settingsBirthYear" 
-                                     min="1900" max="2025" maxlength="4"
-                                     placeholder="YYYY" style="width: 120px;">
-                          </div>
-
-                          <!-- Profile Fields (matching ProfileRight layout) -->
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.bio">Bio</label>
-                              <textarea class="profile-textarea" id="settingsBio" data-i18n-placeholder="profile.bio_placeholder" placeholder="Tell us about yourself..." maxlength="500"></textarea>
-                          </div>
-
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.interests">Interests</label>
-                              <textarea class="profile-textarea" id="settingsInterests" data-i18n-placeholder="profile.interests_placeholder" placeholder="What are you interested in?" maxlength="300"></textarea>
-                          </div>
-
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.occupation">Occupation</label>
-                              <input type="text" class="form-input" id="settingsOccupation" data-i18n-placeholder="profile.occupation_placeholder" placeholder="What do you do?">
-                          </div>
-
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.goals">My Goals</label>
-                              <textarea class="profile-textarea" id="settingsGoals" data-i18n-placeholder="profile.goals_placeholder" placeholder="What are your personal or professional goals?" maxlength="300"></textarea>
-                          </div>
-
-                          <div class="form-group">
-                              <label class="form-label" data-i18n="profile.hobbies">Favorite Hobbies</label>
-                              <textarea class="profile-textarea" id="settingsHobbies" data-i18n-placeholder="profile.hobbies_placeholder" placeholder="What do you love to do in your free time?" maxlength="300"></textarea>
-                          </div>
                       </div>
-
-                      <div style="text-align: center; margin-top: 30px;">
-                          <button class="btn btn-primary" style="width: 200px;" onclick="saveProfileSettings()" data-i18n="profile.save">Save Profile</button>
-                      </div>
-                  </div>
-
-                  <!-- Email Notification Settings -->
-                  <div style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.notification_settings">Email Notification Settings</h3>
-                      <div style="display: flex; flex-direction: column; gap: 16px;">
-                          <div style="display: flex; justify-content: space-between; align-items: center;">
-                              <span data-i18n="settings.email_on_alert">Email me when I receive alerts</span>
-                              <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
-                                  <input type="checkbox" id="settingsEmailOnAlert" onchange="syncSettingsToggles()" style="opacity: 0; width: 0; height: 0; position: absolute;">
-                                  <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
-                              </label>
-                          </div>
-                          <div style="display: flex; justify-content: space-between; align-items: center;">
-                              <span data-i18n="settings.daily_diary_reminder">Daily diary reminder</span>
-                              <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
-                                  <input type="checkbox" id="settingsDiaryReminder" onchange="syncSettingsToggles()" style="opacity: 0; width: 0; height: 0; position: absolute;">
-                                  <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
-                              </label>
-                          </div>
-                      </div>
-                  </div>
-
-                  <!-- Change Password -->
-                  <div style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="settings.change_password">Change Password</h3>
-                      <p style="color: #6B7280; margin-bottom: 15px;" data-i18n="home.password_requirements">Password must be at least 12 characters long.</p>
-                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.password_requirements_detail">Password must have uppercase, lowercase, number and special character.</p>
-                      <div style="display: flex; flex-direction: column; gap: 12px;">
-                          <div>
-                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.current_password">Current Password</label>
-                              <input type="password" id="settingsCurrentPassword" placeholder="Current password" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;">
-                          </div>
-                          <div>
-                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.new_password">New Password</label>
-                              <input type="password" id="settingsNewPassword" placeholder="New password" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;">
-                          </div>
-                          <div>
-                              <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;" data-i18n="home.confirm_new_password">Confirm New Password</label>
-                              <input type="password" id="settingsConfirmPassword" placeholder="Confirm new password" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;">
-                          </div>
-                          <button class="btn btn-primary" style="width: auto; align-self: flex-start;" onclick="changePasswordFromSettings()" data-i18n="settings.update_password">Update Password</button>
-                      </div>
-                  </div>
-
-                  <!-- Export Your Data -->
-                  <div style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="home.data_export">Export Your Data</h3>
-                      <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
-                      <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
-                          <span style="font-size: 1.5rem;">📋</span>
-                          <div>
-                              <p style="font-weight: 600; color: #1D4ED8;" data-i18n="home.data_rights_title">Your Data Rights</p>
-                              <p style="color: #1E40AF; font-size: 0.9rem;" data-i18n="home.data_rights_desc">You have the right to access and download your personal data at any time.</p>
-                          </div>
-                      </div>
-                      <button class="btn btn-primary" onclick="exportUserData()" data-i18n="home.export_button">Export My Data</button>
                   </div>
               </div>
 
               <!-- V2: Connection Info Modal -->
               <div id="connectionInfoModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center;">
-                  <div style="background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                  <div class="connection-info-inner" style="background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                           <h3 id="connInfoUsername" style="color: var(--primary);">Connection</h3>
                           <button onclick="closeConnectionInfo()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray);">✕</button>
@@ -3587,12 +4032,13 @@
               <div id="alertsView" class="view hidden">
     <h2 style="margin-bottom: 20px;" data-i18n="alerts.title">Alerts</h2>
     
-    <!-- PJ6001: Email Options for Mobile -->
-    <div id="mobileNotificationSettingsPanel" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <!-- Fix10C: Email Options panel hidden on mobile too (now in Settings > Notification sub-tab)
+         Kept in DOM with display:none so JS toggle syncing still works -->
+    <div id="mobileNotificationSettingsPanel" style="display: none; background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
         
         <!-- Email on Alert Toggle (Wellness Alerts) -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="toggle-row">
             <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
             <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                 <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
@@ -3605,7 +4051,7 @@
         </div>
         
         <!-- PJ6001: Email on Notification Toggle (Messages, Followers, Invites) -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="toggle-row">
             <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_notification">Email me on new notifications</label>
             <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                 <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
@@ -3672,12 +4118,13 @@
            </main>
             <!-- Right Sidebar -->
             <aside class="right-sidebar">
-                <!-- PJ6001: Email Options (renamed from Email Notifications) -->
-                <div id="notificationSettingsPanel" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <!-- Fix10C: Email Options panel hidden (now in Settings > Notification sub-tab)
+                     Kept in DOM with display:none so JS toggle syncing still works -->
+                <div id="notificationSettingsPanel" style="display: none; background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
                     
                     <!-- Email on Alert Toggle (Wellness Alerts only) -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div class="toggle-row">
                         <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
                         <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                             <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
@@ -3690,7 +4137,7 @@
                     </div>
                     
                     <!-- PJ6001: Email on Notification Toggle (Messages, Followers, Invites) -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div class="toggle-row">
                         <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_notification">Email me on new notifications</label>
                         <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                             <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
@@ -4066,6 +4513,74 @@
     </script>
     
     <script src="/static/js/i18n.js"></script>
+    <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
+    <script>
+    (function() {
+        const fix10cTranslations = {
+            en: {
+                'menu.settings': 'Settings',
+                'menu.triggers': 'Triggers',
+                'settings.notification_btn': 'Notification',
+                'settings.account_btn': 'Account',
+                'settings.profile_info': 'Profile Info',
+                'settings.invitation_desc': 'Invite friends to join TheraSocial and build your support network.',
+                'settings.invite_btn': 'Go to Invitations',
+                'profile.timezone': 'Timezone',
+                'settings.notification_settings': 'Email Notification Options'
+            },
+            he: {
+                'menu.settings': 'הגדרות',
+                'menu.triggers': 'טריגרים',
+                'settings.notification_btn': 'התראות',
+                'settings.account_btn': 'חשבון',
+                'settings.profile_info': 'פרטי פרופיל',
+                'settings.invitation_desc': 'הזמן חברים להצטרף ל-TheraSocial ולבנות את רשת התמיכה שלך.',
+                'settings.invite_btn': 'עבור להזמנות',
+                'profile.timezone': 'אזור זמן',
+                'settings.notification_settings': 'אפשרויות התראה במייל'
+            },
+            ar: {
+                'menu.settings': 'الإعدادات',
+                'menu.triggers': 'المحفزات',
+                'settings.notification_btn': 'الإشعارات',
+                'settings.account_btn': 'الحساب',
+                'settings.profile_info': 'معلومات الملف الشخصي',
+                'settings.invitation_desc': 'ادعُ الأصدقاء للانضمام إلى TheraSocial وبناء شبكة الدعم الخاصة بك.',
+                'settings.invite_btn': 'انتقل إلى الدعوات',
+                'profile.timezone': 'المنطقة الزمنية',
+                'settings.notification_settings': 'خيارات الإشعار عبر البريد'
+            },
+            ru: {
+                'menu.settings': 'Настройки',
+                'menu.triggers': 'Триггеры',
+                'settings.notification_btn': 'Уведомления',
+                'settings.account_btn': 'Аккаунт',
+                'settings.profile_info': 'Информация профиля',
+                'settings.invitation_desc': 'Пригласите друзей присоединиться к TheraSocial и создайте свою сеть поддержки.',
+                'settings.invite_btn': 'Перейти к приглашениям',
+                'profile.timezone': 'Часовой пояс',
+                'settings.notification_settings': 'Настройки уведомлений по email'
+            }
+        };
+        // Extend i18n when ready
+        function extendI18n() {
+            if (window.i18n && window.i18n.translations) {
+                Object.keys(fix10cTranslations).forEach(lang => {
+                    if (!window.i18n.translations[lang]) window.i18n.translations[lang] = {};
+                    Object.assign(window.i18n.translations[lang], fix10cTranslations[lang]);
+                });
+                console.log('[Fix10C] Extended i18n with settings/notification translations');
+            } else {
+                // Store for later use if i18n not yet ready
+                window._fix10cTranslations = fix10cTranslations;
+            }
+        }
+        // Try immediately, then also after load
+        extendI18n();
+        document.addEventListener('DOMContentLoaded', extendI18n);
+        window.addEventListener('load', extendI18n);
+    })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Global variables needed by parameters-social.js - MUST be declared first
@@ -4483,16 +4998,11 @@ async function loadUserCity() {
 
         // CHANGE 4: Client-side validation
         if (!email) {
-            showNotification('Please enter your email address', 'error');
+            showNotification('Please enter your email or username', 'error');
             return;
         }
         
-        // Basic email format validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            showNotification('Please enter a valid email address', 'error');
-            return;
-        }
+        // FD-3: Skip email format check - backend accepts username or email
         
         if (!password) {
             showNotification('Please enter your password', 'error');
@@ -4633,8 +5143,8 @@ async function loadUserCity() {
             return;
         }
         
-        if (password.length < 12) {
-            showNotification('Password must be at least 12 characters long', 'error');
+        if (password.length < 8) {
+            showNotification('Password must be at least 8 characters with an uppercase letter and a special character', 'error');
             return;
         }
         
@@ -4650,7 +5160,7 @@ async function loadUserCity() {
         const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
         
         if (!(hasUpper && hasLower && hasDigit && hasSpecial)) {
-            showNotification('Password must contain uppercase, lowercase, number, and special character', 'error');
+            showNotification('Password must have an uppercase letter and a special character', 'error');
             return;
         }
 
@@ -4819,8 +5329,8 @@ async function loadUserCity() {
                 return;
             }
 
-            if (newPassword.length < 12) {
-                showNotification(window.i18n ? window.i18n.translate('auth.password_too_short') : 'Password must be at least 12 characters', 'warning');
+            if (newPassword.length < 8) {
+                showNotification(window.i18n ? window.i18n.translate('auth.password_too_short') : 'Password must be at least 8 characters with an uppercase letter and a special character', 'warning');
                 return;
             }
 
@@ -4831,7 +5341,7 @@ async function loadUserCity() {
             const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
 
             if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-                showNotification(window.i18n ? window.i18n.translate('auth.password_complexity') : 'Password must contain uppercase, lowercase, number, and special character', 'warning');
+                showNotification(window.i18n ? window.i18n.translate('auth.password_complexity') : 'Password must have an uppercase letter and a special character', 'warning');
                 return;
             }
 
@@ -5506,6 +6016,12 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
             return;
         }
         
+        // Fix10B: Skip triggers handler - it has its own onclick handler
+        if (item.dataset.view === 'triggers') {
+            console.log('[DEBUG] Skipping generic handler for triggers item');
+            return;
+        }
+        
         // PJ602: Skip circles handler - it has its own onclick="handleCirclesClick" handler
         // This prevents double-calling loadUserCircles and double 403 messages
         if (item.dataset.view === 'circles') {
@@ -5699,7 +6215,8 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 
 
 
-// Handle parameters click - redirect to /parameters page for own data, show trackingView for other users
+// Fix10B: Handle parameters click - ALWAYS redirect to /parameters page for own diary
+// Viewing other user's triggers is now handled by handleTriggersClick
 function handleParametersClick(event) {
     // Stop event propagation to prevent both handlers from firing
     if (event) {
@@ -5707,28 +6224,53 @@ function handleParametersClick(event) {
         event.preventDefault();
     }
 
-    console.log('[DEBUG] handleParametersClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
+    console.log('[DEBUG] handleParametersClick called - always redirecting to own diary');
+    window.location.href = '/parameters';
+}
+
+// Fix10B: Handle triggers click - view another user's accessible parameters and set triggers
+function handleTriggersClick(event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
+    console.log('[DEBUG] handleTriggersClick called, viewingUserId:', viewingUserId, 'currentUserId:', currentUserId);
 
     if (viewingUserId !== null && viewingUserId !== currentUserId) {
-        // Viewing another user - show their parameters in modal
-        console.log('[DEBUG] Fetching profile for user:', viewingUserId);
+        // Viewing another user - show their parameters/triggers in modal
+        console.log('[DEBUG] Fetching profile for triggers, user:', viewingUserId);
         fetch(`/api/users/${viewingUserId}/profile`, { credentials: 'include' })
             .then(r => {
                 console.log('[DEBUG] Profile fetch status:', r.status);
                 return r.ok ? r.json() : Promise.reject('Failed to fetch profile');
             })
             .then(data => {
-                console.log('[DEBUG] Profile data received, calling viewUserParameters');
+                console.log('[DEBUG] Profile data received, calling viewUserParameters for triggers');
                 viewUserParameters(viewingUserId, data.username || 'User');
             })
             .catch(err => {
-                console.error('[DEBUG] Error in handleParametersClick:', err);
-                showNotification('Error loading parameters', 'error');
+                console.error('[DEBUG] Error in handleTriggersClick:', err);
+                showNotification('Error loading triggers', 'error');
             });
     } else {
-        // Viewing own parameters - redirect to full parameters page
-        console.log('[DEBUG] Redirecting to /parameters for own data');
-        window.location.href = '/parameters';
+        console.log('[DEBUG] handleTriggersClick called but not viewing another user - ignoring');
+    }
+}
+
+// Fix10B: Show/hide Triggers nav item based on whether viewing another user
+function updateTriggersNavVisibility() {
+    const desktopTriggersNav = document.getElementById('triggersNavItem');
+    const mobileTriggersNav = document.getElementById('mobileTriggersNav');
+
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        // Viewing another user - show triggers
+        if (desktopTriggersNav) desktopTriggersNav.style.display = '';
+        if (mobileTriggersNav) mobileTriggersNav.style.display = '';
+    } else {
+        // Viewing own profile - hide triggers
+        if (desktopTriggersNav) desktopTriggersNav.style.display = 'none';
+        if (mobileTriggersNav) mobileTriggersNav.style.display = 'none';
     }
 }
 
@@ -5903,21 +6445,28 @@ function showView(viewName) {
                 break;
             case 'parameters':
           case 'tracking':
-    // Get username first, then view parameters in modal
-    fetch(`/api/users/${viewingUserId}/profile`, {
-        credentials: 'include'
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch profile');
-        return response.json();
-    })
-    .then(data => {
-        viewUserParameters(viewingUserId, data.username || 'User');
-    })
-    .catch(error => {
-        console.error('Error loading user parameters:', error);
-        showNotification('Error loading parameters', 'error');
-    });
+    // Fix10B: Diary always goes to own diary page
+    console.log('[DEBUG] showView tracking/parameters - redirecting to own diary');
+    window.location.href = '/parameters';
+    break;
+          case 'triggers':
+    // Fix10B: Triggers shows other user's accessible parameters
+    if (viewingUserId !== null && viewingUserId !== currentUserId) {
+        fetch(`/api/users/${viewingUserId}/profile`, {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch profile');
+            return response.json();
+        })
+        .then(data => {
+            viewUserParameters(viewingUserId, data.username || 'User');
+        })
+        .catch(error => {
+            console.error('Error loading user triggers:', error);
+            showNotification('Error loading triggers', 'error');
+        });
+    }
     break;
             case 'following':
                 loadUserFollowing(viewingUserId);
@@ -5963,8 +6512,9 @@ function showView(viewName) {
                 loadFeed();
                 break;
             case 'profile':
-                loadProfile();
-                break;
+                // Fix10C: Own profile is now inside Settings tab
+                showView('settings');
+                return;
             case 'circles':
                 // Reset viewingUserId if returning to own circles
                 if (viewingUserId === null || viewingUserId === currentUserId) {
@@ -5977,20 +6527,9 @@ function showView(viewName) {
                 break;
             case 'parameters':
             case 'tracking':
-                // Initialize parameters calendar
-                if (typeof initializeCalendar === 'function') {
-                    initializeCalendar();
-                }
-                // Initialize parameter options (1-4 buttons)
-                if (typeof createParameterOptions === 'function') {
-                    setTimeout(function() {
-                        createParameterOptions('moodInput', 'mood');
-                        createParameterOptions('sleepInput', 'sleep');
-                        createParameterOptions('exerciseInput', 'exercise');
-                        createParameterOptions('stressInput', 'stress');
-                        createParameterOptions('socialInput', 'social');
-                    }, 100);
-                }
+                // Fix10B: Diary always redirects to own parameters page
+                console.log('[DEBUG] showView own tracking/parameters - redirecting to /parameters');
+                window.location.href = '/parameters';
                 break;
             case 'following':
                 loadFollowing();
@@ -6555,7 +7094,7 @@ async function loadUserFeedForDate(userId, dateStr) {
                     <div class="post-header">
                         <span class="post-category">${post.category || 'General'}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
-                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
                     </div>
                     <div class="post-content">${post.content}</div>
                     ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
@@ -6565,7 +7104,7 @@ async function loadUserFeedForDate(userId, dateStr) {
                                 <span class="like-icon">${post.user_liked ? '❤️' : '🤍'}</span>
                                 <span class="like-count">${post.likes_count || 0}</span>
                             </button>
-                            <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-left: 1rem;">
+                            <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-inline-start: 1rem;">
                                 💬 <span class="comment-count">${post.comments_count || 0}</span>
                             </button>
                         </div>
@@ -6890,7 +7429,7 @@ document.addEventListener('click', function(e) {
                             <span class="like-icon">${post.user_liked ? '❤️' : '🤍'}</span>
                             <span class="like-count">${post.reactions_count || 0}</span>
                         </button>
-                        <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-left: 1rem;">
+                        <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-inline-start: 1rem;">
                             💬 <span class="comment-count">${post.comments_count || 0}</span>
                         </button>
                     </div>
@@ -7010,7 +7549,7 @@ function showNotification(message, type = 'info') {
     
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '×';
-    closeBtn.style.cssText = 'background: none; border: none; color: inherit; font-size: 18px; cursor: pointer; padding: 0; margin-left: 8px; opacity: 0.8;';
+    closeBtn.style.cssText = 'background: none; border: none; color: inherit; font-size: 18px; cursor: pointer; padding: 0; margin-inline-start: 8px; opacity: 0.8;';
     closeBtn.onclick = () => notification.remove();
     
     notification.appendChild(icon);
@@ -7555,11 +8094,15 @@ window.addEventListener('languageChanged', () => {
                 // Show Change Password and Delete Account sections when viewing own profile
                 const changePasswordSection = document.getElementById('changePasswordSection');
                 const accountDeletionSection = document.getElementById('accountDeletionSection');
+                const profileAppearance = document.getElementById('profileAppearanceSection');
                 if (changePasswordSection) {
                     changePasswordSection.style.display = '';
                 }
                 if (accountDeletionSection) {
                     accountDeletionSection.style.display = '';
+                }
+                if (profileAppearance) {
+                    profileAppearance.style.display = '';
                 }
 
                 // Re-enable profile fields for own profile
@@ -9297,7 +9840,7 @@ async function loadFollowing() {
                             <div class="user-name">${escapeHtml(user.username)}</div>
                             <div class="user-location">${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
-                        <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-direction: column;">
+                        <div class="follow-actions-container">
                             <button class="btn-secondary unfollow-btn" data-user-id="${user.id}" data-i18n="following.unfollow">
                                 ${pt('following.unfollow') || 'Unfollow'}
                             </button>
@@ -9397,7 +9940,7 @@ async function loadFollowing() {
                             ${user.reason ? `<div class="user-reason" style="font-size: 0.75rem; color: var(--gray);">${escapeHtml(user.reason)}</div>` : ''}
                             <div class="user-location" style="font-size: 0.75rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
-                        <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap;">
+                        <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center;">
                             <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">
                                 ${pt('following.follow') || 'Follow'}
                             </button>
@@ -9873,7 +10416,7 @@ async function loadTriggers() {
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <strong>${trigger.target_username}</strong>
-                        <span style="color: var(--gray); margin-left: 10px;">
+                        <span style="color: var(--gray); margin-inline-start: 10px;">
                             ${trigger.parameter}: ${trigger.operator} ${trigger.threshold}
                         </span>
                     </div>
@@ -10458,6 +11001,9 @@ showView('profile');
 // Hide messages tab when viewing another user
 updateMessagesNavVisibility();
 
+// Fix10B: Show triggers tab when viewing another user
+updateTriggersNavVisibility();
+
     } catch (error) {
         console.error('Error viewing user profile:', error);
         showNotification('Failed to load user profile', 'error');
@@ -10649,14 +11195,14 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                     parametersHtml += `
                         <div class="param-item" style="padding: 8px; background: white; border-radius: 5px;">
                             <span style="font-size: 0.9em; color: #666;">${label}:</span>
-                            <strong style="margin-left: 5px; color: #333;">${param[key]}/4</strong>
+                            <strong style="margin-inline-start: 5px; color: #333;">${param[key]}/4</strong>
                         </div>
                     `;
                 } else {
                     parametersHtml += `
                         <div class="param-item" style="padding: 8px; background: white; border-radius: 5px; opacity: 0.5;">
                             <span style="font-size: 0.9em; color: #999;">${label}:</span>
-                            <span style="margin-left: 5px; color: #999;">Private</span>
+                            <span style="margin-inline-start: 5px; color: #999;">Private</span>
                         </div>
                     `;
                 }
@@ -10936,11 +11482,15 @@ async function loadUserProfileView(userId) {
         // Hide Change Password and Delete Account sections when viewing another user
         const changePasswordSection = document.getElementById('changePasswordSection');
         const accountDeletionSection = document.getElementById('accountDeletionSection');
+        const profileAppearance = document.getElementById('profileAppearanceSection');
         if (changePasswordSection) {
             changePasswordSection.style.display = 'none';
         }
         if (accountDeletionSection) {
             accountDeletionSection.style.display = 'none';
+        }
+        if (profileAppearance) {
+            profileAppearance.style.display = 'none';
         }
 
     } catch (error) {
@@ -11288,7 +11838,7 @@ async function loadUserFeed(userId) {
                     <div class="post-header">
                         <span class="post-category">${post.category || 'General'}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
-                        ${post.circle_id ? `<span class="post-visibility" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
                     </div>
                     <div class="post-content">${post.content}</div>
                     ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
@@ -11298,7 +11848,7 @@ async function loadUserFeed(userId) {
                                 <span class="like-icon">${post.user_liked ? '❤️' : '🤍'}</span>
                                 <span class="like-count">${post.likes_count || 0}</span>
                             </button>
-                            <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-left: 1rem;">
+                            <button class="comment-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem; margin-inline-start: 1rem;">
                                 💬 <span class="comment-count">${post.comments_count || 0}</span>
                             </button>
                         </div>
@@ -11390,11 +11940,15 @@ function addBackToFollowingButton(viewId) {
             // Show Change Password and Delete Account sections
             const changePasswordSection = document.getElementById('changePasswordSection');
             const accountDeletionSection = document.getElementById('accountDeletionSection');
+            const profileAppearance = document.getElementById('profileAppearanceSection');
             if (changePasswordSection) {
                 changePasswordSection.style.display = '';
             }
             if (accountDeletionSection) {
                 accountDeletionSection.style.display = '';
+            }
+            if (profileAppearance) {
+                profileAppearance.style.display = '';
             }
         }
 
@@ -11426,6 +11980,9 @@ function addBackToFollowingButton(viewId) {
 
         // Show messages nav visibility (restore own account view)
         updateMessagesNavVisibility();
+
+        // Fix10B: Hide triggers nav when going back to own account
+        updateTriggersNavVisibility();
 
         // Navigate to connections view and load connections list
         showView('connections');
@@ -12000,8 +12557,8 @@ async function checkAndLoadTriggerAlerts() {
                 return;
             }
 
-            if (newPassword.length < 12) {
-                showNotification(window.i18n ? window.i18n.translate('home.password_too_short') : 'Password must be at least 12 characters long', 'warning');
+            if (newPassword.length < 8) {
+                showNotification(window.i18n ? window.i18n.translate('home.password_too_short') : 'Password must be at least 8 characters with an uppercase letter and a special character', 'warning');
                 return;
             }
 
@@ -12012,7 +12569,7 @@ async function checkAndLoadTriggerAlerts() {
             const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
 
             if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-                showNotification(window.i18n ? window.i18n.translate('home.password_complexity') : 'Password must contain uppercase, lowercase, number, and special character', 'warning');
+                showNotification(window.i18n ? window.i18n.translate('home.password_complexity') : 'Password must have an uppercase letter and a special character', 'warning');
                 return;
             }
 
@@ -12082,38 +12639,54 @@ async function checkAndLoadTriggerAlerts() {
         }
 
         async function requestAccountDeletion() {
-            const confirmMsg = window.i18n ? window.i18n.translate('home.confirm_deletion') : 'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.';
+            const confirmMsg = window.i18n ? window.i18n.translate('home.confirm_deletion') : 'Are you sure you want to request account deletion? A confirmation email will be sent to your email address.';
 
             if (!confirm(confirmMsg)) {
-                return;
-            }
-
-            const doubleConfirm = window.i18n ? window.i18n.translate('home.double_confirm') : 'This is your final warning. Type DELETE to confirm account deletion.';
-            const userInput = prompt(doubleConfirm);
-
-            if (userInput !== 'DELETE') {
-                showNotification(window.i18n ? window.i18n.translate('home.deletion_cancelled') : 'Account deletion cancelled', 'info');
                 return;
             }
 
             try {
                 const response = await apiCall('/user/delete-account', 'POST', {});
 
-                if (response.success) {
-                    showNotification(window.i18n ? window.i18n.translate('home.account_deleted') : 'Your account has been deleted', 'success');
-                    // Logout
-                    document.getElementById('authContainer').style.display = 'flex';
-                    document.getElementById('dashboard').classList.add('hidden');
+                if (response.success && response.email_sent) {
+                    showNotification(window.i18n ? window.i18n.translate('home.deletion_email_sent') : 'A confirmation email has been sent. Please check your email to confirm account deletion.', 'info');
                 } else {
-                    showNotification(window.i18n ? window.i18n.translate('home.deletion_failed') : response.message || 'Failed to delete account', 'error');
+                    showNotification(response.message || 'Failed to request account deletion', 'error');
                 }
             } catch (error) {
-                console.error('Error deleting account:', error);
+                console.error('Error requesting account deletion:', error);
                 showNotification(window.i18n ? window.i18n.translate('home.error_occurred') : 'An error occurred', 'error');
             }
         }
 
-
+        // FD-1: Handle delete_token from confirmation email
+        (function checkDeleteToken() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const deleteToken = urlParams.get('delete_token');
+            if (deleteToken) {
+                // Remove token from URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                // Ask final confirmation
+                if (confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) {
+                    fetch('/api/user/confirm-delete-account', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        credentials: 'include',
+                        body: JSON.stringify({token: deleteToken})
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Your account has been deleted.');
+                            window.location.href = '/';
+                        } else {
+                            alert(data.error || 'Failed to delete account. The link may have expired.');
+                        }
+                    })
+                    .catch(() => alert('Error processing deletion. Please try again.'));
+                }
+            }
+        })();
 
 
         // CHANGE 2: Enhanced utility functions with comprehensive XSS protection
@@ -12277,7 +12850,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                 // This handles ?view=invite, ?view=following (without highlight_user), etc.
                 else if (viewParam) {
                     const validViews = ['home', 'progress', 'profile', 'circles', 'messages', 
-                                       'tracking', 'following', 'followers', 'invite', 'alerts'];
+                                       'tracking', 'following', 'followers', 'invite', 'alerts',
+                                       'connections', 'settings'];
                     if (validViews.includes(viewParam)) {
                         console.log('[SCREEN FIX] URL ?view= param detected, switching to:', viewParam);
                         // Clear URL params after reading them
@@ -12293,6 +12867,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                             else if (viewParam === 'circles') loadCircles();
                             else if (viewParam === 'messages') loadConversations();
                             else if (viewParam === 'alerts') loadAlerts();
+                            else if (viewParam === 'connections') loadConnections();
+                            else if (viewParam === 'settings') loadSettings();
                         }, 500);
                     } else {
                         console.warn('[SCREEN FIX] Invalid view param:', viewParam);
@@ -13784,16 +14360,19 @@ document.addEventListener('click', (e) => {
 
 // --- V3: SETTINGS VIEW (Full profile editing + account settings) ---
 async function loadSettings() {
-    console.log('[V3] Loading settings view...');
+    console.log('[Fix10C] Loading settings view...');
     try {
-        // Load account data (username, email, selected_city, birth_year)
+        // Load account data (username, email, selected_city, birth_year, timezone)
         const userResponse = await fetch('/api/user/profile', { credentials: 'include' });
         if (userResponse.ok) {
             const userData = await userResponse.json();
-            document.getElementById('settingsDisplayName').value = userData.username || '';
-            document.getElementById('settingsEmail').value = userData.email || '';
-            document.getElementById('settingsCity').value = userData.selected_city || '';
-            document.getElementById('settingsBirthYear').value = userData.birth_year || '';
+            // Fix10C: Removed display_name/email/city fields from settings (now profile-only)
+            const birthYearEl = document.getElementById('settingsBirthYear');
+            if (birthYearEl) birthYearEl.value = userData.birth_year || '';
+            
+            // Fix10C: Load timezone
+            const tzEl = document.getElementById('settingsTimezone');
+            if (tzEl && userData.timezone) tzEl.value = userData.timezone;
             
             // Update avatar and username display
             const avatar = document.getElementById('settingsProfileAvatar');
@@ -13813,30 +14392,119 @@ async function loadSettings() {
             document.getElementById('settingsHobbies').value = profileData.favorite_hobbies || '';
         }
 
-        // Load notification settings (V3: correct endpoint)
+        // Load notification settings
         const notifResponse = await fetch('/api/notification-settings', { credentials: 'include' });
         if (notifResponse.ok) {
             const notif = await notifResponse.json();
-            const emailToggle = document.getElementById('settingsEmailOnAlert');
+            const alertToggle = document.getElementById('settingsEmailOnAlert');
+            const notifToggle = document.getElementById('settingsEmailOnNotification');
             const diaryToggle = document.getElementById('settingsDiaryReminder');
-            if (emailToggle) emailToggle.checked = notif.email_on_alert || false;
-            if (diaryToggle) diaryToggle.checked = notif.email_daily_diary_reminder || false;
+            if (alertToggle) alertToggle.checked = notif.email_on_alert || false;
+            if (notifToggle) notifToggle.checked = notif.email_on_notification || false;
+            if (diaryToggle) {
+                diaryToggle.checked = notif.email_daily_diary_reminder || false;
+                toggleSettingsReminderTime(diaryToggle.checked);
+            }
+            // Load reminder time
+            const timeInput = document.getElementById('settingsReminderTimeInput');
+            if (timeInput && notif.diary_reminder_time) {
+                timeInput.value = notif.diary_reminder_time;
+            }
         }
+
+        // Sync dark mode toggle
+        const isDark = document.body.classList.contains('dark-mode');
+        const dmToggle = document.getElementById('settingsDarkModeToggle');
+        if (dmToggle) dmToggle.checked = isDark;
+
     } catch (error) {
-        console.error('[V3] Error loading settings:', error);
+        console.error('[Fix10C] Error loading settings:', error);
+    }
+}
+
+// Fix10C: Switch between Profile, Account, and Notification sub-tabs in Settings
+function switchSettingsTab(tab) {
+    const profilePanel = document.getElementById('settingsProfilePanel');
+    const accountPanel = document.getElementById('settingsAccountPanel');
+    const notifPanel = document.getElementById('settingsNotificationPanel');
+    const profileBtn = document.getElementById('settingsSubProfile');
+    const accountBtn = document.getElementById('settingsSubAccount');
+    const notifBtn = document.getElementById('settingsSubNotification');
+    
+    // Hide all panels
+    profilePanel.style.display = 'none';
+    accountPanel.style.display = 'none';
+    notifPanel.style.display = 'none';
+    
+    // Reset all buttons
+    const inactiveStyle = { background: 'transparent', color: 'var(--dark)' };
+    [profileBtn, accountBtn, notifBtn].forEach(btn => {
+        btn.style.background = inactiveStyle.background;
+        btn.style.color = inactiveStyle.color;
+    });
+    
+    // Activate selected tab
+    const activeBtn = tab === 'profile' ? profileBtn : tab === 'account' ? accountBtn : notifBtn;
+    const activePanel = tab === 'profile' ? profilePanel : tab === 'account' ? accountPanel : notifPanel;
+    activeBtn.style.background = 'var(--primary)';
+    activeBtn.style.color = 'white';
+    activePanel.style.display = '';
+
+    // Sync dark mode toggle when switching to account tab
+    if (tab === 'account') {
+        const isDark = document.body.classList.contains('dark-mode');
+        const dmToggle = document.getElementById('settingsDarkModeToggle');
+        if (dmToggle) dmToggle.checked = isDark;
+    }
+}
+
+// Fix10C: Show/hide reminder time input based on diary reminder toggle
+function toggleSettingsReminderTime(isChecked) {
+    const container = document.getElementById('settingsReminderTimeContainer');
+    if (container) {
+        container.style.display = isChecked ? 'block' : 'none';
+    }
+}
+
+// Fix10C: Sync notification toggles across all views (settings, alerts, right sidebar)
+function syncAllNotificationToggles() {
+    const settingsAlert = document.getElementById('settingsEmailOnAlert');
+    const settingsNotif = document.getElementById('settingsEmailOnNotification');
+    const settingsDiary = document.getElementById('settingsDiaryReminder');
+    
+    // Sync to right sidebar toggles
+    const rsAlert = document.getElementById('emailOnAlertToggle');
+    const rsNotif = document.getElementById('emailOnNotificationToggle');
+    const rsDiary = document.getElementById('dailyDiaryReminderToggle');
+    
+    // Sync to mobile toggles
+    const mAlert = document.getElementById('mobileEmailOnAlertToggle');
+    const mNotif = document.getElementById('mobileEmailOnNotificationToggle');
+    const mDiary = document.getElementById('mobileDailyDiaryReminderToggle');
+    
+    if (settingsAlert) {
+        if (rsAlert) rsAlert.checked = settingsAlert.checked;
+        if (mAlert) mAlert.checked = settingsAlert.checked;
+    }
+    if (settingsNotif) {
+        if (rsNotif) rsNotif.checked = settingsNotif.checked;
+        if (mNotif) mNotif.checked = settingsNotif.checked;
+    }
+    if (settingsDiary) {
+        if (rsDiary) rsDiary.checked = settingsDiary.checked;
+        if (mDiary) mDiary.checked = settingsDiary.checked;
     }
 }
 
 async function saveProfileSettings() {
     try {
-        const username = document.getElementById('settingsDisplayName').value.trim();
-        const city = document.getElementById('settingsCity').value.trim();
         const birthYear = document.getElementById('settingsBirthYear').value;
         const bio = document.getElementById('settingsBio').value.trim();
         const interests = document.getElementById('settingsInterests').value.trim();
         const occupation = document.getElementById('settingsOccupation').value.trim();
         const goals = document.getElementById('settingsGoals').value.trim();
         const hobbies = document.getElementById('settingsHobbies').value.trim();
+        const timezone = document.getElementById('settingsTimezone').value;
 
         // Save profile fields (bio, interests, occupation, goals, hobbies, birth_year) to /api/profile
         const profileResponse = await fetch('/api/profile', {
@@ -13853,29 +14521,18 @@ async function saveProfileSettings() {
             })
         });
 
-        // Save account fields (username, selected_city) to /api/user/profile
+        // Fix10C: Save timezone to user profile
+        const accountBody = {};
+        if (timezone) accountBody.timezone = timezone;
         const accountResponse = await fetch('/api/user/profile', {
             method: 'PUT',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: username, selected_city: city })
+            body: JSON.stringify(accountBody)
         });
 
         if (profileResponse.ok && accountResponse.ok) {
             showNotification('Profile updated successfully!', 'success');
-            // Update displayed username in settings avatar and other places
-            if (currentUser) {
-                currentUser.username = username;
-            }
-            const settingsAvatar = document.getElementById('settingsProfileAvatar');
-            const settingsUname = document.getElementById('settingsProfileUsername');
-            if (settingsAvatar && username) settingsAvatar.textContent = username[0].toUpperCase();
-            if (settingsUname && username) settingsUname.textContent = username;
-            // Also update profileView avatar if it exists
-            const profileAvatar = document.getElementById('profileAvatar');
-            const profileUsername = document.getElementById('profileUsername');
-            if (profileAvatar && username) profileAvatar.textContent = username[0].toUpperCase();
-            if (profileUsername && username) profileUsername.textContent = username;
         } else {
             let errorMsg = 'Failed to update profile';
             try {
@@ -13888,6 +14545,60 @@ async function saveProfileSettings() {
         console.error('[V3] Save settings error:', error);
         showNotification('Failed to save settings', 'error');
     }
+}
+
+// G-5: Dark mode toggle
+function toggleDarkMode(enabled) {
+    if (enabled) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('therasocial_dark_mode', 'true');
+    } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('therasocial_dark_mode', 'false');
+    }
+}
+
+function initDarkModeToggle() {
+    const saved = localStorage.getItem('therasocial_dark_mode');
+    const toggle = document.getElementById('settingsDarkModeToggle');
+    const profileToggle = document.getElementById('profileDarkModeToggle');
+    if (saved === 'true') {
+        document.body.classList.add('dark-mode');
+        if (toggle) toggle.checked = true;
+        if (profileToggle) profileToggle.checked = true;
+    } else {
+        const isDark = document.body.classList.contains('dark-mode');
+        if (toggle) toggle.checked = isDark;
+        if (profileToggle) profileToggle.checked = isDark;
+    }
+}
+
+// Initialize dark mode on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDarkModeToggle);
+} else {
+    initDarkModeToggle();
+}
+
+// HS-5: Dismissable welcome card
+function dismissWelcomeCard() {
+    const card = document.getElementById('welcomeCard');
+    if (card) card.style.display = 'none';
+    localStorage.setItem('therasocial_welcome_dismissed', 'true');
+}
+
+function initWelcomeCard() {
+    const dismissed = localStorage.getItem('therasocial_welcome_dismissed');
+    const card = document.getElementById('welcomeCard');
+    if (card && !dismissed) {
+        card.style.display = 'block';
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWelcomeCard);
+} else {
+    initWelcomeCard();
 }
 
 async function syncSettingsToggles() {
@@ -13931,7 +14642,7 @@ async function changePasswordFromSettings() {
     }
 
     try {
-        const response = await fetch('/api/auth/change-password', {
+        const response = await fetch('/api/user/change-password', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -14066,6 +14777,64 @@ async function quickCheckin(moodValue) {
     }
 }
 
+// HS-4: Connection status list - shows all connections with activity indicators
+async function loadConnectionStatusList() {
+    try {
+        const listDiv = document.getElementById('connectionStatusList');
+        if (!listDiv) return;
+
+        const response = await apiCall('/following', 'GET');
+        const connections = response.following || [];
+
+        if (!connections.length) {
+            listDiv.innerHTML = '<p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_connections">No connections yet.</p>';
+            return;
+        }
+
+        // Sort: recently active first
+        connections.sort((a, b) => {
+            const aTime = a.last_active || a.last_login || '';
+            const bTime = b.last_active || b.last_login || '';
+            return bTime.localeCompare(aTime);
+        });
+
+        listDiv.innerHTML = connections.map(conn => {
+            const name = escapeHtml(conn.display_name || conn.username || 'User');
+            const avatar = name.charAt(0).toUpperCase();
+            const lastActive = conn.last_active || conn.last_login || null;
+            let statusDot = '#9CA3AF';
+            let statusText = 'Offline';
+
+            if (lastActive) {
+                const diff = (Date.now() - new Date(lastActive).getTime()) / 60000;
+                if (diff < 15) {
+                    statusDot = '#10B981'; statusText = 'Active now';
+                } else if (diff < 60) {
+                    statusDot = '#F59E0B'; statusText = Math.round(diff) + 'm ago';
+                } else if (diff < 1440) {
+                    statusDot = '#F59E0B'; statusText = Math.round(diff/60) + 'h ago';
+                } else {
+                    statusText = Math.round(diff/1440) + 'd ago';
+                }
+            }
+
+            return '<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light, #f9fafb); border-radius: 12px; cursor: pointer;" onclick="if(typeof showConnectionInfo===\'function\') showConnectionInfo(' + (conn.id || 0) + ')">' +
+                '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + avatar + '</div>' +
+                '<div style="flex: 1; min-width: 0;">' +
+                '<div style="font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + name + '</div>' +
+                '<div style="font-size: 0.8rem; color: var(--gray);">' + escapeHtml(conn.bio || conn.occupation || '') + '</div>' +
+                '</div>' +
+                '<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">' +
+                '<span style="width: 8px; height: 8px; border-radius: 50%; background: ' + statusDot + '; display: inline-block;"></span>' +
+                '<span style="font-size: 0.75rem; color: var(--gray);">' + statusText + '</span>' +
+                '</div></div>';
+        }).join('');
+
+    } catch (error) {
+        console.error('Error loading connection status list:', error);
+    }
+}
+
 // VINTER2: Friends daily updates - uses dedicated backend endpoint
 // Replaces the old N+1 approach that only checked first 10 users
 async function loadFriendsUpdates() {
@@ -14190,7 +14959,7 @@ function showMessageTemplates() {
 
     panel = document.createElement('div');
     panel.id = 'messageTemplatePanel';
-    panel.style.cssText = 'background: var(--light); padding: 12px; border-radius: 12px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px;';
+    panel.style.cssText = 'background: var(--light); padding: 12px; border-radius: 12px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0;';
 
     MESSAGE_TEMPLATES.forEach(t => {
         const btn = document.createElement('button');
@@ -14206,7 +14975,13 @@ function showMessageTemplates() {
         panel.appendChild(btn);
     });
 
-    input.parentNode.insertBefore(panel, input);
+    // Insert above message-input-area (not inside it) for better mobile layout
+    const inputArea = input.closest('.message-input-area');
+    if (inputArea) {
+        inputArea.parentNode.insertBefore(panel, inputArea);
+    } else {
+        input.parentNode.insertBefore(panel, input);
+    }
 }
 
 // V2: Override home view load to include new features
@@ -14220,6 +14995,7 @@ function loadV2HomeFeatures() {
     loadHomeSummary();
     loadFriendsUpdates();
     loadHomeAlerts();
+    loadConnectionStatusList();
 }
 
 // Patch: When home view loads, also load V2 features

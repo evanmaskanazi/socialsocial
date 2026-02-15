@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- TheraSocial Parameters/Diary Version P305 -->
+<!-- TheraSocial Parameters/Diary Version Fix10B -->
+<!-- Fix10B: Updated diary nav bar to match home sidebar (Home, Progress, Circles, Messages, Diary, Connections, Invite, Settings) -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <!-- P305: Dark mode support for evening/nighttime use -->
 <html lang="en">
@@ -38,6 +39,12 @@
             padding: 20px;
             background: linear-gradient(135deg, #6B8BA4 0%, #B6A9C9 100%);
             min-height: 100vh;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
         }
 
         /* P305: Dark mode support */
@@ -113,9 +120,165 @@
         [dir="rtl"] .action-buttons {
             flex-direction: row-reverse;
         }
+
+        /* MS-4/MS-5: Mobile responsive fixes */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .parameters-page, .calendar-container, .diary-card,
+            .rating-container, .action-buttons, .form-group {
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                overflow-x: hidden !important;
+            }
+
+            .calendar-grid, .calendar-table, table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                font-size: 14px;
+            }
+
+            .calendar-grid td, .calendar-grid th,
+            .calendar-table td, .calendar-table th {
+                padding: 6px 2px !important;
+                min-width: 0 !important;
+            }
+
+            .rating-buttons {
+                flex-wrap: wrap;
+                gap: 4px;
+                justify-content: center;
+            }
+
+            .rating-button {
+                min-width: 36px !important;
+                padding: 6px 8px !important;
+                font-size: 13px !important;
+            }
+
+            .date-controls {
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+            }
+
+            .action-buttons {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .action-buttons button, .action-buttons .btn {
+                flex: 1 1 auto;
+                min-width: 100px;
+                font-size: 14px !important;
+                padding: 10px 12px !important;
+            }
+
+            textarea, input[type="text"], input[type="number"] {
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .rating-button {
+                min-width: 30px !important;
+                padding: 5px 6px !important;
+                font-size: 12px !important;
+            }
+        }
+
+        /* MS-4: RTL symmetry fixes */
+        [dir="rtl"] .date-controls button {
+            direction: rtl;
+        }
+
+        [dir="rtl"] .calendar-grid {
+            direction: rtl;
+        }
+
+        [dir="rtl"] textarea, [dir="rtl"] input {
+            text-align: right;
+        }
+
+        /* FD-4: Navigation bar for diary page */
+        .diary-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 10px 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .diary-nav-brand {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .diary-nav-links {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .diary-nav-link {
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6B7280;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .diary-nav-link:hover {
+            background: #f3f4f6;
+            color: #667eea;
+        }
+        .diary-nav-link.active {
+            background: #667eea;
+            color: white;
+        }
+        @media (max-width: 480px) {
+            .diary-nav { padding: 8px 12px; }
+            .diary-nav-link { padding: 6px 8px; font-size: 12px; gap: 2px; }
+            .diary-nav-link .nav-text { display: inline; font-size: 11px; }
+            .diary-nav-brand { font-size: 16px; }
+        }
+        [dir="rtl"] .diary-nav-links { flex-direction: row-reverse; }
     </style>
 </head>
 <body>
+    <!-- G-5: Apply dark mode from localStorage -->
+    <script>if(localStorage.getItem('therasocial_dark_mode')==='true')document.body.classList.add('dark-mode');</script>
+
+    <!-- FD-4: Navigation bar matching main app -->
+    <nav class="diary-nav" id="diaryNav">
+        <a href="/" class="diary-nav-brand">TheraSocial</a>
+        <div class="diary-nav-links">
+            <a href="/" class="diary-nav-link"><span>🏠</span><span class="nav-text" data-i18n="menu.home">Home</span></a>
+            <a href="/?view=progress" class="diary-nav-link"><span>📈</span><span class="nav-text" data-i18n="menu.progress">Progress</span></a>
+            <a href="/?view=circles" class="diary-nav-link"><span>⭕</span><span class="nav-text" data-i18n="menu.circles">Circles</span></a>
+            <a href="/?view=messages" class="diary-nav-link"><span>💬</span><span class="nav-text" data-i18n="menu.messages">Messages</span></a>
+            <a href="/diary" class="diary-nav-link active"><span>📊</span><span class="nav-text" data-i18n="menu.diary">Diary</span></a>
+            <a href="/?view=connections" class="diary-nav-link"><span>🤝</span><span class="nav-text" data-i18n="menu.connections">Connections</span></a>
+            <a href="/?view=invite" class="diary-nav-link"><span>👋</span><span class="nav-text" data-i18n="menu.invite">Invite</span></a>
+            <a href="/?view=settings" class="diary-nav-link"><span>⚙️</span><span class="nav-text" data-i18n="menu.settings">Settings</span></a>
+        </div>
+    </nav>
+
     <div id="loadingMessage"><span class="loading-spinner"></span>Loading diary...</div>
     <div id="errorMessage"></div>
     <div id="parametersContainer"></div>
