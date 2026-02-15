@@ -833,7 +833,10 @@ async function loadCircleRecommendations() {
                         ${(user.username || "U")[0].toUpperCase()}
                     </div>
                     <div style="flex-grow: 1;">
-                        <div style="font-weight: 600; color: #2d3436;">${user.username}</div>
+                        <div style="font-weight: 600; color: var(--primary, #667eea); cursor: pointer;" 
+                             onclick="window.location.href='/?view=profile&user_id=${user.id}'"
+                             onmouseover="this.style.textDecoration='underline'" 
+                             onmouseout="this.style.textDecoration='none'">${user.username}</div>
                         <div style="font-size: 12px; color: #8898aa;" data-i18n="${reasonKey}">${user.reason}</div>
                         ${user.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${user.selected_city}</div>` : ""}
                     </div>
