@@ -3081,7 +3081,7 @@
 
                   <!-- V2: One-Tap Quick Check-In -->
                   <div id="quickCheckinCard" style="background: var(--white); padding: 20px; border-radius: 16px; margin-bottom: 24px; border: 2px dashed var(--coral-light); display: none;">
-                      <h3 style="color: var(--coral); margin-bottom: 12px; font-size: 1.1rem;">⚡ Quick Check-In</h3>
+                      <h3 style="color: var(--coral); margin-bottom: 12px; font-size: 1.1rem;" data-i18n="home.quick_checkin_title">⚡ Quick Check-In</h3>
                       <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 12px;" data-i18n="home.quick_checkin_desc">How are you feeling right now? Tap to log your mood quickly.</p>
                       <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                           <button onclick="quickCheckin(4)" style="flex: 1; min-width: 60px; padding: 12px; border: none; border-radius: 12px; background: var(--sage-light); font-size: 1.5rem; cursor: pointer;" title="Great">😊</button>
@@ -4510,7 +4510,7 @@
     })();
     </script>
     
-    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/i18n.js?v=10Link.2"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -4591,7 +4591,7 @@
     }
 </script>
 <script src="/static/js/parameters-social.js?v=1901"></script>
-   <script src="/static/js/circles-messages.js?v=10Link"></script>
+   <script src="/static/js/circles-messages.js?v=10Link.2"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -11442,7 +11442,7 @@ async function loadUserProfileView(userId) {
             const triggerBtn = document.createElement('button');
             triggerBtn.id = 'profileTriggerBtn';
             triggerBtn.className = 'btn';
-            triggerBtn.innerHTML = '🔔 Triggers';
+            triggerBtn.innerHTML = '🔔 <span data-i18n="menu.triggers">Triggers</span>';
             triggerBtn.setAttribute('data-i18n', 'menu.triggers');
             triggerBtn.style.cssText = 'background: var(--warning, #f6ad55); color: white; padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap;';
             triggerBtn.onclick = function(e) { handleTriggersClick(e); };
@@ -11451,7 +11451,7 @@ async function loadUserProfileView(userId) {
             const checkinBtn = document.createElement('button');
             checkinBtn.id = 'profileCheckinHistoryBtn';
             checkinBtn.className = 'btn';
-            checkinBtn.innerHTML = '📊 Check-ins';
+            checkinBtn.innerHTML = '📊 <span data-i18n="profile.checkins_btn">Check-ins</span>';
             checkinBtn.style.cssText = 'background: var(--primary, #667eea); color: white; padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap;';
             checkinBtn.onclick = function() { showUserCheckinHistory(userId, userData.username); };
             
@@ -11656,19 +11656,21 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
     buttonContainer.style.cssText = `
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 0.75rem;
         margin: 1rem 0;
-        padding: 0.5rem;
-        background: #f8f9fa;
-        border-radius: 8px;
+        padding: 1rem;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 16px;
+        justify-content: center;
     `;
     
     if (isFollowing) {
-        // Unfollow button (grey/secondary)
+        // Unfollow button (styled as outlined secondary)
         const unfollowBtn = document.createElement('button');
-        unfollowBtn.className = 'btn-secondary';
         unfollowBtn.textContent = t.unfollow;
-        unfollowBtn.style.cssText = 'padding: 0.5rem 1rem;';
+        unfollowBtn.style.cssText = 'padding: 10px 24px; background: white; color: #6c757d; border: 2px solid #dee2e6; border-radius: 25px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;';
+        unfollowBtn.onmouseover = () => { unfollowBtn.style.background = '#f8d7da'; unfollowBtn.style.borderColor = '#f5c6cb'; unfollowBtn.style.color = '#dc3545'; };
+        unfollowBtn.onmouseout = () => { unfollowBtn.style.background = 'white'; unfollowBtn.style.borderColor = '#dee2e6'; unfollowBtn.style.color = '#6c757d'; };
         unfollowBtn.onclick = async () => {
             if (confirm(lang === 'he' ? `האם להפסיק לעקוב אחרי ${username}?` : 
                        lang === 'ar' ? `هل تريد إلغاء متابعة ${username}؟` :
@@ -11697,10 +11699,10 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         const blockBtn = document.createElement('button');
         blockBtn.textContent = isBlocked ? t.unblock : t.block;
         blockBtn.style.cssText = isBlocked 
-            ? 'padding: 0.5rem 1rem; background-color: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;'
-            : 'padding: 0.5rem 1rem; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;';
-        blockBtn.onmouseover = () => { blockBtn.style.backgroundColor = isBlocked ? '#5a6268' : '#dc2626'; };
-        blockBtn.onmouseout = () => { blockBtn.style.backgroundColor = isBlocked ? '#6c757d' : '#ef4444'; };
+            ? 'padding: 10px 24px; background: white; color: #6c757d; border: 2px solid #dee2e6; border-radius: 25px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;'
+            : 'padding: 10px 24px; background: white; color: #ef4444; border: 2px solid #fecaca; border-radius: 25px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;';
+        blockBtn.onmouseover = () => { blockBtn.style.background = isBlocked ? '#e9ecef' : '#fef2f2'; blockBtn.style.transform = 'translateY(-1px)'; };
+        blockBtn.onmouseout = () => { blockBtn.style.background = 'white'; blockBtn.style.transform = ''; };
         blockBtn.onclick = async () => {
             if (isBlocked) {
                 // Unblock user
@@ -11719,9 +11721,10 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         // PJ601: Follow button (blue/primary) - with min-width to match Follow with Note
         // PJ602: Added width:auto to override CSS width:100%
         const followBtn = document.createElement('button');
-        followBtn.className = 'btn-primary';
         followBtn.textContent = t.follow;
-        followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #3b82f6; color: white; width: auto;';
+        followBtn.style.cssText = 'padding: 10px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); width: auto;';
+        followBtn.onmouseover = () => { followBtn.style.transform = 'translateY(-1px)'; followBtn.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'; };
+        followBtn.onmouseout = () => { followBtn.style.transform = ''; followBtn.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)'; };
         followBtn.onclick = async () => {
             const success = await followUser(userId);
             if (success) {
@@ -11730,11 +11733,12 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         };
         buttonContainer.appendChild(followBtn);
         
-        // Follow with Note button (grey/secondary)
+        // Follow with Note button
         const followNoteBtn = document.createElement('button');
-        followNoteBtn.className = 'btn-secondary';
         followNoteBtn.textContent = t.followWithNote;
-        followNoteBtn.style.cssText = 'padding: 0.5rem 1rem;';
+        followNoteBtn.style.cssText = 'padding: 10px 24px; background: white; color: #667eea; border: 2px solid #c3cff5; border-radius: 25px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;';
+        followNoteBtn.onmouseover = () => { followNoteBtn.style.background = '#f0f3ff'; followNoteBtn.style.transform = 'translateY(-1px)'; };
+        followNoteBtn.onmouseout = () => { followNoteBtn.style.background = 'white'; followNoteBtn.style.transform = ''; };
         followNoteBtn.onclick = () => {
             followUserWithNote(userId, username);
         };
@@ -11973,7 +11977,9 @@ function addBackToFollowingButton(viewId) {
     backButton.className = 'btn-secondary back-to-following-btn';
     backButton.textContent = pt('common.back_to_connections') || '← Back to Connections';
     backButton.setAttribute('data-i18n', 'common.back_to_connections');
-    backButton.style.marginBottom = '1rem';
+    backButton.style.cssText = 'margin-bottom: 1rem; padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 0.9rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.3s; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);';
+    backButton.onmouseover = () => { backButton.style.transform = 'translateY(-1px)'; backButton.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'; };
+    backButton.onmouseout = () => { backButton.style.transform = ''; backButton.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)'; };
   backButton.onclick = () => {
         console.log('[DEBUG] Back to Connections clicked, resetting viewingUserId');
         // CRITICAL: Reset viewingUserId BEFORE calling showView
@@ -14881,7 +14887,10 @@ async function loadHomeSummary() {
         // Update streak badge
         const streakBadge = document.getElementById('streakBadge');
         if (streakBadge) {
-            const streakText = data.streak > 0 ? `🔥 ${data.streak} day streak` : '📝 Start your streak!';
+            const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+            const streakText = data.streak > 0 
+                ? `🔥 ${data.streak} ${tt('home.day_streak', 'day streak')}` 
+                : `📝 ${tt('home.start_streak', 'Start your streak!')}`;
             streakBadge.textContent = streakText;
             streakBadge.style.background = data.streak > 0 ? 'var(--coral)' : 'var(--gray)';
         }
@@ -14920,24 +14929,25 @@ function generateTodayRecommendations(summaryData) {
 
     const recs = [];
     const params = summaryData.latest_params || {};
+    const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
 
     if (!summaryData.completed_today) {
-        recs.push({ icon: '📝', text: 'Complete your daily diary check-in', action: 'handleParametersClick(event)' });
+        recs.push({ icon: '📝', text: tt('home.rec_diary', 'Complete your daily diary check-in'), action: 'handleParametersClick(event)' });
     }
     if (params.mood && params.mood <= 2) {
-        recs.push({ icon: '🌿', text: 'Your mood was low recently — try a short walk or breathing exercise', action: null });
+        recs.push({ icon: '🌿', text: tt('home.rec_mood', 'Your mood was low recently — try a short walk or breathing exercise'), action: null });
     }
     if (params.physical_activity && params.physical_activity <= 1) {
-        recs.push({ icon: '🏃', text: 'Even 10 minutes of light exercise can improve your day', action: null });
+        recs.push({ icon: '🏃', text: tt('home.rec_exercise', 'Even 10 minutes of light exercise can improve your day'), action: null });
     }
     if (params.sleep_quality && params.sleep_quality <= 2) {
-        recs.push({ icon: '😴', text: 'Consider adjusting your bedtime routine for better sleep', action: null });
+        recs.push({ icon: '😴', text: tt('home.rec_sleep', 'Consider adjusting your bedtime routine for better sleep'), action: null });
     }
     if (summaryData.following_count === 0) {
-        recs.push({ icon: '🤝', text: 'Connect with others on TheraSocial for mutual support', action: "showView('connections')" });
+        recs.push({ icon: '🤝', text: tt('home.rec_connect', 'Connect with others on TheraSocial for mutual support'), action: "showView('connections')" });
     }
     if (recs.length === 0) {
-        recs.push({ icon: '🌟', text: 'You\'re doing great! Keep up the good work today.', action: null });
+        recs.push({ icon: '🌟', text: tt('home.rec_great', 'You\'re doing great! Keep up the good work today.'), action: null });
     }
 
     list.innerHTML = recs.map(r => `
@@ -14963,7 +14973,8 @@ async function quickCheckin(moodValue) {
         });
 
         if (response.ok) {
-            showNotification('Mood logged! 🎯', 'success');
+            const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+            showNotification(tt('home.mood_logged', 'Mood logged!') + ' 🎯', 'success');
             // Hide quick check-in
             const card = document.getElementById('quickCheckinCard');
             if (card) card.style.display = 'none';
@@ -15004,18 +15015,19 @@ async function loadConnectionStatusList() {
             const avatar = name.charAt(0).toUpperCase();
             const lastActive = conn.last_active || conn.last_login || null;
             let statusDot = '#9CA3AF';
-            let statusText = 'Offline';
+            const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+            let statusText = tt('home.status_offline', 'Offline');
 
             if (lastActive) {
                 const diff = (Date.now() - new Date(lastActive).getTime()) / 60000;
                 if (diff < 15) {
-                    statusDot = '#10B981'; statusText = 'Active now';
+                    statusDot = '#10B981'; statusText = tt('home.status_active', 'Active now');
                 } else if (diff < 60) {
-                    statusDot = '#F59E0B'; statusText = Math.round(diff) + 'm ago';
+                    statusDot = '#F59E0B'; statusText = Math.round(diff) + tt('home.status_min_ago', 'm ago');
                 } else if (diff < 1440) {
-                    statusDot = '#F59E0B'; statusText = Math.round(diff/60) + 'h ago';
+                    statusDot = '#F59E0B'; statusText = Math.round(diff/60) + tt('home.status_hr_ago', 'h ago');
                 } else {
-                    statusText = Math.round(diff/1440) + 'd ago';
+                    statusText = Math.round(diff/1440) + tt('home.status_day_ago', 'd ago');
                 }
             }
 
@@ -15057,7 +15069,14 @@ async function loadFriendsUpdates() {
         }
 
         const emojis = { 4: '😊', 3: '🙂', 2: '😐', 1: '😔' };
-        const paramLabels = { mood: 'Mood', energy: 'Energy', sleep_quality: 'Sleep', physical_activity: 'Exercise', anxiety: 'Stress' };
+        const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+        const paramLabels = { 
+            mood: tt('params.mood', 'Mood'), 
+            energy: tt('params.energy', 'Energy'), 
+            sleep_quality: tt('params.sleep', 'Sleep'), 
+            physical_activity: tt('params.exercise', 'Exercise'), 
+            anxiety: tt('params.stress', 'Stress') 
+        };
 
         listDiv.innerHTML = updates.map(u => {
             const paramDisplay = u.params.map(p => `${paramLabels[p.parameter_name] || p.parameter_name}: ${emojis[p.value] || p.value}`).join(' · ');
@@ -15066,7 +15085,7 @@ async function loadFriendsUpdates() {
                     <div style="width: 40px; height: 40px; border-radius: 50%; background: #6B8BA4; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">${escapeHtml(u.user.username.charAt(0).toUpperCase())}</div>
                     <div style="flex: 1;">
                         <div style="font-weight: 600; color: var(--dark); font-size: 0.9rem;">${escapeHtml(u.user.username)}</div>
-                        <div style="font-size: 0.8rem; color: var(--gray);">${paramDisplay || 'Updated ' + u.date}</div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">${paramDisplay || tt('home.updated', 'Updated') + ' ' + u.date}</div>
                     </div>
                     <span style="font-size: 0.75rem; color: var(--gray);">${u.date}</span>
                 </div>
@@ -15089,7 +15108,8 @@ async function loadHomeAlerts() {
 
         const alerts = data.alerts || [];
         if (alerts.length === 0) {
-            homeAlertsList.innerHTML = '<p style="color: var(--gray); text-align: center; padding: 16px;">No alerts right now. ✨</p>';
+            const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+            homeAlertsList.innerHTML = `<p style="color: var(--gray); text-align: center; padding: 16px;">${tt('home.no_alerts', 'No alerts right now.')} ✨</p>`;
             return;
         }
 
@@ -15104,7 +15124,8 @@ async function loadHomeAlerts() {
         `).join('');
 
         if (alerts.length > 5) {
-            homeAlertsList.innerHTML += '<p style="text-align: center; padding: 8px;"><a href="#" style="color: var(--primary);" onclick="showView(\'alerts\'); return false;">View all alerts →</a></p>';
+            const tt2 = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+            homeAlertsList.innerHTML += `<p style="text-align: center; padding: 8px;"><a href="#" style="color: var(--primary);" onclick="showView('alerts'); return false;">${tt2('home.view_all_alerts', 'View all alerts →')}</a></p>`;
         }
     } catch (error) {
         console.error('[V2] Error loading home alerts:', error);
