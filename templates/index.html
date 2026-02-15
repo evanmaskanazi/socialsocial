@@ -13705,7 +13705,7 @@ async function showUserCheckinHistory(userId, username) {
                         { label: t.sleep, data: data.sleep || [], borderColor: '#9F7AEA', tension: 0.3, fill: false, pointRadius: 3 },
                         { label: t.activity, data: data.activity || [], borderColor: '#F6AD55', tension: 0.3, fill: false, pointRadius: 3 },
                         { label: t.anxiety, data: data.anxiety || [], borderColor: '#FC8181', tension: 0.3, fill: false, pointRadius: 3 }
-                    ]
+                    ].filter(ds => ds.data.some(v => v !== null && v !== undefined))
                 },
                 options: {
                     responsive: true,
