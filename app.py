@@ -695,7 +695,7 @@ Session(app)
 # OAuth credentials loaded from environment variables
 # Set these in your Render/hosting dashboard:
 #   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-#   FACEBOOK_CLIENT_ID, FACEBOOK_CLIENT_SECRET
+#   MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET
 #   APPLE_CLIENT_ID, APPLE_CLIENT_SECRET, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
 OAUTH_PROVIDERS = {
     'google': {
@@ -706,13 +706,13 @@ OAUTH_PROVIDERS = {
         'userinfo_url': 'https://www.googleapis.com/oauth2/v3/userinfo',
         'scope': 'openid email profile',
     },
-    'facebook': {
-        'client_id': os.environ.get('FACEBOOK_CLIENT_ID', ''),
-        'client_secret': os.environ.get('FACEBOOK_CLIENT_SECRET', ''),
-        'authorize_url': 'https://www.facebook.com/v19.0/dialog/oauth',
-        'token_url': 'https://graph.facebook.com/v19.0/oauth/access_token',
-        'userinfo_url': 'https://graph.facebook.com/me?fields=id,name,email',
-        'scope': 'email public_profile',
+    'microsoft': {
+        'client_id': os.environ.get('MICROSOFT_CLIENT_ID', ''),
+        'client_secret': os.environ.get('MICROSOFT_CLIENT_SECRET', ''),
+        'authorize_url': 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize',
+        'token_url': 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
+        'userinfo_url': 'https://graph.microsoft.com/v1.0/me',
+        'scope': 'openid email profile User.Read',
     },
     'apple': {
         'client_id': os.environ.get('APPLE_CLIENT_ID', ''),
@@ -6889,8 +6889,9 @@ def oauth_initiate(provider):
             params['scope'] = config['scope']
             params['access_type'] = 'offline'
             params['prompt'] = 'select_account'
-        elif provider == 'facebook':
+        elif provider == 'microsoft':
             params['scope'] = config['scope']
+            params['response_mode'] = 'query'
         elif provider == 'apple':
             params['scope'] = config['scope']
             params['response_mode'] = 'form_post'
@@ -6977,16 +6978,17 @@ def oauth_callback(provider):
                 email = userinfo.get('email', '').lower()
                 display_name = userinfo.get('name', '')
 
-        elif provider == 'facebook':
+        elif provider == 'microsoft':
             userinfo_resp = http_requests.get(
                 config['userinfo_url'],
-                params={'access_token': access_token},
+                headers={'Authorization': f'Bearer {access_token}'},
                 timeout=10
             )
             if userinfo_resp.status_code == 200:
                 userinfo = userinfo_resp.json()
-                email = userinfo.get('email', '').lower()
-                display_name = userinfo.get('name', '')
+                email = userinfo.get('mail', '') or userinfo.get('userPrincipalName', '')
+                email = email.lower()
+                display_name = userinfo.get('displayName', '')
 
         elif provider == 'apple':
             # Apple sends user info in the id_token (JWT)
