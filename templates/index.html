@@ -2517,11 +2517,14 @@
                     <span data-i18n="auth.continue_google">Continue with Google</span>
                 </button>
                 
-                <button type="button" class="social-btn social-btn-facebook" onclick="socialLogin('facebook')">
+                <button type="button" class="social-btn social-btn-microsoft" onclick="socialLogin('microsoft')">
                     <svg class="social-btn-icon" viewBox="0 0 24 24" width="20" height="20">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/>
+                        <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+                        <rect x="13" y="1" width="10" height="10" fill="#7FBA00"/>
+                        <rect x="1" y="13" width="10" height="10" fill="#00A4EF"/>
+                        <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
                     </svg>
-                    <span data-i18n="auth.continue_facebook">Continue with Facebook</span>
+                    <span data-i18n="auth.continue_microsoft">Continue with Microsoft</span>
                 </button>
                 
                 <button type="button" class="social-btn social-btn-apple" onclick="socialLogin('apple')">
@@ -2860,9 +2863,9 @@
         border-color: #4285F4;
         background: #f8faff;
     }
-    .social-btn-facebook:hover {
-        border-color: #1877F2;
-        background: #f6f9ff;
+    .social-btn-microsoft:hover {
+        border-color: #00A4EF;
+        background: #f6faff;
     }
     .social-btn-apple:hover {
         border-color: #000000;
@@ -4680,22 +4683,22 @@
         const acctSocialTranslations = {
             en: {
                 'auth.continue_google': 'Continue with Google',
-                'auth.continue_facebook': 'Continue with Facebook',
+                'auth.continue_microsoft': 'Continue with Microsoft',
                 'auth.continue_apple': 'Continue with Apple',
             },
             he: {
                 'auth.continue_google': 'המשך עם Google',
-                'auth.continue_facebook': 'המשך עם Facebook',
+                'auth.continue_microsoft': 'המשך עם Microsoft',
                 'auth.continue_apple': 'המשך עם Apple',
             },
             ar: {
                 'auth.continue_google': 'المتابعة مع Google',
-                'auth.continue_facebook': 'المتابعة مع Facebook',
+                'auth.continue_microsoft': 'المتابعة مع Microsoft',
                 'auth.continue_apple': 'المتابعة مع Apple',
             },
             ru: {
                 'auth.continue_google': 'Продолжить с Google',
-                'auth.continue_facebook': 'Продолжить с Facebook',
+                'auth.continue_microsoft': 'Продолжить с Microsoft',
                 'auth.continue_apple': 'Продолжить с Apple',
             }
         };
