@@ -691,6 +691,39 @@ CORS(app, supports_credentials=True, origins=[
 ], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 Session(app)
 
+# === SOCIAL OAUTH CONFIGURATION - ACCT ADDITION ===
+# OAuth credentials loaded from environment variables
+# Set these in your Render/hosting dashboard:
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+#   FACEBOOK_CLIENT_ID, FACEBOOK_CLIENT_SECRET
+#   APPLE_CLIENT_ID, APPLE_CLIENT_SECRET, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
+OAUTH_PROVIDERS = {
+    'google': {
+        'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+        'client_secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+        'authorize_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'userinfo_url': 'https://www.googleapis.com/oauth2/v3/userinfo',
+        'scope': 'openid email profile',
+    },
+    'facebook': {
+        'client_id': os.environ.get('FACEBOOK_CLIENT_ID', ''),
+        'client_secret': os.environ.get('FACEBOOK_CLIENT_SECRET', ''),
+        'authorize_url': 'https://www.facebook.com/v19.0/dialog/oauth',
+        'token_url': 'https://graph.facebook.com/v19.0/oauth/access_token',
+        'userinfo_url': 'https://graph.facebook.com/me?fields=id,name,email',
+        'scope': 'email public_profile',
+    },
+    'apple': {
+        'client_id': os.environ.get('APPLE_CLIENT_ID', ''),
+        'client_secret': '',  # Generated dynamically for Apple
+        'authorize_url': 'https://appleid.apple.com/auth/authorize',
+        'token_url': 'https://appleid.apple.com/auth/token',
+        'scope': 'name email',
+    },
+}
+# === END SOCIAL OAUTH CONFIGURATION ===
+
 # Security headers middleware (Ethics Doc: Privacy and Security by Design)
 @app.after_request
 def add_security_headers(response):
@@ -6816,6 +6849,297 @@ def reset_password():
         logger.error(f"Reset password error: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to reset password'}), 500
+
+
+# =============================================================================
+# SOCIAL OAUTH LOGIN ROUTES - ACCT ADDITION
+# Non-invasive: These are entirely new routes that don't modify any existing code.
+# Requires environment variables to be set for each provider.
+# =============================================================================
+
+@app.route('/api/auth/oauth/<provider>')
+def oauth_initiate(provider):
+    """Initiate OAuth flow - redirects user to provider's consent screen"""
+    try:
+        if provider not in OAUTH_PROVIDERS:
+            return jsonify({'error': f'Unknown provider: {provider}'}), 400
+
+        config = OAUTH_PROVIDERS[provider]
+        if not config['client_id']:
+            logger.warning(f"OAuth {provider}: client_id not configured")
+            return jsonify({'error': f'{provider.title()} login is not yet configured. Please use email/password login.'}), 503
+
+        import secrets as sec
+        state = sec.token_urlsafe(32)
+        session['oauth_state'] = state
+        session['oauth_provider'] = provider
+        session['oauth_language'] = request.args.get('lang', 'en')
+
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+        redirect_uri = f"{app_url}/api/auth/oauth/{provider}/callback"
+
+        params = {
+            'client_id': config['client_id'],
+            'redirect_uri': redirect_uri,
+            'state': state,
+            'response_type': 'code',
+        }
+
+        if provider == 'google':
+            params['scope'] = config['scope']
+            params['access_type'] = 'offline'
+            params['prompt'] = 'select_account'
+        elif provider == 'facebook':
+            params['scope'] = config['scope']
+        elif provider == 'apple':
+            params['scope'] = config['scope']
+            params['response_mode'] = 'form_post'
+
+        from urllib.parse import urlencode
+        auth_url = f"{config['authorize_url']}?{urlencode(params)}"
+        return redirect(auth_url)
+
+    except Exception as e:
+        logger.error(f"OAuth initiate error ({provider}): {e}")
+        return redirect(f"/?oauth_error=initiation_failed")
+
+
+@app.route('/api/auth/oauth/<provider>/callback', methods=['GET', 'POST'])
+def oauth_callback(provider):
+    """Handle OAuth callback from provider"""
+    try:
+        if provider not in OAUTH_PROVIDERS:
+            return redirect('/?oauth_error=unknown_provider')
+
+        config = OAUTH_PROVIDERS[provider]
+
+        # Verify state parameter to prevent CSRF
+        if provider == 'apple':
+            # Apple uses POST form_post response mode
+            state = request.form.get('state', '')
+            code = request.form.get('code', '')
+        else:
+            state = request.args.get('state', '')
+            code = request.args.get('code', '')
+
+        stored_state = session.pop('oauth_state', None)
+        if not state or state != stored_state:
+            logger.warning(f"OAuth {provider}: State mismatch")
+            return redirect('/?oauth_error=state_mismatch')
+
+        if not code:
+            error = request.args.get('error', 'no_code')
+            logger.warning(f"OAuth {provider}: No code received, error={error}")
+            return redirect(f'/?oauth_error={error}')
+
+        # Exchange code for access token
+        import requests as http_requests
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+        redirect_uri = f"{app_url}/api/auth/oauth/{provider}/callback"
+
+        token_data = {
+            'client_id': config['client_id'],
+            'client_secret': config['client_secret'],
+            'code': code,
+            'redirect_uri': redirect_uri,
+            'grant_type': 'authorization_code',
+        }
+
+        # Apple requires special client_secret generation via JWT
+        if provider == 'apple':
+            apple_secret = _generate_apple_client_secret()
+            if apple_secret:
+                token_data['client_secret'] = apple_secret
+            else:
+                logger.error("Failed to generate Apple client secret")
+                return redirect('/?oauth_error=apple_config')
+
+        token_resp = http_requests.post(config['token_url'], data=token_data, timeout=10)
+        if token_resp.status_code != 200:
+            logger.error(f"OAuth {provider}: Token exchange failed: {token_resp.text}")
+            return redirect('/?oauth_error=token_exchange_failed')
+
+        token_json = token_resp.json()
+        access_token = token_json.get('access_token', '')
+
+        # Get user info from provider
+        email = None
+        display_name = None
+
+        if provider == 'google':
+            userinfo_resp = http_requests.get(
+                config['userinfo_url'],
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=10
+            )
+            if userinfo_resp.status_code == 200:
+                userinfo = userinfo_resp.json()
+                email = userinfo.get('email', '').lower()
+                display_name = userinfo.get('name', '')
+
+        elif provider == 'facebook':
+            userinfo_resp = http_requests.get(
+                config['userinfo_url'],
+                params={'access_token': access_token},
+                timeout=10
+            )
+            if userinfo_resp.status_code == 200:
+                userinfo = userinfo_resp.json()
+                email = userinfo.get('email', '').lower()
+                display_name = userinfo.get('name', '')
+
+        elif provider == 'apple':
+            # Apple sends user info in the id_token (JWT)
+            id_token = token_json.get('id_token', '')
+            if id_token:
+                import base64
+                import json as json_module
+                # Decode JWT payload (Apple id_token)
+                payload_part = id_token.split('.')[1]
+                # Add padding
+                payload_part += '=' * (4 - len(payload_part) % 4)
+                payload = json_module.loads(base64.urlsafe_b64decode(payload_part))
+                email = payload.get('email', '').lower()
+            # Apple only sends name on first authorization
+            user_data = request.form.get('user', '')
+            if user_data:
+                try:
+                    import json as json_module
+                    user_info = json_module.loads(user_data)
+                    first = user_info.get('name', {}).get('firstName', '')
+                    last = user_info.get('name', {}).get('lastName', '')
+                    display_name = f"{first} {last}".strip()
+                except:
+                    pass
+
+        if not email:
+            logger.error(f"OAuth {provider}: No email received from provider")
+            return redirect('/?oauth_error=no_email')
+
+        # Find or create user (same pattern as magic link - non-invasive)
+        user = db.session.execute(
+            select(User).filter_by(email=email)
+        ).scalar_one_or_none()
+
+        oauth_language = session.pop('oauth_language', 'en')
+        is_new_user = False
+
+        if not user:
+            # Create new user (same pattern as magic link registration)
+            is_new_user = True
+            import secrets as sec
+
+            # Generate username from email or display name
+            if display_name:
+                base_username = sanitize_input(display_name.replace(' ', '_').lower()[:80])
+            else:
+                base_username = email.split('@')[0][:80]
+                base_username = sanitize_input(base_username)
+
+            # Check if username taken
+            existing = db.session.execute(
+                select(User).filter_by(username=base_username)
+            ).scalar_one_or_none()
+            if existing:
+                username = f"{base_username}_{sec.token_hex(4)}"
+            else:
+                username = base_username
+
+            user = User(
+                username=username,
+                email=email,
+                preferred_language=oauth_language
+            )
+            user.set_password(sec.token_urlsafe(32))  # Random password for OAuth users
+            db.session.add(user)
+            db.session.flush()
+
+            # Create profile
+            profile = Profile(user_id=user.id)
+            db.session.add(profile)
+
+            # Create welcome alert
+            alert = Alert(
+                user_id=user.id,
+                title='alerts.welcome_title',
+                content='alerts.welcome_message',
+                alert_type='success'
+            )
+            db.session.add(alert)
+
+            log_audit('user_registered', 'user', user.id, user.id,
+                     {'username': username, 'oauth_provider': provider})
+            logger.info(f"OAuth new user registered: {username} via {provider}")
+
+        # Update last login
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+
+        # Create session (same as regular login)
+        session['user_id'] = user.id
+        session['username'] = user.username
+        session['role'] = user.role
+        session.permanent = True
+        session['diary_redirect_pending'] = True
+
+        log_audit('login_success', 'user', user.id, user.id,
+                 {'oauth_provider': provider})
+        logger.info(f"OAuth login successful: {user.username} via {provider}")
+
+        # Check followlog target
+        followlog_target = session.pop('followlog_target', None)
+
+        # Redirect to app with success indicator
+        redirect_url = '/?oauth_success=1'
+        if is_new_user:
+            redirect_url += '&new_user=1'
+        if followlog_target:
+            redirect_url += f'&followlog_target={followlog_target}'
+
+        return redirect(redirect_url)
+
+    except Exception as e:
+        logger.error(f"OAuth callback error ({provider}): {e}")
+        db.session.rollback()
+        return redirect('/?oauth_error=callback_failed')
+
+
+def _generate_apple_client_secret():
+    """Generate Apple client secret JWT (required by Apple Sign In)"""
+    try:
+        import jwt
+        import time
+
+        team_id = os.environ.get('APPLE_TEAM_ID', '')
+        client_id = os.environ.get('APPLE_CLIENT_ID', '')
+        key_id = os.environ.get('APPLE_KEY_ID', '')
+        private_key = os.environ.get('APPLE_PRIVATE_KEY', '')
+
+        if not all([team_id, client_id, key_id, private_key]):
+            return None
+
+        # Replace escaped newlines
+        private_key = private_key.replace('\\n', '\n')
+
+        now = int(time.time())
+        payload = {
+            'iss': team_id,
+            'iat': now,
+            'exp': now + 86400 * 180,  # 6 months
+            'aud': 'https://appleid.apple.com',
+            'sub': client_id,
+        }
+        headers = {
+            'kid': key_id,
+            'alg': 'ES256',
+        }
+
+        return jwt.encode(payload, private_key, algorithm='ES256', headers=headers)
+    except Exception as e:
+        logger.error(f"Apple client secret generation error: {e}")
+        return None
+
+# === END SOCIAL OAUTH LOGIN ROUTES ===
 
 
 @app.route('/api/user/language', methods=['GET'])
