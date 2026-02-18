@@ -2505,6 +2505,39 @@
             </div>
             <h2 class="auth-title" id="authTitle" data-i18n="auth.welcome">Welcome Back</h2>
             
+            <!-- SOCIAL LOGIN BUTTONS - ACCT ADDITION -->
+            <div id="socialLoginSection" class="social-login-section">
+                <button type="button" class="social-btn social-btn-google" onclick="socialLogin('google')">
+                    <svg class="social-btn-icon" viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    <span data-i18n="auth.continue_google">Continue with Google</span>
+                </button>
+                
+                <button type="button" class="social-btn social-btn-facebook" onclick="socialLogin('facebook')">
+                    <svg class="social-btn-icon" viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/>
+                    </svg>
+                    <span data-i18n="auth.continue_facebook">Continue with Facebook</span>
+                </button>
+                
+                <button type="button" class="social-btn social-btn-apple" onclick="socialLogin('apple')">
+                    <svg class="social-btn-icon" viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" fill="#000000"/>
+                    </svg>
+                    <span data-i18n="auth.continue_apple">Continue with Apple</span>
+                </button>
+            </div>
+            
+            <!-- OR Divider between social and traditional login -->
+            <div id="socialOrDivider" class="auth-divider" style="margin: 24px 0 20px 0;">
+                <span data-i18n="auth.or">OR</span>
+            </div>
+            <!-- END SOCIAL LOGIN BUTTONS -->
+            
             <!-- LOGIN MODE: Single email/password form -->
             <form id="authForm">
                 <div id="loginSection">
@@ -2786,6 +2819,67 @@
     .magic-link-btn:hover {
         background: #e5e7eb;
     }
+
+    /* === SOCIAL LOGIN BUTTONS - ACCT ADDITION === */
+    .social-login-section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 0;
+    }
+    .social-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        padding: 11px 16px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid #E5E7EB;
+        background: #FFFFFF;
+        color: #3D4852;
+        line-height: 1.2;
+    }
+    .social-btn:hover {
+        border-color: #D1D5DB;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transform: translateY(-1px);
+    }
+    .social-btn:active {
+        transform: translateY(0);
+        box-shadow: none;
+    }
+    .social-btn-icon {
+        flex-shrink: 0;
+    }
+    .social-btn-google:hover {
+        border-color: #4285F4;
+        background: #f8faff;
+    }
+    .social-btn-facebook:hover {
+        border-color: #1877F2;
+        background: #f6f9ff;
+    }
+    .social-btn-apple:hover {
+        border-color: #000000;
+        background: #f9f9f9;
+    }
+    /* Dark mode social buttons */
+    @media (prefers-color-scheme: dark) {
+        .social-btn {
+            background: var(--dark, #3D4852);
+            border-color: #4B5563;
+            color: #E5E7EB;
+        }
+        .social-btn-apple svg path {
+            fill: #FFFFFF;
+        }
+    }
+    /* === END SOCIAL LOGIN BUTTONS CSS === */
 </style>
 
 
@@ -4579,6 +4673,48 @@
         window.addEventListener('load', extendI18n);
     })();
     </script>
+
+    <!-- ACCT: Social login i18n translations -->
+    <script>
+    (function() {
+        const acctSocialTranslations = {
+            en: {
+                'auth.continue_google': 'Continue with Google',
+                'auth.continue_facebook': 'Continue with Facebook',
+                'auth.continue_apple': 'Continue with Apple',
+            },
+            he: {
+                'auth.continue_google': 'המשך עם Google',
+                'auth.continue_facebook': 'המשך עם Facebook',
+                'auth.continue_apple': 'המשך עם Apple',
+            },
+            ar: {
+                'auth.continue_google': 'المتابعة مع Google',
+                'auth.continue_facebook': 'المتابعة مع Facebook',
+                'auth.continue_apple': 'المتابعة مع Apple',
+            },
+            ru: {
+                'auth.continue_google': 'Продолжить с Google',
+                'auth.continue_facebook': 'Продолжить с Facebook',
+                'auth.continue_apple': 'Продолжить с Apple',
+            }
+        };
+        function extendI18nSocial() {
+            if (window.i18n && window.i18n.translations) {
+                Object.keys(acctSocialTranslations).forEach(lang => {
+                    if (!window.i18n.translations[lang]) window.i18n.translations[lang] = {};
+                    Object.assign(window.i18n.translations[lang], acctSocialTranslations[lang]);
+                });
+                console.log('[ACCT] Extended i18n with social login translations');
+            }
+        }
+        extendI18nSocial();
+        document.addEventListener('DOMContentLoaded', extendI18nSocial);
+        window.addEventListener('load', extendI18nSocial);
+    })();
+    </script>
+    <!-- END ACCT Social login translations -->
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Global variables needed by parameters-social.js - MUST be declared first
@@ -4962,6 +5098,11 @@ async function loadUserCity() {
                 forgotPasswordLink.style.display = 'none';
                 this.setAttribute('data-i18n', 'auth.toggle_signin');
                 this.textContent = 'Already have an account? Sign in';
+                // ACCT: Show social buttons in signup mode too (users can sign up via OAuth)
+                const socialSection = document.getElementById('socialLoginSection');
+                const socialDivider = document.getElementById('socialOrDivider');
+                if (socialSection) socialSection.style.display = 'flex';
+                if (socialDivider) socialDivider.style.display = 'block';
             } else {
                 // Switch to login mode
                 authTitle.setAttribute('data-i18n', 'auth.welcome');
@@ -4971,6 +5112,11 @@ async function loadUserCity() {
                 forgotPasswordLink.style.display = 'block';
                 this.setAttribute('data-i18n', 'auth.toggle_signup');
                 this.textContent = "New here? Create an account";
+                // ACCT: Show social buttons in login mode
+                const socialSection2 = document.getElementById('socialLoginSection');
+                const socialDivider2 = document.getElementById('socialOrDivider');
+                if (socialSection2) socialSection2.style.display = 'flex';
+                if (socialDivider2) socialDivider2.style.display = 'block';
             }
             
             // Apply translations if i18n is available
@@ -5987,7 +6133,22 @@ window.safeApplyLanguage = safeApplyLanguage;
             document.getElementById('resetPasswordContainer').style.display = 'none';
             document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signin');
             document.getElementById('authSubmit').textContent = 'Sign In';
+            // ACCT: Show social login buttons in login mode
+            const socialSection = document.getElementById('socialLoginSection');
+            const socialDivider = document.getElementById('socialOrDivider');
+            if (socialSection) socialSection.style.display = 'flex';
+            if (socialDivider) socialDivider.style.display = 'block';
         }
+
+        // === SOCIAL LOGIN - ACCT ADDITION ===
+        function socialLogin(provider) {
+            // Save current language for post-login restoration
+            const lang = localStorage.getItem('selectedLanguage') || 'en';
+            localStorage.setItem('oauth_language', lang);
+            // Redirect to backend OAuth initiation endpoint
+            window.location.href = `/api/auth/oauth/${provider}?lang=${lang}`;
+        }
+        // === END SOCIAL LOGIN ===
 
         function showForgotPassword() {
             document.getElementById('authContainer').style.display = 'none';
@@ -12860,6 +13021,30 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.history.replaceState({}, document.title, window.location.pathname);
         return; // Don't proceed with normal login check
     }
+
+    // === SOCIAL OAUTH RETURN HANDLING - ACCT ADDITION ===
+    const oauthSuccess = urlParams.get('oauth_success');
+    const oauthError = urlParams.get('oauth_error');
+    if (oauthSuccess) {
+        // Clean URL and let normal session check proceed (user is now logged in)
+        window.history.replaceState({}, document.title, window.location.pathname);
+        console.log('[OAUTH] Login successful, proceeding to session check');
+    }
+    if (oauthError) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        const errorMessages = {
+            'state_mismatch': 'Login verification failed. Please try again.',
+            'no_email': 'Could not retrieve your email from the provider. Please use email/password login.',
+            'token_exchange_failed': 'Authentication failed. Please try again.',
+            'callback_failed': 'Login failed. Please try again.',
+            'initiation_failed': 'Could not connect to login provider. Please try again.',
+            'apple_config': 'Apple Sign In is not fully configured yet.',
+        };
+        const msg = errorMessages[oauthError] || 'Social login failed. Please try again or use email/password.';
+        // Delay notification slightly so page is ready
+        setTimeout(() => showNotification(msg, 'error'), 500);
+    }
+    // === END SOCIAL OAUTH RETURN HANDLING ===
 
     // LINK2 FIX: Await checkMagicToken and return if consent modal is shown
     const magicTokenHandled = await checkMagicToken();
