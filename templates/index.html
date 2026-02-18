@@ -2788,7 +2788,7 @@
             <div id="loginErrorMessage" class="login-error-message" style="display: none; background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; color: #dc2626; text-align: center; font-weight: 500;">
                 <span data-i18n="auth.invalid_credentials">You have entered an invalid username or password</span>
             </div>
-            <h2 class="auth-title" id="authTitle" data-i18n="auth.welcome">Welcome Back</h2>
+            <h2 class="auth-title" id="authTitle" data-i18n="auth.welcome">Welcome to TheraSocial</h2>
             
             <!-- SOCIAL LOGIN BUTTONS - ACCT ADDITION -->
             <div id="socialLoginSection" class="social-login-section">
@@ -2826,6 +2826,22 @@
             </div>
             <!-- END SOCIAL LOGIN BUTTONS -->
             
+            <!-- LOGIN MODE: Magic Link option (visible in login mode) -->
+            <div id="loginMagicLinkSection">
+                <div class="form-group">
+                    <label class="form-label" data-i18n="auth.email">Email</label>
+                    <input type="email" class="form-input" id="loginMagicLinkEmailInput" autocomplete="email" placeholder="Enter your email">
+                </div>
+                <button type="button" class="magic-link-btn" onclick="requestMagicLinkFromLogin()" data-i18n="auth.magic_link">
+                    Send me a magic link to sign in
+                </button>
+                
+                <!-- OR Divider -->
+                <div class="auth-divider">
+                    <span data-i18n="auth.or">OR</span>
+                </div>
+            </div>
+            
             <!-- LOGIN MODE: Single email/password form -->
             <form id="authForm">
                 <div id="loginSection">
@@ -2845,21 +2861,7 @@
             
             <!-- SIGNUP MODE: Magic Link + OR + Traditional Signup -->
             <div id="signupSection" style="display: none;">
-                <!-- Magic Link Option (TOP) -->
-                <div class="form-group">
-                    <label class="form-label" data-i18n="auth.email">Email</label>
-                    <input type="email" class="form-input" id="magicLinkEmailInput" autocomplete="email" placeholder="Enter your email">
-                </div>
-                <button type="button" class="magic-link-btn" onclick="requestMagicLinkSignup()" data-i18n="auth.magic_link">
-                    Send me a magic link to sign in
-                </button>
-                
-                <!-- OR Divider -->
-                <div class="auth-divider">
-                    <span data-i18n="auth.or">OR</span>
-                </div>
-                
-                <!-- Traditional Signup (BOTTOM) -->
+                <!-- Traditional Signup -->
                 <form id="signupForm">
                     <div class="form-group">
                         <label class="form-label" data-i18n="auth.email">Email</label>
@@ -2886,11 +2888,11 @@
                 </form>
             </div>
             
-            <p style="text-align: center; margin-top: 15px;">
-                <a href="#" id="forgotPasswordLink" style="color: var(--primary); font-size: 14px;" data-i18n="auth.forgot_password" onclick="showForgotPassword(); return false;">Forgot Your Password?</a>
-            </p>
             <p style="text-align: center; margin-top: 20px;">
-                <a href="#" id="toggleAuth" style="color: var(--primary);" data-i18n="auth.toggle_signup">New here? Create an account</a>
+                <button type="button" id="toggleAuth" class="btn btn-primary" style="width: 100%;" data-i18n="auth.toggle_signup">Don't have an account? Sign up</button>
+            </p>
+            <p style="text-align: center; margin-top: 15px;">
+                <a href="#" id="forgotPasswordLink" style="color: var(--primary); font-size: 17px;" data-i18n="auth.forgot_password" onclick="showForgotPassword(); return false;">Forgot Your Password?</a>
             </p>
         </div>
     </div>
@@ -5398,6 +5400,9 @@ async function loadUserCity() {
                 loginSection.style.display = 'none';
                 signupSection.style.display = 'block';
                 forgotPasswordLink.style.display = 'none';
+                // PASS2: Hide login magic link section in signup mode
+                const loginMagicLink = document.getElementById('loginMagicLinkSection');
+                if (loginMagicLink) loginMagicLink.style.display = 'none';
                 this.setAttribute('data-i18n', 'auth.toggle_signin');
                 this.textContent = 'Already have an account? Sign in';
                 // ACCT: Show social buttons in signup mode too (users can sign up via OAuth)
@@ -5408,12 +5413,15 @@ async function loadUserCity() {
             } else {
                 // Switch to login mode
                 authTitle.setAttribute('data-i18n', 'auth.welcome');
-                authTitle.textContent = 'Welcome Back';
+                authTitle.textContent = _t('auth.welcome', 'Welcome to TheraSocial');
                 loginSection.style.display = 'block';
                 signupSection.style.display = 'none';
                 forgotPasswordLink.style.display = 'block';
+                // PASS2: Show login magic link section in login mode
+                const loginMagicLink2 = document.getElementById('loginMagicLinkSection');
+                if (loginMagicLink2) loginMagicLink2.style.display = 'block';
                 this.setAttribute('data-i18n', 'auth.toggle_signup');
-                this.textContent = "New here? Create an account";
+                this.textContent = "Don't have an account? Sign up";
                 // ACCT: Show social buttons in login mode
                 const socialSection2 = document.getElementById('socialLoginSection');
                 const socialDivider2 = document.getElementById('socialOrDivider');
@@ -5712,6 +5720,45 @@ async function loadUserCity() {
   
   // Make function globally available
   window.requestMagicLinkSignup = requestMagicLinkSignup;
+
+  // PASS2: Magic link function for login page (uses loginMagicLinkEmailInput)
+  async function requestMagicLinkFromLogin() {
+      const email = document.getElementById('loginMagicLinkEmailInput').value;
+      if (!email) {
+          showNotification(_t('auth.email_required', 'Please enter your email address'), 'warning');
+          return;
+      }
+      
+      try {
+          const response = await fetch('/api/auth/request-magic-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  email,
+                  language: window.i18n && window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en'
+              })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+              const lang = localStorage.getItem('selectedLanguage') || 'en';
+              const successMessages = {
+                  'en': 'Magic link sent! Check your email.',
+                  'he': 'קישור הקסם נשלח! בדוק את האימייל שלך.',
+                  'ar': 'تم إرسال رابط السحر! تحقق من بريدك الإلكتروني.',
+                  'ru': 'Магическая ссылка отправлена! Проверьте свою почту.'
+              };
+              showNotification(successMessages[lang] || successMessages['en'], 'success');
+          } else {
+              showNotification(data.error || _t('auth.magic_link_failed', 'Failed to send magic link'), 'error');
+          }
+      } catch (error) {
+          console.error('Magic link error:', error);
+          showNotification(_t('auth.magic_link_failed', 'Failed to send magic link. Please try again.'), 'error');
+      }
+  }
+  window.requestMagicLinkFromLogin = requestMagicLinkFromLogin;
 
   // Update email prefix hint when typing in signup email
   document.getElementById('signupEmailInput').addEventListener('input', function() {
@@ -6450,6 +6497,20 @@ window.safeApplyLanguage = safeApplyLanguage;
             document.getElementById('resetPasswordContainer').style.display = 'none';
             document.getElementById('authSubmit').setAttribute('data-i18n', 'btn.signin');
             document.getElementById('authSubmit').textContent = 'Sign In';
+            // PASS2: Restore login mode elements
+            const loginSection = document.getElementById('loginSection');
+            const signupSection = document.getElementById('signupSection');
+            const loginMagicLink = document.getElementById('loginMagicLinkSection');
+            const forgotLink = document.getElementById('forgotPasswordLink');
+            const toggleBtn = document.getElementById('toggleAuth');
+            if (loginSection) loginSection.style.display = 'block';
+            if (signupSection) signupSection.style.display = 'none';
+            if (loginMagicLink) loginMagicLink.style.display = 'block';
+            if (forgotLink) forgotLink.style.display = 'block';
+            if (toggleBtn) {
+                toggleBtn.setAttribute('data-i18n', 'auth.toggle_signup');
+                toggleBtn.textContent = "Don't have an account? Sign up";
+            }
             // ACCT: Show social login buttons in login mode
             const socialSection = document.getElementById('socialLoginSection');
             const socialDivider = document.getElementById('socialOrDivider');
