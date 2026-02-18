@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- 10LinkN4: Fixed profile flash bug - clicking name in Circles showed own profile before target profile
+     Root cause: Two competing handlers both fired on ?view=profile&user_id=X
+     Fix: SCREEN FIX handler now checks for user_id and calls viewUserProfile() directly,
+     IIFE handler skips profile+user_id case to prevent double navigation -->
 <!-- 10Link LangFix Changes:
   1. Removed right sidebar (Alerts/Notifications) from home page - main content now full width
   2. Moved Triggers button from nav bar to other user's profile view (left of username)
@@ -13504,7 +13508,16 @@ window.addEventListener('DOMContentLoaded', async () => {
                             if (viewParam === 'following') loadFollowing();
                             else if (viewParam === 'followers') loadFollowers();
                             else if (viewParam === 'invite') loadInviteView();
-                            else if (viewParam === 'profile') loadProfile();
+                            else if (viewParam === 'profile') {
+                                // 10LinkN4: Check for user_id to view another user's profile
+                                // Without this check, loadProfile() shows own profile first
+                                const profileUserId = urlParams.get('user_id');
+                                if (profileUserId && typeof viewUserProfile === 'function') {
+                                    viewUserProfile(parseInt(profileUserId));
+                                } else {
+                                    loadProfile();
+                                }
+                            }
                             else if (viewParam === 'circles') loadCircles();
                             else if (viewParam === 'messages') loadConversations();
                             else if (viewParam === 'alerts') loadAlerts();
@@ -13652,12 +13665,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Remove the parameter from URL without reload
             window.history.replaceState({}, document.title, window.location.pathname);
 
-            // 10Link: If user_id provided with profile view, navigate to that user's profile
+            // 10LinkN4: Profile+user_id is now handled by the SCREEN FIX handler above
+            // to prevent showing own profile first. Only handle non-profile views here.
             if (viewParam === 'profile' && userIdParam) {
-                const uid = parseInt(userIdParam);
-                if (uid && typeof viewUserProfile === 'function') {
-                    setTimeout(function() { viewUserProfile(uid); }, 500);
-                }
+                // Already handled by SCREEN FIX handler - skip to avoid double navigation
+                console.log('[10LinkN4] Profile+user_id handled by SCREEN FIX, skipping IIFE handler');
             } else if (typeof showView === 'function') {
                 showView(viewParam);
             }
