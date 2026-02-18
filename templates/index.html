@@ -561,16 +561,14 @@
             padding: var(--content-padding, 30px);
         }
 
-        /* Navigation - P305: Updated styling - Visual Enhancement */
+        /* Navigation - P305: Updated styling */
         .navbar {
-            background: rgba(255, 255, 255, 0.97);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            box-shadow: 0 1px 0 rgba(107, 139, 164, 0.08), 0 4px 16px rgba(107, 139, 164, 0.06);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
             position: sticky;
             top: 0;
             z-index: 1000;
-            border-bottom: 1px solid rgba(107, 139, 164, 0.06);
         }
 
         .nav-content {
@@ -582,12 +580,9 @@
 
         .logo {
             font-size: 24px;
-            font-weight: 800;
+            font-weight: bold;
             color: var(--primary);
-            letter-spacing: -0.02em;
-            transition: opacity 0.2s;
         }
-        .logo:hover { opacity: 0.8; }
 
         .nav-menu {
             display: flex;
@@ -697,232 +692,290 @@
             background: var(--light);
         }
 
-        /* === VISUAL ENHANCEMENT: Home Page Polish === */
-        /* Refined card system with depth and warmth */
-        .home-section-card {
-            background: var(--white);
-            border-radius: 20px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.08);
-            border: 1px solid rgba(107, 139, 164, 0.06);
-            transition: box-shadow 0.3s ease, transform 0.2s ease;
-        }
-        .home-section-card:hover {
-            box-shadow: 0 4px 24px rgba(107, 139, 164, 0.14);
-        }
-        .home-section-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--primary-dark);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            letter-spacing: -0.01em;
-        }
-        .home-section-title .section-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
-            flex-shrink: 0;
+        /* ================================================================== */
+        /* VISUAL OVERHAUL V3 — Bold, unmissable home page improvements     */
+        /* ================================================================== */
+
+        /* --- Home page heading: large, colored, with greeting feel --- */
+        #homeView > h2:first-of-type {
+            font-size: 2rem !important;
+            font-weight: 800 !important;
+            color: var(--primary-dark) !important;
+            letter-spacing: -0.03em;
+            margin-bottom: 28px !important;
+            padding-bottom: 16px !important;
+            border-bottom: 3px solid var(--sage-light) !important;
         }
 
-        /* Status card visual upgrade */
+        /* --- Welcome card: richer gradient --- */
+        #welcomeCard {
+            background: linear-gradient(135deg, #5A7A93 0%, #7FA882 40%, #B6A9C9 100%) !important;
+            border-radius: 20px !important;
+            padding: 28px 28px !important;
+            box-shadow: 0 8px 32px rgba(90, 122, 147, 0.25) !important;
+        }
+
+        /* --- Summary Status Card: dramatic gradient with thick top border --- */
         #summaryStatusCard {
-            background: linear-gradient(145deg, rgba(244,241,236,0.7) 0%, rgba(212,230,214,0.5) 50%, rgba(251,232,224,0.4) 100%) !important;
-            border: 1px solid rgba(107, 139, 164, 0.1) !important;
-            backdrop-filter: blur(8px);
+            background: linear-gradient(160deg, #FBE8E0 0%, #D4E6D6 40%, #E8E1D9 100%) !important;
+            border-radius: 24px !important;
+            padding: 28px !important;
+            margin-bottom: 28px !important;
+            box-shadow: 0 4px 24px rgba(107, 139, 164, 0.15) !important;
+            border-top: 5px solid var(--primary) !important;
             position: relative;
             overflow: hidden;
         }
+        /* Decorative circle on status card */
         #summaryStatusCard::before {
             content: '';
             position: absolute;
-            top: -60px;
-            right: -60px;
-            width: 160px;
-            height: 160px;
+            top: -50px; right: -50px;
+            width: 180px; height: 180px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(168,197,171,0.15) 0%, transparent 70%);
+            background: rgba(157, 184, 160, 0.12);
             pointer-events: none;
         }
+        #summaryStatusCard::after {
+            content: '';
+            position: absolute;
+            bottom: -40px; left: -40px;
+            width: 140px; height: 140px;
+            border-radius: 50%;
+            background: rgba(232, 144, 122, 0.08);
+            pointer-events: none;
+        }
+
+        /* Status card param tiles: white glass with colored bottom accent */
         #summaryStatusCard .param-mini {
-            background: rgba(255,255,255,0.85) !important;
-            border: 1px solid rgba(107, 139, 164, 0.08);
+            background: rgba(255,255,255,0.9) !important;
+            border-radius: 16px !important;
+            padding: 16px 12px !important;
+            border: 1px solid rgba(107, 139, 164, 0.1);
+            border-bottom: 3px solid var(--primary-light);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            z-index: 1;
         }
         #summaryStatusCard .param-mini:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(107, 139, 164, 0.12);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(107, 139, 164, 0.18);
         }
 
-        /* Quick check-in card visual upgrade */
-        #quickCheckinCard {
-            border: none !important;
-            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(251,232,224,0.4) 100%) !important;
-            box-shadow: 0 2px 16px rgba(232,144,122,0.1);
-        }
-        #quickCheckinCard button {
-            transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-            border: 1px solid rgba(0,0,0,0.04) !important;
-        }
-        #quickCheckinCard button:hover {
-            transform: scale(1.08) !important;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
-        }
-        #quickCheckinCard button:active {
-            transform: scale(0.95) !important;
-        }
-
-        /* Recommendations card visual upgrade */
-        #todayRecommendations {
-            border: 1px solid rgba(168,197,171,0.15) !important;
-            position: relative;
-            overflow: hidden;
-        }
-        #todayRecommendations::after {
-            content: '';
-            position: absolute;
-            bottom: -30px;
-            left: -30px;
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(168,197,171,0.12) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        /* Friends updates and connection status cards */
-        #friendsUpdatesSection, #connectionStatusSection, #homeAlertsSection {
-            background: var(--white);
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 2px 16px rgba(107,139,164,0.08);
-            border: 1px solid rgba(107,139,164,0.06);
-        }
-
-        /* Feed section visual upgrade */
-        #homeFeedSection {
-            background: var(--white);
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 2px 16px rgba(107,139,164,0.08);
-            border: 1px solid rgba(107,139,164,0.06);
-        }
-        .feed-calendar-section {
-            background: rgba(244,241,236,0.5);
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid rgba(107,139,164,0.06);
-        }
-
-        /* Welcome card polish */
-        #welcomeCard {
-            background: linear-gradient(135deg, #6B8BA4 0%, #9DB8A0 50%, #B6A9C9 100%) !important;
-            border: none;
-            position: relative;
-            overflow: hidden;
-        }
-        #welcomeCard::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.08);
-            pointer-events: none;
-        }
-
-        /* Streak badge animation */
+        /* Streak badge: pulsing glow */
         #streakBadge {
-            animation: streakPulse 3s ease-in-out infinite;
+            animation: streakGlow 2.5s ease-in-out infinite;
         }
-        @keyframes streakPulse {
+        @keyframes streakGlow {
             0%, 100% { box-shadow: 0 0 0 0 rgba(232,144,122,0); }
-            50% { box-shadow: 0 0 0 6px rgba(232,144,122,0.15); }
+            50% { box-shadow: 0 0 0 8px rgba(232,144,122,0.2); }
         }
 
-        /* Home page heading */
-        #homeView > h2 {
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: var(--primary-dark);
-            letter-spacing: -0.02em;
-            margin-bottom: 24px !important;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        /* --- Quick Check-In: solid card, no dashed border --- */
+        #quickCheckinCard {
+            background: linear-gradient(135deg, #fff 0%, #FBE8E0 100%) !important;
+            border: none !important;
+            border-left: 5px solid var(--coral) !important;
+            border-radius: 20px !important;
+            padding: 24px !important;
+            margin-bottom: 28px !important;
+            box-shadow: 0 4px 20px rgba(232, 144, 122, 0.12) !important;
         }
-        #homeView > h2::before {
-            content: '🏠';
-            font-size: 1.3rem;
+        #quickCheckinCard button[onclick*="quickCheckin"] {
+            border-radius: 16px !important;
+            font-size: 2rem !important;
+            padding: 16px !important;
+            transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+            border: 2px solid rgba(0,0,0,0.04) !important;
         }
-
-        /* Section headings within home */
-        #friendsUpdatesSection h3,
-        #connectionStatusSection h3,
-        #homeAlertsSection h3,
-        #homeFeedSection h3 {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            letter-spacing: -0.01em;
+        #quickCheckinCard button[onclick*="quickCheckin"]:hover {
+            transform: scale(1.12) translateY(-3px) !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1) !important;
+        }
+        #quickCheckinCard button[onclick*="quickCheckin"]:active {
+            transform: scale(0.92) !important;
         }
 
-        /* Smooth appear animation for home cards */
-        @keyframes homeCardAppear {
-            from { opacity: 0; transform: translateY(12px); }
+        /* --- Recommendations: card with colored left bar --- */
+        #todayRecommendations {
+            background: linear-gradient(145deg, #D4E6D6 0%, rgba(212,230,214,0.3) 100%) !important;
+            border-radius: 20px !important;
+            border-left: 5px solid var(--sage-dark) !important;
+            padding: 24px !important;
+            margin-bottom: 28px !important;
+            box-shadow: 0 4px 20px rgba(168, 197, 171, 0.15) !important;
+        }
+
+        /* --- Friends Updates: VISIBLE card container --- */
+        #friendsUpdatesSection {
+            background: var(--white) !important;
+            border-radius: 20px !important;
+            padding: 24px !important;
+            margin-bottom: 28px !important;
+            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08);
+            border-left: 5px solid var(--primary-light);
+        }
+
+        /* --- Connections Status: VISIBLE card container --- */
+        #connectionStatusSection {
+            background: var(--white) !important;
+            border-radius: 20px !important;
+            padding: 24px !important;
+            margin-bottom: 28px !important;
+            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08);
+            border-left: 5px solid var(--accent);
+        }
+
+        /* --- Alerts Section: VISIBLE card container --- */
+        #homeAlertsSection {
+            background: var(--white) !important;
+            border-radius: 20px !important;
+            padding: 24px !important;
+            margin-bottom: 28px !important;
+            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08);
+            border-left: 5px solid var(--coral-light);
+        }
+
+        /* --- Feed/Journal Section: VISIBLE card container --- */
+        #homeFeedSection {
+            background: var(--white) !important;
+            border-radius: 20px !important;
+            padding: 24px !important;
+            margin-bottom: 28px !important;
+            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08);
+            border-left: 5px solid var(--sage);
+        }
+
+        /* --- Section headings: colored pill icon before text --- */
+        #friendsUpdatesSection > h3,
+        #connectionStatusSection > h3,
+        #homeAlertsSection > h3,
+        #homeFeedSection > h3 {
+            font-weight: 700 !important;
+            font-size: 1.15rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding-bottom: 14px !important;
+            border-bottom: 2px solid var(--light) !important;
+            margin-bottom: 18px !important;
+        }
+
+        /* --- Feed calendar: softer look --- */
+        #homeView .feed-calendar-section {
+            background: var(--light) !important;
+            border-radius: 18px !important;
+            padding: 24px !important;
+            border: 1px solid rgba(107, 139, 164, 0.06);
+        }
+
+        /* --- Staggered entry animation --- */
+        @keyframes homeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        #homeView > div, #homeView > .view {
-            animation: homeCardAppear 0.4s ease-out both;
+        #homeView > * {
+            animation: homeSlideUp 0.5s ease-out both;
         }
-        #homeView > div:nth-child(2) { animation-delay: 0.05s; }
-        #homeView > div:nth-child(3) { animation-delay: 0.1s; }
-        #homeView > div:nth-child(4) { animation-delay: 0.15s; }
-        #homeView > div:nth-child(5) { animation-delay: 0.2s; }
-        #homeView > div:nth-child(6) { animation-delay: 0.25s; }
-        #homeView > div:nth-child(7) { animation-delay: 0.3s; }
-        #homeView > div:nth-child(8) { animation-delay: 0.35s; }
-        #homeView > div:nth-child(9) { animation-delay: 0.4s; }
+        #homeView > *:nth-child(1) { animation-delay: 0s; }
+        #homeView > *:nth-child(2) { animation-delay: 0.06s; }
+        #homeView > *:nth-child(3) { animation-delay: 0.12s; }
+        #homeView > *:nth-child(4) { animation-delay: 0.18s; }
+        #homeView > *:nth-child(5) { animation-delay: 0.24s; }
+        #homeView > *:nth-child(6) { animation-delay: 0.30s; }
+        #homeView > *:nth-child(7) { animation-delay: 0.36s; }
+        #homeView > *:nth-child(8) { animation-delay: 0.42s; }
+        #homeView > *:nth-child(9) { animation-delay: 0.48s; }
+        #homeView > *:nth-child(10) { animation-delay: 0.54s; }
 
-        /* Better dividers between sections */
-        #friendsUpdatesSection + div,
-        #connectionStatusSection + div {
-            margin-top: 24px;
+        /* --- Main content area: subtle warm background --- */
+        .main-content {
+            background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 60%, #F4F1EC 100%) !important;
+            border-radius: 20px !important;
+            border: 1px solid rgba(107, 139, 164, 0.06);
         }
 
-        /* Dark mode adjustments for visual enhancements */
+        /* --- Sidebar: better active state --- */
+        .sidebar {
+            border-radius: 18px !important;
+            border: 1px solid rgba(107, 139, 164, 0.06);
+        }
+        .sidebar-item.active {
+            box-shadow: 0 4px 16px rgba(107, 139, 164, 0.3) !important;
+            font-weight: 600;
+        }
+        .sidebar-item:hover:not(.active) {
+            transform: translateY(-1px);
+        }
+
+        /* --- Navbar: cleaner --- */
+        .navbar {
+            border-bottom: 1px solid rgba(107, 139, 164, 0.06) !important;
+        }
+        .logo {
+            font-weight: 800 !important;
+            letter-spacing: -0.02em;
+        }
+
+        /* --- Dark mode compatibility --- */
         .dark-mode #summaryStatusCard {
-            background: linear-gradient(145deg, rgba(45,55,72,0.9) 0%, rgba(31,41,55,0.9) 100%) !important;
+            background: linear-gradient(160deg, #2D3748 0%, #374151 40%, #2D3748 100%) !important;
+            border-top-color: var(--primary-light) !important;
         }
         .dark-mode #summaryStatusCard .param-mini {
-            background: rgba(45,55,72,0.85) !important;
-            border-color: rgba(255,255,255,0.08);
+            background: rgba(45, 55, 72, 0.9) !important;
+            border-color: rgba(255,255,255,0.06);
         }
         .dark-mode #friendsUpdatesSection,
         .dark-mode #connectionStatusSection,
         .dark-mode #homeAlertsSection,
         .dark-mode #homeFeedSection {
-            background: var(--white);
+            background: var(--white) !important;
             border-color: var(--border);
         }
         .dark-mode #quickCheckinCard {
-            background: rgba(31,41,55,0.95) !important;
+            background: linear-gradient(135deg, #2D3748 0%, #374151 100%) !important;
         }
-        .dark-mode #welcomeCard {
-            background: linear-gradient(135deg, #4A6B82 0%, #5A8A5E 50%, #7A6D9C 100%) !important;
+        .dark-mode #todayRecommendations {
+            background: linear-gradient(145deg, #374151 0%, #2D3748 100%) !important;
+        }
+        .dark-mode .main-content {
+            background: var(--white) !important;
         }
 
-        /* === END VISUAL ENHANCEMENT === */
+        /* RTL: flip left-borders to right-borders */
+        [dir="rtl"] #quickCheckinCard {
+            border-left: none !important;
+            border-right: 5px solid var(--coral) !important;
+        }
+        [dir="rtl"] #todayRecommendations {
+            border-left: none !important;
+            border-right: 5px solid var(--sage-dark) !important;
+        }
+        [dir="rtl"] #friendsUpdatesSection {
+            border-left: none !important;
+            border-right: 5px solid var(--primary-light) !important;
+        }
+        [dir="rtl"] #connectionStatusSection {
+            border-left: none !important;
+            border-right: 5px solid var(--accent) !important;
+        }
+        [dir="rtl"] #homeAlertsSection {
+            border-left: none !important;
+            border-right: 5px solid var(--coral-light) !important;
+        }
+        [dir="rtl"] #homeFeedSection {
+            border-left: none !important;
+            border-right: 5px solid var(--sage) !important;
+        }
+
+        /* ================================================================== */
+        /* END VISUAL OVERHAUL V3                                             */
+        /* ================================================================== */
 
         /* Dashboard - P305: Wider, more open layout */
         .dashboard {
@@ -941,11 +994,10 @@
         .sidebar {
             grid-column: 1 / -1;
             background: var(--white);
-            border-radius: 18px;
-            padding: 10px 18px;
-            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1);
+            border-radius: 16px;
+            padding: 8px 16px;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
             overflow-x: auto;
-            border: 1px solid rgba(107, 139, 164, 0.06);
         }
 
         .sidebar-menu {
@@ -960,25 +1012,22 @@
             padding: 10px 16px;
             border-radius: 12px;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 8px;
             white-space: nowrap;
             flex-shrink: 0;
-            font-weight: 500;
         }
 
         .sidebar-item:hover {
             background: var(--light);
-            transform: translateY(-1px);
         }
 
         .sidebar-item.active {
             background: var(--primary);
             color: var(--white);
-            box-shadow: 0 4px 14px rgba(107, 139, 164, 0.3);
-            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(107, 139, 164, 0.3);
         }
 
         /* Sidebar icons - matching mobile style */
@@ -997,13 +1046,12 @@
             flex-direction: row-reverse;
         }
 
-        /* Main Content - P305: More spacious padding - Visual Enhancement */
+        /* Main Content - P305: More spacious padding */
         .main-content {
-            background: linear-gradient(180deg, var(--white) 0%, rgba(244,241,236,0.3) 100%);
-            border-radius: 20px;
-            padding: 32px;
-            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1);
-            border: 1px solid rgba(107, 139, 164, 0.06);
+            background: var(--white);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
         }
 
         /* Feed - Enhanced with Calendar - P305: Softer colors */
@@ -14323,8 +14371,11 @@ window.generateExcelReport = generateExcelReport;
 window.generatePdfReport = generatePdfReport;
 window.prepareEmailReport = prepareEmailReport;
 
-// ===== INLINE ONBOARDING SYSTEM V3 - Comprehensive Tutorial =====
-// Visual-first, step-by-step guide covering ALL features with rich descriptions
+// ===== INLINE ONBOARDING SYSTEM (with i18n support) =====
+// This replaces the external onboarding.js to properly use translations
+
+// ===== INLINE ONBOARDING SYSTEM V3 — Comprehensive Tutorial =====
+// Step-by-step guide covering ALL features with rich descriptions, tips, and 4-language support
 
 const InlineOnboarding = {
     currentStep: 0,
@@ -14332,69 +14383,72 @@ const InlineOnboarding = {
     overlay: null,
     modal: null,
     
-    // Get translation with fallback
+    // FIXED: t() now detects when i18n returns the raw key (meaning not found) and uses fallback
     t: function(key) {
         if (window.i18n && window.i18n.t) {
             const val = window.i18n.t(key);
+            // If i18n returned something different from the key itself, use it
             if (val && val !== key) return val;
         }
-        // Fallback English translations
-        const fallbacks = {
-            'onboarding.welcome': 'Welcome to TheraSocial!',
-            'onboarding.welcome_desc': 'Your wellness companion for tracking, connecting, and growing together. This short guide will walk you through everything you need to know.',
-            'onboarding.welcome_tip': 'You can restart this tour anytime from the Tutorial button in the navigation bar.',
-            'onboarding.home': 'Home — Your Daily Dashboard',
-            'onboarding.home_desc': 'Your home page shows everything at a glance: today\'s wellness status, your streak, a quick mood check-in, personalized recommendations, friends\' updates, and your journal feed.',
-            'onboarding.home_tip': 'Tip: Use the Quick Check-In to log your mood with a single tap — even on busy days.',
-            'onboarding.diary': 'Diary — Track Your Wellness',
-            'onboarding.diary_desc': 'The Diary is where you record your daily wellness: Mood, Energy, Sleep Quality, Physical Activity, and Stress levels. Select a date on the calendar, set your values using the sliders, and save.',
-            'onboarding.diary_tip': 'Tip: Consistency is key! Even a quick 30-second check-in helps build meaningful patterns over time.',
-            'onboarding.progress': 'Progress — See Your Trends',
-            'onboarding.progress_desc': 'The Progress page shows your wellness data as visual charts and graphs. Track how your mood, sleep, and energy change over time. Set your location to see local time and weather context.',
-            'onboarding.progress_tip': 'Tip: Look for patterns — for example, how exercise affects your mood the following day.',
-            'onboarding.circles': 'Circles — Privacy Levels',
-            'onboarding.circles_desc': 'Circles let you organize your connections into trust levels: General (acquaintances), Close Friends, and Family. Each circle controls who can see specific diary entries and updates you share.',
-            'onboarding.circles_tip': 'Tip: When posting in your feed or saving diary entries, you can choose which circle can see them.',
-            'onboarding.messages': 'Messages — Private Conversations',
-            'onboarding.messages_desc': 'Send private messages to any of your connections. Use the 💬 template button for quick supportive messages when you\'re not sure what to say.',
-            'onboarding.messages_tip': 'Tip: A short encouraging message can brighten someone\'s day — don\'t overthink it!',
-            'onboarding.connections': 'Connections — Build Your Network',
-            'onboarding.connections_desc': 'Find and follow other users in the Connections tab. Browse recommendations, search for people, and manage your connections. Click any connection to view their profile, send a message, or set up alerts.',
-            'onboarding.connections_tip': 'Tip: Follow people you trust to see their wellness updates and support each other.',
-            'onboarding.invite': 'Invite — Bring Friends Along',
-            'onboarding.invite_desc': 'Share your unique invite link with friends, family, or your therapist. When they join, they\'ll be prompted to connect with you. Growing your circle makes TheraSocial more meaningful.',
-            'onboarding.invite_tip': 'Tip: Your invite link can be shared via text, email, or social media.',
-            'onboarding.triggers': 'Triggers & Alerts — Watch Over Loved Ones',
-            'onboarding.triggers_desc': 'Set wellness alerts for connections you care about. When you view someone\'s profile, use the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or stress rises above 4.',
-            'onboarding.triggers_tip': 'Tip: Alerts are a caring tool. You\'ll receive email notifications when patterns are detected.',
-            'onboarding.settings': 'Settings — Personalize Your Experience',
-            'onboarding.settings_desc': 'In Settings, manage your profile (bio, interests, goals), change your password, set notification preferences, choose your diary reminder time, and export your data. You can also toggle dark mode for evening use.',
-            'onboarding.settings_tip': 'Tip: Set a daily diary reminder to build a consistent tracking habit.',
-            'onboarding.finish_title': 'You\'re All Set!',
-            'onboarding.finish_desc': 'You now know everything you need to start your TheraSocial wellness journey. Start by updating your diary, connecting with friends, and checking in daily.',
-            'onboarding.finish_tip': 'Remember: Small, consistent steps lead to meaningful change. We\'re here to support you every step of the way.',
-            'onboarding.next': 'Next',
-            'onboarding.previous': 'Back',
-            'onboarding.skip': 'Skip Tour',
-            'onboarding.finish': 'Get Started!',
-            'onboarding.dont_show': "Don't show this tour again",
-            'onboarding.step_of': 'of'
-        };
-        return fallbacks[key] || key;
+        // Fallback English translations — used when i18n doesn't have the key
+        const fb = this._fallbacks;
+        return (fb && fb[key]) ? fb[key] : key;
+    },
+    
+    _fallbacks: {
+        'onboarding.welcome': 'Welcome to TheraSocial!',
+        'onboarding.welcome_desc': 'Your wellness companion for tracking, connecting, and growing together. This short guide will walk you through everything you need to know.',
+        'onboarding.welcome_tip': 'You can restart this tour anytime from the Tutorial button in the navigation bar.',
+        'onboarding.home': 'Home — Your Daily Dashboard',
+        'onboarding.home_desc': 'Your home page shows everything at a glance: today\'s wellness status, your streak, a quick mood check-in, personalized recommendations, friends\' updates, and your journal feed.',
+        'onboarding.home_tip': 'Tip: Use the Quick Check-In to log your mood with a single tap — even on busy days.',
+        'onboarding.diary': 'Diary — Track Your Wellness',
+        'onboarding.diary_desc': 'The Diary is where you record daily wellness: Mood, Energy, Sleep Quality, Physical Activity, and Stress. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
+        'onboarding.diary_tip': 'Tip: Consistency is key! Even a quick 30-second check-in helps build meaningful patterns over time.',
+        'onboarding.progress': 'Progress — See Your Trends',
+        'onboarding.progress_desc': 'The Progress page shows your wellness data as visual charts and graphs. Track how your mood, sleep, and energy change over weeks and months. Set your location to see local time and weather.',
+        'onboarding.progress_tip': 'Tip: Look for patterns — for example, how exercise affects your mood the following day.',
+        'onboarding.circles': 'Circles — Privacy Levels',
+        'onboarding.circles_desc': 'Circles let you organize connections into trust levels: General (acquaintances), Close Friends, and Family. Each circle controls who sees your diary entries and feed posts.',
+        'onboarding.circles_tip': 'Tip: When posting in your feed or saving diary entries, choose which circle can see them using the visibility dropdown.',
+        'onboarding.messages': 'Messages — Private Conversations',
+        'onboarding.messages_desc': 'Send private messages to any of your connections. Use the 💬 template button for quick supportive messages when you\'re not sure what to say.',
+        'onboarding.messages_tip': 'Tip: A short encouraging message can brighten someone\'s day — don\'t overthink it!',
+        'onboarding.connections': 'Connections — Build Your Network',
+        'onboarding.connections_desc': 'Find and follow other users in the Connections tab. Browse recommendations, search for people, and manage your connections. Click any connection to view their profile, send a message, or set up wellness alerts.',
+        'onboarding.connections_tip': 'Tip: Follow people you trust to see their wellness updates and support each other.',
+        'onboarding.invite': 'Invite — Bring Friends Along',
+        'onboarding.invite_desc': 'Share your unique invite link with friends, family, or your therapist. When they join through your link, they\'ll be prompted to connect with you. Growing your circle makes the experience more meaningful.',
+        'onboarding.invite_tip': 'Tip: Your invite link can be shared via text message, email, WhatsApp, or social media.',
+        'onboarding.triggers': 'Triggers & Alerts — Watch Over Loved Ones',
+        'onboarding.triggers_desc': 'Set wellness alerts for connections you care about. Visit someone\'s profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or stress rises above 4. You\'ll receive email alerts when patterns are detected.',
+        'onboarding.triggers_tip': 'Tip: To set a trigger, go to Connections → click a person → View Full Profile → tap the Triggers button next to their name.',
+        'onboarding.settings': 'Settings — Personalize Everything',
+        'onboarding.settings_desc': 'In Settings, manage your profile (bio, interests, goals, timezone), change your password, toggle notifications and alerts, set a daily diary reminder time, export your data, or delete your account.',
+        'onboarding.settings_tip': 'Tip: Set a daily diary reminder to build a consistent tracking habit. Toggle dark mode for comfortable evening use.',
+        'onboarding.finish_title': 'You\'re All Set!',
+        'onboarding.finish_desc': 'You now know everything you need to start your TheraSocial wellness journey. Begin by updating your diary, connecting with friends, and checking in daily.',
+        'onboarding.finish_tip': 'Remember: Small, consistent steps lead to meaningful change. We\'re here to support you every step of the way. 💚',
+        'onboarding.next': 'Next',
+        'onboarding.previous': 'Back',
+        'onboarding.skip': 'Skip Tour',
+        'onboarding.finish': 'Get Started!',
+        'onboarding.dont_show': "Don't show this tour again",
+        'onboarding.step_of': 'of'
     },
     
     steps: [
         { key: 'welcome', icon: '👋', color: '#6B8BA4', highlight: null },
-        { key: 'home', icon: '🏠', color: '#6B8BA4', highlight: '.sidebar-item[data-view="home"]' },
+        { key: 'home', icon: '🏠', color: '#5A7A93', highlight: '.sidebar-item[data-view="home"]' },
         { key: 'diary', icon: '📊', color: '#E8907A', highlight: '.sidebar-item[data-view="tracking"]' },
         { key: 'progress', icon: '📈', color: '#9DB8A0', highlight: '.sidebar-item[data-view="progress"]' },
         { key: 'circles', icon: '⭕', color: '#B6A9C9', highlight: '.sidebar-item[data-view="circles"]' },
-        { key: 'messages', icon: '💬', color: '#AFC7D6', highlight: '.sidebar-item[data-view="messages"]' },
-        { key: 'connections', icon: '🤝', color: '#A8C5AB', highlight: '.sidebar-item[data-view="connections"]' },
+        { key: 'messages', icon: '💬', color: '#6B8BA4', highlight: '.sidebar-item[data-view="messages"]' },
+        { key: 'connections', icon: '🤝', color: '#7FA882', highlight: '.sidebar-item[data-view="connections"]' },
         { key: 'invite', icon: '✉️', color: '#D4A574', highlight: '.sidebar-item[data-view="invite"]' },
         { key: 'triggers', icon: '🔔', color: '#C17C74', highlight: null },
         { key: 'settings', icon: '⚙️', color: '#8FAFC4', highlight: '.sidebar-item[data-view="settings"]' },
-        { key: 'finish_title', icon: '🌟', color: '#9DB8A0', highlight: null }
+        { key: 'finish_title', icon: '🌟', color: '#7FA882', highlight: null }
     ],
     
     init: async function() {
@@ -14412,7 +14466,7 @@ const InlineOnboarding = {
                 }
             }
         } catch (error) {
-            console.error('[InlineOnboarding] Error checking status:', error);
+            console.error('[Onboarding] Error:', error);
         }
     },
     
@@ -14422,46 +14476,37 @@ const InlineOnboarding = {
         const existingModal = document.getElementById('onboarding-modal');
         if (existingModal) existingModal.remove();
 
-        const isRTL = ['he', 'ar'].includes(this.language);
-
-        // Overlay
+        // Overlay with frosted glass
         this.overlay = document.createElement('div');
         this.overlay.id = 'onboarding-overlay';
         this.overlay.style.cssText = `
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
             z-index: 9998;
-            transition: opacity 0.3s ease;
         `;
 
-        const modalWidth = Math.min(window.innerWidth * 0.92, 420);
+        // Modal — wider and better styled
+        const modalWidth = Math.min(window.innerWidth * 0.92, 440);
         const expectedLeft = (window.innerWidth - modalWidth) / 2;
 
-        // Modal
         this.modal = document.createElement('div');
         this.modal.id = 'onboarding-modal';
         this.modal.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 0;
+            position: fixed; top: 50%; left: 0;
             width: ${modalWidth}px;
             max-height: calc(100vh - 40px);
             background: #ffffff;
             border-radius: 24px;
-            padding: 0;
-            overflow: hidden;
-            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.05);
-            z-index: 9999;
-            box-sizing: border-box;
-            transition: transform 0.3s ease;
+            padding: 0; overflow: hidden;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0,0,0,0.04);
+            z-index: 9999; box-sizing: border-box;
         `;
 
         document.body.appendChild(this.overlay);
         document.body.appendChild(this.modal);
 
-        // P103: Measure where browser actually placed it, then correct with transform
+        // P103 FIX: correct centering in RTL
         const actualLeft = this.modal.getBoundingClientRect().left;
         const offsetNeeded = expectedLeft - actualLeft;
         this.modal.style.transform = `translate(${offsetNeeded}px, -50%)`;
@@ -14480,110 +14525,102 @@ const InlineOnboarding = {
         const isRTL = ['he', 'ar'].includes(this.language);
         const dir = isRTL ? 'rtl' : 'ltr';
         const totalSteps = this.steps.length;
-        const progressPercent = ((this.currentStep) / (totalSteps - 1)) * 100;
-        const stepColor = step.color || '#6B8BA4';
+        const progressPct = ((this.currentStep) / (totalSteps - 1)) * 100;
+        const clr = step.color || '#6B8BA4';
 
-        // Build title and description keys
+        // Build keys
         let titleKey, descKey, tipKey;
         if (step.key === 'welcome') {
-            titleKey = 'onboarding.welcome';
-            descKey = 'onboarding.welcome_desc';
-            tipKey = 'onboarding.welcome_tip';
+            titleKey = 'onboarding.welcome'; descKey = 'onboarding.welcome_desc'; tipKey = 'onboarding.welcome_tip';
         } else if (step.key === 'finish_title') {
-            titleKey = 'onboarding.finish_title';
-            descKey = 'onboarding.finish_desc';
-            tipKey = 'onboarding.finish_tip';
+            titleKey = 'onboarding.finish_title'; descKey = 'onboarding.finish_desc'; tipKey = 'onboarding.finish_tip';
         } else {
-            titleKey = `onboarding.${step.key}`;
-            descKey = `onboarding.${step.key}_desc`;
-            tipKey = `onboarding.${step.key}_tip`;
+            titleKey = `onboarding.${step.key}`; descKey = `onboarding.${step.key}_desc`; tipKey = `onboarding.${step.key}_tip`;
         }
 
-        const stepOfText = this.t('onboarding.step_of');
+        const ofText = this.t('onboarding.step_of');
+        const borderSide = isRTL ? 'border-right' : 'border-left';
+        const borderNone = isRTL ? 'border-left: none;' : 'border-right: none;';
+        const closeSide = isRTL ? 'left' : 'right';
 
         this.modal.innerHTML = `
-            <!-- Progress bar -->
-            <div style="height: 4px; background: #f0f0f0; width: 100%;">
-                <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, ${stepColor}, ${stepColor}cc); border-radius: 0 4px 4px 0; transition: width 0.4s ease;"></div>
+            <!-- Top progress bar -->
+            <div style="height: 5px; background: #f0f0f0; width: 100%;">
+                <div style="height: 100%; width: ${progressPct}%; background: ${clr}; border-radius: 0 5px 5px 0; transition: width 0.4s ease;"></div>
             </div>
 
-            <div style="padding: 28px 24px 24px; direction: ${dir}; overflow-y: auto; max-height: calc(100vh - 80px);">
-                <!-- Close button -->
+            <div style="padding: 32px 28px 28px; direction: ${dir}; overflow-y: auto; max-height: calc(100vh - 80px);">
+                <!-- Close X -->
                 <button onclick="InlineOnboarding.close()" style="
-                    position: absolute; top: 14px; ${isRTL ? 'left' : 'right'}: 16px;
-                    background: #f5f5f5; border: none; width: 32px; height: 32px;
-                    border-radius: 50%; font-size: 18px; cursor: pointer; color: #888;
+                    position: absolute; top: 16px; ${closeSide}: 18px;
+                    background: #f5f5f5; border: none; width: 34px; height: 34px;
+                    border-radius: 50%; font-size: 20px; cursor: pointer; color: #777;
                     display: flex; align-items: center; justify-content: center;
-                    transition: background 0.2s;
-                " onmouseenter="this.style.background='#e8e8e8'" onmouseleave="this.style.background='#f5f5f5'">&times;</button>
+                    transition: background 0.2s; line-height: 1;
+                " onmouseenter="this.style.background='#eaeaea'" onmouseleave="this.style.background='#f5f5f5'">&times;</button>
 
                 <!-- Step counter -->
-                <div style="font-size: 12px; color: #999; margin-bottom: 16px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
-                    ${this.currentStep + 1} ${stepOfText} ${totalSteps}
+                <div style="font-size: 12px; color: #aaa; margin-bottom: 20px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
+                    ${this.currentStep + 1} ${ofText} ${totalSteps}
                 </div>
 
-                <!-- Icon with colored background -->
+                <!-- Icon in colored rounded square -->
                 <div style="
-                    width: 64px; height: 64px; border-radius: 18px;
-                    background: ${stepColor}15;
-                    display: flex; align-items: center; justify-content: center;
-                    font-size: 32px; margin-bottom: 20px;
-                    border: 2px solid ${stepColor}20;
+                    width: 68px; height: 68px; border-radius: 20px;
+                    background: ${clr}18; display: flex; align-items: center; justify-content: center;
+                    font-size: 34px; margin-bottom: 22px; border: 2px solid ${clr}25;
                 ">${step.icon}</div>
 
                 <!-- Title -->
                 <h2 style="
-                    margin: 0 0 12px 0; font-size: 22px; font-weight: 800;
-                    color: #1a1a2e; line-height: 1.3;
-                    letter-spacing: -0.02em;
+                    margin: 0 0 14px 0; font-size: 23px; font-weight: 800;
+                    color: #1a1a2e; line-height: 1.3; letter-spacing: -0.02em;
                 ">${this.t(titleKey)}</h2>
 
                 <!-- Description -->
                 <p style="
-                    margin: 0 0 16px 0; color: #555; font-size: 15px;
-                    line-height: 1.65; letter-spacing: -0.005em;
+                    margin: 0 0 18px 0; color: #4a4a5a; font-size: 15.5px;
+                    line-height: 1.7;
                 ">${this.t(descKey)}</p>
 
-                <!-- Tip box -->
+                <!-- Tip box with colored accent bar -->
                 <div style="
-                    background: ${stepColor}0a; border-radius: 12px;
-                    padding: 14px 16px; margin-bottom: 24px;
-                    border-left: 3px solid ${stepColor}60;
-                    ${isRTL ? 'border-left: none; border-right: 3px solid ' + stepColor + '60;' : ''}
+                    background: ${clr}0c; border-radius: 14px;
+                    padding: 16px 18px; margin-bottom: 28px;
+                    ${borderSide}: 4px solid ${clr}80; ${borderNone}
                 ">
-                    <p style="margin: 0; color: #666; font-size: 13.5px; line-height: 1.55; font-style: italic;">${this.t(tipKey)}</p>
+                    <p style="margin: 0; color: #5a5a6a; font-size: 14px; line-height: 1.6;">
+                        💡 ${this.t(tipKey)}
+                    </p>
                 </div>
 
-                <!-- Buttons -->
-                <div style="display: flex; gap: 10px; justify-content: ${isRTL ? 'flex-start' : 'flex-end'}; flex-wrap: wrap; align-items: center;">
+                <!-- Buttons row -->
+                <div style="display: flex; gap: 12px; justify-content: ${isRTL ? 'flex-start' : 'flex-end'}; flex-wrap: wrap; align-items: center;">
                     ${isFirst ? `
                         <button onclick="InlineOnboarding.skip()" style="
-                            padding: 11px 20px; border: none; background: transparent;
-                            color: #888; border-radius: 12px; cursor: pointer;
-                            font-size: 14px; font-weight: 500; transition: background 0.2s;
-                        " onmouseenter="this.style.background='#f5f5f5'" onmouseleave="this.style.background='transparent'">${this.t('onboarding.skip')}</button>
+                            padding: 12px 22px; border: none; background: transparent;
+                            color: #999; border-radius: 12px; cursor: pointer;
+                            font-size: 14px; font-weight: 500;
+                        ">${this.t('onboarding.skip')}</button>
                     ` : `
                         <button onclick="InlineOnboarding.prev()" style="
-                            padding: 11px 20px; border: 1.5px solid #e0e0e0; background: white;
+                            padding: 12px 22px; border: 1.5px solid #e0e0e0; background: white;
                             border-radius: 12px; cursor: pointer; font-size: 14px;
-                            font-weight: 500; color: #555; transition: all 0.2s;
-                        " onmouseenter="this.style.borderColor='#ccc'" onmouseleave="this.style.borderColor='#e0e0e0'">${this.t('onboarding.previous')}</button>
+                            font-weight: 500; color: #555;
+                        ">${this.t('onboarding.previous')}</button>
                     `}
-                    
                     <button onclick="InlineOnboarding.${isLast ? 'finish' : 'next'}()" style="
-                        padding: 11px 28px; border: none;
-                        background: ${stepColor};
+                        padding: 12px 30px; border: none; background: ${clr};
                         color: white; border-radius: 12px; cursor: pointer;
-                        font-size: 14px; font-weight: 600;
-                        box-shadow: 0 4px 14px ${stepColor}40;
-                        transition: all 0.2s;
-                    " onmouseenter="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px ${stepColor}50'" onmouseleave="this.style.transform='';this.style.boxShadow='0 4px 14px ${stepColor}40'">${this.t(isLast ? 'onboarding.finish' : 'onboarding.next')}</button>
+                        font-size: 15px; font-weight: 600;
+                        box-shadow: 0 4px 16px ${clr}45;
+                    ">${this.t(isLast ? 'onboarding.finish' : 'onboarding.next')}</button>
                 </div>
 
                 ${isFirst ? `
-                    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
-                        <label style="display: flex; align-items: center; ${isRTL ? 'flex-direction: row-reverse;' : ''} gap: 8px; cursor: pointer; font-size: 13px; color: #999;">
-                            <input type="checkbox" id="onboarding-dont-show" style="cursor: pointer; accent-color: ${stepColor};">
+                    <div style="margin-top: 22px; padding-top: 18px; border-top: 1px solid #f0f0f0;">
+                        <label style="display: flex; align-items: center; ${isRTL ? 'flex-direction: row-reverse;' : ''} gap: 8px; cursor: pointer; font-size: 13px; color: #aaa;">
+                            <input type="checkbox" id="onboarding-dont-show" style="cursor: pointer; accent-color: ${clr};">
                             <span>${this.t('onboarding.dont_show')}</span>
                         </label>
                     </div>
@@ -14591,107 +14628,64 @@ const InlineOnboarding = {
             </div>
         `;
 
-        // Highlight sidebar item if specified
         this.highlightElement(step.highlight);
     },
     
     highlightElement: function(selector) {
         document.querySelectorAll('.onboarding-highlight').forEach(el => {
             el.classList.remove('onboarding-highlight');
-            el.style.position = '';
-            el.style.zIndex = '';
-            el.style.background = '';
-            el.style.borderRadius = '';
-            el.style.boxShadow = '';
+            el.style.position = ''; el.style.zIndex = '';
+            el.style.background = ''; el.style.borderRadius = ''; el.style.boxShadow = '';
         });
-        
         if (selector) {
             const el = document.querySelector(selector);
             if (el) {
                 el.classList.add('onboarding-highlight');
-                el.style.position = 'relative';
-                el.style.zIndex = '9999';
-                el.style.boxShadow = '0 0 0 4px rgba(107, 139, 164, 0.45)';
+                el.style.position = 'relative'; el.style.zIndex = '9999';
+                el.style.boxShadow = '0 0 0 4px rgba(107, 139, 164, 0.5)';
             }
         }
     },
     
-    next: function() {
-        if (this.currentStep < this.steps.length - 1) {
-            this.currentStep++;
-            this.renderStep();
-        }
-    },
-    
-    prev: function() {
-        if (this.currentStep > 0) {
-            this.currentStep--;
-            this.renderStep();
-        }
-    },
+    next: function() { if (this.currentStep < this.steps.length - 1) { this.currentStep++; this.renderStep(); } },
+    prev: function() { if (this.currentStep > 0) { this.currentStep--; this.renderStep(); } },
     
     skip: async function() {
-        const dontShow = document.getElementById('onboarding-dont-show');
-        if (dontShow && dontShow.checked) {
-            await this.dismiss();
-        }
+        const cb = document.getElementById('onboarding-dont-show');
+        if (cb && cb.checked) await this.dismiss();
         this.close();
     },
-    
-    finish: async function() {
-        await this.complete();
-        this.close();
-    },
+    finish: async function() { await this.complete(); this.close(); },
     
     close: function() {
         document.querySelectorAll('.onboarding-highlight').forEach(el => {
             el.classList.remove('onboarding-highlight');
-            el.style.position = '';
-            el.style.zIndex = '';
-            el.style.background = '';
-            el.style.borderRadius = '';
-            el.style.boxShadow = '';
+            el.style.position = ''; el.style.zIndex = '';
+            el.style.background = ''; el.style.borderRadius = ''; el.style.boxShadow = '';
         });
         if (this.modal) { this.modal.remove(); this.modal = null; }
         if (this.overlay) { this.overlay.remove(); this.overlay = null; }
     },
     
     complete: async function() {
-        try {
-            await fetch('/api/onboarding/complete', { method: 'POST', credentials: 'include' });
-        } catch (error) {
-            console.error('[InlineOnboarding] Error completing:', error);
-        }
+        try { await fetch('/api/onboarding/complete', { method: 'POST', credentials: 'include' }); } catch(e) {}
     },
-    
     dismiss: async function() {
-        try {
-            await fetch('/api/onboarding/dismiss', { method: 'POST', credentials: 'include' });
-        } catch (error) {
-            console.error('[InlineOnboarding] Error dismissing:', error);
-        }
+        try { await fetch('/api/onboarding/dismiss', { method: 'POST', credentials: 'include' }); } catch(e) {}
     }
 };
 
-// Make globally available
 window.InlineOnboarding = InlineOnboarding;
-
-// Override the checkOnboardingStatus to use our inline version
-window.checkOnboardingStatus = function() {
-    InlineOnboarding.checkAndShow();
-};
+window.checkOnboardingStatus = function() { InlineOnboarding.checkAndShow(); };
 
 // ===== TUTORIAL FUNCTION =====
+// Starts the onboarding tutorial with the current language
 async function startTutorial() {
     const currentLang = localStorage.getItem('selectedLanguage') || 'en';
-    
     try {
         const response = await fetch('/api/onboarding/restart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include'
         });
-        
         if (response.ok) {
             if (window.InlineOnboarding) {
                 InlineOnboarding.language = currentLang;
