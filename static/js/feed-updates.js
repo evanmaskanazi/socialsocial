@@ -1,5 +1,6 @@
-// Version P320 - Uses existing CIRCLE_EMOJIS, does not redeclare
+// Version P320 Lang - Uses existing CIRCLE_EMOJIS, does not redeclare
 // feed-updates.js - Circle display name mappings
+// Version Lang - Replaced hardcoded English visibility names with i18n lookups
 // FIX: circles-messages.js already declares CIRCLE_EMOJIS with const
 // So we just reference it directly - no redeclaration
 
@@ -14,12 +15,19 @@
     }
 
     function getInternalName(displayName) {
-        var reverseMap = {
-            'Public': 'public',
-            'Close Friends': 'class_b',
-            'Family': 'class_a',
-            'Private': 'private'
-        };
+        // Build reverse map dynamically from translations
+        var t = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : function(k) { return k; };
+        var reverseMap = {};
+        // Always include English fallbacks
+        reverseMap['Public'] = 'public';
+        reverseMap['Close Friends'] = 'class_b';
+        reverseMap['Family'] = 'class_a';
+        reverseMap['Private'] = 'private';
+        // Add current language translations
+        reverseMap[t('privacy.public')] = 'public';
+        reverseMap[t('privacy.class_b')] = 'class_b';
+        reverseMap[t('privacy.class_a')] = 'class_a';
+        reverseMap[t('privacy.private')] = 'private';
         return reverseMap[displayName] || displayName;
     }
 
@@ -44,11 +52,17 @@
 
                 var internalValue = header.getAttribute('data-circle-type');
                 if (!internalValue) {
-                    if (currentText.includes('General') || currentText.includes('Public')) {
+                    // Match against both English and translated names
+                    var t = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : function(k) { return k; };
+                    var publicNames = ['General', 'Public', removeAllEmojis(t('privacy.public')), removeAllEmojis(t('circles.title_public'))];
+                    var classBNames = ['Close Friends', 'Class B', removeAllEmojis(t('privacy.class_b')), removeAllEmojis(t('circles.title_class_b'))];
+                    var classANames = ['Family', 'Class A', removeAllEmojis(t('privacy.class_a')), removeAllEmojis(t('circles.title_class_a'))];
+                    
+                    if (publicNames.some(function(n) { return currentText.includes(n); })) {
                         internalValue = 'public';
-                    } else if (currentText.includes('Close Friends') || currentText.includes('Class B')) {
+                    } else if (classBNames.some(function(n) { return currentText.includes(n); })) {
                         internalValue = 'class_b';
-                    } else if (currentText.includes('Family') || currentText.includes('Class A')) {
+                    } else if (classANames.some(function(n) { return currentText.includes(n); })) {
                         internalValue = 'class_a';
                     }
                 }

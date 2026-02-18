@@ -1,5 +1,5 @@
 // Circles and Messages Management System with i18n support
-// Complete Fixed Version with null safety and proper error handling
+// Complete Fixed Version Lang with null safety and proper error handling
 // 10Link: Circle member names now clickable to navigate to profile (uses /?view=profile&user_id=)
 // 10LinkN: Confirmed createMemberElement has clickable names - actual fix was in index.html updateCircleDisplay()
 // 10LinkN2: Fixed color from var(--primary) to hardcoded #667eea - var(--primary) resolves to muted gray #6B8BA4
@@ -14,6 +14,7 @@
 // MVP-FIX: Replaced alert() with toast notifications
 
 // ============================================================
+// Version Lang - Replaced hardcoded English notification strings with i18n translation keys
 // Notification Polyfill - ensures showNotification always works
 // ============================================================
 (function() {
@@ -570,7 +571,7 @@ function showPrivateCirclesMessage() {
                 box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             ">
                 <div style="font-size: 48px; margin-bottom: 20px;">🔒</div>
-                <h3 style="color: #667eea; margin-bottom: 10px;">Private Circles</h3>
+                <h3 style="color: #667eea; margin-bottom: 10px;" data-i18n="circles.private_title">${translateCircle('circles.private_title') || 'Private Circles'}</h3>
                 <p style="color: #8898aa;">This user's circles are private.</p>
             </div>
         `;
@@ -751,7 +752,7 @@ if (window.i18n && window.i18n.applyLanguage) {
     } catch (error) {
         console.error('Error loading circles:', error);
         if (window.showMessage) {
-            window.showMessage('Error loading circles', 'error');
+            window.showMessage(translateCircle('circles.error_loading') || 'Error loading circles', 'error');
         }
     } finally {
         // Reset the loading flag after a short delay to prevent rapid successive calls
@@ -919,7 +920,7 @@ function showCircleAddMenu(userId, username) {
     
     const circleType = circleMap[choice.trim()];
     if (!circleType) {
-        showNotification("Invalid choice", "error");
+        showNotification(translateCircle('circles.invalid_choice') || 'Invalid choice', 'error');
         return;
     }
     
@@ -2180,7 +2181,7 @@ function updateFollowingSection() {
         })
         .catch(error => {
             console.error('Error loading following list:', error);
-            followingSection.innerHTML = '<h2>Following</h2><p>Error loading following list</p>';
+            followingSection.innerHTML = '<h2>' + (translateCircle('following.title') || 'Following') + '</h2><p>' + (translateCircle('circles.error_loading_following') || 'Error loading following list') + '</p>';
         });
 }
 
@@ -2218,7 +2219,7 @@ function addUserSearchToFollowing() {
 async function searchUsersToFollow() {
     const query = document.getElementById('followSearchInput').value.trim();
     if (query.length < 1) {
-        showNotification('Please enter at least 1 character', 'warning');
+        showNotification(translateCircle('circles.search_min_chars') || 'Please enter at least 1 character', 'warning');
         return;
     }
 
@@ -2252,7 +2253,7 @@ async function searchUsersToFollow() {
 
     } catch (error) {
         console.error('Search error:', error);
-        showNotification('Search failed', 'error');
+        showNotification(translateCircle('circles.search_failed') || 'Search failed', 'error');
     }
 }
 
@@ -2267,7 +2268,7 @@ function followWithNote(userId, username) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showNotification(`You are now following ${username}`, 'success');
+            showNotification((translateCircle('circles.now_following') || 'You are now following {username}').replace('{username}', username), 'success');
             // Refresh search results if visible
             const searchInput = document.getElementById('followSearchInput');
             if (searchInput && searchInput.value) {
@@ -2275,17 +2276,17 @@ function followWithNote(userId, username) {
             }
             updateFollowingSection(); // Refresh following list
         } else {
-            showNotification(data.error || 'Failed to follow user', 'error');
+            showNotification(data.error || translateCircle('circles.follow_failed') || 'Failed to follow user', 'error');
         }
     })
     .catch(error => {
         console.error('Follow error:', error);
-        showNotification('Failed to follow user', 'error');
+        showNotification(translateCircle('circles.follow_failed') || 'Failed to follow user', 'error');
     });
 }
 
 function unfollowUser(userId) {
-    if (!confirm('Are you sure you want to unfollow this user?')) return;
+    if (!confirm(translateCircle('circles.confirm_unfollow') || 'Are you sure you want to unfollow this user?')) return;
 
     fetch(`/api/unfollow/${userId}`, {
         method: 'POST',
@@ -2294,15 +2295,15 @@ function unfollowUser(userId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showNotification('User unfollowed', 'success');
+            showNotification(translateCircle('circles.user_unfollowed') || 'User unfollowed', 'success');
             updateFollowingSection();
         } else {
-            showNotification(data.error || 'Failed to unfollow user', 'error');
+            showNotification(data.error || translateCircle('circles.unfollow_failed') || 'Failed to unfollow user', 'error');
         }
     })
     .catch(error => {
         console.error('Unfollow error:', error);
-        showNotification('Failed to unfollow user', 'error');
+        showNotification(translateCircle('circles.unfollow_failed') || 'Failed to unfollow user', 'error');
     });
 }
 
@@ -2490,7 +2491,7 @@ async function followUserById(userId) {
         const data = await response.json();
         if (data.success) {
             if (typeof showNotification === 'function') {
-                showNotification('Now following user', 'success');
+                showNotification(translateCircle('circles.now_following_short') || 'Now following user', 'success');
             }
             // Refresh following list if function exists
             if (typeof window.loadFollowing === 'function') {
@@ -2498,13 +2499,13 @@ async function followUserById(userId) {
             }
         } else {
             if (typeof showNotification === 'function') {
-                showNotification(data.error || 'Failed to follow', 'error');
+                showNotification(data.error || translateCircle('circles.follow_failed_short') || 'Failed to follow', 'error');
             }
         }
     } catch (error) {
         console.error('Follow error:', error);
         if (typeof showNotification === 'function') {
-            showNotification('Failed to follow user', 'error');
+            showNotification(translateCircle('circles.follow_failed') || 'Failed to follow user', 'error');
         }
     }
 }

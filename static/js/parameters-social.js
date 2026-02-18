@@ -1,3 +1,4 @@
+// Version Lang - Replaced hardcoded English strings with i18n translation keys
 // V2 Version 1902 - V2 compatibility: findPeopleToFollow → Connections/Recommended tab
 // P305 Version 1901 - EMOJI FIX: Prevent emojis from disappearing after save
 // P305 Version 1900 - Navigation restructure and visual design changes (frontend-only)
@@ -2037,7 +2038,7 @@ function updateCalendar() {
             dayCell.style.opacity = '0.3';
             dayCell.style.cursor = 'not-allowed';
             dayCell.style.pointerEvents = 'none';
-            dayCell.title = 'Future date - not available';
+            dayCell.title = pt('params.future_date') || 'Future date - not available';
         } else {
             // Check if this date has saved data and add green dot
             if (datesWithData.has(cellDateStr)) {
@@ -2246,7 +2247,7 @@ function followFromParameters(userId, username) {
             width: 90%;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         ">
-            <h3 style="margin-top: 0;">Follow ${username}'s Parameters</h3>
+            <h3 style="margin-top: 0;">${pt('params.follow_title') ? pt('params.follow_title').replace('{username}', username) : "Follow " + username + "'s Parameters"}</h3>
 
             <div style="margin: 1.5rem 0;">
                 <label style="
@@ -2264,9 +2265,9 @@ function followFromParameters(userId, username) {
                         cursor: pointer;
                     " checked>
                     <div>
-                        <div style="font-weight: 500;">Get parameter alerts</div>
+                        <div style="font-weight: 500;">${pt('params.get_alerts') || 'Get parameter alerts'}</div>
                         <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;">
-                            Receive notifications when their parameters trigger
+                            ${pt('params.alerts_desc') || 'Receive notifications when their parameters trigger'}
                         </div>
                     </div>
                 </label>
@@ -2274,7 +2275,7 @@ function followFromParameters(userId, username) {
 
             <div style="margin: 1.5rem 0;">
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
-                    Add a note (optional):
+                    ${pt('params.add_note') || 'Add a note (optional):'}
                 </label>
                 <textarea id="followNote" style="
                     width: 100%;
@@ -2284,15 +2285,15 @@ function followFromParameters(userId, username) {
                     border-radius: 8px;
                     font-size: 14px;
                     resize: vertical;
-                " placeholder="Let them know why you're following..."></textarea>
+                " placeholder="${pt('params.follow_placeholder') || "Let them know why you're following..."}"></textarea>
             </div>
 
             <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                 <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
-                    Cancel
+                    ${pt('params.cancel_btn') || 'Cancel'}
                 </button>
                 <button class="btn-primary" onclick="confirmFollowWithParameters(${userId}, '${username}')">
-                    Follow
+                    ${pt('params.follow_btn') || 'Follow'}
                 </button>
             </div>
         </div>
@@ -2329,11 +2330,11 @@ async function confirmFollowWithParameters(userId, username) {
             // Show success notification
             if (window.showNotification) {
                 const message = trigger
-                    ? `Following ${username} with parameter alerts enabled`
-                    : `Following ${username}`;
+                    ? (pt('params.following_with_alerts') || 'Following {username} with parameter alerts enabled').replace('{username}', username)
+                    : (pt('params.following_user') || 'Following {username}').replace('{username}', username);
                 window.showNotification(message, 'success');
             } else {
-                window.showNotification(`Successfully followed ${username}`, 'success');
+                window.showNotification((pt('params.successfully_followed') || 'Successfully followed {username}').replace('{username}', username), 'success');
             }
 
             // Refresh following list if available
@@ -2341,11 +2342,11 @@ async function confirmFollowWithParameters(userId, username) {
                 loadFollowing();
             }
         } else {
-            throw new Error('Failed to follow user');
+            throw new Error(pt('params.follow_failed') || 'Failed to follow user');
         }
     } catch (error) {
         console.error('Error following user:', error);
-        window.showNotification('Failed to follow user', 'error');
+        window.showNotification(pt('params.follow_failed') || 'Failed to follow user', 'error');
     }
 }
 
@@ -2413,7 +2414,7 @@ function nextMonth() {
 
     // Don't allow going past current month
     if (nextMonthDate > today) {
-        showMessage('Cannot view future months', 'error', 2000);
+        showMessage(pt('params.future_month') || 'Cannot view future months', 'error', 2000);
         return;
     }
 
@@ -2450,7 +2451,7 @@ async function saveParameters() {
 
     // Validate that at least one rating is selected
     if (Object.keys(selectedRatings).length === 0) {
-        window.showMessage(pt('error.saving') + ': Please select at least one rating', 'error');
+        window.showMessage(pt('error.saving') + ': ' + (pt('params.select_rating') || 'Please select at least one rating'), 'error');
         return;
     }
 
@@ -2533,7 +2534,7 @@ async function loadParameters(showMsg = true) {
                 const state = JSON.parse(stored);
                 restoreParameterState(state);
                 if (showMsg) {
-                    window.showMessage('Restored from session cache', 'info');
+                    window.showMessage(pt('params.restored_cache') || 'Restored from session cache', 'info');
                 }
                 return;
             }
@@ -2616,7 +2617,7 @@ sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
             const state = JSON.parse(stored);
             restoreParameterState(state);
             if (showMsg) {
-                window.showMessage('Restored from session cache', 'info');
+                window.showMessage(pt('params.restored_cache') || 'Restored from session cache', 'info');
             }
             return;
         }
@@ -2943,7 +2944,7 @@ window.viewUserParameters = function(userId, username) {
             <div class="modal-content" style="background: white; margin: 5% auto; padding: 30px; width: 90%; max-width: 800px; border-radius: 20px; max-height: 80vh; overflow-y: auto;">
                 <span class="close" onclick="closeUserParametersModal()" style="float: right; font-size: 28px; cursor: pointer;">&times;</span>
                 <h2 data-i18n="parameters.view_user">${username}'s Parameters</h2>
-                <div id="userParametersContent">Loading...</div>
+                <div id="userParametersContent">${pt('params.loading_text') || 'Loading...'}</div>
             </div>
         </div>
     `;
@@ -2963,7 +2964,7 @@ window.viewUserParameters = function(userId, username) {
         .catch(error => {
             console.error('Error loading user parameters:', error);
             document.getElementById('userParametersContent').innerHTML =
-                '<p style="color: red;">Error loading parameters</p>';
+                '<p style="color: red;">' + (pt('params.error_loading_params') || 'Error loading parameters') + '</p>';
         });
 }
 
@@ -3160,14 +3161,14 @@ function addTriggerSettings(container, userId, username) {
                 .then(response => response.json())
                 .then(result => {
                     if (result.success) {
-                        window.showNotification('Trigger settings saved successfully!', 'success');
+                        window.showNotification(pt('msg.trigger_removed') || 'Trigger settings saved successfully!', 'success');
                     } else {
-                        window.showNotification('Error saving trigger settings', 'error');
+                        window.showNotification(pt('params.error_trigger') || 'Error saving trigger settings', 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error saving triggers:', error);
-                    window.showNotification('Error saving trigger settings', 'error');
+                    window.showNotification(pt('params.error_trigger') || 'Error saving trigger settings', 'error');
                 });
             };
 
@@ -3318,14 +3319,14 @@ window.saveTriggers = async function(userId) {
 
         const data = await response.json();
         if (data.success) {
-            window.showMessage('Trigger settings saved', 'success');
+            window.showMessage(pt('msg.trigger_removed') || 'Trigger settings saved', 'success');
         } else {
             window.showMessage(data.error || 'Failed to save triggers', 'error');
         }
 
     } catch (error) {
         console.error('Failed to save triggers:', error);
-        window.showMessage('Failed to save triggers', 'error');
+        window.showMessage(pt('msg.trigger_remove_failed') || 'Failed to save triggers', 'error');
     }
 }
 
