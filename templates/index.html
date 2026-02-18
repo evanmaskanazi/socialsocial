@@ -5297,8 +5297,16 @@ async function loadUserCity() {
 
                 if (response.status === 401) {
                     // Don't call showAuthContainer for login/register endpoints - let the form handle it
+                    // PASS FIX: Also don't redirect if reset password or forgot password view is active
                     if (!endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
-                        showAuthContainer();
+                        const resetActive = document.getElementById('resetPasswordContainer');
+                        const forgotActive = document.getElementById('forgotPasswordContainer');
+                        if ((resetActive && (resetActive.style.display === 'flex' || resetActive.style.display === 'block')) ||
+                            (forgotActive && (forgotActive.style.display === 'flex' || forgotActive.style.display === 'block'))) {
+                            console.log('[PASS FIX] Password reset/forgot view active, ignoring 401');
+                        } else {
+                            showAuthContainer();
+                        }
                     }
                     return null;
                 }
@@ -5861,8 +5869,23 @@ async function loadUserCity() {
         });
 
         function showAuthContainer() {
+            // PASS FIX: Don't override reset password or forgot password views
+            // External scripts and alert polling can trigger 401 → showAuthContainer()
+            // even while the user is on the reset password page. Guard against that.
+            if (document.getElementById('resetPasswordContainer').style.display === 'flex' ||
+                document.getElementById('resetPasswordContainer').style.display === 'block') {
+                console.log('[PASS FIX] Reset password view active, skipping showAuthContainer');
+                return;
+            }
+            if (document.getElementById('forgotPasswordContainer').style.display === 'flex' ||
+                document.getElementById('forgotPasswordContainer').style.display === 'block') {
+                console.log('[PASS FIX] Forgot password view active, skipping showAuthContainer');
+                return;
+            }
             hideAllViews();
             document.getElementById('authContainer').style.display = 'flex';
+            document.getElementById('resetPasswordContainer').style.display = 'none';
+            document.getElementById('forgotPasswordContainer').style.display = 'none';
             document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('tutorialBtn').style.display = 'none';
             // PJ6001: Show nav links when logged out
