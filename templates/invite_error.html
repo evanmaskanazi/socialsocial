@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Invite Error Version P305 -->
+<!-- TheraSocial Invite Error Version P305 Lang -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <html lang="en">
 <head>
@@ -85,9 +85,11 @@
 <body>
     <div class="error-container">
         <div class="error-icon">⚠️</div>
-        <h1>Oops! Something Went Wrong</h1>
-        <p>We encountered an error loading this invite page. Please try again later.</p>
-        <a href="/" class="btn">Go to TheraSocial</a>
+        <h1 data-i18n="invite_error.title">Oops! Something Went Wrong</h1>
+        <p data-i18n="invite_error.desc">We encountered an error loading this invite page. Please try again later.</p>
+        <a href="/" class="btn" data-i18n="invite_error.btn">Go to TheraSocial</a>
     </div>
+    <script src="/static/js/i18n.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => { if(window.i18n) window.i18n.applyLanguage(); });</script>
 </body>
 </html>

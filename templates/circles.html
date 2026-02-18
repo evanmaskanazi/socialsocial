@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Circles Version P305 -->
+<!-- TheraSocial Circles Version P305 Lang -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <!-- P305: Dark mode support for evening/nighttime use -->
 <!-- PJ501 Changes: Added block check before displaying user profile -->
@@ -52,7 +52,7 @@
 <body>
     <!-- G-5: Apply dark mode from localStorage -->
     <script>if(localStorage.getItem('therasocial_dark_mode')==='true')document.body.classList.add('dark-mode');</script>
-    <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;">Loading circles...</div>
+    <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
     <script src="/static/js/i18n.js"></script>
@@ -293,17 +293,12 @@ try {
                         if (blockStatus.blockedBy || blockStatus.is_blocked) {
                             // Show Account Not Available message and redirect
                             const lang = localStorage.getItem('selectedLanguage') || 'en';
-                            const messages = {
-                                'en': 'Account Not Available',
-                                'he': 'חשבון לא זמין',
-                                'ar': 'الحساب غير متاح',
-                                'ru': 'Аккаунт недоступен'
-                            };
+                            const accountMsg = (window.i18n && window.i18n.translate) ? window.i18n.translate('msg.account_not_available') : 'Account Not Available';
                             // MVP-FIX: Use toast instead of alert()
                             if (typeof showNotification === 'function') {
-                                showNotification(messages[lang] || messages['en'], 'error');
+                                showNotification(accountMsg, 'error');
                             } else {
-                                console.warn(messages[lang] || messages['en']);
+                                console.warn(accountMsg);
                             }
                             setTimeout(() => { window.location.href = '/?view=following'; }, 1500);
                             return;
@@ -321,17 +316,12 @@ try {
                         const errorData = await profileResponse.json().catch(() => ({}));
                         if (errorData.blocked || errorData.error === 'account_not_available') {
                             const lang = localStorage.getItem('selectedLanguage') || 'en';
-                            const messages = {
-                                'en': 'Account Not Available',
-                                'he': 'חשבון לא זמין',
-                                'ar': 'الحساب غير متاح',
-                                'ru': 'Аккаунт недоступен'
-                            };
+                            const accountMsg = (window.i18n && window.i18n.translate) ? window.i18n.translate('msg.account_not_available') : 'Account Not Available';
                             // MVP-FIX: Use toast instead of alert()
                             if (typeof showNotification === 'function') {
-                                showNotification(messages[lang] || messages['en'], 'error');
+                                showNotification(accountMsg, 'error');
                             } else {
-                                console.warn(messages[lang] || messages['en']);
+                                console.warn(accountMsg);
                             }
                             setTimeout(() => { window.location.href = '/?view=following'; }, 1500);
                             return;
@@ -355,14 +345,15 @@ try {
                 }
                 
                 // Translation labels
-                const lang = localStorage.getItem('selectedLanguage') || 'en';
-                const labels = {
-                    'en': { back: '← Back to Following', follow: 'Follow', unfollow: 'Unfollow', addToCircle: 'Add to Circle', block: 'Block', unblock: 'Unblock' },
-                    'he': { back: '← חזרה לעוקבים', follow: 'עקוב', unfollow: 'הפסק לעקוב', addToCircle: 'הוסף למעגל', block: 'חסום', unblock: 'בטל חסימה' },
-                    'ar': { back: '← العودة للمتابعين', follow: 'متابعة', unfollow: 'إلغاء المتابعة', addToCircle: 'إضافة إلى دائرة', block: 'حظر', unblock: 'إلغاء الحظر' },
-                    'ru': { back: '← Назад к подписчикам', follow: 'Подписаться', unfollow: 'Отписаться', addToCircle: 'Добавить в круг', block: 'Заблокировать', unblock: 'Разблокировать' }
+                const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+                const t = {
+                    back: tt('common.back_to_following', '← Back to Following'),
+                    follow: tt('btn.follow', 'Follow'),
+                    unfollow: tt('btn.unfollow', 'Unfollow'),
+                    addToCircle: tt('circles.add_to_circle', 'Add to Circle'),
+                    block: tt('btn.block', 'Block'),
+                    unblock: tt('btn.unblock', 'Unblock')
                 };
-                const t = labels[lang] || labels['en'];
                 
                 // PJ601: Check if user is blocked
                 let isBlocked = false;
@@ -428,7 +419,7 @@ try {
                     unfollowBtn.textContent = t.unfollow;
                     unfollowBtn.style.cssText = 'padding: 0.5rem 1rem;';
                     unfollowBtn.onclick = async () => {
-                        if (confirm(`Unfollow ${username}?`)) {
+                        if (confirm(tt('msg.confirm_unfollow', 'Are you sure you want to unfollow this user?'))) {
                             const response = await fetch(`/api/unfollow/${userId}`, { method: 'DELETE', credentials: 'include' });
                             if (response.ok) {
                                 window.location.reload();
@@ -452,7 +443,7 @@ try {
                             }
                         } else {
                             // Block user
-                            if (confirm(`Block ${username}?`)) {
+                            if (confirm(tt('msg.confirm_block', 'Block this user?'))) {
                                 const response = await fetch(`/api/users/${userId}/block`, { method: 'POST', credentials: 'include' });
                                 if (response.ok) {
                                     window.location.href = '/?view=following';
@@ -507,7 +498,7 @@ try {
                 // Update header with username
                 const header = container.querySelector('h1');
                 if (header) {
-                    header.textContent = `${username}'s Circles`;
+                    header.textContent = tt('circles.users_circles', '{username}\'s Circles').replace('{username}', username);
                 }
                 
             } catch (error) {

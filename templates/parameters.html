@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Parameters/Diary Version Fix10B -->
+<!-- TheraSocial Parameters/Diary Version Fix10B Lang -->
 <!-- Fix10B: Updated diary nav bar to match home sidebar (Home, Progress, Circles, Messages, Diary, Connections, Invite, Settings) -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <!-- P305: Dark mode support for evening/nighttime use -->
@@ -279,7 +279,8 @@
         </div>
     </nav>
 
-    <div id="loadingMessage"><span class="loading-spinner"></span>Loading diary...</div>
+<!-- Version Lang - Added i18n to loading message -->
+    <div id="loadingMessage"><span class="loading-spinner"></span><span data-i18n="parameters.loading_diary">Loading diary...</span></div>
     <div id="errorMessage"></div>
     <div id="parametersContainer"></div>
 

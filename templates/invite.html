@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Invite Version P305 -->
+<!-- TheraSocial Invite Version P305 Lang -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <html lang="en">
 <head>
@@ -259,16 +259,16 @@
 
         <!-- FIX 2: XSS escaping on all user data -->
         <h1>Join {{ invite_user.username | e }}'s Wellness Journey</h1>
-        <p class="subtitle">Follow their progress on TheraSocial</p>
+        <p class="subtitle" data-i18n="invite_page.follow_progress">Follow their progress on TheraSocial</p>
 
         <div class="stats">
             <div class="stat">
                 <div class="stat-number">{{ follower_count | e }}</div>
-                <div class="stat-label">Followers</div>
+                <div class="stat-label" data-i18n="invite_page.followers">Followers</div>
             </div>
             <div class="stat">
                 <div class="stat-number">{{ following_count | e }}</div>
-                <div class="stat-label">Following</div>
+                <div class="stat-label" data-i18n="invite_page.following">Following</div>
             </div>
         </div>
 
@@ -318,6 +318,7 @@
         {% endif %}
     </div>
 
+    <script src="/static/js/i18n.js"></script>
     <script>
         // FIX 1: Toast notification system (replaces alert())
         function showNotification(message, type = 'info') {
@@ -357,6 +358,9 @@
                 }
             }, 300);
         }
+
+        // Apply translations
+        if (window.i18n) window.i18n.applyLanguage();
 
         function sendFollowRequest() {
             const btn = document.getElementById('followBtn');
