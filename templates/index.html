@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 10Link Lang Changes:
+<!-- 10Link Changes:
   1. Removed right sidebar (Alerts/Notifications) from home page - main content now full width
   2. Moved Triggers button from nav bar to other user's profile view (left of username)
   3. Added Check-ins button to other user's profile (right of username) - shows progress chart + checkin list in modal
@@ -259,7 +259,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Version Lang - Replaced hardcoded English notification strings with i18n keys -->
     <title>Thera Social - Anonymous Wellness Community</title>
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -5325,7 +5324,7 @@ async function loadUserCity() {
                         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * 2));
                         return apiCall(endpoint, method, body, retryCount + 1);
                     }
-                    showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.network_error') || 'Network error. Please check your connection.') : 'Network error. Please check your connection.'), 'error');
+                    showNotification('Network error. Please check your connection.', 'error');
                     return null;
                 }
                 console.error('API Error:', error);
@@ -5381,7 +5380,7 @@ async function loadUserCity() {
             if (isLoginMode) {
                 // Switch to signup mode
                 authTitle.setAttribute('data-i18n', 'auth.create_account');
-                authTitle.textContent = ((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.create_account') || 'Create Account') : 'Create Account');
+                authTitle.textContent = 'Create Account';
                 loginSection.style.display = 'none';
                 signupSection.style.display = 'block';
                 forgotPasswordLink.style.display = 'none';
@@ -5431,20 +5430,20 @@ async function loadUserCity() {
 
         // CHANGE 4: Client-side validation
         if (!email) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.enter_email_or_username') || 'Please enter your email or username') : 'Please enter your email or username'), 'error');
+            showNotification('Please enter your email or username', 'error');
             return;
         }
         
         // FD-3: Skip email format check - backend accepts username or email
         
         if (!password) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.enter_password') || 'Please enter your password') : 'Please enter your password'), 'error');
+            showNotification('Please enter your password', 'error');
             return;
         }
         
         // CHANGE 4: Prevent very long inputs
         if (email.length > 120 || password.length > 128) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.invalid_input_length') || 'Invalid input length') : 'Invalid input length'), 'error');
+            showNotification('Invalid input length', 'error');
             return;
         }
 
@@ -5555,34 +5554,34 @@ async function loadUserCity() {
         // CHANGE 5: Comprehensive client-side validation
         // Email validation
         if (!email) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.email_required') || 'Please enter your email address') : 'Please enter your email address'), 'error');
+            showNotification('Please enter your email address', 'error');
             return;
         }
         
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.email_invalid') || 'Please enter a valid email address') : 'Please enter a valid email address'), 'error');
+            showNotification('Please enter a valid email address', 'error');
             return;
         }
         
         if (email.length > 120) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.email_too_long') || 'Email address is too long') : 'Email address is too long'), 'error');
+            showNotification('Email address is too long', 'error');
             return;
         }
         
         // Password validation
         if (!password) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.password_required') || 'Please enter a password') : 'Please enter a password'), 'error');
+            showNotification('Please enter a password', 'error');
             return;
         }
         
         if (password.length < 8) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.password_too_short') || 'Password must be at least 8 characters') : 'Password must be at least 8 characters'), 'error');
+            showNotification('Password must be at least 8 characters with an uppercase letter and a special character', 'error');
             return;
         }
         
         if (password.length > 128) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.password_too_long') || 'Password is too long') : 'Password is too long'), 'error');
+            showNotification('Password is too long', 'error');
             return;
         }
         
@@ -5593,7 +5592,7 @@ async function loadUserCity() {
         const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
         
         if (!(hasUpper && hasLower && hasDigit && hasSpecial)) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.password_complexity') || 'Password must have an uppercase letter and a special character') : 'Password must have an uppercase letter and a special character'), 'error');
+            showNotification('Password must have an uppercase letter and a special character', 'error');
             return;
         }
 
@@ -5605,14 +5604,14 @@ async function loadUserCity() {
         
         // Username validation
         if (username.length > 80) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.username_too_long') || 'Username is too long (max 80 characters)') : 'Username is too long (max 80 characters)'), 'error');
+            showNotification('Username is too long (max 80 characters)', 'error');
             return;
         }
         
         // Only allow alphanumeric and underscore in username
         const usernameRegex = /^[a-zA-Z0-9_]+$/;
         if (!usernameRegex.test(username)) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.username_invalid_chars') || 'Username can only contain letters, numbers, and underscores') : 'Username can only contain letters, numbers, and underscores'), 'error');
+            showNotification('Username can only contain letters, numbers, and underscores', 'error');
             return;
         }
 
@@ -5650,7 +5649,7 @@ async function loadUserCity() {
                     loadNotificationSettings();
                 }
             } else {
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.registration_failed') || 'Registration failed. Please try again.') : 'Registration failed. Please try again.'), 'error');
+                showNotification('Registration failed. Please try again.', 'error');
             }
         } catch (error) {
             console.error('Signup error:', error);
@@ -5662,7 +5661,7 @@ async function loadUserCity() {
   async function requestMagicLinkSignup() {
       const email = document.getElementById('magicLinkEmailInput').value;
       if (!email) {
-          showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.email_required') || 'Please enter your email address') : 'Please enter your email address'), 'warning');
+          showNotification('Please enter your email address', 'warning');
           return;
       }
       
@@ -5689,11 +5688,11 @@ async function loadUserCity() {
               };
               showNotification(successMessages[lang] || successMessages['en'], 'success');
           } else {
-              showNotification(data.error || ((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.magic_link_failed') || 'Failed to send magic link') : 'Failed to send magic link'), 'error');
+              showNotification(data.error || 'Failed to send magic link', 'error');
           }
       } catch (error) {
           console.error('Magic link error:', error);
-          showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.magic_link_failed') || 'Failed to send magic link. Please try again.') : 'Failed to send magic link. Please try again.'), 'error');
+          showNotification('Failed to send magic link. Please try again.', 'error');
       }
   }
   
@@ -5851,7 +5850,7 @@ async function loadUserCity() {
                 currentRecipient = null;
             }
             
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.logged_out') || 'You have been logged out successfully') : 'You have been logged out successfully'), 'success');
+            showNotification('You have been logged out successfully', 'success');
             showAuthContainer();
         });
 
@@ -5896,7 +5895,7 @@ async function requestMagicLink() {
     const language = document.getElementById('languageSelector').value;
 
     if (!email) {
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.email_required') || 'Please enter your email') : 'Please enter your email'), 'error');
+        showNotification('Please enter your email', 'error');
         return;
     }
 
@@ -5909,13 +5908,13 @@ async function requestMagicLink() {
 
         const data = await response.json();
         if (response.ok) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.magic_link_sent') || 'Magic link sent! Check your email') : 'Magic link sent! Check your email'), 'success');
+            showNotification('Magic link sent! Check your email', 'success');
             document.getElementById('authForm').reset();
         } else {
-            showNotification(data.error || ((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.magic_link_failed') || 'Failed to send magic link') : 'Failed to send magic link'), 'error');
+            showNotification(data.error || 'Failed to send magic link', 'error');
         }
     } catch (error) {
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.network_error') || 'Network error') : 'Network error'), 'error');
+        showNotification('Network error', 'error');
     }
 }
 
@@ -5955,10 +5954,10 @@ async function checkMagicToken() {
                     return true; // Reloading, so still stop further processing
                 }
             } else {
-                showNotification(data.error || ((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.invalid_expired_link') || 'Invalid or expired link') : 'Invalid or expired link'), 'error');
+                showNotification(data.error || 'Invalid or expired link', 'error');
             }
         } catch (error) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.verification_failed') || 'Verification failed') : 'Verification failed'), 'error');
+            showNotification('Verification failed', 'error');
         }
     }
     return false; // No magic token or error - proceed normally
@@ -6041,7 +6040,7 @@ async function submitConsent() {
             document.getElementById('consentError').style.display = 'block';
         }
     } catch (error) {
-        document.getElementById('consentError').textContent = ((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.consent_failed') || 'Failed to save consent') : 'Failed to save consent');
+        document.getElementById('consentError').textContent = 'Failed to save consent';
         document.getElementById('consentError').style.display = 'block';
     }
 }
@@ -6696,7 +6695,7 @@ function handleTriggersClick(event) {
             })
             .catch(err => {
                 console.error('[DEBUG] Error in handleTriggersClick:', err);
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('triggers.error_loading') || 'Error loading triggers') : 'Error loading triggers'), 'error');
+                showNotification('Error loading triggers', 'error');
             });
     } else {
         console.log('[DEBUG] handleTriggersClick called but not viewing another user - ignoring');
@@ -6909,7 +6908,7 @@ function showView(viewName, resetContext) {
         })
         .catch(error => {
             console.error('Error loading user triggers:', error);
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('triggers.error_loading') || 'Error loading triggers') : 'Error loading triggers'), 'error');
+            showNotification('Error loading triggers', 'error');
         });
     }
     break;
@@ -6921,7 +6920,7 @@ function showView(viewName, resetContext) {
                 break;
             case 'messages':
                 // Don't allow viewing another user's messages
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.view_messages_error') || 'Cannot view another user\\'s messages') : 'Cannot view another user\\'s messages'), 'error');
+                showNotification("Cannot view another user's messages", 'error');
                 showView('following');
                 break;
             default:
@@ -7124,7 +7123,7 @@ function loadUserRecommendations() {
                 safeApplyLanguage();
             } else {
                 console.log('⚠️ No recommendations in array');
-                list.innerHTML = '<div class="empty-state">' + ((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.no_recommendations') || 'No recommendations available yet. Check back soon!') : 'No recommendations available yet. Check back soon!') + '</div>';
+                list.innerHTML = '<div class="empty-state">No recommendations available yet. Check back soon!</div>';
             }
             list.dataset.loading = 'false';
             console.log('✅ Loading complete');
@@ -7141,10 +7140,10 @@ function copyUserInviteLink() {
     if (linkInput) {
         linkInput.select();
         navigator.clipboard.writeText(linkInput.value).then(() => {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.copied_clipboard') || 'Invite link copied to clipboard!') : 'Invite link copied to clipboard!'), 'success');
+            showNotification('Invite link copied to clipboard! 📋', 'success');
         }).catch(err => {
             console.error('Failed to copy:', err);
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.copy_failed') || 'Failed to copy link') : 'Failed to copy link'), 'error');
+            showNotification('Failed to copy link', 'error');
         });
     }
 }
@@ -7193,16 +7192,16 @@ function sendFollowRequestFromInvite(userId) {
         .then(response => response.json())
         .then(data => {
             if (data.message) {
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.follow_sent') || 'Follow request sent!') : 'Follow request sent!'), 'success');
+                showNotification('Follow request sent!', 'success');
                 // Reload recommendations
                 setTimeout(() => loadUserRecommendations(), 1000);
             } else {
-                showNotification(data.error || ((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.follow_failed') || 'Failed to send request') : 'Failed to send request'), 'error');
+                showNotification(data.error || 'Failed to send request', 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.follow_request_failed') || 'Failed to send follow request') : 'Failed to send follow request'), 'error');
+            showNotification('Failed to send follow request', 'error');
         });
     }
 }
@@ -7508,7 +7507,7 @@ async function loadUserFeedForDate(userId, dateStr) {
 
         if (!response.ok) {
             if (response.status === 403) {
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.circle_no_access') || 'This update is not available to you based on your circle membership') : 'This update is not available to you based on your circle membership'), 'error');
+                showNotification('This update is not available to you based on your circle membership', 'error');
                 return;
             }
             throw new Error('Failed to load feed for date');
@@ -7568,7 +7567,7 @@ async function loadUserFeedForDate(userId, dateStr) {
         }
     } catch (error) {
         console.error('Error loading user feed for date:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.post_error') || 'Error loading post') : 'Error loading post'), 'error');
+        showNotification('Error loading post', 'error');
     }
 }
 
@@ -7671,7 +7670,7 @@ async function toggleLike(postId) {
 
     } catch (error) {
         console.error('Error toggling like:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.like_failed') || 'Failed to update like') : 'Failed to update like'), 'error');
+        showNotification('Failed to update like', 'error');
     }
 }
 
@@ -7719,7 +7718,7 @@ async function loadComments(postId) {
 
     } catch (error) {
         console.error('Error loading comments:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.comments_failed') || 'Failed to load comments') : 'Failed to load comments'), 'error');
+        showNotification('Failed to load comments', 'error');
     }
 }
 
@@ -7728,7 +7727,7 @@ async function submitComment(postId) {
     const content = commentInput.value.trim();
 
     if (!content) {
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.comment_empty') || 'Please enter a comment') : 'Please enter a comment'), 'error');
+        showNotification('Please enter a comment', 'error');
         return;
     }
 
@@ -7761,11 +7760,11 @@ async function submitComment(postId) {
             commentCount.textContent = data.comments_count;
         }
 
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.comment_added') || 'Comment added successfully') : 'Comment added successfully'), 'success');
+        showNotification('Comment added successfully', 'success');
 
     } catch (error) {
         console.error('Error submitting comment:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.comment_failed') || 'Failed to add comment') : 'Failed to add comment'), 'error');
+        showNotification('Failed to add comment', 'error');
     }
 }
 
@@ -7898,7 +7897,7 @@ document.addEventListener('click', function(e) {
             const MAX_POST_LENGTH = 5000;
 
             if (!content) {
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.post_empty') || 'Please enter some content before saving.') : 'Please enter some content before saving.'), 'warning');
+                showNotification('Please enter some content before saving.', 'warning');
                 return;
             }
 
@@ -7911,7 +7910,7 @@ document.addEventListener('click', function(e) {
             // CHANGE 13: Validate visibility value
             const validVisibilities = ['general', 'close_friends', 'family', 'private'];
             if (!validVisibilities.includes(visibility)) {
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.invalid_visibility') || 'Invalid visibility setting.') : 'Invalid visibility setting.'), 'error');
+                showNotification('Invalid visibility setting.', 'error');
                 return;
             }
 
@@ -8264,7 +8263,7 @@ async function updateNotificationSetting(settingName, value) {
             toggle.checked = !value;
         }
         
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.setting_failed') || 'Failed to update setting') : 'Failed to update setting'), 'error');
+        showNotification('Failed to update setting', 'error');
     }
 }
 
@@ -8356,7 +8355,7 @@ async function updateDiaryReminderTime(timeValue) {
         
     } catch (error) {
         console.error('[DIARY REMINDER] Error updating reminder time:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.reminder_failed') || 'Failed to update reminder time') : 'Failed to update reminder time'), 'error');
+        showNotification('Failed to update reminder time', 'error');
     }
 }
 
@@ -8714,7 +8713,7 @@ async function updateCirclesPrivacy(passedValue) {
 
         if (!privacyLevel) {
             console.error('No privacy level selected');
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.privacy_select') || 'Please select a privacy level') : 'Please select a privacy level'), 'error');
+            showNotification('Please select a privacy level', 'error');
             return;
         }
 
@@ -8732,15 +8731,15 @@ async function updateCirclesPrivacy(passedValue) {
         });
 
         if (response.ok) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.privacy_updated') || 'Privacy settings updated successfully') : 'Privacy settings updated successfully'), 'success');
+            showNotification('Privacy settings updated successfully', 'success');
         } else {
             const errorData = await response.json();
             console.error('Privacy update failed:', errorData);
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.privacy_update_failed') || 'Failed to update privacy settings') : 'Failed to update privacy settings'), 'error');
+            showNotification('Failed to update privacy settings', 'error');
         }
     } catch (error) {
         console.error('Failed to update circles privacy:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.privacy_update_failed') || 'Failed to update privacy settings') : 'Failed to update privacy settings'), 'error');
+        showNotification('Failed to update privacy settings', 'error');
     }
 }
 
@@ -9046,7 +9045,7 @@ async function loadUserCircles(userId) {
 
         if (!response.ok) {
             if (response.status === 403) {
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.must_follow_circles') || 'You must follow this user to view their circles') : 'You must follow this user to view their circles'), 'error');
+                showNotification('You must follow this user to view their circles', 'error');
                 // PJ601: Reset viewingUserId to prevent navigation loop bug
                 viewingUserId = null;
                 window.viewingUserId = null;
@@ -9273,7 +9272,7 @@ async function loadUserCircles(userId) {
 
     } catch (error) {
         console.error('Error loading user circles:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.circles_load_failed') || 'Failed to load user circles') : 'Failed to load user circles'), 'error');
+        showNotification('Failed to load user circles', 'error');
     }
 }
 
@@ -9922,7 +9921,7 @@ async function loadUserParametersForDate(userId, dateStr) {
 
         if (!response.ok) {
             if (response.status === 403) {
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.must_follow_params') || 'You must follow this user to view their parameters') : 'You must follow this user to view their parameters'), 'error');
+                showNotification('You must follow this user to view their parameters', 'error');
                 return;
             }
             throw new Error('Failed to load parameters for date');
@@ -10490,7 +10489,7 @@ async function loadFollowing() {
 
     } catch (error) {
         console.error('Error loading following:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.following_load_failed') || 'Failed to load following') : 'Failed to load following'), 'error');
+        showNotification('Failed to load following', 'error');
     }
 }
 
@@ -10527,7 +10526,7 @@ async function loadUserFollowing(userId) {
 
     } catch (error) {
         console.error('Error loading user following:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.user_following_failed') || 'Failed to load user following') : 'Failed to load user following'), 'error');
+        showNotification('Failed to load user following', 'error');
     }
 }
 
@@ -10617,7 +10616,7 @@ window.viewingUserId = null;
         }
     } catch (error) {
         console.error('Error loading followers:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.followers_load_failed') || 'Failed to load followers') : 'Failed to load followers'), 'error');
+        showNotification('Failed to load followers', 'error');
     }
 }
 
@@ -10654,7 +10653,7 @@ async function loadUserFollowers(userId) {
 
     } catch (error) {
         console.error('Error loading user followers:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.user_followers_failed') || 'Failed to load user followers') : 'Failed to load user followers'), 'error');
+        showNotification('Failed to load user followers', 'error');
     }
 }
 
@@ -10680,7 +10679,7 @@ async function followUser(userId, note = '', trigger = false) {
         });
 
         if (!response.ok) throw new Error('Failed to follow user');
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.followed_success') || 'Successfully followed user') : 'Successfully followed user'), 'success');
+        showNotification('Successfully followed user', 'success');
 
         // Refresh following list if visible
         if (typeof loadFollowing === 'function') {
@@ -10690,7 +10689,7 @@ async function followUser(userId, note = '', trigger = false) {
         return true;
     } catch (error) {
         console.error('Error following user:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.follow_user_failed') || 'Failed to follow user') : 'Failed to follow user'), 'error');
+        showNotification('Failed to follow user', 'error');
         return false;
     }
 }
@@ -10915,11 +10914,11 @@ async function deleteTrigger(triggerId) {
 
         if (!response.ok) throw new Error('Failed to delete trigger');
 
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.trigger_removed') || 'Trigger removed') : 'Trigger removed'), 'success');
+        showNotification('Trigger removed', 'success');
         loadTriggers();
     } catch (error) {
         console.error('Error deleting trigger:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.trigger_remove_failed') || 'Failed to remove trigger') : 'Failed to remove trigger'), 'error');
+        showNotification('Failed to remove trigger', 'error');
     }
 }
 
@@ -10946,7 +10945,7 @@ function showAddTriggerModal() {
 
     modal.innerHTML = `
         <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
-            <h3>${((window.i18n && window.i18n.translate) ? (window.i18n.translate('triggers.add_wellness') || 'Add Wellness Trigger') : 'Add Wellness Trigger')}</h3>
+            <h3>Add Wellness Trigger</h3>
             <div style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">User to monitor:</label>
                 <select id="triggerUserId" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
@@ -11013,12 +11012,12 @@ async function loadFollowingForTriggers() {
         if (!select) return;
 
         if (data.following && data.following.length > 0) {
-            select.innerHTML = '<option value="">' + ((window.i18n && window.i18n.translate) ? (window.i18n.translate('triggers.select_user') || 'Select a user...') : 'Select a user...') + '</option>' +
+            select.innerHTML = '<option value="">Select a user...</option>' +
                 data.following.map(user =>
                     `<option value="${user.id}">${user.username}</option>`
                 ).join('');
         } else {
-            select.innerHTML = '<option value="">' + ((window.i18n && window.i18n.translate) ? (window.i18n.translate('triggers.no_users_followed') || 'No users followed') : 'No users followed') + '</option>';
+            select.innerHTML = '<option value="">No users followed</option>';
         }
     } catch (error) {
         console.error('Error loading following for triggers:', error);
@@ -11033,7 +11032,7 @@ async function createTrigger() {
     const days = document.getElementById('triggerDays').value;
 
     if (!targetId) {
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.select_user') || 'Please select a user') : 'Please select a user'), 'warning');
+        showNotification('Please select a user', 'warning');
         return;
     }
 
@@ -11065,7 +11064,7 @@ async function createTrigger() {
         loadTriggers();
     } catch (error) {
         console.error('Error creating trigger:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.trigger_create_failed') || 'Failed to create trigger') : 'Failed to create trigger'), 'error');
+        showNotification('Failed to create trigger', 'error');
     }
 }
 
@@ -11170,7 +11169,7 @@ async function createTriggerForUser(targetId, targetUsername) {
         loadTriggersForUser(targetId, targetUsername);
     } catch (error) {
         console.error('Error creating trigger:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.trigger_create_failed') || 'Failed to create trigger') : 'Failed to create trigger'), 'error');
+        showNotification('Failed to create trigger', 'error');
     }
 }
 
@@ -11434,10 +11433,10 @@ async function unfollowUser(userId) {
         });
 
         if (!response.ok) throw new Error('Failed to unfollow user');
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.unfollow_success') || 'Successfully unfollowed user') : 'Successfully unfollowed user'), 'success');
+        showNotification('Successfully unfollowed user', 'success');
     } catch (error) {
         console.error('Error unfollowing user:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('circles.unfollow_failed') || 'Failed to unfollow user') : 'Failed to unfollow user'), 'error');
+        showNotification('Failed to unfollow user', 'error');
     }
 }
 
@@ -11476,7 +11475,7 @@ updateTriggersNavVisibility();
 
     } catch (error) {
         console.error('Error viewing user profile:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.profile_load_failed') || 'Failed to load user profile') : 'Failed to load user profile'), 'error');
+        showNotification('Failed to load user profile', 'error');
     }
 }
 
@@ -11494,7 +11493,7 @@ async function viewRecommendedUserProfile(userId) {
         viewUserProfile(userId, true);
     } catch (error) {
         console.error('Error viewing recommended user profile:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.profile_load_failed') || 'Failed to load user profile') : 'Failed to load user profile'), 'error');
+        showNotification('Failed to load user profile', 'error');
     }
 }
 
@@ -11515,7 +11514,7 @@ async function viewUserProfileFromFollowers(userId) {
         viewUserProfile(userId, true);
     } catch (error) {
         console.error('Error viewing user profile from followers:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.profile_load_failed') || 'Failed to load user profile') : 'Failed to load user profile'), 'error');
+        showNotification('Failed to load user profile', 'error');
     }
 }
 
@@ -11561,7 +11560,7 @@ async function viewUserParameters(userId, username) {
         if (response.status === 403) {
             console.log('[DEBUG] Forbidden - must follow user');
             closeLoadingModal();
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.must_follow_params') || 'You must follow this user to view their parameters') : 'You must follow this user to view their parameters'), 'error');
+            showNotification('You must follow this user to view their parameters', 'error');
             return;
         }
 
@@ -11587,7 +11586,7 @@ async function viewUserParameters(userId, username) {
     } catch (error) {
         console.error('[DEBUG] Error loading user parameters:', error);
         closeLoadingModal();
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.params_load_failed') || 'Failed to load user parameters') : 'Failed to load user parameters'), 'error');
+        showNotification('Failed to load user parameters', 'error');
     } finally {
         // Always clear the flag when done (even if error occurred)
         console.log('[DEBUG] Clearing loading flag');
@@ -11847,7 +11846,7 @@ async function loadUserProfileView(userId) {
                     showBlockedMessage();
                     return;
                 }
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.must_follow_profile') || 'You must follow this user to view their profile') : 'You must follow this user to view their profile'), 'error');
+                showNotification('You must follow this user to view their profile', 'error');
                 showView('following');
                 return;
             }
@@ -12017,7 +12016,7 @@ async function loadUserProfileView(userId) {
 
     } catch (error) {
         console.error('Error loading user profile:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.profile_load_failed') || 'Failed to load user profile') : 'Failed to load user profile'), 'error');
+        showNotification('Failed to load user profile', 'error');
         window.isProfilePreview = false; // Reset on error too
     }
 }
@@ -12299,7 +12298,7 @@ async function loadUserFeed(userId) {
 
         if (!response.ok) {
             if (response.status === 403) {
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.must_follow_feed') || 'You must follow this user to view their feed') : 'You must follow this user to view their feed'), 'error');
+                showNotification('You must follow this user to view their feed', 'error');
                 // PJ601: Reset viewingUserId to prevent navigation loop bug
                 viewingUserId = null;
                 window.viewingUserId = null;
@@ -12414,7 +12413,7 @@ async function loadUserFeed(userId) {
 
     } catch (error) {
         console.error('Error loading user feed:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.feed_load_failed') || 'Failed to load user feed') : 'Failed to load user feed'), 'error');
+        showNotification('Failed to load user feed', 'error');
     }
 }
 
@@ -13135,7 +13134,7 @@ async function checkAndLoadTriggerAlerts() {
                 return;
             }
             
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.export_preparing') || 'Preparing your data export...') : 'Preparing your data export...'), 'info');
+            showNotification('Preparing your data export...', 'info');
             
             try {
                 const response = await fetch('/api/user/export-data', {
@@ -13159,10 +13158,10 @@ async function checkAndLoadTriggerAlerts() {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.export_success') || 'Your data has been exported successfully!') : 'Your data has been exported successfully!'), 'success');
+                showNotification('Your data has been exported successfully!', 'success');
             } catch (error) {
                 console.error('Export error:', error);
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.export_failed') || 'Failed to export data. Please try again.') : 'Failed to export data. Please try again.'), 'error');
+                showNotification('Failed to export data. Please try again.', 'error');
             }
         }
 
@@ -13278,13 +13277,13 @@ function checkSessionActivity() {
         }).then(response => {
             if (!response.ok) {
                 // Session expired - show login
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.session_expired') || 'Your session has expired. Please log in again.') : 'Your session has expired. Please log in again.'), 'warning');
+                showNotification('Your session has expired. Please log in again.', 'warning');
                 currentUser = null;
                 showAuthContainer();
             }
         }).catch(() => {
             // Network error - don't log out, just warn
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.session_verify_failed') || 'Unable to verify session. Please check your connection.') : 'Unable to verify session. Please check your connection.'), 'warning');
+            showNotification('Unable to verify session. Please check your connection.', 'warning');
         });
     }
 }
@@ -13719,7 +13718,7 @@ async function searchUsersToFollowInstant(query) {
 async function followUserFromSearch(userId) {
     try {
         await apiCall(`/follow/${userId}`, 'POST', {});
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.followed_success') || 'Successfully followed user') : 'Successfully followed user'), 'success');
+        showNotification('Successfully followed user', 'success');
         
         // Clear search and reload following
         document.getElementById('followSearchInput').value = '';
@@ -13729,7 +13728,7 @@ async function followUserFromSearch(userId) {
             await loadFollowing();
         }
     } catch (error) {
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.follow_user_failed') || 'Failed to follow user') : 'Failed to follow user'), 'error');
+        showNotification('Failed to follow user', 'error');
     }
 }
 
@@ -13739,7 +13738,7 @@ async function followUserWithNoteFromSearch(userId, username) {
     if (note !== null) {
         try {
             await apiCall(`/follow/${userId}`, 'POST', { note: note });
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.followed_with_note') || 'Successfully followed user with note') : 'Successfully followed user with note'), 'success');
+            showNotification('Successfully followed user with note', 'success');
             
             // Clear search and reload following
             document.getElementById('followSearchInput').value = '';
@@ -13749,7 +13748,7 @@ async function followUserWithNoteFromSearch(userId, username) {
                 await loadFollowing();
             }
         } catch (error) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.follow_user_failed') || 'Failed to follow user') : 'Failed to follow user'), 'error');
+            showNotification('Failed to follow user', 'error');
         }
     }
 }
@@ -13758,7 +13757,7 @@ async function followUserWithNoteFromSearch(userId, username) {
 async function unfollowUserFromSearch(userId) {
     try {
         await apiCall(`/unfollow/${userId}`, 'POST', {});
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.unfollow_success') || 'Successfully unfollowed user') : 'Successfully unfollowed user'), 'success');
+        showNotification('Successfully unfollowed user', 'success');
         
         // Clear search and reload following
         document.getElementById('followSearchInput').value = '';
@@ -13768,7 +13767,7 @@ async function unfollowUserFromSearch(userId) {
             await loadFollowing();
         }
     } catch (error) {
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('circles.unfollow_failed') || 'Failed to unfollow user') : 'Failed to unfollow user'), 'error');
+        showNotification('Failed to unfollow user', 'error');
     }
 }
 
@@ -13816,7 +13815,7 @@ async function blockUserFromSearchToggle(userId, username) {
         });
         
         if (response.ok) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.block_success') || 'User blocked') : 'User blocked'), 'success');
+            showNotification('User blocked', 'success');
             
             // Update the button in place to show Unblock
             const searchItem = document.querySelector(`.search-result-item[data-user-id="${userId}"]`);
@@ -13838,7 +13837,7 @@ async function blockUserFromSearchToggle(userId, username) {
         }
     } catch (error) {
         console.error('Error blocking user:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.block_failed') || 'Failed to block user') : 'Failed to block user'), 'error');
+        showNotification('Failed to block user', 'error');
     }
 }
 
@@ -13851,7 +13850,7 @@ async function unblockUserFromSearchToggle(userId) {
         });
         
         if (response.ok) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.unblock_success') || 'User unblocked') : 'User unblocked'), 'success');
+            showNotification('User unblocked', 'success');
             
             // Update the button in place to show Block
             const searchItem = document.querySelector(`.search-result-item[data-user-id="${userId}"]`);
@@ -13876,7 +13875,7 @@ async function unblockUserFromSearchToggle(userId) {
         }
     } catch (error) {
         console.error('Error unblocking user:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.unblock_failed') || 'Failed to unblock user') : 'Failed to unblock user'), 'error');
+        showNotification('Failed to unblock user', 'error');
     }
 }
 
@@ -14131,7 +14130,7 @@ async function showUserCheckinHistory(userId, username) {
     const lang = localStorage.getItem('selectedLanguage') || 'en';
     const chartLabels = {
         'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: 'Anxiety', title: "'s Check-in History", close: 'Close', loading: 'Loading...', noData: 'No check-in data available for this user.', last30: 'Last 30 days', date: 'Date' },
-        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: 'חרדה', title: ' - היסטוריית צ\'ק-אין', close: 'סגור', loading: 'טוען...', noData: 'אין נתוני צ\'ק-אין עבור משתמש זה.', last30: '30 הימים האחרונים', date: 'תאריך' },
+        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: 'חרדה', title: " - היסטוריית צ'ק-אין", close: 'סגור', loading: 'טוען...', noData: 'אין נתוני צ\'ק-אין עבור משתמש זה.', last30: '30 הימים האחרונים', date: 'תאריך' },
         'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: 'القلق', title: ' - سجل التسجيل', close: 'إغلاق', loading: 'جاري التحميل...', noData: 'لا توجد بيانات تسجيل لهذا المستخدم.', last30: 'آخر 30 يوم', date: 'التاريخ' },
         'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: 'Тревога', title: ' - история отметок', close: 'Закрыть', loading: 'Загрузка...', noData: 'Нет данных для этого пользователя.', last30: 'Последние 30 дней', date: 'Дата' }
     };
@@ -14363,7 +14362,7 @@ async function prepareEmailReport() {
         }
     } catch (error) {
         console.error('Email report error:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.report_failed') || 'Failed to send report') : 'Failed to send report'), 'error');
+        showNotification('Failed to send report', 'error');
     }
 }
 
@@ -14401,7 +14400,7 @@ const InlineOnboarding = {
         'onboarding.welcome_desc': 'Your wellness companion for tracking, connecting, and growing together. This short guide will walk you through everything you need to know.',
         'onboarding.welcome_tip': 'You can restart this tour anytime from the Tutorial button in the navigation bar.',
         'onboarding.home': 'Home — Your Daily Dashboard',
-        'onboarding.home_desc': 'Your home page shows everything at a glance: today\'s wellness status, your streak, a quick mood check-in, personalized recommendations, friends\' updates, and your journal feed.',
+        'onboarding.home_desc': "Your home page shows everything at a glance: today's wellness status, your streak, a quick mood check-in, personalized recommendations, friends' updates, and your journal feed.",
         'onboarding.home_tip': 'Tip: Use the Quick Check-In to log your mood with a single tap — even on busy days.',
         'onboarding.diary': 'Diary — Track Your Wellness',
         'onboarding.diary_desc': 'The Diary is where you record daily wellness: Mood, Energy, Sleep Quality, Physical Activity, and Stress. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
@@ -14413,23 +14412,23 @@ const InlineOnboarding = {
         'onboarding.circles_desc': 'Circles let you organize connections into trust levels: General (acquaintances), Close Friends, and Family. Each circle controls who sees your diary entries and feed posts.',
         'onboarding.circles_tip': 'Tip: When posting in your feed or saving diary entries, choose which circle can see them using the visibility dropdown.',
         'onboarding.messages': 'Messages — Private Conversations',
-        'onboarding.messages_desc': 'Send private messages to any of your connections. Use the 💬 template button for quick supportive messages when you\'re not sure what to say.',
-        'onboarding.messages_tip': 'Tip: A short encouraging message can brighten someone\'s day — don\'t overthink it!',
+        'onboarding.messages_desc': "Send private messages to any of your connections. Use the 💬 template button for quick supportive messages when you're not sure what to say.",
+        'onboarding.messages_tip': "Tip: A short encouraging message can brighten someone's day — don't overthink it!",
         'onboarding.connections': 'Connections — Build Your Network',
         'onboarding.connections_desc': 'Find and follow other users in the Connections tab. Browse recommendations, search for people, and manage your connections. Click any connection to view their profile, send a message, or set up wellness alerts.',
         'onboarding.connections_tip': 'Tip: Follow people you trust to see their wellness updates and support each other.',
         'onboarding.invite': 'Invite — Bring Friends Along',
-        'onboarding.invite_desc': 'Share your unique invite link with friends, family, or your therapist. When they join through your link, they\'ll be prompted to connect with you. Growing your circle makes the experience more meaningful.',
+        'onboarding.invite_desc': "Share your unique invite link with friends, family, or your therapist. When they join through your link, they'll be prompted to connect with you. Growing your circle makes the experience more meaningful.",
         'onboarding.invite_tip': 'Tip: Your invite link can be shared via text message, email, WhatsApp, or social media.',
         'onboarding.triggers': 'Triggers & Alerts — Watch Over Loved Ones',
-        'onboarding.triggers_desc': 'Set wellness alerts for connections you care about. Visit someone\'s profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or stress rises above 4. You\'ll receive email alerts when patterns are detected.',
+        'onboarding.triggers_desc': "Set wellness alerts for connections you care about. Visit someone's profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or stress rises above 4. You'll receive email alerts when patterns are detected.",
         'onboarding.triggers_tip': 'Tip: To set a trigger, go to Connections → click a person → View Full Profile → tap the Triggers button next to their name.',
         'onboarding.settings': 'Settings — Personalize Everything',
         'onboarding.settings_desc': 'In Settings, manage your profile (bio, interests, goals, timezone), change your password, toggle notifications and alerts, set a daily diary reminder time, export your data, or delete your account.',
         'onboarding.settings_tip': 'Tip: Set a daily diary reminder to build a consistent tracking habit. Toggle dark mode for comfortable evening use.',
-        'onboarding.finish_title': 'You\'re All Set!',
+        'onboarding.finish_title': "You're All Set!",
         'onboarding.finish_desc': 'You now know everything you need to start your TheraSocial wellness journey. Begin by updating your diary, connecting with friends, and checking in daily.',
-        'onboarding.finish_tip': 'Remember: Small, consistent steps lead to meaningful change. We\'re here to support you every step of the way. 💚',
+        'onboarding.finish_tip': "Remember: Small, consistent steps lead to meaningful change. We're here to support you every step of the way. 💚",
         'onboarding.next': 'Next',
         'onboarding.previous': 'Back',
         'onboarding.skip': 'Skip Tour',
@@ -14699,11 +14698,11 @@ async function startTutorial() {
             }
             setTimeout(() => { window.location.reload(); }, 100);
         } else {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.tutorial_failed') || 'Failed to start tutorial') : 'Failed to start tutorial'), 'error');
+            showNotification('Failed to start tutorial', 'error');
         }
     } catch (error) {
         console.error('[Tutorial] Error:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.tutorial_failed') || 'Failed to start tutorial') : 'Failed to start tutorial'), 'error');
+        showNotification('Failed to start tutorial', 'error');
     }
 }
 
@@ -14896,19 +14895,19 @@ async function toggleConnectionAlert() {
                 trackBtn.textContent = '🔔 Tracking';
                 trackBtn.style.background = 'var(--coral)';
                 trackBtn.style.color = 'white';
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.alert_enabled') || 'Alert tracking enabled') : 'Alert tracking enabled'), 'success');
+                showNotification('Alert tracking enabled', 'success');
             } else {
                 trackBtn.textContent = 'Enable';
                 trackBtn.style.background = 'var(--peach-light)';
                 trackBtn.style.color = 'var(--dark)';
-                showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.alert_disabled') || 'Alert tracking disabled') : 'Alert tracking disabled'), 'info');
+                showNotification('Alert tracking disabled', 'info');
             }
         } else {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.alert_toggle_failed') || 'Failed to toggle alert tracking') : 'Failed to toggle alert tracking'), 'error');
+            showNotification('Failed to toggle alert tracking', 'error');
         }
     } catch (error) {
         console.error('Toggle trigger error:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.alert_toggle_error') || 'Error toggling alert tracking') : 'Error toggling alert tracking'), 'error');
+        showNotification('Error toggling alert tracking', 'error');
     }
 }
 
@@ -15128,7 +15127,7 @@ async function saveProfileSettings() {
         });
 
         if (profileResponse.ok && accountResponse.ok) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.profile_updated') || 'Profile updated successfully!') : 'Profile updated successfully!'), 'success');
+            showNotification('Profile updated successfully!', 'success');
         } else {
             let errorMsg = 'Failed to update profile';
             try {
@@ -15139,7 +15138,7 @@ async function saveProfileSettings() {
         }
     } catch (error) {
         console.error('[V3] Save settings error:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.settings_failed') || 'Failed to save settings') : 'Failed to save settings'), 'error');
+        showNotification('Failed to save settings', 'error');
     }
 }
 
@@ -15229,11 +15228,11 @@ async function changePasswordFromSettings() {
     const confirmPw = document.getElementById('settingsConfirmPassword').value;
 
     if (!currentPw || !newPw) {
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.fill_all_fields') || 'Please fill in all fields') : 'Please fill in all fields'), 'error');
+        showNotification('Please fill in all fields', 'error');
         return;
     }
     if (newPw !== confirmPw) {
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.passwords_no_match') || 'Passwords do not match') : 'Passwords do not match'), 'error');
+        showNotification('Passwords do not match', 'error');
         return;
     }
 
@@ -15250,7 +15249,7 @@ async function changePasswordFromSettings() {
 
         const data = await response.json();
         if (response.ok) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.password_changed') || 'Password changed successfully!') : 'Password changed successfully!'), 'success');
+            showNotification('Password changed successfully!', 'success');
             document.getElementById('settingsCurrentPassword').value = '';
             document.getElementById('settingsNewPassword').value = '';
             document.getElementById('settingsConfirmPassword').value = '';
@@ -15259,7 +15258,7 @@ async function changePasswordFromSettings() {
         }
     } catch (error) {
         console.error('Change password error:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.password_change_failed') || 'Failed to change password') : 'Failed to change password'), 'error');
+        showNotification('Failed to change password', 'error');
     }
 }
 
@@ -15336,7 +15335,7 @@ function generateTodayRecommendations(summaryData) {
         recs.push({ icon: '🤝', text: tt('home.rec_connect', 'Connect with others on TheraSocial for mutual support'), action: "showView('connections')" });
     }
     if (recs.length === 0) {
-        recs.push({ icon: '🌟', text: tt('home.rec_great', 'You\'re doing great! Keep up the good work today.'), action: null });
+        recs.push({ icon: '🌟', text: tt('home.rec_great', "You're doing great! Keep up the good work today."), action: null });
     }
 
     list.innerHTML = recs.map(r => `
@@ -15370,11 +15369,11 @@ async function quickCheckin(moodValue) {
             // Refresh summary
             loadHomeSummary();
         } else {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.mood_failed') || 'Failed to save mood') : 'Failed to save mood'), 'error');
+            showNotification('Failed to save mood', 'error');
         }
     } catch (error) {
         console.error('Quick check-in error:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.mood_error') || 'Error saving mood') : 'Error saving mood'), 'error');
+        showNotification('Error saving mood', 'error');
     }
 }
 
@@ -15525,7 +15524,7 @@ async function loadHomeAlerts() {
 async function sendForgotPasswordMagicLink() {
     const email = document.getElementById('forgotEmail').value.trim();
     if (!email) {
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.email_first') || 'Please enter your email address first') : 'Please enter your email address first'), 'error');
+        showNotification('Please enter your email address first', 'error');
         return;
     }
 
@@ -15538,21 +15537,21 @@ async function sendForgotPasswordMagicLink() {
 
         const data = await response.json();
         if (response.ok && data.success) {
-            showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.magic_link_sent_long') || 'Magic link sent! Check your email to sign in directly.') : 'Magic link sent! Check your email to sign in directly.'), 'success');
+            showNotification('Magic link sent! Check your email to sign in directly.', 'success');
         } else {
-            showNotification(data.error || ((window.i18n && window.i18n.translate) ? (window.i18n.translate('auth.magic_link_failed') || 'Failed to send magic link') : 'Failed to send magic link'), 'error');
+            showNotification(data.error || 'Failed to send magic link', 'error');
         }
     } catch (error) {
         console.error('Forgot password magic link error:', error);
-        showNotification(((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.magic_link_error') || 'Error sending magic link. Please try again.') : 'Error sending magic link. Please try again.'), 'error');
+        showNotification('Error sending magic link. Please try again.', 'error');
     }
 }
 
 // V2: Message templates
 const MESSAGE_TEMPLATES = [
     { icon: '👋', text: 'Hi! Just checking in — how are you doing today?' },
-    { icon: '💪', text: 'You\'re doing great! Keep it up!' },
-    { icon: '🤗', text: 'I\'m here if you want to talk.' },
+    { icon: '💪', text: "You're doing great! Keep it up!" },
+    { icon: '🤗', text: "I'm here if you want to talk." },
     { icon: '🌟', text: 'Remember to take care of yourself today.' },
     { icon: '❤️', text: 'Thinking of you — sending good vibes!' }
 ];
