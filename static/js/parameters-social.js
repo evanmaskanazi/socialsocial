@@ -491,8 +491,8 @@ const addParameterTranslations = () => {
                 'following.view_full_profile': 'View Full Profile',
                 'following.circles': 'Circles',
                 'alerts.wellness_alert': 'Wellness Alert for',
-                'alerts.mood_low': '\'s mood has been less than 3.0 for 3 consecutive days',
-                'alerts.energy_low': '\'s energy has been less than 3.0 for 3 consecutive days',
+                'alerts.mood_low': '\'s mood has been at concerning levels',
+                'alerts.energy_low': '\'s energy has been at concerning levels',
                 // Tooltip help texts
                 'tooltip.mood': 'How good or bad have you felt today?\n\n1 = Bad - Feeling down, sad, or low\n2 = Below average - Not your best, but managing\n3 = Okay - Reasonably stable or neutral\n4 = Good - Feeling positive, content, or upbeat\n\nRemember: Mood fluctuates naturally day to day. You\'re tracking patterns over time to understand yourself better, not judging individual days. Even difficult days provide valuable information.',
                 'tooltip.energy': 'This tracks your physical stamina and mental sharpness throughout the day.\n\n1 = Depleted - Exhausted, struggling to focus or complete basic tasks\n2 = Low - Tired and running on reserves, everything feels effortful\n3 = Moderate - Decent energy to get things done, can focus reasonably well, some fatigue by day\'s end\n4 = High - Energized and alert, easy to focus and accomplish tasks, feeling capable\n\nRemember: Low energy isn\'t laziness - it\'s information. Many factors affect energy (sleep, stress, nutrition, health). Tracking patterns helps you identify what supports or drains you.',
@@ -3050,7 +3050,7 @@ function addTriggerSettings(container, userId, username) {
     triggerContainer.appendChild(title);
 
     const description = document.createElement('p');
-    description.textContent = `Set up alerts for ${username}'s parameters. You'll be notified when values are concerning for 2 consecutive days.`;
+    description.textContent = `Set up alerts for ${username}'s parameters. You'll be notified when values are concerning for 1 or more consecutive days.`;
     description.style.cssText = 'color: #6c757d; margin-bottom: 20px; font-size: 14px;';
     triggerContainer.appendChild(description);
 
@@ -3111,15 +3111,15 @@ function addTriggerSettings(container, userId, username) {
 
                 if (param.name === 'anxiety') {
                     thresholdInfo.innerHTML = `
-                        <span style="color: #ffc107;">●</span> 3 for 2 days |
-                        <span style="color: #ff9800;">●</span> 3/4 or 4/3 |
-                        <span style="color: #f44336;">●</span> 4 for 2 days
+                        <span style="color: #ffc107;">●</span> 3 for 1+ days |
+                        <span style="color: #ff9800;">●</span> 3&4 mix |
+                        <span style="color: #f44336;">●</span> 4 for 1+ days
                     `;
                 } else {
                     thresholdInfo.innerHTML = `
-                        <span style="color: #ffc107;">●</span> 2 for 2 days |
-                        <span style="color: #ff9800;">●</span> 1/2 or 2/1 |
-                        <span style="color: #f44336;">●</span> 1 for 2 days
+                        <span style="color: #ffc107;">●</span> 2 for 1+ days |
+                        <span style="color: #ff9800;">●</span> 1&2 mix |
+                        <span style="color: #f44336;">●</span> 1 for 1+ days
                     `;
                 }
 
