@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <!-- 10LinkN4: Fixed profile flash bug - clicking name in Circles showed own profile before target profile
-     Root cause: Two competing handlers both fired on ?view=profile&user_id=X
-     Fix: SCREEN FIX handler now checks for user_id and calls viewUserProfile() directly,
-     IIFE handler skips profile+user_id case to prevent double navigation -->
+     Root cause 1: Two competing handlers both fired on ?view=profile&user_id=X
+     Root cause 2: showView('profile') called before viewUserProfile(), triggering own-profile load
+     Root cause 3: Stale own-profile data in DOM visible while target profile loads async
+     Fix: SCREEN FIX handler calls viewUserProfile() directly (skipping showView),
+     IIFE handler skips profile+user_id case, viewUserProfile clears stale DOM data,
+     removed unnecessary /api/profile session-check fetch for faster loading -->
 <!-- 10Link LangFix Changes:
   1. Removed right sidebar (Alerts/Notifications) from home page - main content now full width
   2. Moved Triggers button from nav bar to other user's profile view (left of username)
@@ -11549,16 +11552,19 @@ async function viewUserProfile(userId, allowPreview = false) {
         // PJ501: Store if this is a preview (for recommended users)
         window.isProfilePreview = allowPreview;
 
-        // Get current user ID from session or local storage
-      const sessionResponse = await fetch('/api/profile', {credentials: 'include'});
-        if (sessionResponse.ok) {
-            const sessionData = await sessionResponse.json();
-            console.log('[DEBUG] viewUserProfile - currentUserId:', currentUserId, 'session user:', sessionData.id);
-            // DON'T overwrite currentUserId - it's already set at page load
-            // currentUserId = sessionData.id || sessionData.user_id;
-        }
+        // 10LinkN4: Clear stale own-profile data from DOM BEFORE showing the view
+        // This prevents the flash of own-profile when navigating from circles
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileUsername = document.getElementById('profileUsername');
+        const profileHeader = document.querySelector('#profileView h2');
+        if (profileAvatar) profileAvatar.textContent = '';
+        if (profileUsername) profileUsername.textContent = '...';
+        if (profileHeader) profileHeader.textContent = '';
+        // Also clear form fields that might have stale own-profile data
+        const clearFields = ['profileBio', 'profileInterests', 'profileOccupation', 'profileGoals', 'profileFavoriteHobbies', 'profileBirthYear'];
+        clearFields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
-        // Show profile view first - 10Link: pass false to preserve viewingUserId
+        // Show profile view - 10Link: pass false to preserve viewingUserId
 showView('profile', false);
 
 // Hide messages tab when viewing another user
@@ -13503,21 +13509,22 @@ window.addEventListener('DOMContentLoaded', async () => {
                         window.history.replaceState({}, document.title, window.location.pathname);
                         // Small delay then switch to requested view
                         setTimeout(() => {
+                            // 10LinkN4: When viewing another user's profile, skip showView('profile')
+                            // because it triggers loadProfile() which loads OWN profile first (causing flash).
+                            // viewUserProfile() handles showing the view internally.
+                            const profileUserId = urlParams.get('user_id');
+                            if (viewParam === 'profile' && profileUserId && typeof viewUserProfile === 'function') {
+                                console.log('[10LinkN4] Direct viewUserProfile call, skipping showView to prevent own-profile flash');
+                                viewUserProfile(parseInt(profileUserId));
+                                return;
+                            }
+
                             showView(viewParam);
                             // Load appropriate data for the view
                             if (viewParam === 'following') loadFollowing();
                             else if (viewParam === 'followers') loadFollowers();
                             else if (viewParam === 'invite') loadInviteView();
-                            else if (viewParam === 'profile') {
-                                // 10LinkN4: Check for user_id to view another user's profile
-                                // Without this check, loadProfile() shows own profile first
-                                const profileUserId = urlParams.get('user_id');
-                                if (profileUserId && typeof viewUserProfile === 'function') {
-                                    viewUserProfile(parseInt(profileUserId));
-                                } else {
-                                    loadProfile();
-                                }
-                            }
+                            else if (viewParam === 'profile') loadProfile();
                             else if (viewParam === 'circles') loadCircles();
                             else if (viewParam === 'messages') loadConversations();
                             else if (viewParam === 'alerts') loadAlerts();
