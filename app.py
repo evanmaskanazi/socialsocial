@@ -539,11 +539,12 @@ DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 =
 # MINIMUM TRIGGER DAYS CONFIGURATION (PI502alt)
 # =============================================================================
 # Minimum number of consecutive days required for trigger alerts.
-# This prevents overly sensitive monitoring (e.g., 1 bad day shouldn't trigger alarm).
+# This controls the minimum threshold for trigger monitoring.
 # 
 # Change this value to adjust the minimum threshold:
-# - 3 = Recommended (default) - catches real patterns, ignores single bad days
-# - 2 = More sensitive - may catch issues faster but also more false positives
+# - 1 = Most sensitive (CLEAN default) - alerts after 1 day of concerning values
+# - 2 = Moderate - catches patterns over 2 days
+# - 3 = Conservative - only alerts on 3+ day patterns
 # - 4+ = Less sensitive - only alerts on longer patterns
 #
 # This affects:
@@ -551,7 +552,7 @@ DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 =
 # - Alert processing (filters out shorter patterns)
 # - Alert display (hides existing alerts below threshold)
 # =============================================================================
-MINIMUM_TRIGGER_DAYS = 3  # Reverted to match frontend minimum display
+MINIMUM_TRIGGER_DAYS = 1  # CLEAN: Set to 1 for immediate single-day triggers
 # =============================================================================
 
 from flask import (
