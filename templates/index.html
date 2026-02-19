@@ -981,15 +981,18 @@
         }
 
         /* ================================================================== */
-        /* CLEAN2: Warm, readable styling for Connections, Profile, & all views */
-        /* Non-invasive addition: only adds new rules, doesn't modify existing */
+        /* CLEAN3: Warm styling for ALL views — matches home page aesthetic   */
+        /* Non-invasive: only adds new CSS rules, never modifies existing     */
         /* ================================================================== */
 
-        /* --- Connections view: readable headers and vibrant tabs --- */
+        /* --- Connections view: warm card sections with colored borders --- */
         #connectionsView h2 {
             color: var(--dark) !important;
-            font-size: 1.6rem !important;
+            font-size: 1.5rem !important;
             font-weight: 700 !important;
+            padding-bottom: 14px !important;
+            border-bottom: 3px solid var(--sage-light) !important;
+            margin-bottom: 24px !important;
         }
         .conn-tab {
             font-size: 1rem !important;
@@ -1008,14 +1011,14 @@
             background: rgba(107, 139, 164, 0.06) !important;
         }
 
-        /* --- Connection user cards: warm backgrounds with subtle accent borders --- */
+        /* --- Connection user cards: warm with sage left accent --- */
         #connectionsView .user-card,
         #myConnectionsList .user-card,
         #connectionRecommendationsList .user-card {
             background: white !important;
             border: 1px solid rgba(107, 139, 164, 0.12) !important;
             border-left: 3px solid var(--sage) !important;
-            border-radius: 12px !important;
+            border-radius: 14px !important;
             padding: 14px 16px !important;
             margin-bottom: 8px !important;
             transition: all 0.2s ease !important;
@@ -1030,15 +1033,13 @@
         #connectionsView .user-name {
             color: var(--dark) !important;
             font-weight: 600 !important;
-            font-size: 0.95rem !important;
         }
 
-        /* --- Connection search input: warm styling --- */
+        /* --- Connection search: warm input --- */
         #connectionSearchInput {
             border: 2px solid rgba(107, 139, 164, 0.2) !important;
             border-radius: 12px !important;
             padding: 12px 16px !important;
-            font-size: 0.95rem !important;
             background: white !important;
             transition: border-color 0.2s !important;
         }
@@ -1048,42 +1049,167 @@
             outline: none !important;
         }
 
-        /* --- Profile view: warm card backgrounds and readable text --- */
-        .profile-section {
-            background: white !important;
-            border-radius: 16px !important;
-            padding: 24px !important;
-            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1) !important;
+        /* --- Connection tabs container: warm card wrapper --- */
+        #myConnectionsTab,
+        #recommendationsTab {
+            background: var(--white) !important;
+            border-radius: 20px !important;
+            padding: 20px !important;
+            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
+            border-left: 5px solid var(--sage) !important;
         }
-        .profile-header {
-            margin-bottom: 20px !important;
+        #recommendationsTab {
+            border-left-color: var(--accent) !important;
         }
 
-        /* --- All view headings: consistent warm dark color --- */
-        #progressView h2,
-        #circlesView h2,
-        #messagesView h2,
-        #trackingView h2,
-        #inviteView h2,
-        #settingsView h2,
-        #alertsView h2 {
+        /* === ALL VIEW HEADINGS: consistent warm styling === */
+        #progressView > h2,
+        #circlesView > h2,
+        #messagesView > h2,
+        #trackingView > h2,
+        #inviteView > h2,
+        #settingsView > h2,
+        #alertsView > h2 {
             color: var(--dark) !important;
             font-weight: 700 !important;
+            font-size: 1.5rem !important;
+            padding-bottom: 14px !important;
+            border-bottom: 3px solid var(--sage-light) !important;
+            margin-bottom: 24px !important;
         }
 
-        /* --- Settings cards: warm styling consistent with home --- */
-        .settings-card,
-        .settings-section {
-            background: white !important;
+        /* === PROGRESS VIEW: warm card sections === */
+        .city-selector-container {
+            background: var(--white) !important;
+            border-radius: 20px !important;
+            padding: 24px !important;
+            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
+            border-left: 5px solid var(--primary) !important;
+        }
+        #personalizedInsights {
+            background: linear-gradient(135deg, rgba(212,230,214,0.3) 0%, rgba(251,232,224,0.3) 100%) !important;
+            border-radius: 16px !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
+            border-left: 4px solid var(--sage-dark) !important;
+        }
+        #progressView .progress-section,
+        #progressView > div:not(:first-child) {
+            border-radius: 20px !important;
+        }
+
+        /* === PROFILE VIEW: warm cards when viewing another user === */
+        #profileView .profile-section {
+            background: var(--white) !important;
+            border-radius: 20px !important;
+            padding: 28px !important;
+            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
+            border-left: 5px solid var(--accent) !important;
+        }
+        #profileView h2 {
+            color: var(--dark) !important;
+            font-weight: 700 !important;
+            padding-bottom: 14px !important;
+            border-bottom: 3px solid var(--sage-light) !important;
+            margin-bottom: 20px !important;
+        }
+        /* Profile action bar (Unfollow / Add to Circle) */
+        #profileView .profile-action-buttons,
+        #profileView > .view > div:first-of-type {
+            border-radius: 16px !important;
+        }
+        /* Profile form inputs: warm off-white background */
+        #profileView .form-input,
+        #profileView .profile-textarea,
+        #profileView textarea,
+        #profileView input[type="text"],
+        #profileView input[type="number"] {
+            background: #FAF8F5 !important;
+            border: 1px solid rgba(107, 139, 164, 0.15) !important;
+            border-radius: 10px !important;
+        }
+
+        /* === SETTINGS VIEW: warm card styling === */
+        #settingsView .settings-card,
+        #settingsView .settings-section,
+        #settingsView .profile-section,
+        #settingsProfilePanel,
+        #settingsAccountPanel > div,
+        #settingsNotificationPanel > div {
+            background: var(--white) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
             border: 1px solid rgba(107, 139, 164, 0.08) !important;
             transition: box-shadow 0.2s ease !important;
         }
-        .settings-card:hover,
-        .settings-section:hover {
-            box-shadow: 0 4px 16px rgba(107, 139, 164, 0.12) !important;
+        #settingsProfilePanel {
+            border-left: 5px solid var(--primary) !important;
+            padding: 24px !important;
+        }
+        #settingsAccountPanel > div {
+            border-left: 5px solid var(--accent) !important;
+        }
+        #settingsNotificationPanel > div {
+            border-left: 5px solid var(--sage) !important;
+        }
+        /* Settings form inputs warm background */
+        #settingsView .form-input,
+        #settingsView .profile-textarea,
+        #settingsView textarea,
+        #settingsView select {
+            background: #FAF8F5 !important;
+            border: 1px solid rgba(107, 139, 164, 0.15) !important;
+            border-radius: 10px !important;
+        }
+        /* Settings sub-nav warm treatment */
+        #settingsSubNav {
+            background: var(--white) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.08) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
         }
 
-        /* --- Follow/Unfollow buttons: more visible --- */
+        /* === INVITE VIEW: warm sections === */
+        #inviteView .share-link-card,
+        #inviteView > div {
+            border-radius: 20px !important;
+        }
+        #inviteView .user-card {
+            background: white !important;
+            border: 1px solid rgba(107, 139, 164, 0.12) !important;
+            border-left: 3px solid var(--sage) !important;
+            border-radius: 14px !important;
+            transition: all 0.2s ease !important;
+        }
+        #inviteView .user-card:hover {
+            background: #FAFAF8 !important;
+            border-left-color: var(--primary) !important;
+            box-shadow: 0 4px 16px rgba(107, 139, 164, 0.15) !important;
+        }
+
+        /* === CIRCLES VIEW: warm cards === */
+        #circlesView > div {
+            background: var(--white) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
+            padding: 20px !important;
+            margin-bottom: 20px !important;
+        }
+
+        /* === MESSAGES VIEW: warm cards === */
+        #messagesView > div {
+            border-radius: 16px !important;
+        }
+
+        /* === ALERTS VIEW: warm card === */
+        #alertsView > div {
+            border-radius: 16px !important;
+        }
+
+        /* === Follow/Unfollow buttons: prominent === */
         .follow-btn {
             background: var(--primary) !important;
             color: white !important;
@@ -1095,40 +1221,55 @@
             box-shadow: 0 4px 12px rgba(107, 139, 164, 0.3) !important;
         }
 
-        /* --- User avatar: consistent shadow (don't override inline background colors) --- */
+        /* === User avatar: subtle shadow (no background override) === */
         .user-avatar {
             box-shadow: 0 2px 8px rgba(107, 139, 164, 0.2) !important;
         }
 
-        /* --- Back button: visible warm color --- */
-        .back-to-following-btn,
-        [onclick*="showView('connections')"] {
-            color: var(--primary) !important;
-            font-weight: 600 !important;
-        }
-
-        /* --- Dark mode: connections view dark compatibility --- */
+        /* === DARK MODE for all views === */
         .dark-mode #connectionsView .user-card,
         .dark-mode #myConnectionsList .user-card,
-        .dark-mode #connectionRecommendationsList .user-card {
+        .dark-mode #connectionRecommendationsList .user-card,
+        .dark-mode #inviteView .user-card {
             background: var(--light) !important;
             border-color: var(--border) !important;
-        }
-        .dark-mode #connectionsView .user-name {
-            color: var(--dark) !important;
         }
         .dark-mode .conn-tab.active {
             color: var(--primary) !important;
             border-bottom-color: var(--primary) !important;
             background: rgba(143, 175, 196, 0.1) !important;
         }
-        .dark-mode .settings-card,
-        .dark-mode .settings-section {
+        .dark-mode #settingsView .settings-card,
+        .dark-mode #settingsView .settings-section,
+        .dark-mode #settingsView .profile-section,
+        .dark-mode #settingsProfilePanel,
+        .dark-mode #settingsAccountPanel > div,
+        .dark-mode #settingsNotificationPanel > div {
+            background: var(--light) !important;
+            border-color: var(--border) !important;
+        }
+        .dark-mode #profileView .profile-section {
+            background: var(--light) !important;
+            border-color: var(--border) !important;
+        }
+        .dark-mode #myConnectionsTab,
+        .dark-mode #recommendationsTab {
+            background: var(--light) !important;
+            border-color: var(--border) !important;
+        }
+        .dark-mode #circlesView > div {
+            background: var(--light) !important;
+            border-color: var(--border) !important;
+        }
+        .dark-mode #profileView .form-input,
+        .dark-mode #profileView .profile-textarea,
+        .dark-mode #settingsView .form-input,
+        .dark-mode #settingsView .profile-textarea {
             background: var(--light) !important;
             border-color: var(--border) !important;
         }
         /* ================================================================== */
-        /* END CLEAN2 WARM VIEW STYLING                                       */
+        /* END CLEAN3 WARM VIEW STYLING                                       */
         /* ================================================================== */
 
         /* ================================================================== */
