@@ -2809,6 +2809,8 @@
                     <span data-i18n="auth.continue_google">Continue with Google</span>
                 </button>
                 
+                <!-- CLEAN: Microsoft and Apple commented out - Google only for now -->
+                <!--
                 <button type="button" class="social-btn social-btn-microsoft" onclick="socialLogin('microsoft')">
                     <svg class="social-btn-icon" viewBox="0 0 24 24" width="20" height="20">
                         <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
@@ -2825,6 +2827,7 @@
                     </svg>
                     <span data-i18n="auth.continue_apple">Continue with Apple</span>
                 </button>
+                -->
             </div>
             
             <!-- OR Divider between social and traditional login -->
@@ -2991,30 +2994,42 @@
                 <span data-i18n="consent.email_updates">I want to receive email updates about new features</span>
             </label>
 
-            <label class="consent-item">
-                <input type="checkbox" id="privacyAccepted" required>
-                <span data-i18n="consent.privacy">I accept the privacy policy and understand my data will be protected</span>
-            </label>
-
-            <label class="consent-item">
-                <input type="checkbox" id="researchData">
-                <span data-i18n="consent.research">I agree to share de-identified data for platform improvement</span>
-            </label>
-
-            <label class="consent-item">
-                <input type="checkbox" id="teamDeclaration" required>
-                <span data-i18n="consent.team">I understand this is a good-faith community platform</span>
-            </label>
-
-            <label class="consent-item">
-                <input type="checkbox" id="responsibleUse" required>
-                <span data-i18n="consent.responsible">I will use this platform responsibly and respectfully</span>
-            </label>
-
-            <label class="consent-item">
-                <input type="checkbox" id="waiverClaims" required>
-                <span data-i18n="consent.waiver">I understand and accept the terms of service</span>
-            </label>
+            <!-- CLEAN: 5 required items shown as text list with single agree-all checkbox -->
+            <div style="margin-top: 15px; padding: 15px; background: #f9fafb; border-radius: 10px; border: 1px solid #e5e7eb;">
+                <p style="font-weight: 600; margin-bottom: 10px; color: #374151;" data-i18n="consent.required_heading">By using TheraSocial, you agree to the following:</p>
+                <ul style="list-style: none; padding: 0; margin: 0 0 15px 0; display: flex; flex-direction: column; gap: 8px;">
+                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
+                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+                        <span data-i18n="consent.privacy">I accept the privacy policy and understand my data will be protected</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
+                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+                        <span data-i18n="consent.research">I agree to share de-identified data for platform improvement</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
+                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+                        <span data-i18n="consent.team">I understand this is a good-faith community platform</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
+                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+                        <span data-i18n="consent.responsible">I will use this platform responsibly and respectfully</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
+                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+                        <span data-i18n="consent.waiver">I understand and accept the terms of service</span>
+                    </li>
+                </ul>
+                <label class="consent-item" style="font-weight: 600; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                    <input type="checkbox" id="agreeAllRequired" required onchange="syncRequiredConsents(this.checked)">
+                    <span data-i18n="consent.agree_all">I agree to all of the above</span>
+                </label>
+            </div>
+            <!-- Hidden checkboxes to maintain backend compatibility -->
+            <input type="hidden" id="privacyAccepted">
+            <input type="hidden" id="researchData">
+            <input type="hidden" id="teamDeclaration">
+            <input type="hidden" id="responsibleUse">
+            <input type="hidden" id="waiverClaims">
             
             <!-- PL400: GDPR Additional Optional Consents -->
             <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
@@ -3515,6 +3530,8 @@
                   </div>
 
                   <!-- Feed Section (My Journal/Feed - kept for daily journaling) -->
+                  <!-- CLEAN: My Feed section commented out - no longer needed -->
+                  <!--
                   <div id="homeFeedSection">
                       <h3 style="margin-bottom: 20px; color: var(--primary); font-size: 1.3rem;" data-i18n="feed.my_feed">My Feed</h3>
                       <p style="color: var(--gray); margin-bottom: 20px;" data-i18n="feed.subtitle">Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.</p>
@@ -3553,6 +3570,7 @@
                           <!-- Posts will be displayed here -->
                       </div>
                   </div>
+                  -->
               </div>
 
               <!-- Progress View (P305: New - Location + Progress sections) -->
@@ -4119,6 +4137,29 @@
                                       <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
                                           <input type="checkbox" id="settingsDarkModeToggle" onchange="toggleDarkMode(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute;">
                                           <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                              </div>
+
+                              <!-- CLEAN: Optional Privacy Preferences (same 3 options as signup) -->
+                              <div class="settings-card" id="settingsPrivacyPreferences" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 10px;" data-i18n="settings.privacy_preferences">Privacy Preferences</h3>
+                                  <p style="color: #6B7280; font-size: 0.85rem; margin-bottom: 18px;" data-i18n="settings.privacy_preferences_desc">Manage your optional data sharing preferences. These can be changed at any time.</p>
+
+                                  <div style="display: flex; flex-direction: column; gap: 14px;">
+                                      <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsMarketingConsent" onchange="updateOptionalConsent('marketing_consent', this.checked)">
+                                          <span data-i18n="consent.marketing">I agree to receive marketing communications</span>
+                                      </label>
+
+                                      <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsAnalyticsConsent" onchange="updateOptionalConsent('analytics_consent', this.checked)">
+                                          <span data-i18n="consent.analytics">I allow usage analytics to improve the service</span>
+                                      </label>
+
+                                      <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsThirdPartySharing" onchange="updateOptionalConsent('third_party_sharing', this.checked)">
+                                          <span data-i18n="consent.third_party">I agree to data sharing with service partners</span>
                                       </label>
                                   </div>
                               </div>
@@ -6067,6 +6108,16 @@ function showConsentModal() {
 }
 
 // Submit consent with optional username and required birth year
+// CLEAN: Sync hidden required consent fields from aggregate checkbox
+function syncRequiredConsents(checked) {
+    // Set hidden fields so submitConsent reads them correctly
+    ['privacyAccepted', 'researchData', 'teamDeclaration', 'responsibleUse', 'waiverClaims'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = checked ? 'true' : 'false';
+    });
+}
+window.syncRequiredConsents = syncRequiredConsents;
+
 async function submitConsent() {
     const username = document.getElementById('consentUsername').value.trim(); // Can be empty
     const birthYearInput = document.getElementById('consentBirthYear').value.trim();
@@ -6079,15 +6130,18 @@ async function submitConsent() {
         return;
     }
 
+    // CLEAN: Use aggregate checkbox for all required consents
+    const allRequiredChecked = document.getElementById('agreeAllRequired')?.checked || false;
+
     const consent = {
         username: username, // Empty string is valid - backend will use email prefix
         birth_year: birthYear, // PJ6001: Add birth year
         email_updates: document.getElementById('emailUpdates').checked,
-        privacy_accepted: document.getElementById('privacyAccepted').checked,
-        research_data: document.getElementById('researchData').checked,
-        team_declaration: document.getElementById('teamDeclaration').checked,
-        responsible_use: document.getElementById('responsibleUse').checked,
-        waiver_claims: document.getElementById('waiverClaims').checked,
+        privacy_accepted: allRequiredChecked,
+        research_data: allRequiredChecked,
+        team_declaration: allRequiredChecked,
+        responsible_use: allRequiredChecked,
+        waiver_claims: allRequiredChecked,
         language: document.getElementById('languageSelector').value,
         // PL400: GDPR additional consent fields
         marketing_consent: document.getElementById('marketingConsent')?.checked || false,
@@ -6095,11 +6149,8 @@ async function submitConsent() {
         third_party_sharing: document.getElementById('thirdPartySharing')?.checked || false
     };
 
-    // Check required consents
-    const required = ['privacy_accepted', 'team_declaration', 'responsible_use', 'waiver_claims'];
-    const allAccepted = required.every(field => consent[field]);
-
-    if (!allAccepted) {
+    // CLEAN: Check aggregate required consent checkbox
+    if (!allRequiredChecked) {
         document.getElementById('consentError').textContent = t('consent.error') || 'Please accept all required terms';
         document.getElementById('consentError').style.display = 'block';
         return;
@@ -7321,6 +7372,22 @@ async function viewUserProfileFromInvite(userId) {
 }
 
 window.viewUserProfileFromInvite = viewUserProfileFromInvite;
+
+// CLEAN: View user profile from Home page (connections list and friend updates)
+// Works exactly the same as viewUserProfileFromInvite
+async function viewUserProfileFromHome(userId) {
+    try {
+        const blockStatus = await checkIfBlockedByUser(userId);
+        if (blockStatus.blockedBy || blockStatus.is_blocked) {
+            showBlockedMessage();
+            return;
+        }
+    } catch (e) {
+        console.error('Error checking block status:', e);
+    }
+    viewUserProfile(userId, true);
+}
+window.viewUserProfileFromHome = viewUserProfileFromHome;
 
 // PJ702: Instant search for Invite tab with Send Request button
 let inviteSearchDebounceTimer = null;
@@ -15159,8 +15226,52 @@ function switchSettingsTab(tab) {
         const isDark = document.body.classList.contains('dark-mode');
         const dmToggle = document.getElementById('settingsDarkModeToggle');
         if (dmToggle) dmToggle.checked = isDark;
+        // CLEAN: Load optional consent preferences
+        loadSettingsConsentPreferences();
     }
 }
+
+// CLEAN: Load optional consent preferences for Settings Account tab
+async function loadSettingsConsentPreferences() {
+    try {
+        const response = await fetch('/api/privacy/consents', { credentials: 'include' });
+        if (!response.ok) return;
+        const data = await response.json();
+        const consents = data.consents || {};
+
+        const marketingEl = document.getElementById('settingsMarketingConsent');
+        const analyticsEl = document.getElementById('settingsAnalyticsConsent');
+        const thirdPartyEl = document.getElementById('settingsThirdPartySharing');
+
+        if (marketingEl && consents.marketing) marketingEl.checked = consents.marketing.granted;
+        if (analyticsEl && consents.analytics) analyticsEl.checked = consents.analytics.granted;
+        if (thirdPartyEl && consents.third_party_sharing) thirdPartyEl.checked = consents.third_party_sharing.granted;
+    } catch (error) {
+        console.error('[CLEAN] Error loading consent preferences:', error);
+    }
+}
+
+// CLEAN: Update a single optional consent preference
+async function updateOptionalConsent(field, value) {
+    try {
+        const response = await fetch('/api/privacy/consents/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ [field]: value })
+        });
+        if (response.ok) {
+            showNotification(_t('msg.preferences_saved', 'Preference updated successfully'), 'success');
+        } else {
+            showNotification(_t('msg.preferences_failed', 'Failed to update preference'), 'error');
+        }
+    } catch (error) {
+        console.error('[CLEAN] Error updating consent:', error);
+        showNotification(_t('msg.preferences_failed', 'Failed to update preference'), 'error');
+    }
+}
+window.updateOptionalConsent = updateOptionalConsent;
+window.loadSettingsConsentPreferences = loadSettingsConsentPreferences;
 
 // Fix10C: Show/hide reminder time input based on diary reminder toggle
 function toggleSettingsReminderTime(isChecked) {
@@ -15531,7 +15642,7 @@ async function loadConnectionStatusList() {
             return '<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light, #f9fafb); border-radius: 12px; cursor: pointer;" onclick="if(typeof showConnectionInfo===\'function\') showConnectionInfo(' + (conn.id || 0) + ')">' +
                 '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + avatar + '</div>' +
                 '<div style="flex: 1; min-width: 0;">' +
-                '<div style="font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + name + '</div>' +
+                '<div style="font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><a href="#" onclick="event.stopPropagation(); viewUserProfileFromHome(' + (conn.id || 0) + '); return false;" style="color: var(--dark); text-decoration: none;" onmouseover="this.style.color=\'var(--primary)\'; this.style.textDecoration=\'underline\';" onmouseout="this.style.color=\'var(--dark)\'; this.style.textDecoration=\'none\';">' + name + '</a></div>' +
                 '<div style="font-size: 0.8rem; color: var(--gray);">' + escapeHtml(conn.bio || conn.occupation || '') + '</div>' +
                 '</div>' +
                 '<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">' +
@@ -15581,7 +15692,7 @@ async function loadFriendsUpdates() {
                 <div style="background: var(--light); padding: 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="openConnectionInfo(${u.user.id}, '${escapeHtml(u.user.username)}', '${escapeHtml(u.user.selected_city || 'Unknown')}', '#6B8BA4', false, ${u.user.follows_you || false})">
                     <div style="width: 40px; height: 40px; border-radius: 50%; background: #6B8BA4; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">${escapeHtml(u.user.username.charAt(0).toUpperCase())}</div>
                     <div style="flex: 1;">
-                        <div style="font-weight: 600; color: var(--dark); font-size: 0.9rem;">${escapeHtml(u.user.username)}</div>
+                        <div style="font-weight: 600; color: var(--dark); font-size: 0.9rem;"><a href="#" onclick="event.stopPropagation(); viewUserProfileFromHome(${u.user.id}); return false;" style="color: var(--dark); text-decoration: none;" onmouseover="this.style.color='var(--primary)'; this.style.textDecoration='underline';" onmouseout="this.style.color='var(--dark)'; this.style.textDecoration='none';">${escapeHtml(u.user.username)}</a></div>
                         <div style="font-size: 0.8rem; color: var(--gray);">${paramDisplay || tt('home.updated', 'Updated') + ' ' + u.date}</div>
                     </div>
                     <span style="font-size: 0.75rem; color: var(--gray);">${u.date}</span>
