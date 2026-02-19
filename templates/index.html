@@ -981,6 +981,157 @@
         }
 
         /* ================================================================== */
+        /* CLEAN2: Warm, readable styling for Connections, Profile, & all views */
+        /* Non-invasive addition: only adds new rules, doesn't modify existing */
+        /* ================================================================== */
+
+        /* --- Connections view: readable headers and vibrant tabs --- */
+        #connectionsView h2 {
+            color: var(--dark) !important;
+            font-size: 1.6rem !important;
+            font-weight: 700 !important;
+        }
+        .conn-tab {
+            font-size: 1rem !important;
+            padding: 14px 20px !important;
+            color: #5A6978 !important;
+            font-weight: 600 !important;
+            transition: all 0.25s ease !important;
+        }
+        .conn-tab.active {
+            color: #4A6FA5 !important;
+            border-bottom: 3px solid #4A6FA5 !important;
+            background: rgba(74, 111, 165, 0.06) !important;
+        }
+        .conn-tab:hover:not(.active) {
+            color: var(--dark) !important;
+            background: rgba(107, 139, 164, 0.06) !important;
+        }
+
+        /* --- Connection user cards: warm backgrounds with subtle accent borders --- */
+        #connectionsView .user-card,
+        #myConnectionsList .user-card,
+        #connectionRecommendationsList .user-card {
+            background: white !important;
+            border: 1px solid rgba(107, 139, 164, 0.12) !important;
+            border-left: 3px solid var(--sage) !important;
+            border-radius: 12px !important;
+            padding: 14px 16px !important;
+            margin-bottom: 8px !important;
+            transition: all 0.2s ease !important;
+        }
+        #connectionsView .user-card:hover,
+        #myConnectionsList .user-card:hover,
+        #connectionRecommendationsList .user-card:hover {
+            background: #FAFAF8 !important;
+            border-left-color: var(--primary) !important;
+            box-shadow: 0 4px 16px rgba(107, 139, 164, 0.15) !important;
+        }
+        #connectionsView .user-name {
+            color: var(--dark) !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+        }
+
+        /* --- Connection search input: warm styling --- */
+        #connectionSearchInput {
+            border: 2px solid rgba(107, 139, 164, 0.2) !important;
+            border-radius: 12px !important;
+            padding: 12px 16px !important;
+            font-size: 0.95rem !important;
+            background: white !important;
+            transition: border-color 0.2s !important;
+        }
+        #connectionSearchInput:focus {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px rgba(107, 139, 164, 0.1) !important;
+            outline: none !important;
+        }
+
+        /* --- Profile view: warm card backgrounds and readable text --- */
+        .profile-section {
+            background: white !important;
+            border-radius: 16px !important;
+            padding: 24px !important;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1) !important;
+        }
+        .profile-header {
+            margin-bottom: 20px !important;
+        }
+
+        /* --- All view headings: consistent warm dark color --- */
+        #progressView h2,
+        #circlesView h2,
+        #messagesView h2,
+        #trackingView h2,
+        #inviteView h2,
+        #settingsView h2,
+        #alertsView h2 {
+            color: var(--dark) !important;
+            font-weight: 700 !important;
+        }
+
+        /* --- Settings cards: warm styling consistent with home --- */
+        .settings-card,
+        .settings-section {
+            background: white !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
+            transition: box-shadow 0.2s ease !important;
+        }
+        .settings-card:hover,
+        .settings-section:hover {
+            box-shadow: 0 4px 16px rgba(107, 139, 164, 0.12) !important;
+        }
+
+        /* --- Follow/Unfollow buttons: more visible --- */
+        .follow-btn {
+            background: var(--primary) !important;
+            color: white !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+        }
+        .follow-btn:hover {
+            background: #5A7A93 !important;
+            box-shadow: 0 4px 12px rgba(107, 139, 164, 0.3) !important;
+        }
+
+        /* --- User avatar: consistent shadow (don't override inline background colors) --- */
+        .user-avatar {
+            box-shadow: 0 2px 8px rgba(107, 139, 164, 0.2) !important;
+        }
+
+        /* --- Back button: visible warm color --- */
+        .back-to-following-btn,
+        [onclick*="showView('connections')"] {
+            color: var(--primary) !important;
+            font-weight: 600 !important;
+        }
+
+        /* --- Dark mode: connections view dark compatibility --- */
+        .dark-mode #connectionsView .user-card,
+        .dark-mode #myConnectionsList .user-card,
+        .dark-mode #connectionRecommendationsList .user-card {
+            background: var(--light) !important;
+            border-color: var(--border) !important;
+        }
+        .dark-mode #connectionsView .user-name {
+            color: var(--dark) !important;
+        }
+        .dark-mode .conn-tab.active {
+            color: var(--primary) !important;
+            border-bottom-color: var(--primary) !important;
+            background: rgba(143, 175, 196, 0.1) !important;
+        }
+        .dark-mode .settings-card,
+        .dark-mode .settings-section {
+            background: var(--light) !important;
+            border-color: var(--border) !important;
+        }
+        /* ================================================================== */
+        /* END CLEAN2 WARM VIEW STYLING                                       */
+        /* ================================================================== */
+
+        /* ================================================================== */
         /* END VISUAL OVERHAUL V3                                             */
         /* ================================================================== */
 
@@ -3530,8 +3681,8 @@
                   </div>
 
                   <!-- Feed Section (My Journal/Feed - kept for daily journaling) -->
-                  <!-- CLEAN: My Feed section commented out - no longer needed -->
-                  <!--
+                  <!-- CLEAN2: My Feed section hidden - no longer needed (using display:none instead of HTML comment to avoid nested comment issues) -->
+                  <div id="homeFeedSectionWrapper" style="display: none !important;">
                   <div id="homeFeedSection">
                       <h3 style="margin-bottom: 20px; color: var(--primary); font-size: 1.3rem;" data-i18n="feed.my_feed">My Feed</h3>
                       <p style="color: var(--gray); margin-bottom: 20px;" data-i18n="feed.subtitle">Save your thoughts for each day. Select a date from the calendar, write your update, and save it. Green dots show dates with saved entries.</p>
@@ -3570,7 +3721,7 @@
                           <!-- Posts will be displayed here -->
                       </div>
                   </div>
-                  -->
+                  </div>
               </div>
 
               <!-- Progress View (P305: New - Location + Progress sections) -->
