@@ -3260,70 +3260,73 @@
 
 <!-- Consent Modal with integrated username option -->
 <div id="consentModal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 600px;">
-        <h2 data-i18n="consent.title">Welcome to TheraSocial</h2>
-        <p data-i18n="consent.subtitle">Please review and accept our terms to continue</p>
+    <div class="modal-content" style="max-width: 580px; padding: 0; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.18);">
+        <!-- Header with gradient -->
+        <div style="background: linear-gradient(135deg, #6B8BA4 0%, #9DB8A0 100%); padding: 32px 36px 28px; text-align: center;">
+            <h2 data-i18n="consent.title" style="color: white; font-size: 1.6rem; margin: 0 0 6px 0; font-weight: 700; letter-spacing: -0.3px;">Welcome to TheraSocial</h2>
+            <p data-i18n="consent.subtitle" style="color: rgba(255,255,255,0.9); font-size: 0.95rem; margin: 0; font-weight: 400;">Please review and accept our terms to continue</p>
+        </div>
+        
+        <div style="padding: 28px 36px 32px;">
 
         <!-- Optional Username Field -->
-        <div class="form-group" style="margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 8px;">
-            <label class="form-label">
+        <div class="form-group" style="margin: 0 0 20px 0; padding: 16px 18px; background: #f8faf8; border-radius: 12px; border: 1px solid #e8efe8;">
+            <label class="form-label" style="margin-bottom: 8px; font-weight: 600; color: #374151;">
                 <span data-i18n="auth.username">Username</span>
-                <span style="color: #666; font-size: 14px;" data-i18n="username.optional">(optional)</span>
+                <span style="color: #9CA3AF; font-size: 13px; font-weight: 400;" data-i18n="username.optional">(optional)</span>
             </label>
             <input type="text" id="consentUsername" class="form-input"
                    placeholder="Leave blank to use your email prefix"
-                   data-i18n-placeholder="username.blank_for_email">
-            <small id="suggestedUsername" style="color: #666; display: block; margin-top: 5px;"></small>
+                   data-i18n-placeholder="username.blank_for_email"
+                   style="border-radius: 10px; border: 1px solid #d1d5db; padding: 10px 14px;">
+            <small id="suggestedUsername" style="color: #6B8BA4; display: block; margin-top: 6px; font-size: 13px;"></small>
         </div>
 
         <!-- PJ6001: Birth Year Field (Required) -->
-        <div class="form-group" style="margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 8px;">
-            <label class="form-label">
+        <div class="form-group" style="margin: 0 0 20px 0; padding: 16px 18px; background: #f8faf8; border-radius: 12px; border: 1px solid #e8efe8;">
+            <label class="form-label" style="margin-bottom: 8px; font-weight: 600; color: #374151;">
                 <span data-i18n="profile.birth_year">Birth Year</span>
                 <span style="color: #dc2626; font-size: 14px;">*</span>
             </label>
             <input type="number" id="consentBirthYear" class="form-input"
                    placeholder="YYYY" min="1900" max="2025" maxlength="4"
                    data-i18n-placeholder="profile.birth_year_placeholder"
-                   required>
-            <small style="color: #666; display: block; margin-top: 5px;" data-i18n="profile.birth_year_hint">Enter your birth year (4 digits)</small>
+                   required
+                   style="border-radius: 10px; border: 1px solid #d1d5db; padding: 10px 14px;">
+            <small style="color: #9CA3AF; display: block; margin-top: 6px; font-size: 13px;" data-i18n="profile.birth_year_hint">Enter your birth year (4 digits)</small>
         </div>
 
         <!-- Consent checkboxes -->
         <div class="consent-items" style="margin: 20px 0;">
-            <label class="consent-item">
-                <input type="checkbox" id="emailUpdates">
-                <span data-i18n="consent.email_updates">I want to receive email updates about new features</span>
-            </label>
 
             <!-- CLEAN: 5 required items shown as text list with single agree-all checkbox -->
-            <div style="margin-top: 15px; padding: 15px; background: #f9fafb; border-radius: 10px; border: 1px solid #e5e7eb;">
-                <p style="font-weight: 600; margin-bottom: 10px; color: #374151;" data-i18n="consent.required_heading">By using TheraSocial, you agree to the following:</p>
-                <ul style="list-style: none; padding: 0; margin: 0 0 15px 0; display: flex; flex-direction: column; gap: 8px;">
-                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
-                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+            <div style="margin-top: 0; padding: 18px; background: #fafbfc; border-radius: 14px; border: 1px solid #e5e8eb;">
+                <p style="font-weight: 600; margin-bottom: 12px; color: #374151; font-size: 0.95rem;" data-i18n="consent.required_heading">By using TheraSocial, you agree to the following:</p>
+                <ul style="list-style: none; padding: 0; margin: 0 0 16px 0; display: flex; flex-direction: column; gap: 10px;">
+                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
+                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
                         <span data-i18n="consent.privacy">I accept the privacy policy and understand my data will be protected</span>
                     </li>
-                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
-                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
+                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
                         <span data-i18n="consent.research">I agree to share de-identified data for platform improvement</span>
                     </li>
-                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
-                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
+                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
                         <span data-i18n="consent.team">I understand this is a good-faith community platform</span>
                     </li>
-                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
-                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
+                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
                         <span data-i18n="consent.responsible">I will use this platform responsibly and respectfully</span>
                     </li>
-                    <li style="display: flex; align-items: flex-start; gap: 8px; color: #4B5563; font-size: 14px;">
-                        <span style="color: var(--primary); flex-shrink: 0;">•</span>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
+                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
                         <span data-i18n="consent.waiver">I understand and accept the terms of service</span>
                     </li>
                 </ul>
-                <label class="consent-item" style="font-weight: 600; padding-top: 10px; border-top: 1px solid #e5e7eb;">
-                    <input type="checkbox" id="agreeAllRequired" required onchange="syncRequiredConsents(this.checked)">
-                    <span data-i18n="consent.agree_all">I agree to all of the above</span>
+                <label class="consent-item" style="font-weight: 600; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; gap: 10px; margin: 0; cursor: pointer;">
+                    <input type="checkbox" id="agreeAllRequired" required onchange="syncRequiredConsents(this.checked)" style="width: 18px; height: 18px; accent-color: #6B8BA4;">
+                    <span data-i18n="consent.agree_all" style="color: #374151;">I agree to all of the above</span>
                 </label>
             </div>
             <!-- Hidden checkboxes to maintain backend compatibility -->
@@ -3334,35 +3337,37 @@
             <input type="hidden" id="waiverClaims">
             
             <!-- PL400: GDPR Additional Optional Consents -->
-            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-                <p style="font-size: 14px; color: #666; margin-bottom: 10px;" data-i18n="consent.optional_title">Optional preferences (can be changed anytime in Privacy Settings):</p>
+            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                <p style="font-size: 13px; color: #9CA3AF; margin-bottom: 12px; font-weight: 500;" data-i18n="consent.optional_title">Optional preferences (can be changed anytime in Privacy Settings):</p>
                 
-                <label class="consent-item">
-                    <input type="checkbox" id="marketingConsent">
-                    <span data-i18n="consent.marketing">I agree to receive marketing communications</span>
+                <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 10px 0;">
+                    <input type="checkbox" id="marketingConsent" style="width: 16px; height: 16px; accent-color: #6B8BA4;">
+                    <span data-i18n="consent.marketing" style="color: #6B7280; font-size: 14px;">I agree to receive marketing communications</span>
                 </label>
                 
-                <label class="consent-item">
-                    <input type="checkbox" id="analyticsConsent" checked>
-                    <span data-i18n="consent.analytics">I allow usage analytics to improve the service</span>
+                <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 10px 0;">
+                    <input type="checkbox" id="analyticsConsent" checked style="width: 16px; height: 16px; accent-color: #6B8BA4;">
+                    <span data-i18n="consent.analytics" style="color: #6B7280; font-size: 14px;">I allow usage analytics to improve the service</span>
                 </label>
                 
-                <label class="consent-item">
-                    <input type="checkbox" id="thirdPartySharing">
-                    <span data-i18n="consent.third_party">I agree to data sharing with service partners</span>
+                <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 10px 0;">
+                    <input type="checkbox" id="thirdPartySharing" style="width: 16px; height: 16px; accent-color: #6B8BA4;">
+                    <span data-i18n="consent.third_party" style="color: #6B7280; font-size: 14px;">I agree to data sharing with service partners</span>
                 </label>
             </div>
         </div>
 
         <!-- PL400: Privacy Rights Notice -->
-        <div style="background: #f0f9ff; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; color: #1e40af;">
-            <strong data-i18n="consent.rights_title">Your Privacy Rights:</strong>
+        <div style="background: linear-gradient(135deg, #f0f7ff 0%, #f0f9f0 100%); padding: 14px 16px; border-radius: 12px; margin-bottom: 18px; font-size: 13px; color: #4a6b8a; border: 1px solid #dde8f0;">
+            <strong data-i18n="consent.rights_title" style="display: block; margin-bottom: 4px;">Your Privacy Rights:</strong>
             <span data-i18n="consent.rights_text">You can access, export, or delete your data anytime from Privacy Settings. You can withdraw optional consents at any time.</span>
         </div>
 
-        <div class="consent-actions">
-            <button type="button" class="btn btn-primary" onclick="submitConsent()" data-i18n="consent.accept">Accept and Continue</button>
-            <p style="color: red; display: none;" id="consentError" data-i18n="consent.error">Please accept all required terms</p>
+        <div class="consent-actions" style="text-align: center;">
+            <button type="button" class="btn" onclick="submitConsent()" data-i18n="consent.accept" style="background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: white; border: none; padding: 14px 40px; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(107,139,164,0.3); width: 100%; transition: all 0.2s ease;">Accept and Continue</button>
+            <p style="color: #EF4444; display: none; margin-top: 12px; font-size: 0.9rem;" id="consentError" data-i18n="consent.error">Please accept all required terms</p>
+        </div>
+        
         </div>
     </div>
 </div>
@@ -4449,6 +4454,11 @@
                                   <p style="color: #6B7280; font-size: 0.85rem; margin-bottom: 18px;" data-i18n="settings.privacy_preferences_desc">Manage your optional data sharing preferences. These can be changed at any time.</p>
 
                                   <div style="display: flex; flex-direction: column; gap: 14px;">
+                                      <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsEmailUpdates" onchange="updateOptionalConsent('email_updates', this.checked)">
+                                          <span data-i18n="consent.email_updates">I want to receive email updates about new features</span>
+                                      </label>
+
                                       <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                                           <input type="checkbox" id="settingsMarketingConsent" onchange="updateOptionalConsent('marketing_consent', this.checked)">
                                           <span data-i18n="consent.marketing">I agree to receive marketing communications</span>
@@ -6009,6 +6019,8 @@ async function loadUserCity() {
                     const consentResponse = await fetch('/api/user/consent-status');
                     const consentData = await consentResponse.json();
                     if (!consentData.has_consent) {
+                        // Save email to sessionStorage so consent modal can show dynamic username hint
+                        sessionStorage.setItem('userEmail', email);
                         showConsentModal();
                         return;
                     }
@@ -6303,11 +6315,19 @@ function updateEmailPrefixHint() {
 
     if (email && email.includes('@')) {
         const prefix = email.split('@')[0];
+        const lang = localStorage.getItem('selectedLanguage') || 'en';
+        const hintTexts = {
+            'en': `If blank, username will be: ${prefix}`,
+            'he': `אם ריק, שם המשתמש יהיה: ${prefix}`,
+            'ar': `إذا كان فارغًا، سيكون اسم المستخدم: ${prefix}`,
+            'ru': `Если пусто, имя пользователя будет: ${prefix}`
+        };
+        const text = hintTexts[lang] || hintTexts['en'];
         if (hint) {
-            hint.textContent = `If blank, username will be: ${prefix}`;
+            hint.textContent = text;
         }
         if (suggestedUsername) {
-            suggestedUsername.textContent = `If blank, username will be: ${prefix}`;
+            suggestedUsername.textContent = text;
         }
     }
 }
@@ -6398,7 +6418,14 @@ function showConsentModal() {
         const prefix = suggested || email.split('@')[0];
         const suggestedElem = document.getElementById('suggestedUsername');
         if (suggestedElem) {
-            suggestedElem.textContent = `If blank, username will be: ${prefix}`;
+            const lang = localStorage.getItem('selectedLanguage') || 'en';
+            const hintTexts = {
+                'en': `If blank, username will be: ${prefix}`,
+                'he': `אם ריק, שם המשתמש יהיה: ${prefix}`,
+                'ar': `إذا كان فارغًا، سيكون اسم المستخدم: ${prefix}`,
+                'ru': `Если пусто, имя пользователя будет: ${prefix}`
+            };
+            suggestedElem.textContent = hintTexts[lang] || hintTexts['en'];
         }
         const usernameInput = document.getElementById('consentUsername');
         if (usernameInput) {
@@ -6438,7 +6465,7 @@ async function submitConsent() {
     const consent = {
         username: username, // Empty string is valid - backend will use email prefix
         birth_year: birthYear, // PJ6001: Add birth year
-        email_updates: document.getElementById('emailUpdates').checked,
+        email_updates: document.getElementById('emailUpdates')?.checked || false,
         privacy_accepted: allRequiredChecked,
         research_data: allRequiredChecked,
         team_declaration: allRequiredChecked,
@@ -11558,11 +11585,12 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
     `;
 
     modal.innerHTML = `
-        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
-            <h3>${window.i18n ? window.i18n.translate('trigger_modal_title').replace('{username}', targetUsername) : 'Add Trigger for ' + targetUsername}</h3>
-            <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">${window.i18n ? window.i18n.translate('trigger_parameter_label') : 'Parameter:'}</label>
-                <select id="triggerParameter" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        <div class="modal-content" style="background: white; padding: 32px; border-radius: 16px; max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+            <h3 style="color: #4a6b5a; margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 600;">${window.i18n ? window.i18n.translate('trigger_modal_title').replace('{username}', targetUsername) : 'Add Trigger for ' + targetUsername}</h3>
+            <p style="color: #6B7280; font-size: 0.85rem; margin: 0 0 20px 0; line-height: 1.4;">Configure when you'd like to be notified about changes.</p>
+            <div style="margin: 16px 0;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_parameter_label') : 'Parameter:'}</label>
+                <select id="triggerParameter" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151;">
                     <option value="mood">${window.i18n ? window.i18n.translate('trigger_parameter_mood') : 'Mood'}</option>
                     <option value="sleep_quality">${window.i18n ? window.i18n.translate('trigger_parameter_sleep_quality') : 'Sleep Quality'}</option>
                     <option value="physical_activity">${window.i18n ? window.i18n.translate('trigger_parameter_physical_activity') : 'Physical Activity'}</option>
@@ -11570,30 +11598,30 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
                     <option value="energy">${window.i18n ? window.i18n.translate('trigger_parameter_energy') : 'Energy'}</option>
                 </select>
             </div>
-            <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">${window.i18n ? window.i18n.translate('trigger_alert_when') : 'Alert when:'}</label>
-                <select id="triggerOperator" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <div style="margin: 16px 0;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_alert_when') : 'Alert when:'}</label>
+                <select id="triggerOperator" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151;">
                     <option value="less_than">${window.i18n ? window.i18n.translate('trigger_condition_less_than') : 'Less than'}</option>
                     <option value="greater_than">${window.i18n ? window.i18n.translate('trigger_condition_greater_than') : 'Greater than'}</option>
                     <option value="equals">${window.i18n ? window.i18n.translate('trigger_condition_equals') : 'Equals'}</option>
                 </select>
             </div>
-            <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">${window.i18n ? window.i18n.translate('trigger_value_label') : 'Value (1-4):'}</label>
+            <div style="margin: 16px 0;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_value_label') : 'Value (1-4):'}</label>
                 <input type="number" id="triggerThreshold" min="1" max="4" value="2"
-                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151; box-sizing: border-box;">
             </div>
-            <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">${window.i18n ? window.i18n.translate('trigger.days_label') : 'For how many days (optional, 1 day minimum):'}</label>
+            <div style="margin: 16px 0;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger.days_label') : 'For how many days (optional, 1 day minimum):'}</label>
                 <input type="number" id="triggerDays" min="1" max="30"
-                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151; box-sizing: border-box;"
                        placeholder="${window.i18n ? window.i18n.translate('trigger.days_placeholder') : 'Leave blank for 1 day'}">
             </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn btn-secondary" onclick="document.getElementById('addTriggerModal').remove()">
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;">
+                <button class="btn" onclick="document.getElementById('addTriggerModal').remove()" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 10px; font-weight: 500; cursor: pointer;">
                     ${window.i18n ? window.i18n.translate('trigger_cancel') : 'Cancel'}
                 </button>
-                <button class="btn btn-primary" onclick="createTriggerForUser(${targetUserId}, '${targetUsername}')">
+                <button class="btn" onclick="createTriggerForUser(${targetUserId}, '${targetUsername}')" style="padding: 10px 20px; background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(107,139,164,0.3);">
                     ${window.i18n ? window.i18n.translate('trigger_create') : 'Create Trigger'}
                 </button>
             </div>
@@ -11686,12 +11714,12 @@ async function loadTriggersForUser(userId, username) {
         const removeText = window.i18n ? window.i18n.t('trigger_remove') : 'Remove';
 
         container.innerHTML = userTriggers.map(trigger => `
-            <div style="padding: 10px; background: white; border-radius: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <span>
+            <div style="padding: 12px 14px; background: white; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e0e8e0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease;">
+                <span style="color: #3D4852; font-size: 0.92rem; line-height: 1.4;">
                     ${translateTrigger(trigger)}
                 </span>
-                <button class="btn btn-danger" onclick="deleteTrigger(${trigger.id}); setTimeout(() => loadTriggersForUser(${userId}, '${username}'), 500);"
-                        style="padding: 4px 8px; font-size: 0.8rem;">
+                <button class="btn" onclick="deleteTrigger(${trigger.id}); setTimeout(() => loadTriggersForUser(${userId}, '${username}'), 500);"
+                        style="padding: 5px 12px; font-size: 0.8rem; background: #f5e6e6; color: #b44; border: 1px solid #e8c8c8; border-radius: 8px; cursor: pointer; font-weight: 500; white-space: nowrap; margin-left: 10px; transition: all 0.2s ease;">
                     ${removeText}
                 </button>
             </div>
@@ -12180,17 +12208,18 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
 
                     <!-- Triggers Section (only shown if following this user) -->
                     ${userId && userId !== currentUserId ? `
-            <div id="triggersSection" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h3 style="color: var(--primary); margin: 0 0 10px 0; font-size: 1.1rem;">
+            <div id="triggersSection" style="background: linear-gradient(135deg, #f0f4f0 0%, #e8efe8 100%); padding: 20px; border-radius: 14px; margin-bottom: 20px; border: 1px solid #d0ddd0;">
+                        <h3 style="color: #4a6b5a; margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.2rem;">🔔</span>
                             ${window.i18n ? window.i18n.t('trigger_set_alert') : 'Set Alert Triggers'}
                         </h3>
-                        <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 15px;">
+                        <p style="color: #5a7a6a; font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;">
                             ${window.i18n ? window.i18n.t('trigger_get_notified').replace('{username}', escapeHtml(username)) : `Get notified when ${escapeHtml(username)}'s wellness parameters are concerning`}
                         </p>
-                        <div id="modalTriggersList" style="margin-bottom: 10px;">
-                            <p style="color: #666;">Loading triggers...</p>
+                        <div id="modalTriggersList" style="margin-bottom: 14px;">
+                            <p style="color: #6a8a7a; font-size: 0.9rem;">Loading triggers...</p>
                         </div>
-                        <button class="btn btn-primary" onclick="showAddTriggerModalForUser(${userId}, '${escapeHtml(username)}')" style="padding: 8px 16px; font-size: 0.9rem;">
+                        <button class="btn" onclick="showAddTriggerModalForUser(${userId}, '${escapeHtml(username)}')" style="padding: 10px 20px; font-size: 0.9rem; background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(107,139,164,0.3);">
                             ${window.i18n ? window.i18n.t('trigger_add') : 'Add Trigger'}
                         </button>
                     </div>
@@ -15553,15 +15582,26 @@ async function loadSettingsConsentPreferences() {
         const response = await fetch('/api/privacy/consents', { credentials: 'include' });
         if (!response.ok) return;
         const data = await response.json();
-        const consents = data.consents || {};
+        const consents = data.current_consents || data.consents || {};
 
+        const emailUpdatesEl = document.getElementById('settingsEmailUpdates');
         const marketingEl = document.getElementById('settingsMarketingConsent');
         const analyticsEl = document.getElementById('settingsAnalyticsConsent');
         const thirdPartyEl = document.getElementById('settingsThirdPartySharing');
 
-        if (marketingEl && consents.marketing) marketingEl.checked = consents.marketing.granted;
-        if (analyticsEl && consents.analytics) analyticsEl.checked = consents.analytics.granted;
-        if (thirdPartyEl && consents.third_party_sharing) thirdPartyEl.checked = consents.third_party_sharing.granted;
+        // Handle both object format {granted: bool} and direct boolean format
+        if (emailUpdatesEl && consents.email_updates != null) {
+            emailUpdatesEl.checked = typeof consents.email_updates === 'object' ? consents.email_updates.granted : consents.email_updates;
+        }
+        if (marketingEl && consents.marketing != null) {
+            marketingEl.checked = typeof consents.marketing === 'object' ? consents.marketing.granted : consents.marketing;
+        }
+        if (analyticsEl && consents.analytics != null) {
+            analyticsEl.checked = typeof consents.analytics === 'object' ? consents.analytics.granted : consents.analytics;
+        }
+        if (thirdPartyEl && consents.third_party_sharing != null) {
+            thirdPartyEl.checked = typeof consents.third_party_sharing === 'object' ? consents.third_party_sharing.granted : consents.third_party_sharing;
+        }
     } catch (error) {
         console.error('[CLEAN] Error loading consent preferences:', error);
     }
