@@ -12395,8 +12395,8 @@ async function loadUserProfileView(userId) {
             const triggerBtn = document.createElement('button');
             triggerBtn.id = 'profileTriggerBtn';
             triggerBtn.className = 'btn';
-            triggerBtn.innerHTML = '🔔 <span data-i18n="menu.triggers">Triggers</span>';
-            triggerBtn.setAttribute('data-i18n', 'menu.triggers');
+            const triggersLabel = (window.i18n && window.i18n.t) ? (window.i18n.t('menu.triggers') || 'Triggers') : 'Triggers';
+            triggerBtn.innerHTML = '🔔 ' + triggersLabel;
             triggerBtn.style.cssText = 'background: var(--warning, #f6ad55); color: white; padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap;';
             triggerBtn.onclick = function(e) { handleTriggersClick(e); };
             
@@ -12404,7 +12404,8 @@ async function loadUserProfileView(userId) {
             const checkinBtn = document.createElement('button');
             checkinBtn.id = 'profileCheckinHistoryBtn';
             checkinBtn.className = 'btn';
-            checkinBtn.innerHTML = '📊 <span data-i18n="profile.checkins_btn">Check-ins</span>';
+            const checkinsLabel = (window.i18n && window.i18n.t) ? (window.i18n.t('profile.checkins_btn') || 'Check-ins') : 'Check-ins';
+            checkinBtn.innerHTML = '📊 ' + checkinsLabel;
             checkinBtn.style.cssText = 'background: var(--primary, #667eea); color: white; padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap;';
             checkinBtn.onclick = function() { showUserCheckinHistory(userId, userData.username); };
             
@@ -15264,7 +15265,7 @@ async function loadConnections() {
                             <div class="user-location" style="font-size: 0.8rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 6px;">
-                            ${user.follows_you ? '<span style="color: var(--primary); font-size: 0.7rem; padding: 2px 8px; background: rgba(107,70,193,0.1); border-radius: 10px;">Follows You</span>' : ''}
+                            ${user.follows_you ? `<span style="color: var(--primary); font-size: 0.7rem; padding: 2px 8px; background: rgba(107,70,193,0.1); border-radius: 10px;">${(window.i18n && window.i18n.t) ? (window.i18n.t('connections.follows_you') || 'Follows You') : 'Follows You'}</span>` : ''}
                             <span style="color: var(--gray); font-size: 1.2rem;">›</span>
                         </div>
                     </div>
@@ -15383,7 +15384,7 @@ function openConnectionInfo(userId, username, city, avatarColor, hasTrigger, fol
     if (statusContainer) {
         let statusHTML = '';
         if (followsYou) {
-            statusHTML += '<span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">' + (pt('connections.follows_you') || 'Follows You') + '</span>';
+            statusHTML += '<span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">' + ((window.i18n && window.i18n.t) ? (window.i18n.t('connections.follows_you') || 'Follows You') : 'Follows You') + '</span>';
         }
         statusHTML += '<span id="connInfoStatus" style="background: var(--sage); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">Following</span>';
         statusContainer.innerHTML = statusHTML;
