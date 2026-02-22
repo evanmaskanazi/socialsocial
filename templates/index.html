@@ -2957,64 +2957,61 @@
         }
 
         /* ================================================================== */
-        /* FLOW: Visual Flow Overhaul — Smooth, cohesive, inviting design     */
-        /* Non-invasive: only adds/overrides CSS rules, no functional changes */
+        /* FLOW2: Wellness-Informed Visual Design                              */
+        /* Research: Blues/greens = calm & trust; warm coral/peach = social     */
+        /* warmth; 60-30-10 rule (white/blue-green/warm accent)               */
+        /* Balanced between original vibrancy and Flow1 subtlety              */
         /* ================================================================== */
 
-        /* --- FLOW: Refined color palette for warmth and cohesion --- */
+        /* --- FLOW2: Refined palette — wellness-informed --- */
         :root {
-            --flow-bg-start: #7B95AD;
-            --flow-bg-end: #C4B6D6;
-            --flow-card-bg: #FEFEFE;
-            --flow-card-shadow: 0 4px 24px rgba(90, 110, 140, 0.08);
-            --flow-card-shadow-hover: 0 8px 32px rgba(90, 110, 140, 0.14);
-            --flow-border-subtle: rgba(120, 150, 180, 0.10);
-            --flow-heading-color: #445566;
-            --flow-text-muted: #7A8896;
-            --flow-accent-warm: #E8907A;
-            --flow-section-radius: 22px;
-            --flow-transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            --flow-card-shadow: 0 4px 20px rgba(80, 110, 140, 0.10);
+            --flow-card-shadow-hover: 0 8px 28px rgba(80, 110, 140, 0.16);
+            --flow-border-subtle: rgba(107, 139, 164, 0.12);
+            --flow-heading-color: #3D4F5F;
+            --flow-text-muted: #6B7F8E;
+            --flow-section-radius: 20px;
+            --flow-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* --- FLOW: Smoother body background gradient --- */
+        /* --- FLOW2: Body gradient — visible but smooth, nature-inspired --- */
         body {
-            background: linear-gradient(155deg, var(--flow-bg-start) 0%, #A0AABC 35%, var(--flow-bg-end) 70%, #D4C8E0 100%) !important;
+            background: linear-gradient(145deg, #6B8BA4 0%, #8EA5B8 30%, #B6A9C9 65%, #C9BCDA 100%) !important;
             background-attachment: fixed !important;
         }
         .dark-mode body, body.dark-mode {
-            background: linear-gradient(155deg, #1F2937 0%, #252D3A 35%, #2D2640 70%, #1F2937 100%) !important;
+            background: linear-gradient(145deg, #1F2937 0%, #252D3A 35%, #2D2640 70%, #1F2937 100%) !important;
         }
 
-        /* --- FLOW: Navigation bar — fluid, breathing feel --- */
+        /* --- FLOW2: Navbar — clean glass with depth --- */
         .navbar {
-            background: rgba(255, 255, 255, 0.95) !important;
-            backdrop-filter: blur(20px) saturate(1.2) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
-            box-shadow: 0 1px 8px rgba(90, 110, 140, 0.08), 0 0 0 1px rgba(255,255,255,0.5) !important;
-            border-bottom: none !important;
-            transition: var(--flow-transition) !important;
+            background: rgba(255, 255, 255, 0.96) !important;
+            backdrop-filter: blur(16px) saturate(1.15) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(1.15) !important;
+            box-shadow: 0 1px 12px rgba(80, 110, 140, 0.10) !important;
+            border-bottom: 1px solid rgba(107, 139, 164, 0.06) !important;
         }
         .dark-mode .navbar {
-            background: rgba(31, 41, 55, 0.92) !important;
+            background: rgba(31, 41, 55, 0.94) !important;
         }
 
+        /* --- FLOW2: Logo — gradient text, calming blue-to-lavender --- */
         .logo {
             font-weight: 800 !important;
-            letter-spacing: -0.03em !important;
-            background: linear-gradient(135deg, #5A7A93, #8B6BA4) !important;
+            letter-spacing: -0.02em !important;
+            background: linear-gradient(135deg, #4A6E88, #8B6BA4) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             background-clip: text !important;
         }
 
-        /* --- FLOW: Sidebar/Tab navigation — unified active state --- */
+        /* --- FLOW2: Sidebar/Tab navigation --- */
         .sidebar {
-            background: rgba(255, 255, 255, 0.92) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
             border-radius: 16px !important;
-            box-shadow: var(--flow-card-shadow) !important;
-            border: 1px solid var(--flow-border-subtle) !important;
-            padding: 6px 12px !important;
-            backdrop-filter: blur(8px) !important;
+            box-shadow: 0 2px 16px rgba(80, 110, 140, 0.10) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
+            padding: 6px 14px !important;
         }
 
         .sidebar-item {
@@ -3022,11 +3019,11 @@
             padding: 10px 18px !important;
             font-weight: 500 !important;
             transition: var(--flow-transition) !important;
-            color: var(--flow-text-muted) !important;
+            color: #5A6B7A !important;
         }
 
         .sidebar-item:hover:not(.active) {
-            background: rgba(107, 139, 164, 0.08) !important;
+            background: rgba(107, 139, 164, 0.09) !important;
             color: var(--flow-heading-color) !important;
             transform: translateY(-1px) !important;
         }
@@ -3034,7 +3031,7 @@
         .sidebar-item.active {
             background: linear-gradient(135deg, #5A7A93, #7B6BA0) !important;
             color: white !important;
-            box-shadow: 0 4px 16px rgba(90, 107, 160, 0.3) !important;
+            box-shadow: 0 4px 18px rgba(90, 107, 160, 0.35) !important;
             font-weight: 600 !important;
         }
 
@@ -3043,29 +3040,28 @@
             color: white !important;
         }
 
-        /* --- FLOW: Main content area — breathable white space --- */
+        /* --- FLOW2: Main content — warm white with subtle texture --- */
         .main-content {
-            background: linear-gradient(180deg, #FFFFFF 0%, #FDFCFA 40%, #FAF8F5 100%) !important;
+            background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF9 50%, #F7F4F0 100%) !important;
             border-radius: var(--flow-section-radius) !important;
             box-shadow: var(--flow-card-shadow) !important;
-            border: 1px solid var(--flow-border-subtle) !important;
-            padding: 36px !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
+            padding: 34px !important;
         }
         .dark-mode .main-content {
             background: linear-gradient(180deg, #1F2937 0%, #1C2533 100%) !important;
         }
 
-        /* --- FLOW: Smooth view transitions --- */
+        /* --- FLOW2: Smooth view entrance animation --- */
         .view {
-            animation: flowFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            animation: flow2FadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
-
-        @keyframes flowFadeIn {
-            from { opacity: 0; transform: translateY(8px); }
+        @keyframes flow2FadeIn {
+            from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- FLOW: Unified heading style across ALL views --- */
+        /* --- FLOW2: Consistent heading style — all views --- */
         #homeView > h2:first-of-type,
         #progressView > h2,
         #circlesView > h2,
@@ -3080,11 +3076,11 @@
             font-size: 1.6rem !important;
             letter-spacing: -0.02em !important;
             padding-bottom: 16px !important;
-            border-bottom: 2px solid rgba(120, 150, 180, 0.12) !important;
-            margin-bottom: 28px !important;
+            border-bottom: 2px solid rgba(157, 184, 160, 0.3) !important;
+            margin-bottom: 26px !important;
         }
 
-        /* --- FLOW: Section cards — unified warm glass look --- */
+        /* --- FLOW2: Card containers — medium depth, warm --- */
         #summaryStatusCard,
         #quickCheckinCard,
         #todayRecommendations,
@@ -3106,7 +3102,7 @@
             transition: var(--flow-transition) !important;
         }
 
-        /* --- FLOW: Card hover lift effect --- */
+        /* --- FLOW2: Card hover — gentle lift --- */
         #summaryStatusCard:hover,
         #quickCheckinCard:hover,
         #todayRecommendations:hover,
@@ -3119,45 +3115,46 @@
         #myConnectionsTab:hover,
         #recommendationsTab:hover {
             box-shadow: var(--flow-card-shadow-hover) !important;
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
 
-        /* --- FLOW: Softer left border accents — thinner, more muted --- */
+        /* --- FLOW2: Left border accents — visible, color-coded per section --- */
+        /* Using 4px at medium-high opacity for clear visual hierarchy */
         #quickCheckinCard {
-            border-left: 4px solid rgba(232, 144, 122, 0.6) !important;
+            border-left: 4px solid rgba(232, 144, 122, 0.7) !important;
         }
         #todayRecommendations {
-            border-left: 4px solid rgba(127, 168, 130, 0.5) !important;
+            border-left: 4px solid rgba(127, 168, 130, 0.65) !important;
         }
         #friendsUpdatesSection {
-            border-left: 4px solid rgba(175, 199, 214, 0.6) !important;
+            border-left: 4px solid rgba(107, 139, 164, 0.55) !important;
         }
         #connectionStatusSection {
-            border-left: 4px solid rgba(182, 169, 201, 0.5) !important;
+            border-left: 4px solid rgba(182, 169, 201, 0.6) !important;
         }
         #homeAlertsSection {
-            border-left: 4px solid rgba(245, 196, 184, 0.6) !important;
+            border-left: 4px solid rgba(232, 144, 122, 0.55) !important;
         }
         #homeFeedSection {
-            border-left: 4px solid rgba(168, 197, 171, 0.5) !important;
+            border-left: 4px solid rgba(157, 184, 160, 0.6) !important;
         }
         #myConnectionsTab {
-            border-left: 4px solid rgba(168, 197, 171, 0.5) !important;
+            border-left: 4px solid rgba(157, 184, 160, 0.6) !important;
         }
         #recommendationsTab {
-            border-left: 4px solid rgba(182, 169, 201, 0.5) !important;
+            border-left: 4px solid rgba(182, 169, 201, 0.6) !important;
         }
         #settingsProfilePanel {
-            border-left: 4px solid rgba(107, 139, 164, 0.4) !important;
+            border-left: 4px solid rgba(107, 139, 164, 0.5) !important;
         }
         .city-selector-container {
-            border-left: 4px solid rgba(107, 139, 164, 0.4) !important;
+            border-left: 4px solid rgba(107, 139, 164, 0.5) !important;
         }
         #personalizedInsights {
-            border-left: 4px solid rgba(127, 168, 130, 0.4) !important;
+            border-left: 4px solid rgba(127, 168, 130, 0.55) !important;
         }
 
-        /* RTL: Flip flow borders */
+        /* RTL: Flip left-borders to right-borders */
         [dir="rtl"] #quickCheckinCard,
         [dir="rtl"] #todayRecommendations,
         [dir="rtl"] #friendsUpdatesSection,
@@ -3174,76 +3171,73 @@
             border-right-style: solid !important;
         }
 
-        /* --- FLOW: Section heading accents (h3 within cards) --- */
+        /* --- FLOW2: Section sub-headings (h3 within cards) --- */
         #friendsUpdatesSection > h3,
         #connectionStatusSection > h3,
         #homeAlertsSection > h3,
         #homeFeedSection > h3 {
             color: var(--flow-heading-color) !important;
             font-weight: 600 !important;
-            font-size: 1.05rem !important;
-            border-bottom: 1px solid rgba(120, 150, 180, 0.10) !important;
+            font-size: 1.1rem !important;
+            border-bottom: 1.5px solid rgba(157, 184, 160, 0.2) !important;
         }
 
-        /* --- FLOW: Welcome card — smoother gradient --- */
+        /* --- FLOW2: Welcome banner — rich but not overwhelming --- */
         #welcomeCard {
-            background: linear-gradient(135deg, #5A7A93 0%, #6E947A 30%, #9B8AB5 100%) !important;
+            background: linear-gradient(135deg, #5A7A93 0%, #6E947A 35%, #9B8AB5 100%) !important;
             border-radius: var(--flow-section-radius) !important;
-            box-shadow: 0 6px 24px rgba(90, 122, 147, 0.20) !important;
-        }
-        #welcomeCard h3, #welcomeCard p {
-            text-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+            box-shadow: 0 6px 28px rgba(90, 122, 147, 0.22) !important;
         }
 
-        /* --- FLOW: Summary status — gentler gradient --- */
+        /* --- FLOW2: Summary status — warm gradient with clear top accent --- */
         #summaryStatusCard {
-            background: linear-gradient(160deg, #FAF0EA 0%, #EEF4EE 40%, #F4F1EC 100%) !important;
-            border-top: 3px solid rgba(107, 139, 164, 0.3) !important;
+            background: linear-gradient(160deg, #FBE8E0 0%, #E8F0E8 40%, #F0EDE8 100%) !important;
+            border-top: 4px solid rgba(107, 139, 164, 0.4) !important;
         }
         #summaryStatusCard .param-mini {
-            background: rgba(255,255,255,0.95) !important;
-            border-bottom: 2px solid rgba(175, 199, 214, 0.4) !important;
+            background: rgba(255,255,255,0.92) !important;
+            border-bottom: 2px solid rgba(107, 139, 164, 0.3) !important;
             border-radius: 14px !important;
         }
 
-        /* --- FLOW: Quick Check-In — softer palette --- */
+        /* --- FLOW2: Quick Check-In — gentle warmth --- */
         #quickCheckinCard {
-            background: linear-gradient(135deg, #FEFEFE 0%, #FDF3EF 100%) !important;
+            background: linear-gradient(135deg, #FEFEFE 0%, #FCF0EB 100%) !important;
         }
         #quickCheckinCard button[onclick*="quickCheckin"] {
             border-radius: 14px !important;
-            border: 1px solid rgba(0,0,0,0.04) !important;
+            border: 1.5px solid rgba(0,0,0,0.05) !important;
         }
 
-        /* --- FLOW: Recommendations — softer green tint --- */
+        /* --- FLOW2: Recommendations — sage-tinted --- */
         #todayRecommendations {
-            background: linear-gradient(145deg, #EEF5EF 0%, rgba(238,245,239,0.3) 100%) !important;
+            background: linear-gradient(145deg, #ECF3ED 0%, rgba(236,243,237,0.3) 100%) !important;
         }
 
-        /* --- FLOW: Connections tab pills --- */
+        /* --- FLOW2: Connection tabs --- */
         .conn-tab {
             border-radius: 8px !important;
             transition: var(--flow-transition) !important;
             font-weight: 500 !important;
         }
         .conn-tab.active {
-            color: var(--flow-heading-color) !important;
-            border-bottom: 2px solid #5A7A93 !important;
-            background: rgba(90, 122, 147, 0.06) !important;
+            color: #4A6F8A !important;
+            border-bottom: 3px solid #5A7A93 !important;
+            background: rgba(90, 122, 147, 0.07) !important;
         }
         .conn-tab:hover:not(.active) {
-            background: rgba(107, 139, 164, 0.04) !important;
+            background: rgba(107, 139, 164, 0.05) !important;
         }
 
-        /* --- FLOW: User cards — consistent across Connections, Circles, Invite --- */
+        /* --- FLOW2: User cards — consistent sage-green left accent --- */
         #connectionsView .user-card,
         #myConnectionsList .user-card,
         #connectionRecommendationsList .user-card,
         #inviteView .user-card,
         #circlesView .user-card {
             background: white !important;
-            border: 1px solid rgba(120, 150, 180, 0.10) !important;
-            border-left: 3px solid rgba(168, 197, 171, 0.5) !important;
+            border: 1px solid rgba(107, 139, 164, 0.12) !important;
+            border-left: 3px solid rgba(157, 184, 160, 0.6) !important;
             border-radius: 14px !important;
             padding: 14px 16px !important;
             margin-bottom: 8px !important;
@@ -3254,9 +3248,9 @@
         #connectionRecommendationsList .user-card:hover,
         #inviteView .user-card:hover,
         #circlesView .user-card:hover {
-            background: #FDFDFC !important;
+            background: #FCFCFA !important;
             border-left-color: #5A7A93 !important;
-            box-shadow: 0 4px 16px rgba(90, 110, 140, 0.12) !important;
+            box-shadow: 0 4px 16px rgba(80, 110, 140, 0.13) !important;
             transform: translateY(-1px) !important;
         }
         [dir="rtl"] #connectionsView .user-card,
@@ -3264,95 +3258,87 @@
         [dir="rtl"] #connectionRecommendationsList .user-card,
         [dir="rtl"] #inviteView .user-card,
         [dir="rtl"] #circlesView .user-card {
-            border-left: 1px solid rgba(120, 150, 180, 0.10) !important;
-            border-right: 3px solid rgba(168, 197, 171, 0.5) !important;
+            border-left: 1px solid rgba(107, 139, 164, 0.12) !important;
+            border-right: 3px solid rgba(157, 184, 160, 0.6) !important;
         }
 
-        /* --- FLOW: User avatars — softer shadow, consistent ring --- */
+        /* --- FLOW2: User avatars --- */
         .user-avatar {
-            box-shadow: 0 2px 8px rgba(90, 110, 140, 0.15) !important;
-            border: 2px solid rgba(255, 255, 255, 0.8) !important;
+            box-shadow: 0 2px 8px rgba(80, 110, 140, 0.18) !important;
+            border: 2px solid rgba(255, 255, 255, 0.7) !important;
         }
 
-        /* --- FLOW: Follow/Unfollow buttons — rounded pills --- */
+        /* --- FLOW2: Follow buttons — pill shape, clear action color --- */
         .follow-btn {
             background: linear-gradient(135deg, #5A7A93, #6B8BA4) !important;
             color: white !important;
             border-radius: 20px !important;
             font-weight: 600 !important;
             padding: 8px 20px !important;
-            box-shadow: 0 2px 8px rgba(90, 122, 147, 0.2) !important;
+            box-shadow: 0 2px 10px rgba(90, 122, 147, 0.22) !important;
             transition: var(--flow-transition) !important;
         }
         .follow-btn:hover {
             background: linear-gradient(135deg, #4A6A83, #5A7A93) !important;
-            box-shadow: 0 4px 14px rgba(90, 122, 147, 0.3) !important;
+            box-shadow: 0 4px 16px rgba(90, 122, 147, 0.32) !important;
             transform: translateY(-1px) !important;
         }
 
-        /* --- FLOW: Circles view — card grids breathe --- */
+        /* --- FLOW2: Circles view cards --- */
         #circlesView > div {
-            background: var(--flow-card-bg) !important;
+            background: var(--white) !important;
             border-radius: var(--flow-section-radius) !important;
             box-shadow: var(--flow-card-shadow) !important;
             border: 1px solid var(--flow-border-subtle) !important;
-            padding: 24px !important;
-            margin-bottom: 20px !important;
+            padding: 22px !important;
+            margin-bottom: 18px !important;
         }
 
-        /* --- FLOW: Messages view — cleaner chat area --- */
+        /* --- FLOW2: Messages view --- */
         #messagesView > div {
-            border-radius: 18px !important;
-        }
-        #messagesView .message-thread,
-        #messagesView .conversation-list {
             border-radius: 16px !important;
         }
 
-        /* --- FLOW: Invite share link card --- */
+        /* --- FLOW2: Invite share link card --- */
         .invite-section .share-link-card {
-            background: var(--flow-card-bg) !important;
-            padding: 28px !important;
-            border-left: 4px solid rgba(107, 139, 164, 0.4) !important;
+            background: white !important;
+            padding: 26px !important;
+            border-left: 4px solid rgba(107, 139, 164, 0.5) !important;
         }
         .invite-section .share-link-card h3 {
             color: var(--flow-heading-color) !important;
         }
         [dir="rtl"] .invite-section .share-link-card {
             border-left: 1px solid var(--flow-border-subtle) !important;
-            border-right: 4px solid rgba(107, 139, 164, 0.4) !important;
+            border-right: 4px solid rgba(107, 139, 164, 0.5) !important;
         }
-
         .share-buttons .btn-secondary {
             border-radius: 10px !important;
-            border: 1px solid rgba(107, 139, 164, 0.2) !important;
+            border: 1.5px solid rgba(107, 139, 164, 0.25) !important;
             transition: var(--flow-transition) !important;
         }
         .share-buttons .btn-secondary:hover {
-            background: rgba(107, 139, 164, 0.06) !important;
-            border-color: rgba(107, 139, 164, 0.3) !important;
+            background: rgba(107, 139, 164, 0.07) !important;
+            border-color: rgba(107, 139, 164, 0.35) !important;
         }
 
-        /* --- FLOW: Settings view — consistent sub-panel styling --- */
-        #settingsView .settings-sub-tab {
-            transition: var(--flow-transition) !important;
-        }
+        /* --- FLOW2: Settings view --- */
         #settingsSubNav {
-            background: rgba(255, 255, 255, 0.9) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
             border-radius: 14px !important;
-            box-shadow: 0 2px 12px rgba(90, 110, 140, 0.06) !important;
-            border: 1px solid var(--flow-border-subtle) !important;
+            box-shadow: 0 2px 12px rgba(80, 110, 140, 0.08) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
         }
 
-        /* --- FLOW: Form inputs — warm, consistent --- */
+        /* --- FLOW2: Form inputs — warm off-white --- */
         .form-input,
         #settingsView .form-input,
         #settingsView textarea,
         #settingsView select,
         #profileView .form-input,
         #profileView textarea {
-            background: #FAFAF8 !important;
-            border: 1.5px solid rgba(120, 150, 180, 0.15) !important;
+            background: #FAF9F7 !important;
+            border: 1.5px solid rgba(107, 139, 164, 0.18) !important;
             border-radius: 10px !important;
             transition: var(--flow-transition) !important;
         }
@@ -3361,44 +3347,44 @@
         #settingsView textarea:focus,
         #settingsView select:focus {
             border-color: rgba(90, 122, 147, 0.5) !important;
-            box-shadow: 0 0 0 3px rgba(90, 122, 147, 0.08) !important;
+            box-shadow: 0 0 0 3px rgba(90, 122, 147, 0.10) !important;
             outline: none !important;
         }
 
-        /* --- FLOW: Buttons — consistent primary style --- */
+        /* --- FLOW2: Primary buttons --- */
         .btn-primary {
             background: linear-gradient(135deg, #5A7A93, #6B8BA4) !important;
             border-radius: 12px !important;
-            box-shadow: 0 2px 10px rgba(90, 122, 147, 0.2) !important;
+            box-shadow: 0 2px 12px rgba(90, 122, 147, 0.22) !important;
             transition: var(--flow-transition) !important;
         }
         .btn-primary:hover {
             background: linear-gradient(135deg, #4A6A83, #5A7A93) !important;
-            box-shadow: 0 4px 18px rgba(90, 122, 147, 0.3) !important;
+            box-shadow: 0 4px 18px rgba(90, 122, 147, 0.32) !important;
             transform: translateY(-2px) !important;
         }
 
-        /* --- FLOW: Progress chart area --- */
+        /* --- FLOW2: Progress view --- */
         #progressView .progress-section,
         #progressView > div:not(:first-child) {
-            background: var(--flow-card-bg) !important;
+            background: white !important;
             border-radius: var(--flow-section-radius) !important;
             box-shadow: var(--flow-card-shadow) !important;
             border: 1px solid var(--flow-border-subtle) !important;
         }
 
-        /* --- FLOW: Alerts — softer warning colors --- */
+        /* --- FLOW2: Alert items --- */
         .alert-item, .alerts-list .alert-card {
             border-radius: 12px !important;
             transition: var(--flow-transition) !important;
         }
 
-        /* --- FLOW: Search inputs across views --- */
+        /* --- FLOW2: Search inputs — consistent warm styling --- */
         #connectionSearchInput,
         #inviteSearchInput,
         #circlesView input[type="text"] {
-            background: #F8F8F6 !important;
-            border: 1.5px solid rgba(120, 150, 180, 0.15) !important;
+            background: #F8F7F5 !important;
+            border: 1.5px solid rgba(107, 139, 164, 0.18) !important;
             border-radius: 24px !important;
             padding: 12px 20px !important;
             transition: var(--flow-transition) !important;
@@ -3406,52 +3392,29 @@
         #connectionSearchInput:focus,
         #inviteSearchInput:focus,
         #circlesView input[type="text"]:focus {
-            border-color: rgba(90, 122, 147, 0.4) !important;
-            box-shadow: 0 0 0 3px rgba(90, 122, 147, 0.08) !important;
+            border-color: rgba(90, 122, 147, 0.45) !important;
+            box-shadow: 0 0 0 3px rgba(90, 122, 147, 0.10) !important;
             background: #FFFFFF !important;
         }
 
-        /* --- FLOW: Tutorial/Action buttons — consistent --- */
-        .btn-tutorial, [onclick*="startTutorial"] {
-            border-radius: 10px !important;
-            transition: var(--flow-transition) !important;
-        }
-
-        /* --- FLOW: Language selector --- */
+        /* --- FLOW2: Language selector --- */
         .language-selector {
             border: 1.5px solid rgba(107, 139, 164, 0.3) !important;
             border-radius: 10px !important;
-            background: rgba(255, 255, 255, 0.9) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
             transition: var(--flow-transition) !important;
         }
         .language-selector:hover {
             border-color: rgba(107, 139, 164, 0.5) !important;
         }
 
-        /* --- FLOW: Diary page link consistent with nav flow --- */
-        .diary-nav {
-            background: rgba(255, 255, 255, 0.95) !important;
-            backdrop-filter: blur(16px) !important;
-            border-radius: 16px !important;
-            box-shadow: var(--flow-card-shadow) !important;
-        }
+        /* --- FLOW2: Scrollbar --- */
+        ::-webkit-scrollbar { width: 7px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(107, 139, 164, 0.22); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(107, 139, 164, 0.38); }
 
-        /* --- FLOW: Scrollbar aesthetic (webkit) --- */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(107, 139, 164, 0.2);
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(107, 139, 164, 0.35);
-        }
-
-        /* --- FLOW: Mobile nav — same gradient active state --- */
+        /* --- FLOW2: Mobile adjustments --- */
         @media (max-width: 768px) {
             .mobile-nav-item.active,
             .bottom-nav-item.active {
@@ -3463,9 +3426,9 @@
             }
         }
 
-        /* --- FLOW: Dark mode overrides --- */
+        /* --- FLOW2: Dark mode --- */
         .dark-mode .sidebar {
-            background: rgba(31, 41, 55, 0.92) !important;
+            background: rgba(31, 41, 55, 0.94) !important;
         }
         .dark-mode .sidebar-item.active {
             background: linear-gradient(135deg, #4A6A83, #6B5B90) !important;
@@ -3479,7 +3442,7 @@
         }
 
         /* ================================================================== */
-        /* END FLOW VISUAL OVERHAUL                                           */
+        /* END FLOW2 VISUAL OVERHAUL                                          */
         /* ================================================================== */
 
     </style>
@@ -4703,7 +4666,7 @@
                     <div id="circleRecommendationsSection" style="margin: 20px 0; background: var(--light); border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);">
                         <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 16px;" data-i18n="circles.recommended_title">Recommended Users to Add to Circle</h3>
                         <div id="circleRecommendationsList" style="max-height: 250px; overflow-y: auto;">
-                            <p style="color: var(--gray); text-align: center;">Loading recommendations...</p>
+                            <p style="color: var(--gray); text-align: center;" data-i18n="loading.recommendations">Loading recommendations...</p>
                         </div>
                     </div>
 
@@ -4841,14 +4804,14 @@
                   <!-- My Connections List -->
                   <div id="myConnectionsTab">
                       <div id="myConnectionsList" style="display: flex; flex-direction: column; gap: 8px;">
-                          <p style="text-align: center; color: var(--gray); padding: 2rem;">Loading connections...</p>
+                          <p style="text-align: center; color: var(--gray); padding: 2rem;" data-i18n="loading.connections">Loading connections...</p>
                       </div>
                   </div>
 
                   <!-- Recommended Connections -->
                   <div id="recommendationsTab" style="display: none;">
                       <div id="connectionRecommendationsList" style="display: flex; flex-direction: column; gap: 8px;">
-                          <p style="text-align: center; color: var(--gray); padding: 2rem;">Loading recommendations...</p>
+                          <p style="text-align: center; color: var(--gray); padding: 2rem;" data-i18n="loading.recommendations">Loading recommendations...</p>
                       </div>
                   </div>
               </div>
@@ -8084,7 +8047,7 @@ function loadUserRecommendations() {
     }
     list.dataset.loading = 'true';
 
-    list.innerHTML = '<div class="loading">Loading recommendations...</div>';
+    list.innerHTML = '<div class="loading">' + _t('loading.recommendations', 'Loading recommendations...') + '</div>';
     console.log('🔍 Set loading state');
 
     fetch('/api/users/recommendations', {
@@ -9935,7 +9898,7 @@ async function loadCircleRecommendations() {
         }
 
         // Show loading state
-        recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;">Loading recommendations...</p>`;
+        recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;">${_t('loading.recommendations', 'Loading recommendations...')}</p>`;
 
         const response = await fetch("/api/circles/recommendations", {
             credentials: 'include'
@@ -10577,7 +10540,7 @@ showNotification(`${username} added to ${circleLabels[circleType]} circle!`, 'su
         container.innerHTML = `
             <div style="padding: 40px; text-align: center; color: var(--gray);">
                 <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid var(--light); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                <p style="margin-top: 10px;">Loading conversations...</p>
+                <p style="margin-top: 10px;">${_t('loading.conversations', 'Loading conversations...')}</p>
             </div>`;
     }
     
@@ -11974,7 +11937,7 @@ function showAddTriggerModal() {
             <div style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">User to monitor:</label>
                 <select id="triggerUserId" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="">Loading...</option>
+                    <option value="" data-i18n="loading.generic">Loading...</option>
                 </select>
             </div>
             <div style="margin: 20px 0;">
@@ -12749,7 +12712,7 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                             ${window.i18n ? window.i18n.t('trigger_get_notified').replace('{username}', escapeHtml(username)) : `Get notified when ${escapeHtml(username)}'s wellness parameters are concerning`}
                         </p>
                         <div id="modalTriggersList" style="margin-bottom: 14px;">
-                            <p style="color: #6a8a7a; font-size: 0.9rem;">Loading triggers...</p>
+                            <p style="color: #6a8a7a; font-size: 0.9rem;">${_t('loading.triggers', 'Loading triggers...')}</p>
                         </div>
                         <button class="btn" onclick="showAddTriggerModalForUser(${userId}, '${escapeHtml(username)}')" style="padding: 10px 20px; font-size: 0.9rem; background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(107,139,164,0.3);">
                             ${window.i18n ? window.i18n.t('trigger_add') : 'Add Trigger'}
@@ -12811,7 +12774,7 @@ function showLoadingModal() {
                         animation: spin 1s linear infinite;
                         margin: 0 auto 1rem;
                     "></div>
-                    <p style="color: #666; font-size: 16px;">Loading parameters...</p>
+                    <p style="color: #666; font-size: 16px;">${_t('loading.parameters', 'Loading parameters...')}</p>
                 </div>
             </div>
         </div>
@@ -13813,7 +13776,7 @@ async function loadAlerts() {
 
         const container = document.getElementById('alertsList');
         if (container) {
-            container.innerHTML = '<p style="color: red;">Error loading alerts. Please refresh the page.</p>';
+            container.innerHTML = '<p style="color: red;">' + _t('error.loading_alerts', 'Error loading alerts. Please refresh the page.') + '</p>';
         }
     }
 }

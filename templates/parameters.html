@@ -260,29 +260,29 @@
         [dir="rtl"] .diary-nav-links { flex-direction: row-reverse; }
 
         /* ================================================================== */
-        /* FLOW: Diary page visual flow — matches main app aesthetic          */
+        /* FLOW2: Diary page visual — matches main app wellness aesthetic     */
         /* ================================================================== */
         body {
-            background: linear-gradient(155deg, #7B95AD 0%, #A0AABC 35%, #C4B6D6 70%, #D4C8E0 100%) !important;
+            background: linear-gradient(145deg, #6B8BA4 0%, #8EA5B8 30%, #B6A9C9 65%, #C9BCDA 100%) !important;
             background-attachment: fixed !important;
         }
         .dark-mode body, body.dark-mode {
-            background: linear-gradient(155deg, #1F2937 0%, #252D3A 35%, #2D2640 70%, #1F2937 100%) !important;
+            background: linear-gradient(145deg, #1F2937 0%, #252D3A 35%, #2D2640 70%, #1F2937 100%) !important;
         }
         .diary-nav {
-            background: rgba(255, 255, 255, 0.95) !important;
-            backdrop-filter: blur(20px) saturate(1.2) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+            background: rgba(255, 255, 255, 0.96) !important;
+            backdrop-filter: blur(16px) saturate(1.15) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(1.15) !important;
             border-radius: 16px !important;
-            box-shadow: 0 4px 24px rgba(90, 110, 140, 0.08) !important;
-            border: 1px solid rgba(120, 150, 180, 0.10) !important;
+            box-shadow: 0 2px 16px rgba(80, 110, 140, 0.10) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
             padding: 10px 20px !important;
             margin-bottom: 20px !important;
         }
         .diary-nav-brand {
             font-weight: 800 !important;
-            letter-spacing: -0.03em !important;
-            background: linear-gradient(135deg, #5A7A93, #8B6BA4) !important;
+            letter-spacing: -0.02em !important;
+            background: linear-gradient(135deg, #4A6E88, #8B6BA4) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             background-clip: text !important;
@@ -290,24 +290,24 @@
         .diary-nav-link {
             border-radius: 10px !important;
             font-weight: 500 !important;
-            color: #7A8896 !important;
-            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            color: #5A6B7A !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
         .diary-nav-link:hover {
-            background: rgba(107, 139, 164, 0.08) !important;
-            color: #445566 !important;
+            background: rgba(107, 139, 164, 0.09) !important;
+            color: #3D4F5F !important;
         }
         .diary-nav-link.active {
             background: linear-gradient(135deg, #5A7A93, #7B6BA0) !important;
             color: white !important;
-            box-shadow: 0 4px 16px rgba(90, 107, 160, 0.3) !important;
+            box-shadow: 0 4px 18px rgba(90, 107, 160, 0.35) !important;
         }
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 7px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(107, 139, 164, 0.2); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(107, 139, 164, 0.35); }
+        ::-webkit-scrollbar-thumb { background: rgba(107, 139, 164, 0.22); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(107, 139, 164, 0.38); }
         /* ================================================================== */
-        /* END FLOW DIARY VISUAL OVERHAUL                                     */
+        /* END FLOW2 DIARY VISUAL                                             */
         /* ================================================================== */
     </style>
 </head>
