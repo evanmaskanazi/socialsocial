@@ -394,14 +394,30 @@ Storage.prototype.setItem = function(key, value) {
     </script>
     
     <!-- FIX 3: ASYNC pre-fetch backend language (replaces synchronous XHR) -->
+    <!-- FLOW3 FIX: Added justLoggedIn guard + dual field check to match main page -->
     <script>
     (async function() {
-        console.log('[PRE-FETCH] Pre-fetching backend language (async)...');
+        console.log('[PRE-FETCH DIARY] ========================================');
+        console.log('[PRE-FETCH DIARY] Pre-fetching backend language (async)...');
         
         // Initialize user interaction tracking flags
         window._userClickedLanguageSelector = false;
         window._lastLanguageSelectorInteraction = 0;
         window._languageReady = false;
+        
+        // FLOW3 FIX: Check if user just logged in - if so, DON'T overwrite their language choice
+        // This matches the same guard in the main page's pre-fetch
+        const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+        if (justLoggedIn) {
+            console.log('[PRE-FETCH DIARY] User just logged in - preserving localStorage language choice');
+            console.log('[PRE-FETCH DIARY] Current localStorage.selectedLanguage:', localStorage.getItem('selectedLanguage'));
+            // Clear the flag so subsequent diary visits will sync normally
+            sessionStorage.removeItem('justLoggedIn');
+            window._languageReady = true;
+            window.dispatchEvent(new CustomEvent('languagePreFetchComplete'));
+            console.log('[PRE-FETCH DIARY] ========================================');
+            return;
+        }
         
         try {
             const response = await fetch('/api/user/profile', {
@@ -413,21 +429,49 @@ Storage.prototype.setItem = function(key, value) {
             
             if (response.ok) {
                 const profile = await response.json();
-                if (profile.preferred_language) {
-                    localStorage.setItem('selectedLanguage', profile.preferred_language);
-                    localStorage.setItem('userLanguage', profile.preferred_language);
-                    console.log('[PRE-FETCH] Set localStorage to backend value:', profile.preferred_language);
+                // FLOW3 FIX: Check BOTH preferred_language and language fields (matching main page)
+                const backendLang = profile.preferred_language || profile.language;
+                const currentLocal = localStorage.getItem('selectedLanguage');
+                
+                console.log('[PRE-FETCH DIARY] Backend language:', backendLang);
+                console.log('[PRE-FETCH DIARY] Current localStorage:', currentLocal);
+                
+                // FLOW3 FIX: Only update if backend has a value AND localStorage matches or is empty
+                // This preserves user's pre-login choice (matching main page logic)
+                if (backendLang && (!currentLocal || currentLocal === backendLang)) {
+                    localStorage.setItem('selectedLanguage', backendLang);
+                    localStorage.setItem('userLanguage', backendLang);
+                    console.log('[PRE-FETCH DIARY] SUCCESS: localStorage updated to backend value:', backendLang);
+                } else if (currentLocal && currentLocal !== backendLang) {
+                    console.log('[PRE-FETCH DIARY] Keeping localStorage value:', currentLocal, '(differs from backend:', backendLang, ')');
+                    // Also sync localStorage value TO backend so they match next time
+                    // FLOW3: Must set _allowLanguagePost to bypass fetch interceptor
+                    try {
+                        window._allowLanguagePost = true;
+                        await fetch('/api/user/language', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ language: currentLocal, preferred_language: currentLocal })
+                        });
+                        console.log('[PRE-FETCH DIARY] Synced localStorage language to backend:', currentLocal);
+                    } catch (syncErr) {
+                        console.warn('[PRE-FETCH DIARY] Failed to sync language to backend:', syncErr);
+                    }
+                } else {
+                    console.log('[PRE-FETCH DIARY] No backend language set, keeping localStorage');
                 }
             } else {
-                console.log('[PRE-FETCH] Status:', response.status, '- skipping');
+                console.log('[PRE-FETCH DIARY] Status:', response.status, '- skipping');
             }
         } catch (e) {
-            console.warn('[PRE-FETCH] Error:', e.message);
+            console.warn('[PRE-FETCH DIARY] Error:', e.message);
         }
         
         window._languageReady = true;
         // Dispatch event so other scripts know language is ready
         window.dispatchEvent(new CustomEvent('languagePreFetchComplete'));
+        console.log('[PRE-FETCH DIARY] ========================================');
     })();
     </script>
 
