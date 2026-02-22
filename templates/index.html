@@ -5860,6 +5860,91 @@
     </script>
     <!-- END ACCT Social login translations -->
 
+    <!-- LL FIX: Alert/wellness translation keys for Hebrew, Arabic, Russian -->
+    <script>
+    (function() {
+        const alertTranslations = {
+            en: {
+                'alerts.wellness_alert_for': 'Wellness Alert for {username}',
+                'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
+                'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
+                'alerts.new_message_from': 'New message from {username}',
+                'alerts.started_following': '{username} started following you',
+                'alerts.accepted_request': '{username} accepted your follow request',
+                'alerts.follow_request': '{username} wants to follow you',
+                'alerts.new_follower': 'You have a new follower!',
+                'alerts.no_alerts': 'No alerts',
+                'alerts.welcome_title': 'Welcome to TheraSocial!',
+                'alerts.welcome_message': 'Track your daily wellness, connect with friends, and grow together.',
+                'params.sleep_quality': 'Sleep',
+                'params.physical_activity': 'Exercise',
+                'params.anxiety': 'Stress'
+            },
+            he: {
+                'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
+                'alerts.wellness_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
+                'alerts.wellness_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
+                'alerts.new_message_from': 'הודעה חדשה מ-{username}',
+                'alerts.started_following': '{username} התחיל/ה לעקוב אחריך',
+                'alerts.accepted_request': '{username} אישר/ה את בקשת המעקב שלך',
+                'alerts.follow_request': '{username} רוצה לעקוב אחריך',
+                'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
+                'alerts.no_alerts': 'אין התראות',
+                'alerts.welcome_title': 'ברוכים הבאים ל-TheraSocial!',
+                'alerts.welcome_message': 'עקבו אחר הבריאות היומית שלכם, התחברו עם חברים וצמחו יחד.',
+                'params.sleep_quality': 'שינה',
+                'params.physical_activity': 'פעילות גופנית',
+                'params.anxiety': 'מתח'
+            },
+            ar: {
+                'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
+                'alerts.wellness_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
+                'alerts.wellness_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
+                'alerts.new_message_from': 'رسالة جديدة من {username}',
+                'alerts.started_following': 'بدأ {username} بمتابعتك',
+                'alerts.accepted_request': 'قبل {username} طلب المتابعة الخاص بك',
+                'alerts.follow_request': '{username} يريد متابعتك',
+                'alerts.new_follower': 'لديك متابع جديد!',
+                'alerts.no_alerts': 'لا توجد تنبيهات',
+                'alerts.welcome_title': 'مرحباً بك في TheraSocial!',
+                'alerts.welcome_message': 'تتبع صحتك اليومية، تواصل مع الأصدقاء، وانمو معاً.',
+                'params.sleep_quality': 'النوم',
+                'params.physical_activity': 'التمارين',
+                'params.anxiety': 'التوتر'
+            },
+            ru: {
+                'alerts.wellness_alert_for': 'Оповещение о здоровье {username}',
+                'alerts.wellness_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
+                'alerts.wellness_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
+                'alerts.new_message_from': 'Новое сообщение от {username}',
+                'alerts.started_following': '{username} подписался на вас',
+                'alerts.accepted_request': '{username} принял(а) ваш запрос на подписку',
+                'alerts.follow_request': '{username} хочет подписаться на вас',
+                'alerts.new_follower': 'У вас новый подписчик!',
+                'alerts.no_alerts': 'Нет уведомлений',
+                'alerts.welcome_title': 'Добро пожаловать в TheraSocial!',
+                'alerts.welcome_message': 'Отслеживайте своё здоровье, общайтесь с друзьями и развивайтесь вместе.',
+                'params.sleep_quality': 'Сон',
+                'params.physical_activity': 'Физическая активность',
+                'params.anxiety': 'Стресс'
+            }
+        };
+        function extendI18nAlerts() {
+            if (window.i18n && window.i18n.translations) {
+                Object.keys(alertTranslations).forEach(lang => {
+                    if (!window.i18n.translations[lang]) window.i18n.translations[lang] = {};
+                    Object.assign(window.i18n.translations[lang], alertTranslations[lang]);
+                });
+                console.log('[LL FIX] Extended i18n with alert/wellness translations');
+            }
+        }
+        extendI18nAlerts();
+        document.addEventListener('DOMContentLoaded', extendI18nAlerts);
+        window.addEventListener('load', extendI18nAlerts);
+    })();
+    </script>
+    <!-- END LL FIX Alert translations -->
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Global variables needed by parameters-social.js - MUST be declared first
@@ -13582,16 +13667,37 @@ async function loadAlerts() {
                 // PJ6003: Translate wellness alert content patterns
                 // Pattern: "username's param has been at concerning levels for N consecutive days (date range)"
                 const wellnessMatch = content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
-                if (wellnessMatch) {
-                    const [, alertUsername, param, days, dateRange] = wellnessMatch;
-                    // Translate parameter name
-                    const translatedParam = translateKey(`params.${param}`) || param;
-                    const template = translateKey('alerts.wellness_content') || "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})";
-                    content = template
-                        .replace('{username}', alertUsername)
-                        .replace('{param}', translatedParam)
-                        .replace('{days}', days)
-                        .replace('{dateRange}', dateRange);
+                const wellnessMatchNoDate = !wellnessMatch ? content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days?$/) : null;
+                if (wellnessMatch || wellnessMatchNoDate) {
+                    const match = wellnessMatch || wellnessMatchNoDate;
+                    const alertUsername = match[1];
+                    const param = match[2];
+                    const days = match[3];
+                    const dateRange = match[4] || '';
+                    // LL FIX: Map backend param names to i18n keys
+                    const paramKeyMap = {
+                        'mood': 'params.mood',
+                        'energy': 'params.energy',
+                        'sleep_quality': 'params.sleep',
+                        'physical_activity': 'params.exercise',
+                        'anxiety': 'params.stress'
+                    };
+                    const translatedParam = translateKey(paramKeyMap[param] || `params.${param}`) || param;
+                    let template;
+                    if (dateRange) {
+                        template = translateKey('alerts.wellness_content') || "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})";
+                        content = template
+                            .replace('{username}', alertUsername)
+                            .replace('{param}', translatedParam)
+                            .replace('{days}', days)
+                            .replace('{dateRange}', dateRange);
+                    } else {
+                        template = translateKey('alerts.wellness_content_no_date') || "{username}'s {param} has been at concerning levels for {days} consecutive days";
+                        content = template
+                            .replace('{username}', alertUsername)
+                            .replace('{param}', translatedParam)
+                            .replace('{days}', days);
+                    }
                 }
 
                 // ===== HANDLE OTHER TITLE PATTERNS =====
