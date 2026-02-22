@@ -13648,12 +13648,34 @@ async function loadAlerts() {
         }
         
         console.log(`📊 Separated: ${wellnessAlerts.length} wellness alerts, ${notifications.length} notifications`);
+        
+        // LL DEBUG: Log first wellness alert to see exact content format
+        if (wellnessAlerts.length > 0) {
+            const firstAlert = wellnessAlerts[0];
+            console.log('[LL DEBUG] First wellness alert:', JSON.stringify({
+                title: firstAlert.title,
+                message: firstAlert.message,
+                content: firstAlert.content,
+                type: firstAlert.type,
+                alert_category: firstAlert.alert_category
+            }));
+            // Test regex directly
+            const testContent = (firstAlert.message || firstAlert.content || '').trim();
+            const testMatch = testContent.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
+            console.log('[LL DEBUG] Regex test on first alert:', !!testMatch, testMatch ? testMatch.slice(1) : 'NO MATCH');
+            console.log('[LL DEBUG] Content chars:', [...testContent.slice(0,10)].map(c => c + '(U+' + c.charCodeAt(0).toString(16).padStart(4,'0') + ')').join(' '));
+            // Test translateKey availability
+            console.log('[LL DEBUG] translateKey type:', typeof translateKey);
+            if (typeof translateKey === 'function') {
+                console.log('[LL DEBUG] translateKey("alerts.wellness_content"):', translateKey('alerts.wellness_content'));
+            }
+        }
 
         // Helper function to translate and render an alert/notification item
         function renderItem(alert) {
             try {
                 let title = alert.title || '';
-                let content = alert.message || alert.content || '';
+                let content = (alert.message || alert.content || '').trim();
 
                 // ===== HANDLE WELLNESS ALERT TITLES =====
                 // PJ6003: Translate "Wellness Alert for username" pattern
