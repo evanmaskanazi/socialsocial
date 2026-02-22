@@ -1,11 +1,17 @@
 // Complete Trigger Management System for TheraSocial
 // triggers.js - Full Implementation
+// Version Lang - Replaced all hardcoded English strings with i18n translation keys
 
 class TriggerManager {
     constructor() {
         this.triggers = [];
         this.followedUsers = [];
         this.initialized = false;
+    }
+
+    // Translation helper with fallback
+    t(key, fallback) {
+        return (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : (fallback || key);
     }
 
     async init() {
@@ -66,18 +72,18 @@ class TriggerManager {
         container.innerHTML = `
             <div class="triggers-section">
                 <div class="section-header">
-                    <h2>Care Triggers</h2>
-                    <p class="section-subtitle">Get notified when people you care about need support</p>
+                    <h2>${this.t('triggers.care_title', 'Care Triggers')}</h2>
+                    <p class="section-subtitle">${this.t('triggers.care_subtitle', 'Get notified when people you care about need support')}</p>
                 </div>
 
                 <div class="add-trigger-form">
-                    <h3>Add New Trigger</h3>
+                    <h3>${this.t('triggers.add_new', 'Add New Trigger')}</h3>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="trigger-user">Person to watch:</label>
+                            <label for="trigger-user">${this.t('triggers.person_to_watch', 'Person to watch:')}</label>
                             <select id="trigger-user" class="form-select">
-                                <option value="">Select a person...</option>
+                                <option value="">${this.t('triggers.select_person', 'Select a person...')}</option>
                                 ${this.followedUsers.map(user => `
                                     <option value="${user.id}">${user.display_name || user.username}</option>
                                 `).join('')}
@@ -85,31 +91,31 @@ class TriggerManager {
                         </div>
 
                         <div class="form-group">
-                            <label for="trigger-parameter">Parameter:</label>
+                            <label for="trigger-parameter">${this.t('triggers.parameter_label', 'Parameter:')}</label>
                             <select id="trigger-parameter" class="form-select">
-                                <option value="mood">😊 Mood</option>
-                                <option value="energy">⚡ Energy</option>
-                                <option value="sleep_quality">😴 Sleep Quality</option>
-                                <option value="physical_activity">🏃 Physical Activity</option>
-                                <option value="anxiety">😰 Anxiety</option>
+                                <option value="mood">\u{1F60A} ${this.t('triggers.param_mood', 'Mood')}</option>
+                                <option value="energy">\u{26A1} ${this.t('triggers.param_energy', 'Energy')}</option>
+                                <option value="sleep_quality">\u{1F634} ${this.t('triggers.param_sleep', 'Sleep Quality')}</option>
+                                <option value="physical_activity">\u{1F3C3} ${this.t('triggers.param_activity', 'Physical Activity')}</option>
+                                <option value="anxiety">\u{1F630} ${this.t('triggers.param_anxiety', 'Anxiety')}</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="trigger-condition">Alert when value:</label>
+                            <label for="trigger-condition">${this.t('triggers.alert_when', 'Alert when value:')}</label>
                             <div class="condition-group">
                                 <select id="trigger-condition" class="form-select">
-                                    <option value="below">Falls below</option>
-                                    <option value="equals">Equals exactly</option>
-                                    <option value="above">Goes above</option>
+                                    <option value="below">${this.t('triggers.falls_below', 'Falls below')}</option>
+                                    <option value="equals">${this.t('triggers.equals_exactly', 'Equals exactly')}</option>
+                                    <option value="above">${this.t('triggers.goes_above', 'Goes above')}</option>
                                 </select>
                                 <select id="trigger-value" class="form-select">
-                                    <option value="1">1 (Low)</option>
-                                    <option value="2">2 (Medium-Low)</option>
-                                    <option value="3">3 (Medium-High)</option>
-                                    <option value="4">4 (High)</option>
+                                    <option value="1">${this.t('triggers.value_low', '1 (Low)')}</option>
+                                    <option value="2">${this.t('triggers.value_med_low', '2 (Medium-Low)')}</option>
+                                    <option value="3">${this.t('triggers.value_med_high', '3 (Medium-High)')}</option>
+                                    <option value="4">${this.t('triggers.value_high', '4 (High)')}</option>
                                 </select>
                             </div>
                         </div>
@@ -119,32 +125,32 @@ class TriggerManager {
                         <div class="form-group full-width">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="trigger-consecutive" onchange="triggerManager.toggleConsecutiveDays()">
-                                <span>Also alert if no check-in for</span>
+                                <span>${this.t('triggers.also_alert_no_checkin', 'Also alert if no check-in for')}</span>
                                 <input type="number" id="trigger-days" min="1" max="30" value="3" disabled class="inline-input">
-                                <span>consecutive days</span>
+                                <span>${this.t('triggers.consecutive_days', 'consecutive days')}</span>
                             </label>
                         </div>
                     </div>
 
                     <button class="btn-primary" onclick="triggerManager.addTrigger()">
-                        <span>➕</span> Add Trigger
+                        <span>\u{2795}</span> ${this.t('triggers.add_btn', 'Add Trigger')}
                     </button>
                 </div>
 
                 <div class="existing-triggers">
-                    <h3>Active Triggers (${this.triggers.length})</h3>
+                    <h3>${this.t('triggers.active_count', 'Active Triggers')} (${this.triggers.length})</h3>
                     ${this.renderTriggerList()}
                 </div>
             </div>
         `;
     }
 
-    renderTriggerList() {
+        renderTriggerList() {
         if (this.triggers.length === 0) {
             return `
                 <div class="no-triggers">
-                    <p>📭 No active triggers yet</p>
-                    <p class="hint">Add triggers above to get notified when someone needs support</p>
+                    <p>📭 ${this.t('triggers.no_active', 'No active triggers yet')}</p>
+                    <p class="hint">${this.t('triggers.no_active_hint', 'Add triggers above to get notified when someone needs support')}</p>
                 </div>
             `;
         }
@@ -157,46 +163,54 @@ class TriggerManager {
     }
 
     renderTriggerItem(trigger) {
+        const parameterNames = {
+            mood: this.t('triggers.param_mood', 'Mood'),
+            energy: this.t('triggers.param_energy', 'Energy'),
+            sleep_quality: this.t('triggers.param_sleep', 'Sleep Quality'),
+            physical_activity: this.t('triggers.param_activity', 'Physical Activity'),
+            anxiety: this.t('triggers.param_anxiety', 'Anxiety')
+        };
+
         const parameterEmoji = {
-            mood: '😊',
-            energy: '⚡',
-            sleep_quality: '😴',
-            physical_activity: '🏃',
-            anxiety: '😰'
+            mood: '\u{1F60A}',
+            energy: '\u{26A1}',
+            sleep_quality: '\u{1F634}',
+            physical_activity: '\u{1F3C3}',
+            anxiety: '\u{1F630}'
         };
 
         const conditionText = {
-            below: 'drops below',
-            above: 'goes above',
-            equals: 'equals'
+            below: this.t('triggers.drops_below', 'drops below'),
+            above: this.t('triggers.goes_above_text', 'goes above'),
+            equals: this.t('triggers.equals_text', 'equals')
         };
 
         return `
             <div class="trigger-item" data-trigger-id="${trigger.id}">
                 <div class="trigger-icon">
-                    ${parameterEmoji[trigger.parameter] || '📊'}
+                    ${parameterEmoji[trigger.parameter] || '\u{1F4CA}'}
                 </div>
                 <div class="trigger-info">
                     <div class="trigger-main">
                         <strong>${trigger.watched_user}</strong>'s
-                        <span class="parameter-name">${trigger.parameter.replace(/_/g, ' ')}</span>
+                        <span class="parameter-name">${parameterNames[trigger.parameter] || trigger.parameter.replace(/_/g, ' ')}</span>
                         ${conditionText[trigger.condition]}
                         <span class="trigger-value-badge">${trigger.value}</span>
                     </div>
                     ${trigger.consecutive_days ? `
                         <div class="trigger-secondary">
-                            Or no check-in for ${trigger.consecutive_days} days
+                            ${this.t('triggers.no_checkin_for', 'Or no check-in for {days} days').replace('{days}', trigger.consecutive_days)}
                         </div>
                     ` : ''}
                 </div>
-                <button class="btn-delete" onclick="triggerManager.deleteTrigger(${trigger.id})" title="Delete trigger">
-                    🗑️
+                <button class="btn-delete" onclick="triggerManager.deleteTrigger(${trigger.id})" title="${this.t('triggers.delete_title', 'Delete trigger')}">
+                    \u{1F5D1}\u{FE0F}
                 </button>
             </div>
         `;
     }
 
-    toggleConsecutiveDays() {
+        toggleConsecutiveDays() {
         const checkbox = document.getElementById('trigger-consecutive');
         const daysInput = document.getElementById('trigger-days');
 
@@ -220,7 +234,7 @@ class TriggerManager {
 
         // Validate
         if (!watchedId) {
-            this.showMessage('Please select a person to watch', 'error');
+            this.showMessage(this.t('triggers.select_person_error', 'Please select a person to watch'), 'error');
             return;
         }
 
@@ -245,7 +259,7 @@ class TriggerManager {
             if (response.ok) {
                 await this.loadTriggers();
                 this.render();
-                this.showMessage('Trigger added successfully! You\'ll be notified when conditions are met.', 'success');
+                this.showMessage(this.t('triggers.added_success', 'Trigger added successfully!'), 'success');
 
                 // Reset form
                 document.getElementById('trigger-user').value = '';
@@ -253,16 +267,16 @@ class TriggerManager {
                 document.getElementById('trigger-days').disabled = true;
             } else {
                 const error = await response.json();
-                this.showMessage(error.error || 'Failed to add trigger', 'error');
+                this.showMessage(error.error || this.t('triggers.add_failed', 'Failed to add trigger'), 'error');
             }
         } catch (error) {
             console.error('Error adding trigger:', error);
-            this.showMessage('Failed to add trigger. Please try again.', 'error');
+            this.showMessage(this.t('triggers.add_failed_retry', 'Failed to add trigger. Please try again.'), 'error');
         }
     }
 
     async deleteTrigger(triggerId) {
-        if (!confirm('Are you sure you want to delete this trigger?')) {
+        if (!confirm(this.t('triggers.confirm_delete', 'Are you sure you want to delete this trigger?'))) {
             return;
         }
 
@@ -282,13 +296,13 @@ class TriggerManager {
                     }, 300);
                 }
 
-                this.showMessage('Trigger deleted', 'success');
+                this.showMessage(this.t('triggers.deleted', 'Trigger deleted'), 'success');
             } else {
-                this.showMessage('Failed to delete trigger', 'error');
+                this.showMessage(this.t('triggers.delete_failed', 'Failed to delete trigger'), 'error');
             }
         } catch (error) {
             console.error('Error deleting trigger:', error);
-            this.showMessage('Failed to delete trigger', 'error');
+            this.showMessage(this.t('triggers.delete_failed', 'Failed to delete trigger'), 'error');
         }
     }
 

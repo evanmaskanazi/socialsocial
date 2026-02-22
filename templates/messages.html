@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Messages Version P305 -->
+<!-- TheraSocial Messages Version P305 Lang -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <!-- P305: Dark mode support for evening/nighttime use -->
 <html lang="en">
@@ -68,7 +68,7 @@
 <body>
     <!-- G-5: Apply dark mode from localStorage -->
     <script>if(localStorage.getItem('therasocial_dark_mode')==='true')document.body.classList.add('dark-mode');</script>
-    <div id="messagesContainer">Loading...</div>
+    <div id="messagesContainer"><span data-i18n="messages.loading">Loading...</span></div>
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/circles-messages.js?v=9.0"></script>
     <script>
@@ -115,7 +115,7 @@
             } catch (error) {
                 console.error('Initialization error:', error);
                 document.getElementById('messagesContainer').innerHTML =
-                    '<p style="color: white; text-align: center;">Error loading messages. Please try again.</p>';
+                    '<p style="color: white; text-align: center;">' + ((window.i18n && window.i18n.translate) ? (window.i18n.translate('msg.error_loading_messages') || 'Error loading messages. Please try again.') : 'Error loading messages. Please try again.') + '</p>';
             }
         });
     </script>

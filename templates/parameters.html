@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Parameters/Diary Version Fix10B -->
+<!-- TheraSocial Parameters/Diary Version Fix10B Lang -->
 <!-- Fix10B: Updated diary nav bar to match home sidebar (Home, Progress, Circles, Messages, Diary, Connections, Invite, Settings) -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <!-- P305: Dark mode support for evening/nighttime use -->
@@ -258,6 +258,57 @@
             .diary-nav-brand { font-size: 16px; }
         }
         [dir="rtl"] .diary-nav-links { flex-direction: row-reverse; }
+
+        /* ================================================================== */
+        /* FLOW2: Diary page visual — matches main app wellness aesthetic     */
+        /* ================================================================== */
+        body {
+            background: linear-gradient(145deg, #6B8BA4 0%, #8EA5B8 30%, #B6A9C9 65%, #C9BCDA 100%) !important;
+            background-attachment: fixed !important;
+        }
+        .dark-mode body, body.dark-mode {
+            background: linear-gradient(145deg, #1F2937 0%, #252D3A 35%, #2D2640 70%, #1F2937 100%) !important;
+        }
+        .diary-nav {
+            background: rgba(255, 255, 255, 0.96) !important;
+            backdrop-filter: blur(16px) saturate(1.15) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(1.15) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 2px 16px rgba(80, 110, 140, 0.10) !important;
+            border: 1px solid rgba(107, 139, 164, 0.08) !important;
+            padding: 10px 20px !important;
+            margin-bottom: 20px !important;
+        }
+        .diary-nav-brand {
+            font-weight: 800 !important;
+            letter-spacing: -0.02em !important;
+            background: linear-gradient(135deg, #4A6E88, #8B6BA4) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+        .diary-nav-link {
+            border-radius: 10px !important;
+            font-weight: 500 !important;
+            color: #5A6B7A !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .diary-nav-link:hover {
+            background: rgba(107, 139, 164, 0.09) !important;
+            color: #3D4F5F !important;
+        }
+        .diary-nav-link.active {
+            background: linear-gradient(135deg, #5A7A93, #7B6BA0) !important;
+            color: white !important;
+            box-shadow: 0 4px 18px rgba(90, 107, 160, 0.35) !important;
+        }
+        ::-webkit-scrollbar { width: 7px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(107, 139, 164, 0.22); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(107, 139, 164, 0.38); }
+        /* ================================================================== */
+        /* END FLOW2 DIARY VISUAL                                             */
+        /* ================================================================== */
     </style>
 </head>
 <body>
@@ -279,7 +330,8 @@
         </div>
     </nav>
 
-    <div id="loadingMessage"><span class="loading-spinner"></span>Loading diary...</div>
+<!-- Version Lang - Added i18n to loading message -->
+    <div id="loadingMessage"><span class="loading-spinner"></span><span data-i18n="parameters.loading_diary">Loading diary...</span></div>
     <div id="errorMessage"></div>
     <div id="parametersContainer"></div>
 

@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 Fix10C
+Complete app.py for Social Social Platform - V4 10Link
+
+10Link Changes:
+- Added /api/users/<user_id>/progress endpoint for viewing another user's progress with privacy checks
+- Circle-based privacy applied to progress data (mood, energy, sleep, activity, anxiety)
+- Returns checkin list, chart data, and averages
+
 Fix10C Changes:
 - Added 'timezone' column to User model and /api/user/profile PUT handler
 - Database migration for timezone column (PostgreSQL + SQLite)
@@ -533,11 +539,12 @@ DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 =
 # MINIMUM TRIGGER DAYS CONFIGURATION (PI502alt)
 # =============================================================================
 # Minimum number of consecutive days required for trigger alerts.
-# This prevents overly sensitive monitoring (e.g., 1 bad day shouldn't trigger alarm).
+# This controls the minimum threshold for trigger monitoring.
 # 
 # Change this value to adjust the minimum threshold:
-# - 3 = Recommended (default) - catches real patterns, ignores single bad days
-# - 2 = More sensitive - may catch issues faster but also more false positives
+# - 1 = Most sensitive (CLEAN default) - alerts after 1 day of concerning values
+# - 2 = Moderate - catches patterns over 2 days
+# - 3 = Conservative - only alerts on 3+ day patterns
 # - 4+ = Less sensitive - only alerts on longer patterns
 #
 # This affects:
@@ -545,7 +552,7 @@ DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 =
 # - Alert processing (filters out shorter patterns)
 # - Alert display (hides existing alerts below threshold)
 # =============================================================================
-MINIMUM_TRIGGER_DAYS = 3  # Reverted to match frontend minimum display
+MINIMUM_TRIGGER_DAYS = 1  # CLEAN: Set to 1 for immediate single-day triggers
 # =============================================================================
 
 from flask import (
@@ -684,6 +691,39 @@ CORS(app, supports_credentials=True, origins=[
     'https://socialsocial-72gn.onrender.com'  # Keep for backwards compatibility during transition
 ], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 Session(app)
+
+# === SOCIAL OAUTH CONFIGURATION - ACCT ADDITION ===
+# OAuth credentials loaded from environment variables
+# Set these in your Render/hosting dashboard:
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+#   MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET
+#   APPLE_CLIENT_ID, APPLE_CLIENT_SECRET, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
+OAUTH_PROVIDERS = {
+    'google': {
+        'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+        'client_secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+        'authorize_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'userinfo_url': 'https://www.googleapis.com/oauth2/v3/userinfo',
+        'scope': 'openid email profile',
+    },
+    'microsoft': {
+        'client_id': os.environ.get('MICROSOFT_CLIENT_ID', ''),
+        'client_secret': os.environ.get('MICROSOFT_CLIENT_SECRET', ''),
+        'authorize_url': 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize',
+        'token_url': 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
+        'userinfo_url': 'https://graph.microsoft.com/v1.0/me',
+        'scope': 'openid email profile User.Read',
+    },
+    'apple': {
+        'client_id': os.environ.get('APPLE_CLIENT_ID', ''),
+        'client_secret': '',  # Generated dynamically for Apple
+        'authorize_url': 'https://appleid.apple.com/auth/authorize',
+        'token_url': 'https://appleid.apple.com/auth/token',
+        'scope': 'name email',
+    },
+}
+# === END SOCIAL OAUTH CONFIGURATION ===
 
 # Security headers middleware (Ethics Doc: Privacy and Security by Design)
 @app.after_request
@@ -6812,6 +6852,299 @@ def reset_password():
         return jsonify({'error': 'Failed to reset password'}), 500
 
 
+# =============================================================================
+# SOCIAL OAUTH LOGIN ROUTES - ACCT ADDITION
+# Non-invasive: These are entirely new routes that don't modify any existing code.
+# Requires environment variables to be set for each provider.
+# =============================================================================
+
+@app.route('/api/auth/oauth/<provider>')
+def oauth_initiate(provider):
+    """Initiate OAuth flow - redirects user to provider's consent screen"""
+    try:
+        if provider not in OAUTH_PROVIDERS:
+            return jsonify({'error': f'Unknown provider: {provider}'}), 400
+
+        config = OAUTH_PROVIDERS[provider]
+        if not config['client_id']:
+            logger.warning(f"OAuth {provider}: client_id not configured")
+            return jsonify({'error': f'{provider.title()} login is not yet configured. Please use email/password login.'}), 503
+
+        import secrets as sec
+        state = sec.token_urlsafe(32)
+        session['oauth_state'] = state
+        session['oauth_provider'] = provider
+        session['oauth_language'] = request.args.get('lang', 'en')
+
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+        redirect_uri = f"{app_url}/api/auth/oauth/{provider}/callback"
+
+        params = {
+            'client_id': config['client_id'],
+            'redirect_uri': redirect_uri,
+            'state': state,
+            'response_type': 'code',
+        }
+
+        if provider == 'google':
+            params['scope'] = config['scope']
+            params['access_type'] = 'offline'
+            params['prompt'] = 'select_account'
+        elif provider == 'microsoft':
+            params['scope'] = config['scope']
+            params['response_mode'] = 'query'
+        elif provider == 'apple':
+            params['scope'] = config['scope']
+            params['response_mode'] = 'form_post'
+
+        from urllib.parse import urlencode
+        auth_url = f"{config['authorize_url']}?{urlencode(params)}"
+        return redirect(auth_url)
+
+    except Exception as e:
+        logger.error(f"OAuth initiate error ({provider}): {e}")
+        return redirect(f"/?oauth_error=initiation_failed")
+
+
+@app.route('/api/auth/oauth/<provider>/callback', methods=['GET', 'POST'])
+def oauth_callback(provider):
+    """Handle OAuth callback from provider"""
+    try:
+        if provider not in OAUTH_PROVIDERS:
+            return redirect('/?oauth_error=unknown_provider')
+
+        config = OAUTH_PROVIDERS[provider]
+
+        # Verify state parameter to prevent CSRF
+        if provider == 'apple':
+            # Apple uses POST form_post response mode
+            state = request.form.get('state', '')
+            code = request.form.get('code', '')
+        else:
+            state = request.args.get('state', '')
+            code = request.args.get('code', '')
+
+        stored_state = session.pop('oauth_state', None)
+        if not state or state != stored_state:
+            logger.warning(f"OAuth {provider}: State mismatch")
+            return redirect('/?oauth_error=state_mismatch')
+
+        if not code:
+            error = request.args.get('error', 'no_code')
+            logger.warning(f"OAuth {provider}: No code received, error={error}")
+            return redirect(f'/?oauth_error={error}')
+
+        # Exchange code for access token
+        import requests as http_requests
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+        redirect_uri = f"{app_url}/api/auth/oauth/{provider}/callback"
+
+        token_data = {
+            'client_id': config['client_id'],
+            'client_secret': config['client_secret'],
+            'code': code,
+            'redirect_uri': redirect_uri,
+            'grant_type': 'authorization_code',
+        }
+
+        # Apple requires special client_secret generation via JWT
+        if provider == 'apple':
+            apple_secret = _generate_apple_client_secret()
+            if apple_secret:
+                token_data['client_secret'] = apple_secret
+            else:
+                logger.error("Failed to generate Apple client secret")
+                return redirect('/?oauth_error=apple_config')
+
+        token_resp = http_requests.post(config['token_url'], data=token_data, timeout=10)
+        if token_resp.status_code != 200:
+            logger.error(f"OAuth {provider}: Token exchange failed: {token_resp.text}")
+            return redirect('/?oauth_error=token_exchange_failed')
+
+        token_json = token_resp.json()
+        access_token = token_json.get('access_token', '')
+
+        # Get user info from provider
+        email = None
+        display_name = None
+
+        if provider == 'google':
+            userinfo_resp = http_requests.get(
+                config['userinfo_url'],
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=10
+            )
+            if userinfo_resp.status_code == 200:
+                userinfo = userinfo_resp.json()
+                email = userinfo.get('email', '').lower()
+                display_name = userinfo.get('name', '')
+
+        elif provider == 'microsoft':
+            userinfo_resp = http_requests.get(
+                config['userinfo_url'],
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=10
+            )
+            if userinfo_resp.status_code == 200:
+                userinfo = userinfo_resp.json()
+                email = userinfo.get('mail', '') or userinfo.get('userPrincipalName', '')
+                email = email.lower()
+                display_name = userinfo.get('displayName', '')
+
+        elif provider == 'apple':
+            # Apple sends user info in the id_token (JWT)
+            id_token = token_json.get('id_token', '')
+            if id_token:
+                import base64
+                import json as json_module
+                # Decode JWT payload (Apple id_token)
+                payload_part = id_token.split('.')[1]
+                # Add padding
+                payload_part += '=' * (4 - len(payload_part) % 4)
+                payload = json_module.loads(base64.urlsafe_b64decode(payload_part))
+                email = payload.get('email', '').lower()
+            # Apple only sends name on first authorization
+            user_data = request.form.get('user', '')
+            if user_data:
+                try:
+                    import json as json_module
+                    user_info = json_module.loads(user_data)
+                    first = user_info.get('name', {}).get('firstName', '')
+                    last = user_info.get('name', {}).get('lastName', '')
+                    display_name = f"{first} {last}".strip()
+                except:
+                    pass
+
+        if not email:
+            logger.error(f"OAuth {provider}: No email received from provider")
+            return redirect('/?oauth_error=no_email')
+
+        # Find or create user (same pattern as magic link - non-invasive)
+        user = db.session.execute(
+            select(User).filter_by(email=email)
+        ).scalar_one_or_none()
+
+        oauth_language = session.pop('oauth_language', 'en')
+        is_new_user = False
+
+        if not user:
+            # Create new user (same pattern as magic link registration)
+            is_new_user = True
+            import secrets as sec
+
+            # Generate username from email or display name
+            if display_name:
+                base_username = sanitize_input(display_name.replace(' ', '_').lower()[:80])
+            else:
+                base_username = email.split('@')[0][:80]
+                base_username = sanitize_input(base_username)
+
+            # Check if username taken
+            existing = db.session.execute(
+                select(User).filter_by(username=base_username)
+            ).scalar_one_or_none()
+            if existing:
+                username = f"{base_username}_{sec.token_hex(4)}"
+            else:
+                username = base_username
+
+            user = User(
+                username=username,
+                email=email,
+                preferred_language=oauth_language
+            )
+            user.set_password(sec.token_urlsafe(32))  # Random password for OAuth users
+            db.session.add(user)
+            db.session.flush()
+
+            # Create profile
+            profile = Profile(user_id=user.id)
+            db.session.add(profile)
+
+            # Create welcome alert
+            alert = Alert(
+                user_id=user.id,
+                title='alerts.welcome_title',
+                content='alerts.welcome_message',
+                alert_type='success'
+            )
+            db.session.add(alert)
+
+            log_audit('user_registered', 'user', user.id, user.id,
+                     {'username': username, 'oauth_provider': provider})
+            logger.info(f"OAuth new user registered: {username} via {provider}")
+
+        # Update last login
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+
+        # Create session (same as regular login)
+        session['user_id'] = user.id
+        session['username'] = user.username
+        session['role'] = user.role
+        session.permanent = True
+        session['diary_redirect_pending'] = True
+
+        log_audit('login_success', 'user', user.id, user.id,
+                 {'oauth_provider': provider})
+        logger.info(f"OAuth login successful: {user.username} via {provider}")
+
+        # Check followlog target
+        followlog_target = session.pop('followlog_target', None)
+
+        # Redirect to app with success indicator
+        redirect_url = '/?oauth_success=1'
+        if is_new_user:
+            redirect_url += '&new_user=1'
+        if followlog_target:
+            redirect_url += f'&followlog_target={followlog_target}'
+
+        return redirect(redirect_url)
+
+    except Exception as e:
+        logger.error(f"OAuth callback error ({provider}): {e}")
+        db.session.rollback()
+        return redirect('/?oauth_error=callback_failed')
+
+
+def _generate_apple_client_secret():
+    """Generate Apple client secret JWT (required by Apple Sign In)"""
+    try:
+        import jwt
+        import time
+
+        team_id = os.environ.get('APPLE_TEAM_ID', '')
+        client_id = os.environ.get('APPLE_CLIENT_ID', '')
+        key_id = os.environ.get('APPLE_KEY_ID', '')
+        private_key = os.environ.get('APPLE_PRIVATE_KEY', '')
+
+        if not all([team_id, client_id, key_id, private_key]):
+            return None
+
+        # Replace escaped newlines
+        private_key = private_key.replace('\\n', '\n')
+
+        now = int(time.time())
+        payload = {
+            'iss': team_id,
+            'iat': now,
+            'exp': now + 86400 * 180,  # 6 months
+            'aud': 'https://appleid.apple.com',
+            'sub': client_id,
+        }
+        headers = {
+            'kid': key_id,
+            'alg': 'ES256',
+        }
+
+        return jwt.encode(payload, private_key, algorithm='ES256', headers=headers)
+    except Exception as e:
+        logger.error(f"Apple client secret generation error: {e}")
+        return None
+
+# === END SOCIAL OAUTH LOGIN ROUTES ===
+
+
 @app.route('/api/user/language', methods=['GET'])
 def get_user_language():
     """Get user's language preference"""
@@ -11439,6 +11772,152 @@ def get_progress():
         
     except Exception as e:
         logger.error(f"Progress data error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# 10Link: Get another user's progress data with circle-based privacy
+@app.route('/api/users/<int:user_id>/progress')
+@login_required
+def get_user_progress(user_id):
+    """Get another user's progress/checkin data with privacy checks"""
+    try:
+        current_user_id = session.get('user_id')
+        
+        # Check if following or in circle
+        is_following = Follow.query.filter_by(
+            follower_id=current_user_id,
+            followed_id=user_id
+        ).first() is not None
+        
+        is_in_circle = Circle.query.filter_by(
+            user_id=user_id,
+            circle_user_id=current_user_id
+        ).first() is not None
+        
+        if not is_following and not is_in_circle and user_id != current_user_id:
+            return jsonify({'error': 'Must be following user or in their circles'}), 403
+        
+        days = request.args.get('days', 30, type=int)
+        if days > 365:
+            days = 365
+        
+        # Determine circle level for privacy
+        circle_level = 'public'
+        if current_user_id != user_id:
+            circle_stmt = select(Circle).filter_by(
+                user_id=user_id,
+                circle_user_id=current_user_id
+            )
+            circle = db.session.execute(circle_stmt).scalar_one_or_none()
+            if circle:
+                type_mapping = {
+                    'public': 'public', 'general': 'public',
+                    'class_b': 'class_b', 'close_friends': 'class_b',
+                    'class_a': 'class_a', 'family': 'class_a'
+                }
+                circle_level = type_mapping.get(circle.circle_type, 'public')
+        else:
+            circle_level = 'class_a'
+        
+        # Privacy hierarchy - Check10: Added 'private': 3 so private params are never visible
+        privacy_levels = {'public': 0, 'class_b': 1, 'class_a': 2, 'private': 3}
+        viewer_level = privacy_levels.get(circle_level, 0)
+        
+        def can_see(privacy_setting):
+            param_level = privacy_levels.get(privacy_setting or 'public', 0)
+            return viewer_level >= param_level
+        
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        params_stmt = select(SavedParameters).filter(
+            SavedParameters.user_id == user_id,
+            SavedParameters.date >= start_date,
+            SavedParameters.date <= end_date
+        ).order_by(SavedParameters.date)
+        params = db.session.execute(params_stmt).scalars().all()
+        
+        dates = []
+        mood_data = []
+        energy_data = []
+        sleep_data = []
+        activity_data = []
+        anxiety_data = []
+        checkin_list = []
+        
+        def safe_int(val):
+            if val is None:
+                return None
+            try:
+                v = int(val)
+                return v if 1 <= v <= 4 else None
+            except (ValueError, TypeError):
+                if isinstance(val, str):
+                    text_map = {
+                        '1': 1, '2': 2, '3': 3, '4': 4,
+                        'terrible': 1, 'bad': 1, 'poor': 2, 'low': 2,
+                        'okay': 3, 'neutral': 3, 'moderate': 3, 'medium': 3,
+                        'good': 4, 'high': 4, 'great': 4, 'excellent': 4
+                    }
+                    return text_map.get(val.lower(), None)
+                return None
+        
+        for p in params:
+            date_str = p.date.strftime('%m/%d')
+            dates.append(date_str)
+            
+            # Apply privacy per parameter
+            mood_privacy = getattr(p, 'mood_privacy', 'public') or 'public'
+            energy_privacy = getattr(p, 'energy_privacy', 'public') or 'public'
+            sleep_privacy = getattr(p, 'sleep_quality_privacy', 'public') or 'public'
+            activity_privacy = getattr(p, 'physical_activity_privacy', 'public') or 'public'
+            anxiety_privacy = getattr(p, 'anxiety_privacy', 'public') or 'public'
+            
+            mood_val = safe_int(getattr(p, 'mood', None)) if can_see(mood_privacy) else None
+            energy_val = safe_int(getattr(p, 'energy', None)) if can_see(energy_privacy) else None
+            sleep_val = safe_int(getattr(p, 'sleep_quality', None)) if can_see(sleep_privacy) else None
+            activity_val = safe_int(getattr(p, 'physical_activity', None)) if can_see(activity_privacy) else None
+            anxiety_val = safe_int(getattr(p, 'anxiety', None)) if can_see(anxiety_privacy) else None
+            
+            mood_data.append(mood_val)
+            energy_data.append(energy_val)
+            sleep_data.append(sleep_val)
+            activity_data.append(activity_val)
+            anxiety_data.append(anxiety_val)
+            
+            # Build checkin list entry
+            checkin_entry = {
+                'date': p.date.strftime('%Y-%m-%d'),
+                'date_display': date_str
+            }
+            if mood_val is not None: checkin_entry['mood'] = mood_val
+            if energy_val is not None: checkin_entry['energy'] = energy_val
+            if sleep_val is not None: checkin_entry['sleep'] = sleep_val
+            if activity_val is not None: checkin_entry['activity'] = activity_val
+            if anxiety_val is not None: checkin_entry['anxiety'] = anxiety_val
+            checkin_list.append(checkin_entry)
+        
+        def calc_avg(data):
+            valid = [v for v in data if v is not None]
+            return round(sum(valid) / len(valid), 1) if valid else None
+        
+        return jsonify({
+            'dates': dates,
+            'mood': mood_data,
+            'energy': energy_data,
+            'sleep': sleep_data,
+            'activity': activity_data,
+            'anxiety': anxiety_data,
+            'totalCheckins': len(params),
+            'avgMood': calc_avg(mood_data),
+            'avgEnergy': calc_avg(energy_data),
+            'avgSleep': calc_avg(sleep_data),
+            'avgActivity': calc_avg(activity_data),
+            'avgAnxiety': calc_avg(anxiety_data),
+            'checkins': checkin_list
+        })
+    except Exception as e:
+        logger.error(f"User progress data error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 

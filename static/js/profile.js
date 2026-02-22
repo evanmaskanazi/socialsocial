@@ -1,4 +1,5 @@
 // Profile Page JavaScript with Enhanced Fields, Modern Styling, and i18n support
+// Version Lang - Verified fully translated with t() calls
 // Add this to your existing profile page or create a new profile.html
 
 // Use translation function helper

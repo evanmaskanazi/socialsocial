@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TheraSocial Invite Not Found Version P305 -->
+<!-- TheraSocial Invite Not Found Version P305 Lang -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <html lang="en">
 <head>
@@ -85,9 +85,11 @@
 <body>
     <div class="error-container">
         <div class="error-icon">😕</div>
-        <h1>User Not Found</h1>
-        <p>This invite link doesn't seem to be valid. The user may have changed their username or deleted their account.</p>
-        <a href="/" class="btn">Go to TheraSocial</a>
+        <h1 data-i18n="invite_not_found.title">User Not Found</h1>
+        <p data-i18n="invite_not_found.desc">This invite link doesn't seem to be valid. The user may have changed their username or deleted their account.</p>
+        <a href="/" class="btn" data-i18n="invite_not_found.btn">Go to TheraSocial</a>
     </div>
+    <script src="/static/js/i18n.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => { if(window.i18n) window.i18n.applyLanguage(); });</script>
 </body>
 </html>
