@@ -6332,14 +6332,14 @@ async function loadUserCity() {
                 currentUserId = response.user.id;
 
                 // P95 FIX: Save current language to backend IMMEDIATELY after login
-                // Use the captured languageToSave variable (captured at START of handler)
+                // FLOW3 FIX: Send BOTH field names to ensure backend saves correctly
                 console.log('[LOGIN] Saving captured language to backend:', languageToSave);
                 try {
                     await fetch('/api/user/language', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        body: JSON.stringify({ language: languageToSave })
+                        body: JSON.stringify({ language: languageToSave, preferred_language: languageToSave })
                     });
                     console.log('[LOGIN] Language saved to backend successfully:', languageToSave);
                 } catch (langErr) {
