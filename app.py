@@ -2,6 +2,7 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+
 10Link Changes:
 - Added /api/users/<user_id>/progress endpoint for viewing another user's progress with privacy checks
 - Circle-based privacy applied to progress data (mood, energy, sleep, activity, anxiety)
