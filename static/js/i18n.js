@@ -1359,6 +1359,13 @@ const translations = {
 
         // Lang batch 3 - circles.html, feed-updates.js
         'circles.loading': 'Loading circles...',
+        'loading.recommendations': 'Loading recommendations...',
+        'loading.connections': 'Loading connections...',
+        'loading.conversations': 'Loading conversations...',
+        'loading.triggers': 'Loading triggers...',
+        'loading.parameters': 'Loading parameters...',
+        'loading.generic': 'Loading...',
+        'error.loading_alerts': 'Error loading alerts. Please refresh the page.',
         'circles.users_circles': "{username}'s Circles",
         'msg.account_not_available': 'Account Not Available',
         'btn.follow': 'Follow',
@@ -2702,6 +2709,13 @@ const translations = {
 
         // Lang batch 3
         'circles.loading': 'טוען מעגלים...',
+        'loading.recommendations': 'טוען המלצות...',
+        'loading.connections': 'טוען חיבורים...',
+        'loading.conversations': 'טוען שיחות...',
+        'loading.triggers': 'טוען טריגרים...',
+        'loading.parameters': 'טוען פרמטרים...',
+        'loading.generic': 'טוען...',
+        'error.loading_alerts': 'שגיאה בטעינת התראות. אנא רענן את הדף.',
         'circles.users_circles': 'המעגלים של {username}',
         'msg.account_not_available': 'חשבון לא זמין',
         'btn.follow': 'עקוב',
@@ -4045,6 +4059,13 @@ const translations = {
 
         // Lang batch 3
         'circles.loading': 'جارٍ تحميل الدوائر...',
+        'loading.recommendations': 'جارٍ تحميل التوصيات...',
+        'loading.connections': 'جارٍ تحميل الاتصالات...',
+        'loading.conversations': 'جارٍ تحميل المحادثات...',
+        'loading.triggers': 'جارٍ تحميل المحفزات...',
+        'loading.parameters': 'جارٍ تحميل المعلمات...',
+        'loading.generic': 'جارٍ التحميل...',
+        'error.loading_alerts': 'خطأ في تحميل التنبيهات. يرجى تحديث الصفحة.',
         'circles.users_circles': 'دوائر {username}',
         'msg.account_not_available': 'الحساب غير متاح',
         'btn.follow': 'متابعة',
@@ -5388,6 +5409,13 @@ const translations = {
 
         // Lang batch 3
         'circles.loading': 'Загрузка кругов...',
+        'loading.recommendations': 'Загрузка рекомендаций...',
+        'loading.connections': 'Загрузка подключений...',
+        'loading.conversations': 'Загрузка разговоров...',
+        'loading.triggers': 'Загрузка триггеров...',
+        'loading.parameters': 'Загрузка параметров...',
+        'loading.generic': 'Загрузка...',
+        'error.loading_alerts': 'Ошибка загрузки оповещений. Пожалуйста, обновите страницу.',
         'circles.users_circles': 'Круги {username}',
         'msg.account_not_available': 'Аккаунт недоступен',
         'btn.follow': 'Подписаться',
