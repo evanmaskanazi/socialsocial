@@ -13646,10 +13646,10 @@ async function loadAlerts() {
                 }
 
                 // ===== HANDLE CONTENT =====
-                if (content.startsWith('alerts.')) {
+                if (content.startsWith('alerts.') || content.startsWith('invite.')) {
                     const translated = translateKey(content);
                     if (!translated || translated === content) {
-                        content = content.replace('alerts.', '').replace(/_/g, ' ');
+                        content = content.replace('alerts.', '').replace('invite.', '').replace(/_/g, ' ');
                     } else {
                         content = translated;
                     }
