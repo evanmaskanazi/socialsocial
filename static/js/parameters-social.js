@@ -1317,10 +1317,10 @@ function addParameterStyles() {
 
         .language-selector {
             padding: 8px 12px;
-            border: 2px solid #667eea;
+            border: 2px solid #5A7A93;
             border-radius: 8px;
             background: white;
-            color: #667eea;
+            color: #5A7A93;
             font-weight: 600;
             cursor: pointer;
             min-width: 120px;
@@ -1374,7 +1374,7 @@ function addParameterStyles() {
         }
 
         .date-nav-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5A7A93 0%, #7B6BA0 100%);
             color: white;
             border: none;
             border-radius: 50%;
@@ -1423,13 +1423,13 @@ function addParameterStyles() {
         }
 
         .calendar-day.selected {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5A7A93 0%, #7B6BA0 100%);
             color: white;
-            border-color: #667eea;
+            border-color: #5A7A93;
         }
 
         .calendar-day.today {
-            border-color: #667eea;
+            border-color: #5A7A93;
             font-weight: bold;
         }
 
@@ -1489,7 +1489,7 @@ function addParameterStyles() {
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: #667eea;
+            background: #5A7A93;
             color: white;
             font-size: 12px;
             font-weight: bold;
@@ -1501,7 +1501,7 @@ function addParameterStyles() {
         }
 
         .tooltip-icon:hover {
-            background: #764ba2;
+            background: #7B6BA0;
             transform: scale(1.1);
         }
 
@@ -1533,7 +1533,7 @@ function addParameterStyles() {
 
         .tooltip-content h3 {
             margin: 0 0 15px 0;
-            color: #667eea;
+            color: #5A7A93;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -1605,9 +1605,9 @@ function addParameterStyles() {
         }
 
         .rating-button.selected {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5A7A93 0%, #7B6BA0 100%);
             color: white;
-            border-color: #667eea;
+            border-color: #5A7A93;
             transform: scale(1.1);
         }
 
@@ -1654,7 +1654,7 @@ function addParameterStyles() {
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5A7A93 0%, #7B6BA0 100%);
             color: white;
         }
 
@@ -1708,7 +1708,7 @@ function addParameterStyles() {
         }
 
         .message.flashy {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5A7A93 0%, #7B6BA0 100%);
             color: white;
             padding: 25px;
             font-size: 1.2em;
@@ -1850,7 +1850,7 @@ function addParameterStyles() {
 
 
   .invite-cta {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5A7A93 0%, #7B6BA0 100%);
             border-radius: 15px;
             padding: 25px;
             margin: 20px 0;
@@ -1890,7 +1890,7 @@ function addParameterStyles() {
 
         .cta-button.primary {
             background: white;
-            color: #667eea;
+            color: #5A7A93;
         }
 
         .cta-button.primary:hover {
@@ -3260,7 +3260,7 @@ function addTriggerControls(userId, username) {
                 </label>
             </div>
 
-            <button onclick="saveTriggers(${userId})" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer;">
+            <button onclick="saveTriggers(${userId})" class="btn btn-primary" style="background: linear-gradient(135deg, #5A7A93 0%, #7B6BA0 100%); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer;">
                 Save Trigger Settings
             </button>
         </div>
