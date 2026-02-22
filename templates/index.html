@@ -13649,6 +13649,10 @@ async function loadAlerts() {
         
         console.log(`📊 Separated: ${wellnessAlerts.length} wellness alerts, ${notifications.length} notifications`);
         
+        // LL DEBUG: Reset render counters
+        window._llDebugCount = 0;
+        window._llFinalCount = 0;
+        
         // LL DEBUG: Log first wellness alert to see exact content format
         if (wellnessAlerts.length > 0) {
             const firstAlert = wellnessAlerts[0];
@@ -13719,6 +13723,15 @@ async function loadAlerts() {
                             .replace('{username}', alertUsername)
                             .replace('{param}', translatedParam)
                             .replace('{days}', days);
+                    }
+                    // LL DEBUG: Log first 3 translated alerts inside renderItem
+                    if (!window._llDebugCount) window._llDebugCount = 0;
+                    if (window._llDebugCount < 3) {
+                        console.log(`[LL RENDER #${window._llDebugCount}] param=${param}, mapped=${paramKeyMap[param]}, translatedParam=${translatedParam}`);
+                        console.log(`[LL RENDER #${window._llDebugCount}] template=${template}`);
+                        console.log(`[LL RENDER #${window._llDebugCount}] FINAL content=${content}`);
+                        console.log(`[LL RENDER #${window._llDebugCount}] FINAL title=${title}`);
+                        window._llDebugCount++;
                     }
                 }
 
@@ -13808,6 +13821,7 @@ async function loadAlerts() {
                     <div class="alert-item ${alert.type || 'info'}"
                          data-alert-id="${alert.id}"
                          onclick="dismissAlert(${alert.id}, this)">
+                        ${(() => { if (!window._llFinalCount) window._llFinalCount = 0; if (window._llFinalCount < 3) { console.log(`[LL FINAL #${window._llFinalCount}] title=${title}`); console.log(`[LL FINAL #${window._llFinalCount}] content=${content}`); window._llFinalCount++; } return ''; })()}
                         <strong>${escapeHtml(title)}</strong><br>
                         <small>${escapeHtml(content)}</small>
                         <span class="alert-dismiss" style="position: absolute; top: 8px; right: 8px; opacity: 0.3; font-size: 1.2rem; transition: opacity 0.2s;">×</span>
@@ -13861,6 +13875,12 @@ async function loadAlerts() {
         }
         
         console.log(`✅ Rendered ${wellnessAlerts.length} wellness alerts and ${notifications.length} notifications`);
+        
+        // LL DEBUG: Verify DOM content of first alert
+        const firstAlertEl = alertsContainer.querySelector('.alert-item small');
+        if (firstAlertEl) {
+            console.log('[LL DOM CHECK] First alert DOM text:', firstAlertEl.textContent);
+        }
         
         // Update mobile alerts badge (on main nav and in More menu)
         const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
