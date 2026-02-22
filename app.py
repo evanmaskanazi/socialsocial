@@ -5866,6 +5866,77 @@ def confirm_delete_account():
         log_audit('account_deleted', 'user', user.id, user.id, {'username': user.username})
 
         token_record.used = True
+
+        # Manually delete all related records that lack cascade delete-orphan
+        # Follow: user can be follower or followed
+        db.session.execute(
+            Follow.__table__.delete().where(
+                (Follow.follower_id == user.id) | (Follow.followed_id == user.id)
+            )
+        )
+        # FollowRequest: user can be requester or target
+        db.session.execute(
+            FollowRequest.__table__.delete().where(
+                (FollowRequest.requester_id == user.id) | (FollowRequest.target_id == user.id)
+            )
+        )
+        # BlockedUser: user can be blocker or blocked
+        db.session.execute(
+            BlockedUser.__table__.delete().where(
+                (BlockedUser.blocker_id == user.id) | (BlockedUser.blocked_id == user.id)
+            )
+        )
+        # ParameterTrigger: user can be watcher or watched
+        db.session.execute(
+            ParameterTrigger.__table__.delete().where(
+                (ParameterTrigger.watcher_id == user.id) | (ParameterTrigger.watched_id == user.id)
+            )
+        )
+        # CircleMember entries where user is the circle_user (member of others' circles)
+        db.session.execute(
+            Circle.__table__.delete().where(Circle.circle_user_id == user.id)
+        )
+        # Alerts where user is the source
+        db.session.execute(
+            Alert.__table__.update().where(Alert.source_user_id == user.id).values(source_user_id=None)
+        )
+        # Comments authored by user (on others' posts)
+        db.session.execute(
+            Comment.__table__.delete().where(Comment.user_id == user.id)
+        )
+        # Reactions by user
+        db.session.execute(
+            Reaction.__table__.delete().where(Reaction.user_id == user.id)
+        )
+        # Auth tokens
+        db.session.execute(
+            PasswordResetToken.__table__.delete().where(PasswordResetToken.user_id == user.id)
+        )
+        db.session.execute(
+            MagicLoginToken.__table__.delete().where(MagicLoginToken.user_id == user.id)
+        )
+        # Consent and privacy records
+        db.session.execute(
+            UserConsent.__table__.delete().where(UserConsent.user_id == user.id)
+        )
+        db.session.execute(
+            ConsentHistory.__table__.delete().where(ConsentHistory.user_id == user.id)
+        )
+        db.session.execute(
+            CookieConsent.__table__.delete().where(CookieConsent.user_id == user.id)
+        )
+        db.session.execute(
+            ProcessingRestriction.__table__.delete().where(ProcessingRestriction.user_id == user.id)
+        )
+        # Notification settings
+        db.session.execute(
+            NotificationSettings.__table__.delete().where(NotificationSettings.user_id == user.id)
+        )
+        # Audit logs (set to null since nullable)
+        db.session.execute(
+            AuditLog.__table__.update().where(AuditLog.user_id == user.id).values(user_id=None)
+        )
+
         db.session.delete(user)
         db.session.commit()
 
