@@ -4820,16 +4820,28 @@ def support_page():
 def support_contact():
     """
     Handle support contact form submissions.
-    Validates input, stores message, and optionally sends email.
+    Validates input, stores message, and sends email to support address.
     """
     try:
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Invalid request data'}), 400
         
-        # Validate required fields
+        # Get user ID if logged in
+        user_id = session.get('user_id')
+        
+        # Auto-fill name and email from session if logged in
         name = data.get('name', '').strip()
         email = data.get('email', '').strip()
+        
+        if user_id and (not name or not email):
+            user = db.session.get(User, user_id)
+            if user:
+                if not name:
+                    name = user.username or 'User'
+                if not email:
+                    email = user.email or ''
+        
         subject = data.get('subject', '').strip()
         message = data.get('message', '').strip()
         
@@ -4863,9 +4875,6 @@ def support_contact():
         subject = sanitize_input(subject)
         message = sanitize_input(message)
         
-        # Get user ID if logged in
-        user_id = session.get('user_id')
-        
         # Log the support request (audit trail)
         log_audit('support_contact', 'support_request', None, {
             'name': name[:50],  # Truncate for log
@@ -4875,9 +4884,57 @@ def support_contact():
             'user_id': user_id
         })
         
-        # TODO: Store in database and/or send email notification
-        # For now, just log and return success
         logger.info(f"Support contact from {email}: {subject[:50]}")
+        
+        # Send email to support address
+        SUPPORT_EMAIL = 'notifications@therasocialconnect.com'
+        try:
+            from_email = app.config.get('MAIL_DEFAULT_SENDER', os.environ.get('FROM_EMAIL', 'TheraSocial <onboarding@resend.dev>'))
+            
+            email_subject = f"[TheraSocial Support] {subject}"
+            text_content = (
+                f"Support request from: {name} ({email})\n"
+                f"User ID: {user_id or 'Not logged in'}\n"
+                f"Subject: {subject}\n\n"
+                f"Message:\n{message}\n"
+            )
+            html_content = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #667eea;">TheraSocial Support Request</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">From:</td><td style="padding: 8px;">{name} ({email})</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">User ID:</td><td style="padding: 8px;">{user_id or 'Not logged in'}</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">Subject:</td><td style="padding: 8px;">{subject}</td></tr>
+                </table>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <p style="margin: 0; white-space: pre-wrap;">{message}</p>
+                </div>
+                <p style="color: #888; font-size: 12px; margin-top: 20px;">Reply directly to this email to respond to {email}</p>
+            </div>
+            """
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = email_subject
+            msg['From'] = from_email
+            msg['To'] = SUPPORT_EMAIL
+            msg['Reply-To'] = email  # So replies go to the user
+            msg.attach(MIMEText(text_content, 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
+            
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+            
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], SUPPORT_EMAIL, msg.as_string())
+            
+            logger.info(f"[SMTP SUPPORT] Support email sent to {SUPPORT_EMAIL} from {email}")
+            
+        except Exception as e:
+            logger.error(f"[SMTP SUPPORT] Failed to send support email: {e}")
+            # Still return success - the request was logged even if email failed
         
         return jsonify({
             'success': True,
