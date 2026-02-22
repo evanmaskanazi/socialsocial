@@ -16573,15 +16573,40 @@ async function loadHomeAlerts() {
             return;
         }
 
-        homeAlertsList.innerHTML = alerts.slice(0, 5).map(alert => `
+        // Helper to translate alert/invite i18n keys
+        function translateAlertText(text) {
+            if (!text) return 'Alert';
+            const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate : null;
+            if (text.startsWith('alerts.') || text.startsWith('invite.')) {
+                if (tFn) {
+                    const translated = tFn(text);
+                    if (translated && translated !== text) return translated;
+                }
+                return text.replace('alerts.', '').replace('invite.', '').replace(/_/g, ' ');
+            }
+            // Handle JSON-encoded title with {username} params
+            try {
+                const parsed = JSON.parse(text);
+                if (parsed.key && parsed.params) {
+                    let base = tFn ? (tFn(parsed.key) || parsed.key) : parsed.key;
+                    if (parsed.params.username) base = base.replace('{username}', parsed.params.username);
+                    return base;
+                }
+            } catch (e) { /* not JSON, use as-is */ }
+            return text;
+        }
+
+        homeAlertsList.innerHTML = alerts.slice(0, 5).map(alert => {
+            const displayText = translateAlertText(alert.message || alert.text || alert.title || 'Alert');
+            return `
             <div style="background: var(--peach-light); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.2rem;">🔔</span>
                 <div style="flex: 1;">
-                    <div style="font-size: 0.9rem; color: var(--dark);">${escapeHtml(alert.message || alert.text || 'Alert')}</div>
+                    <div style="font-size: 0.9rem; color: var(--dark);">${escapeHtml(displayText)}</div>
                     <div style="font-size: 0.75rem; color: var(--gray);">${alert.created_at ? new Date(alert.created_at).toLocaleDateString() : ''}</div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
 
         if (alerts.length > 5) {
             const tt2 = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
