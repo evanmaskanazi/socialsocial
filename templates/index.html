@@ -5941,9 +5941,57 @@
         extendI18nAlerts();
         document.addEventListener('DOMContentLoaded', extendI18nAlerts);
         window.addEventListener('load', extendI18nAlerts);
+
+        // LL FIX: Global helper to translate wellness alert content
+        // Used by both loadAlerts() and loadHomeAlerts()
+        window._translateWellnessContent = function(content) {
+            if (!content || typeof content !== 'string') return content;
+            const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : null;
+            if (!tFn) return content;
+            
+            const paramKeyMap = {
+                'mood': 'params.mood',
+                'energy': 'params.energy',
+                'sleep_quality': 'params.sleep',
+                'physical_activity': 'params.exercise',
+                'anxiety': 'params.stress'
+            };
+            
+            const m = content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
+            const mNoDate = !m ? content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days?$/) : null;
+            
+            if (m || mNoDate) {
+                const match = m || mNoDate;
+                const username = match[1], param = match[2], days = match[3], dateRange = match[4] || '';
+                const translatedParam = tFn(paramKeyMap[param] || 'params.' + param) || param;
+                const templateKey = dateRange ? 'alerts.wellness_content' : 'alerts.wellness_content_no_date';
+                const fallback = dateRange 
+                    ? "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})"
+                    : "{username}'s {param} has been at concerning levels for {days} consecutive days";
+                const template = tFn(templateKey) || fallback;
+                return template
+                    .replace('{username}', username)
+                    .replace('{param}', translatedParam)
+                    .replace('{days}', days)
+                    .replace('{dateRange}', dateRange);
+            }
+            return content;
+        };
+        
+        // LL FIX: Global helper to translate wellness alert titles
+        window._translateWellnessTitle = function(title) {
+            if (!title || typeof title !== 'string') return title;
+            const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : null;
+            if (!tFn) return title;
+            if (title.startsWith('Wellness Alert for ')) {
+                const username = title.replace('Wellness Alert for ', '');
+                const template = tFn('alerts.wellness_alert_for') || 'Wellness Alert for {username}';
+                return template.replace('{username}', username);
+            }
+            return title;
+        };
     })();
     </script>
-    <!-- END LL FIX Alert translations -->
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -13648,91 +13696,25 @@ async function loadAlerts() {
         }
         
         console.log(`📊 Separated: ${wellnessAlerts.length} wellness alerts, ${notifications.length} notifications`);
-        
-        // LL DEBUG: Reset render counters
-        window._llDebugCount = 0;
-        window._llFinalCount = 0;
-        
-        // LL DEBUG: Log first wellness alert to see exact content format
-        if (wellnessAlerts.length > 0) {
-            const firstAlert = wellnessAlerts[0];
-            console.log('[LL DEBUG] First wellness alert:', JSON.stringify({
-                title: firstAlert.title,
-                message: firstAlert.message,
-                content: firstAlert.content,
-                type: firstAlert.type,
-                alert_category: firstAlert.alert_category
-            }));
-            // Test regex directly
-            const testContent = (firstAlert.message || firstAlert.content || '').trim();
-            const testMatch = testContent.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
-            console.log('[LL DEBUG] Regex test on first alert:', !!testMatch, testMatch ? testMatch.slice(1) : 'NO MATCH');
-            console.log('[LL DEBUG] Content chars:', [...testContent.slice(0,10)].map(c => c + '(U+' + c.charCodeAt(0).toString(16).padStart(4,'0') + ')').join(' '));
-            // Test translateKey availability
-            console.log('[LL DEBUG] translateKey type:', typeof translateKey);
-            if (typeof translateKey === 'function') {
-                console.log('[LL DEBUG] translateKey("alerts.wellness_content"):', translateKey('alerts.wellness_content'));
-            }
-        }
 
         // Helper function to translate and render an alert/notification item
         function renderItem(alert) {
             try {
                 let title = alert.title || '';
-                let content = (alert.message || alert.content || '').trim();
+                let content = alert.message || alert.content || '';
 
                 // ===== HANDLE WELLNESS ALERT TITLES =====
-                // PJ6003: Translate "Wellness Alert for username" pattern
-                if (title.startsWith('Wellness Alert for ')) {
-                    const username = title.replace('Wellness Alert for ', '');
-                    const template = translateKey('alerts.wellness_alert_for') || 'Wellness Alert for {username}';
-                    title = template.replace('{username}', username);
+                // LL FIX: Use global wellness title translator
+                if (window._translateWellnessTitle) {
+                    const translated = window._translateWellnessTitle(title);
+                    if (translated !== title) title = translated;
                 }
                 
                 // ===== HANDLE WELLNESS ALERT CONTENT =====
-                // PJ6003: Translate wellness alert content patterns
-                // Pattern: "username's param has been at concerning levels for N consecutive days (date range)"
-                const wellnessMatch = content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
-                const wellnessMatchNoDate = !wellnessMatch ? content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days?$/) : null;
-                if (wellnessMatch || wellnessMatchNoDate) {
-                    const match = wellnessMatch || wellnessMatchNoDate;
-                    const alertUsername = match[1];
-                    const param = match[2];
-                    const days = match[3];
-                    const dateRange = match[4] || '';
-                    // LL FIX: Map backend param names to i18n keys
-                    const paramKeyMap = {
-                        'mood': 'params.mood',
-                        'energy': 'params.energy',
-                        'sleep_quality': 'params.sleep',
-                        'physical_activity': 'params.exercise',
-                        'anxiety': 'params.stress'
-                    };
-                    const translatedParam = translateKey(paramKeyMap[param] || `params.${param}`) || param;
-                    let template;
-                    if (dateRange) {
-                        template = translateKey('alerts.wellness_content') || "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})";
-                        content = template
-                            .replace('{username}', alertUsername)
-                            .replace('{param}', translatedParam)
-                            .replace('{days}', days)
-                            .replace('{dateRange}', dateRange);
-                    } else {
-                        template = translateKey('alerts.wellness_content_no_date') || "{username}'s {param} has been at concerning levels for {days} consecutive days";
-                        content = template
-                            .replace('{username}', alertUsername)
-                            .replace('{param}', translatedParam)
-                            .replace('{days}', days);
-                    }
-                    // LL DEBUG: Log first 3 translated alerts inside renderItem
-                    if (!window._llDebugCount) window._llDebugCount = 0;
-                    if (window._llDebugCount < 3) {
-                        console.log(`[LL RENDER #${window._llDebugCount}] param=${param}, mapped=${paramKeyMap[param]}, translatedParam=${translatedParam}`);
-                        console.log(`[LL RENDER #${window._llDebugCount}] template=${template}`);
-                        console.log(`[LL RENDER #${window._llDebugCount}] FINAL content=${content}`);
-                        console.log(`[LL RENDER #${window._llDebugCount}] FINAL title=${title}`);
-                        window._llDebugCount++;
-                    }
+                // LL FIX: Use global wellness content translator
+                if (window._translateWellnessContent) {
+                    const translated = window._translateWellnessContent(content);
+                    if (translated !== content) content = translated;
                 }
 
                 // ===== HANDLE OTHER TITLE PATTERNS =====
@@ -13821,7 +13803,6 @@ async function loadAlerts() {
                     <div class="alert-item ${alert.type || 'info'}"
                          data-alert-id="${alert.id}"
                          onclick="dismissAlert(${alert.id}, this)">
-                        ${(() => { if (!window._llFinalCount) window._llFinalCount = 0; if (window._llFinalCount < 3) { console.log(`[LL FINAL #${window._llFinalCount}] title=${title}`); console.log(`[LL FINAL #${window._llFinalCount}] content=${content}`); window._llFinalCount++; } return ''; })()}
                         <strong>${escapeHtml(title)}</strong><br>
                         <small>${escapeHtml(content)}</small>
                         <span class="alert-dismiss" style="position: absolute; top: 8px; right: 8px; opacity: 0.3; font-size: 1.2rem; transition: opacity 0.2s;">×</span>
@@ -13875,12 +13856,6 @@ async function loadAlerts() {
         }
         
         console.log(`✅ Rendered ${wellnessAlerts.length} wellness alerts and ${notifications.length} notifications`);
-        
-        // LL DEBUG: Verify DOM content of first alert
-        const firstAlertEl = alertsContainer.querySelector('.alert-item small');
-        if (firstAlertEl) {
-            console.log('[LL DOM CHECK] First alert DOM text:', firstAlertEl.textContent);
-        }
         
         // Update mobile alerts badge (on main nav and in More menu)
         const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
@@ -16745,7 +16720,9 @@ async function loadHomeAlerts() {
         }
 
         homeAlertsList.innerHTML = alerts.slice(0, 5).map(alert => {
-            const displayText = translateAlertText(alert.message || alert.text || alert.title || 'Alert');
+            let displayText = translateAlertText(alert.message || alert.text || alert.title || 'Alert');
+            // LL FIX: Translate wellness alert content patterns (e.g., "julia's anxiety has been...")
+            if (window._translateWellnessContent) displayText = window._translateWellnessContent(displayText);
             return `
             <div style="background: var(--peach-light); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.2rem;">🔔</span>
