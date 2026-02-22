@@ -2956,9 +2956,533 @@
             }
         }
 
+        /* ================================================================== */
+        /* FLOW: Visual Flow Overhaul — Smooth, cohesive, inviting design     */
+        /* Non-invasive: only adds/overrides CSS rules, no functional changes */
+        /* ================================================================== */
+
+        /* --- FLOW: Refined color palette for warmth and cohesion --- */
+        :root {
+            --flow-bg-start: #7B95AD;
+            --flow-bg-end: #C4B6D6;
+            --flow-card-bg: #FEFEFE;
+            --flow-card-shadow: 0 4px 24px rgba(90, 110, 140, 0.08);
+            --flow-card-shadow-hover: 0 8px 32px rgba(90, 110, 140, 0.14);
+            --flow-border-subtle: rgba(120, 150, 180, 0.10);
+            --flow-heading-color: #445566;
+            --flow-text-muted: #7A8896;
+            --flow-accent-warm: #E8907A;
+            --flow-section-radius: 22px;
+            --flow-transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- FLOW: Smoother body background gradient --- */
+        body {
+            background: linear-gradient(155deg, var(--flow-bg-start) 0%, #A0AABC 35%, var(--flow-bg-end) 70%, #D4C8E0 100%) !important;
+            background-attachment: fixed !important;
+        }
+        .dark-mode body, body.dark-mode {
+            background: linear-gradient(155deg, #1F2937 0%, #252D3A 35%, #2D2640 70%, #1F2937 100%) !important;
+        }
+
+        /* --- FLOW: Navigation bar — fluid, breathing feel --- */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(20px) saturate(1.2) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+            box-shadow: 0 1px 8px rgba(90, 110, 140, 0.08), 0 0 0 1px rgba(255,255,255,0.5) !important;
+            border-bottom: none !important;
+            transition: var(--flow-transition) !important;
+        }
+        .dark-mode .navbar {
+            background: rgba(31, 41, 55, 0.92) !important;
+        }
+
+        .logo {
+            font-weight: 800 !important;
+            letter-spacing: -0.03em !important;
+            background: linear-gradient(135deg, #5A7A93, #8B6BA4) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+
+        /* --- FLOW: Sidebar/Tab navigation — unified active state --- */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.92) !important;
+            border-radius: 16px !important;
+            box-shadow: var(--flow-card-shadow) !important;
+            border: 1px solid var(--flow-border-subtle) !important;
+            padding: 6px 12px !important;
+            backdrop-filter: blur(8px) !important;
+        }
+
+        .sidebar-item {
+            border-radius: 10px !important;
+            padding: 10px 18px !important;
+            font-weight: 500 !important;
+            transition: var(--flow-transition) !important;
+            color: var(--flow-text-muted) !important;
+        }
+
+        .sidebar-item:hover:not(.active) {
+            background: rgba(107, 139, 164, 0.08) !important;
+            color: var(--flow-heading-color) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        .sidebar-item.active {
+            background: linear-gradient(135deg, #5A7A93, #7B6BA0) !important;
+            color: white !important;
+            box-shadow: 0 4px 16px rgba(90, 107, 160, 0.3) !important;
+            font-weight: 600 !important;
+        }
+
+        .sidebar-item.active .sidebar-icon,
+        .sidebar-item.active .sidebar-label {
+            color: white !important;
+        }
+
+        /* --- FLOW: Main content area — breathable white space --- */
+        .main-content {
+            background: linear-gradient(180deg, #FFFFFF 0%, #FDFCFA 40%, #FAF8F5 100%) !important;
+            border-radius: var(--flow-section-radius) !important;
+            box-shadow: var(--flow-card-shadow) !important;
+            border: 1px solid var(--flow-border-subtle) !important;
+            padding: 36px !important;
+        }
+        .dark-mode .main-content {
+            background: linear-gradient(180deg, #1F2937 0%, #1C2533 100%) !important;
+        }
+
+        /* --- FLOW: Smooth view transitions --- */
+        .view {
+            animation: flowFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        @keyframes flowFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- FLOW: Unified heading style across ALL views --- */
+        #homeView > h2:first-of-type,
+        #progressView > h2,
+        #circlesView > h2,
+        #messagesView > h2,
+        #trackingView > h2,
+        #inviteView > h2,
+        #settingsView > h2,
+        #connectionsView > h2,
+        #alertsView > h2 {
+            color: var(--flow-heading-color) !important;
+            font-weight: 700 !important;
+            font-size: 1.6rem !important;
+            letter-spacing: -0.02em !important;
+            padding-bottom: 16px !important;
+            border-bottom: 2px solid rgba(120, 150, 180, 0.12) !important;
+            margin-bottom: 28px !important;
+        }
+
+        /* --- FLOW: Section cards — unified warm glass look --- */
+        #summaryStatusCard,
+        #quickCheckinCard,
+        #todayRecommendations,
+        #friendsUpdatesSection,
+        #connectionStatusSection,
+        #homeAlertsSection,
+        #homeFeedSection,
+        .city-selector-container,
+        .invite-section .share-link-card,
+        .invite-section .recommendations-card,
+        #myConnectionsTab,
+        #recommendationsTab,
+        #settingsProfilePanel,
+        #settingsAccountPanel > div,
+        #settingsNotificationPanel > div {
+            border-radius: var(--flow-section-radius) !important;
+            box-shadow: var(--flow-card-shadow) !important;
+            border: 1px solid var(--flow-border-subtle) !important;
+            transition: var(--flow-transition) !important;
+        }
+
+        /* --- FLOW: Card hover lift effect --- */
+        #summaryStatusCard:hover,
+        #quickCheckinCard:hover,
+        #todayRecommendations:hover,
+        #friendsUpdatesSection:hover,
+        #connectionStatusSection:hover,
+        #homeAlertsSection:hover,
+        #homeFeedSection:hover,
+        .city-selector-container:hover,
+        .invite-section .share-link-card:hover,
+        #myConnectionsTab:hover,
+        #recommendationsTab:hover {
+            box-shadow: var(--flow-card-shadow-hover) !important;
+            transform: translateY(-2px);
+        }
+
+        /* --- FLOW: Softer left border accents — thinner, more muted --- */
+        #quickCheckinCard {
+            border-left: 4px solid rgba(232, 144, 122, 0.6) !important;
+        }
+        #todayRecommendations {
+            border-left: 4px solid rgba(127, 168, 130, 0.5) !important;
+        }
+        #friendsUpdatesSection {
+            border-left: 4px solid rgba(175, 199, 214, 0.6) !important;
+        }
+        #connectionStatusSection {
+            border-left: 4px solid rgba(182, 169, 201, 0.5) !important;
+        }
+        #homeAlertsSection {
+            border-left: 4px solid rgba(245, 196, 184, 0.6) !important;
+        }
+        #homeFeedSection {
+            border-left: 4px solid rgba(168, 197, 171, 0.5) !important;
+        }
+        #myConnectionsTab {
+            border-left: 4px solid rgba(168, 197, 171, 0.5) !important;
+        }
+        #recommendationsTab {
+            border-left: 4px solid rgba(182, 169, 201, 0.5) !important;
+        }
+        #settingsProfilePanel {
+            border-left: 4px solid rgba(107, 139, 164, 0.4) !important;
+        }
+        .city-selector-container {
+            border-left: 4px solid rgba(107, 139, 164, 0.4) !important;
+        }
+        #personalizedInsights {
+            border-left: 4px solid rgba(127, 168, 130, 0.4) !important;
+        }
+
+        /* RTL: Flip flow borders */
+        [dir="rtl"] #quickCheckinCard,
+        [dir="rtl"] #todayRecommendations,
+        [dir="rtl"] #friendsUpdatesSection,
+        [dir="rtl"] #connectionStatusSection,
+        [dir="rtl"] #homeAlertsSection,
+        [dir="rtl"] #homeFeedSection,
+        [dir="rtl"] #myConnectionsTab,
+        [dir="rtl"] #recommendationsTab,
+        [dir="rtl"] #settingsProfilePanel,
+        [dir="rtl"] .city-selector-container,
+        [dir="rtl"] #personalizedInsights {
+            border-left: 1px solid var(--flow-border-subtle) !important;
+            border-right-width: 4px !important;
+            border-right-style: solid !important;
+        }
+
+        /* --- FLOW: Section heading accents (h3 within cards) --- */
+        #friendsUpdatesSection > h3,
+        #connectionStatusSection > h3,
+        #homeAlertsSection > h3,
+        #homeFeedSection > h3 {
+            color: var(--flow-heading-color) !important;
+            font-weight: 600 !important;
+            font-size: 1.05rem !important;
+            border-bottom: 1px solid rgba(120, 150, 180, 0.10) !important;
+        }
+
+        /* --- FLOW: Welcome card — smoother gradient --- */
+        #welcomeCard {
+            background: linear-gradient(135deg, #5A7A93 0%, #6E947A 30%, #9B8AB5 100%) !important;
+            border-radius: var(--flow-section-radius) !important;
+            box-shadow: 0 6px 24px rgba(90, 122, 147, 0.20) !important;
+        }
+        #welcomeCard h3, #welcomeCard p {
+            text-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+        }
+
+        /* --- FLOW: Summary status — gentler gradient --- */
+        #summaryStatusCard {
+            background: linear-gradient(160deg, #FAF0EA 0%, #EEF4EE 40%, #F4F1EC 100%) !important;
+            border-top: 3px solid rgba(107, 139, 164, 0.3) !important;
+        }
+        #summaryStatusCard .param-mini {
+            background: rgba(255,255,255,0.95) !important;
+            border-bottom: 2px solid rgba(175, 199, 214, 0.4) !important;
+            border-radius: 14px !important;
+        }
+
+        /* --- FLOW: Quick Check-In — softer palette --- */
+        #quickCheckinCard {
+            background: linear-gradient(135deg, #FEFEFE 0%, #FDF3EF 100%) !important;
+        }
+        #quickCheckinCard button[onclick*="quickCheckin"] {
+            border-radius: 14px !important;
+            border: 1px solid rgba(0,0,0,0.04) !important;
+        }
+
+        /* --- FLOW: Recommendations — softer green tint --- */
+        #todayRecommendations {
+            background: linear-gradient(145deg, #EEF5EF 0%, rgba(238,245,239,0.3) 100%) !important;
+        }
+
+        /* --- FLOW: Connections tab pills --- */
+        .conn-tab {
+            border-radius: 8px !important;
+            transition: var(--flow-transition) !important;
+            font-weight: 500 !important;
+        }
+        .conn-tab.active {
+            color: var(--flow-heading-color) !important;
+            border-bottom: 2px solid #5A7A93 !important;
+            background: rgba(90, 122, 147, 0.06) !important;
+        }
+        .conn-tab:hover:not(.active) {
+            background: rgba(107, 139, 164, 0.04) !important;
+        }
+
+        /* --- FLOW: User cards — consistent across Connections, Circles, Invite --- */
+        #connectionsView .user-card,
+        #myConnectionsList .user-card,
+        #connectionRecommendationsList .user-card,
+        #inviteView .user-card,
+        #circlesView .user-card {
+            background: white !important;
+            border: 1px solid rgba(120, 150, 180, 0.10) !important;
+            border-left: 3px solid rgba(168, 197, 171, 0.5) !important;
+            border-radius: 14px !important;
+            padding: 14px 16px !important;
+            margin-bottom: 8px !important;
+            transition: var(--flow-transition) !important;
+        }
+        #connectionsView .user-card:hover,
+        #myConnectionsList .user-card:hover,
+        #connectionRecommendationsList .user-card:hover,
+        #inviteView .user-card:hover,
+        #circlesView .user-card:hover {
+            background: #FDFDFC !important;
+            border-left-color: #5A7A93 !important;
+            box-shadow: 0 4px 16px rgba(90, 110, 140, 0.12) !important;
+            transform: translateY(-1px) !important;
+        }
+        [dir="rtl"] #connectionsView .user-card,
+        [dir="rtl"] #myConnectionsList .user-card,
+        [dir="rtl"] #connectionRecommendationsList .user-card,
+        [dir="rtl"] #inviteView .user-card,
+        [dir="rtl"] #circlesView .user-card {
+            border-left: 1px solid rgba(120, 150, 180, 0.10) !important;
+            border-right: 3px solid rgba(168, 197, 171, 0.5) !important;
+        }
+
+        /* --- FLOW: User avatars — softer shadow, consistent ring --- */
+        .user-avatar {
+            box-shadow: 0 2px 8px rgba(90, 110, 140, 0.15) !important;
+            border: 2px solid rgba(255, 255, 255, 0.8) !important;
+        }
+
+        /* --- FLOW: Follow/Unfollow buttons — rounded pills --- */
+        .follow-btn {
+            background: linear-gradient(135deg, #5A7A93, #6B8BA4) !important;
+            color: white !important;
+            border-radius: 20px !important;
+            font-weight: 600 !important;
+            padding: 8px 20px !important;
+            box-shadow: 0 2px 8px rgba(90, 122, 147, 0.2) !important;
+            transition: var(--flow-transition) !important;
+        }
+        .follow-btn:hover {
+            background: linear-gradient(135deg, #4A6A83, #5A7A93) !important;
+            box-shadow: 0 4px 14px rgba(90, 122, 147, 0.3) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* --- FLOW: Circles view — card grids breathe --- */
+        #circlesView > div {
+            background: var(--flow-card-bg) !important;
+            border-radius: var(--flow-section-radius) !important;
+            box-shadow: var(--flow-card-shadow) !important;
+            border: 1px solid var(--flow-border-subtle) !important;
+            padding: 24px !important;
+            margin-bottom: 20px !important;
+        }
+
+        /* --- FLOW: Messages view — cleaner chat area --- */
+        #messagesView > div {
+            border-radius: 18px !important;
+        }
+        #messagesView .message-thread,
+        #messagesView .conversation-list {
+            border-radius: 16px !important;
+        }
+
+        /* --- FLOW: Invite share link card --- */
+        .invite-section .share-link-card {
+            background: var(--flow-card-bg) !important;
+            padding: 28px !important;
+            border-left: 4px solid rgba(107, 139, 164, 0.4) !important;
+        }
+        .invite-section .share-link-card h3 {
+            color: var(--flow-heading-color) !important;
+        }
+        [dir="rtl"] .invite-section .share-link-card {
+            border-left: 1px solid var(--flow-border-subtle) !important;
+            border-right: 4px solid rgba(107, 139, 164, 0.4) !important;
+        }
+
+        .share-buttons .btn-secondary {
+            border-radius: 10px !important;
+            border: 1px solid rgba(107, 139, 164, 0.2) !important;
+            transition: var(--flow-transition) !important;
+        }
+        .share-buttons .btn-secondary:hover {
+            background: rgba(107, 139, 164, 0.06) !important;
+            border-color: rgba(107, 139, 164, 0.3) !important;
+        }
+
+        /* --- FLOW: Settings view — consistent sub-panel styling --- */
+        #settingsView .settings-sub-tab {
+            transition: var(--flow-transition) !important;
+        }
+        #settingsSubNav {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 2px 12px rgba(90, 110, 140, 0.06) !important;
+            border: 1px solid var(--flow-border-subtle) !important;
+        }
+
+        /* --- FLOW: Form inputs — warm, consistent --- */
+        .form-input,
+        #settingsView .form-input,
+        #settingsView textarea,
+        #settingsView select,
+        #profileView .form-input,
+        #profileView textarea {
+            background: #FAFAF8 !important;
+            border: 1.5px solid rgba(120, 150, 180, 0.15) !important;
+            border-radius: 10px !important;
+            transition: var(--flow-transition) !important;
+        }
+        .form-input:focus,
+        #settingsView .form-input:focus,
+        #settingsView textarea:focus,
+        #settingsView select:focus {
+            border-color: rgba(90, 122, 147, 0.5) !important;
+            box-shadow: 0 0 0 3px rgba(90, 122, 147, 0.08) !important;
+            outline: none !important;
+        }
+
+        /* --- FLOW: Buttons — consistent primary style --- */
+        .btn-primary {
+            background: linear-gradient(135deg, #5A7A93, #6B8BA4) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 2px 10px rgba(90, 122, 147, 0.2) !important;
+            transition: var(--flow-transition) !important;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #4A6A83, #5A7A93) !important;
+            box-shadow: 0 4px 18px rgba(90, 122, 147, 0.3) !important;
+            transform: translateY(-2px) !important;
+        }
+
+        /* --- FLOW: Progress chart area --- */
+        #progressView .progress-section,
+        #progressView > div:not(:first-child) {
+            background: var(--flow-card-bg) !important;
+            border-radius: var(--flow-section-radius) !important;
+            box-shadow: var(--flow-card-shadow) !important;
+            border: 1px solid var(--flow-border-subtle) !important;
+        }
+
+        /* --- FLOW: Alerts — softer warning colors --- */
+        .alert-item, .alerts-list .alert-card {
+            border-radius: 12px !important;
+            transition: var(--flow-transition) !important;
+        }
+
+        /* --- FLOW: Search inputs across views --- */
+        #connectionSearchInput,
+        #inviteSearchInput,
+        #circlesView input[type="text"] {
+            background: #F8F8F6 !important;
+            border: 1.5px solid rgba(120, 150, 180, 0.15) !important;
+            border-radius: 24px !important;
+            padding: 12px 20px !important;
+            transition: var(--flow-transition) !important;
+        }
+        #connectionSearchInput:focus,
+        #inviteSearchInput:focus,
+        #circlesView input[type="text"]:focus {
+            border-color: rgba(90, 122, 147, 0.4) !important;
+            box-shadow: 0 0 0 3px rgba(90, 122, 147, 0.08) !important;
+            background: #FFFFFF !important;
+        }
+
+        /* --- FLOW: Tutorial/Action buttons — consistent --- */
+        .btn-tutorial, [onclick*="startTutorial"] {
+            border-radius: 10px !important;
+            transition: var(--flow-transition) !important;
+        }
+
+        /* --- FLOW: Language selector --- */
+        .language-selector {
+            border: 1.5px solid rgba(107, 139, 164, 0.3) !important;
+            border-radius: 10px !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            transition: var(--flow-transition) !important;
+        }
+        .language-selector:hover {
+            border-color: rgba(107, 139, 164, 0.5) !important;
+        }
+
+        /* --- FLOW: Diary page link consistent with nav flow --- */
+        .diary-nav {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(16px) !important;
+            border-radius: 16px !important;
+            box-shadow: var(--flow-card-shadow) !important;
+        }
+
+        /* --- FLOW: Scrollbar aesthetic (webkit) --- */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(107, 139, 164, 0.2);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(107, 139, 164, 0.35);
+        }
+
+        /* --- FLOW: Mobile nav — same gradient active state --- */
+        @media (max-width: 768px) {
+            .mobile-nav-item.active,
+            .bottom-nav-item.active {
+                color: #5A7A93 !important;
+            }
+            .main-content {
+                padding: 20px !important;
+                border-radius: 16px !important;
+            }
+        }
+
+        /* --- FLOW: Dark mode overrides --- */
+        .dark-mode .sidebar {
+            background: rgba(31, 41, 55, 0.92) !important;
+        }
+        .dark-mode .sidebar-item.active {
+            background: linear-gradient(135deg, #4A6A83, #6B5B90) !important;
+        }
+        .dark-mode #circlesView > div {
+            background: var(--white) !important;
+            border-color: var(--border) !important;
+        }
+        .dark-mode .user-card {
+            background: var(--light) !important;
+        }
+
+        /* ================================================================== */
+        /* END FLOW VISUAL OVERHAUL                                           */
+        /* ================================================================== */
+
     </style>
-</head>
-<body>
     <!-- PL400: Cookie Consent Banner (GDPR/ePrivacy Compliance) -->
     <div id="cookieConsentBanner" class="cookie-consent-banner" style="display: none;">
         <div class="cookie-consent-content">
@@ -3290,6 +3814,7 @@
             </label>
             <input type="number" id="consentBirthYear" class="form-input"
                    placeholder="YYYY" min="1900" max="2025" maxlength="4"
+                   value="1985"
                    data-i18n-placeholder="profile.birth_year_placeholder"
                    required
                    style="border-radius: 10px; border: 1px solid #d1d5db; padding: 10px 14px;">
@@ -4723,14 +5248,9 @@
                     <span data-i18n="invite.whatsapp">📱 WhatsApp</span>
                 </button>
             </div>
-        </div>
 
-        <div class="recommendations-card">
-            <h3 data-i18n="invite.suggested">Suggested People to Invite</h3>
-            <p data-i18n="invite.suggested_description">Based on your location and connections</p>
-
-            <!-- PJ702: Search bar for Invite tab -->
-            <div style="margin: 20px 0;">
+            <!-- Flow: Search bar moved into invite link card -->
+            <div style="margin: 20px 0 0 0;">
                 <div style="position: relative; max-width: 600px;">
                     <input type="text"
                         id="inviteSearchInput"
@@ -4760,10 +5280,22 @@
                     max-width: 600px;
                 "></div>
             </div>
-            <!-- End of PJ702 search bar -->
+        </div>
+
+        <!-- Flow: Commented out - Suggested People to Invite section and recommendations list -->
+        <!--
+        <div class="recommendations-card">
+            <h3 data-i18n="invite.suggested">Suggested People to Invite</h3>
+            <p data-i18n="invite.suggested_description">Based on your location and connections</p>
 
                     <div id="recommendationsList" class="recommendations-list">
                         <div class="loading">Loading recommendations...</div>
+                    </div>
+                </div>
+        -->
+        <!-- Flow: Hidden recommendationsList kept in DOM so JS doesn't error -->
+        <div class="recommendations-card" style="display: none;">
+                    <div id="recommendationsList" class="recommendations-list">
                     </div>
                 </div>
               </div>
