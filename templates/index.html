@@ -6259,6 +6259,29 @@ async function loadUserCity() {
 
 
         // CHANGE 3: Enhanced API Helper with rate limiting and retry logic
+        // CSRF token cache
+        let _csrfToken = null;
+        let _csrfTokenExpiry = 0;
+
+        async function getCsrfToken() {
+            // Return cached token if still valid (refresh 5 min before expiry)
+            if (_csrfToken && Date.now() < _csrfTokenExpiry) {
+                return _csrfToken;
+            }
+            try {
+                const resp = await fetch(`${API_URL}/csrf-token`, { credentials: 'include' });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    _csrfToken = data.csrf_token;
+                    _csrfTokenExpiry = Date.now() + 50 * 60 * 1000; // cache for 50 min
+                    return _csrfToken;
+                }
+            } catch (e) {
+                console.warn('Failed to fetch CSRF token:', e);
+            }
+            return null;
+        }
+
         async function apiCall(endpoint, method = 'GET', body = null, retryCount = 0) {
             const MAX_RETRIES = 2;
             const RETRY_DELAY = 1000; // 1 second
@@ -6270,6 +6293,14 @@ async function loadUserCity() {
                 },
                 credentials: 'include'
             };
+
+            // Add CSRF token for state-changing requests
+            if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+                const csrfToken = await getCsrfToken();
+                if (csrfToken) {
+                    options.headers['X-CSRF-Token'] = csrfToken;
+                }
+            }
 
             if (body) {
                 options.body = JSON.stringify(body);
@@ -6309,6 +6340,13 @@ async function loadUserCity() {
                 }
 
                 const data = await response.json();
+
+                // CSRF token expired/invalid - refresh and retry once
+                if (response.status === 403 && data.error && data.error.includes('CSRF') && retryCount < 1) {
+                    _csrfToken = null;
+                    _csrfTokenExpiry = 0;
+                    return apiCall(endpoint, method, body, retryCount + 1);
+                }
 
                 if (!response.ok) {
                     // CHANGE 3: Use reference_id from server for error tracking
@@ -6863,6 +6901,8 @@ async function loadUserCity() {
             // CHANGE 8: Comprehensive local cleanup
             currentUser = null;
             currentUserId = null;
+            _csrfToken = null;
+            _csrfTokenExpiry = 0;
             
             // FIX: Clear diary redirect check flag on logout
             if (typeof clearDiaryRedirectCheck === 'function') {
@@ -14091,7 +14131,9 @@ async function checkAndLoadTriggerAlerts() {
             try {
                 await apiCall('/support/contact', 'POST', {
                     subject: subject,
-                    message: message
+                    message: message,
+                    name: currentUser?.username || 'Anonymous',
+                    email: currentUser?.email || ''
                 });
 
                 showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.sent') : 'Message sent') + ' successfully!', 'success');
