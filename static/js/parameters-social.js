@@ -1254,7 +1254,7 @@ async function setupLanguageSelector() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ language: newLang })
+                body: JSON.stringify({ language: newLang, preferred_language: newLang })
             }).then(resp => {
                 console.log('[PS CHANGE DEBUG P101] POST response status:', resp.status);
             }).catch(err => {

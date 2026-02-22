@@ -5486,6 +5486,7 @@ async function syncLanguageWithBackend(lang) {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
+                    language: lang,
                     preferred_language: lang
                 })
             });
