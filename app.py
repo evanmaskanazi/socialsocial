@@ -1391,19 +1391,19 @@ def get_invite_alert_translations(language='en'):
     translations = {
         'en': {
             'invite.alert_title': 'New Invitation',
-            'invite.alert_content': '{username} has invited you to follow them'
+            'invite.alert_content': '{username} has invited you to connect'
         },
         'he': {
             'invite.alert_title': 'הזמנה חדשה',
-            'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה'
+            'invite.alert_content': '{username} הזמין/ה אותך להתחבר'
         },
         'ar': {
             'invite.alert_title': 'دعوة جديدة',
-            'invite.alert_content': 'دعاك {username} لمتابعته'
+            'invite.alert_content': 'دعاك {username} للاتصال'
         },
         'ru': {
             'invite.alert_title': 'Новое приглашение',
-            'invite.alert_content': '{username} пригласил(а) вас подписаться'
+            'invite.alert_content': '{username} пригласил(а) вас подключиться'
         }
     }
     return translations.get(language, translations['en'])
@@ -1416,51 +1416,51 @@ def get_notification_translations(language='en'):
     translations = {
         'en': {
             # Follow notifications
-            'follow.alert_title': '{username} started following you',
-            'follow.alert_content': 'You have a new follower!',
-            'follow.new_follower': 'You have a new follower!',
+            'follow.alert_title': '{username} connected with you',
+            'follow.alert_content': 'You have a new connection!',
+            'follow.new_follower': 'You have a new connection!',
             # Message notifications
             'message.alert_title': 'New message from {username}',
             'message.alert_content': 'You have received a new message',
             # Invite notifications  
             'invite.alert_title': 'New Invitation',
-            'invite.alert_content': '{username} has invited you to follow them'
+            'invite.alert_content': '{username} has invited you to connect'
         },
         'he': {
             # Follow notifications
-            'follow.alert_title': '{username} התחיל/ה לעקוב אחריך',
-            'follow.alert_content': 'יש לך עוקב/ת חדש/ה!',
-            'follow.new_follower': 'יש לך עוקב/ת חדש/ה!',
+            'follow.alert_title': '{username} התחבר/ה אליך',
+            'follow.alert_content': 'יש לך חיבור חדש!',
+            'follow.new_follower': 'יש לך חיבור חדש!',
             # Message notifications
             'message.alert_title': 'הודעה חדשה מ-{username}',
             'message.alert_content': 'קיבלת הודעה חדשה',
             # Invite notifications
             'invite.alert_title': 'הזמנה חדשה',
-            'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה'
+            'invite.alert_content': '{username} הזמין/ה אותך להתחבר'
         },
         'ar': {
             # Follow notifications
-            'follow.alert_title': 'بدأ {username} بمتابعتك',
-            'follow.alert_content': 'لديك متابع جديد!',
-            'follow.new_follower': 'لديك متابع جديد!',
+            'follow.alert_title': '{username} اتصل بك',
+            'follow.alert_content': 'لديك اتصال جديد!',
+            'follow.new_follower': 'لديك اتصال جديد!',
             # Message notifications
             'message.alert_title': 'رسالة جديدة من {username}',
             'message.alert_content': 'لقد تلقيت رسالة جديدة',
             # Invite notifications
             'invite.alert_title': 'دعوة جديدة',
-            'invite.alert_content': 'دعاك {username} لمتابعته'
+            'invite.alert_content': 'دعاك {username} للاتصال'
         },
         'ru': {
             # Follow notifications
-            'follow.alert_title': '{username} подписался на вас',
-            'follow.alert_content': 'У вас новый подписчик!',
-            'follow.new_follower': 'У вас новый подписчик!',
+            'follow.alert_title': '{username} подключился к вам',
+            'follow.alert_content': 'У вас новое подключение!',
+            'follow.new_follower': 'У вас новое подключение!',
             # Message notifications
             'message.alert_title': 'Новое сообщение от {username}',
             'message.alert_content': 'Вы получили новое сообщение',
             # Invite notifications
             'invite.alert_title': 'Новое приглашение',
-            'invite.alert_content': '{username} пригласил(а) вас подписаться'
+            'invite.alert_content': '{username} пригласил(а) вас подключиться'
         }
     }
     return translations.get(language, translations['en'])
@@ -1890,7 +1890,7 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
                                 if 'new_message' in key:
                                     email_title = f"New message from {username}"
                                 elif 'started_following' in key:
-                                    email_title = f"{username} started following you"
+                                    email_title = f"{username} connected with you"
                                 elif 'invitation' in key.lower():
                                     email_title = "New invitation"
                                 else:
@@ -2310,7 +2310,7 @@ def create_notification_with_email(user_id, title, content, alert_type='info', s
                             if 'new_message' in key:
                                 email_title = f"New message from {username}"
                             elif 'started_following' in key:
-                                email_title = f"{username} started following you"
+                                email_title = f"{username} connected with you"
                             elif 'invitation' in key.lower():
                                 email_title = "New invitation"
                             else:
@@ -16667,51 +16667,59 @@ def public_invite_page(username):
             default_language = browser_lang
 
         # Translations for invite page
+        # Translated "User" word for each language (replaces username display)
+        user_word = {
+            'en': 'User',
+            'he': 'משתמש/ת',
+            'ar': 'المستخدم',
+            'ru': 'Пользователь'
+        }
+
         translations = {
             'en': {
-                'title': f"Join {username}'s Wellness Journey",
+                'title': f"Join {user_word['en']}'s Wellness Journey",
                 'subtitle': 'Follow their progress on TheraSocial',
                 'followers': 'Followers',
                 'following': 'Following',
-                'description': f'{username} is tracking their wellness journey and wants to share it with you.',
+                'description': f'{user_word["en"]} is tracking their wellness journey and wants to share it with you.',
                 'join_text': 'Join TheraSocial to follow their progress and support their health, well-being and prosperity goals.',
-                'follow_btn': f'Follow {username}',
+                'follow_btn': f'Follow {user_word["en"]}',
                 'dashboard_btn': 'Go to Dashboard',
                 'already_following': 'Already Following',
                 'request_pending': 'Request Pending'
             },
             'he': {
-                'title': f'הצטרף/י למסע הבריאות של {username}',
+                'title': f'הצטרף/י למסע הבריאות של {user_word["he"]}',
                 'subtitle': 'עקוב/י אחרי ההתקדמות שלו/ה ב-TheraSocial',
                 'followers': 'עוקבים',
                 'following': 'עוקב/ת אחרי',
-                'description': f'{username} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
+                'description': f'{user_word["he"]} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
                 'join_text': 'הצטרף/י ל-TheraSocial כדי לעקוב אחרי ההתקדמות שלו/ה ולתמוך ביעדי הבריאות, הרווחה והשגשוג שלו/ה.',
-                'follow_btn': f'עקוב/י אחרי {username}',
+                'follow_btn': f'עקוב/י אחרי {user_word["he"]}',
                 'dashboard_btn': 'עבור ללוח הבקרה',
                 'already_following': 'כבר עוקב/ת',
                 'request_pending': 'בקשה ממתינה'
             },
             'ar': {
-                'title': f'انضم إلى رحلة {username} الصحية',
+                'title': f'انضم إلى رحلة {user_word["ar"]} الصحية',
                 'subtitle': 'تابع تقدمهم على TheraSocial',
                 'followers': 'المتابعون',
                 'following': 'يتابع',
-                'description': f'{username} يتتبع رحلته الصحية ويريد مشاركتها معك.',
+                'description': f'{user_word["ar"]} يتتبع رحلته الصحية ويريد مشاركتها معك.',
                 'join_text': 'انضم إلى TheraSocial لمتابعة تقدمهم ودعم أهدافهم في الصحة والرفاهية والازدهار.',
-                'follow_btn': f'تابع {username}',
+                'follow_btn': f'تابع {user_word["ar"]}',
                 'dashboard_btn': 'اذهب إلى لوحة التحكم',
                 'already_following': 'متابع بالفعل',
                 'request_pending': 'طلب قيد الانتظار'
             },
             'ru': {
-                'title': f'Присоединяйтесь к пути здоровья {username}',
+                'title': f'Присоединяйтесь к пути здоровья {user_word["ru"]}',
                 'subtitle': 'Следите за их прогрессом на TheraSocial',
                 'followers': 'Подписчики',
                 'following': 'Подписки',
-                'description': f'{username} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
+                'description': f'{user_word["ru"]} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
                 'join_text': 'Присоединяйтесь к TheraSocial, чтобы следить за их прогрессом и поддерживать их цели в области здоровья, благополучия и процветания.',
-                'follow_btn': f'Подписаться на {username}',
+                'follow_btn': f'Подписаться на {user_word["ru"]}',
                 'dashboard_btn': 'Перейти к панели',
                 'already_following': 'Уже подписаны',
                 'request_pending': 'Запрос ожидает'
@@ -16868,6 +16876,65 @@ def public_invite_page(username):
                     gap: 10px;
                     align-items: center;
                 }}
+                /* Mobile improvements */
+                @media (max-width: 480px) {{
+                    body {{
+                        padding: 12px;
+                    }}
+                    .card {{
+                        padding: 24px 18px;
+                        margin-top: 48px;
+                        border-radius: 16px;
+                    }}
+                    .avatar {{
+                        width: 76px;
+                        height: 76px;
+                        font-size: 32px;
+                        margin-bottom: 14px;
+                    }}
+                    h1 {{
+                        font-size: 22px;
+                        line-height: 1.3;
+                        margin-bottom: 8px;
+                    }}
+                    .subtitle {{
+                        font-size: 14px;
+                        margin-bottom: 18px;
+                    }}
+                    .description {{
+                        font-size: 14px;
+                        line-height: 1.5;
+                        margin-bottom: 22px;
+                    }}
+                    .btn {{
+                        padding: 12px 32px;
+                        font-size: 15px;
+                        width: 100%;
+                        max-width: 280px;
+                    }}
+                    .language-selector {{
+                        top: 10px;
+                        {{'left' if is_rtl else 'right'}}: 10px;
+                    }}
+                    .language-selector select {{
+                        padding: 6px 12px;
+                        font-size: 13px;
+                    }}
+                }}
+                @media (max-width: 360px) {{
+                    .card {{
+                        padding: 20px 14px;
+                        margin-top: 40px;
+                    }}
+                    h1 {{
+                        font-size: 19px;
+                    }}
+                    .avatar {{
+                        width: 64px;
+                        height: 64px;
+                        font-size: 28px;
+                    }}
+                }}
             </style>
         </head>
         <body>
@@ -16883,6 +16950,7 @@ def public_invite_page(username):
                 <div class="avatar">{username[0].upper()}</div>
                 <h1>{t['title']}</h1>
                 <p class="subtitle">{t['subtitle']}</p>
+                <!-- Stats box commented out per design update
                 <div class="stats">
                     <div class="stat">
                         <div class="stat-value">{follower_count}</div>
@@ -16893,6 +16961,7 @@ def public_invite_page(username):
                         <div class="stat-label">{t['following']}</div>
                     </div>
                 </div>
+                -->
                 <p class="description">
                     {t['description']}<br><br>
                     {t['join_text']}
