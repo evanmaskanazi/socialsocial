@@ -2956,6 +2956,43 @@
             }
         }
 
+        /* ================================================== */
+        /* Mobile text & visual improvements for invite/cards  */
+        /* ================================================== */
+        @media (max-width: 480px) {
+            /* Invite link input: prevent overflow, readable font */
+            .invite-link-input {
+                font-size: 13px !important;
+                padding: 10px !important;
+                word-break: break-all;
+            }
+            /* Share link card: tighter padding on small screens */
+            .share-link-card {
+                padding: 16px !important;
+            }
+            /* User card names: truncate long usernames */
+            .user-card .user-name,
+            .user-card h3,
+            .user-card h4 {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 100%;
+            }
+            /* Description text: better readability */
+            .share-link-card p,
+            .recommendations-card p {
+                font-size: 14px;
+                line-height: 1.5;
+            }
+            /* Share buttons: more compact on small screens */
+            .share-buttons .btn {
+                min-width: 0 !important;
+                padding: 10px 8px !important;
+                font-size: 14px !important;
+            }
+        }
+
         /* ================================================================== */
         /* FLOW2: Wellness-Informed Visual Design                              */
         /* Research: Blues/greens = calm & trust; warm coral/peach = social     */
@@ -5104,7 +5141,7 @@
                           <div style="display: flex; justify-content: space-between; align-items: center;">
                               <span style="font-weight: 600;" data-i18n="connections.status">Connection Status</span>
                               <div id="connInfoStatusContainer" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                                  <span id="connInfoStatus" style="background: var(--sage); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">Following</span>
+                                  <span id="connInfoStatus" style="background: var(--sage); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">Is a Connection</span>
                               </div>
                           </div>
                       </div>
@@ -11482,9 +11519,9 @@ async function loadFollowing() {
                         </div>
                         <div class="follow-actions-container">
                             <button class="btn-secondary unfollow-btn" data-user-id="${user.id}" data-i18n="following.unfollow">
-                                ${pt('following.unfollow') || 'Unfollow'}
+                                ${pt('following.unfollow') || 'Remove Connection'}
                             </button>
-                            ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.75rem; padding: 2px 6px; background: #d1fae5; border-radius: 4px;" data-i18n="following.following_back">${pt('following.following_back') || 'Following back'}</span>` : ''}
+                            ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.75rem; padding: 2px 6px; background: #d1fae5; border-radius: 4px;" data-i18n="following.following_back">${pt('following.following_back') || 'Connected'}</span>` : ''}
                         </div>
                     </div>
                 `).join('');
@@ -11582,10 +11619,10 @@ async function loadFollowing() {
                         </div>
                         <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center;">
                             <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">
-                                ${pt('following.follow') || 'Follow'}
+                                ${pt('following.follow') || 'Connect'}
                             </button>
                             <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;" data-i18n="following.with_note">
-                                ${window.i18n && window.i18n.t ? window.i18n.t('following.with_note') : '+ Note'}
+                                ${window.i18n && window.i18n.t ? window.i18n.t('following.with_note') : 'Connect with Note'}
                             </button>
                             <button class="block-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" 
                                 data-is-blocked="${isBlocked}"
@@ -11771,7 +11808,7 @@ window.viewingUserId = null;
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.875rem;" data-i18n="following.following_back">${pt('following.following_back') || 'Following back'}</span>` : ''}
+                            ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.875rem;" data-i18n="following.following_back">${pt('following.following_back') || 'Connected'}</span>` : ''}
                             <button onclick="${buttonAction}(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" 
                                     class="block-btn" 
                                     style="${buttonStyle} border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;"
@@ -12444,9 +12481,9 @@ async function followUserWithNote(userId, username) {
     `;
 
     modalContent.innerHTML = `
-        <h3 style="margin-top: 0;">Follow ${username}</h3>
+        <h3 style="margin-top: 0;">${_t('connections.connect_user', 'Connect with ' + username).replace('{username}', username)}</h3>
         <div style="margin: 1rem 0;">
-            <label style="display: block; margin-bottom: 0.5rem;">Add a note (optional):</label>
+            <label style="display: block; margin-bottom: 0.5rem;">${_t('connections.add_note_optional', 'Add a note (optional):')}</label>
             <textarea id="followNote" style="
                 width: 100%;
                 min-height: 80px;
@@ -12457,8 +12494,8 @@ async function followUserWithNote(userId, username) {
             " placeholder="Say something nice..."></textarea>
         </div>
         <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
-            <button class="btn-secondary" id="cancelFollowBtn">Cancel</button>
-            <button class="btn-primary" id="confirmFollowBtn">Follow</button>
+            <button class="btn-secondary" id="cancelFollowBtn">${_t('connections.cancel', 'Cancel')}</button>
+            <button class="btn-primary" id="confirmFollowBtn">${_t('connections.connect_btn', 'Connect')}</button>
         </div>
     `;
 
@@ -12563,7 +12600,7 @@ async function searchUsersToFollow() {
                         Follow
                     </button>
                    <button class="btn-primary btn-sm" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')" data-i18n="following.with_note">
-                                ${window.i18n && window.i18n.translate ? window.i18n.translate('following.with_note') : '+ Note'}
+                                ${window.i18n && window.i18n.translate ? window.i18n.translate('following.with_note') : 'Connect with Note'}
                     </button>
                 </div>
             </div>
@@ -13247,33 +13284,33 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
     const lang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage') || 'en';
     const labels = {
         'en': { 
-            follow: 'Follow', 
-            unfollow: 'Unfollow',
-            followWithNote: 'Follow with Note', 
+            follow: 'Connect', 
+            unfollow: 'Remove Connection',
+            followWithNote: 'Connect with Note', 
             addToCircle: 'Add to Circle',
             block: 'Block',
             unblock: 'Unblock'
         },
         'he': { 
-            follow: 'עקוב', 
-            unfollow: 'הפסק לעקוב',
-            followWithNote: 'עקוב עם הערה', 
+            follow: 'התחבר', 
+            unfollow: 'הסר חיבור',
+            followWithNote: 'התחבר עם הערה', 
             addToCircle: 'הוסף למעגל',
             block: 'חסום',
             unblock: 'בטל חסימה'
         },
         'ar': { 
-            follow: 'متابعة', 
-            unfollow: 'إلغاء المتابعة',
-            followWithNote: 'متابعة مع ملاحظة', 
+            follow: 'اتصل', 
+            unfollow: 'إزالة الاتصال',
+            followWithNote: 'اتصل مع ملاحظة', 
             addToCircle: 'إضافة إلى دائرة',
             block: 'حظر',
             unblock: 'إلغاء الحظر'
         },
         'ru': { 
-            follow: 'Подписаться', 
-            unfollow: 'Отписаться',
-            followWithNote: 'Подписаться с заметкой', 
+            follow: 'Подключиться', 
+            unfollow: 'Удалить контакт',
+            followWithNote: 'Подключиться с заметкой', 
             addToCircle: 'Добавить в круг',
             block: 'Заблокировать',
             unblock: 'Разблокировать'
@@ -13303,20 +13340,20 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         unfollowBtn.onmouseover = () => { unfollowBtn.style.background = '#f8d7da'; unfollowBtn.style.borderColor = '#f5c6cb'; unfollowBtn.style.color = '#dc3545'; };
         unfollowBtn.onmouseout = () => { unfollowBtn.style.background = 'white'; unfollowBtn.style.borderColor = '#dee2e6'; unfollowBtn.style.color = '#6c757d'; };
         unfollowBtn.onclick = async () => {
-            if (confirm(lang === 'he' ? `האם להפסיק לעקוב אחרי ${username}?` : 
-                       lang === 'ar' ? `هل تريد إلغاء متابعة ${username}؟` :
-                       lang === 'ru' ? `Отписаться от ${username}?` :
-                       `Unfollow ${username}?`)) {
+            if (confirm(lang === 'he' ? `האם להסיר חיבור עם ${username}?` : 
+                       lang === 'ar' ? `هل تريد إزالة الاتصال مع ${username}؟` :
+                       lang === 'ru' ? `Удалить контакт ${username}?` :
+                       `Remove connection with ${username}?`)) {
                 try {
                     const response = await fetch(`/api/unfollow/${userId}`, { 
                         method: 'DELETE', 
                         credentials: 'include' 
                     });
                     if (response.ok) {
-                        showNotification(lang === 'he' ? 'הפסקת לעקוב' : 
-                                        lang === 'ar' ? 'تم إلغاء المتابعة' :
-                                        lang === 'ru' ? 'Вы отписались' :
-                                        'Unfollowed', 'success');
+                        showNotification(lang === 'he' ? 'החיבור הוסר' : 
+                                        lang === 'ar' ? 'تمت إزالة الاتصال' :
+                                        lang === 'ru' ? 'Контакт удален' :
+                                        'Connection removed', 'success');
                         addUserActionButtonsToView(viewId, userId, username); // Refresh buttons
                     }
                 } catch (e) {
@@ -13833,12 +13870,12 @@ async function loadAlerts() {
                     const parts = content.split('|');
                     if (parts.length === 2) {
                         const [username, i18nKey] = parts;
-                        const template = translateKey(i18nKey) || '{username} has invited you to follow them';
+                        const template = translateKey(i18nKey) || '{username} has invited you to connect';
                         content = template.replace('{username}', username);
                     }
                 }
                 else if (content === 'Someone wants to follow your journey') {
-                    content = translateKey('invite.legacy_alert_content') || 'Someone has invited you to follow them';
+                    content = translateKey('invite.legacy_alert_content') || 'Someone has invited you to connect';
                 }
 
                 if (!title || title.trim() === '') {
@@ -14845,11 +14882,11 @@ async function searchUsersToFollowInstant(query) {
                     
                     // FIX #6: Show results with Follow and +Note buttons like circles
                     const followText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('following.follow') : 'Follow';
+                        window.i18n.translate('following.follow') : 'Connect';
                     const unfollowText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('following.unfollow') : 'Unfollow';
+                        window.i18n.translate('following.unfollow') : 'Remove Connection';
                     const withNoteText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('following.with_note') : '+ Note';
+                        window.i18n.translate('following.with_note') : 'Connect with Note';
                     const blockText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('block.block_user') : 'Block';
                     const unblockText = window.i18n && window.i18n.translate ? 
@@ -14945,7 +14982,7 @@ async function followUserFromSearch(userId) {
 
 // FIX #6: Helper function to follow user with note from search results  
 async function followUserWithNoteFromSearch(userId, username) {
-    const note = prompt(`Add a note for ${username} (optional):`);
+    const note = prompt(_t('connections.add_note_optional', 'Add a note (optional):'));
     if (note !== null) {
         try {
             await apiCall(`/follow/${userId}`, 'POST', { note: note });
@@ -15954,7 +15991,7 @@ async function loadConnections() {
                             <div class="user-location" style="font-size: 0.8rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 6px;">
-                            ${user.follows_you ? `<span style="color: var(--primary); font-size: 0.7rem; padding: 2px 8px; background: rgba(107,70,193,0.1); border-radius: 10px;">${(window.i18n && window.i18n.t) ? (window.i18n.t('connections.follows_you') || 'Follows You') : 'Follows You'}</span>` : ''}
+                            ${user.follows_you ? `<span style="color: var(--primary); font-size: 0.7rem; padding: 2px 8px; background: rgba(107,70,193,0.1); border-radius: 10px;">${_t('connections.follows_you', 'Connected to You')}</span>` : ''}
                             <span style="color: var(--gray); font-size: 1.2rem;">›</span>
                         </div>
                     </div>
@@ -15979,7 +16016,7 @@ async function loadConnections() {
                             ${user.reason ? `<div style="font-size: 0.75rem; color: var(--gray);">${escapeHtml(user.reason)}</div>` : ''}
                             <div class="user-location" style="font-size: 0.75rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
-                        <button class="btn-primary follow-btn" onclick="event.stopPropagation(); followAndReload(${user.id})" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">Follow</button>
+                        <button class="btn-primary follow-btn" onclick="event.stopPropagation(); followAndReload(${user.id})" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">Connect</button>
                     </div>
                 `).join('');
             } else {
@@ -16045,7 +16082,7 @@ async function searchConnectionsInstant(query) {
                             <div class="user-info">
                                 <div class="user-name">${escapeHtml(user.username)}</div>
                             </div>
-                            <button class="btn-primary" onclick="followAndReload(${user.id})" style="font-size: 0.8rem; padding: 6px 12px; width: auto;">Follow</button>
+                            <button class="btn-primary" onclick="followAndReload(${user.id})" style="font-size: 0.8rem; padding: 6px 12px; width: auto;">${_t('following.follow', 'Connect')}</button>
                         </div>
                     `).join('');
                     resultsDiv.style.display = 'block';
@@ -16068,18 +16105,19 @@ function openConnectionInfo(userId, username, city, avatarColor, hasTrigger, fol
     document.getElementById('connInfoAvatar').style.background = avatarColor || 'var(--primary)';
     document.getElementById('connInfoCity').textContent = '📍 ' + city;
 
-    // VINTER2: Show "Follows You" indicator alongside "Following"
+    // VINTER2: Show connection status
     const statusContainer = document.getElementById('connInfoStatusContainer');
     if (statusContainer) {
         let statusHTML = '';
-        if (followsYou) {
-            statusHTML += '<span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">' + ((window.i18n && window.i18n.t) ? (window.i18n.t('connections.follows_you') || 'Follows You') : 'Follows You') + '</span>';
-        }
-        statusHTML += '<span id="connInfoStatus" style="background: var(--sage); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">Following</span>';
+        // ConnectTab3: "Follows You" badge commented out - only show "Is a Connection"
+        // if (followsYou) {
+        //     statusHTML += '<span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">' + ((window.i18n && window.i18n.t) ? (window.i18n.t('connections.follows_you') || 'Connected to You') : 'Connected to You') + '</span>';
+        // }
+        statusHTML += '<span id="connInfoStatus" style="background: var(--sage); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem;">' + _t('connections.is_connection', 'Is a Connection') + '</span>';
         statusContainer.innerHTML = statusHTML;
     } else {
         // Fallback if container not found
-        document.getElementById('connInfoStatus').textContent = 'Following';
+        document.getElementById('connInfoStatus').textContent = _t('connections.is_connection', 'Is a Connection');
     }
 
     const modal = document.getElementById('connectionInfoModal');
