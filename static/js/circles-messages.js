@@ -468,7 +468,7 @@ window.circlesHTML = `
 
     <!-- Recommended Users to Add to Circle Section -->
     <div id="circleRecommendationsSection" style="max-width: 600px; margin: 0 auto 30px; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);">
-        <h3 style="color: #667eea; margin-bottom: 15px;" data-i18n="circles.recommended_title">Recommended Users to Add to Circle</h3>
+        <h3 style="color: #667eea; margin-bottom: 15px;" data-i18n="circles.recommended_title">Connection Options Pending for Classification</h3>
         <div id="circleRecommendationsList" style="max-height: 300px; overflow-y: auto;"></div>
     </div>
 
