@@ -3011,6 +3011,36 @@
             --flow-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* --- OPT-FLOW: Professional view transition animation --- */
+        @keyframes viewFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .view-entering {
+            animation: viewFadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        /* OPT-FLOW: Smooth dashboard reveal after login */
+        @keyframes dashboardReveal {
+            from {
+                opacity: 0.6;
+                transform: scale(0.995);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        .dashboard-entering {
+            animation: dashboardReveal 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
         /* --- FLOW2: Body gradient — visible but smooth, nature-inspired --- */
         body {
             background: linear-gradient(145deg, #6B8BA4 0%, #8EA5B8 30%, #B6A9C9 65%, #C9BCDA 100%) !important;
@@ -4170,7 +4200,7 @@
     </div>
 
     <!-- Dashboard -->
- <div id="dashboard" class="dashboard container">
+ <div id="dashboard" class="dashboard container" style="display:none">
     <!-- Mobile Navigation Bar - P305: Consolidated 5-tab navigation -->
     <nav class="mobile-nav">
         <ul class="mobile-nav-menu">
@@ -5794,7 +5824,7 @@
     })();
     </script>
     
-    <script src="/static/js/i18n.js?v=10Link.2"></script>
+    <script src="/static/js/i18n.js?v=Opt1"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -6049,8 +6079,8 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=1901"></script>
-   <script src="/static/js/circles-messages.js?v=10LinkN3"></script>
+<script src="/static/js/parameters-social.js?v=Opt1"></script>
+   <script src="/static/js/circles-messages.js?v=Opt1"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -7283,7 +7313,12 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
         // Dashboard Functions
   function showDashboard() {
     hideAllViews();
-    document.getElementById('dashboard').style.display = 'block';
+    const dashboard = document.getElementById('dashboard');
+    dashboard.style.display = 'block';
+    // OPT-FLOW: Smooth dashboard reveal after login
+    dashboard.classList.remove('dashboard-entering');
+    void dashboard.offsetWidth;
+    dashboard.classList.add('dashboard-entering');
     document.getElementById('logoutBtn').style.display = 'block';
     document.getElementById('tutorialBtn').style.display = 'block';
     // PJ6001: Hide nav links when logged in
@@ -8055,6 +8090,12 @@ function showView(viewName, resetContext) {
     if (selectedView) {
         selectedView.classList.remove('hidden');
         selectedView.style.display = '';  // Remove inline style to let CSS take over
+        // OPT-FLOW: Add smooth entrance animation
+        selectedView.classList.remove('view-entering');
+        void selectedView.offsetWidth; // Force reflow to restart animation
+        selectedView.classList.add('view-entering');
+        // OPT-FLOW: Scroll to top for clean view presentation
+        window.scrollTo({ top: 0, behavior: 'instant' });
         console.log('[SCREEN FIX] Showing view:', viewName + 'View');
     } else {
         console.error('[SCREEN FIX] View not found:', viewName + 'View');
