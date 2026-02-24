@@ -2556,20 +2556,30 @@ async function loadParameters(showMsg = true) {
                 selectRating(categoryId, selectedRatings[categoryId]);
             });
 
-            // Load privacy settings for each parameter
-          ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
-                const privacyKey = `${param}_privacy`;
-                // Check both direct property and nested in data - FIXED to load from correct location
-                const privacyValue = result.data[privacyKey] || result.data[param + '_privacy'] || 'private';
+            // OPT-PRIVACY: Check if this day has real saved data (any non-zero parameter)
+            const hasRealData = result.data.parameters && 
+                Object.values(result.data.parameters).some(v => v && v > 0);
 
-                window.selectedPrivacy[param] = privacyValue;
+            // OPT-PRIVACY: Only overwrite privacy settings if the day has actual saved data.
+            // When navigating from a filled day to an empty day, this preserves the
+            // filled day's privacy settings instead of resetting everything to 'private'.
+            if (hasRealData) {
+                // Load privacy settings for each parameter
+                ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+                    const privacyKey = `${param}_privacy`;
+                    // Check both direct property and nested in data - FIXED to load from correct location
+                    const privacyValue = result.data[privacyKey] || result.data[param + '_privacy'] || 'private';
 
-                // Update the dropdown
-                const selector = document.querySelector(`select[data-category="${param}"]`);
-                if (selector) {
-                    selector.value = privacyValue;
-                }
-            });
+                    window.selectedPrivacy[param] = privacyValue;
+
+                    // Update the dropdown
+                    const selector = document.querySelector(`select[data-category="${param}"]`);
+                    if (selector) {
+                        selector.value = privacyValue;
+                    }
+                });
+            }
+            // else: OPT-PRIVACY: Keep current window.selectedPrivacy and dropdown values unchanged
 
             // Load notes
             const notesInput = document.getElementById('notesInput');
@@ -2577,14 +2587,15 @@ async function loadParameters(showMsg = true) {
                 notesInput.value = result.data.notes;
             }
 
-            // Save to session storage for persistence
+          // Save to session storage for persistence
+          // OPT-PRIVACY: Use window.selectedPrivacy which holds either loaded or carried-over values
           const state = {
     ...selectedRatings,
-    mood_privacy: result.data.mood_privacy || 'private',
-    energy_privacy: result.data.energy_privacy || 'private',
-    sleep_quality_privacy: result.data.sleep_quality_privacy || 'private',
-    physical_activity_privacy: result.data.physical_activity_privacy || 'private',
-    anxiety_privacy: result.data.anxiety_privacy || 'private',
+    mood_privacy: window.selectedPrivacy.mood || 'private',
+    energy_privacy: window.selectedPrivacy.energy || 'private',
+    sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
+    physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
+    anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
     notes: result.data.notes || ''
 };
 sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
