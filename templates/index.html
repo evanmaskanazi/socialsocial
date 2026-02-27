@@ -2,6 +2,7 @@
 <!-- CLEAN4: Session retry for cold start + Trigger days UI fix -->
 
 <!-- CLEAN4 CHANGES:
+
   1. Session check now retries once (3s delay) on network/server error before showing login
      - Addresses Render cold start, mid-deploy, and race condition with multiple DOMContentLoaded listeners
      - Only retries on network errors or 5xx server errors; 401 and non-authenticated responses handled immediately
