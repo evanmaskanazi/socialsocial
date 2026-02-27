@@ -8,6 +8,7 @@
      - Addresses Render cold start, mid-deploy, and race condition with multiple DOMContentLoaded listeners
 
      - Only retries on network errors or 5xx server errors; 401 and non-authenticated responses handled immediately
+
   2. Trigger form UI updated: minimum changed from 3 days to 1 day (matching MINIMUM_TRIGGER_DAYS=1 in backend)
      - Static trigger form: min="1", placeholder "Leave blank for 1 day"
      - Dynamic/i18n trigger form: same changes with fallback text updated
