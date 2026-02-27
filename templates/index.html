@@ -16218,6 +16218,12 @@ function openConnectionInfo(userId, username, city, avatarColor, hasTrigger, fol
     }
 
     const modal = document.getElementById('connectionInfoModal');
+    // CENTERING FIX 2: Move modal to document.body so no ancestor's CSS
+    // (transforms, animations with fill-mode) can create a containing block
+    // that breaks position:fixed viewport centering.
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
     modal.style.display = 'flex';
 }
 
