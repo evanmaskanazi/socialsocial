@@ -6,7 +6,6 @@
   1. Session check now retries once (3s delay) on network/server error before showing login
 
      - Addresses Render cold start, mid-deploy, and race condition with multiple DOMContentLoaded listeners
-
      - Only retries on network errors or 5xx server errors; 401 and non-authenticated responses handled immediately
   2. Trigger form UI updated: minimum changed from 3 days to 1 day (matching MINIMUM_TRIGGER_DAYS=1 in backend)
      - Static trigger form: min="1", placeholder "Leave blank for 1 day"
@@ -16,7 +15,6 @@
 <!-- 10LinkN4: Fixed profile flash bug - clicking name in Circles showed own profile before target profile
 
      Root cause 1: Two competing handlers both fired on ?view=profile&user_id=X
-
      Root cause 2: showView('profile') called before viewUserProfile(), triggering own-profile load
      Root cause 3: Stale own-profile data in DOM visible while target profile loads async
      Fix: SCREEN FIX handler calls viewUserProfile() directly (skipping showView),
@@ -281,7 +279,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Thera Social - Anonymous Wellness Community</title>
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -555,10 +553,17 @@
             --border: #4A5568;
         }
 
+        /* MOB-FIX: iOS Safari height normalization */
+        html {
+            height: -webkit-fill-available;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #6B8BA4 0%, #B6A9C9 100%);
             min-height: 100vh;
+            /* MOB-FIX: iOS Safari 100vh includes address bar area; use -webkit-fill-available as fallback */
+            min-height: -webkit-fill-available;
             color: var(--dark);
         }
 
@@ -2000,11 +2005,19 @@
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             z-index: 1000;
             padding: 4px 0;
+            /* MOB-FIX: Add safe area padding for iPhone X+ home indicator */
+            padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
             border-top: 1px solid #E5E7EB;
-            overflow: hidden !important;
             width: 100% !important;
             max-width: 100vw !important;
             box-sizing: border-box;
+            /* MOB-FIX: Force GPU compositing layer - prevents iOS Safari from
+               dropping position:fixed during address bar show/hide scroll transitions */
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            will-change: transform;
         }
 
         .mobile-nav-menu {
@@ -2097,7 +2110,7 @@
         @media (max-width: 768px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
-                padding-bottom: 70px; /* Space for bottom nav */
+                padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); /* Space for bottom nav + safe area */
             }
 
             .sidebar {
@@ -2113,7 +2126,7 @@
             }
 
             .main-content {
-                margin-bottom: 60px; /* Prevent content being hidden behind nav */
+                margin-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); /* Prevent content being hidden behind nav + safe area */
                 border-radius: 0;
                 padding: var(--mobile-padding);
             }
@@ -17058,6 +17071,51 @@ function startNudgeTimer() {
 document.addEventListener('click', startNudgeTimer);
 document.addEventListener('keydown', startNudgeTimer);
 startNudgeTimer();
+
+// MOB-FIX: iOS Safari visual viewport fix
+// When iOS address bar hides/shows, the visual viewport resizes but position:fixed
+// elements can temporarily lose their position. This handler forces a repaint.
+(function() {
+    const mobileNav = document.querySelector('.mobile-nav');
+    if (!mobileNav) return;
+    
+    // Method 1: Use visualViewport API (iOS 13+, all modern browsers)
+    if (window.visualViewport) {
+        let ticking = false;
+        const onViewportResize = () => {
+            if (!ticking) {
+                ticking = true;
+                requestAnimationFrame(() => {
+                    // Force the nav to bottom of visual viewport
+                    // This handles address bar show/hide and keyboard appearance
+                    const offsetY = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+                    if (Math.abs(offsetY) > 1) {
+                        // Keyboard is open or viewport shifted — adjust
+                        mobileNav.style.bottom = offsetY + 'px';
+                    } else {
+                        mobileNav.style.bottom = '0px';
+                    }
+                    ticking = false;
+                });
+            }
+        };
+        window.visualViewport.addEventListener('resize', onViewportResize);
+        window.visualViewport.addEventListener('scroll', onViewportResize);
+    }
+    
+    // Method 2: Fallback scroll handler — force repaint on scroll end (older iOS/Samsung)
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            // Trigger a micro-repaint to ensure fixed positioning is recalculated
+            mobileNav.style.display = 'none';
+            // Force reflow
+            void mobileNav.offsetHeight;
+            mobileNav.style.display = '';
+        }, 150);
+    }, { passive: true });
+})();
 
 // Make functions globally available
 window.loadConnections = loadConnections;
