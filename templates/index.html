@@ -12,6 +12,7 @@
   3. Removed redundant 2-second verification timeout (kept 500ms one)
 -->
 <!-- 10LinkN4: Fixed profile flash bug - clicking name in Circles showed own profile before target profile
+
      Root cause 1: Two competing handlers both fired on ?view=profile&user_id=X
      Root cause 2: showView('profile') called before viewUserProfile(), triggering own-profile load
      Root cause 3: Stale own-profile data in DOM visible while target profile loads async
