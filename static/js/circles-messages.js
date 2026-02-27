@@ -1,4 +1,5 @@
 // Circles and Messages Management System with i18n support
+
 // Complete Fixed Version Lang with null safety and proper error handling
 // 10Link: Circle member names now clickable to navigate to profile (uses /?view=profile&user_id=)
 // 10LinkN: Confirmed createMemberElement has clickable names - actual fix was in index.html updateCircleDisplay()
