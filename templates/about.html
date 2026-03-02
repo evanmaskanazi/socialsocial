@@ -150,6 +150,64 @@
             margin-left: 0;
             margin-right: 30px;
         }
+
+        /* Mobile responsiveness fixes */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px 16px;
+                border-radius: 12px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .subtitle {
+                font-size: 1em;
+            }
+            .features {
+                grid-template-columns: 1fr;
+                gap: 16px;
+                margin: 20px 0;
+            }
+            .feature-card {
+                padding: 20px 16px;
+            }
+            .mission-section {
+                padding: 20px 16px;
+            }
+            .header {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .values-list {
+                margin-left: 16px;
+            }
+            [dir="rtl"] .values-list {
+                margin-left: 0;
+                margin-right: 16px;
+            }
+            .back-link {
+                padding: 10px 24px;
+                font-size: 0.95em;
+                display: block;
+                text-align: center;
+                margin: 10px auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px 12px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            .feature-icon {
+                font-size: 2.2em;
+            }
+        }
     </style>
 </head>
 <body>
@@ -165,18 +223,18 @@
         </div>
 
         <p class="subtitle" data-i18n="about.subtitle">
-            Your trusted companion for therapy practice and personal wellness journey
+            A professional platform for personal empowerment and social well-being
         </p>
 
         <div class="content">
             <p data-i18n="about.intro">
-                Welcome to TheraSocial - a comprehensive platform designed to support both therapists and individuals on their wellness journey. We combine professional tools with personal tracking features to create a holistic approach to mental health and wellbeing.
+                TheraSocial is built around one core principle: your well-being comes first. We offer a thoughtful alternative to mainstream social networks — a platform designed to strengthen your personal resilience, health, and meaningful human connections rather than capture your time and attention.
             </p>
 
             <div class="mission-section">
                 <h2 style="color: #6B8BA4; margin-bottom: 20px;" data-i18n="about.mission_title">Our Mission</h2>
                 <p data-i18n="about.mission_text">
-                    We believe in making mental health support accessible, organized, and effective. Our mission is to empower therapists with the tools they need to provide excellent care, while giving individuals the resources to track and improve their wellbeing.
+                    We believe everyone deserves tools that support their quality of life — across sports, sleep, health, mood, and social connections. Our mission is to empower you with innovative features that cultivate trusted, safe, and effective relationships while protecting your personal data and privacy.
                 </p>
             </div>
 
@@ -184,19 +242,19 @@
                 <h2 style="color: #6B8BA4; margin-bottom: 20px;" data-i18n="about.team_title">Our Team & Story</h2>
 
                 <p style="margin-bottom: 20px;" data-i18n="about.team_intro">
-                    The primary team behind this is CEO Benny Brandstetter and CTO Evan Askanazi.
+                    TheraSocial was founded by CEO Benjamin Brandstetter and CTO Evan Askanazi, and developed with the consultation of professionals in psychology, clinical social work, strategic consulting, product management, and business.
                 </p>
 
                 <p style="margin-bottom: 15px;" data-i18n="about.story_para1">
-                    Thera Social was created for those who feel disconnected, struggling, or unseen. War veterans carrying invisible wounds, young adults navigating isolation, survivors of trauma and abuse, students overwhelmed by pressure—all deserve genuine connection and support, not just another feed of curated highlights.
+                    The initial idea for TheraSocial was born at a meaningful hackathon hosted by the "Bishvil HaChaim" Association together with Reichman University — an event dedicated to advancing innovation in welfare and quality of life.
                 </p>
 
                 <p style="margin-bottom: 15px;" data-i18n="about.story_para2">
-                    Current social media platforms have failed us. They amplify comparison, enable harassment, and leave the vulnerable more isolated than before. We need something fundamentally different.
+                    We recognized that mainstream social networks are engineered to capture time and attention by leveraging the human need for connection — often leaving people feeling more isolated, not less. We set out to build something fundamentally different.
                 </p>
 
                 <p style="margin-bottom: 20px;" data-i18n="about.story_para3">
-                    That's why we built Thera Social. This platform offers real community support through complete anonymity and customizable trust circles. Share your feelings, track what matters (sleep, mood, health, exercise), and receive alerts on trends in people you care about—all while choosing exactly who sees what. Thera Social isn't designed for endless selfies or internet arguments—it's built for mutual care, authentic check-ins through private messaging, and the meaningful support we all need.
+                    TheraSocial is designed to strengthen the relationships you already have. Track what matters to you — sleep, exercise, mood, health — and stay connected to the people you care about through customizable trust circles and private messaging. Receive gentle alerts when someone close to you may need support. This is not another feed of curated highlights — it is a platform built for mutual care, authentic check-ins, and the meaningful human connections we all need to flourish.
                 </p>
 
                 <p>
@@ -212,34 +270,34 @@
 
             <div class="features">
                 <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <div class="feature-title" data-i18n="about.privacy_title">Privacy First</div>
+                    <div class="feature-icon">🛡️</div>
+                    <div class="feature-title" data-i18n="about.privacy_title">Your Data, Your Control</div>
                     <p class="feature-desc" data-i18n="about.privacy_desc">
-                        The platform emphasizes private chat capabilities between users, prioritizing anonymity and safety.
+                        Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and full GDPR compliance. You decide who sees what — always.
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
-                    <div class="feature-title" data-i18n="about.track_title">Track Progress</div>
+                    <div class="feature-title" data-i18n="about.track_title">Track Your Well-Being</div>
                     <p class="feature-desc" data-i18n="about.track_desc">
-                        Monitor your wellness journey with daily parameters and visual insights
+                        Monitor your sleep, exercise, mood, energy, and stress with an easy daily diary and beautiful visual insights over time.
                     </p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">🌟</div>
-                    <div class="feature-title" data-i18n="about.goals_title">Set Goals</div>
+                    <div class="feature-icon">💪</div>
+                    <div class="feature-title" data-i18n="about.goals_title">Personal Empowerment</div>
                     <p class="feature-desc" data-i18n="about.goals_desc">
-                        Create and track personal goals with milestone celebrations
+                        Build personal resilience and flourish in every area of life — sports performance, sleep quality, health habits, mood awareness, and social connections.
                     </p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">💬</div>
-                    <div class="feature-title" data-i18n="about.communication_title">Secure Communication</div>
+                    <div class="feature-icon">👨‍👩‍👧‍👦</div>
+                    <div class="feature-title" data-i18n="about.communication_title">Strengthen Your Connections</div>
                     <p class="feature-desc" data-i18n="about.communication_desc">
-                        Connect with your therapist through encrypted messaging
+                        Stay meaningfully connected with close friends, family, and your community through private messaging and customizable trust circles.
                     </p>
                 </div>
 
@@ -247,25 +305,25 @@
                     <div class="feature-icon">📅</div>
                     <div class="feature-title" data-i18n="about.checkin_title">Daily Check-ins</div>
                     <p class="feature-desc" data-i18n="about.checkin_desc">
-                        Log your mood, energy, and other parameters to identify patterns
+                        A quick daily check-in helps you understand your patterns in sleep, exercise, mood, and energy — building self-awareness one day at a time.
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🤝</div>
-                    <div class="feature-title" data-i18n="about.community_title">Community Support</div>
+                    <div class="feature-title" data-i18n="about.community_title">Supportive Community</div>
                     <p class="feature-desc" data-i18n="about.community_desc">
-                        Connect with others on similar journeys in a safe, moderated environment
+                        Share your journey with people who care, receive alerts when someone you love may need support, and grow together in a safe environment.
                     </p>
                 </div>
             </div>
 
             <h2 style="color: #6B8BA4; margin: 30px 0 20px;" data-i18n="about.values_title">Our Values</h2>
             <ul class="values-list">
-                <li><strong data-i18n="about.value1_title">Compassion:</strong> <span data-i18n="about.value1_desc">We approach every interaction with empathy and understanding</span></li>
-                <li><strong data-i18n="about.value2_title">Privacy:</strong> <span data-i18n="about.value2_desc">Your data is yours alone - we never share without explicit consent</span></li>
-                <li><strong data-i18n="about.value3_title">Innovation:</strong> <span data-i18n="about.value3_desc">Continuously improving our platform based on user feedback</span></li>
-                <li><strong data-i18n="about.value4_title">Accessibility:</strong> <span data-i18n="about.value4_desc">Making mental health tools available to everyone, everywhere</span></li>
+                <li><strong data-i18n="about.value1_title">Empowerment:</strong> <span data-i18n="about.value1_desc">We help you take charge of your well-being across every area of life</span></li>
+                <li><strong data-i18n="about.value2_title">Data Protection:</strong> <span data-i18n="about.value2_desc">End-to-end encryption and GDPR compliance ensure your data stays yours</span></li>
+                <li><strong data-i18n="about.value3_title">Innovation:</strong> <span data-i18n="about.value3_desc">Patent-protected features designed to cultivate meaningful human connection</span></li>
+                <li><strong data-i18n="about.value4_title">Accessibility:</strong> <span data-i18n="about.value4_desc">Available in multiple languages with support for every user, everywhere</span></li>
             </ul>
 
             <div style="text-align: center; margin-top: 40px;">

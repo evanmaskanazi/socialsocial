@@ -304,6 +304,57 @@
             font-size: 12px;
             margin-top: 4px;
         }
+
+        /* Mobile responsiveness fixes */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px 16px;
+                border-radius: 12px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .subtitle {
+                font-size: 1em;
+            }
+            .support-sections {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .support-card {
+                padding: 20px 16px;
+            }
+            .faq-item {
+                padding: 16px;
+            }
+            .contact-form {
+                padding: 20px 16px;
+            }
+            .form-group input,
+            .form-group textarea {
+                font-size: 16px; /* Prevents iOS zoom */
+            }
+            .back-link {
+                display: block;
+                text-align: center;
+                margin: 20px auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px 12px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            .faq-question {
+                font-size: 0.95em;
+            }
+        }
     </style>
 </head>
 <body>
@@ -324,7 +375,7 @@
         <h1 data-i18n="support.title">Support Center</h1>
 
         <p class="subtitle" data-i18n="support.subtitle">
-            We're here to help! Choose how you'd like to get in touch or find answers to your questions.
+            We're here to help! Find answers to common questions or send us a message below.
         </p>
 
         <div class="support-sections">
@@ -373,37 +424,86 @@
             </h2>
 
             <div class="faq-item">
-                <div class="faq-question" data-i18n="support.faq1_q">How do I reset my password?</div>
+                <div class="faq-question" data-i18n="support.faq1_q">How do I track my daily well-being?</div>
                 <div class="faq-answer" data-i18n="support.faq1_a">
-                    Click on "Forgot Password" on the login page. Enter your email address, and we'll send you instructions to reset your password.
+                    Go to the Diary tab in your dashboard. You can rate your sleep quality, mood, energy, physical activity, and stress level on a simple 1-4 scale each day. Use the calendar to select any date, set your values with the sliders, and save. Over time, you will see patterns emerge in your Progress page.
                 </div>
             </div>
 
             <div class="faq-item">
-                <div class="faq-question" data-i18n="support.faq2_q">How do I track my therapy progress?</div>
+                <div class="faq-question" data-i18n="support.faq2_q">What are Circles and how do they work?</div>
                 <div class="faq-answer" data-i18n="support.faq2_a">
-                    Go to the Progress tab in your dashboard. You can log daily parameters, set goals, and view your progress over time with visual charts and insights.
+                    Circles let you organize your connections into trust levels: General (acquaintances), Close Friends, and Family. When you post in your feed or save diary entries, you choose which circle can see them. This gives you full control over your privacy — share as much or as little as you want with each group.
                 </div>
             </div>
 
             <div class="faq-item">
                 <div class="faq-question" data-i18n="support.faq3_q">Is my data secure?</div>
                 <div class="faq-answer" data-i18n="support.faq3_a">
-                    Yes! We are HIPAA compliant and use industry-standard encryption to protect your data. All sensitive information is encrypted both in transit and at rest. We never share your personal information with third parties without your consent.
+                    Absolutely. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and full GDPR compliance. You can view, export, or delete your data at any time from your Settings.
                 </div>
             </div>
 
             <div class="faq-item">
-                <div class="faq-question" data-i18n="support.faq4_q">How do I delete my account?</div>
+                <div class="faq-question" data-i18n="support.faq4_q">How do alerts and triggers work?</div>
                 <div class="faq-answer" data-i18n="support.faq4_a">
-                    Go to Settings > Account > Delete Account. Please note that this action is permanent and cannot be undone. We'll ask you to confirm before proceeding.
+                    You can set wellness alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or their stress rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.
                 </div>
             </div>
 
             <div class="faq-item">
                 <div class="faq-question" data-i18n="support.faq5_q">How do I change my language preference?</div>
                 <div class="faq-answer" data-i18n="support.faq5_a">
-                    You can change the language at any time using the language selector at the top of any page. We support English, Hebrew, Arabic, and Russian.
+                    You can change the language at any time using the language selector at the top of any page. TheraSocial supports English, Hebrew, Arabic, and Russian, with full right-to-left support for Hebrew and Arabic.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" data-i18n="support.faq6_q">How do I connect with friends and family?</div>
+                <div class="faq-answer" data-i18n="support.faq6_a">
+                    Go to the Connections tab to search for users by name or email. You can also share your personal invite link via email, SMS, or WhatsApp. Once connected, you can assign people to your trust circles, send private messages, view their shared diary updates, and set wellness alerts for them.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" data-i18n="support.faq7_q">How do I see my progress over time?</div>
+                <div class="faq-answer" data-i18n="support.faq7_a">
+                    The Progress page shows your wellness data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and stress change over weeks and months. Look for patterns — for example, how exercise affects your mood the following day.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" data-i18n="support.faq8_q">How do I send a private message?</div>
+                <div class="faq-answer" data-i18n="support.faq8_a">
+                    Go to the Messages tab and select a connection. You can type a custom message or use the template button for quick supportive messages when you are not sure what to say. All messages are sent through encrypted channels.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" data-i18n="support.faq9_q">How do I update my profile and settings?</div>
+                <div class="faq-answer" data-i18n="support.faq9_a">
+                    In the Settings section, you can update your bio, interests, occupation, goals, and timezone. You can also change your password, toggle notifications and daily diary reminders, export your data, or delete your account.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" data-i18n="support.faq10_q">How do I delete my account?</div>
+                <div class="faq-answer" data-i18n="support.faq10_a">
+                    Go to Settings, scroll to the bottom, and select Delete Account. You will be asked to confirm. Please note that this action is permanent and cannot be undone — all your data will be removed from our servers.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" data-i18n="support.faq11_q">Can I export my data?</div>
+                <div class="faq-answer" data-i18n="support.faq11_a">
+                    Yes. In your Settings, you will find a Data Export option. This allows you to download all your personal data in accordance with GDPR data portability rights. Your export will include your diary entries, profile information, and connection history.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" data-i18n="support.faq12_q">How do I reset my password?</div>
+                <div class="faq-answer" data-i18n="support.faq12_a">
+                    Click on "Forgot Password" on the login page. Enter your email address, and we will send you a secure link to reset your password. You can also sign in using a magic link sent to your email.
                 </div>
             </div>
         </div>
