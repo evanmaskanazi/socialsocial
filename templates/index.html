@@ -53,8 +53,8 @@
   - NAV: Site name now clickable to navigate to home view
   - HOME: My Summary Status card with streak tracking and Update Diary button
   - HOME: One-Tap Quick Check-In for mood logging
-  - HOME: Recommendations for Today section (personalized wellness tips)
-  - HOME: Friends' Daily Updates feed (shows connection wellness summaries)
+  - HOME: Recommendations for Today section (personalized well-being tips)
+  - HOME: Friends' Daily Updates feed (shows connection well-being summaries)
   - HOME: Alerts & Notifications preview on home page
   - CONNECTIONS: New unified Connections view (replaces Following/Followers in nav)
   - CONNECTIONS: Connection search, My Connections tab, Recommendations tab
@@ -64,7 +64,7 @@
   - COLORS: Warmed-up palette with coral/peach/sage accents
   - MOBILE: Improved margins and spacing for mobile
   - MESSAGES: Message templates button for quick supportive messages
-  - WELLNESS: Caring Nudges after inactivity
+  - WELL-BEING: Caring Nudges after inactivity
   - BACKEND: MINIMUM_TRIGGER_DAYS changed from 3 to 1
   - BACKEND: Magic link expiry changed from 5 years to 10 minutes
   - BACKEND: follow_trigger column + toggle API for connection alert tracking
@@ -280,7 +280,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Thera Social - Anonymous Wellness Community</title>
+    <title>Thera Social - Anonymous Well-Being Community</title>
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -3032,13 +3032,13 @@
         }
 
         /* ================================================================== */
-        /* FLOW2: Wellness-Informed Visual Design                              */
+        /* FLOW2: Well-Being-Informed Visual Design                              */
         /* Research: Blues/greens = calm & trust; warm coral/peach = social     */
         /* warmth; 60-30-10 rule (white/blue-green/warm accent)               */
         /* Balanced between original vibrancy and Flow1 subtlety              */
         /* ================================================================== */
 
-        /* --- FLOW2: Refined palette — wellness-informed --- */
+        /* --- FLOW2: Refined palette — well-being-informed --- */
         :root {
             --flow-card-shadow: 0 4px 20px rgba(80, 110, 140, 0.10);
             --flow-card-shadow-hover: 0 8px 28px rgba(80, 110, 140, 0.16);
@@ -4222,7 +4222,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq4_q">How do alerts and triggers work?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq4_a">You can set wellness alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or their stress rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq4_a">You can set well-being alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or their stress rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -4232,12 +4232,12 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq6_q">How do I connect with friends and family?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq6_a">Go to the Connections tab to search for users by name or email. You can also share your personal invite link via email, SMS, or WhatsApp. Once connected, you can assign people to your trust circles, send private messages, view their shared diary updates, and set wellness alerts for them.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq6_a">Go to the Connections tab to search for users by name or email. You can also share your personal invite link via email, SMS, or WhatsApp. Once connected, you can assign people to your trust circles, send private messages, view their shared diary updates, and set well-being alerts for them.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq7_q">How do I see my progress over time?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq7_a">The Progress page shows your wellness data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and stress change over weeks and months. Look for patterns — for example, how exercise affects your mood the following day.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq7_a">The Progress page shows your well-being data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and stress change over weeks and months. Look for patterns — for example, how exercise affects your mood the following day.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -4415,7 +4415,7 @@
                   <div id="welcomeCard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 24px; border-radius: 16px; margin-bottom: 20px; position: relative; display: none;">
                       <button onclick="dismissWelcomeCard()" style="position: absolute; top: 10px; right: 14px; background: none; border: none; color: rgba(255,255,255,0.8); font-size: 1.3rem; cursor: pointer; line-height: 1;" title="Dismiss">✕</button>
                       <h3 style="margin: 0 0 8px 0; font-size: 1.1rem;" data-i18n="home.welcome_title">Welcome to TheraSocial!</h3>
-                      <p style="margin: 0; font-size: 0.9rem; opacity: 0.9; line-height: 1.5;" data-i18n="home.welcome_message">Track your daily wellness, connect with friends, and grow together. Start by updating your diary or exploring your connections.</p>
+                      <p style="margin: 0; font-size: 0.9rem; opacity: 0.9; line-height: 1.5;" data-i18n="home.welcome_message">Track your daily well-being, connect with friends, and grow together. Start by updating your diary or exploring your connections.</p>
                   </div>
 
                   <!-- V2: My Summary Status Card -->
@@ -4772,7 +4772,7 @@
                     <div id="dataExportSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px;">
                         <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.data_export">Export Your Data</h3>
 
-                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
+                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, well-being diary entries, messages, and more.</p>
 
                         <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
                             <span style="font-size: 24px;">📋</span>
@@ -4905,7 +4905,7 @@
 
                 <!-- Tracking/Parameters View (Enhanced with save/load) -->
                 <div id="trackingView" class="view hidden">
-                    <h2 style="margin-bottom: 20px;" data-i18n="parameters.title">Wellness Parameters</h2>
+                    <h2 style="margin-bottom: 20px;" data-i18n="parameters.title">Well-Being Parameters</h2>
 
                     <!-- P307: Static calendar removed - parameters-social.js generates its own calendar inside parametersContainer -->
                     <div id="parametersContainer" class="parameter-grid">
@@ -5160,7 +5160,7 @@
                               <!-- Export Your Data -->
                               <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
                                   <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="home.data_export">Export Your Data</h3>
-                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
+                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, well-being diary entries, messages, and more.</p>
                                   <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
                                       <span style="font-size: 1.5rem;">📋</span>
                                       <div>
@@ -5279,7 +5279,7 @@
                               <span style="font-weight: 600;" data-i18n="connections.track_alerts">🔔 Track Alerts</span>
                               <button id="connInfoTrackBtn" onclick="toggleConnectionAlert()" style="padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">Enable</button>
                           </div>
-                          <p style="font-size: 0.8rem; color: var(--gray); margin-top: 8px;" data-i18n="connections.track_alerts_desc">Get notified about changes in this person's wellness parameters.</p>
+                          <p style="font-size: 0.8rem; color: var(--gray); margin-top: 8px;" data-i18n="connections.track_alerts_desc">Get notified about changes in this person's well-being parameters.</p>
                       </div>
                       -->
 
@@ -5357,12 +5357,12 @@
 
               <!-- Invite View -->
               <div id="inviteView" class="view hidden">
-    <h2 style="margin-bottom: 20px;" data-i18n="invite.title">Invite Friends to Your Wellness Journey</h2>
+    <h2 style="margin-bottom: 20px;" data-i18n="invite.title">Invite Friends to Your Well-Being Journey</h2>
 
     <div class="invite-section">
         <div class="share-link-card">
             <h3 data-i18n="invite.your_link">Your Personal Invite Link</h3>
-            <p data-i18n="invite.link_description">Share this link with friends and family so they can follow your wellness journey</p>
+            <p data-i18n="invite.link_description">Share this link with friends and family so they can follow your well-being journey</p>
 
             <div class="link-display">
                 <input type="text" id="userInviteLink" readonly class="invite-link-input">
@@ -5445,7 +5445,7 @@
     <div id="mobileNotificationSettingsPanel" style="display: none; background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
         
-        <!-- Email on Alert Toggle (Wellness Alerts) -->
+        <!-- Email on Alert Toggle (Well-Being Alerts) -->
         <div class="toggle-row">
             <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
             <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
@@ -5503,7 +5503,7 @@
         </div>
     </div>
     
-    <!-- PJ6001: Wellness Alerts List for Mobile -->
+    <!-- PJ6001: Well-Being Alerts List for Mobile -->
     <h3 style="margin-bottom: 10px;" data-i18n="alerts.title">Alerts</h3>
     <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div class="alerts-list" id="mobileAlertsList"></div>
@@ -5531,7 +5531,7 @@
                 <div id="notificationSettingsPanel" style="display: none; background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
                     
-                    <!-- Email on Alert Toggle (Wellness Alerts only) -->
+                    <!-- Email on Alert Toggle (Well-Being Alerts only) -->
                     <div class="toggle-row">
                         <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
                         <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
@@ -5591,7 +5591,7 @@
                     </div>
                 </div>
                 
-                <!-- PJ6001: Wellness Alerts Section (trigger alerts only) -->
+                <!-- PJ6001: Well-Being Alerts Section (trigger alerts only) -->
                 <h3 style="margin-bottom: 15px;" data-i18n="alerts.title">Alerts</h3>
                 <div class="alerts-list" id="alertsList"></div>
                 
@@ -6031,14 +6031,14 @@
     </script>
     <!-- END ACCT Social login translations -->
 
-    <!-- LL FIX: Alert/wellness translation keys for Hebrew, Arabic, Russian -->
+    <!-- LL FIX: Alert/well-being translation keys for Hebrew, Arabic, Russian -->
     <script>
     (function() {
         const alertTranslations = {
             en: {
-                'alerts.wellness_alert_for': 'Wellness Alert for {username}',
-                'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
-                'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
+                'alerts.well-being_alert_for': 'Well-Being Alert for {username}',
+                'alerts.well-being_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
+                'alerts.well-being_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
                 'alerts.new_message_from': 'New message from {username}',
                 'alerts.started_following': '{username} started following you',
                 'alerts.accepted_request': '{username} accepted your follow request',
@@ -6046,15 +6046,15 @@
                 'alerts.new_follower': 'You have a new follower!',
                 'alerts.no_alerts': 'No alerts',
                 'alerts.welcome_title': 'Welcome to TheraSocial!',
-                'alerts.welcome_message': 'Track your daily wellness, connect with friends, and grow together.',
+                'alerts.welcome_message': 'Track your daily well-being, connect with friends, and grow together.',
                 'params.sleep_quality': 'Sleep',
                 'params.physical_activity': 'Exercise',
                 'params.anxiety': 'Stress'
             },
             he: {
-                'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
-                'alerts.wellness_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
-                'alerts.wellness_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
+                'alerts.well-being_alert_for': 'התראת בריאות עבור {username}',
+                'alerts.well-being_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
+                'alerts.well-being_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
                 'alerts.new_message_from': 'הודעה חדשה מ-{username}',
                 'alerts.started_following': '{username} התחיל/ה לעקוב אחריך',
                 'alerts.accepted_request': '{username} אישר/ה את בקשת המעקב שלך',
@@ -6068,9 +6068,9 @@
                 'params.anxiety': 'מתח'
             },
             ar: {
-                'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
-                'alerts.wellness_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
-                'alerts.wellness_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
+                'alerts.well-being_alert_for': 'تنبيه صحي لـ {username}',
+                'alerts.well-being_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
+                'alerts.well-being_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
                 'alerts.new_message_from': 'رسالة جديدة من {username}',
                 'alerts.started_following': 'بدأ {username} بمتابعتك',
                 'alerts.accepted_request': 'قبل {username} طلب المتابعة الخاص بك',
@@ -6084,9 +6084,9 @@
                 'params.anxiety': 'التوتر'
             },
             ru: {
-                'alerts.wellness_alert_for': 'Оповещение о здоровье {username}',
-                'alerts.wellness_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
-                'alerts.wellness_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
+                'alerts.well-being_alert_for': 'Оповещение о здоровье {username}',
+                'alerts.well-being_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
+                'alerts.well-being_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
                 'alerts.new_message_from': 'Новое сообщение от {username}',
                 'alerts.started_following': '{username} подписался на вас',
                 'alerts.accepted_request': '{username} принял(а) ваш запрос на подписку',
@@ -6106,16 +6106,16 @@
                     if (!window.i18n.translations[lang]) window.i18n.translations[lang] = {};
                     Object.assign(window.i18n.translations[lang], alertTranslations[lang]);
                 });
-                console.log('[LL FIX] Extended i18n with alert/wellness translations');
+                console.log('[LL FIX] Extended i18n with alert/well-being translations');
             }
         }
         extendI18nAlerts();
         document.addEventListener('DOMContentLoaded', extendI18nAlerts);
         window.addEventListener('load', extendI18nAlerts);
 
-        // LL FIX: Global helper to translate wellness alert content
+        // LL FIX: Global helper to translate well-being alert content
         // Used by both loadAlerts() and loadHomeAlerts()
-        window._translateWellnessContent = function(content) {
+        window._translateWell-BeingContent = function(content) {
             if (!content || typeof content !== 'string') return content;
             const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : null;
             if (!tFn) return content;
@@ -6135,7 +6135,7 @@
                 const match = m || mNoDate;
                 const username = match[1], param = match[2], days = match[3], dateRange = match[4] || '';
                 const translatedParam = tFn(paramKeyMap[param] || 'params.' + param) || param;
-                const templateKey = dateRange ? 'alerts.wellness_content' : 'alerts.wellness_content_no_date';
+                const templateKey = dateRange ? 'alerts.well-being_content' : 'alerts.well-being_content_no_date';
                 const fallback = dateRange 
                     ? "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})"
                     : "{username}'s {param} has been at concerning levels for {days} consecutive days";
@@ -6149,14 +6149,14 @@
             return content;
         };
         
-        // LL FIX: Global helper to translate wellness alert titles
-        window._translateWellnessTitle = function(title) {
+        // LL FIX: Global helper to translate well-being alert titles
+        window._translateWell-BeingTitle = function(title) {
             if (!title || typeof title !== 'string') return title;
             const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : null;
             if (!tFn) return title;
-            if (title.startsWith('Wellness Alert for ')) {
-                const username = title.replace('Wellness Alert for ', '');
-                const template = tFn('alerts.wellness_alert_for') || 'Wellness Alert for {username}';
+            if (title.startsWith('Well-Being Alert for ')) {
+                const username = title.replace('Well-Being Alert for ', '');
+                const template = tFn('alerts.well-being_alert_for') || 'Well-Being Alert for {username}';
                 return template.replace('{username}', username);
             }
             return title;
@@ -8480,8 +8480,8 @@ function shareViaEmail() {
     const linkInput = document.getElementById('userInviteLink');
     if (linkInput) {
         const link = linkInput.value;
-        const subject = encodeURIComponent('Join me on my wellness journey!');
-        const body = encodeURIComponent(`I'd love for you to follow my wellness journey on TheraSocial. Click here to connect: ${link}`);
+        const subject = encodeURIComponent('Join me on my well-being journey!');
+        const body = encodeURIComponent(`I'd love for you to follow my well-being journey on TheraSocial. Click here to connect: ${link}`);
         window.location.href = `mailto:?subject=${subject}&body=${body}`;
     }
 }
@@ -8490,7 +8490,7 @@ function shareViaSMS() {
     const linkInput = document.getElementById('userInviteLink');
     if (linkInput) {
         const link = linkInput.value;
-        const message = encodeURIComponent(`Join me on my wellness journey! ${link}`);
+        const message = encodeURIComponent(`Join me on my well-being journey! ${link}`);
         window.location.href = `sms:?body=${message}`;
     }
 }
@@ -8499,7 +8499,7 @@ function shareViaWhatsApp() {
     const linkInput = document.getElementById('userInviteLink');
     if (linkInput) {
         const link = linkInput.value;
-        const message = encodeURIComponent(`Join me on my wellness journey on TheraSocial! ${link}`);
+        const message = encodeURIComponent(`Join me on my well-being journey on TheraSocial! ${link}`);
         window.open(`https://wa.me/?text=${message}`, '_blank');
     }
 }
@@ -12289,7 +12289,7 @@ function showAddTriggerModal() {
 
     modal.innerHTML = `
         <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
-            <h3>${_t('triggers.add_wellness', 'Add Wellness Trigger')}</h3>
+            <h3>${_t('triggers.add_well-being', 'Add Well-Being Trigger')}</h3>
             <div style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">User to monitor:</label>
                 <select id="triggerUserId" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
@@ -13065,7 +13065,7 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                             ${window.i18n ? window.i18n.t('trigger_set_alert') : 'Set Alert Triggers'}
                         </h3>
                         <p style="color: #5a7a6a; font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;">
-                            ${window.i18n ? window.i18n.t('trigger_get_notified').replace('{username}', escapeHtml(username)) : `Get notified when ${escapeHtml(username)}'s wellness parameters are concerning`}
+                            ${window.i18n ? window.i18n.t('trigger_get_notified').replace('{username}', escapeHtml(username)) : `Get notified when ${escapeHtml(username)}'s well-being parameters are concerning`}
                         </p>
                         <div id="modalTriggersList" style="margin-bottom: 14px;">
                             <p style="color: #6a8a7a; font-size: 0.9rem;">${_t('loading.triggers', 'Loading triggers...')}</p>
@@ -13846,7 +13846,7 @@ function addBackToFollowingButton(viewId) {
         const circlesHeader = document.querySelector('#circlesView h2');
         if (circlesHeader) circlesHeader.textContent = 'Circles';
         const parametersHeader = document.querySelector('#parametersView h2, #trackingView h2');
-        if (parametersHeader) parametersHeader.textContent = 'Wellness Parameters';
+        if (parametersHeader) parametersHeader.textContent = 'Well-Being Parameters';
         const followingHeader = document.querySelector('#followingView h2');
         if (followingHeader) followingHeader.textContent = 'Following';
         const followersHeader = document.querySelector('#followersView h2');
@@ -13902,15 +13902,15 @@ async function loadAlerts() {
 
         console.log(`📬 Received ${response.alerts?.length || 0} items from API`);
 
-        // PJ6003: Separate alerts (wellness/trigger) from notifications (messages, follows, invites)
-        const wellnessAlerts = [];
+        // PJ6003: Separate alerts (well-being/trigger) from notifications (messages, follows, invites)
+        const well-beingAlerts = [];
         const notifications = [];
         
         if (response.alerts && response.alerts.length > 0) {
             response.alerts.forEach(alert => {
-                // Wellness alerts have alert_category='trigger' or type='trigger'
+                // Well-Being alerts have alert_category='trigger' or type='trigger'
                 if (alert.alert_category === 'trigger' || alert.type === 'trigger') {
-                    wellnessAlerts.push(alert);
+                    well-beingAlerts.push(alert);
                 } else {
                     // Everything else is a notification (messages, follows, invites)
                     notifications.push(alert);
@@ -13918,7 +13918,7 @@ async function loadAlerts() {
             });
         }
         
-        console.log(`📊 Separated: ${wellnessAlerts.length} wellness alerts, ${notifications.length} notifications`);
+        console.log(`📊 Separated: ${well-beingAlerts.length} well-being alerts, ${notifications.length} notifications`);
 
         // Helper function to translate and render an alert/notification item
         function renderItem(alert) {
@@ -13926,17 +13926,17 @@ async function loadAlerts() {
                 let title = alert.title || '';
                 let content = alert.message || alert.content || '';
 
-                // ===== HANDLE WELLNESS ALERT TITLES =====
-                // LL FIX: Use global wellness title translator
-                if (window._translateWellnessTitle) {
-                    const translated = window._translateWellnessTitle(title);
+                // ===== HANDLE WELL-BEING ALERT TITLES =====
+                // LL FIX: Use global well-being title translator
+                if (window._translateWell-BeingTitle) {
+                    const translated = window._translateWell-BeingTitle(title);
                     if (translated !== title) title = translated;
                 }
                 
-                // ===== HANDLE WELLNESS ALERT CONTENT =====
-                // LL FIX: Use global wellness content translator
-                if (window._translateWellnessContent) {
-                    const translated = window._translateWellnessContent(content);
+                // ===== HANDLE WELL-BEING ALERT CONTENT =====
+                // LL FIX: Use global well-being content translator
+                if (window._translateWell-BeingContent) {
+                    const translated = window._translateWell-BeingContent(content);
                     if (translated !== content) content = translated;
                 }
 
@@ -14042,17 +14042,17 @@ async function loadAlerts() {
             }
         }
 
-        // Render wellness alerts
+        // Render well-being alerts
         const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
         const noNotificationsText = translateKey('notifications.no_notifications') || 'No notifications';
         
-        if (wellnessAlerts.length === 0) {
+        if (well-beingAlerts.length === 0) {
             alertsContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
             if (mobileAlertsContainer) {
                 mobileAlertsContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
             }
         } else {
-            const alertsHTML = wellnessAlerts.map(renderItem).join('');
+            const alertsHTML = well-beingAlerts.map(renderItem).join('');
             alertsContainer.innerHTML = alertsHTML;
             if (mobileAlertsContainer) {
                 mobileAlertsContainer.innerHTML = alertsHTML;
@@ -14078,12 +14078,12 @@ async function loadAlerts() {
             }
         }
         
-        console.log(`✅ Rendered ${wellnessAlerts.length} wellness alerts and ${notifications.length} notifications`);
+        console.log(`✅ Rendered ${well-beingAlerts.length} well-being alerts and ${notifications.length} notifications`);
         
         // Update mobile alerts badge (on main nav and in More menu)
         const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
         const mobileMoreAlertsBadge = document.getElementById('mobileMoreAlertsBadge');
-        const totalCount = wellnessAlerts.length + notifications.length;
+        const totalCount = well-beingAlerts.length + notifications.length;
         const badgeText = totalCount > 99 ? '99+' : totalCount.toString();
         
         if (mobileAlertsBadge) {
@@ -14108,7 +14108,7 @@ async function loadAlerts() {
         // Show/hide no alerts message on mobile
         const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
         if (mobileNoAlertsMsg) {
-            mobileNoAlertsMsg.style.display = wellnessAlerts.length === 0 ? 'block' : 'none';
+            mobileNoAlertsMsg.style.display = well-beingAlerts.length === 0 ? 'block' : 'none';
         }
         
         const mobileNoNotificationsMsg = document.getElementById('mobileNoNotificationsMessage');
@@ -15294,7 +15294,7 @@ async function updateProgressChart() {
         if (insightsEl) {
             const lang = localStorage.getItem('selectedLanguage') || 'en';
             const startTrackingTexts = {
-                'en': 'Start tracking your wellness to see insights here!',
+                'en': 'Start tracking your well-being to see insights here!',
                 'he': 'התחל לעקוב אחר הבריאות שלך כדי לראות תובנות כאן!',
                 'ar': 'ابدأ بتتبع صحتك لرؤية الرؤى هنا!',
                 'ru': 'Начните отслеживать свое здоровье, чтобы увидеть здесь статистику!'
@@ -15403,7 +15403,7 @@ function updateInsights(data) {
     // FIX #2: Translated "Start tracking" message
     const lang = localStorage.getItem('selectedLanguage') || 'en';
     const startTrackingTexts = {
-        'en': 'Start tracking your wellness to see insights here!',
+        'en': 'Start tracking your well-being to see insights here!',
         'he': 'התחל לעקוב אחר הבריאות שלך כדי לראות תובנות כאן!',
         'ar': 'ابدأ بتتبع صحتك لرؤية الرؤى هنا!',
         'ru': 'Начните отслеживать свое здоровье, чтобы увидеть здесь статистику!'
@@ -15782,16 +15782,16 @@ const InlineOnboarding = {
     
     _fallbacks: {
         'onboarding.welcome': 'Welcome to TheraSocial!',
-        'onboarding.welcome_desc': 'Your wellness companion for tracking, connecting, and growing together. This short guide will walk you through everything you need to know.',
+        'onboarding.welcome_desc': 'Your well-being companion for tracking, connecting, and growing together. This short guide will walk you through everything you need to know.',
         'onboarding.welcome_tip': 'You can restart this tour anytime from the Tutorial button in the navigation bar.',
         'onboarding.home': 'Home — Your Daily Dashboard',
-        'onboarding.home_desc': "Your home page shows everything at a glance: today's wellness status, your streak, a quick mood check-in, personalized recommendations, friends' updates, and your journal feed.",
+        'onboarding.home_desc': "Your home page shows everything at a glance: today's well-being status, your streak, a quick mood check-in, personalized recommendations, friends' updates, and your journal feed.",
         'onboarding.home_tip': 'Tip: Use the Quick Check-In to log your mood with a single tap — even on busy days.',
-        'onboarding.diary': 'Diary — Track Your Wellness',
-        'onboarding.diary_desc': 'The Diary is where you record daily wellness: Mood, Energy, Sleep Quality, Physical Activity, and Stress. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
+        'onboarding.diary': 'Diary — Track Your Well-Being',
+        'onboarding.diary_desc': 'The Diary is where you record daily well-being: Mood, Energy, Sleep Quality, Physical Activity, and Stress. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
         'onboarding.diary_tip': 'Tip: Consistency is key! Even a quick 30-second check-in helps build meaningful patterns over time.',
         'onboarding.progress': 'Progress — See Your Trends',
-        'onboarding.progress_desc': 'The Progress page shows your wellness data as visual charts and graphs. Track how your mood, sleep, and energy change over weeks and months. Set your location to see local time and weather.',
+        'onboarding.progress_desc': 'The Progress page shows your well-being data as visual charts and graphs. Track how your mood, sleep, and energy change over weeks and months. Set your location to see local time and weather.',
         'onboarding.progress_tip': 'Tip: Look for patterns — for example, how exercise affects your mood the following day.',
         'onboarding.circles': 'Circles — Privacy Levels',
         'onboarding.circles_desc': 'Circles let you organize connections into trust levels: General (acquaintances), Close Friends, and Family. Each circle controls who sees your diary entries and feed posts.',
@@ -15800,19 +15800,19 @@ const InlineOnboarding = {
         'onboarding.messages_desc': "Send private messages to any of your connections. Use the 💬 template button for quick supportive messages when you're not sure what to say.",
         'onboarding.messages_tip': "Tip: A short encouraging message can brighten someone's day — don't overthink it!",
         'onboarding.connections': 'Connections — Build Your Network',
-        'onboarding.connections_desc': 'Find and follow other users in the Connections tab. Browse recommendations, search for people, and manage your connections. Click any connection to view their profile, send a message, or set up wellness alerts.',
-        'onboarding.connections_tip': 'Tip: Follow people you trust to see their wellness updates and support each other.',
+        'onboarding.connections_desc': 'Find and follow other users in the Connections tab. Browse recommendations, search for people, and manage your connections. Click any connection to view their profile, send a message, or set up well-being alerts.',
+        'onboarding.connections_tip': 'Tip: Follow people you trust to see their well-being updates and support each other.',
         'onboarding.invite': 'Invite — Bring Friends Along',
         'onboarding.invite_desc': "Share your unique invite link with friends, family, or your therapist. When they join through your link, they'll be prompted to connect with you. Growing your circle makes the experience more meaningful.",
         'onboarding.invite_tip': 'Tip: Your invite link can be shared via text message, email, WhatsApp, or social media.',
         'onboarding.triggers': 'Triggers & Alerts — Watch Over Loved Ones',
-        'onboarding.triggers_desc': "Set wellness alerts for connections you care about. Visit someone's profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or stress rises above 4. You'll receive email alerts when patterns are detected.",
+        'onboarding.triggers_desc': "Set well-being alerts for connections you care about. Visit someone's profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or stress rises above 4. You'll receive email alerts when patterns are detected.",
         'onboarding.triggers_tip': 'Tip: To set a trigger, go to Connections → click a person → View Full Profile → tap the Triggers button next to their name.',
         'onboarding.settings': 'Settings — Personalize Everything',
         'onboarding.settings_desc': 'In Settings, manage your profile (bio, interests, goals, timezone), change your password, toggle notifications and alerts, set a daily diary reminder time, export your data, or delete your account.',
         'onboarding.settings_tip': 'Tip: Set a daily diary reminder to build a consistent tracking habit. Toggle dark mode for comfortable evening use.',
         'onboarding.finish_title': "You're All Set!",
-        'onboarding.finish_desc': 'You now know everything you need to start your TheraSocial wellness journey. Begin by updating your diary, connecting with friends, and checking in daily.',
+        'onboarding.finish_desc': 'You now know everything you need to start your TheraSocial well-being journey. Begin by updating your diary, connecting with friends, and checking in daily.',
         'onboarding.finish_tip': "Remember: Small, consistent steps lead to meaningful change. We're here to support you every step of the way. 💚",
         'onboarding.next': 'Next',
         'onboarding.previous': 'Back',
@@ -16973,8 +16973,8 @@ async function loadHomeAlerts() {
 
         homeAlertsList.innerHTML = alerts.slice(0, 5).map(alert => {
             let displayText = translateAlertText(alert.message || alert.text || alert.title || 'Alert');
-            // LL FIX: Translate wellness alert content patterns (e.g., "julia's anxiety has been...")
-            if (window._translateWellnessContent) displayText = window._translateWellnessContent(displayText);
+            // LL FIX: Translate well-being alert content patterns (e.g., "julia's anxiety has been...")
+            if (window._translateWell-BeingContent) displayText = window._translateWell-BeingContent(displayText);
             return `
             <div style="background: var(--peach-light); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.2rem;">🔔</span>
