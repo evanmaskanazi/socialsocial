@@ -481,8 +481,8 @@ const translations = {
 'followers.title': 'Followers',
 'invite.legacy_alert_content': 'Someone has invited you to connect',
 // PJ6003 - Well-Being Alert Translations
-    'alerts.well-being_alert_for': 'Well-Being Alert for {username}',
-    'alerts.well-being_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
+    'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
+    'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
 
     // PJ6003 - Notification Translations (for alerts list rendering)
     'alerts.new_message_from': 'New message from {username}',
@@ -953,8 +953,8 @@ const translations = {
     'notifications.no_notifications': 'No notifications to display',
 
     // Alert types (for translation in alert list)
-    'alerts.well-being_alert': 'Well-Being Alert',
-    'alerts.well-being_alert_for': 'Well-Being Alert for {username}',
+    'alerts.wellness_alert': 'Well-Being Alert',
+    'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
     'alerts.parameter_alert': '{parameter} has been at concerning levels',
     'alerts.consecutive_days': 'for {days} consecutive days',
     'alerts.date_range': '({start} - {end})',
@@ -972,7 +972,7 @@ const translations = {
     'invite.follow_progress': 'Connect and see their progress on TheraSocial',
     'invite.followers': 'Followers',
     'invite.following': 'Connected',
-    'invite.tracking_well-being': 'User is tracking their well-being journey and wants to share it with you.',
+    'invite.tracking_wellness': 'User is tracking their well-being journey and wants to share it with you.',
     'invite.join_to_follow': 'Join TheraSocial to connect and support their health, well-being and prosperity goals.',
     'invite.follow_user': 'Connect with User',
     'invite.go_to_dashboard': 'Go to Dashboard',
@@ -1183,7 +1183,7 @@ const translations = {
         'triggers.care_title': 'Care Triggers',
         'triggers.care_subtitle': 'Get notified when people you care about need support',
         'triggers.add_new': 'Add New Trigger',
-        'triggers.add_well-being': 'Add Well-Being Trigger',
+        'triggers.add_wellness': 'Add Well-Being Trigger',
         'triggers.person_to_watch': 'Person to watch:',
         'triggers.user_to_monitor': 'User to monitor:',
         'triggers.select_person': 'Select a person...',
@@ -1489,8 +1489,8 @@ const translations = {
     'notifications.no_notifications': 'אין הודעות להצגה',
 
     // Alert types
-    'alerts.well-being_alert': 'התראת רווחה',
-    'alerts.well-being_alert_for': 'התראת רווחה עבור {username}',
+    'alerts.wellness_alert': 'התראת רווחה',
+    'alerts.wellness_alert_for': 'התראת רווחה עבור {username}',
     'alerts.parameter_alert': '{parameter} היה ברמות מדאיגות',
     'alerts.consecutive_days': 'במשך {days} ימים רצופים',
     'alerts.date_range': '({start} - {end})',
@@ -1508,7 +1508,7 @@ const translations = {
     'invite.follow_progress': 'עקוב/י אחרי ההתקדמות שלו/ה ב-TheraSocial',
     'invite.followers': 'עוקבים',
     'invite.following': 'מחובר/ת',
-    'invite.tracking_well-being': 'משתמש/ת עוקב/ת אחרי מסע הרווחה שלו/ה ורוצה לשתף אותך.',
+    'invite.tracking_wellness': 'משתמש/ת עוקב/ת אחרי מסע הרווחה שלו/ה ורוצה לשתף אותך.',
     'invite.join_to_follow': 'הצטרף/י ל-TheraSocial כדי לעקוב אחרי ההתקדמות שלו/ה ולתמוך ביעדי הרווחה, הרווחה והשגשוג שלו/ה.',
     'invite.follow_user': 'עקוב/י אחרי משתמש/ת',
     'invite.go_to_dashboard': 'עבור ללוח הבקרה',
@@ -1519,8 +1519,8 @@ const translations = {
         'invite.alert_title': 'הזמנה חדשה',
         'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה',
          // PJ6003 - Well-Being Alert Translations
-    'alerts.well-being_alert_for': 'התראת רווחה עבור {username}',
-    'alerts.well-being_content': "{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})",
+    'alerts.wellness_alert_for': 'התראת רווחה עבור {username}',
+    'alerts.wellness_content': "{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})",
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'הודעה חדשה מ-{username}',
@@ -2555,7 +2555,7 @@ const translations = {
         'triggers.care_title': 'טריגרי טיפול',
         'triggers.care_subtitle': 'קבל התראות כשאנשים שאכפת לך מהם צריכים תמיכה',
         'triggers.add_new': 'הוסף טריגר חדש',
-        'triggers.add_well-being': 'הוסף טריגר רווחה',
+        'triggers.add_wellness': 'הוסף טריגר רווחה',
         'triggers.person_to_watch': 'אדם לעקוב אחריו:',
         'triggers.user_to_monitor': 'משתמש לניטור:',
         'triggers.select_person': 'בחר אדם...',
@@ -2979,8 +2979,8 @@ const translations = {
     'notifications.no_notifications': 'لا توجد إشعارات للعرض',
 
     // Alert types
-    'alerts.well-being_alert': 'تنبيه رفاهية',
-    'alerts.well-being_alert_for': 'تنبيه رفاهية لـ {username}',
+    'alerts.wellness_alert': 'تنبيه رفاهية',
+    'alerts.wellness_alert_for': 'تنبيه رفاهية لـ {username}',
     'alerts.parameter_alert': 'كان {parameter} في مستويات مقلقة',
     'alerts.consecutive_days': 'لمدة {days} أيام متتالية',
     'alerts.date_range': '({start} - {end})',
@@ -2998,7 +2998,7 @@ const translations = {
     'invite.follow_progress': 'تابع تقدمهم على TheraSocial',
     'invite.followers': 'المتابعون',
     'invite.following': 'يتابع',
-    'invite.tracking_well-being': 'المستخدم يتتبع رحلة رفاهيته ويريد مشاركتها معك.',
+    'invite.tracking_wellness': 'المستخدم يتتبع رحلة رفاهيته ويريد مشاركتها معك.',
     'invite.join_to_follow': 'انضم إلى TheraSocial لمتابعة تقدمهم ودعم أهدافهم في الصحة والرفاهية والازدهار.',
     'invite.follow_user': 'تابع المستخدم',
     'invite.go_to_dashboard': 'اذهب إلى لوحة التحكم',
@@ -3107,8 +3107,8 @@ const translations = {
 'invite.alert_title': 'دعوة جديدة',
 'invite.alert_content': 'دعاك {username} لمتابعته',
  // PJ6003 - Well-Being Alert Translations
-    'alerts.well-being_alert_for': 'تنبيه رفاهية لـ {username}',
-    'alerts.well-being_content': "كان {param} لـ {username} في مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})",
+    'alerts.wellness_alert_for': 'تنبيه رفاهية لـ {username}',
+    'alerts.wellness_content': "كان {param} لـ {username} في مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})",
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'رسالة جديدة من {username}',
@@ -3927,7 +3927,7 @@ const translations = {
         'triggers.care_title': 'محفزات الرعاية',
         'triggers.care_subtitle': 'احصل على إشعارات عندما يحتاج من تهتم بهم إلى دعم',
         'triggers.add_new': 'إضافة محفز جديد',
-        'triggers.add_well-being': 'إضافة محفز صحي',
+        'triggers.add_wellness': 'إضافة محفز صحي',
         'triggers.person_to_watch': 'الشخص المراد متابعته:',
         'triggers.user_to_monitor': 'المستخدم المراد مراقبته:',
         'triggers.select_person': 'اختر شخصاً...',
@@ -4263,8 +4263,8 @@ const translations = {
     'invite.alert_title': 'Новое приглашение',
     'invite.alert_content': '{username} пригласил(а) вас подписаться',
  // PJ6003 - Well-Being Alert Translations
-    'alerts.well-being_alert_for': 'Оповещение о благополучии для {username}',
-    'alerts.well-being_content': "{param} пользователя {username} был на тревожном уровне в течение {days} дней подряд ({dateRange})",
+    'alerts.wellness_alert_for': 'Оповещение о благополучии для {username}',
+    'alerts.wellness_content': "{param} пользователя {username} был на тревожном уровне в течение {days} дней подряд ({dateRange})",
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'Новое сообщение от {username}',
@@ -4390,8 +4390,8 @@ const translations = {
     'notifications.no_notifications': 'Нет уведомлений для отображения',
 
     // Alert types
-    'alerts.well-being_alert': 'Оповещение о благополучии',
-    'alerts.well-being_alert_for': 'Оповещение о благополучии для {username}',
+    'alerts.wellness_alert': 'Оповещение о благополучии',
+    'alerts.wellness_alert_for': 'Оповещение о благополучии для {username}',
     'alerts.parameter_alert': '{parameter} был на тревожном уровне',
     'alerts.consecutive_days': 'в течение {days} дней подряд',
     'alerts.date_range': '({start} - {end})',
@@ -4409,7 +4409,7 @@ const translations = {
     'invite.follow_progress': 'Следите за их прогрессом на TheraSocial',
     'invite.followers': 'Подписчики',
     'invite.following': 'Подписки',
-    'invite.tracking_well-being': 'Пользователь отслеживает свой путь к благополучию и хочет поделиться им с вами.',
+    'invite.tracking_wellness': 'Пользователь отслеживает свой путь к благополучию и хочет поделиться им с вами.',
     'invite.join_to_follow': 'Присоединяйтесь к TheraSocial, чтобы следить за их прогрессом и поддерживать их цели в области благополучия, благополучия и процветания.',
     'invite.follow_user': 'Подписаться на Пользователь',
     'invite.go_to_dashboard': 'Перейти к панели',
@@ -5299,7 +5299,7 @@ const translations = {
         'triggers.care_title': 'Триггеры заботы',
         'triggers.care_subtitle': 'Получайте уведомления, когда люди, о которых вы заботитесь, нуждаются в поддержке',
         'triggers.add_new': 'Добавить новый триггер',
-        'triggers.add_well-being': 'Добавить триггер благополучия',
+        'triggers.add_wellness': 'Добавить триггер благополучия',
         'triggers.person_to_watch': 'Человек для наблюдения:',
         'triggers.user_to_monitor': 'Пользователь для мониторинга:',
         'triggers.select_person': 'Выберите человека...',
