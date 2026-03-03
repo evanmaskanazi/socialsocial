@@ -6036,9 +6036,9 @@
     (function() {
         const alertTranslations = {
             en: {
-                'alerts.well-being_alert_for': 'Well-Being Alert for {username}',
-                'alerts.well-being_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
-                'alerts.well-being_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
+                'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
+                'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
+                'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
                 'alerts.new_message_from': 'New message from {username}',
                 'alerts.started_following': '{username} started following you',
                 'alerts.accepted_request': '{username} accepted your follow request',
@@ -6052,9 +6052,9 @@
                 'params.anxiety': 'Stress'
             },
             he: {
-                'alerts.well-being_alert_for': 'התראת בריאות עבור {username}',
-                'alerts.well-being_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
-                'alerts.well-being_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
+                'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
+                'alerts.wellness_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
+                'alerts.wellness_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
                 'alerts.new_message_from': 'הודעה חדשה מ-{username}',
                 'alerts.started_following': '{username} התחיל/ה לעקוב אחריך',
                 'alerts.accepted_request': '{username} אישר/ה את בקשת המעקב שלך',
@@ -6068,9 +6068,9 @@
                 'params.anxiety': 'מתח'
             },
             ar: {
-                'alerts.well-being_alert_for': 'تنبيه صحي لـ {username}',
-                'alerts.well-being_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
-                'alerts.well-being_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
+                'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
+                'alerts.wellness_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
+                'alerts.wellness_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
                 'alerts.new_message_from': 'رسالة جديدة من {username}',
                 'alerts.started_following': 'بدأ {username} بمتابعتك',
                 'alerts.accepted_request': 'قبل {username} طلب المتابعة الخاص بك',
@@ -6084,9 +6084,9 @@
                 'params.anxiety': 'التوتر'
             },
             ru: {
-                'alerts.well-being_alert_for': 'Оповещение о здоровье {username}',
-                'alerts.well-being_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
-                'alerts.well-being_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
+                'alerts.wellness_alert_for': 'Оповещение о здоровье {username}',
+                'alerts.wellness_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
+                'alerts.wellness_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
                 'alerts.new_message_from': 'Новое сообщение от {username}',
                 'alerts.started_following': '{username} подписался на вас',
                 'alerts.accepted_request': '{username} принял(а) ваш запрос на подписку',
@@ -6115,7 +6115,7 @@
 
         // LL FIX: Global helper to translate well-being alert content
         // Used by both loadAlerts() and loadHomeAlerts()
-        window._translateWell-BeingContent = function(content) {
+        window._translateWellnessContent = function(content) {
             if (!content || typeof content !== 'string') return content;
             const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : null;
             if (!tFn) return content;
@@ -6135,7 +6135,7 @@
                 const match = m || mNoDate;
                 const username = match[1], param = match[2], days = match[3], dateRange = match[4] || '';
                 const translatedParam = tFn(paramKeyMap[param] || 'params.' + param) || param;
-                const templateKey = dateRange ? 'alerts.well-being_content' : 'alerts.well-being_content_no_date';
+                const templateKey = dateRange ? 'alerts.wellness_content' : 'alerts.wellness_content_no_date';
                 const fallback = dateRange 
                     ? "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})"
                     : "{username}'s {param} has been at concerning levels for {days} consecutive days";
@@ -6150,13 +6150,13 @@
         };
         
         // LL FIX: Global helper to translate well-being alert titles
-        window._translateWell-BeingTitle = function(title) {
+        window._translateWellnessTitle = function(title) {
             if (!title || typeof title !== 'string') return title;
             const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : null;
             if (!tFn) return title;
-            if (title.startsWith('Well-Being Alert for ')) {
-                const username = title.replace('Well-Being Alert for ', '');
-                const template = tFn('alerts.well-being_alert_for') || 'Well-Being Alert for {username}';
+            if (title.startsWith('Wellness Alert for ')) {
+                const username = title.replace('Wellness Alert for ', '');
+                const template = tFn('alerts.wellness_alert_for') || 'Well-Being Alert for {username}';
                 return template.replace('{username}', username);
             }
             return title;
@@ -12289,7 +12289,7 @@ function showAddTriggerModal() {
 
     modal.innerHTML = `
         <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
-            <h3>${_t('triggers.add_well-being', 'Add Well-Being Trigger')}</h3>
+            <h3>${_t('triggers.add_wellness', 'Add Well-Being Trigger')}</h3>
             <div style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">User to monitor:</label>
                 <select id="triggerUserId" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
@@ -13903,14 +13903,14 @@ async function loadAlerts() {
         console.log(`📬 Received ${response.alerts?.length || 0} items from API`);
 
         // PJ6003: Separate alerts (well-being/trigger) from notifications (messages, follows, invites)
-        const well-beingAlerts = [];
+        const wellnessAlerts = [];
         const notifications = [];
         
         if (response.alerts && response.alerts.length > 0) {
             response.alerts.forEach(alert => {
                 // Well-Being alerts have alert_category='trigger' or type='trigger'
                 if (alert.alert_category === 'trigger' || alert.type === 'trigger') {
-                    well-beingAlerts.push(alert);
+                    wellnessAlerts.push(alert);
                 } else {
                     // Everything else is a notification (messages, follows, invites)
                     notifications.push(alert);
@@ -13918,7 +13918,7 @@ async function loadAlerts() {
             });
         }
         
-        console.log(`📊 Separated: ${well-beingAlerts.length} well-being alerts, ${notifications.length} notifications`);
+        console.log(`📊 Separated: ${wellnessAlerts.length} well-being alerts, ${notifications.length} notifications`);
 
         // Helper function to translate and render an alert/notification item
         function renderItem(alert) {
@@ -13928,15 +13928,15 @@ async function loadAlerts() {
 
                 // ===== HANDLE WELL-BEING ALERT TITLES =====
                 // LL FIX: Use global well-being title translator
-                if (window._translateWell-BeingTitle) {
-                    const translated = window._translateWell-BeingTitle(title);
+                if (window._translateWellnessTitle) {
+                    const translated = window._translateWellnessTitle(title);
                     if (translated !== title) title = translated;
                 }
                 
                 // ===== HANDLE WELL-BEING ALERT CONTENT =====
                 // LL FIX: Use global well-being content translator
-                if (window._translateWell-BeingContent) {
-                    const translated = window._translateWell-BeingContent(content);
+                if (window._translateWellnessContent) {
+                    const translated = window._translateWellnessContent(content);
                     if (translated !== content) content = translated;
                 }
 
@@ -14046,13 +14046,13 @@ async function loadAlerts() {
         const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
         const noNotificationsText = translateKey('notifications.no_notifications') || 'No notifications';
         
-        if (well-beingAlerts.length === 0) {
+        if (wellnessAlerts.length === 0) {
             alertsContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
             if (mobileAlertsContainer) {
                 mobileAlertsContainer.innerHTML = `<p style="color: var(--gray);" data-i18n="alerts.no_alerts">${noAlertsText}</p>`;
             }
         } else {
-            const alertsHTML = well-beingAlerts.map(renderItem).join('');
+            const alertsHTML = wellnessAlerts.map(renderItem).join('');
             alertsContainer.innerHTML = alertsHTML;
             if (mobileAlertsContainer) {
                 mobileAlertsContainer.innerHTML = alertsHTML;
@@ -14078,12 +14078,12 @@ async function loadAlerts() {
             }
         }
         
-        console.log(`✅ Rendered ${well-beingAlerts.length} well-being alerts and ${notifications.length} notifications`);
+        console.log(`✅ Rendered ${wellnessAlerts.length} well-being alerts and ${notifications.length} notifications`);
         
         // Update mobile alerts badge (on main nav and in More menu)
         const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
         const mobileMoreAlertsBadge = document.getElementById('mobileMoreAlertsBadge');
-        const totalCount = well-beingAlerts.length + notifications.length;
+        const totalCount = wellnessAlerts.length + notifications.length;
         const badgeText = totalCount > 99 ? '99+' : totalCount.toString();
         
         if (mobileAlertsBadge) {
@@ -14108,7 +14108,7 @@ async function loadAlerts() {
         // Show/hide no alerts message on mobile
         const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
         if (mobileNoAlertsMsg) {
-            mobileNoAlertsMsg.style.display = well-beingAlerts.length === 0 ? 'block' : 'none';
+            mobileNoAlertsMsg.style.display = wellnessAlerts.length === 0 ? 'block' : 'none';
         }
         
         const mobileNoNotificationsMsg = document.getElementById('mobileNoNotificationsMessage');
@@ -16974,7 +16974,7 @@ async function loadHomeAlerts() {
         homeAlertsList.innerHTML = alerts.slice(0, 5).map(alert => {
             let displayText = translateAlertText(alert.message || alert.text || alert.title || 'Alert');
             // LL FIX: Translate well-being alert content patterns (e.g., "julia's anxiety has been...")
-            if (window._translateWell-BeingContent) displayText = window._translateWell-BeingContent(displayText);
+            if (window._translateWellnessContent) displayText = window._translateWellnessContent(displayText);
             return `
             <div style="background: var(--peach-light); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.2rem;">🔔</span>
