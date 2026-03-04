@@ -284,7 +284,7 @@
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
@@ -3768,8 +3768,23 @@
         if (s) { s.classList.add('fade-out'); setTimeout(function() { s.remove(); }, 300); }
         var n = document.getElementById('mainNavbar');
         if (n) n.style.display = '';
+        // APPLOAD2 FIX: Only show auth if nothing else is already visible.
+        // Without this check, the timeout would show login over the dashboard (if user
+        // logged in within 8s), or over the forgot-password/reset-password/consent views.
         var a = document.getElementById('authContainer');
-        if (a && a.style.display === 'none') a.style.display = 'flex';
+        if (a && a.style.display === 'none') {
+            var d = document.getElementById('dashboard');
+            var r = document.getElementById('resetPasswordContainer');
+            var f = document.getElementById('forgotPasswordContainer');
+            var c = document.getElementById('consentModal');
+            var anyVisible = (d && d.style.display !== 'none') ||
+                             (r && r.style.display !== 'none') ||
+                             (f && f.style.display !== 'none') ||
+                             (c && c.style.display !== 'none');
+            if (!anyVisible) {
+                a.style.display = 'flex';
+            }
+        }
     }, 8000);
     </script>
 
@@ -14467,7 +14482,7 @@ document.addEventListener('visibilitychange', async () => {
     }
 });
 
-console.log('✅ Alert auto-refresh enabled (30s polling + visibility change)');
+console.log('✅ Alert auto-refresh enabled (60s polling + visibility change)');
 // ========== END AUTO-REFRESH ALERTS ==========
 
 // Call this when user logs in or navigates to main page
