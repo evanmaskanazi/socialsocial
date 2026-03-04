@@ -521,9 +521,9 @@
             --sage-dark: #7FA882;
             /* Wide and open layout */
             --content-max-width: 1400px;
-            --content-padding: 30px;
+            --content-padding: 20px;
             /* Step 1: Universal mobile width system */
-            --mobile-padding: 16px;
+            --mobile-padding: 12px;
             --mobile-content-width: calc(100vw - (var(--mobile-padding) * 2));
             --mobile-max-content: 600px;
             --card-padding: 16px;
@@ -586,7 +586,7 @@
         .container {
             max-width: var(--content-max-width, 1400px);
             margin: 0 auto;
-            padding: var(--content-padding, 30px);
+            padding: var(--content-padding, 20px);
         }
 
         /* Navigation - P305: Updated styling */
@@ -603,7 +603,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 32px;
+            padding: 10px 24px;
         }
 
         .logo {
@@ -837,10 +837,10 @@
         /* --- Friends Updates: VISIBLE card container --- */
         #friendsUpdatesSection {
             background: var(--white) !important;
-            border-radius: 20px !important;
-            padding: 24px !important;
-            margin-bottom: 28px !important;
-            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border-radius: 16px !important;
+            padding: 18px !important;
+            margin-bottom: 16px !important;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1) !important;
             border: 1px solid rgba(107, 139, 164, 0.08);
             border-left: 5px solid var(--primary-light);
         }
@@ -848,10 +848,10 @@
         /* --- Connections Status: VISIBLE card container --- */
         #connectionStatusSection {
             background: var(--white) !important;
-            border-radius: 20px !important;
-            padding: 24px !important;
-            margin-bottom: 28px !important;
-            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border-radius: 16px !important;
+            padding: 18px !important;
+            margin-bottom: 16px !important;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1) !important;
             border: 1px solid rgba(107, 139, 164, 0.08);
             border-left: 5px solid var(--accent);
         }
@@ -859,10 +859,10 @@
         /* --- Alerts Section: VISIBLE card container --- */
         #homeAlertsSection {
             background: var(--white) !important;
-            border-radius: 20px !important;
-            padding: 24px !important;
-            margin-bottom: 28px !important;
-            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border-radius: 16px !important;
+            padding: 18px !important;
+            margin-bottom: 16px !important;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1) !important;
             border: 1px solid rgba(107, 139, 164, 0.08);
             border-left: 5px solid var(--coral-light);
         }
@@ -1307,7 +1307,7 @@
         .dashboard-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 25px;
+            gap: 16px;
         }
 
         /* V2: Sidebar converted to horizontal top navigation bar */
@@ -1950,6 +1950,29 @@
             border-inline-start-color: var(--success);
         }
 
+        /* Clear All alerts button styling */
+        .clear-all-alerts-btn {
+            background: var(--light) !important;
+            color: var(--gray) !important;
+            border: 1px solid var(--border) !important;
+            transition: all 0.2s ease;
+            font-weight: 500 !important;
+        }
+        .clear-all-alerts-btn:hover {
+            background: var(--coral-light, #fde8e8) !important;
+            color: var(--danger, #dc2626) !important;
+            border-color: var(--danger, #dc2626) !important;
+        }
+        [dir="rtl"] .clear-all-alerts-btn svg {
+            margin-left: 2px;
+            margin-right: 0;
+        }
+
+        /* Reduced spacing for h2 view headings */
+        .view > h2 {
+            margin-bottom: 14px;
+        }
+
         /* About and Support Pages */
         .page-content {
             background: var(--white);
@@ -2007,7 +2030,7 @@
             -webkit-backdrop-filter: blur(16px) saturate(1.15);
             box-shadow: 0 2px 12px rgba(80, 110, 140, 0.10);
             z-index: 999;
-            padding: 6px 0 4px 0;
+            padding: 8px 0 6px 0;
             border-bottom: 1px solid rgba(107, 139, 164, 0.08);
             width: 100% !important;
             max-width: 100vw !important;
@@ -2018,9 +2041,9 @@
             -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
             /* TOP-NAV: Break out of container padding to span full width */
-            margin-left: calc(-1 * var(--content-padding, 30px));
-            margin-right: calc(-1 * var(--content-padding, 30px));
-            width: calc(100% + 2 * var(--content-padding, 30px)) !important;
+            margin-left: calc(-1 * var(--content-padding, 20px));
+            margin-right: calc(-1 * var(--content-padding, 20px));
+            width: calc(100% + 2 * var(--content-padding, 20px)) !important;
         }
 
         .mobile-nav-menu {
@@ -2037,13 +2060,14 @@
         }
 
         .mobile-nav-item {
-            /* P96 FIX: Force exactly 20% width for 5 items - with !important */
+            /* Apple HIG 44px minimum touch target */
             flex: 0 0 20% !important;
             width: 20% !important;
             max-width: 20% !important;
             min-width: 0 !important;
             text-align: center;
-            padding: 6px 0 4px 0;
+            padding: 8px 0 6px 0;
+            min-height: 44px;
             cursor: pointer;
             transition: all 0.25s ease;
             font-size: 12px;
@@ -2072,7 +2096,7 @@
         }
 
         .mobile-nav-icon {
-            font-size: 17px;
+            font-size: 19px;
             line-height: 1;
         }
 
@@ -2182,13 +2206,14 @@
 
             .conversations-list {
                 width: 100%;
-                height: 160px;
-                max-height: 160px;
-                min-height: 100px;
+                height: auto;
+                max-height: 22vh;
+                min-height: 80px;
                 border-right: none;
                 border-bottom: 2px solid #E5E7EB;
                 flex-shrink: 0;
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .conversation-item {
@@ -2345,10 +2370,32 @@
             .mobile-alerts-container {
                 max-height: calc(100vh - 250px);
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
             
             .mobile-alerts-container .alerts-list {
                 max-height: none;
+            }
+
+            /* Mobile scroll improvements */
+            .main-content,
+            #homeView,
+            #progressView,
+            #settingsView,
+            #connectionsView,
+            #circlesView {
+                -webkit-overflow-scrolling: touch;
+                overflow-scrolling: touch;
+            }
+
+            /* Smoother momentum scrolling for all scrollable areas */
+            .alerts-list,
+            .feed-posts,
+            #connectionStatusList,
+            #friendsUpdatesList,
+            #myConnectionsList,
+            #connectionRecommendationsList {
+                -webkit-overflow-scrolling: touch;
             }
         }
         
@@ -3688,14 +3735,27 @@
                 <!-- PJ6004: About and Support shown when logged out, language selector at end -->
                 <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
                 <a href="#" class="nav-link auth-only-hide" id="navSupport" data-i18n="nav.support">Support</a>
-                <select id="languageSelector" class="language-selector">
-                    <option value="en">English</option>
-                    <option value="he">עברית</option>
-                    <option value="ar">العربية</option>
-                    <option value="ru">Русский</option>
-                </select>
-                <button class="btn btn-primary" id="tutorialBtn" style="display: none; width: auto; margin-left: 10px; margin-right: 10px;" onclick="startTutorial()" data-i18n="nav.tutorial">Tutorial</button>
-                <button class="btn btn-primary" id="logoutBtn" style="display: none; width: auto;" data-i18n="nav.logout">Logout</button>
+                <div style="display: flex; align-items: center; gap: 2px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <select id="languageSelector" class="language-selector">
+                        <option value="en">English</option>
+                        <option value="he">עברית</option>
+                        <option value="ar">العربية</option>
+                        <option value="ru">Русский</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" id="tutorialBtn" style="display: none; width: auto; margin-left: 6px; margin-right: 6px; padding: 8px 14px; font-size: 0.9rem; border-radius: 10px;" onclick="startTutorial()" data-i18n="nav.tutorial">
+                    <span style="display: flex; align-items: center; gap: 5px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span data-i18n="nav.tutorial">Tutorial</span>
+                    </span>
+                </button>
+                <button class="btn btn-primary" id="logoutBtn" style="display: none; width: auto; padding: 8px 14px; font-size: 0.9rem; border-radius: 10px; background: var(--coral, #E8837C); border-color: var(--coral, #E8837C);" data-i18n="nav.logout">
+                    <span style="display: flex; align-items: center; gap: 5px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <span data-i18n="nav.logout">Logout</span>
+                    </span>
+                </button>
             </div>
         </div>
     </nav>
@@ -4419,7 +4479,7 @@
                   </div>
 
                   <!-- V2: My Summary Status Card -->
-                  <div id="summaryStatusCard" style="background: linear-gradient(135deg, var(--peach-light) 0%, var(--sage-light) 100%); padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.12);">
+                  <div id="summaryStatusCard" style="background: linear-gradient(135deg, var(--peach-light) 0%, var(--sage-light) 100%); padding: 20px; border-radius: 14px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(107, 139, 164, 0.12);">
                       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                           <h3 style="color: var(--primary-dark); font-size: 1.2rem; margin: 0;" data-i18n="home.my_status">My Status Today</h3>
                           <div style="display: flex; gap: 8px; align-items: center;">
@@ -4452,7 +4512,7 @@
                   </div>
 
                   <!-- V2: One-Tap Quick Check-In -->
-                  <div id="quickCheckinCard" style="background: var(--white); padding: 20px; border-radius: 16px; margin-bottom: 24px; border: 2px dashed var(--coral-light); display: none;">
+                  <div id="quickCheckinCard" style="background: var(--white); padding: 16px; border-radius: 14px; margin-bottom: 16px; border: 2px dashed var(--coral-light); display: none;">
                       <h3 style="color: var(--coral); margin-bottom: 12px; font-size: 1.1rem;" data-i18n="home.quick_checkin_title">⚡ Quick Check-In</h3>
                       <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 12px;" data-i18n="home.quick_checkin_desc">How are you feeling right now? Tap to log your mood quickly.</p>
                       <div style="display: flex; gap: 12px; flex-wrap: wrap;">
@@ -4464,7 +4524,7 @@
                   </div>
 
                   <!-- V2: Recommendations for Today -->
-                  <div id="todayRecommendations" style="background: linear-gradient(135deg, var(--sage-light) 0%, rgba(168,197,171,0.3) 100%); padding: 20px; border-radius: 16px; margin-bottom: 24px;">
+                  <div id="todayRecommendations" style="background: linear-gradient(135deg, var(--sage-light) 0%, rgba(168,197,171,0.3) 100%); padding: 16px; border-radius: 14px; margin-bottom: 16px;">
                       <h3 style="color: var(--sage-dark); margin-bottom: 12px; font-size: 1.1rem;" data-i18n="home.recommendations_today">💡 Recommendations for Today</h3>
                       <div id="todayRecommendationsList" style="display: flex; flex-direction: column; gap: 8px;">
                           <!-- Populated by JS -->
@@ -4472,7 +4532,7 @@
                   </div>
 
                   <!-- V2: Friends' Daily Updates (replaces showing all posts) -->
-                  <div id="friendsUpdatesSection" style="margin-bottom: 24px;">
+                  <div id="friendsUpdatesSection" style="margin-bottom: 16px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="home.friends_updates">Friends' Daily Updates</h3>
                       <div id="friendsUpdatesList" style="display: flex; flex-direction: column; gap: 12px;">
                           <p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_updates">No updates from your connections yet today.</p>
@@ -4480,7 +4540,7 @@
                   </div>
 
                   <!-- HS-4: My Connections Status List -->
-                  <div id="connectionStatusSection" style="margin-bottom: 24px;">
+                  <div id="connectionStatusSection" style="margin-bottom: 16px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="home.connection_status">My Connections Status</h3>
                       <div id="connectionStatusList" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
                           <p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_connections">No connections yet.</p>
@@ -4488,8 +4548,14 @@
                   </div>
 
                   <!-- V2: Alerts & Notifications preview on Home -->
-                  <div id="homeAlertsSection" style="margin-bottom: 24px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="alerts.title">Alerts & Notifications</h3>
+                  <div id="homeAlertsSection" style="margin-bottom: 18px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                          <h3 style="color: var(--primary); font-size: 1.15rem; margin: 0;" data-i18n="alerts.title">Alerts & Notifications</h3>
+                          <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('all')" style="width: auto !important; padding: 5px 12px !important; font-size: 0.78rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                              <span data-i18n="alerts.clear_all">Clear All</span>
+                          </button>
+                      </div>
                       <div id="homeAlertsList" style="max-height: 300px; overflow-y: auto;">
                           <!-- Populated by loadAlerts -->
                       </div>
@@ -4539,81 +4605,13 @@
                   </div>
               </div>
 
-              <!-- Progress View (P305: New - Location + Progress sections) -->
+              <!-- Progress View (P305: New - Progress sections) -->
               <div id="progressView" class="view hidden">
-                  <h2 style="margin-bottom: 20px;" data-i18n="menu.progress">Progress</h2>
-
-                  <!-- City Selector Section -->
-                  <div class="city-selector-container" style="background: var(--light); padding: 28px; border-radius: 16px; margin-bottom: 28px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);">
-                      <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="home.location_settings">Location Settings</h3>
-
-                      <div class="city-selector-wrapper" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
-                          <label style="font-weight: 600; color: var(--dark);" data-i18n="home.select_city">Select City:</label>
-                  <select id="homeCitySelector" class="city-selector">
-    <!-- Israel (10 cities) -->
-    <option value="Jerusalem, Israel" data-i18n="city.jerusalem_israel">Jerusalem, Israel</option>
-    <option value="Tel Aviv, Israel" data-i18n="city.tel_aviv_israel">Tel Aviv, Israel</option>
-    <option value="Haifa, Israel" data-i18n="city.haifa_israel">Haifa, Israel</option>
-    <option value="Beer Sheva, Israel" data-i18n="city.beer_sheva_israel">Beer Sheva, Israel</option>
-    <option value="Netanya, Israel" data-i18n="city.netanya_israel">Netanya, Israel</option>
-    <option value="Rishon LeZion, Israel" data-i18n="city.rishon_lezion_israel">Rishon LeZion, Israel</option>
-    <option value="Petah Tikva, Israel" data-i18n="city.petah_tikva_israel">Petah Tikva, Israel</option>
-    <option value="Ashdod, Israel" data-i18n="city.ashdod_israel">Ashdod, Israel</option>
-    <option value="Eilat, Israel" data-i18n="city.eilat_israel">Eilat, Israel</option>
-    <option value="Herzliya, Israel" data-i18n="city.herzliya_israel">Herzliya, Israel</option>
-    <!-- USA (25 cities) -->
-    <option value="New York City, USA" data-i18n="city.new_york_city_usa">New York City, USA</option>
-    <option value="Los Angeles, USA" data-i18n="city.los_angeles_usa">Los Angeles, USA</option>
-    <option value="Chicago, USA" data-i18n="city.chicago_usa">Chicago, USA</option>
-    <option value="Washington, USA" data-i18n="city.washington_usa">Washington, USA</option>
-    <option value="Houston, USA" data-i18n="city.houston_usa">Houston, USA</option>
-    <option value="San Francisco, USA" data-i18n="city.san_francisco_usa">San Francisco, USA</option>
-    <option value="Boston, USA" data-i18n="city.boston_usa">Boston, USA</option>
-    <option value="Philadelphia, USA" data-i18n="city.philadelphia_usa">Philadelphia, USA</option>
-    <option value="Phoenix, USA" data-i18n="city.phoenix_usa">Phoenix, USA</option>
-    <option value="San Diego, USA" data-i18n="city.san_diego_usa">San Diego, USA</option>
-    <option value="Dallas, USA" data-i18n="city.dallas_usa">Dallas, USA</option>
-    <option value="Seattle, USA" data-i18n="city.seattle_usa">Seattle, USA</option>
-    <option value="Miami, USA" data-i18n="city.miami_usa">Miami, USA</option>
-    <option value="Atlanta, USA" data-i18n="city.atlanta_usa">Atlanta, USA</option>
-    <option value="Denver, USA" data-i18n="city.denver_usa">Denver, USA</option>
-    <option value="Austin, USA" data-i18n="city.austin_usa">Austin, USA</option>
-    <option value="San Jose, USA" data-i18n="city.san_jose_usa">San Jose, USA</option>
-    <option value="Portland, USA" data-i18n="city.portland_usa">Portland, USA</option>
-    <option value="Las Vegas, USA" data-i18n="city.las_vegas_usa">Las Vegas, USA</option>
-    <option value="Minneapolis, USA" data-i18n="city.minneapolis_usa">Minneapolis, USA</option>
-    <option value="Detroit, USA" data-i18n="city.detroit_usa">Detroit, USA</option>
-    <option value="Baltimore, USA" data-i18n="city.baltimore_usa">Baltimore, USA</option>
-    <option value="Nashville, USA" data-i18n="city.nashville_usa">Nashville, USA</option>
-    <option value="Charlotte, USA" data-i18n="city.charlotte_usa">Charlotte, USA</option>
-    <option value="Orlando, USA" data-i18n="city.orlando_usa">Orlando, USA</option>
-    <!-- UK (15 cities) -->
-    <option value="London, UK" data-i18n="city.london_uk">London, UK</option>
-    <option value="Manchester, UK" data-i18n="city.manchester_uk">Manchester, UK</option>
-    <option value="Birmingham, UK" data-i18n="city.birmingham_uk">Birmingham, UK</option>
-    <option value="Edinburgh, UK" data-i18n="city.edinburgh_uk">Edinburgh, UK</option>
-    <option value="Glasgow, UK" data-i18n="city.glasgow_uk">Glasgow, UK</option>
-    <option value="Bristol, UK" data-i18n="city.bristol_uk">Bristol, UK</option>
-    <option value="Liverpool, UK" data-i18n="city.liverpool_uk">Liverpool, UK</option>
-    <option value="Leeds, UK" data-i18n="city.leeds_uk">Leeds, UK</option>
-    <option value="Sheffield, UK" data-i18n="city.sheffield_uk">Sheffield, UK</option>
-    <option value="Newcastle, UK" data-i18n="city.newcastle_uk">Newcastle, UK</option>
-    <option value="Nottingham, UK" data-i18n="city.nottingham_uk">Nottingham, UK</option>
-    <option value="Southampton, UK" data-i18n="city.southampton_uk">Southampton, UK</option>
-    <option value="Cardiff, UK" data-i18n="city.cardiff_uk">Cardiff, UK</option>
-    <option value="Belfast, UK" data-i18n="city.belfast_uk">Belfast, UK</option>
-    <option value="Cambridge, UK" data-i18n="city.cambridge_uk">Cambridge, UK</option>
-</select>
-                      </div>
-
-                      <div class="city-time-display" id="homeCityTimeDisplay" style="font-size: 24px; font-weight: bold; color: var(--primary); text-align: center; padding: 18px; background: var(--white); border-radius: 12px; box-shadow: 0 2px 8px rgba(107, 139, 164, 0.1);">
-                          <!-- Time will be displayed here -->
-                      </div>
-                  </div>
+                  <h2 style="margin-bottom: 16px;" data-i18n="menu.progress">Progress</h2>
 
                   <!-- Progress Chart Section -->
-                  <div id="progressChartSection" class="settings-section" style="background: var(--light); padding: 28px; border-radius: 16px; margin-bottom: 28px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);">
-                      <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="progress.title">Your Progress</h3>
+                  <div id="progressChartSection" class="settings-section" style="background: var(--light); padding: 20px; border-radius: 14px; margin-bottom: 18px; box-shadow: 0 2px 10px rgba(107, 139, 164, 0.1);">
+                      <h3 style="color: var(--primary); margin-bottom: 14px; font-size: 1.2rem;" data-i18n="progress.title">Your Progress</h3>
                       
                       <div style="text-align: center; margin-bottom: 20px;">
                           <label data-i18n="progress.view_progress" style="font-weight: 600; margin-right: 10px;">View Progress:</label>
@@ -5081,6 +5079,72 @@
                                               <option value="Pacific/Auckland">New Zealand (UTC+12/+13)</option>
                                           </select>
                                       </div>
+
+                                      <!-- Location Settings (moved from Progress view) -->
+                                      <div class="form-group" style="margin-top: 8px;">
+                                          <label class="form-label" data-i18n="home.location_settings">Location Settings</label>
+                                          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                                              <label style="font-weight: 500; color: var(--dark); font-size: 0.9rem;" data-i18n="home.select_city">Select City:</label>
+                                              <select id="homeCitySelector" class="form-input city-selector" style="flex: 1; min-width: 180px;">
+    <!-- Israel (10 cities) -->
+    <option value="Jerusalem, Israel" data-i18n="city.jerusalem_israel">Jerusalem, Israel</option>
+    <option value="Tel Aviv, Israel" data-i18n="city.tel_aviv_israel">Tel Aviv, Israel</option>
+    <option value="Haifa, Israel" data-i18n="city.haifa_israel">Haifa, Israel</option>
+    <option value="Beer Sheva, Israel" data-i18n="city.beer_sheva_israel">Beer Sheva, Israel</option>
+    <option value="Netanya, Israel" data-i18n="city.netanya_israel">Netanya, Israel</option>
+    <option value="Rishon LeZion, Israel" data-i18n="city.rishon_lezion_israel">Rishon LeZion, Israel</option>
+    <option value="Petah Tikva, Israel" data-i18n="city.petah_tikva_israel">Petah Tikva, Israel</option>
+    <option value="Ashdod, Israel" data-i18n="city.ashdod_israel">Ashdod, Israel</option>
+    <option value="Eilat, Israel" data-i18n="city.eilat_israel">Eilat, Israel</option>
+    <option value="Herzliya, Israel" data-i18n="city.herzliya_israel">Herzliya, Israel</option>
+    <!-- USA (25 cities) -->
+    <option value="New York City, USA" data-i18n="city.new_york_city_usa">New York City, USA</option>
+    <option value="Los Angeles, USA" data-i18n="city.los_angeles_usa">Los Angeles, USA</option>
+    <option value="Chicago, USA" data-i18n="city.chicago_usa">Chicago, USA</option>
+    <option value="Washington, USA" data-i18n="city.washington_usa">Washington, USA</option>
+    <option value="Houston, USA" data-i18n="city.houston_usa">Houston, USA</option>
+    <option value="San Francisco, USA" data-i18n="city.san_francisco_usa">San Francisco, USA</option>
+    <option value="Boston, USA" data-i18n="city.boston_usa">Boston, USA</option>
+    <option value="Philadelphia, USA" data-i18n="city.philadelphia_usa">Philadelphia, USA</option>
+    <option value="Phoenix, USA" data-i18n="city.phoenix_usa">Phoenix, USA</option>
+    <option value="San Diego, USA" data-i18n="city.san_diego_usa">San Diego, USA</option>
+    <option value="Dallas, USA" data-i18n="city.dallas_usa">Dallas, USA</option>
+    <option value="Seattle, USA" data-i18n="city.seattle_usa">Seattle, USA</option>
+    <option value="Miami, USA" data-i18n="city.miami_usa">Miami, USA</option>
+    <option value="Atlanta, USA" data-i18n="city.atlanta_usa">Atlanta, USA</option>
+    <option value="Denver, USA" data-i18n="city.denver_usa">Denver, USA</option>
+    <option value="Austin, USA" data-i18n="city.austin_usa">Austin, USA</option>
+    <option value="San Jose, USA" data-i18n="city.san_jose_usa">San Jose, USA</option>
+    <option value="Portland, USA" data-i18n="city.portland_usa">Portland, USA</option>
+    <option value="Las Vegas, USA" data-i18n="city.las_vegas_usa">Las Vegas, USA</option>
+    <option value="Minneapolis, USA" data-i18n="city.minneapolis_usa">Minneapolis, USA</option>
+    <option value="Detroit, USA" data-i18n="city.detroit_usa">Detroit, USA</option>
+    <option value="Baltimore, USA" data-i18n="city.baltimore_usa">Baltimore, USA</option>
+    <option value="Nashville, USA" data-i18n="city.nashville_usa">Nashville, USA</option>
+    <option value="Charlotte, USA" data-i18n="city.charlotte_usa">Charlotte, USA</option>
+    <option value="Orlando, USA" data-i18n="city.orlando_usa">Orlando, USA</option>
+    <!-- UK (15 cities) -->
+    <option value="London, UK" data-i18n="city.london_uk">London, UK</option>
+    <option value="Manchester, UK" data-i18n="city.manchester_uk">Manchester, UK</option>
+    <option value="Birmingham, UK" data-i18n="city.birmingham_uk">Birmingham, UK</option>
+    <option value="Edinburgh, UK" data-i18n="city.edinburgh_uk">Edinburgh, UK</option>
+    <option value="Glasgow, UK" data-i18n="city.glasgow_uk">Glasgow, UK</option>
+    <option value="Bristol, UK" data-i18n="city.bristol_uk">Bristol, UK</option>
+    <option value="Liverpool, UK" data-i18n="city.liverpool_uk">Liverpool, UK</option>
+    <option value="Leeds, UK" data-i18n="city.leeds_uk">Leeds, UK</option>
+    <option value="Sheffield, UK" data-i18n="city.sheffield_uk">Sheffield, UK</option>
+    <option value="Newcastle, UK" data-i18n="city.newcastle_uk">Newcastle, UK</option>
+    <option value="Nottingham, UK" data-i18n="city.nottingham_uk">Nottingham, UK</option>
+    <option value="Southampton, UK" data-i18n="city.southampton_uk">Southampton, UK</option>
+    <option value="Cardiff, UK" data-i18n="city.cardiff_uk">Cardiff, UK</option>
+    <option value="Belfast, UK" data-i18n="city.belfast_uk">Belfast, UK</option>
+    <option value="Cambridge, UK" data-i18n="city.cambridge_uk">Cambridge, UK</option>
+</select>
+                                          </div>
+                                          <div class="city-time-display" id="homeCityTimeDisplay" style="font-size: 20px; font-weight: bold; color: var(--primary); text-align: center; padding: 14px; background: var(--light); border-radius: 10px;">
+                                              <!-- Time will be displayed here -->
+                                          </div>
+                                      </div>
                                   </div>
 
                                   <div style="text-align: center; margin-top: 30px;">
@@ -5504,7 +5568,13 @@
     </div>
     
     <!-- PJ6001: Well-Being Alerts List for Mobile -->
-    <h3 style="margin-bottom: 10px;" data-i18n="alerts.title">Alerts</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0;" data-i18n="alerts.title">Alerts</h3>
+        <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('wellness')" style="width: auto !important; padding: 6px 14px !important; font-size: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span data-i18n="alerts.clear_all">Clear All</span>
+        </button>
+    </div>
     <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div class="alerts-list" id="mobileAlertsList"></div>
         <div id="mobileNoAlertsMessage" style="display: none; text-align: center; padding: 20px; color: #666;">
@@ -5513,7 +5583,13 @@
     </div>
     
     <!-- PJ6001: Notifications List for Mobile (messages, followers, invites) -->
-    <h3 style="margin-bottom: 10px;" data-i18n="notifications.title">Notifications</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0;" data-i18n="notifications.title">Notifications</h3>
+        <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('notifications')" style="width: auto !important; padding: 6px 14px !important; font-size: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span data-i18n="alerts.clear_all">Clear All</span>
+        </button>
+    </div>
     <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div class="alerts-list" id="mobileNotificationsList"></div>
         <div id="mobileNoNotificationsMessage" style="display: none; text-align: center; padding: 20px; color: #666;">
@@ -14205,6 +14281,67 @@ async function dismissAlert(alertId, element) {
         element.style.opacity = '1';
     }
 }
+
+// ========== CLEAR ALL ALERTS FUNCTION ==========
+async function clearAllAlerts(type) {
+    try {
+        // Determine which containers to clear
+        const containers = [];
+        if (type === 'wellness' || type === 'all') {
+            containers.push(document.getElementById('alertsList'));
+            containers.push(document.getElementById('mobileAlertsList'));
+            containers.push(document.getElementById('homeAlertsList'));
+        }
+        if (type === 'notifications' || type === 'all') {
+            containers.push(document.getElementById('notificationsList'));
+            containers.push(document.getElementById('mobileNotificationsList'));
+        }
+
+        // Collect all alert IDs from visible containers
+        const alertIds = new Set();
+        containers.forEach(container => {
+            if (!container) return;
+            container.querySelectorAll('.alert-item[data-alert-id]').forEach(item => {
+                alertIds.add(item.getAttribute('data-alert-id'));
+            });
+        });
+
+        if (alertIds.size === 0) return;
+
+        // Dismiss all alerts in parallel
+        const promises = Array.from(alertIds).map(id =>
+            fetch(`/api/alerts/${id}/read`, { method: 'PUT', credentials: 'include' }).catch(() => {})
+        );
+        await Promise.all(promises);
+
+        // Clear all containers
+        const noAlertsText = (window.i18n && window.i18n.translate) ? (window.i18n.translate('alerts.no_alerts') || 'No alerts') : 'No alerts';
+        const noNotificationsText = (window.i18n && window.i18n.translate) ? (window.i18n.translate('notifications.no_notifications') || 'No notifications') : 'No notifications';
+
+        containers.forEach(container => {
+            if (!container) return;
+            const isNotification = container.id && container.id.toLowerCase().includes('notification');
+            container.innerHTML = `<p style="color: var(--gray);">${isNotification ? noNotificationsText : noAlertsText}</p>`;
+        });
+
+        // Update badges
+        const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
+        const mobileMoreAlertsBadge = document.getElementById('mobileMoreAlertsBadge');
+        if (mobileAlertsBadge) mobileAlertsBadge.style.display = 'none';
+        if (mobileMoreAlertsBadge) mobileMoreAlertsBadge.style.display = 'none';
+
+        // Show no-alerts messages
+        const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
+        const mobileNoNotificationsMsg = document.getElementById('mobileNoNotificationsMessage');
+        if (mobileNoAlertsMsg && (type === 'wellness' || type === 'all')) mobileNoAlertsMsg.style.display = 'block';
+        if (mobileNoNotificationsMsg && (type === 'notifications' || type === 'all')) mobileNoNotificationsMsg.style.display = 'block';
+
+        console.log(`✅ Cleared ${alertIds.size} ${type} alerts`);
+    } catch (error) {
+        console.error('Error clearing all alerts:', error);
+    }
+}
+window.clearAllAlerts = clearAllAlerts;
 
 // ========== AUTO-REFRESH ALERTS (KEEP THIS - NO CHANGES) ==========
 // Poll for new alerts every 30 seconds when page is visible
