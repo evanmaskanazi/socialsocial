@@ -2152,6 +2152,12 @@
                 /* TOP-NAV: No bottom padding needed — nav is at top now */
             }
 
+            /* Nospace2: Remove gap between navbar and mobile-nav */
+            .dashboard.container {
+                padding-top: 0 !important;
+                margin-top: 4px !important;
+            }
+
             .sidebar {
                 display: none; /* V2: horizontal top nav hidden on mobile, mobile bottom nav used instead */
             }
@@ -2162,6 +2168,11 @@
 
             .mobile-nav {
                 display: block;
+            }
+
+            /* Nospace2: Hide trackingView h2 on mobile - diary page has its own header */
+            #trackingView > h2 {
+                display: none !important;
             }
 
             .main-content {
