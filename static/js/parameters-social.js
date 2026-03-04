@@ -2022,7 +2022,6 @@ function updateCalendar() {
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day';
-        dayCell.textContent = day;
 
         const cellDate = new Date(year, month, day);
         const cellDateStr = formatDate(cellDate);
@@ -2030,17 +2029,20 @@ function updateCalendar() {
         // Check if this is a future date
         const isFutureDate = cellDate > today;
 
+        // Don't render future days at all - only show days up to current day
+        if (isFutureDate) {
+            // Add empty placeholder to maintain grid layout
+            const emptyCell = document.createElement('div');
+            calendarGrid.appendChild(emptyCell);
+            continue;
+        }
+
+        dayCell.textContent = day;
+
         // Add data-date attribute for targeting
         dayCell.setAttribute('data-date', cellDateStr);
 
-        // Disable future dates
-        if (isFutureDate) {
-            dayCell.style.opacity = '0.3';
-            dayCell.style.cursor = 'not-allowed';
-            dayCell.style.pointerEvents = 'none';
-            dayCell.title = pt('params.future_date') || 'Future date - not available';
-        } else {
-            // Check if this date has saved data and add green dot
+        // Check if this date has saved data and add green dot
             if (datesWithData.has(cellDateStr)) {
                 dayCell.style.position = 'relative';
                 const dot = document.createElement('span');
@@ -2059,9 +2061,8 @@ function updateCalendar() {
                 dayCell.classList.add('selected');
             }
 
-            // Only add click handler for past/present dates
+            // Add click handler for past/present dates
             dayCell.onclick = () => selectDate(cellDate);
-        }
 
         calendarGrid.appendChild(dayCell);
     }
