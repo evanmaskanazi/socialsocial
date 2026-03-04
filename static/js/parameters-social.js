@@ -1762,6 +1762,7 @@ function addParameterStyles() {
         @media (max-width: 768px) {
             .parameters-page {
                 padding: 10px;
+                padding-top: 4px;
                 overflow-x: hidden;
                 max-width: 100vw;
                 box-sizing: border-box;
@@ -1789,7 +1790,24 @@ function addParameterStyles() {
                 position: relative;
                 top: 0;
                 right: 0;
-                margin-bottom: 20px;
+                margin-bottom: 4px;
+            }
+            /* Nospace2: Compact diary header - no need for 60px gap since language selector is relative on mobile */
+            .parameters-header {
+                margin-top: 6px !important;
+                margin-bottom: 10px !important;
+            }
+            .parameters-header h1 {
+                font-size: 1.8em;
+            }
+            .date-section {
+                margin-bottom: 16px;
+            }
+            .date-section label {
+                margin-bottom: 8px;
+            }
+            .date-controls {
+                margin-bottom: 10px;
             }
             .notes-section textarea {
                 width: 100%;
