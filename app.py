@@ -1640,10 +1640,10 @@ def get_daily_diary_reminder_translations(language='en'):
     """Get email translations for daily diary reminder"""
     translations = {
         'en': {
-            'subject': 'TheraSocial - Daily Wellness Check-in Reminder',
+            'subject': 'TheraSocial - Daily Well-Being Check-in Reminder',
             'hello': 'Hello',
-            'reminder': "Don't forget to log your wellness parameters for today!",
-            'description': 'Taking a few moments to track your mood, energy, sleep, and other wellness factors helps you understand your patterns and make positive changes.',
+            'reminder': "Don't forget to log your well-being parameters for today!",
+            'description': 'Taking a few moments to track your mood, energy, sleep, and other well-being factors helps you understand your patterns and make positive changes.',
             'fill_diary': 'Fill Out Daily Diary',
             'regards': 'Best regards',
             'team': 'TheraSocial Team',
@@ -2908,6 +2908,21 @@ def auto_migrate_database():
                         conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_timezone VARCHAR(100) DEFAULT 'UTC'"))
                         conn.commit()
                         logger.info("✓ Added diary_reminder_timezone column to notification_settings table")
+                    # CS7: Add deduplication column for diary reminders
+                    if 'diary_reminder_last_sent' not in columns:
+                        logger.info("Adding diary_reminder_last_sent column to notification_settings table...")
+                        conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
+                        conn.commit()
+                        logger.info("✓ Added diary_reminder_last_sent column")
+
+                # NP1: Add notes_privacy column to saved_parameters table
+                if 'saved_parameters' in inspector.get_table_names():
+                    sp_columns = [col['name'] for col in inspector.get_columns('saved_parameters')]
+                    if 'notes_privacy' not in sp_columns:
+                        logger.info("Adding notes_privacy column to saved_parameters table...")
+                        conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
+                        conn.commit()
+                        logger.info("✓ Added notes_privacy column to saved_parameters")
 
                 # Add follow_note column to follows table
                 if 'follows' in inspector.get_table_names():
@@ -3433,6 +3448,7 @@ class SavedParameters(db.Model):
     physical_activity_privacy = db.Column(db.String(20), default='private')
     anxiety_privacy = db.Column(db.String(20), default='private')
     notes = db.Column(db.Text)
+    notes_privacy = db.Column(db.String(20), default='private')  # NP1: Notes privacy setting
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     # REMOVED: privacy = db.Column(db.JSON)  # This line should be removed/commented
@@ -3459,7 +3475,8 @@ class SavedParameters(db.Model):
                 'sleep_quality_privacy': self.sleep_quality_privacy,
                 'physical_activity_privacy': self.physical_activity_privacy,
                 'anxiety_privacy': self.anxiety_privacy,
-                'notes': self.notes
+                'notes': self.notes,
+                'notes_privacy': self.notes_privacy or 'private'  # NP1
             })
         else:
             for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
@@ -3470,6 +3487,12 @@ class SavedParameters(db.Model):
                         (param_privacy == 'class_a' and privacy_level == 'class_a'):
                     # Note: 'private' params are excluded - only owner can see
                     base_dict[param] = getattr(self, param)
+            # NP1: Apply same privacy logic to notes
+            notes_priv = self.notes_privacy or 'private'
+            if notes_priv == 'public' or \
+                    (notes_priv == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
+                    (notes_priv == 'class_a' and privacy_level == 'class_a'):
+                base_dict['notes'] = self.notes
 
         return base_dict
 
@@ -3605,6 +3628,7 @@ class NotificationSettings(db.Model):
     # Daily diary reminder time settings (24-hour format, e.g., "09:00" or "21:30")
     diary_reminder_time = db.Column(db.String(5), default='09:00')  # Default 9 AM
     diary_reminder_timezone = db.Column(db.String(100), default='UTC')  # Timezone based on selected city
+    diary_reminder_last_sent = db.Column(db.Date, default=None)  # CS7: Date last reminder was sent (dedup)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -10151,7 +10175,8 @@ def get_parameters():
                     'sleep_quality_privacy': params.sleep_quality_privacy or 'private',
                     'physical_activity_privacy': params.physical_activity_privacy or 'private',
                     'anxiety_privacy': params.anxiety_privacy or 'private',
-                    'notes': params.notes or ''
+                    'notes': params.notes or '',
+                    'notes_privacy': params.notes_privacy or 'private'  # NP1
                 }
             })
         else:
@@ -10171,7 +10196,8 @@ def get_parameters():
                     'sleep_quality_privacy': 'private',
                     'physical_activity_privacy': 'private',
                     'anxiety_privacy': 'private',
-                    'notes': ''
+                    'notes': '',
+                    'notes_privacy': 'private'  # NP1
                 }
             })
 
@@ -10250,6 +10276,12 @@ def save_parameters():
         if 'notes' in data:
             params.notes = data['notes']
 
+        # NP1: Save notes_privacy
+        if 'notes_privacy' in data:
+            notes_priv = data['notes_privacy']
+            if notes_priv in ['public', 'class_a', 'class_b', 'private']:
+                params.notes_privacy = notes_priv
+
         params.updated_at = datetime.utcnow()
         db.session.add(params)
         db.session.commit()
@@ -10274,6 +10306,7 @@ def save_parameters():
             'sleep_quality_privacy': getattr(params, 'sleep_quality_privacy', 'private'),
             'physical_activity_privacy': getattr(params, 'physical_activity_privacy', 'private'),
             'anxiety_privacy': getattr(params, 'anxiety_privacy', 'private'),
+            'notes_privacy': getattr(params, 'notes_privacy', 'private'),  # NP1
             'date': params.date.isoformat() if params.date else None,  # PJ6016: Must be string for JSON
             'notes': params.notes
         }
@@ -10319,7 +10352,8 @@ def save_parameters():
                     'physical_activity': int(params.physical_activity) if params.physical_activity else 0,
                     'anxiety': int(params.anxiety) if params.anxiety else 0
                 },
-                'notes': params.notes or ''
+                'notes': params.notes or '',
+                'notes_privacy': params.notes_privacy or 'private'  # NP1
             }
         }), 200
 
@@ -14996,14 +15030,27 @@ def get_following():
                     follower_id=followed_user.id,
                     followed_id=user_id
                 ).first() is not None
+                # CS1: Get last check-in date (always visible regardless of privacy settings)
+                last_checkin = db.session.execute(
+                    select(SavedParameters.date).filter_by(user_id=followed_user.id)
+                    .order_by(SavedParameters.date.desc()).limit(1)
+                ).scalar()
+                last_checkin_date = last_checkin.isoformat() if last_checkin else None
+
                 following.append({
                     'id': followed_user.id,
                     'username': followed_user.username,
+                    'display_name': getattr(followed_user, 'display_name', None) or followed_user.username,
                     'email': followed_user.email,
                     'note': follow.follow_note,  # ADD THIS FIELD
                     'follow_trigger': getattr(follow, 'follow_trigger', False) or False,  # V2: alert tracking status
                     'follows_you': follows_back,  # VINTER2: whether this user follows you back
                     'selected_city': followed_user.selected_city,
+                    'bio': getattr(followed_user, 'bio', None) or '',
+                    'occupation': getattr(followed_user, 'occupation', None) or '',
+                    'last_login': followed_user.last_login.isoformat() if followed_user.last_login else None,
+                    'last_active': followed_user.last_login.isoformat() if followed_user.last_login else None,
+                    'last_checkin_date': last_checkin_date,  # CS1: date of most recent diary entry
                     'created_at': follow.created_at.isoformat()
                 })
 
@@ -15675,12 +15722,21 @@ def run_diary_reminder_scheduler():
                                     logger.warning(f"[DIARY SCHEDULER] User {settings.user_id} has no email - skipping")
                                     continue
                                 
+                                # CS7: Dedup check - skip if already sent today (prevents 4x sends from multiple instances)
+                                today_date = now_utc.date()
+                                if settings.diary_reminder_last_sent == today_date:
+                                    logger.info(f"[DIARY SCHEDULER] SKIP: Already sent reminder to {user.email} today ({today_date})")
+                                    continue
+                                
                                 logger.info(f"[DIARY SCHEDULER] Sending reminder to user {user.id} ({user.email})...")
                                 user_language = user.preferred_language or 'en'
                                 success = send_daily_diary_reminder_email(user.email, user_language)
                                 
                                 if success:
                                     emails_sent += 1
+                                    # CS7: Mark as sent today so other instances/runs skip it
+                                    settings.diary_reminder_last_sent = today_date
+                                    db.session.commit()
                                     logger.info(f"[DIARY SCHEDULER] SUCCESS: Sent reminder to {user.email}")
                                 else:
                                     emails_failed += 1
