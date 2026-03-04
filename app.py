@@ -726,6 +726,46 @@ OAUTH_PROVIDERS = {
 }
 # === END SOCIAL OAUTH CONFIGURATION ===
 
+# =====================
+# APPLOAD: Response compression (non-invasive addition)
+# Gzip compresses the 820KB index.html to ~80-100KB over the wire
+# =====================
+import gzip as _gzip_module
+
+@app.after_request
+def compress_response(response):
+    """Gzip compress text responses for faster delivery"""
+    # Skip if client doesn't accept gzip
+    if 'gzip' not in request.headers.get('Accept-Encoding', ''):
+        return response
+    # Skip if already encoded, or not a text type, or too small to bother
+    if (response.direct_passthrough or
+        response.status_code < 200 or response.status_code >= 300 or
+        'Content-Encoding' in response.headers or
+        len(response.get_data()) < 500):
+        return response
+    content_type = response.content_type or ''
+    if not any(t in content_type for t in ['text/', 'application/json', 'application/javascript']):
+        return response
+    compressed = _gzip_module.compress(response.get_data(), compresslevel=6)
+    response.set_data(compressed)
+    response.headers['Content-Encoding'] = 'gzip'
+    response.headers['Content-Length'] = len(compressed)
+    response.headers['Vary'] = 'Accept-Encoding'
+    return response
+
+# APPLOAD: Cache headers for static assets
+@app.after_request
+def add_cache_headers(response):
+    """Set browser cache headers - long cache for static, no cache for HTML"""
+    if request.path.startswith('/static/'):
+        # Cache static JS/CSS/images for 1 week (they have cache-bust versions)
+        response.headers['Cache-Control'] = 'public, max-age=604800'
+    elif request.path == '/' or request.path.endswith('.html'):
+        # Don't cache HTML pages - always get fresh version
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
 # Security headers middleware (Ethics Doc: Privacy and Security by Design)
 @app.after_request
 def add_security_headers(response):
