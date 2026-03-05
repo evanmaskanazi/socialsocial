@@ -3,9 +3,13 @@
 Complete app.py for Social Social Platform - V4 10Link
 
 T15 Fixes (architecture audit):
-- FIX-T15-1: _init_complete flag now checked in before_request — API endpoints return
-  503 until background initialization completes, preventing OperationalError if a new
-  column is queried before the migration thread creates it.
+- FIX-T15-1: REVERTED — _init_complete before_request guard removed. The flag is set
+  in gunicorn's master process background thread but the worker process (which handles
+  all HTTP requests) forks its own copy that stays False forever, blocking all /api/
+  endpoints permanently. The original concern (queries hitting missing columns during
+  init) is hypothetical for future schema changes; the guard caused immediate, total
+  login failure. The background init thread and _init_complete flag are retained for
+  internal state but no longer gate request handling.
 - FIX-T15-2: Background schedulers now guarded by a cross-process file lock (fcntl.flock)
   so only one gunicorn worker starts diary/trigger/job-queue schedulers. Prevents duplicate
   emails and alert races when running with multiple workers.
@@ -5069,14 +5073,11 @@ def before_request():
     # Skip everything for health check - maximum speed
     if request.path == '/healthz':
         return
-    # T15 FIX-1: Block API requests until background init completes.
-    # Prevents OperationalError when a new model column is queried before
-    # the migration thread has created it in the database.
-    if not _init_complete and request.path.startswith('/api/'):
-        return jsonify({
-            'error': 'Service initializing',
-            'message': 'The service is starting up. Please try again in a moment.'
-        }), 503
+    # T15 FIX-1 REVERTED: The _init_complete guard was intended to block API
+    # requests until background migration finishes, but it doesn't work with
+    # gunicorn's fork model — the flag is set in the master's background thread
+    # while the worker process (which handles requests) has its own copy that
+    # stays False forever. Removed to restore login functionality.
     request.request_id = str(uuid.uuid4())
     if not request.path.startswith('/static'):
         logger.info(f"Request started: {request.method} {request.path}")
