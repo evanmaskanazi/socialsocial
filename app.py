@@ -49,6 +49,24 @@ T15b Fixes:
   lock_timeout to '5s' instead of '0', keeping the connection protected for all
   remaining migrations.
 
+T15c Fixes:
+- FIX: inspect(engine) NameError in auto_migrate_database() NP1-SAFE block (line ~3088).
+  'engine' was undefined; the bare except swallowed the NameError and always set
+  NOTES_PRIVACY_AVAILABLE = False. Changed to inspect(db.engine) so the flag reflects
+  actual schema state.
+- FIX: start_data_retention_scheduler() was defined but never called. Audit logs, expired
+  tokens, old alerts, and completed jobs accumulated indefinitely. Now wired into
+  init_database() on both the happy path and fallback path, matching the pattern of the
+  other three schedulers.
+- FIX: Duplicate security headers between add_security_headers() and after_request().
+  add_security_headers() set X-Frame-Options: SAMEORIGIN; after_request() overwrote it
+  with DENY in production. Removed the security header block from after_request(),
+  making add_security_headers() the single authority. Logging in after_request() kept.
+- FIX: In-memory rate_limit_store (Redis fallback) grew unboundedly. Individual
+  timestamps were pruned, but empty keys were never deleted. Under sustained Redis
+  outage, every unique IP+endpoint combination created a permanent dict entry.
+  Now deletes keys whose timestamp list is empty after pruning.
+
 appFormat8 Fix:
 - FIX: Removed module-level auto_migrate_database() call (was at line ~3131).
   db.create_all() inside it opens its own connection and blocks on table locks BEFORE
@@ -1019,11 +1037,16 @@ def check_rate_limit(user_id, max_requests=100, window=60, endpoint=None):
         # Remove old requests outside window
         user_requests[:] = [req_time for req_time in user_requests if now - req_time < window]
         
+        # T15c: Remove key entirely if no requests remain, preventing unbounded dict growth
+        if not user_requests:
+            del rate_limit_store[key]
+        
         if len(user_requests) >= max_requests:
             return False, len(user_requests), 0
         
-        user_requests.append(now)
-        return True, len(user_requests), 0
+        # Re-create if we just deleted (defaultdict will recreate)
+        rate_limit_store[key].append(now)
+        return True, len(rate_limit_store[key]), 0
 
 
 def rate_limit_endpoint(max_requests=100, window=60, endpoint_name=None):
@@ -3085,7 +3108,7 @@ def auto_migrate_database():
 
                 # NP1-SAFE: Set flag for whether notes_privacy column exists
                 try:
-                    _np_cols = [c['name'] for c in inspect(engine).get_columns('saved_parameters')]
+                    _np_cols = [c['name'] for c in inspect(db.engine).get_columns('saved_parameters')]
                     app.config['NOTES_PRIVACY_AVAILABLE'] = 'notes_privacy' in _np_cols
                 except Exception:
                     app.config['NOTES_PRIVACY_AVAILABLE'] = False
@@ -4148,6 +4171,12 @@ def init_database():
             except Exception as scheduler_err:
                 logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
 
+            # T15c: Start GDPR data retention scheduler (daily cleanup at 3 AM UTC)
+            try:
+                start_data_retention_scheduler()
+            except Exception as scheduler_err:
+                logger.warning(f"Data retention scheduler warning (non-critical): {scheduler_err}")
+
         except Exception as e:
             logger.error(f"Database initialization error: {e}")
             # Try to create tables as fallback
@@ -4178,6 +4207,11 @@ def init_database():
                     start_job_queue_scheduler()
                 except Exception as scheduler_err:
                     logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
+                # T15c: Start GDPR data retention scheduler (daily cleanup at 3 AM UTC)
+                try:
+                    start_data_retention_scheduler()
+                except Exception as scheduler_err:
+                    logger.warning(f"Data retention scheduler warning (non-critical): {scheduler_err}")
             except Exception as e2:
                 logger.error(f"Failed to create tables: {e2}")
                 if not is_production:
@@ -5061,18 +5095,12 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    """Log response details and set security headers"""
+    """Log response details"""
     # Skip logging for health check and static files
     if request.path != '/healthz' and not request.path.startswith('/static'):
         logger.info(f"Request completed: {response.status_code}")
 
-    # Security headers
-    if is_production:
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-
+    # T15c: Security headers removed — add_security_headers() is the single authority
     return response
 
 
