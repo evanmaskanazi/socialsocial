@@ -2916,13 +2916,20 @@ def auto_migrate_database():
                         logger.info("✓ Added diary_reminder_last_sent column")
 
                 # NP1: Add notes_privacy column to saved_parameters table
-                if 'saved_parameters' in inspector.get_table_names():
-                    sp_columns = [col['name'] for col in inspector.get_columns('saved_parameters')]
-                    if 'notes_privacy' not in sp_columns:
-                        logger.info("Adding notes_privacy column to saved_parameters table...")
-                        conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
-                        conn.commit()
-                        logger.info("✓ Added notes_privacy column to saved_parameters")
+                try:
+                    if 'saved_parameters' in inspector.get_table_names():
+                        sp_columns = [col['name'] for col in inspector.get_columns('saved_parameters')]
+                        if 'notes_privacy' not in sp_columns:
+                            logger.info("Adding notes_privacy column to saved_parameters table...")
+                            conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
+                            conn.commit()
+                            logger.info("✓ Added notes_privacy column to saved_parameters")
+                except Exception as np1_err:
+                    logger.warning(f"notes_privacy migration skipped (may already exist): {np1_err}")
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
 
                 # Add follow_note column to follows table
                 if 'follows' in inspector.get_table_names():
@@ -3476,7 +3483,7 @@ class SavedParameters(db.Model):
                 'physical_activity_privacy': self.physical_activity_privacy,
                 'anxiety_privacy': self.anxiety_privacy,
                 'notes': self.notes,
-                'notes_privacy': self.notes_privacy or 'private'  # NP1
+                'notes_privacy': getattr(self, 'notes_privacy', None) or 'private'  # NP1
             })
         else:
             for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
@@ -3488,7 +3495,7 @@ class SavedParameters(db.Model):
                     # Note: 'private' params are excluded - only owner can see
                     base_dict[param] = getattr(self, param)
             # NP1: Apply same privacy logic to notes
-            notes_priv = self.notes_privacy or 'private'
+            notes_priv = getattr(self, 'notes_privacy', None) or 'private'
             if notes_priv == 'public' or \
                     (notes_priv == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
                     (notes_priv == 'class_a' and privacy_level == 'class_a'):
@@ -10176,7 +10183,7 @@ def get_parameters():
                     'physical_activity_privacy': params.physical_activity_privacy or 'private',
                     'anxiety_privacy': params.anxiety_privacy or 'private',
                     'notes': params.notes or '',
-                    'notes_privacy': params.notes_privacy or 'private'  # NP1
+                    'notes_privacy': getattr(params, 'notes_privacy', None) or 'private'  # NP1
                 }
             })
         else:
@@ -10306,7 +10313,7 @@ def save_parameters():
             'sleep_quality_privacy': getattr(params, 'sleep_quality_privacy', 'private'),
             'physical_activity_privacy': getattr(params, 'physical_activity_privacy', 'private'),
             'anxiety_privacy': getattr(params, 'anxiety_privacy', 'private'),
-            'notes_privacy': getattr(params, 'notes_privacy', 'private'),  # NP1
+            'notes_privacy': getattr(params, 'notes_privacy', None) or 'private',  # NP1
             'date': params.date.isoformat() if params.date else None,  # PJ6016: Must be string for JSON
             'notes': params.notes
         }
@@ -10353,7 +10360,7 @@ def save_parameters():
                     'anxiety': int(params.anxiety) if params.anxiety else 0
                 },
                 'notes': params.notes or '',
-                'notes_privacy': params.notes_privacy or 'private'  # NP1
+                'notes_privacy': getattr(params, 'notes_privacy', None) or 'private'  # NP1
             }
         }), 200
 
@@ -15654,6 +15661,13 @@ def run_diary_reminder_scheduler():
                     logger.info(f"[DIARY SCHEDULER] ========================================")
                     logger.info(f"[DIARY SCHEDULER] Checking reminders at UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S')}")
                     
+                    # Set a statement timeout so queries never hang indefinitely
+                    # This prevents the scheduler thread from being permanently stuck
+                    try:
+                        db.session.execute(text("SET statement_timeout = '10s'"))
+                    except Exception:
+                        pass  # Not critical - just prevents hangs
+
                     # Get all users with diary reminders enabled and log their settings
                     all_diary_settings = NotificationSettings.query.filter(
                         NotificationSettings.email_daily_diary_reminder == True
@@ -15724,7 +15738,8 @@ def run_diary_reminder_scheduler():
                                 
                                 # CS7: Dedup check - skip if already sent today (prevents 4x sends from multiple instances)
                                 today_date = now_utc.date()
-                                if settings.diary_reminder_last_sent == today_date:
+                                last_sent = getattr(settings, 'diary_reminder_last_sent', None)
+                                if last_sent == today_date:
                                     logger.info(f"[DIARY SCHEDULER] SKIP: Already sent reminder to {user.email} today ({today_date})")
                                     continue
                                 
@@ -15735,8 +15750,12 @@ def run_diary_reminder_scheduler():
                                 if success:
                                     emails_sent += 1
                                     # CS7: Mark as sent today so other instances/runs skip it
-                                    settings.diary_reminder_last_sent = today_date
-                                    db.session.commit()
+                                    try:
+                                        settings.diary_reminder_last_sent = today_date
+                                        db.session.commit()
+                                    except Exception as mark_err:
+                                        logger.warning(f"[DIARY SCHEDULER] Could not mark reminder sent: {mark_err}")
+                                        db.session.rollback()
                                     logger.info(f"[DIARY SCHEDULER] SUCCESS: Sent reminder to {user.email}")
                                 else:
                                     emails_failed += 1
@@ -15753,7 +15772,16 @@ def run_diary_reminder_scheduler():
                 except Exception as inner_error:
                     logger.error(f"[DIARY SCHEDULER] Processing error: {str(inner_error)}")
                     logger.error(f"[DIARY SCHEDULER] Traceback: {traceback.format_exc()}")
-                    db.session.rollback()
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                finally:
+                    # Always release the DB session so connections return to the pool
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
                     
         except Exception as e:
             logger.error(f"[DIARY SCHEDULER] Scheduler error: {str(e)}")
