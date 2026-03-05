@@ -623,14 +623,12 @@ except ImportError as e:
     print(f"WARNING: reportlab not available - PDF generation disabled: {e}")
 
 # WeasyPrint for better Unicode/RTL support (preferred method)
-# LAZY IMPORT: WeasyPrint is heavy (~200MB RSS) and causes OOM worker kills on Render free tier
-# when imported at module level.  Import is deferred to first PDF generation request.
-WEASYPRINT_AVAILABLE = None  # None = not yet checked; True/False after first check
+# LAZY IMPORT: Deferred to first PDF request to prevent OOM worker kills on boot.
+WEASYPRINT_AVAILABLE = None
 _weasyprint_HTML = None
 _weasyprint_CSS = None
 
 def _ensure_weasyprint():
-    """Lazy-load WeasyPrint on first use to avoid OOM during worker boot."""
     global WEASYPRINT_AVAILABLE, _weasyprint_HTML, _weasyprint_CSS
     if WEASYPRINT_AVAILABLE is not None:
         return WEASYPRINT_AVAILABLE
@@ -639,10 +637,9 @@ def _ensure_weasyprint():
         _weasyprint_HTML = _HTML
         _weasyprint_CSS = _CSS
         WEASYPRINT_AVAILABLE = True
-        print("INFO: WeasyPrint loaded on first PDF request")
     except ImportError as e:
         WEASYPRINT_AVAILABLE = False
-        print(f"WARNING: weasyprint not available - falling back to reportlab: {e}")
+        print(f"WARNING: weasyprint not available: {e}")
     return WEASYPRINT_AVAILABLE
 
 try:
@@ -3012,17 +3009,15 @@ def auto_migrate_database():
                             logger.info("✓ notes_privacy column already exists in saved_parameters")
                 except Exception as np1_err:
                     logger.error(f"CRITICAL: notes_privacy migration failed: {np1_err}")
-                    logger.error("The app will continue WITHOUT notes_privacy - all notes treated as private.")
                     try:
                         conn.rollback()
                     except Exception:
                         pass
 
-                # NP1-SAFE: Re-check if column exists and set global flag.
+                # NP1-SAFE: Set flag for whether notes_privacy column exists
                 try:
                     _np_cols = [c['name'] for c in inspect(engine).get_columns('saved_parameters')]
                     app.config['NOTES_PRIVACY_AVAILABLE'] = 'notes_privacy' in _np_cols
-                    logger.info(f"[NP1] notes_privacy column available: {app.config['NOTES_PRIVACY_AVAILABLE']}")
                 except Exception:
                     app.config['NOTES_PRIVACY_AVAILABLE'] = False
 
@@ -3554,8 +3549,7 @@ class SavedParameters(db.Model):
     physical_activity_privacy = db.Column(db.String(20), default='private')
     anxiety_privacy = db.Column(db.String(20), default='private')
     notes = db.Column(db.Text)
-    # NP1: notes_privacy NOT in ORM model - prevents UndefinedColumn when migration hasn't run.
-    # Column is added via startup migration. Access via getattr(obj, 'notes_privacy', 'private').
+    # NP1: notes_privacy NOT in ORM - prevents UndefinedColumn. Access via getattr().
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     # REMOVED: privacy = db.Column(db.JSON)  # This line should be removed/commented
@@ -10383,7 +10377,7 @@ def save_parameters():
         if 'notes' in data:
             params.notes = data['notes']
 
-        # NP1: Save notes_privacy via raw SQL (column not in ORM to prevent UndefinedColumn)
+        # NP1: Save notes_privacy via raw SQL (column not in ORM)
         _np_priv_to_save = None
         if 'notes_privacy' in data:
             notes_priv = data['notes_privacy']
@@ -10394,7 +10388,6 @@ def save_parameters():
         db.session.add(params)
         db.session.commit()
 
-        # NP1: Persist notes_privacy via raw SQL after ORM commit (if column exists)
         if _np_priv_to_save and app.config.get('NOTES_PRIVACY_AVAILABLE'):
             try:
                 db.session.execute(
@@ -10402,8 +10395,7 @@ def save_parameters():
                     {'np': _np_priv_to_save, 'pid': params.id}
                 )
                 db.session.commit()
-            except Exception as np_err:
-                logger.warning(f"[NP1] Could not save notes_privacy: {np_err}")
+            except Exception:
                 try:
                     db.session.rollback()
                 except Exception:
@@ -13077,7 +13069,7 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
     </html>
     '''
     
-    # Generate PDF with WeasyPrint (lazy loaded)
+    # Generate PDF with WeasyPrint
     output = io.BytesIO()
     _weasyprint_HTML(string=html_content).write_pdf(output)
     output.seek(0)
@@ -13090,7 +13082,6 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
 def generate_pdf_report():
     """Generate PDF report for past 7 days - uses WeasyPrint if available, falls back to reportlab"""
     
-    # Check if any PDF library is available (lazy-load WeasyPrint on first use)
     _ensure_weasyprint()
     if not WEASYPRINT_AVAILABLE and not REPORTLAB_AVAILABLE:
         logger.error("PDF generation failed: no PDF library available")
@@ -13563,38 +13554,9 @@ def check_parameter_triggers():
     - Use a SET to track unique (user, param, start_date, end_date) patterns already seen
     - Only add NEW patterns to results - prevents duplicate alerts from duplicate trigger rows
     - Extensive logging showing each trigger's flags and each pattern found
-    
-    PERF FIX: Session-based cooldown prevents this endpoint from blocking the worker.
-    Processing 175+ triggers takes 30+ seconds, which kills Render's single worker.
-    If checked within last 5 minutes, returns immediately with cached status.
     """
     try:
         watcher_id = session.get('user_id')
-        
-        # PERF FIX: Session-based cooldown - prevent 30s worker blocks
-        # Trigger processing already happens in background when users save diary entries.
-        # This frontend-poll endpoint only needs to run occasionally to catch stragglers.
-        import time
-        last_check = session.get('last_trigger_check_ts')
-        now_ts = time.time()
-        TRIGGER_CHECK_COOLDOWN = 300  # 5 minutes
-        
-        if last_check and (now_ts - last_check) < TRIGGER_CHECK_COOLDOWN:
-            elapsed = int(now_ts - last_check)
-            logger.info(f"[TRIGGER CHECK] Cooldown active for watcher {watcher_id} ({elapsed}s since last check, limit {TRIGGER_CHECK_COOLDOWN}s). Returning cached.")
-            return jsonify({
-                'success': True,
-                'alerts': [],
-                'count': 0,
-                'alerts_created': 0,
-                'alerts_skipped_duplicate': 0,
-                'cooldown': True,
-                'cooldown_remaining': TRIGGER_CHECK_COOLDOWN - elapsed
-            })
-        
-        # Set the cooldown timestamp BEFORE processing (so concurrent requests also skip)
-        session['last_trigger_check_ts'] = now_ts
-        
         # PJ6019 FIX: Added is_active=True filter to exclude "deleted" triggers
         triggers = db.session.execute(
             select(ParameterTrigger).filter_by(watcher_id=watcher_id, is_active=True)
@@ -13604,24 +13566,16 @@ def check_parameter_triggers():
         logger.info(f"[PJ815 DEBUG] check_parameter_triggers called for watcher_id={watcher_id}")
         logger.info(f"[PJ815 DEBUG] Found {len(triggers)} trigger rows")
         
-        # PERF: Removed per-trigger debug logging loop (was doing 175 DB queries just for logs)
-        # Log first 5 only for debugging
-        for i, t in enumerate(triggers[:5]):
+        # PERF: Only log first 3 triggers (was doing 175 DB queries for logging)
+        for i, t in enumerate(triggers[:3]):
             watched_user = db.session.get(User, t.watched_id)
             username = watched_user.username if watched_user else f"user_{t.watched_id}"
-            flags = [p for p in ['mood','energy','sleep','activity','anxiety'] 
-                     if getattr(t, f"{'physical' if p=='activity' else p}_alert", False)]
-            logger.info(f"[PJ815 DEBUG] Trigger {i+1}: watched={username}, days={t.consecutive_days}, flags={flags}")
-        if len(triggers) > 5:
-            logger.info(f"[PJ815 DEBUG] ... and {len(triggers)-5} more triggers (suppressed)")
+            logger.info(f"[PJ815 DEBUG] Trigger {i+1}: watched={username}, days={t.consecutive_days}")
+        if len(triggers) > 3:
+            logger.info(f"[PJ815 DEBUG] ... and {len(triggers)-3} more (suppressed)")
 
         alerts = []
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        
-        # PERF: Time limit to prevent worker kill (Render timeout is 30s)
-        _check_start = time.time()
-        TRIGGER_TIME_LIMIT = 10  # seconds - leave headroom for alert creation phase
-        _triggers_skipped_timeout = 0
         
         # PJ815: Track unique patterns to prevent duplicates from multiple trigger rows
         # Key = (username, param_name, start_date_iso, end_date_iso)
@@ -13655,12 +13609,6 @@ def check_parameter_triggers():
             return False
 
         for trigger in triggers:
-            # PERF: Time limit check - abort processing if taking too long
-            if time.time() - _check_start > TRIGGER_TIME_LIMIT:
-                _triggers_skipped_timeout = len(triggers) - triggers.index(trigger)
-                logger.warning(f"[TRIGGER CHECK] Time limit ({TRIGGER_TIME_LIMIT}s) reached after processing {triggers.index(trigger)}/{len(triggers)} triggers. Skipping remaining {_triggers_skipped_timeout}.")
-                break
-            
             # PI502alt: Skip if consecutive_days below minimum threshold
             consecutive_days = max(trigger.consecutive_days or MINIMUM_TRIGGER_DAYS, MINIMUM_TRIGGER_DAYS)
             if consecutive_days < MINIMUM_TRIGGER_DAYS:
@@ -14041,153 +13989,23 @@ def check_parameter_triggers():
         logger.info(f"[TRIGGER CHECK] ========================================")
         logger.info(f"[TRIGGER CHECK] Found {len(alerts)} trigger patterns for watcher {watcher_id}")
         
-        alerts_created = 0
-        alerts_skipped_duplicate = 0
-        # PJ6015: Removed alerts_emailed = 0 - now using emails_actually_sent from batch email code
+        # PERF FIX: Return patterns immediately WITHOUT creating alerts or sending emails.
+        # Alert creation happens in background when users save diary entries via
+        # process_parameter_triggers / run_background_trigger_check_for_watcher.
+        # The old code called create_alert_with_email() here which sent SMTP emails
+        # synchronously, hanging for 30+ seconds and killing Render's single worker.
+        logger.info(f"[TRIGGER CHECK] Returning {len(alerts)} patterns (read-only, no alert creation)")
         
-        # PERF: Also time-limit the alert creation phase
-        ALERT_CREATE_TIME_LIMIT = 15  # total seconds from start for entire endpoint
-        
-        for alert_data in alerts:
-            # PERF: Time limit check for alert creation
-            if time.time() - _check_start > ALERT_CREATE_TIME_LIMIT:
-                logger.warning(f"[TRIGGER CHECK] Alert creation time limit ({ALERT_CREATE_TIME_LIMIT}s total) reached. Created {alerts_created} alerts, skipping remaining.")
-                break
-            
-            try:
-                watched_username = alert_data.get('user', 'Unknown')
-                parameter = alert_data.get('parameter', 'unknown')
-                consecutive_days = alert_data.get('consecutive_days', 0)
-                
-                # Normalize parameter name for consistent duplicate detection
-                normalized_param = parameter.replace(' ', '_').lower()
-                
-                # Build unique key for this alert
-                alert_key = f"{watched_username.lower()}_{normalized_param}"
-                
-                # PJ813 FIX: Build date range string for unique key - each date range should be a separate alert
-                date_range_str = ""
-                date_pattern = ""
-                if alert_data.get('dates') and len(alert_data['dates']) >= 2:
-                    try:
-                        from datetime import datetime as dt
-                        start_date = dt.fromisoformat(alert_data['dates'][0])
-                        end_date = dt.fromisoformat(alert_data['dates'][-1])
-                        date_range_str = f"_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}"
-                        start_str = start_date.strftime('%b %d')
-                        end_str = end_date.strftime('%b %d')
-                        date_pattern = f"({start_str} - {end_str})"
-                    except Exception as e:
-                        logger.warning(f"[PJ815 DEBUG] Could not parse dates: {e}")
-                
-                # PJ813 FIX: Include date range in alert key so different patterns create separate alerts
-                alert_key_with_dates = f"{alert_key}{date_range_str}"
-                
-                logger.info(f"[TRIGGER CHECK] Processing pattern: user={watched_username}, param={parameter}, days={consecutive_days}, dates={date_pattern}, key={alert_key_with_dates}, mode={ALERT_EMAIL_MODE}")
-                
-                # PJ6018: Check for existing alert using helper function that respects ALERT_EMAIL_MODE
-                existing_alert = None
-                if date_pattern:
-                    existing_alert = check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
-                    if existing_alert:
-                        logger.info(f"[PJ815 DEBUG] Found existing alert with date pattern '{date_pattern}': ID={existing_alert.id} (mode={ALERT_EMAIL_MODE})")
-                    else:
-                        logger.info(f"[PJ815 DEBUG] No existing alert with date pattern '{date_pattern}' - will create new (mode={ALERT_EMAIL_MODE})")
-                
-                # Fallback: if no date range available, use broader check
-                if not date_range_str:
-                    existing_alert = check_duplicate_alert_broad(watcher_id, watched_username, parameter)
-                
-                if existing_alert:
-                    logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_username}/{parameter} - alert already exists for this date range (ID: {existing_alert.id}, created: {existing_alert.created_at}, mode={ALERT_EMAIL_MODE})")
-                    alerts_skipped_duplicate += 1
-                    continue
-                
-                # Get the watched user's ID for source_user_id
-                watched_user = User.query.filter_by(username=watched_username).first()
-                source_user_id = watched_user.id if watched_user else None
-                
-                # Create alert content with nicely formatted dates
-                if alert_data.get('dates') and len(alert_data['dates']) >= 2:
-                    try:
-                        # Parse ISO dates and format nicely (e.g., "Dec 5 - Dec 7")
-                        from datetime import datetime as dt
-                        start_date = dt.fromisoformat(alert_data['dates'][0])
-                        end_date = dt.fromisoformat(alert_data['dates'][-1])
-                        start_str = start_date.strftime('%b %d')  # e.g., "Dec 05"
-                        end_str = end_date.strftime('%b %d')      # e.g., "Dec 07"
-                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
-                    except Exception as date_err:
-                        logger.warning(f"[TRIGGER CHECK] Could not parse dates: {date_err}")
-                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days (from {alert_data['dates'][0]} to {alert_data['dates'][-1]})"
-                elif alert_data.get('end_date'):
-                    # Old schema format - has end_date object
-                    try:
-                        end_date = alert_data['end_date']
-                        if hasattr(end_date, 'strftime'):
-                            end_str = end_date.strftime('%b %d')
-                            start_date = end_date - timedelta(days=consecutive_days - 1)
-                            start_str = start_date.strftime('%b %d')
-                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
-                        else:
-                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
-                    except Exception as date_err:
-                        logger.warning(f"[TRIGGER CHECK] Could not format end_date: {date_err}")
-                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
-                else:
-                    content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
-                
-                # Create the alert with email notification
-                logger.info(f"[TRIGGER CREATE] Creating alert for watcher {watcher_id}: {content[:100]}...")
-                
-                alert = create_alert_with_email(
-                    user_id=watcher_id,
-                    title=f"Wellness Alert for {watched_username}",
-                    content=content,
-                    alert_type='trigger',
-                    source_user_id=source_user_id,
-                    alert_category='trigger'
-                )
-                
-                if alert:
-                    alerts_created += 1
-                    logger.info(f"[TRIGGER CREATE] ✅ Created alert ID {alert.id} for {watched_username}/{parameter}")
-                    # PJ6015: Removed misleading email check - actual emails are sent via batch system below
-                        
-            except Exception as pattern_err:
-                logger.error(f"[TRIGGER CHECK] Error processing pattern: {pattern_err}")
-                logger.error(f"[TRIGGER CHECK] Pattern data: {alert_data}")
-                continue
-        
-        # Commit all created alerts
-        try:
-            db.session.commit()
-            logger.info(f"[TRIGGER CHECK] Committed {alerts_created} new alerts to database")
-        except Exception as commit_err:
-            logger.error(f"[TRIGGER CHECK] Error committing alerts: {commit_err}")
-            db.session.rollback()
-        
-        # PJ6017: REMOVED email sending from frontend polling path
-        # Emails should ONLY be sent from background scheduler when watched users save diary
-        # This prevents duplicate emails when watcher logs in and frontend polls for alerts
-        # The background scheduler (run_background_trigger_check_for_watcher) handles all email sending
-        
-        logger.info(f"[TRIGGER CHECK] Summary: patterns={len(alerts)}, created={alerts_created}, duplicates_skipped={alerts_skipped_duplicate}")
-        logger.info(f"[TRIGGER CHECK] Note: Emails sent via background scheduler only (not on login)")
-        logger.info(f"[TRIGGER CHECK] ========================================")
-
         return jsonify({
             'success': True,
             'alerts': alerts,
             'count': len(alerts),
-            'alerts_created': alerts_created,
-            'alerts_skipped_duplicate': alerts_skipped_duplicate
-            # PJ6017: Removed alerts_emailed - emails only sent from background scheduler
+            'alerts_created': 0,
+            'alerts_skipped_duplicate': 0
         })
 
     except Exception as e:
         logger.error(f"Check triggers error: {str(e)}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({
             'success': False,
