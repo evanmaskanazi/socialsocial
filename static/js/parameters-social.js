@@ -200,10 +200,15 @@ function saveParameterState(date) {
         }
     });
 
-    // Save notes
+    // Save notes + notes_privacy
     const notesField = document.querySelector('textarea');
     if (notesField) {
         state.notes = notesField.value;
+    }
+    const notesPrivacySel = document.getElementById('notesPrivacySelect');
+    if (notesPrivacySel) {
+        state.notes_privacy = notesPrivacySel.value;
+        window.selectedPrivacy.notes = notesPrivacySel.value;
     }
 
     // Store in session storage for persistence
@@ -242,6 +247,12 @@ function restoreParameterState(state) {
         if (notesField) {
             notesField.value = state.notes;
         }
+    }
+    // NP1: Restore notes_privacy
+    if (state.notes_privacy) {
+        const sel = document.getElementById('notesPrivacySelect');
+        if (sel) sel.value = state.notes_privacy;
+        window.selectedPrivacy.notes = state.notes_privacy;
     }
 }
 
@@ -294,6 +305,12 @@ async function loadMostRecentPrivacySettings() {
             }
         });
         
+        // NP1: Also load notes_privacy from most recent entry
+        const recentNotesPrivacy = recentResult.data.notes_privacy || 'private';
+        window.selectedPrivacy.notes = recentNotesPrivacy;
+        const recentNotesSel = document.getElementById('notesPrivacySelect');
+        if (recentNotesSel) recentNotesSel.value = recentNotesPrivacy;
+
         console.log('Privacy settings loaded from recent entry:', window.selectedPrivacy);
     } catch (error) {
         console.log('Could not load recent privacy settings:', error);
@@ -378,7 +395,8 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.mood',
         descriptionKey: 'parameters.mood_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['😢', '😁']  // EM1: low=sad, high=great
     },
     {
         id: 'energy',
@@ -386,7 +404,8 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.energy',
         descriptionKey: 'parameters.energy_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['🪫', '⚡']  // EM1: low=depleted, high=energized
     },
     {
         id: 'sleep_quality',
@@ -394,7 +413,8 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.sleep_quality',
         descriptionKey: 'parameters.sleep_quality_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['😣', '✨']  // EM1: low=poor sleep, high=great sleep
     },
     {
         id: 'physical_activity',
@@ -402,7 +422,8 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.physical_activity',
         descriptionKey: 'parameters.physical_activity_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['🛋️', '💪']  // EM1: low=sedentary, high=very active
     },
     {
         id: 'anxiety',
@@ -410,7 +431,9 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.anxiety',
         descriptionKey: 'parameters.anxiety_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['😌', '😰'],  // EM1: REVERSED — low(1)=calm/best, high(4)=overwhelming/worst
+        reversedScale: true
     }
 ];
 
@@ -835,7 +858,7 @@ function initializeParameters() {
 
     // Set default privacy to public for all parameters (matches backend default)
     // These will be overwritten when we auto-load today's saved data
-    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'notes'].forEach(param => {
         if (!window.selectedPrivacy[param]) {
             window.selectedPrivacy[param] = 'private';
         }
@@ -924,23 +947,44 @@ function initializeParameters() {
                 </div>
             </div>
             <div class="rating-buttons" id="${category.id}-buttons">
-                ${[1, 2, 3, 4].map(value => `
-                    <button class="rating-button"
+                ${[1, 2, 3, 4].map(value => {
+                    // EM1: Show emoji hint above the number for endpoint buttons (1 and 4)
+                    const hasEmojis = category.endEmojis && category.endEmojis.length === 2;
+                    let emojiHint = '';
+                    if (hasEmojis && value === 1) {
+                        emojiHint = `<span class="rating-endpoint-emoji" aria-hidden="true">${category.endEmojis[0]}</span>`;
+                    } else if (hasEmojis && value === 4) {
+                        emojiHint = `<span class="rating-endpoint-emoji" aria-hidden="true">${category.endEmojis[1]}</span>`;
+                    }
+                    return `
+                    <button class="rating-button${(value === 1 || value === 4) && hasEmojis ? ' has-endpoint-emoji' : ''}"
                             data-category="${category.id}"
                             data-value="${value}"
                             onclick="selectRating('${category.id}', ${value})">
-                        ${value}
-                    </button>
-                `).join('')}
+                        ${emojiHint}<span class="rating-number">${value}</span>
+                    </button>`;
+                }).join('')}
             </div>
         </div>
     `;
 }).join('')}
                 </div>
 
-                <!-- Notes Section -->
+                <!-- Notes Section — NP1: includes privacy dropdown matching parameter cards -->
                 <div class="notes-section">
-                    <label data-i18n="parameters.notes">Notes</label>
+                    <div class="notes-header">
+                        <label data-i18n="parameters.notes">Notes</label>
+                        <div class="privacy-selector">
+                            <select class="privacy-select" id="notesPrivacySelect"
+                                    data-category="notes"
+                                    onchange="updatePrivacy('notes', this.value)">
+                                <option value="private"  data-i18n="privacy.private">Private</option>
+                                <option value="class_a"  data-i18n="privacy.class_a">Family</option>
+                                <option value="class_b"  data-i18n="privacy.class_b">Close Friends</option>
+                                <option value="public"   data-i18n="privacy.public">Public</option>
+                            </select>
+                        </div>
+                    </div>
                     <textarea id="notesInput"
                               data-i18n-placeholder="parameters.notes_placeholder"
                               placeholder="Additional thoughts for today..."></textarea>
@@ -951,7 +995,9 @@ function initializeParameters() {
                     <button class="btn btn-primary" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
                     <button class="btn btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
                     <button class="btn btn-clear" onclick="clearParameters()" data-i18n="parameters.clear">Clear Form</button>
+                    <!-- HOME BTN: Commented out - diary nav handles return home
                     <button class="btn btn-menu" onclick="goToHome()" data-i18n="parameters.home">Home</button>
+                    -->
                 </div>
             </div>
         </div>
@@ -1001,6 +1047,11 @@ function initializeParameters() {
                                 selector.value = privacyValue;
                             }
                         });
+                        // NP1: Load notes privacy
+                        const autoNotesPrivacy = result.data.notes_privacy || 'private';
+                        window.selectedPrivacy.notes = autoNotesPrivacy;
+                        const autoNotesSel = document.getElementById('notesPrivacySelect');
+                        if (autoNotesSel) autoNotesSel.value = autoNotesPrivacy;
                         
                         // Also load ratings if they exist
                         if (result.data.parameters) {
@@ -1596,6 +1647,32 @@ function addParameterStyles() {
             cursor: pointer;
             transition: all 0.3s ease;
             color: #333;
+            /* EM1: Stack emoji + number vertically */
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            padding: 4px 2px;
+            box-sizing: border-box;
+        }
+
+        /* EM1: Endpoint buttons with emoji are taller */
+        .rating-button.has-endpoint-emoji {
+            height: 72px;
+        }
+
+        .rating-endpoint-emoji {
+            font-size: 0.9em;
+            line-height: 1;
+            display: block;
+            /* Works equally for RTL and LTR since it's stacked vertically */
+        }
+
+        .rating-number {
+            font-size: 1em;
+            line-height: 1;
+            font-weight: 600;
         }
 
         .rating-button:hover {
@@ -1615,11 +1692,25 @@ function addParameterStyles() {
             margin: 30px 0;
         }
 
+        /* NP1: Notes header with privacy selector */
+        .notes-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        [dir="rtl"] .notes-header {
+            flex-direction: row-reverse;
+        }
+
         .notes-section label {
             display: block;
             font-weight: 600;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 0;
             font-size: 1.1em;
         }
 
@@ -1777,6 +1868,12 @@ function addParameterStyles() {
                 width: 50px;
                 height: 50px;
                 font-size: 1.1em;
+            }
+            .rating-button.has-endpoint-emoji {
+                height: 62px;
+            }
+            .rating-endpoint-emoji {
+                font-size: 0.8em;
             }
             .action-buttons {
                 flex-direction: column;
@@ -2486,6 +2583,7 @@ async function saveParameters() {
         sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
         physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
         anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
+        notes_privacy: window.selectedPrivacy.notes || 'private',  // NP1
         notes: notes
     };
 
@@ -2597,6 +2695,11 @@ async function loadParameters(showMsg = true) {
                         selector.value = privacyValue;
                     }
                 });
+                // NP1: Load notes privacy
+                const notesPrivacyValue = result.data.notes_privacy || 'private';
+                window.selectedPrivacy.notes = notesPrivacyValue;
+                const notesPrivacySel = document.getElementById('notesPrivacySelect');
+                if (notesPrivacySel) notesPrivacySel.value = notesPrivacyValue;
             }
             // else: OPT-PRIVACY: Keep current window.selectedPrivacy and dropdown values unchanged
 
@@ -2615,6 +2718,7 @@ async function loadParameters(showMsg = true) {
     sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
     physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
     anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
+    notes_privacy: window.selectedPrivacy.notes || 'private',  // NP1
     notes: result.data.notes || ''
 };
 sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
@@ -2674,6 +2778,9 @@ function clearParameters() {
     if (notesInput) {
         notesInput.value = '';
     }
+
+    // NP1: Keep notes privacy on clear (same as other parameters)
+    // Don't reset notes_privacy - user's preference should persist
 
     window.showMessage(pt('parameters.cleared'), 'info');
 }
