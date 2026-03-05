@@ -10391,6 +10391,7 @@ def save_parameters():
             params.notes = data['notes']
 
         # NP1: Save notes_privacy via raw SQL (column not in ORM)
+        # Always attempt the save - don't rely on startup flag which may be stale
         _np_priv_to_save = None
         if 'notes_privacy' in data:
             notes_priv = data['notes_privacy']
@@ -10401,14 +10402,16 @@ def save_parameters():
         db.session.add(params)
         db.session.commit()
 
-        if _np_priv_to_save and app.config.get('NOTES_PRIVACY_AVAILABLE'):
+        if _np_priv_to_save:
             try:
                 db.session.execute(
                     text("UPDATE saved_parameters SET notes_privacy = :np WHERE id = :pid"),
                     {'np': _np_priv_to_save, 'pid': params.id}
                 )
                 db.session.commit()
-            except Exception:
+                logger.info(f"[NP1] Saved notes_privacy={_np_priv_to_save} for params id={params.id}")
+            except Exception as np_err:
+                logger.warning(f"[NP1] Could not save notes_privacy: {np_err}")
                 try:
                     db.session.rollback()
                 except Exception:
