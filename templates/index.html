@@ -16975,12 +16975,15 @@ async function loadHomeSummary() {
         const params = data.latest_params || {};
         const paramMap = { 'summaryMood': 'mood', 'summaryEnergy': 'energy', 'summarySleep': 'sleep_quality', 'summaryExercise': 'physical_activity', 'summaryStress': 'anxiety' };
         const emojis = { 4: '😊', 3: '🙂', 2: '😐', 1: '😔' };
+        // Anxiety scale is reversed: 1=calm(best), 4=overwhelming(worst)
+        const anxietyEmojis = { 1: '😊', 2: '🙂', 3: '😐', 4: '😔' };
 
         for (const [elemId, paramKey] of Object.entries(paramMap)) {
             const elem = document.getElementById(elemId);
             if (elem) {
                 const val = params[paramKey];
-                elem.textContent = val ? (emojis[val] || val + '/4') : '—';
+                const emojiMap = paramKey === 'anxiety' ? anxietyEmojis : emojis;
+                elem.textContent = val ? (emojiMap[val] || val + '/4') : '—';
                 elem.style.color = val ? 'var(--primary)' : 'var(--gray)';
             }
         }
