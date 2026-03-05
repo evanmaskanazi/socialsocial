@@ -2,6 +2,20 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+appFormat5 Fixes:
+- FIX: Removed dangling @app.route('/api/parameters/should-redirect-to-diary') decorator that was
+  wrongly applied to get_user_summary(), corrupting the /api/user/summary endpoint
+- FIX: UniqueConstraint on ParameterTrigger now includes 'parameter_name' so multiple
+  triggers per user pair (one per parameter) are allowed without IntegrityError
+
+appFormat6 Fixes:
+- FIX: NP1 notes_privacy migration no longer silently fails during rolling deploys.
+  Previously used SET lock_timeout = '3s' and caught the exception, leaving the model
+  out of sync with the database (column missing but SQLAlchemy querying it on every request).
+  Now retries without timeout if the fast attempt fails, ensuring the column exists before
+  the app serves requests. Failure is logged as CRITICAL instead of a warning.
+- FIX: CS7 diary_reminder_last_sent migration uses same retry pattern.
+
 
 10Link Changes:
 - Added /api/users/<user_id>/progress endpoint for viewing another user's progress with privacy checks
@@ -2918,30 +2932,53 @@ def auto_migrate_database():
                             conn.commit()
                             logger.info("✓ Added diary_reminder_last_sent column")
                         except Exception as cs7_err:
-                            logger.warning(f"diary_reminder_last_sent migration skipped (will retry): {cs7_err}")
+                            logger.warning(f"diary_reminder_last_sent fast migration failed ({cs7_err}), retrying without timeout...")
                             try:
                                 conn.rollback()
                             except Exception:
                                 pass
+                            try:
+                                conn.execute(text("SET lock_timeout = '0'"))
+                                conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
+                                conn.commit()
+                                logger.info("✓ Added diary_reminder_last_sent column (retry succeeded)")
+                            except Exception as cs7_retry_err:
+                                logger.warning(f"diary_reminder_last_sent retry also failed: {cs7_retry_err}")
+                                try:
+                                    conn.rollback()
+                                except Exception:
+                                    pass
 
                 # NP1: Add notes_privacy column to saved_parameters table
-                # LOCK_TIMEOUT: Use 3s lock timeout so rolling deploys never stall
-                # If the old instance holds a lock on saved_parameters, we fail fast
-                # and the column gets added on the next startup after the old instance exits.
+                # LOCK_TIMEOUT: Try 3s lock timeout first for fast rolling deploys.
+                # If the old instance holds a lock, retry without timeout to ensure
+                # the column exists before the app starts serving requests.
                 try:
                     if 'saved_parameters' in inspector.get_table_names():
                         sp_columns = [col['name'] for col in inspector.get_columns('saved_parameters')]
                         if 'notes_privacy' not in sp_columns:
                             logger.info("Adding notes_privacy column to saved_parameters table...")
-                            conn.execute(text("SET lock_timeout = '3s'"))
-                            conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
-                            conn.execute(text("SET lock_timeout = '0'"))  # Reset to no timeout
-                            conn.commit()
-                            logger.info("✓ Added notes_privacy column to saved_parameters")
+                            try:
+                                conn.execute(text("SET lock_timeout = '3s'"))
+                                conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
+                                conn.execute(text("SET lock_timeout = '0'"))
+                                conn.commit()
+                                logger.info("✓ Added notes_privacy column to saved_parameters")
+                            except Exception as np1_fast_err:
+                                logger.warning(f"notes_privacy fast migration failed ({np1_fast_err}), retrying without timeout...")
+                                try:
+                                    conn.rollback()
+                                except Exception:
+                                    pass
+                                conn.execute(text("SET lock_timeout = '0'"))
+                                conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
+                                conn.commit()
+                                logger.info("✓ Added notes_privacy column to saved_parameters (retry succeeded)")
                         else:
                             logger.info("✓ notes_privacy column already exists in saved_parameters")
                 except Exception as np1_err:
-                    logger.warning(f"notes_privacy migration skipped (will retry on next startup): {np1_err}")
+                    logger.error(f"CRITICAL: notes_privacy migration failed: {np1_err}")
+                    logger.error("The app may encounter errors on parameters endpoints until this column is added.")
                     try:
                         conn.rollback()
                     except Exception:
@@ -3370,7 +3407,7 @@ class ParameterTrigger(db.Model):
     watcher = db.relationship('User', foreign_keys=[watcher_id], backref='watching_triggers')
     watched = db.relationship('User', foreign_keys=[watched_id], backref='watched_by_triggers')
 
-    __table_args__ = (db.UniqueConstraint('watcher_id', 'watched_id', name='unique_trigger'),)
+    __table_args__ = (db.UniqueConstraint('watcher_id', 'watched_id', 'parameter_name', name='unique_trigger'),)
 
 
 class Profile(db.Model):
@@ -11677,9 +11714,6 @@ def get_today_status():
     except Exception as e:
         logger.error(f"Today status error: {str(e)}")
         return jsonify({'has_entry_today': False, 'has_complete_entry_today': False, 'error': str(e)})
-
-
-@app.route('/api/parameters/should-redirect-to-diary')
 
 
 # V2: User summary endpoint for home screen dashboard card
