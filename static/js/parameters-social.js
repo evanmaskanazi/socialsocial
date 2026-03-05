@@ -3649,14 +3649,12 @@ if (!document.getElementById('parameterAlertsStyles')) {
 // loadAlerts() fetches the persisted alerts from /api/alerts.
 // PJ812: Increased interval to 5 minutes (300000ms) to prevent excessive API calls.
 // PJ812: Now checks if user is logged in before making API call to avoid 401 errors.
-// PERF FIX: Triggers are already processed in background when users save diary entries.
-// The initial call is delayed 60s so the home screen / diary can load without being blocked.
+// PJ812: Triggers are already processed when users save diary entries.
+// This poll is just a backup check. Delayed 60s so home screen loads first.
 setInterval(checkParameterAlerts, 300000);  // 5 min interval
 
-// PERF FIX: Delay first check-triggers call to 60s (was 2s) so home screen APIs can load first.
-// Trigger processing on save already handles real-time alerts; this is just a catch-up check.
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('[PJ812] parameters-social.js loaded - will check triggers in 60 seconds (delayed for page load)');
+    console.log('[PJ812] parameters-social.js loaded - trigger check delayed 60s for page load');
     setTimeout(checkParameterAlerts, 60000);
 });
 
