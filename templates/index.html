@@ -6858,25 +6858,22 @@ async function loadUserCity() {
                     return;
                 }
 
-                // FIX #5: Check if user needs to fill diary before showing dashboard
-                const needsDiary = await checkAndRedirectToDiary();
-                if (!needsDiary) {
-                    showDashboard();
-                    // Load notification settings after login
-                    console.log('[LOGIN DEBUG] Login successful, calling loadNotificationSettings');
-                    loadNotificationSettings();
+                // FIX: Always go to home after login (diary redirect disabled)
+                showDashboard();
+                // Load notification settings after login
+                console.log('[LOGIN DEBUG] Login successful, calling loadNotificationSettings');
+                loadNotificationSettings();
                     
-                    // PJ812 FIX: Check trigger alerts after login (with delay to ensure session is ready)
-                    console.log('[PJ812] Login successful, will check trigger alerts in 3 seconds');
-                    setTimeout(() => {
-                        if (typeof checkParameterAlerts === 'function') {
-                            console.log('[PJ812] Calling checkParameterAlerts after login');
-                            checkParameterAlerts();
-                        } else {
-                            console.warn('[PJ812] checkParameterAlerts not available');
-                        }
-                    }, 3000);
-                }
+                // PJ812 FIX: Check trigger alerts after login (with delay to ensure session is ready)
+                console.log('[PJ812] Login successful, will check trigger alerts in 3 seconds');
+                setTimeout(() => {
+                    if (typeof checkParameterAlerts === 'function') {
+                        console.log('[PJ812] Calling checkParameterAlerts after login');
+                        checkParameterAlerts();
+                    } else {
+                        console.warn('[PJ812] checkParameterAlerts not available');
+                    }
+                }, 3000);
             } else {
                 // Show translated login error message
                 const lang = localStorage.getItem('selectedLanguage') || 'en';
@@ -7012,12 +7009,9 @@ async function loadUserCity() {
                     }
                 }
 
-                // Check if user needs to fill diary before showing dashboard
-                const needsDiary = await checkAndRedirectToDiary();
-                if (!needsDiary) {
-                    showDashboard();
-                    loadNotificationSettings();
-                }
+                // FIX: Always go to home after signup (diary redirect disabled)
+                showDashboard();
+                loadNotificationSettings();
             } else {
                 showNotification(_t('auth.registration_failed', 'Registration failed. Please try again.'), 'error');
             }
@@ -15873,10 +15867,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
     
     // Check if user needs to fill diary - runs ONCE per session after login
-    // The server-side flag ensures this only triggers once per login session
-    setTimeout(() => {
-        checkAndRedirectToDiary();
-    }, 500);
+    // FIX: Diary redirect disabled - always show home
+    // setTimeout(() => {
+    //     checkAndRedirectToDiary();
+    // }, 500);
 });
 
 // PL203: Refresh progress chart when language changes to update insights text
@@ -17124,7 +17118,7 @@ async function loadConnectionStatusList() {
                     if (diffDays === 0) checkinText = tt('home.checkin_today', 'Checked in today');
                     else if (diffDays === 1) checkinText = tt('home.checkin_yesterday', 'Checked in yesterday');
                     else if (diffDays < 7) checkinText = diffDays + ' ' + tt('home.days_ago', 'days ago');
-                    else if (diffDays < 30) checkinText = Math.floor(diffDays/7) + tt('home.weeks_ago', 'w ago');
+                    else if (diffDays < 30) checkinText = Math.floor(diffDays/7) + ' ' + tt('home.weeks_ago', 'w ago');
                     else checkinText = checkinDate.toLocaleDateString(undefined, {month:'short', day:'numeric'});
                 } catch(e) {}
             }
