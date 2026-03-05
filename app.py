@@ -35,6 +35,20 @@ T15a Fixes:
   ensure_database_schema, fix_all_schema_issues, create_parameters_table.
   Pattern matches existing auto_migrate_database() which already had this protection.
 
+T15b Fixes:
+- FIX: Trigger and job-queue schedulers didn't call db.session.remove() in a finally
+  block, unlike the diary scheduler which already did. Without this, connections from
+  background threads return to the pool in a dirty state (uncommitted transaction,
+  stale ORM identity map). Added finally blocks with db.session.remove() to both the
+  trigger scheduler and job-queue scheduler, matching the diary scheduler pattern.
+  Also wrapped the existing bare db.session.rollback() calls in try/except for safety.
+- FIX: auto_migrate_database() CS7 and NP1 retry paths both set lock_timeout = '0'
+  (unlimited) and never restored the function-level '5s' timeout. After either retry
+  path ran, every subsequent ALTER TABLE in the same connection could block forever
+  during a rolling deploy. Both the happy-path reset and retry-path reset now restore
+  lock_timeout to '5s' instead of '0', keeping the connection protected for all
+  remaining migrations.
+
 appFormat8 Fix:
 - FIX: Removed module-level auto_migrate_database() call (was at line ~3131).
   db.create_all() inside it opens its own connection and blocks on table locks BEFORE
@@ -3002,7 +3016,7 @@ def auto_migrate_database():
                             logger.info("Adding diary_reminder_last_sent column to notification_settings table...")
                             conn.execute(text("SET lock_timeout = '3s'"))
                             conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
-                            conn.execute(text("SET lock_timeout = '0'"))
+                            conn.execute(text("SET lock_timeout = '5s'"))  # T15b: Restore function-level timeout
                             conn.commit()
                             logger.info("✓ Added diary_reminder_last_sent column")
                         except Exception as cs7_err:
@@ -3016,10 +3030,16 @@ def auto_migrate_database():
                                 conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
                                 conn.commit()
                                 logger.info("✓ Added diary_reminder_last_sent column (retry succeeded)")
+                                conn.execute(text("SET lock_timeout = '5s'"))  # T15b: Restore function-level timeout
                             except Exception as cs7_retry_err:
                                 logger.warning(f"diary_reminder_last_sent retry also failed: {cs7_retry_err}")
                                 try:
                                     conn.rollback()
+                                except Exception:
+                                    pass
+                                # T15b: Restore function-level timeout after failed retry
+                                try:
+                                    conn.execute(text("SET lock_timeout = '5s'"))
                                 except Exception:
                                     pass
 
@@ -3035,7 +3055,7 @@ def auto_migrate_database():
                             try:
                                 conn.execute(text("SET lock_timeout = '3s'"))
                                 conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
-                                conn.execute(text("SET lock_timeout = '0'"))
+                                conn.execute(text("SET lock_timeout = '5s'"))  # T15b: Restore function-level timeout
                                 conn.commit()
                                 logger.info("✓ Added notes_privacy column to saved_parameters")
                             except Exception as np1_fast_err:
@@ -3048,12 +3068,18 @@ def auto_migrate_database():
                                 conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
                                 conn.commit()
                                 logger.info("✓ Added notes_privacy column to saved_parameters (retry succeeded)")
+                                conn.execute(text("SET lock_timeout = '5s'"))  # T15b: Restore function-level timeout
                         else:
                             logger.info("✓ notes_privacy column already exists in saved_parameters")
                 except Exception as np1_err:
                     logger.error(f"CRITICAL: notes_privacy migration failed: {np1_err}")
                     try:
                         conn.rollback()
+                    except Exception:
+                        pass
+                    # T15b: Restore function-level timeout after failed migration
+                    try:
+                        conn.execute(text("SET lock_timeout = '5s'"))
                     except Exception:
                         pass
 
@@ -16499,7 +16525,16 @@ def run_trigger_scheduler():
                 except Exception as inner_error:
                     logger.error(f"[TRIGGER SCHEDULER] Processing error: {str(inner_error)}")
                     logger.error(f"[TRIGGER SCHEDULER] Traceback: {traceback.format_exc()}")
-                    db.session.rollback()
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                finally:
+                    # T15b: Always release the DB session so connections return to the pool
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
             
             # Sleep for 5 minutes between checks
             time.sleep(300)
@@ -16573,7 +16608,16 @@ def run_job_queue_scheduler():
                     process_background_jobs(batch_size=10)
                 except Exception as inner_error:
                     logger.error(f"[JOB QUEUE SCHEDULER] Processing error: {str(inner_error)}")
-                    db.session.rollback()
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                finally:
+                    # T15b: Always release the DB session so connections return to the pool
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
             
             # Sleep for 10 seconds between job processing cycles
             time.sleep(10)
