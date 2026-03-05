@@ -623,13 +623,27 @@ except ImportError as e:
     print(f"WARNING: reportlab not available - PDF generation disabled: {e}")
 
 # WeasyPrint for better Unicode/RTL support (preferred method)
-try:
-    from weasyprint import HTML, CSS
-    WEASYPRINT_AVAILABLE = True
-    print("INFO: WeasyPrint available - using for PDF generation with full Unicode support")
-except ImportError as e:
-    WEASYPRINT_AVAILABLE = False
-    print(f"WARNING: weasyprint not available - falling back to reportlab: {e}")
+# LAZY IMPORT: WeasyPrint is heavy (~200MB RSS) and causes OOM worker kills on Render free tier
+# when imported at module level.  Import is deferred to first PDF generation request.
+WEASYPRINT_AVAILABLE = None  # None = not yet checked; True/False after first check
+_weasyprint_HTML = None
+_weasyprint_CSS = None
+
+def _ensure_weasyprint():
+    """Lazy-load WeasyPrint on first use to avoid OOM during worker boot."""
+    global WEASYPRINT_AVAILABLE, _weasyprint_HTML, _weasyprint_CSS
+    if WEASYPRINT_AVAILABLE is not None:
+        return WEASYPRINT_AVAILABLE
+    try:
+        from weasyprint import HTML as _HTML, CSS as _CSS
+        _weasyprint_HTML = _HTML
+        _weasyprint_CSS = _CSS
+        WEASYPRINT_AVAILABLE = True
+        print("INFO: WeasyPrint available - using for PDF generation with full Unicode support")
+    except ImportError as e:
+        WEASYPRINT_AVAILABLE = False
+        print(f"WARNING: weasyprint not available - falling back to reportlab: {e}")
+    return WEASYPRINT_AVAILABLE
 
 try:
     from openpyxl import Workbook
@@ -2998,11 +3012,20 @@ def auto_migrate_database():
                             logger.info("✓ notes_privacy column already exists in saved_parameters")
                 except Exception as np1_err:
                     logger.error(f"CRITICAL: notes_privacy migration failed: {np1_err}")
-                    logger.error("The app may encounter errors on parameters endpoints until this column is added.")
+                    logger.error("The app will continue WITHOUT notes_privacy - all notes treated as private.")
                     try:
                         conn.rollback()
                     except Exception:
                         pass
+
+                # NP1-SAFE: After migration attempt, re-check if column actually exists now.
+                # Set global flag so the app knows whether to use raw SQL for notes_privacy.
+                try:
+                    _np_cols = [c['name'] for c in inspect(engine).get_columns('saved_parameters')]
+                    app.config['NOTES_PRIVACY_AVAILABLE'] = 'notes_privacy' in _np_cols
+                    logger.info(f"[NP1] notes_privacy column available: {app.config['NOTES_PRIVACY_AVAILABLE']}")
+                except Exception:
+                    app.config['NOTES_PRIVACY_AVAILABLE'] = False
 
                 # Add follow_note column to follows table
                 if 'follows' in inspector.get_table_names():
@@ -3532,7 +3555,9 @@ class SavedParameters(db.Model):
     physical_activity_privacy = db.Column(db.String(20), default='private')
     anxiety_privacy = db.Column(db.String(20), default='private')
     notes = db.Column(db.Text)
-    notes_privacy = db.Column(db.String(20), default='private')  # NP1: Notes privacy setting
+    # NP1: notes_privacy is added dynamically at startup ONLY if the DB column exists.
+    # This prevents UndefinedColumn errors when the migration hasn't run yet.
+    # Access via getattr(obj, 'notes_privacy', 'private') everywhere.
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     # REMOVED: privacy = db.Column(db.JSON)  # This line should be removed/commented
@@ -10360,15 +10385,31 @@ def save_parameters():
         if 'notes' in data:
             params.notes = data['notes']
 
-        # NP1: Save notes_privacy
+        # NP1: Save notes_privacy via raw SQL (column not in ORM model to avoid UndefinedColumn)
+        _np_priv_to_save = None
         if 'notes_privacy' in data:
             notes_priv = data['notes_privacy']
             if notes_priv in ['public', 'class_a', 'class_b', 'private']:
-                params.notes_privacy = notes_priv
+                _np_priv_to_save = notes_priv
 
         params.updated_at = datetime.utcnow()
         db.session.add(params)
         db.session.commit()
+
+        # NP1: Persist notes_privacy via raw SQL after ORM commit (if column exists)
+        if _np_priv_to_save and app.config.get('NOTES_PRIVACY_AVAILABLE'):
+            try:
+                db.session.execute(
+                    text("UPDATE saved_parameters SET notes_privacy = :np WHERE id = :pid"),
+                    {'np': _np_priv_to_save, 'pid': params.id}
+                )
+                db.session.commit()
+            except Exception as np_err:
+                logger.warning(f"[NP1] Could not save notes_privacy: {np_err}")
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
         
         # PJ809: Log parameter values before trigger check
         logger.info(f"[SAVE PARAMS] Saved: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}")
@@ -11629,6 +11670,7 @@ def get_parameter_dates():
         })
 
     except Exception as e:
+        db.session.rollback()
         logger.error(f"Get parameter dates error: {str(e)}")
         return jsonify({
             'success': False,
@@ -11819,6 +11861,7 @@ def get_user_summary():
         }), 200
         
     except Exception as e:
+        db.session.rollback()
         logger.error(f"User summary error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
@@ -11926,6 +11969,7 @@ def should_redirect_to_diary():
         })
         
     except Exception as e:
+        db.session.rollback()
         logger.error(f"Should redirect check error: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
@@ -12055,6 +12099,7 @@ def get_progress():
         })
         
     except Exception as e:
+        db.session.rollback()
         logger.error(f"Progress data error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
@@ -13036,7 +13081,7 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
     
     # Generate PDF with WeasyPrint
     output = io.BytesIO()
-    HTML(string=html_content).write_pdf(output)
+    _weasyprint_HTML(string=html_content).write_pdf(output)
     output.seek(0)
     
     return output
@@ -13047,7 +13092,8 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
 def generate_pdf_report():
     """Generate PDF report for past 7 days - uses WeasyPrint if available, falls back to reportlab"""
     
-    # Check if any PDF library is available
+    # Check if any PDF library is available (lazy-load WeasyPrint on first use)
+    _ensure_weasyprint()
     if not WEASYPRINT_AVAILABLE and not REPORTLAB_AVAILABLE:
         logger.error("PDF generation failed: no PDF library available")
         return jsonify({'error': 'PDF generation not available - install weasyprint or reportlab'}), 500
@@ -15076,6 +15122,7 @@ def get_friends_updates():
         return jsonify({'updates': updates}), 200
     
     except Exception as e:
+        db.session.rollback()
         logger.error(f"Friends updates error: {str(e)}")
         return jsonify({'error': 'Failed to load friends updates'}), 500
 
