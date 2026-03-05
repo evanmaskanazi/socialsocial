@@ -948,21 +948,22 @@ function initializeParameters() {
             </div>
             <div class="rating-buttons" id="${category.id}-buttons">
                 ${[1, 2, 3, 4].map(value => {
-                    // EM1: Show emoji hint above the number for endpoint buttons (1 and 4)
+                    // EM1: Show emoji hint to the SIDE of endpoint buttons (1 and 4)
                     const hasEmojis = category.endEmojis && category.endEmojis.length === 2;
-                    let emojiHint = '';
+                    let emojiBeforeBtn = '';
+                    let emojiAfterBtn = '';
                     if (hasEmojis && value === 1) {
-                        emojiHint = `<span class="rating-endpoint-emoji" aria-hidden="true">${category.endEmojis[0]}</span>`;
+                        emojiBeforeBtn = `<span class="rating-endpoint-emoji emoji-before" aria-hidden="true">${category.endEmojis[0]}</span>`;
                     } else if (hasEmojis && value === 4) {
-                        emojiHint = `<span class="rating-endpoint-emoji" aria-hidden="true">${category.endEmojis[1]}</span>`;
+                        emojiAfterBtn = `<span class="rating-endpoint-emoji emoji-after" aria-hidden="true">${category.endEmojis[1]}</span>`;
                     }
                     return `
-                    <button class="rating-button${(value === 1 || value === 4) && hasEmojis ? ' has-endpoint-emoji' : ''}"
+                    ${emojiBeforeBtn}<button class="rating-button"
                             data-category="${category.id}"
                             data-value="${value}"
                             onclick="selectRating('${category.id}', ${value})">
-                        ${emojiHint}<span class="rating-number">${value}</span>
-                    </button>`;
+                        <span class="rating-number">${value}</span>
+                    </button>${emojiAfterBtn}`;
                 }).join('')}
             </div>
         </div>
@@ -993,7 +994,9 @@ function initializeParameters() {
                 <!-- Action Buttons -->
                 <div class="action-buttons">
                     <button class="btn btn-primary" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
+                    <!-- LOAD BTN: Commented out per UX review
                     <button class="btn btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
+                    -->
                     <button class="btn btn-clear" onclick="clearParameters()" data-i18n="parameters.clear">Clear Form</button>
                     <!-- HOME BTN: Commented out - diary nav handles return home
                     <button class="btn btn-menu" onclick="goToHome()" data-i18n="parameters.home">Home</button>
@@ -1632,8 +1635,9 @@ function addParameterStyles() {
 
         .rating-buttons {
             display: flex;
-            gap: 10px;
+            gap: 6px;
             justify-content: center;
+            align-items: center;
         }
 
         .rating-button {
@@ -1647,26 +1651,27 @@ function addParameterStyles() {
             cursor: pointer;
             transition: all 0.3s ease;
             color: #333;
-            /* EM1: Stack emoji + number vertically */
             display: inline-flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 0;
             padding: 4px 2px;
             box-sizing: border-box;
         }
 
-        /* EM1: Endpoint buttons with emoji are taller */
-        .rating-button.has-endpoint-emoji {
-            height: 72px;
-        }
-
+        /* EM1: Emojis positioned to the SIDE of endpoint buttons */
         .rating-endpoint-emoji {
-            font-size: 0.9em;
+            font-size: 1.3em;
             line-height: 1;
-            display: block;
-            /* Works equally for RTL and LTR since it's stacked vertically */
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            /* Works for RTL/LTR: flexbox auto-mirrors in RTL */
+        }
+        .rating-endpoint-emoji.emoji-before {
+            margin-inline-end: 2px;
+        }
+        .rating-endpoint-emoji.emoji-after {
+            margin-inline-start: 2px;
         }
 
         .rating-number {
@@ -1869,11 +1874,8 @@ function addParameterStyles() {
                 height: 50px;
                 font-size: 1.1em;
             }
-            .rating-button.has-endpoint-emoji {
-                height: 62px;
-            }
             .rating-endpoint-emoji {
-                font-size: 0.8em;
+                font-size: 1.1em;
             }
             .action-buttons {
                 flex-direction: column;
