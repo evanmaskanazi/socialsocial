@@ -3,7 +3,6 @@
 Complete app.py for Social Social Platform - V4 10Link
 
 
-
 10Link Changes:
 - Added /api/users/<user_id>/progress endpoint for viewing another user's progress with privacy checks
 - Circle-based privacy applied to progress data (mood, energy, sleep, activity, anxiety)
@@ -2911,22 +2910,38 @@ def auto_migrate_database():
                         logger.info("✓ Added diary_reminder_timezone column to notification_settings table")
                     # CS7: Add deduplication column for diary reminders
                     if 'diary_reminder_last_sent' not in columns:
-                        logger.info("Adding diary_reminder_last_sent column to notification_settings table...")
-                        conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
-                        conn.commit()
-                        logger.info("✓ Added diary_reminder_last_sent column")
+                        try:
+                            logger.info("Adding diary_reminder_last_sent column to notification_settings table...")
+                            conn.execute(text("SET lock_timeout = '3s'"))
+                            conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
+                            conn.execute(text("SET lock_timeout = '0'"))
+                            conn.commit()
+                            logger.info("✓ Added diary_reminder_last_sent column")
+                        except Exception as cs7_err:
+                            logger.warning(f"diary_reminder_last_sent migration skipped (will retry): {cs7_err}")
+                            try:
+                                conn.rollback()
+                            except Exception:
+                                pass
 
                 # NP1: Add notes_privacy column to saved_parameters table
+                # LOCK_TIMEOUT: Use 3s lock timeout so rolling deploys never stall
+                # If the old instance holds a lock on saved_parameters, we fail fast
+                # and the column gets added on the next startup after the old instance exits.
                 try:
                     if 'saved_parameters' in inspector.get_table_names():
                         sp_columns = [col['name'] for col in inspector.get_columns('saved_parameters')]
                         if 'notes_privacy' not in sp_columns:
                             logger.info("Adding notes_privacy column to saved_parameters table...")
+                            conn.execute(text("SET lock_timeout = '3s'"))
                             conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
+                            conn.execute(text("SET lock_timeout = '0'"))  # Reset to no timeout
                             conn.commit()
                             logger.info("✓ Added notes_privacy column to saved_parameters")
+                        else:
+                            logger.info("✓ notes_privacy column already exists in saved_parameters")
                 except Exception as np1_err:
-                    logger.warning(f"notes_privacy migration skipped (may already exist): {np1_err}")
+                    logger.warning(f"notes_privacy migration skipped (will retry on next startup): {np1_err}")
                     try:
                         conn.rollback()
                     except Exception:
