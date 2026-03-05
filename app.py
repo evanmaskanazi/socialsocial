@@ -2,6 +2,31 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+appFormat5 Fixes:
+- FIX: Removed dangling @app.route('/api/parameters/should-redirect-to-diary') decorator that was
+  wrongly applied to get_user_summary(), corrupting the /api/user/summary endpoint
+- FIX: UniqueConstraint on ParameterTrigger now includes 'parameter_name' so multiple
+  triggers per user pair (one per parameter) are allowed without IntegrityError
+
+appFormat6 Fixes:
+- FIX: NP1 notes_privacy migration no longer silently fails during rolling deploys.
+  Previously used SET lock_timeout = '3s' and caught the exception, leaving the model
+  out of sync with the database (column missing but SQLAlchemy querying it on every request).
+  Now retries without timeout if the fast attempt fails, ensuring the column exists before
+  the app serves requests. Failure is logged as CRITICAL instead of a warning.
+- FIX: CS7 diary_reminder_last_sent migration uses same retry pattern.
+- FIX: auto_migrate_database() now sets SET lock_timeout = '5s' at the start of its
+  connection. Previously, ALTER TABLE statements blocked forever during rolling deploys
+  because the old instance held table locks while Render waited for the new instance to
+  open a port — causing a deadlock where neither instance could proceed.
+
+appFormat8 Fix:
+- FIX: Removed module-level auto_migrate_database() call (was at line ~3131).
+  db.create_all() inside it opens its own connection and blocks on table locks BEFORE
+  the SET lock_timeout on the separate connection could help. This blocked gunicorn
+  from ever opening a port during rolling deploys. The same migrations already run via
+  _background_init() -> init_database() in a background thread after gunicorn starts.
+
 
 10Link Changes:
 - Added /api/users/<user_id>/progress endpoint for viewing another user's progress with privacy checks
@@ -1640,10 +1665,10 @@ def get_daily_diary_reminder_translations(language='en'):
     """Get email translations for daily diary reminder"""
     translations = {
         'en': {
-            'subject': 'TheraSocial - Daily Wellness Check-in Reminder',
+            'subject': 'TheraSocial - Daily Well-Being Check-in Reminder',
             'hello': 'Hello',
-            'reminder': "Don't forget to log your wellness parameters for today!",
-            'description': 'Taking a few moments to track your mood, energy, sleep, and other wellness factors helps you understand your patterns and make positive changes.',
+            'reminder': "Don't forget to log your well-being parameters for today!",
+            'description': 'Taking a few moments to track your mood, energy, sleep, and other well-being factors helps you understand your patterns and make positive changes.',
             'fill_diary': 'Fill Out Daily Diary',
             'regards': 'Best regards',
             'team': 'TheraSocial Team',
@@ -2733,6 +2758,15 @@ def auto_migrate_database():
                 # Check if we're using PostgreSQL or SQLite
                 is_postgres = 'postgresql' in str(db.engine.url)
 
+                # DEPLOY FIX: Set lock_timeout so ALTER TABLE fails fast during rolling deploys
+                # Without this, migrations block forever waiting for the old instance's locks,
+                # gunicorn never opens a port, and Render never kills the old instance = deadlock
+                if is_postgres:
+                    try:
+                        conn.execute(text("SET lock_timeout = '5s'"))
+                    except Exception:
+                        pass
+
                 # Update users table
                 if 'users' in inspector.get_table_names():
                     columns = [col['name'] for col in inspector.get_columns('users')]
@@ -2908,6 +2942,67 @@ def auto_migrate_database():
                         conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_timezone VARCHAR(100) DEFAULT 'UTC'"))
                         conn.commit()
                         logger.info("✓ Added diary_reminder_timezone column to notification_settings table")
+                    # CS7: Add deduplication column for diary reminders
+                    if 'diary_reminder_last_sent' not in columns:
+                        try:
+                            logger.info("Adding diary_reminder_last_sent column to notification_settings table...")
+                            conn.execute(text("SET lock_timeout = '3s'"))
+                            conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
+                            conn.execute(text("SET lock_timeout = '0'"))
+                            conn.commit()
+                            logger.info("✓ Added diary_reminder_last_sent column")
+                        except Exception as cs7_err:
+                            logger.warning(f"diary_reminder_last_sent fast migration failed ({cs7_err}), retrying without timeout...")
+                            try:
+                                conn.rollback()
+                            except Exception:
+                                pass
+                            try:
+                                conn.execute(text("SET lock_timeout = '0'"))
+                                conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
+                                conn.commit()
+                                logger.info("✓ Added diary_reminder_last_sent column (retry succeeded)")
+                            except Exception as cs7_retry_err:
+                                logger.warning(f"diary_reminder_last_sent retry also failed: {cs7_retry_err}")
+                                try:
+                                    conn.rollback()
+                                except Exception:
+                                    pass
+
+                # NP1: Add notes_privacy column to saved_parameters table
+                # LOCK_TIMEOUT: Try 3s lock timeout first for fast rolling deploys.
+                # If the old instance holds a lock, retry without timeout to ensure
+                # the column exists before the app starts serving requests.
+                try:
+                    if 'saved_parameters' in inspector.get_table_names():
+                        sp_columns = [col['name'] for col in inspector.get_columns('saved_parameters')]
+                        if 'notes_privacy' not in sp_columns:
+                            logger.info("Adding notes_privacy column to saved_parameters table...")
+                            try:
+                                conn.execute(text("SET lock_timeout = '3s'"))
+                                conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
+                                conn.execute(text("SET lock_timeout = '0'"))
+                                conn.commit()
+                                logger.info("✓ Added notes_privacy column to saved_parameters")
+                            except Exception as np1_fast_err:
+                                logger.warning(f"notes_privacy fast migration failed ({np1_fast_err}), retrying without timeout...")
+                                try:
+                                    conn.rollback()
+                                except Exception:
+                                    pass
+                                conn.execute(text("SET lock_timeout = '0'"))
+                                conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
+                                conn.commit()
+                                logger.info("✓ Added notes_privacy column to saved_parameters (retry succeeded)")
+                        else:
+                            logger.info("✓ notes_privacy column already exists in saved_parameters")
+                except Exception as np1_err:
+                    logger.error(f"CRITICAL: notes_privacy migration failed: {np1_err}")
+                    logger.error("The app may encounter errors on parameters endpoints until this column is added.")
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
 
                 # Add follow_note column to follows table
                 if 'follows' in inspector.get_table_names():
@@ -3039,8 +3134,12 @@ def auto_migrate_database():
             logger.warning(f"Auto-migration error (may be normal if columns exist): {e}")
 
 
-# Call auto-migration on startup
-auto_migrate_database()
+# auto_migrate_database() is NOT called here at module level.
+# It was blocking gunicorn from opening its port during rolling deploys because
+# db.create_all() acquires table locks that the old instance holds.
+# All the same migrations run via _background_init() -> init_database() in a
+# background thread AFTER gunicorn opens the port and Render kills the old instance.
+# auto_migrate_database()
 
 
 # =====================
@@ -3332,7 +3431,7 @@ class ParameterTrigger(db.Model):
     watcher = db.relationship('User', foreign_keys=[watcher_id], backref='watching_triggers')
     watched = db.relationship('User', foreign_keys=[watched_id], backref='watched_by_triggers')
 
-    __table_args__ = (db.UniqueConstraint('watcher_id', 'watched_id', name='unique_trigger'),)
+    __table_args__ = (db.UniqueConstraint('watcher_id', 'watched_id', 'parameter_name', name='unique_trigger'),)
 
 
 class Profile(db.Model):
@@ -3433,6 +3532,7 @@ class SavedParameters(db.Model):
     physical_activity_privacy = db.Column(db.String(20), default='private')
     anxiety_privacy = db.Column(db.String(20), default='private')
     notes = db.Column(db.Text)
+    notes_privacy = db.Column(db.String(20), default='private')  # NP1: Notes privacy setting
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     # REMOVED: privacy = db.Column(db.JSON)  # This line should be removed/commented
@@ -3459,7 +3559,8 @@ class SavedParameters(db.Model):
                 'sleep_quality_privacy': self.sleep_quality_privacy,
                 'physical_activity_privacy': self.physical_activity_privacy,
                 'anxiety_privacy': self.anxiety_privacy,
-                'notes': self.notes
+                'notes': self.notes,
+                'notes_privacy': getattr(self, 'notes_privacy', None) or 'private'  # NP1
             })
         else:
             for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
@@ -3470,6 +3571,12 @@ class SavedParameters(db.Model):
                         (param_privacy == 'class_a' and privacy_level == 'class_a'):
                     # Note: 'private' params are excluded - only owner can see
                     base_dict[param] = getattr(self, param)
+            # NP1: Apply same privacy logic to notes
+            notes_priv = getattr(self, 'notes_privacy', None) or 'private'
+            if notes_priv == 'public' or \
+                    (notes_priv == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
+                    (notes_priv == 'class_a' and privacy_level == 'class_a'):
+                base_dict['notes'] = self.notes
 
         return base_dict
 
@@ -3605,6 +3712,7 @@ class NotificationSettings(db.Model):
     # Daily diary reminder time settings (24-hour format, e.g., "09:00" or "21:30")
     diary_reminder_time = db.Column(db.String(5), default='09:00')  # Default 9 AM
     diary_reminder_timezone = db.Column(db.String(100), default='UTC')  # Timezone based on selected city
+    diary_reminder_last_sent = db.Column(db.Date, default=None)  # CS7: Date last reminder was sent (dedup)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -10151,7 +10259,8 @@ def get_parameters():
                     'sleep_quality_privacy': params.sleep_quality_privacy or 'private',
                     'physical_activity_privacy': params.physical_activity_privacy or 'private',
                     'anxiety_privacy': params.anxiety_privacy or 'private',
-                    'notes': params.notes or ''
+                    'notes': params.notes or '',
+                    'notes_privacy': getattr(params, 'notes_privacy', None) or 'private'  # NP1
                 }
             })
         else:
@@ -10171,7 +10280,8 @@ def get_parameters():
                     'sleep_quality_privacy': 'private',
                     'physical_activity_privacy': 'private',
                     'anxiety_privacy': 'private',
-                    'notes': ''
+                    'notes': '',
+                    'notes_privacy': 'private'  # NP1
                 }
             })
 
@@ -10250,6 +10360,12 @@ def save_parameters():
         if 'notes' in data:
             params.notes = data['notes']
 
+        # NP1: Save notes_privacy
+        if 'notes_privacy' in data:
+            notes_priv = data['notes_privacy']
+            if notes_priv in ['public', 'class_a', 'class_b', 'private']:
+                params.notes_privacy = notes_priv
+
         params.updated_at = datetime.utcnow()
         db.session.add(params)
         db.session.commit()
@@ -10274,6 +10390,7 @@ def save_parameters():
             'sleep_quality_privacy': getattr(params, 'sleep_quality_privacy', 'private'),
             'physical_activity_privacy': getattr(params, 'physical_activity_privacy', 'private'),
             'anxiety_privacy': getattr(params, 'anxiety_privacy', 'private'),
+            'notes_privacy': getattr(params, 'notes_privacy', None) or 'private',  # NP1
             'date': params.date.isoformat() if params.date else None,  # PJ6016: Must be string for JSON
             'notes': params.notes
         }
@@ -10319,7 +10436,8 @@ def save_parameters():
                     'physical_activity': int(params.physical_activity) if params.physical_activity else 0,
                     'anxiety': int(params.anxiety) if params.anxiety else 0
                 },
-                'notes': params.notes or ''
+                'notes': params.notes or '',
+                'notes_privacy': getattr(params, 'notes_privacy', None) or 'private'  # NP1
             }
         }), 200
 
@@ -11620,9 +11738,6 @@ def get_today_status():
     except Exception as e:
         logger.error(f"Today status error: {str(e)}")
         return jsonify({'has_entry_today': False, 'has_complete_entry_today': False, 'error': str(e)})
-
-
-@app.route('/api/parameters/should-redirect-to-diary')
 
 
 # V2: User summary endpoint for home screen dashboard card
@@ -14996,14 +15111,27 @@ def get_following():
                     follower_id=followed_user.id,
                     followed_id=user_id
                 ).first() is not None
+                # CS1: Get last check-in date (always visible regardless of privacy settings)
+                last_checkin = db.session.execute(
+                    select(SavedParameters.date).filter_by(user_id=followed_user.id)
+                    .order_by(SavedParameters.date.desc()).limit(1)
+                ).scalar()
+                last_checkin_date = last_checkin.isoformat() if last_checkin else None
+
                 following.append({
                     'id': followed_user.id,
                     'username': followed_user.username,
+                    'display_name': getattr(followed_user, 'display_name', None) or followed_user.username,
                     'email': followed_user.email,
                     'note': follow.follow_note,  # ADD THIS FIELD
                     'follow_trigger': getattr(follow, 'follow_trigger', False) or False,  # V2: alert tracking status
                     'follows_you': follows_back,  # VINTER2: whether this user follows you back
                     'selected_city': followed_user.selected_city,
+                    'bio': getattr(followed_user, 'bio', None) or '',
+                    'occupation': getattr(followed_user, 'occupation', None) or '',
+                    'last_login': followed_user.last_login.isoformat() if followed_user.last_login else None,
+                    'last_active': followed_user.last_login.isoformat() if followed_user.last_login else None,
+                    'last_checkin_date': last_checkin_date,  # CS1: date of most recent diary entry
                     'created_at': follow.created_at.isoformat()
                 })
 
@@ -15607,6 +15735,13 @@ def run_diary_reminder_scheduler():
                     logger.info(f"[DIARY SCHEDULER] ========================================")
                     logger.info(f"[DIARY SCHEDULER] Checking reminders at UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S')}")
                     
+                    # Set a statement timeout so queries never hang indefinitely
+                    # This prevents the scheduler thread from being permanently stuck
+                    try:
+                        db.session.execute(text("SET statement_timeout = '10s'"))
+                    except Exception:
+                        pass  # Not critical - just prevents hangs
+
                     # Get all users with diary reminders enabled and log their settings
                     all_diary_settings = NotificationSettings.query.filter(
                         NotificationSettings.email_daily_diary_reminder == True
@@ -15675,12 +15810,26 @@ def run_diary_reminder_scheduler():
                                     logger.warning(f"[DIARY SCHEDULER] User {settings.user_id} has no email - skipping")
                                     continue
                                 
+                                # CS7: Dedup check - skip if already sent today (prevents 4x sends from multiple instances)
+                                today_date = now_utc.date()
+                                last_sent = getattr(settings, 'diary_reminder_last_sent', None)
+                                if last_sent == today_date:
+                                    logger.info(f"[DIARY SCHEDULER] SKIP: Already sent reminder to {user.email} today ({today_date})")
+                                    continue
+                                
                                 logger.info(f"[DIARY SCHEDULER] Sending reminder to user {user.id} ({user.email})...")
                                 user_language = user.preferred_language or 'en'
                                 success = send_daily_diary_reminder_email(user.email, user_language)
                                 
                                 if success:
                                     emails_sent += 1
+                                    # CS7: Mark as sent today so other instances/runs skip it
+                                    try:
+                                        settings.diary_reminder_last_sent = today_date
+                                        db.session.commit()
+                                    except Exception as mark_err:
+                                        logger.warning(f"[DIARY SCHEDULER] Could not mark reminder sent: {mark_err}")
+                                        db.session.rollback()
                                     logger.info(f"[DIARY SCHEDULER] SUCCESS: Sent reminder to {user.email}")
                                 else:
                                     emails_failed += 1
@@ -15697,7 +15846,16 @@ def run_diary_reminder_scheduler():
                 except Exception as inner_error:
                     logger.error(f"[DIARY SCHEDULER] Processing error: {str(inner_error)}")
                     logger.error(f"[DIARY SCHEDULER] Traceback: {traceback.format_exc()}")
-                    db.session.rollback()
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                finally:
+                    # Always release the DB session so connections return to the pool
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
                     
         except Exception as e:
             logger.error(f"[DIARY SCHEDULER] Scheduler error: {str(e)}")
