@@ -3556,13 +3556,19 @@ class SavedParameters(db.Model):
 
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),)
 
-    def to_dict(self, viewer_id=None, privacy_level=None):
+    def to_dict(self, viewer_id=None, privacy_level=None, _notes_privacy=None):
+        """Convert parameter to dictionary with privacy filtering.
+        _notes_privacy: optional pre-fetched value to avoid per-row SQL query (NP1-PERF).
+        """
         base_dict = {
             'id': self.id,
             'date': self.date,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
+        # NP1-PERF: Use pre-fetched value if available, else fall back to single-row query
+        notes_priv = _notes_privacy if _notes_privacy is not None else _get_notes_privacy(self.id)
 
         if viewer_id == self.user_id:
             base_dict.update({
@@ -3577,7 +3583,7 @@ class SavedParameters(db.Model):
                 'physical_activity_privacy': self.physical_activity_privacy,
                 'anxiety_privacy': self.anxiety_privacy,
                 'notes': self.notes,
-                'notes_privacy': _get_notes_privacy(self.id)  # NP1: raw SQL read
+                'notes_privacy': notes_priv  # NP1: raw SQL read (or pre-fetched)
             })
         else:
             for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
@@ -3589,7 +3595,6 @@ class SavedParameters(db.Model):
                     # Note: 'private' params are excluded - only owner can see
                     base_dict[param] = getattr(self, param)
             # NP1: Apply same privacy logic to notes
-            notes_priv = _get_notes_privacy(self.id)
             if notes_priv == 'public' or \
                     (notes_priv == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
                     (notes_priv == 'class_a' and privacy_level == 'class_a'):
@@ -3609,6 +3614,29 @@ def _get_notes_privacy(params_id):
         return row[0] if row and row[0] else 'private'
     except Exception:
         return 'private'
+
+
+def _batch_get_notes_privacy(param_ids):
+    """NP1-PERF: Batch-read notes_privacy for multiple params in ONE query.
+    Returns dict {param_id: privacy_value}. Falls back to 'private' on error."""
+    if not param_ids:
+        return {}
+    try:
+        # Build safe parameterized query for IN clause (all IDs are ints from DB)
+        placeholders = ', '.join(f':id_{i}' for i in range(len(param_ids)))
+        bind_params = {f'id_{i}': pid for i, pid in enumerate(param_ids)}
+        rows = db.session.execute(
+            text(f"SELECT id, notes_privacy FROM saved_parameters WHERE id IN ({placeholders})"),
+            bind_params
+        ).fetchall()
+        result = {row[0]: (row[1] or 'private') for row in rows}
+        # Fill in any missing IDs with default
+        for pid in param_ids:
+            if pid not in result:
+                result[pid] = 'private'
+        return result
+    except Exception:
+        return {pid: 'private' for pid in param_ids}
 
 
 class Alert(db.Model):
@@ -9649,8 +9677,10 @@ def get_hierarchical_parameters(view_user_id):
         # If viewing own parameters, return all
         if view_user_id == current_user_id:
             params = SavedParameters.query.filter_by(user_id=view_user_id).all()
+            # NP1-PERF: Batch-fetch notes_privacy in one query instead of N queries
+            np_cache = _batch_get_notes_privacy([p.id for p in params])
             return jsonify({
-                'parameters': [p.to_dict(viewer_id=current_user_id) for p in params]
+                'parameters': [p.to_dict(viewer_id=current_user_id, _notes_privacy=np_cache.get(p.id, 'private')) for p in params]
             })
 
         # Check what circle current user is in for the viewed user
@@ -9667,10 +9697,12 @@ def get_hierarchical_parameters(view_user_id):
 
         # Get parameters and apply visibility rules
         params = SavedParameters.query.filter_by(user_id=view_user_id).all()
+        # NP1-PERF: Batch-fetch notes_privacy in one query instead of N queries
+        np_cache = _batch_get_notes_privacy([p.id for p in params])
         visible_params = []
 
         for param in params:
-            param_dict = param.to_dict(viewer_id=current_user_id, privacy_level=privacy_level)
+            param_dict = param.to_dict(viewer_id=current_user_id, privacy_level=privacy_level, _notes_privacy=np_cache.get(param.id, 'private'))
             visible_params.append(param_dict)
 
         return jsonify({'parameters': visible_params})
