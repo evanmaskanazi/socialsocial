@@ -2,7 +2,6 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
-
 appFormat5 Fixes:
 - FIX: Removed dangling @app.route('/api/parameters/should-redirect-to-diary') decorator that was
   wrongly applied to get_user_summary(), corrupting the /api/user/summary endpoint
@@ -640,7 +639,7 @@ def _ensure_weasyprint():
         _weasyprint_HTML = _HTML
         _weasyprint_CSS = _CSS
         WEASYPRINT_AVAILABLE = True
-        print("INFO: WeasyPrint available - using for PDF generation with full Unicode support")
+        print("INFO: WeasyPrint loaded on first PDF request")
     except ImportError as e:
         WEASYPRINT_AVAILABLE = False
         print(f"WARNING: weasyprint not available - falling back to reportlab: {e}")
@@ -3019,8 +3018,7 @@ def auto_migrate_database():
                     except Exception:
                         pass
 
-                # NP1-SAFE: After migration attempt, re-check if column actually exists now.
-                # Set global flag so the app knows whether to use raw SQL for notes_privacy.
+                # NP1-SAFE: Re-check if column exists and set global flag.
                 try:
                     _np_cols = [c['name'] for c in inspect(engine).get_columns('saved_parameters')]
                     app.config['NOTES_PRIVACY_AVAILABLE'] = 'notes_privacy' in _np_cols
@@ -3556,9 +3554,8 @@ class SavedParameters(db.Model):
     physical_activity_privacy = db.Column(db.String(20), default='private')
     anxiety_privacy = db.Column(db.String(20), default='private')
     notes = db.Column(db.Text)
-    # NP1: notes_privacy is added dynamically at startup ONLY if the DB column exists.
-    # This prevents UndefinedColumn errors when the migration hasn't run yet.
-    # Access via getattr(obj, 'notes_privacy', 'private') everywhere.
+    # NP1: notes_privacy NOT in ORM model - prevents UndefinedColumn when migration hasn't run.
+    # Column is added via startup migration. Access via getattr(obj, 'notes_privacy', 'private').
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     # REMOVED: privacy = db.Column(db.JSON)  # This line should be removed/commented
@@ -10386,7 +10383,7 @@ def save_parameters():
         if 'notes' in data:
             params.notes = data['notes']
 
-        # NP1: Save notes_privacy via raw SQL (column not in ORM model to avoid UndefinedColumn)
+        # NP1: Save notes_privacy via raw SQL (column not in ORM to prevent UndefinedColumn)
         _np_priv_to_save = None
         if 'notes_privacy' in data:
             notes_priv = data['notes_privacy']
@@ -13080,7 +13077,7 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
     </html>
     '''
     
-    # Generate PDF with WeasyPrint
+    # Generate PDF with WeasyPrint (lazy loaded)
     output = io.BytesIO()
     _weasyprint_HTML(string=html_content).write_pdf(output)
     output.seek(0)
@@ -13566,9 +13563,38 @@ def check_parameter_triggers():
     - Use a SET to track unique (user, param, start_date, end_date) patterns already seen
     - Only add NEW patterns to results - prevents duplicate alerts from duplicate trigger rows
     - Extensive logging showing each trigger's flags and each pattern found
+    
+    PERF FIX: Session-based cooldown prevents this endpoint from blocking the worker.
+    Processing 175+ triggers takes 30+ seconds, which kills Render's single worker.
+    If checked within last 5 minutes, returns immediately with cached status.
     """
     try:
         watcher_id = session.get('user_id')
+        
+        # PERF FIX: Session-based cooldown - prevent 30s worker blocks
+        # Trigger processing already happens in background when users save diary entries.
+        # This frontend-poll endpoint only needs to run occasionally to catch stragglers.
+        import time
+        last_check = session.get('last_trigger_check_ts')
+        now_ts = time.time()
+        TRIGGER_CHECK_COOLDOWN = 300  # 5 minutes
+        
+        if last_check and (now_ts - last_check) < TRIGGER_CHECK_COOLDOWN:
+            elapsed = int(now_ts - last_check)
+            logger.info(f"[TRIGGER CHECK] Cooldown active for watcher {watcher_id} ({elapsed}s since last check, limit {TRIGGER_CHECK_COOLDOWN}s). Returning cached.")
+            return jsonify({
+                'success': True,
+                'alerts': [],
+                'count': 0,
+                'alerts_created': 0,
+                'alerts_skipped_duplicate': 0,
+                'cooldown': True,
+                'cooldown_remaining': TRIGGER_CHECK_COOLDOWN - elapsed
+            })
+        
+        # Set the cooldown timestamp BEFORE processing (so concurrent requests also skip)
+        session['last_trigger_check_ts'] = now_ts
+        
         # PJ6019 FIX: Added is_active=True filter to exclude "deleted" triggers
         triggers = db.session.execute(
             select(ParameterTrigger).filter_by(watcher_id=watcher_id, is_active=True)
@@ -13578,20 +13604,24 @@ def check_parameter_triggers():
         logger.info(f"[PJ815 DEBUG] check_parameter_triggers called for watcher_id={watcher_id}")
         logger.info(f"[PJ815 DEBUG] Found {len(triggers)} trigger rows")
         
-        # Log each trigger's actual flags
-        for i, t in enumerate(triggers):
+        # PERF: Removed per-trigger debug logging loop (was doing 175 DB queries just for logs)
+        # Log first 5 only for debugging
+        for i, t in enumerate(triggers[:5]):
             watched_user = db.session.get(User, t.watched_id)
             username = watched_user.username if watched_user else f"user_{t.watched_id}"
-            flags = []
-            if t.mood_alert: flags.append('mood')
-            if t.energy_alert: flags.append('energy')
-            if t.sleep_alert: flags.append('sleep')
-            if t.physical_alert: flags.append('activity')
-            if t.anxiety_alert: flags.append('anxiety')
-            logger.info(f"[PJ815 DEBUG] Trigger {i+1}: watched={username}, consecutive_days={t.consecutive_days}, flags={flags}, mood_alert_raw={t.mood_alert}")
+            flags = [p for p in ['mood','energy','sleep','activity','anxiety'] 
+                     if getattr(t, f"{'physical' if p=='activity' else p}_alert", False)]
+            logger.info(f"[PJ815 DEBUG] Trigger {i+1}: watched={username}, days={t.consecutive_days}, flags={flags}")
+        if len(triggers) > 5:
+            logger.info(f"[PJ815 DEBUG] ... and {len(triggers)-5} more triggers (suppressed)")
 
         alerts = []
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
+        # PERF: Time limit to prevent worker kill (Render timeout is 30s)
+        _check_start = time.time()
+        TRIGGER_TIME_LIMIT = 10  # seconds - leave headroom for alert creation phase
+        _triggers_skipped_timeout = 0
         
         # PJ815: Track unique patterns to prevent duplicates from multiple trigger rows
         # Key = (username, param_name, start_date_iso, end_date_iso)
@@ -13625,6 +13655,12 @@ def check_parameter_triggers():
             return False
 
         for trigger in triggers:
+            # PERF: Time limit check - abort processing if taking too long
+            if time.time() - _check_start > TRIGGER_TIME_LIMIT:
+                _triggers_skipped_timeout = len(triggers) - triggers.index(trigger)
+                logger.warning(f"[TRIGGER CHECK] Time limit ({TRIGGER_TIME_LIMIT}s) reached after processing {triggers.index(trigger)}/{len(triggers)} triggers. Skipping remaining {_triggers_skipped_timeout}.")
+                break
+            
             # PI502alt: Skip if consecutive_days below minimum threshold
             consecutive_days = max(trigger.consecutive_days or MINIMUM_TRIGGER_DAYS, MINIMUM_TRIGGER_DAYS)
             if consecutive_days < MINIMUM_TRIGGER_DAYS:
@@ -14009,7 +14045,15 @@ def check_parameter_triggers():
         alerts_skipped_duplicate = 0
         # PJ6015: Removed alerts_emailed = 0 - now using emails_actually_sent from batch email code
         
+        # PERF: Also time-limit the alert creation phase
+        ALERT_CREATE_TIME_LIMIT = 15  # total seconds from start for entire endpoint
+        
         for alert_data in alerts:
+            # PERF: Time limit check for alert creation
+            if time.time() - _check_start > ALERT_CREATE_TIME_LIMIT:
+                logger.warning(f"[TRIGGER CHECK] Alert creation time limit ({ALERT_CREATE_TIME_LIMIT}s total) reached. Created {alerts_created} alerts, skipping remaining.")
+                break
+            
             try:
                 watched_username = alert_data.get('user', 'Unknown')
                 parameter = alert_data.get('parameter', 'unknown')
