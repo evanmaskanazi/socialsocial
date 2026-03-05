@@ -4263,7 +4263,7 @@
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
                     <h3 data-i18n="about.track_title">Track Your Well-Being</h3>
-                    <p data-i18n="about.track_desc">Monitor your sleep, exercise, mood, energy, and anxiety with an easy daily diary and beautiful visual insights over time.</p>
+                    <p data-i18n="about.track_desc">Monitor your sleep, exercise, mood, energy, and stress with an easy daily diary and beautiful visual insights over time.</p>
                 </div>
 
                 <div class="feature-card">
@@ -4339,7 +4339,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq1_q">How do I track my daily well-being?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq1_a">Go to the Diary tab in your dashboard. You can rate your sleep quality, mood, energy, physical activity, and anxiety level on a simple 1-4 scale each day. Use the calendar to select any date, set your values with the sliders, and save. Over time, you will see patterns emerge in your Progress page.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq1_a">Go to the Diary tab in your dashboard. You can rate your sleep quality, mood, energy, physical activity, and stress level on a simple 1-4 scale each day. Use the calendar to select any date, set your values with the sliders, and save. Over time, you will see patterns emerge in your Progress page.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -4354,7 +4354,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq4_q">How do alerts and triggers work?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq4_a">You can set well-being alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or their anxiety rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq4_a">You can set well-being alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or their stress rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -4369,7 +4369,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq7_q">How do I see my progress over time?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq7_a">The Progress page shows your well-being data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and anxiety change over weeks and months. Look for patterns — for example, how exercise affects your mood the following day.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq7_a">The Progress page shows your well-being data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and stress change over weeks and months. Look for patterns — for example, how exercise affects your mood the following day.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -4577,7 +4577,7 @@
                               <div id="summaryExercise" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
                           </div>
                           <div class="param-mini" style="background: var(--white); padding: 12px; border-radius: 12px; text-align: center;">
-                              <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.anxiety">Anxiety</div>
+                              <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.stress">Stress</div>
                               <div id="summaryStress" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
                           </div>
                       </div>
@@ -6197,7 +6197,7 @@
                 'alerts.welcome_message': 'Track your daily well-being, connect with friends, and grow together.',
                 'params.sleep_quality': 'Sleep',
                 'params.physical_activity': 'Exercise',
-                'params.anxiety': 'Anxiety'
+                'params.anxiety': 'Stress'
             },
             he: {
                 'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
@@ -6273,7 +6273,7 @@
                 'energy': 'params.energy',
                 'sleep_quality': 'params.sleep',
                 'physical_activity': 'params.exercise',
-                'anxiety': 'params.anxiety'
+                'anxiety': 'params.stress'
             };
             
             const m = content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
@@ -8233,11 +8233,6 @@ function toggleMobileMoreMenu() {
     const moreMenu = document.getElementById('mobileMoreMenu');
     if (moreMenu) {
         if (moreMenu.classList.contains('hidden')) {
-            // CS4: Move menu to document.body to ensure position:fixed works correctly
-            // in iOS Safari when any ancestor has overflow or transform properties
-            if (moreMenu.parentNode !== document.body) {
-                document.body.appendChild(moreMenu);
-            }
             moreMenu.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; // Prevent background scrolling
         } else {
@@ -16024,7 +16019,7 @@ const InlineOnboarding = {
         'onboarding.home_desc': "Your home page shows everything at a glance: today's well-being status, your streak, a quick mood check-in, personalized recommendations, friends' updates, and your journal feed.",
         'onboarding.home_tip': 'Tip: Use the Quick Check-In to log your mood with a single tap — even on busy days.',
         'onboarding.diary': 'Diary — Track Your Well-Being',
-        'onboarding.diary_desc': 'The Diary is where you record daily well-being: Mood, Energy, Sleep Quality, Physical Activity, and Anxiety. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
+        'onboarding.diary_desc': 'The Diary is where you record daily well-being: Mood, Energy, Sleep Quality, Physical Activity, and Stress. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
         'onboarding.diary_tip': 'Tip: Consistency is key! Even a quick 30-second check-in helps build meaningful patterns over time.',
         'onboarding.progress': 'Progress — See Your Trends',
         'onboarding.progress_desc': 'The Progress page shows your well-being data as visual charts and graphs. Track how your mood, sleep, and energy change over weeks and months. Set your location to see local time and weather.',
@@ -16042,7 +16037,7 @@ const InlineOnboarding = {
         'onboarding.invite_desc': "Share your unique invite link with friends, family, or your therapist. When they join through your link, they'll be prompted to connect with you. Growing your circle makes the experience more meaningful.",
         'onboarding.invite_tip': 'Tip: Your invite link can be shared via text message, email, WhatsApp, or social media.',
         'onboarding.triggers': 'Triggers & Alerts — Watch Over Loved Ones',
-        'onboarding.triggers_desc': "Set well-being alerts for connections you care about. Visit someone's profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or anxiety rises above 4. You'll receive email alerts when patterns are detected.",
+        'onboarding.triggers_desc': "Set well-being alerts for connections you care about. Visit someone's profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or stress rises above 4. You'll receive email alerts when patterns are detected.",
         'onboarding.triggers_tip': 'Tip: To set a trigger, go to Connections → click a person → View Full Profile → tap the Triggers button next to their name.',
         'onboarding.settings': 'Settings — Personalize Everything',
         'onboarding.settings_desc': 'In Settings, manage your profile (bio, interests, goals, timezone), change your password, toggle notifications and alerts, set a daily diary reminder time, export your data, or delete your account.',
@@ -16078,11 +16073,6 @@ const InlineOnboarding = {
     
     checkAndShow: async function() {
         try {
-            // CS2: If user dismissed tutorial this session (clicked X or Skip), don't re-show
-            if (sessionStorage.getItem('tutorialDismissedThisSession')) {
-                console.log('[Onboarding] Skipping - dismissed this session');
-                return;
-            }
             const response = await fetch('/api/onboarding/status', { credentials: 'include' });
             if (response.ok) {
                 const data = await response.json();
@@ -16279,15 +16269,11 @@ const InlineOnboarding = {
     skip: async function() {
         const cb = document.getElementById('onboarding-dont-show');
         if (cb && cb.checked) await this.dismiss();
-        // CS2: Mark dismissed this session so it won't reappear until next login
-        sessionStorage.setItem('tutorialDismissedThisSession', 'true');
         this.close();
     },
     finish: async function() { await this.complete(); this.close(); },
     
     close: function() {
-        // CS2: Mark dismissed this session (covers X button close as well)
-        sessionStorage.setItem('tutorialDismissedThisSession', 'true');
         document.querySelectorAll('.onboarding-highlight').forEach(el => {
             el.classList.remove('onboarding-highlight');
             el.style.position = ''; el.style.zIndex = '';
@@ -16311,8 +16297,6 @@ window.checkOnboardingStatus = function() { InlineOnboarding.checkAndShow(); };
 // ===== TUTORIAL FUNCTION =====
 // Starts the onboarding tutorial with the current language
 async function startTutorial() {
-    // CS2: Clear session dismiss flag so Tutorial button always works
-    sessionStorage.removeItem('tutorialDismissedThisSession');
     const currentLang = localStorage.getItem('selectedLanguage') || 'en';
     try {
         const response = await fetch('/api/onboarding/restart', {
@@ -17113,27 +17097,11 @@ async function loadConnectionStatusList() {
                 }
             }
 
-            // CS3: Format last check-in date in user-friendly way (always visible, privacy-independent)
-            let checkinText = '';
-            if (conn.last_checkin_date) {
-                try {
-                    const checkinDate = new Date(conn.last_checkin_date);
-                    const today = new Date(); today.setHours(0,0,0,0);
-                    const checkinDay = new Date(checkinDate); checkinDay.setHours(0,0,0,0);
-                    const diffDays = Math.round((today - checkinDay) / 86400000);
-                    if (diffDays === 0) checkinText = tt('home.checkin_today', 'Checked in today');
-                    else if (diffDays === 1) checkinText = tt('home.checkin_yesterday', 'Checked in yesterday');
-                    else if (diffDays < 7) checkinText = diffDays + ' ' + tt('home.days_ago', 'days ago');
-                    else if (diffDays < 30) checkinText = Math.floor(diffDays/7) + tt('home.weeks_ago', 'w ago');
-                    else checkinText = checkinDate.toLocaleDateString(undefined, {month:'short', day:'numeric'});
-                } catch(e) {}
-            }
-
             return '<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light, #f9fafb); border-radius: 12px; cursor: pointer;" onclick="if(typeof showConnectionInfo===\'function\') showConnectionInfo(' + (conn.id || 0) + ')">' +
                 '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + avatar + '</div>' +
                 '<div style="flex: 1; min-width: 0;">' +
                 '<div style="font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><a href="#" onclick="event.stopPropagation(); viewUserProfileFromHome(' + (conn.id || 0) + '); return false;" style="color: var(--dark); text-decoration: none;" onmouseover="this.style.color=\'var(--primary)\'; this.style.textDecoration=\'underline\';" onmouseout="this.style.color=\'var(--dark)\'; this.style.textDecoration=\'none\';">' + name + '</a></div>' +
-                (checkinText ? '<div style="font-size: 0.72rem; color: var(--gray); margin-top: 2px; opacity: 0.85;">📅 ' + checkinText + '</div>' : '') +
+                '<div style="font-size: 0.8rem; color: var(--gray);">' + escapeHtml(conn.bio || conn.occupation || '') + '</div>' +
                 '</div>' +
                 '<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">' +
                 '<span style="width: 8px; height: 8px; border-radius: 50%; background: ' + statusDot + '; display: inline-block;"></span>' +
@@ -17173,7 +17141,7 @@ async function loadFriendsUpdates() {
             energy: tt('params.energy', 'Energy'), 
             sleep_quality: tt('params.sleep', 'Sleep'), 
             physical_activity: tt('params.exercise', 'Exercise'), 
-            anxiety: tt('params.anxiety', 'Anxiety') 
+            anxiety: tt('params.stress', 'Stress') 
         };
 
         listDiv.innerHTML = updates.map(u => {
