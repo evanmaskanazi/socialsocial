@@ -3577,7 +3577,7 @@ class SavedParameters(db.Model):
                 'physical_activity_privacy': self.physical_activity_privacy,
                 'anxiety_privacy': self.anxiety_privacy,
                 'notes': self.notes,
-                'notes_privacy': getattr(self, 'notes_privacy', None) or 'private'  # NP1
+                'notes_privacy': _get_notes_privacy(self.id)  # NP1: raw SQL read
             })
         else:
             for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
@@ -3589,13 +3589,26 @@ class SavedParameters(db.Model):
                     # Note: 'private' params are excluded - only owner can see
                     base_dict[param] = getattr(self, param)
             # NP1: Apply same privacy logic to notes
-            notes_priv = getattr(self, 'notes_privacy', None) or 'private'
+            notes_priv = _get_notes_privacy(self.id)
             if notes_priv == 'public' or \
                     (notes_priv == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
                     (notes_priv == 'class_a' and privacy_level == 'class_a'):
                 base_dict['notes'] = self.notes
 
         return base_dict
+
+
+def _get_notes_privacy(params_id):
+    """Read notes_privacy via raw SQL (column not in ORM to prevent UndefinedColumn).
+    Returns 'private' if column doesn't exist or on any error."""
+    try:
+        row = db.session.execute(
+            text("SELECT notes_privacy FROM saved_parameters WHERE id = :pid"),
+            {'pid': params_id}
+        ).first()
+        return row[0] if row and row[0] else 'private'
+    except Exception:
+        return 'private'
 
 
 class Alert(db.Model):
@@ -3729,7 +3742,7 @@ class NotificationSettings(db.Model):
     # Daily diary reminder time settings (24-hour format, e.g., "09:00" or "21:30")
     diary_reminder_time = db.Column(db.String(5), default='09:00')  # Default 9 AM
     diary_reminder_timezone = db.Column(db.String(100), default='UTC')  # Timezone based on selected city
-    diary_reminder_last_sent = db.Column(db.Date, default=None)  # CS7: Date last reminder was sent (dedup)
+    # CS7: diary_reminder_last_sent NOT in ORM - added via migration. Access via raw SQL.
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -10277,7 +10290,7 @@ def get_parameters():
                     'physical_activity_privacy': params.physical_activity_privacy or 'private',
                     'anxiety_privacy': params.anxiety_privacy or 'private',
                     'notes': params.notes or '',
-                    'notes_privacy': getattr(params, 'notes_privacy', None) or 'private'  # NP1
+                    'notes_privacy': _get_notes_privacy(params.id)  # NP1
                 }
             })
         else:
@@ -10421,7 +10434,7 @@ def save_parameters():
             'sleep_quality_privacy': getattr(params, 'sleep_quality_privacy', 'private'),
             'physical_activity_privacy': getattr(params, 'physical_activity_privacy', 'private'),
             'anxiety_privacy': getattr(params, 'anxiety_privacy', 'private'),
-            'notes_privacy': getattr(params, 'notes_privacy', None) or 'private',  # NP1
+            'notes_privacy': _get_notes_privacy(params.id),  # NP1
             'date': params.date.isoformat() if params.date else None,  # PJ6016: Must be string for JSON
             'notes': params.notes
         }
@@ -10468,7 +10481,7 @@ def save_parameters():
                     'anxiety': int(params.anxiety) if params.anxiety else 0
                 },
                 'notes': params.notes or '',
-                'notes_privacy': getattr(params, 'notes_privacy', None) or 'private'  # NP1
+                'notes_privacy': _get_notes_privacy(params.id)  # NP1
             }
         }), 200
 
@@ -15720,9 +15733,16 @@ def run_diary_reminder_scheduler():
                                     logger.warning(f"[DIARY SCHEDULER] User {settings.user_id} has no email - skipping")
                                     continue
                                 
-                                # CS7: Dedup check - skip if already sent today (prevents 4x sends from multiple instances)
+                                # CS7: Dedup check - skip if already sent today (raw SQL since column may not be in ORM)
                                 today_date = now_utc.date()
-                                last_sent = getattr(settings, 'diary_reminder_last_sent', None)
+                                try:
+                                    _ls_row = db.session.execute(
+                                        text("SELECT diary_reminder_last_sent FROM notification_settings WHERE id = :sid"),
+                                        {'sid': settings.id}
+                                    ).first()
+                                    last_sent = _ls_row[0] if _ls_row else None
+                                except Exception:
+                                    last_sent = None
                                 if last_sent == today_date:
                                     logger.info(f"[DIARY SCHEDULER] SKIP: Already sent reminder to {user.email} today ({today_date})")
                                     continue
@@ -15733,9 +15753,12 @@ def run_diary_reminder_scheduler():
                                 
                                 if success:
                                     emails_sent += 1
-                                    # CS7: Mark as sent today so other instances/runs skip it
+                                    # CS7: Mark as sent today via raw SQL
                                     try:
-                                        settings.diary_reminder_last_sent = today_date
+                                        db.session.execute(
+                                            text("UPDATE notification_settings SET diary_reminder_last_sent = :td WHERE id = :sid"),
+                                            {'td': today_date, 'sid': settings.id}
+                                        )
                                         db.session.commit()
                                     except Exception as mark_err:
                                         logger.warning(f"[DIARY SCHEDULER] Could not mark reminder sent: {mark_err}")
