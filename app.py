@@ -2,7 +2,6 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
-
 appFormat5 Fixes:
 - FIX: Removed dangling @app.route('/api/parameters/should-redirect-to-diary') decorator that was
   wrongly applied to get_user_summary(), corrupting the /api/user/summary endpoint
@@ -20,6 +19,13 @@ appFormat6 Fixes:
   connection. Previously, ALTER TABLE statements blocked forever during rolling deploys
   because the old instance held table locks while Render waited for the new instance to
   open a port — causing a deadlock where neither instance could proceed.
+
+appFormat8 Fix:
+- FIX: Removed module-level auto_migrate_database() call (was at line ~3131).
+  db.create_all() inside it opens its own connection and blocks on table locks BEFORE
+  the SET lock_timeout on the separate connection could help. This blocked gunicorn
+  from ever opening a port during rolling deploys. The same migrations already run via
+  _background_init() -> init_database() in a background thread after gunicorn starts.
 
 
 10Link Changes:
@@ -3128,8 +3134,12 @@ def auto_migrate_database():
             logger.warning(f"Auto-migration error (may be normal if columns exist): {e}")
 
 
-# Call auto-migration on startup
-auto_migrate_database()
+# auto_migrate_database() is NOT called here at module level.
+# It was blocking gunicorn from opening its port during rolling deploys because
+# db.create_all() acquires table locks that the old instance holds.
+# All the same migrations run via _background_init() -> init_database() in a
+# background thread AFTER gunicorn opens the port and Render kills the old instance.
+# auto_migrate_database()
 
 
 # =====================
