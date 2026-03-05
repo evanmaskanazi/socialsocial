@@ -20,6 +20,21 @@ appFormat6 Fixes:
   because the old instance held table locks while Render waited for the new instance to
   open a port — causing a deadlock where neither instance could proceed.
 
+T15a Fixes:
+- FIX: Multi-worker scheduler duplication. All three background schedulers (diary,
+  trigger, job queue) used per-process flags that only prevent double-starts within
+  one Gunicorn worker. With N workers, N copies of each scheduler ran, causing
+  duplicate emails and duplicate job processing. Now each scheduler loop iteration
+  acquires a PostgreSQL advisory lock (pg_try_advisory_lock) before doing work.
+  Only the worker holding the lock processes; others skip and retry next cycle.
+  Advisory lock IDs: diary=100001, trigger=100002, job_queue=100003.
+- FIX: Seven migration functions ran ALTER TABLE without SET lock_timeout, risking
+  indefinite blocking during rolling deploys. Added SET lock_timeout = '5s' to:
+  ensure_notification_settings_schema, ensure_privacy_schema,
+  ensure_user_consents_schema, ensure_saved_parameters_schema,
+  ensure_database_schema, fix_all_schema_issues, create_parameters_table.
+  Pattern matches existing auto_migrate_database() which already had this protection.
+
 appFormat8 Fix:
 - FIX: Removed module-level auto_migrate_database() call (was at line ~3131).
   db.create_all() inside it opens its own connection and blocks on table locks BEFORE
@@ -2447,6 +2462,13 @@ def ensure_notification_settings_schema():
                 logger.info(f"Adding missing columns to notification_settings: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15a: Prevent indefinite blocking during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+
                     for column_name in missing_columns:
                         column_type = required_columns[column_name]
 
@@ -2515,6 +2537,13 @@ def ensure_privacy_schema():
                 logger.info(f"[PL405] Adding missing privacy columns to users: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15a: Prevent indefinite blocking during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+
                     for column_name in missing_columns:
                         column_type = required_columns[column_name]
 
@@ -2588,6 +2617,13 @@ def ensure_user_consents_schema():
                 logger.info(f"[QA FIX] Adding missing GDPR columns to user_consents: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15a: Prevent indefinite blocking during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+
                     for column_name in missing_columns:
                         column_type = required_columns[column_name]
 
@@ -2667,6 +2703,13 @@ def ensure_saved_parameters_schema():
                 logger.info(f"Adding missing columns to saved_parameters: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15a: Prevent indefinite blocking during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+
                     for column_name in missing_columns:
                         column_type = all_required[column_name]
 
@@ -3834,6 +3877,13 @@ def ensure_database_schema():
             # Check if we're using PostgreSQL or SQLite
             is_postgres = 'postgresql' in str(db.engine.url)
 
+            # T15a: Prevent indefinite blocking during rolling deploys
+            if is_postgres:
+                try:
+                    conn.execute(text("SET lock_timeout = '5s'"))
+                except Exception:
+                    pass
+
             if is_postgres:
                 # PostgreSQL - Check and add visibility column to posts table
                 result = conn.execute(text("""
@@ -4114,6 +4164,13 @@ def fix_all_schema_issues():
         with db.engine.connect() as conn:
             # Check if we're using PostgreSQL or SQLite
             is_postgres = 'postgresql' in str(db.engine.url)
+
+            # T15a: Prevent indefinite blocking during rolling deploys
+            if is_postgres:
+                try:
+                    conn.execute(text("SET lock_timeout = '5s'"))
+                except Exception:
+                    pass
             
             # PJ401: Add source_user_id and alert_category columns to alerts table
             inspector = inspect(db.engine)
@@ -4792,6 +4849,12 @@ def create_parameters_table():
 
         conn = get_db()
         cursor = conn.cursor()
+
+        # T15a: Prevent indefinite blocking during rolling deploys
+        try:
+            cursor.execute("SET lock_timeout = '5s'")
+        except Exception:
+            pass
 
         # Check if parameters table exists and has correct columns
         try:
@@ -15672,6 +15735,35 @@ def process_diary_reminders():
 _diary_reminder_scheduler_started = False
 _diary_reminder_scheduler_lock = threading.Lock()
 
+# T15a: Advisory lock IDs for multi-worker scheduler deduplication
+_SCHEDULER_LOCK_DIARY = 100001
+_SCHEDULER_LOCK_TRIGGER = 100002
+_SCHEDULER_LOCK_JOB_QUEUE = 100003
+
+
+def _try_acquire_scheduler_lock(lock_id):
+    """
+    T15a: Try to acquire a PostgreSQL advisory lock (non-blocking).
+    Returns True if this worker should process, False if another worker holds the lock.
+    Falls back to True for SQLite (single-process dev mode).
+    """
+    try:
+        is_postgres = 'postgresql' in str(db.engine.url)
+        if not is_postgres:
+            return True  # SQLite = dev mode, always run
+        result = db.session.execute(
+            text("SELECT pg_try_advisory_lock(:lock_id)"),
+            {'lock_id': lock_id}
+        ).scalar()
+        return bool(result)
+    except Exception as e:
+        logger.warning(f"[SCHEDULER LOCK] Could not check advisory lock {lock_id}: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return False  # If we can't check, don't run (safer)
+
 def run_diary_reminder_scheduler():
     """
     Background thread that checks for diary reminders every minute.
@@ -15689,6 +15781,11 @@ def run_diary_reminder_scheduler():
             # Process diary reminders within app context
             with app.app_context():
                 try:
+                    # T15a: Only process if this worker holds the advisory lock
+                    if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_DIARY):
+                        logger.debug("[DIARY SCHEDULER] Another worker holds the lock, skipping this cycle")
+                        continue
+
                     now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
                     logger.info(f"[DIARY SCHEDULER] ========================================")
                     logger.info(f"[DIARY SCHEDULER] Checking reminders at UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -16309,6 +16406,12 @@ def run_trigger_scheduler():
             # Process triggers every 5 minutes
             with app.app_context():
                 try:
+                    # T15a: Only process if this worker holds the advisory lock
+                    if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_TRIGGER):
+                        logger.debug("[TRIGGER SCHEDULER] Another worker holds the lock, skipping this cycle")
+                        time.sleep(300)
+                        continue
+
                     now_utc = datetime.utcnow()
                     current_hour = now_utc.hour
                     logger.info(f"[TRIGGER SCHEDULER] ========================================")
@@ -16460,6 +16563,12 @@ def run_job_queue_scheduler():
         try:
             with app.app_context():
                 try:
+                    # T15a: Only process if this worker holds the advisory lock
+                    if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_JOB_QUEUE):
+                        logger.debug("[JOB QUEUE SCHEDULER] Another worker holds the lock, skipping this cycle")
+                        time.sleep(10)
+                        continue
+
                     # Process up to 10 jobs per cycle
                     process_background_jobs(batch_size=10)
                 except Exception as inner_error:
