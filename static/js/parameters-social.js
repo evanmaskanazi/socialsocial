@@ -432,7 +432,7 @@ const PARAMETER_CATEGORIES = [
         descriptionKey: 'parameters.anxiety_desc',
         min: 1,
         max: 4,
-        endEmojis: ['😌', '😰'],  // EM1: REVERSED — low(1)=calm/best, high(4)=overwhelming/worst
+        endEmojis: ['😊', '😔'],  // EM1: REVERSED — low(1)=calm/best, high(4)=overwhelming/worst — matches home page anxietyEmojis
         reversedScale: true
     }
 ];
