@@ -2,6 +2,29 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+T15 Fixes (architecture audit):
+- FIX-T15-1: _init_complete flag now checked in before_request — API endpoints return
+  503 until background initialization completes, preventing OperationalError if a new
+  column is queried before the migration thread creates it.
+- FIX-T15-2: Background schedulers now guarded by a cross-process file lock (fcntl.flock)
+  so only one gunicorn worker starts diary/trigger/job-queue schedulers. Prevents duplicate
+  emails and alert races when running with multiple workers.
+- FIX-T15-3: All six ensure_*/fix_* migration functions now SET lock_timeout = '5s' on
+  their connections, matching auto_migrate_database(). Prevents indefinite hangs during
+  rolling deploys if the old instance holds table locks.
+- FIX-T15-4: Trigger scheduler and job-queue scheduler now call db.session.remove() in
+  finally blocks, matching the diary scheduler. Prevents session/connection leaks on errors.
+- FIX-T15-5: After NP1 notes_privacy retry in auto_migrate_database(), lock_timeout is
+  re-set to '5s' so subsequent ALTER TABLE statements retain deploy-safe timeout.
+- FIX-T15-6: inspect(engine) NameError on line ~3019 fixed to inspect(db.engine).
+- FIX-T15-7: start_data_retention_scheduler() is now called from init_database().
+  Previously defined but never invoked — expired tokens and audit logs accumulated forever.
+- FIX-T15-8: Removed duplicate security headers from after_request() that conflicted
+  with the more comprehensive add_security_headers() middleware (X-Frame-Options
+  SAMEORIGIN vs DENY).
+- FIX-T15-9: In-memory rate_limit_store fallback now prunes stale keys when size exceeds
+  10 000 entries, preventing unbounded memory growth during sustained Redis outage.
+
 appFormat5 Fixes:
 - FIX: Removed dangling @app.route('/api/parameters/should-redirect-to-diary') decorator that was
   wrongly applied to get_user_summary(), corrupting the /api/user/summary endpoint
@@ -537,6 +560,12 @@ import time
 import secrets
 from collections import defaultdict
 
+# T15 FIX-2: Cross-process lock for background schedulers (Linux/macOS only)
+try:
+    import fcntl
+except ImportError:
+    fcntl = None  # Windows dev — scheduler lock unavailable, single-worker assumed
+
 # Cache busting timestamp - updates on every app restart
 CACHE_BUST_VERSION = str(int(time.time()))
 
@@ -989,6 +1018,12 @@ def check_rate_limit(user_id, max_requests=100, window=60, endpoint=None):
         user_requests = rate_limit_store[key]
         # Remove old requests outside window
         user_requests[:] = [req_time for req_time in user_requests if now - req_time < window]
+        
+        # T15 FIX-9: Prune stale keys to prevent unbounded memory growth
+        if len(rate_limit_store) > 10000:
+            stale_keys = [k for k, v in rate_limit_store.items() if not v]
+            for k in stale_keys:
+                del rate_limit_store[k]
         
         if len(user_requests) >= max_requests:
             return False, len(user_requests), 0
@@ -2447,6 +2482,12 @@ def ensure_notification_settings_schema():
                 logger.info(f"Adding missing columns to notification_settings: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15 FIX-3: Prevent indefinite hangs during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
                     for column_name in missing_columns:
                         column_type = required_columns[column_name]
 
@@ -2515,6 +2556,12 @@ def ensure_privacy_schema():
                 logger.info(f"[PL405] Adding missing privacy columns to users: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15 FIX-3: Prevent indefinite hangs during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
                     for column_name in missing_columns:
                         column_type = required_columns[column_name]
 
@@ -2588,6 +2635,12 @@ def ensure_user_consents_schema():
                 logger.info(f"[QA FIX] Adding missing GDPR columns to user_consents: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15 FIX-3: Prevent indefinite hangs during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
                     for column_name in missing_columns:
                         column_type = required_columns[column_name]
 
@@ -2667,6 +2720,12 @@ def ensure_saved_parameters_schema():
                 logger.info(f"Adding missing columns to saved_parameters: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15 FIX-3: Prevent indefinite hangs during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
                     for column_name in missing_columns:
                         column_type = all_required[column_name]
 
@@ -3005,6 +3064,11 @@ def auto_migrate_database():
                                 conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
                                 conn.commit()
                                 logger.info("✓ Added notes_privacy column to saved_parameters (retry succeeded)")
+                                # T15 FIX-5: Restore deploy-safe timeout for remaining migrations
+                                try:
+                                    conn.execute(text("SET lock_timeout = '5s'"))
+                                except Exception:
+                                    pass
                         else:
                             logger.info("✓ notes_privacy column already exists in saved_parameters")
                 except Exception as np1_err:
@@ -3016,7 +3080,7 @@ def auto_migrate_database():
 
                 # NP1-SAFE: Set flag for whether notes_privacy column exists
                 try:
-                    _np_cols = [c['name'] for c in inspect(engine).get_columns('saved_parameters')]
+                    _np_cols = [c['name'] for c in inspect(db.engine).get_columns('saved_parameters')]
                     app.config['NOTES_PRIVACY_AVAILABLE'] = 'notes_privacy' in _np_cols
                 except Exception:
                     app.config['NOTES_PRIVACY_AVAILABLE'] = False
@@ -3834,6 +3898,13 @@ def ensure_database_schema():
             # Check if we're using PostgreSQL or SQLite
             is_postgres = 'postgresql' in str(db.engine.url)
 
+            # T15 FIX-3: Prevent indefinite hangs during rolling deploys
+            if is_postgres:
+                try:
+                    conn.execute(text("SET lock_timeout = '5s'"))
+                except Exception:
+                    pass
+
             if is_postgres:
                 # PostgreSQL - Check and add visibility column to posts table
                 result = conn.execute(text("""
@@ -3916,6 +3987,13 @@ def ensure_background_jobs_schema():
     try:
         with db.engine.connect() as conn:
             is_postgres = 'postgresql' in str(db.engine.url)
+            
+            # T15 FIX-3: Prevent indefinite hangs during rolling deploys
+            if is_postgres:
+                try:
+                    conn.execute(text("SET lock_timeout = '5s'"))
+                except Exception:
+                    pass
             
             if is_postgres:
                 # Check if table exists
@@ -4055,22 +4133,32 @@ def init_database():
                 logger.warning(f"Cleanup warning (non-critical): {cleanup_err}")
 
             # Start background diary reminder scheduler
-            try:
-                start_diary_reminder_scheduler()
-            except Exception as scheduler_err:
-                logger.warning(f"Diary scheduler warning (non-critical): {scheduler_err}")
+            # T15 FIX-2: Only one worker starts background schedulers
+            if _acquire_scheduler_lock():
+                try:
+                    start_diary_reminder_scheduler()
+                except Exception as scheduler_err:
+                    logger.warning(f"Diary scheduler warning (non-critical): {scheduler_err}")
 
-            # PJ816: Start background trigger scheduler (emails without login)
-            try:
-                start_trigger_scheduler()
-            except Exception as scheduler_err:
-                logger.warning(f"Trigger scheduler warning (non-critical): {scheduler_err}")
+                # PJ816: Start background trigger scheduler (emails without login)
+                try:
+                    start_trigger_scheduler()
+                except Exception as scheduler_err:
+                    logger.warning(f"Trigger scheduler warning (non-critical): {scheduler_err}")
 
-            # Start background job queue scheduler
-            try:
-                start_job_queue_scheduler()
-            except Exception as scheduler_err:
-                logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
+                # Start background job queue scheduler
+                try:
+                    start_job_queue_scheduler()
+                except Exception as scheduler_err:
+                    logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
+
+                # T15 FIX-7: Data retention scheduler — was defined but never called
+                try:
+                    start_data_retention_scheduler()
+                except Exception as scheduler_err:
+                    logger.warning(f"Data retention scheduler warning (non-critical): {scheduler_err}")
+            else:
+                logger.info("[T15] Scheduler startup skipped — another worker owns the lock")
 
         except Exception as e:
             logger.error(f"Database initialization error: {e}")
@@ -4087,21 +4175,30 @@ def init_database():
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
-                # Start background diary reminder scheduler
-                try:
-                    start_diary_reminder_scheduler()
-                except Exception as scheduler_err:
-                    logger.warning(f"Diary scheduler warning (non-critical): {scheduler_err}")
-                # PJ816: Start background trigger scheduler (emails without login)
-                try:
-                    start_trigger_scheduler()
-                except Exception as scheduler_err:
-                    logger.warning(f"Trigger scheduler warning (non-critical): {scheduler_err}")
-                # Start background job queue scheduler
-                try:
-                    start_job_queue_scheduler()
-                except Exception as scheduler_err:
-                    logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
+                # T15 FIX-2: Only one worker starts background schedulers
+                if _acquire_scheduler_lock():
+                    # Start background diary reminder scheduler
+                    try:
+                        start_diary_reminder_scheduler()
+                    except Exception as scheduler_err:
+                        logger.warning(f"Diary scheduler warning (non-critical): {scheduler_err}")
+                    # PJ816: Start background trigger scheduler (emails without login)
+                    try:
+                        start_trigger_scheduler()
+                    except Exception as scheduler_err:
+                        logger.warning(f"Trigger scheduler warning (non-critical): {scheduler_err}")
+                    # Start background job queue scheduler
+                    try:
+                        start_job_queue_scheduler()
+                    except Exception as scheduler_err:
+                        logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
+                    # T15 FIX-7: Data retention scheduler
+                    try:
+                        start_data_retention_scheduler()
+                    except Exception as scheduler_err:
+                        logger.warning(f"Data retention scheduler warning (non-critical): {scheduler_err}")
+                else:
+                    logger.info("[T15] Scheduler startup skipped — another worker owns the lock")
             except Exception as e2:
                 logger.error(f"Failed to create tables: {e2}")
                 if not is_production:
@@ -4114,6 +4211,13 @@ def fix_all_schema_issues():
         with db.engine.connect() as conn:
             # Check if we're using PostgreSQL or SQLite
             is_postgres = 'postgresql' in str(db.engine.url)
+            
+            # T15 FIX-3: Prevent indefinite hangs during rolling deploys
+            if is_postgres:
+                try:
+                    conn.execute(text("SET lock_timeout = '5s'"))
+                except Exception:
+                    pass
             
             # PJ401: Add source_user_id and alert_category columns to alerts table
             inspector = inspect(db.engine)
@@ -4965,6 +5069,14 @@ def before_request():
     # Skip everything for health check - maximum speed
     if request.path == '/healthz':
         return
+    # T15 FIX-1: Block API requests until background init completes.
+    # Prevents OperationalError when a new model column is queried before
+    # the migration thread has created it in the database.
+    if not _init_complete and request.path.startswith('/api/'):
+        return jsonify({
+            'error': 'Service initializing',
+            'message': 'The service is starting up. Please try again in a moment.'
+        }), 503
     request.request_id = str(uuid.uuid4())
     if not request.path.startswith('/static'):
         logger.info(f"Request started: {request.method} {request.path}")
@@ -4972,17 +5084,14 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    """Log response details and set security headers"""
+    """Log response details"""
     # Skip logging for health check and static files
     if request.path != '/healthz' and not request.path.startswith('/static'):
         logger.info(f"Request completed: {response.status_code}")
 
-    # Security headers
-    if is_production:
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    # T15 FIX-8: Security headers removed from here — they are set by
+    # add_security_headers() middleware (registered earlier) which is more
+    # comprehensive and avoids the X-Frame-Options SAMEORIGIN vs DENY conflict.
 
     return response
 
@@ -15669,6 +15778,33 @@ def process_diary_reminders():
 # =====================
 
 # Global flag to track if scheduler is running
+# =====================
+# T15 FIX-2: CROSS-PROCESS SCHEDULER LOCK
+# =====================
+# When gunicorn runs multiple workers, each worker imports this module and
+# would start its own set of background schedulers (diary, trigger, job-queue).
+# This file lock ensures only one worker process starts the schedulers.
+_scheduler_lock_fd = None
+
+def _acquire_scheduler_lock():
+    """Acquire a cross-process file lock so only one worker runs background schedulers.
+    Returns True if this process acquired the lock (and should start schedulers).
+    Returns True as fallback if fcntl is unavailable (Windows dev) or on error."""
+    global _scheduler_lock_fd
+    if fcntl is None:
+        return True  # No locking available — assume single worker
+    try:
+        _scheduler_lock_fd = open('/tmp/thera_scheduler.lock', 'w')
+        fcntl.flock(_scheduler_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _scheduler_lock_fd.write(str(os.getpid()))
+        _scheduler_lock_fd.flush()
+        logger.info(f"[T15] Scheduler lock acquired by PID {os.getpid()}")
+        return True
+    except (IOError, OSError):
+        logger.info(f"[T15] Scheduler lock held by another worker — this worker will skip schedulers")
+        return False
+
+
 _diary_reminder_scheduler_started = False
 _diary_reminder_scheduler_lock = threading.Lock()
 
@@ -16397,6 +16533,12 @@ def run_trigger_scheduler():
                     logger.error(f"[TRIGGER SCHEDULER] Processing error: {str(inner_error)}")
                     logger.error(f"[TRIGGER SCHEDULER] Traceback: {traceback.format_exc()}")
                     db.session.rollback()
+                finally:
+                    # T15 FIX-4: Always release the DB session so connections return to the pool
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
             
             # Sleep for 5 minutes between checks
             time.sleep(300)
@@ -16465,6 +16607,12 @@ def run_job_queue_scheduler():
                 except Exception as inner_error:
                     logger.error(f"[JOB QUEUE SCHEDULER] Processing error: {str(inner_error)}")
                     db.session.rollback()
+                finally:
+                    # T15 FIX-4: Always release the DB session so connections return to the pool
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
             
             # Sleep for 10 seconds between job processing cycles
             time.sleep(10)
