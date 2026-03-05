@@ -15,6 +15,10 @@ appFormat6 Fixes:
   Now retries without timeout if the fast attempt fails, ensuring the column exists before
   the app serves requests. Failure is logged as CRITICAL instead of a warning.
 - FIX: CS7 diary_reminder_last_sent migration uses same retry pattern.
+- FIX: auto_migrate_database() now sets SET lock_timeout = '5s' at the start of its
+  connection. Previously, ALTER TABLE statements blocked forever during rolling deploys
+  because the old instance held table locks while Render waited for the new instance to
+  open a port — causing a deadlock where neither instance could proceed.
 
 
 10Link Changes:
@@ -2746,6 +2750,15 @@ def auto_migrate_database():
             with db.engine.connect() as conn:
                 # Check if we're using PostgreSQL or SQLite
                 is_postgres = 'postgresql' in str(db.engine.url)
+
+                # DEPLOY FIX: Set lock_timeout so ALTER TABLE fails fast during rolling deploys
+                # Without this, migrations block forever waiting for the old instance's locks,
+                # gunicorn never opens a port, and Render never kills the old instance = deadlock
+                if is_postgres:
+                    try:
+                        conn.execute(text("SET lock_timeout = '5s'"))
+                    except Exception:
+                        pass
 
                 # Update users table
                 if 'users' in inspector.get_table_names():
