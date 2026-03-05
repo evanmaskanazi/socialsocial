@@ -9,10 +9,8 @@ pip install --upgrade pip
 pip install -r requirements.txt
 
 # Fix all database schema issues
-# TIMEOUT: 30s limit prevents hanging when the old instance holds DB locks
-# If it times out, the app's _background_init will complete migrations on startup
 echo "Fixing database schema..."
-timeout 30 python -c "
+python -c "
 from app import app, db
 from sqlalchemy import text
 import logging
@@ -131,6 +129,6 @@ with app.app_context():
         logger.info('✓ Database initialized with test users')
     except Exception as e:
         logger.error(f'Test user creation error: {e}')
-" || echo "WARNING: Database init timed out or failed (will complete on app startup)"
+"
 
 echo "=== Build completed successfully! ==="
