@@ -67,6 +67,27 @@ T15c Fixes:
   outage, every unique IP+endpoint combination created a permanent dict entry.
   Now deletes keys whose timestamp list is empty after pruning.
 
+T15d Fixes:
+- FIX: Advisory lock leak in all three T15a schedulers. pg_try_advisory_lock acquires a
+  connection-level lock that persists when db.session.remove() returns the connection to
+  the pool. If the next scheduler iteration gets a different pooled connection, it sees
+  the lock as held by another session and skips work — potentially for up to pool_recycle
+  (1800s). Added _release_scheduler_lock() which calls pg_advisory_unlock on the same
+  session before db.session.remove(). All four schedulers now acquire, work, release,
+  then remove. Advisory lock IDs: diary=100001, trigger=100002, job_queue=100003,
+  data_retention=100004.
+- FIX: consecutive_days overwrite in check_parameter_triggers() and
+  run_background_trigger_check_for_watcher(). Both functions clamped consecutive_days
+  via max(trigger.consecutive_days or MIN, MIN) then ~22 lines later unconditionally
+  overwrote it with the raw trigger.consecutive_days. NULL would cause TypeError;
+  0 would match every entry. Removed both overwrite lines; the clamped value is now
+  used throughout. (process_parameter_triggers_async was already correct.)
+- FIX: start_data_retention_scheduler() was missing both T15a (advisory lock) and T15b
+  (db.session.remove in finally) safeguards that the other three schedulers had. With N
+  workers, N copies ran cleanup_old_data() concurrently, and connections returned dirty.
+  Added advisory lock (ID 100004), explicit release, and session cleanup matching the
+  diary/trigger/job_queue pattern.
+
 appFormat8 Fix:
 - FIX: Removed module-level auto_migrate_database() call (was at line ~3131).
   db.create_all() inside it opens its own connection and blocks on table locks BEFORE
@@ -11685,7 +11706,29 @@ def start_data_retention_scheduler():
                 time.sleep(sleep_seconds)
                 
                 with app.app_context():
-                    cleanup_old_data()
+                    _retention_lock_acquired = False
+                    try:
+                        # T15d: Only process if this worker holds the advisory lock
+                        if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_DATA_RETENTION):
+                            logger.debug("[DATA RETENTION] Another worker holds the lock, skipping")
+                            continue
+                        _retention_lock_acquired = True
+                        cleanup_old_data()
+                    except Exception as inner_error:
+                        logger.error(f"[DATA RETENTION] Processing error: {inner_error}")
+                        try:
+                            db.session.rollback()
+                        except Exception:
+                            pass
+                    finally:
+                        # T15d: Release advisory lock before returning connection to pool
+                        if _retention_lock_acquired:
+                            _release_scheduler_lock(_SCHEDULER_LOCK_DATA_RETENTION)
+                        # T15d: Always release the DB session so connections return to the pool
+                        try:
+                            db.session.remove()
+                        except Exception:
+                            pass
                     
             except Exception as e:
                 logger.error(f"[DATA RETENTION] Scheduler error: {e}")
@@ -13797,7 +13840,7 @@ def check_parameter_triggers():
             if not watched_user:
                 continue
 
-            consecutive_days = trigger.consecutive_days
+            # T15d: consecutive_days already clamped above — do not re-read raw value
             
             # Determine which schema this trigger uses
             has_new_schema = any([
@@ -15793,6 +15836,7 @@ _diary_reminder_scheduler_lock = threading.Lock()
 _SCHEDULER_LOCK_DIARY = 100001
 _SCHEDULER_LOCK_TRIGGER = 100002
 _SCHEDULER_LOCK_JOB_QUEUE = 100003
+_SCHEDULER_LOCK_DATA_RETENTION = 100004
 
 
 def _try_acquire_scheduler_lock(lock_id):
@@ -15818,6 +15862,31 @@ def _try_acquire_scheduler_lock(lock_id):
             pass
         return False  # If we can't check, don't run (safer)
 
+
+def _release_scheduler_lock(lock_id):
+    """
+    T15d: Explicitly release a PostgreSQL advisory lock before the connection
+    returns to the pool.  Without this, pg_try_advisory_lock holds the lock on
+    the specific pooled connection; if the next scheduler iteration receives a
+    different connection from the pool, it sees the lock as held and skips work.
+    Must be called on the same db.session that acquired the lock (i.e. before
+    db.session.remove()).  No-op for SQLite.
+    """
+    try:
+        is_postgres = 'postgresql' in str(db.engine.url)
+        if not is_postgres:
+            return
+        db.session.execute(
+            text("SELECT pg_advisory_unlock(:lock_id)"),
+            {'lock_id': lock_id}
+        )
+    except Exception as e:
+        logger.warning(f"[SCHEDULER LOCK] Could not release advisory lock {lock_id}: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
 def run_diary_reminder_scheduler():
     """
     Background thread that checks for diary reminders every minute.
@@ -15834,11 +15903,14 @@ def run_diary_reminder_scheduler():
             
             # Process diary reminders within app context
             with app.app_context():
+                _diary_lock_acquired = False
                 try:
                     # T15a: Only process if this worker holds the advisory lock
                     if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_DIARY):
                         logger.debug("[DIARY SCHEDULER] Another worker holds the lock, skipping this cycle")
                         continue
+
+                    _diary_lock_acquired = True
 
                     now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
                     logger.info(f"[DIARY SCHEDULER] ========================================")
@@ -15970,6 +16042,9 @@ def run_diary_reminder_scheduler():
                     except Exception:
                         pass
                 finally:
+                    # T15d: Release advisory lock before returning connection to pool
+                    if _diary_lock_acquired:
+                        _release_scheduler_lock(_SCHEDULER_LOCK_DIARY)
                     # Always release the DB session so connections return to the pool
                     try:
                         db.session.remove()
@@ -16087,7 +16162,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
             if not watched_user:
                 continue
 
-            consecutive_days = trigger.consecutive_days
+            # T15d: consecutive_days already clamped above — do not re-read raw value
             
             has_new_schema = any([
                 trigger.mood_alert,
@@ -16459,6 +16534,7 @@ def run_trigger_scheduler():
         try:
             # Process triggers every 5 minutes
             with app.app_context():
+                _trigger_lock_acquired = False
                 try:
                     # T15a: Only process if this worker holds the advisory lock
                     if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_TRIGGER):
@@ -16466,6 +16542,7 @@ def run_trigger_scheduler():
                         time.sleep(300)
                         continue
 
+                    _trigger_lock_acquired = True
                     now_utc = datetime.utcnow()
                     current_hour = now_utc.hour
                     logger.info(f"[TRIGGER SCHEDULER] ========================================")
@@ -16558,6 +16635,9 @@ def run_trigger_scheduler():
                     except Exception:
                         pass
                 finally:
+                    # T15d: Release advisory lock before returning connection to pool
+                    if _trigger_lock_acquired:
+                        _release_scheduler_lock(_SCHEDULER_LOCK_TRIGGER)
                     # T15b: Always release the DB session so connections return to the pool
                     try:
                         db.session.remove()
@@ -16625,6 +16705,7 @@ def run_job_queue_scheduler():
     while True:
         try:
             with app.app_context():
+                _jobq_lock_acquired = False
                 try:
                     # T15a: Only process if this worker holds the advisory lock
                     if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_JOB_QUEUE):
@@ -16632,6 +16713,7 @@ def run_job_queue_scheduler():
                         time.sleep(10)
                         continue
 
+                    _jobq_lock_acquired = True
                     # Process up to 10 jobs per cycle
                     process_background_jobs(batch_size=10)
                 except Exception as inner_error:
@@ -16641,6 +16723,9 @@ def run_job_queue_scheduler():
                     except Exception:
                         pass
                 finally:
+                    # T15d: Release advisory lock before returning connection to pool
+                    if _jobq_lock_acquired:
+                        _release_scheduler_lock(_SCHEDULER_LOCK_JOB_QUEUE)
                     # T15b: Always release the DB session so connections return to the pool
                     try:
                         db.session.remove()
