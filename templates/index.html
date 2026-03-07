@@ -12961,10 +12961,10 @@ async function searchUsersToFollow() {
                     ${user.bio ? `<div style="font-size: 0.875rem; color: #666;">${user.bio.slice(0, 50)}...</div>` : ''}
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); followUser(${user.id}); this.disabled=true; this.textContent='Following'">
-                        Follow
+                    <button class="conn-action-btn connect" onclick="event.stopPropagation(); followUser(${user.id}); this.disabled=true; this.textContent='Following'">
+                        Connect
                     </button>
-                   <button class="btn-primary btn-sm" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')" data-i18n="following.with_note">
+                   <button class="conn-action-btn connect-note" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')" data-i18n="following.with_note">
                                 ${window.i18n && window.i18n.translate ? window.i18n.translate('following.with_note') : 'Connect with Note'}
                     </button>
                 </div>
@@ -15364,13 +15364,13 @@ async function searchUsersToFollowInstant(query) {
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <button onclick="event.stopPropagation(); ${buttonAction}" style="padding: 6px 10px; ${buttonStyle} color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                <button onclick="event.stopPropagation(); ${buttonAction}" class="conn-action-btn block${isBlocked ? ' blocked' : ''}">
                                     ${buttonLabel}
                                 </button>
-                                <button onclick="event.stopPropagation(); ${followButtonAction}" class="btn ${isFollowing ? '' : 'btn-primary'}" style="padding: 8px 16px; font-size: 14px; width: auto; ${followButtonStyle} ${isFollowing ? 'color: white; border: none; border-radius: 6px; cursor: pointer;' : ''}">
+                                <button onclick="event.stopPropagation(); ${followButtonAction}" class="conn-action-btn${isFollowing ? ' block' : ' connect'}">
                                     ${followButtonText}
                                 </button>
-                                ${!isFollowing ? `<button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto;">
+                                ${!isFollowing ? `<button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" class="conn-action-btn connect-note">
                                     ${withNoteText}
                                 </button>` : ''}
                             </div>
