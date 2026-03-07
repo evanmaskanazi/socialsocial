@@ -8288,15 +8288,19 @@ def get_user_parameters(user_id):
                 param_dict['anxiety'] = None
 
             # T25: Notes privacy now uses per-entry notes_privacy column (matching diary save)
-            # Falls back to 'private' if notes_privacy column unavailable (NP1-SAFE)
+            # Falls back to original class_a-only behavior if notes_privacy column unavailable (NP1-SAFE)
             if app.config.get('NOTES_PRIVACY_AVAILABLE', False):
                 notes_privacy = row[12] or 'private'
+                if check_param_visibility(notes_privacy, circle_level):
+                    param_dict['notes'] = row[6]
+                else:
+                    param_dict['notes'] = None
             else:
-                notes_privacy = 'private'
-            if check_param_visibility(notes_privacy, circle_level):
-                param_dict['notes'] = row[6]
-            else:
-                param_dict['notes'] = None
+                # NP1-SAFE fallback: column not yet migrated, preserve original behavior
+                if circle_level == 'class_a':
+                    param_dict['notes'] = row[6]
+                else:
+                    param_dict['notes'] = None
 
             result.append(param_dict)
 
