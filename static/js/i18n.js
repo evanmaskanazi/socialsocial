@@ -462,7 +462,7 @@ const translations = {
 'followers.title': 'Followers',
 'invite.legacy_alert_content': 'Someone has invited you to connect',
 // PJ6003 - Wellness Alert Translations
-    'alerts.wellness_alert_for': 'Wellness Alert for {username}',
+    'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
     'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
 
     // PJ6003 - Notification Translations (for alerts list rendering)
@@ -934,8 +934,8 @@ const translations = {
     'notifications.no_notifications': 'No notifications to display',
 
     // Alert types (for translation in alert list)
-    'alerts.wellness_alert': 'Wellness Alert',
-    'alerts.wellness_alert_for': 'Wellness Alert for {username}',
+    'alerts.wellness_alert': 'Well-Being Alert',
+    'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
     'alerts.parameter_alert': '{parameter} has been at concerning levels',
     'alerts.consecutive_days': 'for {days} consecutive days',
     'alerts.date_range': '({start} - {end})',
