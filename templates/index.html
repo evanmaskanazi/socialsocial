@@ -6114,9 +6114,15 @@
             if (!title || typeof title !== 'string') return title;
             const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : null;
             if (!tFn) return title;
+            // T2500: Match both old "Wellness Alert for" and new "Well-Being Alert for"
+            if (title.startsWith('Well-Being Alert for ')) {
+                const username = title.replace('Well-Being Alert for ', '');
+                const template = tFn('alerts.wellness_alert_for') || 'Well-Being Alert for {username}';
+                return template.replace('{username}', username);
+            }
             if (title.startsWith('Wellness Alert for ')) {
                 const username = title.replace('Wellness Alert for ', '');
-                const template = tFn('alerts.wellness_alert_for') || 'Wellness Alert for {username}';
+                const template = tFn('alerts.wellness_alert_for') || 'Well-Being Alert for {username}';
                 return template.replace('{username}', username);
             }
             return title;
