@@ -665,6 +665,35 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# T25: Email deliverability helper — adds headers that prevent Gmail/Hotmail/Yahoo spam filtering
+def _add_deliverability_headers(msg, unsubscribe_path='/settings#notification'):
+    """Add anti-spam headers to MIMEMultipart messages for Gmail, Hotmail, Yahoo deliverability.
+    
+    Key headers:
+    - List-Unsubscribe: Required by Gmail/Yahoo for bulk senders (Feb 2024 rules)
+    - List-Unsubscribe-Post: One-click unsubscribe support (RFC 8058)
+    - Reply-To: Signals legitimate sender
+    - X-Mailer: Identifies sending application
+    - Feedback-ID: Helps Gmail categorize mail properly
+    """
+    app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+    from_email = os.environ.get('FROM_EMAIL', 'noreply@therasocial.org')
+    
+    msg['Reply-To'] = from_email
+    msg['X-Mailer'] = 'TheraSocial/1.0'
+    msg['List-Unsubscribe'] = f'<{app_url}{unsubscribe_path}>'
+    msg['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
+    msg['Feedback-ID'] = f'therasocial:transactional:{app_url}'
+    return msg
+
+
+def _html_to_plain_text(html):
+    """T25: Convert HTML email to plain text fallback for spam filter compliance."""
+    import re as _re
+    text = _re.sub(r'<[^>]+>', '', html)
+    text = _re.sub(r'\s+', ' ', text).strip()
+    return text
+
 import mimetypes
 import io
 import tempfile
@@ -1248,6 +1277,7 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
             msg.attach(MIMEText(text_content, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
@@ -1334,6 +1364,10 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -1465,6 +1499,10 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
             msg['Subject'] = subject
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = recipient_email
+            _add_deliverability_headers(msg)
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -1721,6 +1759,10 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -1863,6 +1905,10 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
             logger.info(f"[DAILY REMINDER] Email message created successfully")
 
@@ -2136,9 +2182,9 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         # Build the consolidated content
         translations = {
             'en': {
-                'subject': f'TheraSocial - Wellness Alert for {watched_username}',
+                'subject': f'TheraSocial - Well-Being Alert for {watched_username}',
                 'hello': 'Hello',
-                'intro': f"We noticed some concerning wellness patterns for {watched_username}:",
+                'intro': f"We noticed some concerning well-being patterns for {watched_username}:",
                 'param_line': '{param} has been at concerning levels for {days} consecutive days ({date_range})',
                 'recommendation': 'Consider reaching out to check in on them.',
                 'view_details': 'View Details',
@@ -2255,6 +2301,10 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = watcher.email
+            _add_deliverability_headers(msg)
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
             
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -2382,6 +2432,10 @@ def send_notification_email(user_email, notification_title, notification_content
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -5261,6 +5315,7 @@ def support_contact():
             msg['Subject'] = email_subject
             msg['From'] = from_email
             msg['To'] = SUPPORT_EMAIL
+            _add_deliverability_headers(msg)
             msg['Reply-To'] = email  # So replies go to the user
             msg.attach(MIMEText(text_content, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
@@ -6210,6 +6265,7 @@ def delete_account():
             msg['Subject'] = 'TheraSocial - Confirm Account Deletion'
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user.email
+            _add_deliverability_headers(msg)
             msg.attach(MIMEText(f"Confirm account deletion: {confirm_link}", 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
@@ -6850,8 +6906,8 @@ def get_data_processing_info():
                 'cross_border': False
             },
             {
-                'name': 'Wellness Tracking',
-                'purpose': 'To provide wellness diary and tracking features',
+                'name': 'Well-Being Tracking',
+                'purpose': 'To provide well-being diary and tracking features',
                 'legal_basis': 'Contract performance and consent',
                 'data_categories': ['mood', 'energy', 'sleep quality', 'physical activity', 'anxiety', 'notes'],
                 'retention': DATA_RETENTION_PERIODS['wellness_data']['period'],
@@ -8163,11 +8219,13 @@ def get_user_parameters(user_id):
             circle_level = 'class_a'
 
         # Get parameters with privacy settings
-        query = text("""
+        # T25: Added notes_privacy to query for per-entry notes privacy filtering
+        notes_privacy_col = ', p.notes_privacy' if app.config.get('NOTES_PRIVACY_AVAILABLE', False) else ''
+        query = text(f"""
             SELECT p.date, p.mood, p.energy, p.sleep_quality, 
                    p.physical_activity, p.anxiety, p.notes,
                    p.mood_privacy, p.energy_privacy, p.sleep_quality_privacy,
-                   p.physical_activity_privacy, p.anxiety_privacy
+                   p.physical_activity_privacy, p.anxiety_privacy{notes_privacy_col}
             FROM saved_parameters p
             WHERE p.user_id = :user_id
               AND p.date >= :start_date 
@@ -8229,8 +8287,13 @@ def get_user_parameters(user_id):
             else:
                 param_dict['anxiety'] = None
 
-            # Notes are always private unless user is in class_a
-            if circle_level == 'class_a':
+            # T25: Notes privacy now uses per-entry notes_privacy column (matching diary save)
+            # Falls back to 'private' if notes_privacy column unavailable (NP1-SAFE)
+            if app.config.get('NOTES_PRIVACY_AVAILABLE', False):
+                notes_privacy = row[12] or 'private'
+            else:
+                notes_privacy = 'private'
+            if check_param_visibility(notes_privacy, circle_level):
                 param_dict['notes'] = row[6]
             else:
                 param_dict['notes'] = None
@@ -10633,11 +10696,11 @@ def save_parameters():
 
         import random
         encouragements = [
-            "Great job tracking your wellness today! 🌟",
+            "Great job tracking your well-being today! 🌟",
             "Your consistency is inspiring! Keep it up! 💪",
             "Every check-in is a step forward! 🚀",
             "Thank you for taking care of yourself! ❤️",
-            "Your commitment to wellness is admirable! 🌈"
+            "Your commitment to well-being is admirable! 🌈"
         ]
 
         # Return consistent format
@@ -11000,7 +11063,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
-                                        title=f"Wellness Alert for {watched_user.username}",
+                                        title=f"Well-Being Alert for {watched_user.username}",
                                         content=content,
                                         alert_type='trigger',
                                         source_user_id=watched_user.id,
@@ -11050,7 +11113,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                         logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                         alert = create_alert_no_email(
                                             user_id=watcher_id,
-                                            title=f"Wellness Alert for {watched_user.username}",
+                                            title=f"Well-Being Alert for {watched_user.username}",
                                             content=content,
                                             alert_type='trigger',
                                             source_user_id=watched_user.id,
@@ -11090,7 +11153,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
-                                        title=f"Wellness Alert for {watched_user.username}",
+                                        title=f"Well-Being Alert for {watched_user.username}",
                                         content=content,
                                         alert_type='trigger',
                                         source_user_id=watched_user.id,
@@ -11129,7 +11192,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                             logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                             alert = create_alert_no_email(
                                 user_id=watcher_id,
-                                title=f"Wellness Alert for {watched_user.username}",
+                                title=f"Well-Being Alert for {watched_user.username}",
                                 content=content,
                                 alert_type='trigger',
                                 source_user_id=watched_user.id,
@@ -11360,7 +11423,7 @@ def process_parameter_triggers(user_id, params):
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
                                     alert = create_alert_with_email(
                                         user_id=watcher_id,
-                                        title=f"Wellness Alert for {watched_user.username}",
+                                        title=f"Well-Being Alert for {watched_user.username}",
                                         content=content,
                                         alert_type='trigger',
                                         source_user_id=watched_user.id,
@@ -11406,7 +11469,7 @@ def process_parameter_triggers(user_id, params):
                                         content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
                                         alert = create_alert_with_email(
                                             user_id=watcher_id,
-                                            title=f"Wellness Alert for {watched_user.username}",
+                                            title=f"Well-Being Alert for {watched_user.username}",
                                             content=content,
                                             alert_type='trigger',
                                             source_user_id=watched_user.id,
@@ -11440,7 +11503,7 @@ def process_parameter_triggers(user_id, params):
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
                                     alert = create_alert_with_email(
                                         user_id=watcher_id,
-                                        title=f"Wellness Alert for {watched_user.username}",
+                                        title=f"Well-Being Alert for {watched_user.username}",
                                         content=content,
                                         alert_type='trigger',
                                         source_user_id=watched_user.id,
@@ -11474,7 +11537,7 @@ def process_parameter_triggers(user_id, params):
                             content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
                             alert = create_alert_with_email(
                                 user_id=watcher_id,
-                                title=f"Wellness Alert for {watched_user.username}",
+                                title=f"Well-Being Alert for {watched_user.username}",
                                 content=content,
                                 alert_type='trigger',
                                 source_user_id=watched_user.id,
@@ -12454,17 +12517,17 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
     # PJ6003: Insight translations
     insight_translations = {
         'en': {
-            'start_tracking': 'Start tracking your daily wellness to receive personalized insights!',
+            'start_tracking': 'Start tracking your daily well-being to receive personalized insights!',
             'logged_entries': "Great job tracking for {days} days!",
             'logged_few': "You've logged {days} entries. Keep tracking daily for better insights!",
             'mood_positive': 'Your mood has been generally positive. Keep up the good work!',
-            'mood_low': 'Your mood has been lower than usual. Consider activities that boost your wellbeing.',
+            'mood_low': 'Your mood has been lower than usual. Consider activities that boost your well-being.',
             'energy_strong': 'Your energy levels are strong!',
             'energy_low': 'Low energy detected. Consider prioritizing rest or exercise.',
             'sleep_great': 'Great sleep quality!',
             'sleep_improve': 'Your sleep quality could be improved. Consider better sleep hygiene.',
             'activity_excellent': 'Excellent activity levels!',
-            'activity_low': 'Consider increasing your physical activity for better wellbeing.',
+            'activity_low': 'Consider increasing your physical activity for better well-being.',
             'anxiety_high': 'Anxiety levels appear elevated. Consider relaxation techniques or speaking with a professional.',
             'anxiety_good': 'Good anxiety management!',
             'making_progress': "You're making progress! Continue tracking for more detailed insights."
@@ -13616,7 +13679,7 @@ def email_report():
             return jsonify({'error': 'Email service not configured'}), 500
         
         subject_translations = {
-            'en': 'Your Weekly Wellness Report',
+            'en': 'Your Weekly Well-Being Report',
             'he': 'דוח הבריאות השבועי שלך',
             'ar': 'تقرير صحتك الأسبوعي',
             'ru': 'Ваш еженедельный отчет о здоровье'
@@ -13626,6 +13689,10 @@ def email_report():
         msg['Subject'] = subject_translations.get(lang, subject_translations['en'])
         msg['From'] = os.environ.get('FROM_EMAIL', 'TheraSocial <onboarding@resend.dev>')
         msg['To'] = recipient
+        _add_deliverability_headers(msg)
+        # T25: Plain text fallback for spam filter compliance
+        _text_fb = _html_to_plain_text(html_content)
+        msg.attach(MIMEText(_text_fb, 'plain'))
         msg.attach(MIMEText(html_content, 'html'))
         
         smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -16450,7 +16517,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 # Create alert with email notification
                 alert = create_alert_with_email(
                     user_id=watcher_id,
-                    title=f"Wellness Alert for {watched_username}",
+                    title=f"Well-Being Alert for {watched_username}",
                     content=content,
                     alert_type='trigger',
                     source_user_id=source_user_id,
@@ -17113,7 +17180,7 @@ def public_invite_page(username):
                 'subtitle': 'Follow their progress on TheraSocial',
                 'followers': 'Followers',
                 'following': 'Following',
-                'description': f'{user_word["en"]} is tracking their wellness journey and wants to share it with you.',
+                'description': f'{user_word["en"]} is tracking their well-being journey and wants to share it with you.',
                 'join_text': 'Join TheraSocial to follow their progress and support their health, well-being and prosperity goals.',
                 'follow_btn': f'Follow {user_word["en"]}',
                 'dashboard_btn': 'Go to Dashboard',
