@@ -572,6 +572,26 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# T2500: Email deliverability helper — adds headers that prevent Gmail/Hotmail/Yahoo spam filtering
+def _add_deliverability_headers(msg, unsubscribe_path='/settings#notification'):
+    """Add anti-spam headers to MIMEMultipart messages for Gmail, Hotmail, Yahoo deliverability."""
+    app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+    from_email = os.environ.get('FROM_EMAIL', 'noreply@therasocial.org')
+    msg['Reply-To'] = from_email
+    msg['X-Mailer'] = 'TheraSocial/1.0'
+    msg['List-Unsubscribe'] = f'<{app_url}{unsubscribe_path}>'
+    msg['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
+    msg['Feedback-ID'] = f'therasocial:transactional:{app_url}'
+    return msg
+
+
+def _html_to_plain_text(html):
+    """T2500: Convert HTML email to plain text fallback for spam filter compliance."""
+    import re as _re
+    text = _re.sub(r'<[^>]+>', '', html)
+    text = _re.sub(r'\s+', ' ', text).strip()
+    return text
+
 import mimetypes
 import io
 import tempfile
@@ -1043,7 +1063,7 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
         <html>
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         </head>
         <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -1099,6 +1119,7 @@ def send_password_reset_email(user_email, reset_token, user_language='en'):
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
             msg.attach(MIMEText(text_content, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
@@ -1185,6 +1206,9 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
+            # T2500: Plain text fallback for spam filter compliance
+            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -1276,7 +1300,7 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
         <html>
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         </head>
         <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -1316,6 +1340,9 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
             msg['Subject'] = subject
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = recipient_email
+            _add_deliverability_headers(msg)
+            # T2500: Plain text fallback for spam filter compliance
+            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -1391,19 +1418,19 @@ def get_invite_alert_translations(language='en'):
     translations = {
         'en': {
             'invite.alert_title': 'New Invitation',
-            'invite.alert_content': '{username} has invited you to follow them'
+            'invite.alert_content': '{username} has invited you to connect'
         },
         'he': {
             'invite.alert_title': 'הזמנה חדשה',
-            'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה'
+            'invite.alert_content': '{username} הזמין/ה אותך להתחבר'
         },
         'ar': {
             'invite.alert_title': 'دعوة جديدة',
-            'invite.alert_content': 'دعاك {username} لمتابعته'
+            'invite.alert_content': 'دعاك {username} للاتصال'
         },
         'ru': {
             'invite.alert_title': 'Новое приглашение',
-            'invite.alert_content': '{username} пригласил(а) вас подписаться'
+            'invite.alert_content': '{username} пригласил(а) вас подключиться'
         }
     }
     return translations.get(language, translations['en'])
@@ -1416,51 +1443,51 @@ def get_notification_translations(language='en'):
     translations = {
         'en': {
             # Follow notifications
-            'follow.alert_title': '{username} started following you',
-            'follow.alert_content': 'You have a new follower!',
-            'follow.new_follower': 'You have a new follower!',
+            'follow.alert_title': '{username} connected with you',
+            'follow.alert_content': 'You have a new connection!',
+            'follow.new_follower': 'You have a new connection!',
             # Message notifications
             'message.alert_title': 'New message from {username}',
             'message.alert_content': 'You have received a new message',
             # Invite notifications  
             'invite.alert_title': 'New Invitation',
-            'invite.alert_content': '{username} has invited you to follow them'
+            'invite.alert_content': '{username} has invited you to connect'
         },
         'he': {
             # Follow notifications
-            'follow.alert_title': '{username} התחיל/ה לעקוב אחריך',
-            'follow.alert_content': 'יש לך עוקב/ת חדש/ה!',
-            'follow.new_follower': 'יש לך עוקב/ת חדש/ה!',
+            'follow.alert_title': '{username} התחבר/ה אליך',
+            'follow.alert_content': 'יש לך חיבור חדש!',
+            'follow.new_follower': 'יש לך חיבור חדש!',
             # Message notifications
             'message.alert_title': 'הודעה חדשה מ-{username}',
             'message.alert_content': 'קיבלת הודעה חדשה',
             # Invite notifications
             'invite.alert_title': 'הזמנה חדשה',
-            'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה'
+            'invite.alert_content': '{username} הזמין/ה אותך להתחבר'
         },
         'ar': {
             # Follow notifications
-            'follow.alert_title': 'بدأ {username} بمتابعتك',
-            'follow.alert_content': 'لديك متابع جديد!',
-            'follow.new_follower': 'لديك متابع جديد!',
+            'follow.alert_title': '{username} اتصل بك',
+            'follow.alert_content': 'لديك اتصال جديد!',
+            'follow.new_follower': 'لديك اتصال جديد!',
             # Message notifications
             'message.alert_title': 'رسالة جديدة من {username}',
             'message.alert_content': 'لقد تلقيت رسالة جديدة',
             # Invite notifications
             'invite.alert_title': 'دعوة جديدة',
-            'invite.alert_content': 'دعاك {username} لمتابعته'
+            'invite.alert_content': 'دعاك {username} للاتصال'
         },
         'ru': {
             # Follow notifications
-            'follow.alert_title': '{username} подписался на вас',
-            'follow.alert_content': 'У вас новый подписчик!',
-            'follow.new_follower': 'У вас новый подписчик!',
+            'follow.alert_title': '{username} подключился к вам',
+            'follow.alert_content': 'У вас новое подключение!',
+            'follow.new_follower': 'У вас новое подключение!',
             # Message notifications
             'message.alert_title': 'Новое сообщение от {username}',
             'message.alert_content': 'Вы получили новое сообщение',
             # Invite notifications
             'invite.alert_title': 'Новое приглашение',
-            'invite.alert_content': '{username} пригласил(а) вас подписаться'
+            'invite.alert_content': '{username} пригласил(а) вас подключиться'
         }
     }
     return translations.get(language, translations['en'])
@@ -1532,7 +1559,7 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
         <html>
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         </head>
         <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -1572,6 +1599,9 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
+            # T2500: Plain text fallback for spam filter compliance
+            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -1600,10 +1630,10 @@ def get_daily_diary_reminder_translations(language='en'):
     """Get email translations for daily diary reminder"""
     translations = {
         'en': {
-            'subject': 'TheraSocial - Daily Wellness Check-in Reminder',
+            'subject': 'TheraSocial - Daily Well-Being Check-in Reminder',
             'hello': 'Hello',
-            'reminder': "Don't forget to log your wellness parameters for today!",
-            'description': 'Taking a few moments to track your mood, energy, sleep, and other wellness factors helps you understand your patterns and make positive changes.',
+            'reminder': "Don't forget to log your well-being parameters for today!",
+            'description': 'Taking a few moments to track your mood, energy, sleep, and other well-being factors helps you understand your patterns and make positive changes.',
             'fill_diary': 'Fill Out Daily Diary',
             'regards': 'Best regards',
             'team': 'TheraSocial Team',
@@ -1668,7 +1698,7 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         <html>
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         </head>
         <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -1714,6 +1744,9 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
+            # T2500: Plain text fallback for spam filter compliance
+            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
             msg.attach(MIMEText(html_content, 'html'))
             logger.info(f"[DAILY REMINDER] Email message created successfully")
 
@@ -1890,7 +1923,7 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
                                 if 'new_message' in key:
                                     email_title = f"New message from {username}"
                                 elif 'started_following' in key:
-                                    email_title = f"{username} started following you"
+                                    email_title = f"{username} connected with you"
                                 elif 'invitation' in key.lower():
                                     email_title = "New invitation"
                                 else:
@@ -1987,9 +2020,9 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         # Build the consolidated content
         translations = {
             'en': {
-                'subject': f'TheraSocial - Wellness Alert for {watched_username}',
+                'subject': f'TheraSocial - Well-Being Alert for {watched_username}',
                 'hello': 'Hello',
-                'intro': f"We noticed some concerning wellness patterns for {watched_username}:",
+                'intro': f"We noticed some concerning well-being patterns for {watched_username}:",
                 'param_line': '{param} has been at concerning levels for {days} consecutive days ({date_range})',
                 'recommendation': 'Consider reaching out to check in on them.',
                 'view_details': 'View Details',
@@ -2068,7 +2101,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         <html>
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         </head>
         <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -2106,6 +2139,9 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = watcher.email
+            _add_deliverability_headers(msg)
+            # T2500: Plain text fallback for spam filter compliance
+            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
             msg.attach(MIMEText(html_content, 'html'))
             
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -2195,7 +2231,7 @@ def send_notification_email(user_email, notification_title, notification_content
         <html>
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         </head>
         <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -2233,6 +2269,9 @@ def send_notification_email(user_email, notification_title, notification_content
             msg['Subject'] = t['subject']
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
+            _add_deliverability_headers(msg)
+            # T2500: Plain text fallback for spam filter compliance
+            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -2310,7 +2349,7 @@ def create_notification_with_email(user_id, title, content, alert_type='info', s
                             if 'new_message' in key:
                                 email_title = f"New message from {username}"
                             elif 'started_following' in key:
-                                email_title = f"{username} started following you"
+                                email_title = f"{username} connected with you"
                             elif 'invitation' in key.lower():
                                 email_title = "New invitation"
                             else:
@@ -4820,16 +4859,28 @@ def support_page():
 def support_contact():
     """
     Handle support contact form submissions.
-    Validates input, stores message, and optionally sends email.
+    Validates input, stores message, and sends email to support address.
     """
     try:
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Invalid request data'}), 400
         
-        # Validate required fields
+        # Get user ID if logged in
+        user_id = session.get('user_id')
+        
+        # Auto-fill name and email from session if logged in
         name = data.get('name', '').strip()
         email = data.get('email', '').strip()
+        
+        if user_id and (not name or not email):
+            user = db.session.get(User, user_id)
+            if user:
+                if not name:
+                    name = user.username or 'User'
+                if not email:
+                    email = user.email or ''
+        
         subject = data.get('subject', '').strip()
         message = data.get('message', '').strip()
         
@@ -4863,9 +4914,6 @@ def support_contact():
         subject = sanitize_input(subject)
         message = sanitize_input(message)
         
-        # Get user ID if logged in
-        user_id = session.get('user_id')
-        
         # Log the support request (audit trail)
         log_audit('support_contact', 'support_request', None, {
             'name': name[:50],  # Truncate for log
@@ -4875,9 +4923,58 @@ def support_contact():
             'user_id': user_id
         })
         
-        # TODO: Store in database and/or send email notification
-        # For now, just log and return success
         logger.info(f"Support contact from {email}: {subject[:50]}")
+        
+        # Send email to support address
+        SUPPORT_EMAIL = 'notifications@therasocialconnect.com'
+        try:
+            from_email = app.config.get('MAIL_DEFAULT_SENDER', os.environ.get('FROM_EMAIL', 'TheraSocial <onboarding@resend.dev>'))
+            
+            email_subject = f"[TheraSocial Support] {subject}"
+            text_content = (
+                f"Support request from: {name} ({email})\n"
+                f"User ID: {user_id or 'Not logged in'}\n"
+                f"Subject: {subject}\n\n"
+                f"Message:\n{message}\n"
+            )
+            html_content = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #667eea;">TheraSocial Support Request</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">From:</td><td style="padding: 8px;">{name} ({email})</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">User ID:</td><td style="padding: 8px;">{user_id or 'Not logged in'}</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">Subject:</td><td style="padding: 8px;">{subject}</td></tr>
+                </table>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <p style="margin: 0; white-space: pre-wrap;">{message}</p>
+                </div>
+                <p style="color: #888; font-size: 12px; margin-top: 20px;">Reply directly to this email to respond to {email}</p>
+            </div>
+            """
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = email_subject
+            msg['From'] = from_email
+            msg['To'] = SUPPORT_EMAIL
+            _add_deliverability_headers(msg)
+            msg['Reply-To'] = email  # So replies go to the user
+            msg.attach(MIMEText(text_content, 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
+            
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', app.config.get('MAIL_PASSWORD', ''))
+            
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(msg['From'], SUPPORT_EMAIL, msg.as_string())
+            
+            logger.info(f"[SMTP SUPPORT] Support email sent to {SUPPORT_EMAIL} from {email}")
+            
+        except Exception as e:
+            logger.error(f"[SMTP SUPPORT] Failed to send support email: {e}")
+            # Still return success - the request was logged even if email failed
         
         return jsonify({
             'success': True,
@@ -5782,7 +5879,7 @@ def delete_account():
             html_content = f"""
             <!DOCTYPE html>
             <html>
-            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"></head>
             <body style="font-family: Arial, sans-serif; direction: {text_dir}; text-align: {text_align}; background-color: #f5f5f5; margin: 0; padding: 20px;">
                 <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <div style="background: #EF4444; padding: 30px; text-align: center;">
@@ -5809,6 +5906,7 @@ def delete_account():
             msg['Subject'] = 'TheraSocial - Confirm Account Deletion'
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user.email
+            _add_deliverability_headers(msg)
             msg.attach(MIMEText(f"Confirm account deletion: {confirm_link}", 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
@@ -5866,6 +5964,77 @@ def confirm_delete_account():
         log_audit('account_deleted', 'user', user.id, user.id, {'username': user.username})
 
         token_record.used = True
+
+        # Manually delete all related records that lack cascade delete-orphan
+        # Follow: user can be follower or followed
+        db.session.execute(
+            Follow.__table__.delete().where(
+                (Follow.follower_id == user.id) | (Follow.followed_id == user.id)
+            )
+        )
+        # FollowRequest: user can be requester or target
+        db.session.execute(
+            FollowRequest.__table__.delete().where(
+                (FollowRequest.requester_id == user.id) | (FollowRequest.target_id == user.id)
+            )
+        )
+        # BlockedUser: user can be blocker or blocked
+        db.session.execute(
+            BlockedUser.__table__.delete().where(
+                (BlockedUser.blocker_id == user.id) | (BlockedUser.blocked_id == user.id)
+            )
+        )
+        # ParameterTrigger: user can be watcher or watched
+        db.session.execute(
+            ParameterTrigger.__table__.delete().where(
+                (ParameterTrigger.watcher_id == user.id) | (ParameterTrigger.watched_id == user.id)
+            )
+        )
+        # CircleMember entries where user is the circle_user (member of others' circles)
+        db.session.execute(
+            Circle.__table__.delete().where(Circle.circle_user_id == user.id)
+        )
+        # Alerts where user is the source
+        db.session.execute(
+            Alert.__table__.update().where(Alert.source_user_id == user.id).values(source_user_id=None)
+        )
+        # Comments authored by user (on others' posts)
+        db.session.execute(
+            Comment.__table__.delete().where(Comment.user_id == user.id)
+        )
+        # Reactions by user
+        db.session.execute(
+            Reaction.__table__.delete().where(Reaction.user_id == user.id)
+        )
+        # Auth tokens
+        db.session.execute(
+            PasswordResetToken.__table__.delete().where(PasswordResetToken.user_id == user.id)
+        )
+        db.session.execute(
+            MagicLoginToken.__table__.delete().where(MagicLoginToken.user_id == user.id)
+        )
+        # Consent and privacy records
+        db.session.execute(
+            UserConsent.__table__.delete().where(UserConsent.user_id == user.id)
+        )
+        db.session.execute(
+            ConsentHistory.__table__.delete().where(ConsentHistory.user_id == user.id)
+        )
+        db.session.execute(
+            CookieConsent.__table__.delete().where(CookieConsent.user_id == user.id)
+        )
+        db.session.execute(
+            ProcessingRestriction.__table__.delete().where(ProcessingRestriction.user_id == user.id)
+        )
+        # Notification settings
+        db.session.execute(
+            NotificationSettings.__table__.delete().where(NotificationSettings.user_id == user.id)
+        )
+        # Audit logs (set to null since nullable)
+        db.session.execute(
+            AuditLog.__table__.update().where(AuditLog.user_id == user.id).values(user_id=None)
+        )
+
         db.session.delete(user)
         db.session.commit()
 
@@ -6378,8 +6547,8 @@ def get_data_processing_info():
                 'cross_border': False
             },
             {
-                'name': 'Wellness Tracking',
-                'purpose': 'To provide wellness diary and tracking features',
+                'name': 'Well-Being Tracking',
+                'purpose': 'To provide well-being diary and tracking features',
                 'legal_basis': 'Contract performance and consent',
                 'data_categories': ['mood', 'energy', 'sleep quality', 'physical activity', 'anxiety', 'notes'],
                 'retention': DATA_RETENTION_PERIODS['wellness_data']['period'],
@@ -10131,11 +10300,11 @@ def save_parameters():
 
         import random
         encouragements = [
-            "Great job tracking your wellness today! 🌟",
+            "Great job tracking your well-being today! 🌟",
             "Your consistency is inspiring! Keep it up! 💪",
             "Every check-in is a step forward! 🚀",
             "Thank you for taking care of yourself! ❤️",
-            "Your commitment to wellness is admirable! 🌈"
+            "Your commitment to well-being is admirable! 🌈"
         ]
 
         # Return consistent format
@@ -10497,7 +10666,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
-                                        title=f"Wellness Alert for {watched_user.username}",
+                                        title=f"Well-Being Alert for {watched_user.username}",
                                         content=content,
                                         alert_type='trigger',
                                         source_user_id=watched_user.id,
@@ -10547,7 +10716,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                         logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                         alert = create_alert_no_email(
                                             user_id=watcher_id,
-                                            title=f"Wellness Alert for {watched_user.username}",
+                                            title=f"Well-Being Alert for {watched_user.username}",
                                             content=content,
                                             alert_type='trigger',
                                             source_user_id=watched_user.id,
@@ -10587,7 +10756,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
-                                        title=f"Wellness Alert for {watched_user.username}",
+                                        title=f"Well-Being Alert for {watched_user.username}",
                                         content=content,
                                         alert_type='trigger',
                                         source_user_id=watched_user.id,
@@ -10626,7 +10795,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                             logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                             alert = create_alert_no_email(
                                 user_id=watcher_id,
-                                title=f"Wellness Alert for {watched_user.username}",
+                                title=f"Well-Being Alert for {watched_user.username}",
                                 content=content,
                                 alert_type='trigger',
                                 source_user_id=watched_user.id,
@@ -10857,7 +11026,7 @@ def process_parameter_triggers(user_id, params):
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
                                     alert = create_alert_with_email(
                                         user_id=watcher_id,
-                                        title=f"Wellness Alert for {watched_user.username}",
+                                        title=f"Well-Being Alert for {watched_user.username}",
                                         content=content,
                                         alert_type='trigger',
                                         source_user_id=watched_user.id,
@@ -10903,7 +11072,7 @@ def process_parameter_triggers(user_id, params):
                                         content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
                                         alert = create_alert_with_email(
                                             user_id=watcher_id,
-                                            title=f"Wellness Alert for {watched_user.username}",
+                                            title=f"Well-Being Alert for {watched_user.username}",
                                             content=content,
                                             alert_type='trigger',
                                             source_user_id=watched_user.id,
@@ -10937,7 +11106,7 @@ def process_parameter_triggers(user_id, params):
                                     content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
                                     alert = create_alert_with_email(
                                         user_id=watcher_id,
-                                        title=f"Wellness Alert for {watched_user.username}",
+                                        title=f"Well-Being Alert for {watched_user.username}",
                                         content=content,
                                         alert_type='trigger',
                                         source_user_id=watched_user.id,
@@ -10971,7 +11140,7 @@ def process_parameter_triggers(user_id, params):
                             content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
                             alert = create_alert_with_email(
                                 user_id=watcher_id,
-                                title=f"Wellness Alert for {watched_user.username}",
+                                title=f"Well-Being Alert for {watched_user.username}",
                                 content=content,
                                 alert_type='trigger',
                                 source_user_id=watched_user.id,
@@ -11928,17 +12097,17 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
     # PJ6003: Insight translations
     insight_translations = {
         'en': {
-            'start_tracking': 'Start tracking your daily wellness to receive personalized insights!',
+            'start_tracking': 'Start tracking your daily well-being to receive personalized insights!',
             'logged_entries': "Great job tracking for {days} days!",
             'logged_few': "You've logged {days} entries. Keep tracking daily for better insights!",
             'mood_positive': 'Your mood has been generally positive. Keep up the good work!',
-            'mood_low': 'Your mood has been lower than usual. Consider activities that boost your wellbeing.',
+            'mood_low': 'Your mood has been lower than usual. Consider activities that boost your well-being.',
             'energy_strong': 'Your energy levels are strong!',
             'energy_low': 'Low energy detected. Consider prioritizing rest or exercise.',
             'sleep_great': 'Great sleep quality!',
             'sleep_improve': 'Your sleep quality could be improved. Consider better sleep hygiene.',
             'activity_excellent': 'Excellent activity levels!',
-            'activity_low': 'Consider increasing your physical activity for better wellbeing.',
+            'activity_low': 'Consider increasing your physical activity for better well-being.',
             'anxiety_high': 'Anxiety levels appear elevated. Consider relaxation techniques or speaking with a professional.',
             'anxiety_good': 'Good anxiety management!',
             'making_progress': "You're making progress! Continue tracking for more detailed insights."
@@ -13090,7 +13259,7 @@ def email_report():
             return jsonify({'error': 'Email service not configured'}), 500
         
         subject_translations = {
-            'en': 'Your Weekly Wellness Report',
+            'en': 'Your Weekly Well-Being Report',
             'he': 'דוח הבריאות השבועי שלך',
             'ar': 'تقرير صحتك الأسبوعي',
             'ru': 'Ваш еженедельный отчет о здоровье'
@@ -13100,6 +13269,9 @@ def email_report():
         msg['Subject'] = subject_translations.get(lang, subject_translations['en'])
         msg['From'] = os.environ.get('FROM_EMAIL', 'TheraSocial <onboarding@resend.dev>')
         msg['To'] = recipient
+        _add_deliverability_headers(msg)
+        # T2500: Plain text fallback for spam filter compliance
+        msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
         msg.attach(MIMEText(html_content, 'html'))
         
         smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -13768,7 +13940,7 @@ def check_parameter_triggers():
                 
                 alert = create_alert_with_email(
                     user_id=watcher_id,
-                    title=f"Wellness Alert for {watched_username}",
+                    title=f"Well-Being Alert for {watched_username}",
                     content=content,
                     alert_type='trigger',
                     source_user_id=source_user_id,
@@ -15930,7 +16102,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 # Create alert with email notification
                 alert = create_alert_with_email(
                     user_id=watcher_id,
-                    title=f"Wellness Alert for {watched_username}",
+                    title=f"Well-Being Alert for {watched_username}",
                     content=content,
                     alert_type='trigger',
                     source_user_id=source_user_id,
@@ -16539,51 +16711,59 @@ def public_invite_page(username):
             default_language = browser_lang
 
         # Translations for invite page
+        # Translated "User" word for each language (replaces username display)
+        user_word = {
+            'en': 'User',
+            'he': 'משתמש/ת',
+            'ar': 'المستخدم',
+            'ru': 'Пользователь'
+        }
+
         translations = {
             'en': {
-                'title': f"Join {username}'s Wellness Journey",
+                'title': f"Join {user_word['en']}'s Wellness Journey",
                 'subtitle': 'Follow their progress on TheraSocial',
                 'followers': 'Followers',
                 'following': 'Following',
-                'description': f'{username} is tracking their wellness journey and wants to share it with you.',
+                'description': f'{user_word["en"]} is tracking their well-being journey and wants to share it with you.',
                 'join_text': 'Join TheraSocial to follow their progress and support their health, well-being and prosperity goals.',
-                'follow_btn': f'Follow {username}',
+                'follow_btn': f'Follow {user_word["en"]}',
                 'dashboard_btn': 'Go to Dashboard',
                 'already_following': 'Already Following',
                 'request_pending': 'Request Pending'
             },
             'he': {
-                'title': f'הצטרף/י למסע הבריאות של {username}',
+                'title': f'הצטרף/י למסע הבריאות של {user_word["he"]}',
                 'subtitle': 'עקוב/י אחרי ההתקדמות שלו/ה ב-TheraSocial',
                 'followers': 'עוקבים',
                 'following': 'עוקב/ת אחרי',
-                'description': f'{username} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
+                'description': f'{user_word["he"]} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
                 'join_text': 'הצטרף/י ל-TheraSocial כדי לעקוב אחרי ההתקדמות שלו/ה ולתמוך ביעדי הבריאות, הרווחה והשגשוג שלו/ה.',
-                'follow_btn': f'עקוב/י אחרי {username}',
+                'follow_btn': f'עקוב/י אחרי {user_word["he"]}',
                 'dashboard_btn': 'עבור ללוח הבקרה',
                 'already_following': 'כבר עוקב/ת',
                 'request_pending': 'בקשה ממתינה'
             },
             'ar': {
-                'title': f'انضم إلى رحلة {username} الصحية',
+                'title': f'انضم إلى رحلة {user_word["ar"]} الصحية',
                 'subtitle': 'تابع تقدمهم على TheraSocial',
                 'followers': 'المتابعون',
                 'following': 'يتابع',
-                'description': f'{username} يتتبع رحلته الصحية ويريد مشاركتها معك.',
+                'description': f'{user_word["ar"]} يتتبع رحلته الصحية ويريد مشاركتها معك.',
                 'join_text': 'انضم إلى TheraSocial لمتابعة تقدمهم ودعم أهدافهم في الصحة والرفاهية والازدهار.',
-                'follow_btn': f'تابع {username}',
+                'follow_btn': f'تابع {user_word["ar"]}',
                 'dashboard_btn': 'اذهب إلى لوحة التحكم',
                 'already_following': 'متابع بالفعل',
                 'request_pending': 'طلب قيد الانتظار'
             },
             'ru': {
-                'title': f'Присоединяйтесь к пути здоровья {username}',
+                'title': f'Присоединяйтесь к пути здоровья {user_word["ru"]}',
                 'subtitle': 'Следите за их прогрессом на TheraSocial',
                 'followers': 'Подписчики',
                 'following': 'Подписки',
-                'description': f'{username} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
+                'description': f'{user_word["ru"]} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
                 'join_text': 'Присоединяйтесь к TheraSocial, чтобы следить за их прогрессом и поддерживать их цели в области здоровья, благополучия и процветания.',
-                'follow_btn': f'Подписаться на {username}',
+                'follow_btn': f'Подписаться на {user_word["ru"]}',
                 'dashboard_btn': 'Перейти к панели',
                 'already_following': 'Уже подписаны',
                 'request_pending': 'Запрос ожидает'
@@ -16613,7 +16793,7 @@ def public_invite_page(username):
         <html lang="{default_language}" dir="{text_dir}">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
             <title>{t['title']} - TheraSocial</title>
             <style>
                 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -16740,6 +16920,65 @@ def public_invite_page(username):
                     gap: 10px;
                     align-items: center;
                 }}
+                /* Mobile improvements */
+                @media (max-width: 480px) {{
+                    body {{
+                        padding: 12px;
+                    }}
+                    .card {{
+                        padding: 24px 18px;
+                        margin-top: 48px;
+                        border-radius: 16px;
+                    }}
+                    .avatar {{
+                        width: 76px;
+                        height: 76px;
+                        font-size: 32px;
+                        margin-bottom: 14px;
+                    }}
+                    h1 {{
+                        font-size: 22px;
+                        line-height: 1.3;
+                        margin-bottom: 8px;
+                    }}
+                    .subtitle {{
+                        font-size: 14px;
+                        margin-bottom: 18px;
+                    }}
+                    .description {{
+                        font-size: 14px;
+                        line-height: 1.5;
+                        margin-bottom: 22px;
+                    }}
+                    .btn {{
+                        padding: 12px 32px;
+                        font-size: 15px;
+                        width: 100%;
+                        max-width: 280px;
+                    }}
+                    .language-selector {{
+                        top: 10px;
+                        {{'left' if is_rtl else 'right'}}: 10px;
+                    }}
+                    .language-selector select {{
+                        padding: 6px 12px;
+                        font-size: 13px;
+                    }}
+                }}
+                @media (max-width: 360px) {{
+                    .card {{
+                        padding: 20px 14px;
+                        margin-top: 40px;
+                    }}
+                    h1 {{
+                        font-size: 19px;
+                    }}
+                    .avatar {{
+                        width: 64px;
+                        height: 64px;
+                        font-size: 28px;
+                    }}
+                }}
             </style>
         </head>
         <body>
@@ -16755,6 +16994,7 @@ def public_invite_page(username):
                 <div class="avatar">{username[0].upper()}</div>
                 <h1>{t['title']}</h1>
                 <p class="subtitle">{t['subtitle']}</p>
+                <!-- Stats box commented out per design update
                 <div class="stats">
                     <div class="stat">
                         <div class="stat-value">{follower_count}</div>
@@ -16765,6 +17005,7 @@ def public_invite_page(username):
                         <div class="stat-label">{t['following']}</div>
                     </div>
                 </div>
+                -->
                 <p class="description">
                     {t['description']}<br><br>
                     {t['join_text']}
