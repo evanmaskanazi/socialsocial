@@ -8219,13 +8219,16 @@ def get_user_parameters(user_id):
             circle_level = 'class_a'
 
         # Get parameters with privacy settings
-        # T25: Added notes_privacy to query for per-entry notes privacy filtering
-        notes_privacy_col = ', p.notes_privacy' if app.config.get('NOTES_PRIVACY_AVAILABLE', False) else ''
-        query = text(f"""
+        # T25: Always try to include notes_privacy for per-entry filtering.
+        # Uses try/except instead of NOTES_PRIVACY_AVAILABLE flag (which can be False
+        # due to race conditions during background init even when column exists).
+        _has_notes_priv = True
+        query = text("""
             SELECT p.date, p.mood, p.energy, p.sleep_quality, 
                    p.physical_activity, p.anxiety, p.notes,
                    p.mood_privacy, p.energy_privacy, p.sleep_quality_privacy,
-                   p.physical_activity_privacy, p.anxiety_privacy{notes_privacy_col}
+                   p.physical_activity_privacy, p.anxiety_privacy,
+                   p.notes_privacy
             FROM saved_parameters p
             WHERE p.user_id = :user_id
               AND p.date >= :start_date 
@@ -8233,14 +8236,30 @@ def get_user_parameters(user_id):
             ORDER BY p.date ASC
         """)
 
-        result_proxy = db.session.execute(
-            query,
-            {
-                'user_id': user_id,
-                'start_date': start.isoformat(),
-                'end_date': end.isoformat()
-            }
-        )
+        query_params = {
+            'user_id': user_id,
+            'start_date': start.isoformat(),
+            'end_date': end.isoformat()
+        }
+
+        try:
+            result_proxy = db.session.execute(query, query_params)
+        except Exception:
+            # notes_privacy column doesn't exist yet — retry without it
+            db.session.rollback()
+            _has_notes_priv = False
+            query = text("""
+                SELECT p.date, p.mood, p.energy, p.sleep_quality, 
+                       p.physical_activity, p.anxiety, p.notes,
+                       p.mood_privacy, p.energy_privacy, p.sleep_quality_privacy,
+                       p.physical_activity_privacy, p.anxiety_privacy
+                FROM saved_parameters p
+                WHERE p.user_id = :user_id
+                  AND p.date >= :start_date 
+                  AND p.date <= :end_date
+                ORDER BY p.date ASC
+            """)
+            result_proxy = db.session.execute(query, query_params)
 
         parameters = result_proxy.fetchall()
 
@@ -8287,20 +8306,14 @@ def get_user_parameters(user_id):
             else:
                 param_dict['anxiety'] = None
 
-            # T25: Notes privacy now uses per-entry notes_privacy column (matching diary save)
-            # Falls back to original class_a-only behavior if notes_privacy column unavailable (NP1-SAFE)
-            if app.config.get('NOTES_PRIVACY_AVAILABLE', False):
-                notes_privacy = row[12] or 'private'
-                if check_param_visibility(notes_privacy, circle_level):
-                    param_dict['notes'] = row[6]
-                else:
-                    param_dict['notes'] = None
+            # T25: Notes privacy uses per-entry notes_privacy column (matching diary save).
+            # If column was available in query, use it. Otherwise default to 'private' (safest).
+            notes_privacy = row[12] if _has_notes_priv else 'private'
+            notes_privacy = notes_privacy or 'private'  # Handle NULL values
+            if check_param_visibility(notes_privacy, circle_level):
+                param_dict['notes'] = row[6]
             else:
-                # NP1-SAFE fallback: column not yet migrated, preserve original behavior
-                if circle_level == 'class_a':
-                    param_dict['notes'] = row[6]
-                else:
-                    param_dict['notes'] = None
+                param_dict['notes'] = None
 
             result.append(param_dict)
 
