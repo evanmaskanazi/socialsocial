@@ -7657,8 +7657,8 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
         if (citySelector || homeCitySelector) {
             updateCityTime();
             // Start time update interval only if we have a selector
-            // APPLOAD: Reduced from 1s to 60s - minute-level precision is sufficient
-            setInterval(updateCityTime, 60000);
+            // T255: Restored to 1s - display shows seconds so interval must match
+            setInterval(updateCityTime, 1000);
         }
     }, 100);
 
