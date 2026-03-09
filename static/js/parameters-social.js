@@ -1227,22 +1227,31 @@ async function setupLanguageSelector() {
             if (oldLocal !== currentLang) {
                 console.log('[PS LANG DEBUG P101] Updating localStorage from', oldLocal, 'to', currentLang);
             }
+            // T30c: ONLY write localStorage when we have confirmed backend language
+            localStorage.setItem('selectedLanguage', currentLang);
+            localStorage.setItem('userLanguage', currentLang);
+            console.log('[PS LANG DEBUG P101] localStorage updated to:', currentLang);
         } else {
-            // Fallback to localStorage only if backend unavailable
+            // T30c FIX: Backend unavailable (401/not logged in) — use localStorage for UI
+            // but DO NOT overwrite it. The fallback 'en' must not corrupt stored preference.
             currentLang = localStorage.getItem('selectedLanguage') || 
                           localStorage.getItem('userLanguage') ||
                           (window.i18n?.getCurrentLanguage?.()) ||
                           'en';
-            console.log('[PS LANG DEBUG P101] Backend unavailable, using fallback:', currentLang);
+            console.log('[PS LANG DEBUG P101] Backend unavailable, using fallback (not writing localStorage):', currentLang);
         }
     }
 
     console.log('[PS LANG DEBUG P101] Resolved language:', currentLang);
 
-    // Sync localStorage with the determined language
-    localStorage.setItem('selectedLanguage', currentLang);
-    localStorage.setItem('userLanguage', currentLang);
-    console.log('[PS LANG DEBUG P101] localStorage updated to:', currentLang);
+    // T30c: localStorage write moved into the backend-confirmed branch above.
+    // The justLoggedIn branch already has its own localStorage read; write it back
+    // only for that case so the login-time choice is preserved.
+    if (justLoggedIn) {
+        localStorage.setItem('selectedLanguage', currentLang);
+        localStorage.setItem('userLanguage', currentLang);
+        console.log('[PS LANG DEBUG P101] localStorage updated (justLoggedIn) to:', currentLang);
+    }
 
     // CRITICAL FIX: Set programmatic flag BEFORE setting selector value
     console.log('[PS LANG DEBUG P101] Setting selector value with programmatic flag...');
