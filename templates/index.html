@@ -6013,8 +6013,17 @@
                 // This is a valid user-initiated change
                 console.log('[INTERCEPTOR] VALID USER CHANGE:', storedLang, '->', newValue);
                 
-                // T30b: Update short code label for mobile
-                if (typeof updateLangCodeLabel === 'function') updateLangCodeLabel();
+                // T30b: Update label immediately with the new value, and again after i18n writes localStorage
+                if (typeof updateLangCodeLabel === 'function') {
+                    // Immediate: set from newValue directly
+                    var _lbl = document.getElementById('langCodeLabel');
+                    if (_lbl) {
+                        var _map = {'en':'EN','he':'עב','ar':'عر','ru':'РУ'};
+                        _lbl.textContent = _map[newValue] || newValue.toUpperCase();
+                    }
+                    // Delayed: re-read from localStorage after i18n settles
+                    setTimeout(updateLangCodeLabel, 1000);
+                }
 
                 // Reset the flag after processing a valid change
                 window._userClickedLanguageSelector = false;
@@ -6163,21 +6172,27 @@
     
     <!-- T30c: Protect localStorage language from i18n.js init corruption -->
     <!-- i18n.js defaults to 'en' on load and may overwrite a stored 'he'/'ar'/'ru' -->
+    <!-- FIX: Uses timestamp (_lastLanguageSelectorInteraction) instead of boolean -->
+    <!--       because the boolean gets reset by the interceptor BEFORE i18n.js writes -->
     <script>
     (function() {
         const _origSetItem = Storage.prototype.setItem;
         Storage.prototype.setItem = function(key, value) {
             if (key === 'selectedLanguage' || key === 'userLanguage') {
                 const oldValue = localStorage.getItem(key);
-                // Block non-en → en changes UNLESS user explicitly clicked the selector
-                if (oldValue && oldValue !== 'en' && value === 'en' && !window._userClickedLanguageSelector) {
-                    console.warn('[T30c STORAGE GUARD] BLOCKED:', key, oldValue, '→', value, '(no user interaction)');
+                // Block non-en → en changes UNLESS user interacted with selector recently
+                // Using timestamp because the boolean _userClickedLanguageSelector gets
+                // reset by the INTERCEPTOR before i18n.js calls localStorage.setItem
+                const timeSinceClick = Date.now() - (window._lastLanguageSelectorInteraction || 0);
+                const isRecentUserAction = timeSinceClick < 10000; // 10 second window
+                if (oldValue && oldValue !== 'en' && value === 'en' && !isRecentUserAction) {
+                    console.warn('[T30c STORAGE GUARD] BLOCKED:', key, oldValue, '→', value, '(no recent user interaction, ' + timeSinceClick + 'ms ago)');
                     return; // Don't corrupt
                 }
             }
             return _origSetItem.apply(this, arguments);
         };
-        console.log('[T30c] localStorage language guard installed');
+        console.log('[T30c] localStorage language guard installed (timestamp-based)');
     })();
     </script>
 

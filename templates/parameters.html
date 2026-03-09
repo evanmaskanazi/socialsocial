@@ -541,9 +541,11 @@ Storage.prototype.setItem = function(key, value) {
     if (key === 'selectedLanguage' || key === 'userLanguage') {
         const oldValue = localStorage.getItem(key);
 
-        // Block non-en → en changes UNLESS user explicitly clicked the selector
-        if (oldValue && oldValue !== 'en' && value === 'en' && !window._userClickedLanguageSelector) {
-            console.warn('[T30c STORAGE GUARD] BLOCKED:', key, oldValue, '→', value, '(no user interaction)');
+        // Block non-en → en changes UNLESS user interacted with selector recently
+        const timeSinceClick = Date.now() - (window._lastLanguageSelectorInteraction || 0);
+        const isRecentUserAction = timeSinceClick < 10000;
+        if (oldValue && oldValue !== 'en' && value === 'en' && !isRecentUserAction) {
+            console.warn('[T30c STORAGE GUARD] BLOCKED:', key, oldValue, '→', value, '(no recent user interaction)');
             return; // Don't corrupt
         }
     }
