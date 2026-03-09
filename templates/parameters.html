@@ -314,10 +314,70 @@
         @media (max-width: 768px) {
             .diary-nav { display: none !important; }
 
+            /* T40: Top header bar matching home page */
+            .diary-mobile-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 12px;
+                background: rgba(255,255,255,0.96);
+                backdrop-filter: blur(16px) saturate(1.15);
+                -webkit-backdrop-filter: blur(16px) saturate(1.15);
+                position: sticky;
+                top: 0;
+                z-index: 1000;
+                border-bottom: 1px solid rgba(107,139,164,0.08);
+                box-sizing: border-box;
+            }
+            .diary-mobile-header-brand {
+                font-weight: 700;
+                font-size: 1rem;
+                color: #667eea;
+                text-decoration: none;
+            }
+            .diary-mobile-header-actions {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .diary-header-lang-wrap {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+                position: relative;
+                cursor: pointer;
+            }
+            .diary-header-lang-label {
+                font-weight: 700;
+                font-size: 12px;
+                color: var(--primary, #667eea);
+            }
+            .diary-header-btn {
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 0.8rem;
+                padding: 6px 12px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                white-space: nowrap;
+            }
+            .diary-header-btn.tutorial {
+                background: var(--primary, #667eea);
+                color: white;
+            }
+            .diary-header-btn.logout {
+                background: var(--coral, #E8837C);
+                color: white;
+                border-color: var(--coral, #E8837C);
+            }
+
             .diary-mobile-nav {
                 display: block;
                 position: sticky;
-                top: 0;
+                top: 46px;
                 left: 0;
                 right: 0;
                 background: rgba(255,255,255,0.96);
@@ -426,10 +486,80 @@
         @media (min-width: 769px) {
             .diary-mobile-nav { display: none !important; }
             .diary-mobile-more-menu { display: none !important; }
+            .diary-mobile-header { display: none !important; }
         }
     </style>
 </head>
 <body>
+
+    <!-- T40: Mobile header bar matching home page (TheraSocial + EN + Tutorial + Logout) -->
+    <div class="diary-mobile-header">
+        <a href="/" class="diary-mobile-header-brand">TheraSocial</a>
+        <div class="diary-mobile-header-actions">
+            <div class="diary-header-lang-wrap" onclick="document.getElementById('diaryHeaderLangSelect').click()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <span class="diary-header-lang-label" id="diaryHeaderLangLabel">EN</span>
+                <select id="diaryHeaderLangSelect" style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer;">
+                    <option value="en">English</option>
+                    <option value="he">עברית</option>
+                    <option value="ar">العربية</option>
+                    <option value="ru">Русский</option>
+                </select>
+            </div>
+            <button class="diary-header-btn tutorial" onclick="window.location.href='/?tutorial=start'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span data-i18n="nav.tutorial">Tutorial</span>
+            </button>
+            <button class="diary-header-btn logout" onclick="fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>{window.location.href='/';})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <span data-i18n="nav.logout">Logout</span>
+            </button>
+        </div>
+    </div>
+    <script>
+    // T40: Sync header language selector with diary language
+    (function(){
+        var langMap = {'en':'EN','he':'עב','ar':'عر','ru':'РУ'};
+        var stored = localStorage.getItem('selectedLanguage') || localStorage.getItem('userLanguage') || 'en';
+        var label = document.getElementById('diaryHeaderLangLabel');
+        var sel = document.getElementById('diaryHeaderLangSelect');
+        if (label) label.textContent = langMap[stored] || stored.toUpperCase();
+        if (sel) {
+            sel.value = stored;
+            sel.addEventListener('change', function() {
+                var lang = sel.value;
+                label.textContent = langMap[lang] || lang.toUpperCase();
+                localStorage.setItem('selectedLanguage', lang);
+                localStorage.setItem('userLanguage', lang);
+                window._allowLanguagePost = true;
+                window._lastLanguageSelectorInteraction = Date.now();
+                if (window.i18n && window.i18n.setLanguage) {
+                    window.i18n.setLanguage(lang);
+                }
+                // Also sync the content language selector if present
+                var contentSel = document.getElementById('languageSelector');
+                if (contentSel) contentSel.value = lang;
+                // Post to backend
+                fetch('/api/user/language', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ language: lang })
+                }).catch(function(){});
+            });
+        }
+        // Listen for language changes from content selector
+        window.addEventListener('languageChanged', function(){
+            setTimeout(function(){
+                var l = document.getElementById('diaryHeaderLangLabel');
+                if(!l)return;
+                var c = localStorage.getItem('selectedLanguage') || localStorage.getItem('userLanguage') || 'en';
+                l.textContent = langMap[c] || c.toUpperCase();
+                if(sel) sel.value = c;
+            }, 200);
+        });
+    })();
+    </script>
 
     <!-- CS5: Mobile navigation matching home page -->
     <nav class="diary-mobile-nav">
@@ -673,8 +803,8 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=R1"></script>
-    <script src="/static/js/parameters-social.js?v=T30c"></script>
+    <script src="/static/js/i18n.js?v=T40"></script>
+    <script src="/static/js/parameters-social.js?v=T40"></script>
     <script src="/static/js/feed-updates.js?v=3.0"></script>
 
     <script>

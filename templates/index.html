@@ -3091,6 +3091,27 @@
                 flex-wrap: wrap !important;
             }
 
+            /* T40: Mobile-friendly connection user cards */
+            #connectionsView .user-card,
+            #myConnectionsList .user-card,
+            #connectionRecommendationsList .user-card,
+            #connectionSearchResults .user-card {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                padding: 12px !important;
+            }
+            #connectionsView .user-card > div:last-child,
+            #connectionRecommendationsList .user-card > div:last-child,
+            #connectionSearchResults .user-card > div:last-child {
+                width: 100% !important;
+                justify-content: flex-start !important;
+                gap: 6px !important;
+            }
+            .conn-action-btn {
+                font-size: 0.75rem !important;
+                padding: 5px 12px !important;
+            }
+
             /* MS-4/MS-5: Calendar and content overflow containment */
             .feed-calendar-section .calendar-grid,
             .calendar-container, .calendar-table, table.calendar {
@@ -5140,7 +5161,7 @@
                   <!-- Connection Tabs -->
                   <div style="display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border);">
                       <button class="conn-tab active" onclick="switchConnectionTab('myConnections')" data-tab="myConnections" data-i18n="connections.my_connections">My Connections</button>
-                      <button class="conn-tab" onclick="switchConnectionTab('recommendations')" data-tab="recommendations" data-i18n="connections.recommended">Recommended</button>
+                      <button class="conn-tab" onclick="switchConnectionTab('recommendations')" data-tab="recommendations" data-i18n="connections.requests">Connection Requests</button>
                   </div>
 
                   <!-- My Connections List -->
@@ -6207,7 +6228,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=R1"></script>
+    <script src="/static/js/i18n.js?v=T40"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -6462,7 +6483,7 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=T30c"></script>
+<script src="/static/js/parameters-social.js?v=T40"></script>
    <script src="/static/js/circles-messages.js?v=Opt1"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
@@ -16571,13 +16592,18 @@ async function loadConnections() {
         // Load following data
         const followingResponse = await fetch('/api/following', { credentials: 'include' });
         const followersResponse = await fetch('/api/followers', { credentials: 'include' });
-        const recommendedResponse = await fetch('/api/recommendations', { credentials: 'include' });
+        // T40: Commented out recommendation-based fetch (common city/connections logic) - kept for later
+        // const recommendedResponse = await fetch('/api/recommendations', { credentials: 'include' });
+        // T40: Fetch received follow requests instead of recommendations
+        const followRequestsResponse = await fetch('/api/follow-requests/received', { credentials: 'include' });
         // T25: Fetch blocked users for Connection Requests tab block/unblock toggle
         const blockedResponse = await fetch('/api/blocked-users', { credentials: 'include' });
 
         const followingData = followingResponse.ok ? await followingResponse.json() : { following: [] };
         const followersData = followersResponse.ok ? await followersResponse.json() : { followers: [] };
-        const recommendedData = recommendedResponse.ok ? await recommendedResponse.json() : { recommendations: [] };
+        // T40: Commented out recommendation data - replaced by follow requests
+        // const recommendedData = recommendedResponse.ok ? await recommendedResponse.json() : { recommendations: [] };
+        const followRequestsData = followRequestsResponse.ok ? await followRequestsResponse.json() : { requests: [] };
         // T25: Build blocked user set
         let blockedUserIds = new Set();
         if (blockedResponse.ok) {
@@ -16612,7 +16638,10 @@ async function loadConnections() {
             }
         }
 
-        // Render Recommended (Connection Requests)
+        // T40: Render Connection Requests (received follow requests only)
+        // T40: Commented out old recommendation-based rendering (common city/connections)
+        /*
+        // OLD: Render Recommended (Connection Requests)
         // T25: Added Block and Connect with Note buttons matching search results
         const recList = document.getElementById('connectionRecommendationsList');
         if (recList) {
@@ -16670,6 +16699,90 @@ async function loadConnections() {
                 });
             } else {
                 recList.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">' + _t('msg.no_recommendations_now', 'No recommendations available right now.') + '</p>';
+            }
+        }
+        END OLD */
+
+        // T40: NEW - Render received follow requests
+        const recList = document.getElementById('connectionRecommendationsList');
+        if (recList) {
+            const requests = followRequestsData.requests || [];
+            if (requests.length > 0) {
+                recList.innerHTML = requests.map(req => {
+                    const isBlocked = blockedUserIds.has(req.requester_id);
+                    const blockText = isBlocked ? _t('block.unblock_user', 'Unblock') : _t('block.block_user', 'Block');
+                    const blockClass = isBlocked ? ' blocked' : '';
+                    return `
+                    <div class="user-card" data-user-id="${req.requester_id}" data-request-id="${req.id}">
+                        <div class="user-avatar" style="background: ${req.avatar_color || '#6B8BA4'}; cursor: pointer;" onclick="viewRecommendedUserProfile(${req.requester_id})">
+                            ${escapeHtml(req.requester_name.charAt(0).toUpperCase())}
+                        </div>
+                        <div class="user-info" style="cursor: pointer;" onclick="viewRecommendedUserProfile(${req.requester_id})">
+                            <div class="user-name">${escapeHtml(req.requester_name)}</div>
+                            <div style="font-size: 0.75rem; color: var(--gray);">${_t('connections.sent_you_request', 'Sent you a connection request')}</div>
+                            <div style="font-size: 0.7rem; color: var(--gray);">${new Date(req.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                            <button class="conn-action-btn connect req-accept-btn" data-request-id="${req.id}" data-i18n="connections.approve">${_t('connections.approve', 'Accept')}</button>
+                            <button class="conn-action-btn block req-reject-btn" data-request-id="${req.id}" data-i18n="connections.reject">${_t('connections.reject', 'Reject')}</button>
+                            <button class="conn-action-btn block${blockClass} rec-block-btn" data-user-id="${req.requester_id}" data-username="${escapeHtml(req.requester_name)}" data-is-blocked="${isBlocked}">${blockText}</button>
+                        </div>
+                    </div>
+                `}).join('');
+
+                // T40: Add event handlers for follow request Accept/Reject buttons
+                recList.querySelectorAll('.req-accept-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const requestId = parseInt(btn.dataset.requestId);
+                        try {
+                            const resp = await fetch(`/api/follow-requests/${requestId}/respond`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ action: 'accept', privacy_level: 'public' })
+                            });
+                            if (resp.ok) {
+                                if (typeof showNotification === 'function') showNotification(_t('connections.request_accepted', 'Request accepted!'), 'success');
+                            }
+                        } catch (err) { console.error('Accept request error:', err); }
+                        loadConnections();
+                    });
+                });
+                recList.querySelectorAll('.req-reject-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const requestId = parseInt(btn.dataset.requestId);
+                        try {
+                            const resp = await fetch(`/api/follow-requests/${requestId}/respond`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ action: 'reject' })
+                            });
+                            if (resp.ok) {
+                                if (typeof showNotification === 'function') showNotification(_t('connections.request_rejected', 'Request rejected'), 'info');
+                            }
+                        } catch (err) { console.error('Reject request error:', err); }
+                        loadConnections();
+                    });
+                });
+                recList.querySelectorAll('.rec-block-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const userId = parseInt(btn.dataset.userId);
+                        const username = btn.dataset.username;
+                        const isBlocked = btn.dataset.isBlocked === 'true';
+                        if (isBlocked) {
+                            await unblockUserAndRefresh(userId, username);
+                        } else {
+                            await blockUser(userId, username);
+                        }
+                        loadConnections();
+                    });
+                });
+            } else {
+                recList.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">' + _t('connections.no_pending_requests', 'No pending connection requests.') + '</p>';
             }
         }
     } catch (error) {
@@ -17485,6 +17598,19 @@ async function loadHomeAlerts() {
         function translateAlertText(text) {
             if (!text) return 'Alert';
             const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate : null;
+            // T40: Handle "username|invite.alert_content" format
+            if (typeof text === 'string' && text.includes('|')) {
+                const parts = text.split('|');
+                if (parts.length === 2 && (parts[1].startsWith('invite.') || parts[1].startsWith('alerts.'))) {
+                    const [username, i18nKey] = parts;
+                    if (tFn) {
+                        const template = tFn(i18nKey);
+                        if (template && template !== i18nKey) return template.replace('{username}', username);
+                    }
+                    // Fallback: use key as readable text
+                    return username + ' has invited you to connect';
+                }
+            }
             if (text.startsWith('alerts.') || text.startsWith('invite.')) {
                 if (tFn) {
                     const translated = tFn(text);
