@@ -256,13 +256,52 @@ function restoreParameterState(state) {
     }
 }
 
+// T40: Dropdown change now applies privacy to ALL past, current and future days
 function updatePrivacy(categoryId, privacyLevel) {
     if (!window.selectedPrivacy) {
         window.selectedPrivacy = {};
     }
     window.selectedPrivacy[categoryId] = privacyLevel;
-    console.log('Privacy updated:', categoryId, privacyLevel);
+    console.log('Privacy updated (applying to all days):', categoryId, privacyLevel);
+    // T40: Automatically apply to all days when dropdown changes
+    applyPrivacyToAllDaysAuto(categoryId, privacyLevel);
 }
+
+// T40: Apply privacy to all days automatically (no confirmation prompt)
+async function applyPrivacyToAllDaysAuto(categoryId, privacyLevel) {
+    try {
+        const response = await fetch('/api/parameters/set-default-privacy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ parameter: categoryId, privacy: privacyLevel })
+        });
+        const result = await response.json();
+        if (result.success) {
+            const privacyLabels = { 'private': 'Private', 'class_a': 'Family', 'class_b': 'Close Friends', 'public': 'Public' };
+            const label = privacyLabels[privacyLevel] || privacyLevel;
+            const msg = pt('parameters.apply_all_days_success') || `Visibility updated for all diary entries`;
+            if (typeof showNotification === 'function') showNotification(msg, 'success');
+            else if (typeof window.showMessage === 'function') window.showMessage(msg, 'success');
+            console.log('[T40] Privacy applied to all days:', categoryId, '=', label, '- rows updated:', result.rows_updated);
+        } else {
+            console.error('[T40] Failed to apply privacy to all days:', result);
+        }
+    } catch (err) {
+        console.error('[T40] applyPrivacyToAllDaysAuto error:', err);
+    }
+}
+
+// T40: Apply privacy only for today (renamed from old "Apply to all days" - kept for future use)
+// This sets privacy only for the currently selected day's entry
+async function applyPrivacyOnlyToday(categoryId) {
+    const privacy = (window.selectedPrivacy && window.selectedPrivacy[categoryId]) || 'private';
+    console.log('[T40] Applying privacy only for today:', categoryId, privacy);
+    // The current day's privacy is already stored in selectedPrivacy and will be saved with saveParameters()
+    const msg = pt('parameters.apply_only_today') || 'Privacy set for today only';
+    if (typeof showNotification === 'function') showNotification(msg, 'info');
+}
+window.applyPrivacyOnlyToday = applyPrivacyOnlyToday;
 
 // T30: Apply the currently-selected privacy level for a parameter to ALL past & future diary entries
 async function applyPrivacyToAllDays(categoryId) {
@@ -924,7 +963,8 @@ function initializeParameters() {
     const html = `
         <div class="parameters-page">
             <!-- Language Selector -->
-            <div class="language-selector-wrapper">
+            <!-- T40: Hidden on mobile since header bar has language selector -->
+            <div class="language-selector-wrapper diary-content-lang-selector">
                 <select id="languageSelector" class="language-selector">
                     <option value="en">English</option>
                     <option value="he">עברית</option>
@@ -983,10 +1023,12 @@ function initializeParameters() {
         Public
     </option>
 </select>
+                    <!-- T40: "Apply only for today" link - commented out for now (dropdown applies to all days by default)
                     <a href="#" class="apply-all-days-link" data-category="${category.id}"
-                       onclick="event.preventDefault(); applyPrivacyToAllDays('${category.id}')"
-                       data-i18n="parameters.apply_all_days"
-                       style="display:block; font-size:11px; color:#6B8BA4; text-align:center; margin-top:3px; text-decoration:underline; cursor:pointer;">Apply to all days</a>
+                       onclick="event.preventDefault(); applyPrivacyOnlyToday('${category.id}')"
+                       data-i18n="parameters.apply_only_today"
+                       style="display:block; font-size:11px; color:#6B8BA4; text-align:center; margin-top:3px; text-decoration:underline; cursor:pointer;">Apply only for today</a>
+                    -->
                 </div>
             </div>
             <div class="rating-buttons" id="${category.id}-buttons">
@@ -1027,10 +1069,12 @@ function initializeParameters() {
                                 <option value="class_b"  data-i18n="privacy.class_b">Close Friends</option>
                                 <option value="public"   data-i18n="privacy.public">Public</option>
                             </select>
+                            <!-- T40: "Apply only for today" link - commented out for now
                             <a href="#" class="apply-all-days-link" data-category="notes"
-                               onclick="event.preventDefault(); applyPrivacyToAllDays('notes')"
-                               data-i18n="parameters.apply_all_days"
-                               style="display:block; font-size:11px; color:#6B8BA4; text-align:center; margin-top:3px; text-decoration:underline; cursor:pointer;">Apply to all days</a>
+                               onclick="event.preventDefault(); applyPrivacyOnlyToday('notes')"
+                               data-i18n="parameters.apply_only_today"
+                               style="display:block; font-size:11px; color:#6B8BA4; text-align:center; margin-top:3px; text-decoration:underline; cursor:pointer;">Apply only for today</a>
+                            -->
                         </div>
                     </div>
                     <textarea id="notesInput"
@@ -1039,12 +1083,14 @@ function initializeParameters() {
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="action-buttons">
+                <div class="action-buttons" style="justify-content: center;">
                     <button class="btn btn-primary" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
                     <!-- LOAD BTN: Commented out per UX review
                     <button class="btn btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
                     -->
+                    <!-- T40: Clear Form button commented out per UX review - Save is centered
                     <button class="btn btn-clear" onclick="clearParameters()" data-i18n="parameters.clear">Clear Form</button>
+                    -->
                     <!-- HOME BTN: Commented out - diary nav handles return home
                     <button class="btn btn-menu" onclick="goToHome()" data-i18n="parameters.home">Home</button>
                     -->
@@ -1940,6 +1986,10 @@ function addParameterStyles() {
             .btn {
                 width: 100%;
                 box-sizing: border-box;
+            }
+            /* T40: Hide content language selector on mobile - header bar has it */
+            .diary-content-lang-selector {
+                display: none !important;
             }
             .language-selector-wrapper {
                 position: relative;
