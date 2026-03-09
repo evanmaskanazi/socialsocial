@@ -2403,8 +2403,9 @@
 
             .nav-menu {
                 gap: 6px;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
                 justify-content: flex-end;
+                align-items: center;
             }
 
             /* PJ6010: MOBILE FIX - Show About and Support links on mobile */
@@ -2415,6 +2416,9 @@
                 padding: 4px 8px;
             }
 
+            /* T30: Hide About/Support when logged in to save space */
+            .auth-only-hide { display: none !important; }
+
             /* Keep language selector visible - compact on mobile */
             .language-selector {
                 padding: 2px 6px;
@@ -2422,12 +2426,13 @@
                 border-width: 1.5px;
             }
             
-            /* Tutorial and Logout buttons - slightly larger for mobile usability */
+            /* T30: Tutorial and Logout buttons - compact single-row layout */
             #tutorialBtn, #logoutBtn {
-                font-size: 13px !important;
-                padding: 6px 12px !important;
-                margin-left: 3px !important;
-                margin-right: 3px !important;
+                font-size: 12px !important;
+                padding: 5px 10px !important;
+                margin-left: 2px !important;
+                margin-right: 2px !important;
+                white-space: nowrap;
             }
             
             /* Mobile Alerts View Styles */
@@ -12526,15 +12531,16 @@ function showAddTriggerModal() {
             </div>
             <div style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">Parameter:</label>
-                <select id="triggerParameter" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <select id="triggerParameter" onchange="toggleNoCheckinFields()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     <option value="mood">Mood</option>
                     <option value="sleep_quality">Sleep Quality</option>
                     <option value="physical_activity">Physical Activity</option>
                     <option value="anxiety">Anxiety</option>
                     <option value="energy">Energy</option>
+                    <option value="no_checkin">${_t('trigger_parameter_no_checkin', 'No Check-In')}</option>
                 </select>
             </div>
-            <div style="margin: 20px 0;">
+            <div id="triggerConditionSection" style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">Alert when:</label>
                 <select id="triggerOperator" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     <option value="less_than">Less than</option>
@@ -12542,16 +12548,19 @@ function showAddTriggerModal() {
                     <option value="equals">Equals</option>
                 </select>
             </div>
-            <div style="margin: 20px 0;">
+            <div id="triggerValueSection" style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">Value (1-4):</label>
                 <input type="number" id="triggerThreshold" min="1" max="4" value="2"
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">For how many days (optional, 1 day minimum):</label>
+                <label id="triggerDaysLabel" style="display: block; margin-bottom: 5px;">For how many days (optional, 1 day minimum):</label>
                 <input type="number" id="triggerDays" min="1" max="30"
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
                        placeholder="Leave blank for 1 day">
+                <p id="triggerNoCheckinHint" style="display:none; font-size:0.8rem; color:#6B7280; margin-top:6px; line-height:1.4;">
+                    ${_t('trigger_no_checkin_hint', 'You will be alerted if this person has not updated their diary for the number of days you choose. This can help you stay aware and reach out when someone you care about may need support.')}
+                </p>
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="document.getElementById('addTriggerModal').remove()">
@@ -12609,15 +12618,26 @@ async function createTrigger() {
     }
 
     try {
-        const body = {
-            target_id: parseInt(targetId),
-            parameter: parameter,
-            operator: operator,
-            threshold: parseInt(threshold)
-        };
-
-        if (days) {
-            body.days = parseInt(days);
+        let body;
+        if (parameter === 'no_checkin') {
+            // T30: No-checkin trigger
+            body = {
+                watched_id: parseInt(targetId),
+                parameter_name: 'no_checkin',
+                condition: 'no_checkin',
+                value: 0,
+                consecutive_days: days ? parseInt(days) : 1
+            };
+        } else {
+            body = {
+                target_id: parseInt(targetId),
+                parameter: parameter,
+                operator: operator,
+                threshold: parseInt(threshold)
+            };
+            if (days) {
+                body.days = parseInt(days);
+            }
         }
 
         const response = await fetch('/api/triggers', {
@@ -12666,18 +12686,19 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
     modal.innerHTML = `
         <div class="modal-content" style="background: white; padding: 32px; border-radius: 16px; max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
             <h3 style="color: #4a6b5a; margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 600;">${window.i18n ? window.i18n.translate('trigger_modal_title').replace('{username}', targetUsername) : 'Add Trigger for ' + targetUsername}</h3>
-            <p style="color: #6B7280; font-size: 0.85rem; margin: 0 0 20px 0; line-height: 1.4;">Configure when you'd like to be notified about changes.</p>
+            <p style="color: #6B7280; font-size: 0.85rem; margin: 0 0 20px 0; line-height: 1.4;">${window.i18n ? window.i18n.translate('trigger_modal_subtitle') : 'Configure when you\'d like to be notified about changes.'}</p>
             <div style="margin: 16px 0;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_parameter_label') : 'Parameter:'}</label>
-                <select id="triggerParameter" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151;">
+                <select id="triggerParameter" onchange="toggleNoCheckinFields()" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151;">
                     <option value="mood">${window.i18n ? window.i18n.translate('trigger_parameter_mood') : 'Mood'}</option>
                     <option value="sleep_quality">${window.i18n ? window.i18n.translate('trigger_parameter_sleep_quality') : 'Sleep Quality'}</option>
                     <option value="physical_activity">${window.i18n ? window.i18n.translate('trigger_parameter_physical_activity') : 'Physical Activity'}</option>
                     <option value="anxiety">${window.i18n ? window.i18n.translate('trigger_parameter_anxiety') : 'Anxiety'}</option>
                     <option value="energy">${window.i18n ? window.i18n.translate('trigger_parameter_energy') : 'Energy'}</option>
+                    <option value="no_checkin">${window.i18n ? window.i18n.translate('trigger_parameter_no_checkin') : 'No Check-In'}</option>
                 </select>
             </div>
-            <div style="margin: 16px 0;">
+            <div id="triggerConditionSection" style="margin: 16px 0;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_alert_when') : 'Alert when:'}</label>
                 <select id="triggerOperator" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151;">
                     <option value="less_than">${window.i18n ? window.i18n.translate('trigger_condition_less_than') : 'Less than'}</option>
@@ -12685,16 +12706,19 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
                     <option value="equals">${window.i18n ? window.i18n.translate('trigger_condition_equals') : 'Equals'}</option>
                 </select>
             </div>
-            <div style="margin: 16px 0;">
+            <div id="triggerValueSection" style="margin: 16px 0;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_value_label') : 'Value (1-4):'}</label>
                 <input type="number" id="triggerThreshold" min="1" max="4" value="2"
                        style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151; box-sizing: border-box;">
             </div>
             <div style="margin: 16px 0;">
-                <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger.days_label') : 'For how many days (optional, 1 day minimum):'}</label>
+                <label id="triggerDaysLabel" style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger.days_label') : 'For how many days (optional, 1 day minimum):'}</label>
                 <input type="number" id="triggerDays" min="1" max="30"
                        style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151; box-sizing: border-box;"
                        placeholder="${window.i18n ? window.i18n.translate('trigger.days_placeholder') : 'Leave blank for 1 day'}">
+                <p id="triggerNoCheckinHint" style="display:none; font-size:0.8rem; color:#6B7280; margin-top:6px; line-height:1.4;">
+                    ${window.i18n ? window.i18n.translate('trigger_no_checkin_hint') : 'You will be alerted if this person has not updated their diary for the number of days you choose. This can help you stay aware and reach out when someone you care about may need support.'}
+                </p>
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;">
                 <button class="btn" onclick="document.getElementById('addTriggerModal').remove()" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 10px; font-weight: 500; cursor: pointer;">
@@ -12710,6 +12734,25 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
     document.body.appendChild(modal);
 }
 
+// T30: Toggle visibility of condition/value fields when no_checkin is selected
+function toggleNoCheckinFields() {
+    const param = document.getElementById('triggerParameter');
+    const condSection = document.getElementById('triggerConditionSection');
+    const valSection = document.getElementById('triggerValueSection');
+    const daysLabel = document.getElementById('triggerDaysLabel');
+    const hint = document.getElementById('triggerNoCheckinHint');
+    if (!param) return;
+    const isNoCheckin = param.value === 'no_checkin';
+    if (condSection) condSection.style.display = isNoCheckin ? 'none' : '';
+    if (valSection) valSection.style.display = isNoCheckin ? 'none' : '';
+    if (daysLabel && isNoCheckin) {
+        daysLabel.textContent = window.i18n ? window.i18n.translate('trigger_no_checkin_days_label') : 'Alert after how many days without a check-in (minimum 1):';
+    } else if (daysLabel) {
+        daysLabel.textContent = window.i18n ? window.i18n.translate('trigger.days_label') : 'For how many days (optional, 1 day minimum):';
+    }
+    if (hint) hint.style.display = isNoCheckin ? 'block' : 'none';
+}
+
 async function createTriggerForUser(targetId, targetUsername) {
     const parameter = document.getElementById('triggerParameter').value;
     const operator = document.getElementById('triggerOperator').value;
@@ -12717,13 +12760,25 @@ async function createTriggerForUser(targetId, targetUsername) {
     const days = document.getElementById('triggerDays').value;
 
     try {
-        const body = {
-            watched_id: parseInt(targetId),  // Changed from target_id
-            parameter_name: parameter,       // Changed from parameter
-            condition: operator,              // Changed from operator
-            value: parseInt(threshold),      // Changed from threshold
-            consecutive_days: days ? parseInt(days) : 1  // Changed from days, default to 1
-        };
+        let body;
+        if (parameter === 'no_checkin') {
+            // T30: No-checkin trigger — no operator/threshold needed
+            body = {
+                watched_id: parseInt(targetId),
+                parameter_name: 'no_checkin',
+                condition: 'no_checkin',
+                value: 0,
+                consecutive_days: days ? parseInt(days) : 1
+            };
+        } else {
+            body = {
+                watched_id: parseInt(targetId),
+                parameter_name: parameter,
+                condition: operator,
+                value: parseInt(threshold),
+                consecutive_days: days ? parseInt(days) : 1
+            };
+        }
 
         const response = await fetch('/api/triggers', {
             method: 'POST',
@@ -12773,6 +12828,16 @@ async function loadTriggersForUser(userId, username) {
 
         // Helper function to translate trigger text
         function translateTrigger(trigger) {
+            // T30: Handle no_checkin triggers with a distinct display
+            if (trigger.parameter === 'no_checkin' || trigger.parameter_name === 'no_checkin') {
+                const noCheckinLabel = window.i18n ? window.i18n.t('trigger_parameter_no_checkin') : 'No Check-In';
+                const daysKey = 'trigger_days_format';
+                const daysText = trigger.consecutive_days ?
+                    (window.i18n ? window.i18n.t(daysKey).replace('{count}', trigger.consecutive_days) : `${trigger.consecutive_days} days`)
+                    : '';
+                return `${noCheckinLabel}${daysText ? ` (${daysText})` : ''}`;
+            }
+
             // Translate parameter name
             const paramKey = `trigger_parameter_${trigger.parameter || trigger.parameter_name}`;
             const paramText = window.i18n ? window.i18n.t(paramKey) : (trigger.parameter || trigger.parameter_name);
@@ -17238,7 +17303,9 @@ async function loadConnectionStatusList() {
                 '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + avatar + '</div>' +
                 '<div style="flex: 1; min-width: 0;">' +
                 '<div style="font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><a href="#" onclick="event.stopPropagation(); viewUserProfileFromHome(' + (conn.id || 0) + '); return false;" style="color: var(--dark); text-decoration: none;" onmouseover="this.style.color=\'var(--primary)\'; this.style.textDecoration=\'underline\';" onmouseout="this.style.color=\'var(--dark)\'; this.style.textDecoration=\'none\';">' + name + '</a></div>' +
+                /* T30: Checkin dates commented out per design review
                 (checkinText ? '<div style="font-size: 0.72rem; color: var(--gray); margin-top: 2px; opacity: 0.85;">📅 ' + checkinText + '</div>' : '') +
+                */
                 '</div>' +
                 '<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">' +
                 '<span style="width: 8px; height: 8px; border-radius: 50%; background: ' + statusDot + '; display: inline-block;"></span>' +
