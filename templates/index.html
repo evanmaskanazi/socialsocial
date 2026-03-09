@@ -2425,6 +2425,25 @@
                 font-size: 11px;
                 border-width: 1.5px;
             }
+
+            /* T30b: Show short language code label on mobile, overlay the select */
+            .lang-code-label {
+                display: inline !important;
+            }
+            .lang-selector-wrap {
+                position: relative;
+            }
+            .lang-selector-wrap .language-selector {
+                position: absolute;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                opacity: 0;
+                padding: 0;
+                margin: 0;
+                border: none;
+                cursor: pointer;
+                z-index: 1;
+            }
             
             /* T30: Tutorial and Logout buttons - compact single-row layout */
             #tutorialBtn, #logoutBtn {
@@ -3873,8 +3892,9 @@
                 <!-- PJ6004: About and Support shown when logged out, language selector at end -->
                 <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
                 <a href="#" class="nav-link auth-only-hide" id="navSupport" data-i18n="nav.support">Support</a>
-                <div style="display: flex; align-items: center; gap: 2px;">
+                <div class="lang-selector-wrap" style="display: flex; align-items: center; gap: 2px; position: relative;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <span id="langCodeLabel" class="lang-code-label" style="display: none; font-weight: 700; font-size: 12px; color: var(--primary); pointer-events: none;">EN</span>
                     <select id="languageSelector" class="language-selector">
                         <option value="en">English</option>
                         <option value="he">עברית</option>
@@ -5871,6 +5891,10 @@
     
     // Update labels on language change
     window.addEventListener('languageChanged', updateToggleLabels);
+    // T30b: Also update the short code label on any language change
+    window.addEventListener('languageChanged', function() {
+        if (typeof updateLangCodeLabel === 'function') updateLangCodeLabel();
+    });
     // Initial update
     document.addEventListener('DOMContentLoaded', updateToggleLabels);
     </script>
@@ -5989,6 +6013,9 @@
                 // This is a valid user-initiated change
                 console.log('[INTERCEPTOR] VALID USER CHANGE:', storedLang, '->', newValue);
                 
+                // T30b: Update short code label for mobile
+                if (typeof updateLangCodeLabel === 'function') updateLangCodeLabel();
+
                 // Reset the flag after processing a valid change
                 window._userClickedLanguageSelector = false;
                 
@@ -7640,6 +7667,9 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
     dashboard.classList.add('dashboard-entering');
     document.getElementById('logoutBtn').style.display = 'block';
     document.getElementById('tutorialBtn').style.display = 'block';
+
+    // T30b: Update short language code label for mobile
+    if (typeof updateLangCodeLabel === 'function') updateLangCodeLabel();
     // PJ6001: Hide nav links when logged in
     document.querySelectorAll('.auth-only-hide').forEach(el => el.style.display = 'none');
 
@@ -7894,7 +7924,21 @@ function syncLanguageSelector() {
     console.log('[SYNC DEBUG] FINAL STATE:');
     console.log('[SYNC DEBUG]   selector.value:', selector.value);
     console.log('[SYNC DEBUG] ========================================');
+
+    // T30b: Update the short language code label for mobile
+    updateLangCodeLabel();
 }
+
+// T30b: Update the visible short language code label (mobile)
+function updateLangCodeLabel() {
+    const label = document.getElementById('langCodeLabel');
+    if (!label) return;
+    const selector = document.getElementById('languageSelector');
+    const code = (selector && selector.value) || localStorage.getItem('selectedLanguage') || 'en';
+    const codeMap = { 'en': 'EN', 'he': 'עב', 'ar': 'عر', 'ru': 'РУ' };
+    label.textContent = codeMap[code] || code.toUpperCase();
+}
+window.updateLangCodeLabel = updateLangCodeLabel;
 
 // Make function globally available
 window.syncLanguageSelector = syncLanguageSelector;
