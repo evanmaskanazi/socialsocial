@@ -3898,6 +3898,17 @@
                     <script>
                     // T30b: Set correct language code immediately from localStorage to prevent flash
                     (function(){var l=document.getElementById('langCodeLabel');if(l){var c=localStorage.getItem('selectedLanguage')||localStorage.getItem('userLanguage')||'en';var m={'en':'EN','he':'עב','ar':'عر','ru':'РУ'};l.textContent=m[c]||c.toUpperCase();}})();
+                    // T30c: Keep label synced whenever language changes (works on login page too)
+                    // Self-contained — does NOT depend on updateLangCodeLabel which is inside showDashboard
+                    window.addEventListener('languageChanged', function(){
+                        setTimeout(function(){
+                            var l=document.getElementById('langCodeLabel');
+                            if(!l)return;
+                            var c=localStorage.getItem('selectedLanguage')||localStorage.getItem('userLanguage')||'en';
+                            var m={'en':'EN','he':'עב','ar':'عر','ru':'РУ'};
+                            l.textContent=m[c]||c.toUpperCase();
+                        }, 200);
+                    });
                     </script>
                     <select id="languageSelector" class="language-selector">
                         <option value="en">English</option>
