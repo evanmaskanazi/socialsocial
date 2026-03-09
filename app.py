@@ -17895,11 +17895,20 @@ def respond_to_follow_request(request_id):
             follow_request.privacy_level = privacy_level
             follow_request.responded_at = datetime.utcnow()
 
-            follow = Follow(
+            # T40: Guard against duplicate follow - the requester may already follow the target
+            # (e.g. via direct follow path or a previous accept that didn't clean up the request)
+            existing_follow = Follow.query.filter_by(
                 follower_id=follow_request.requester_id,
                 followed_id=follow_request.target_id
-            )
-            db.session.add(follow)
+            ).first()
+            if not existing_follow:
+                follow = Follow(
+                    follower_id=follow_request.requester_id,
+                    followed_id=follow_request.target_id
+                )
+                db.session.add(follow)
+            else:
+                logger.info(f"[T40] Follow already exists: {follow_request.requester_id} -> {follow_request.target_id}, skipping insert")
 
         elif action == 'reject':
             follow_request.status = 'rejected'
