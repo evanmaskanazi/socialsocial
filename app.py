@@ -8527,6 +8527,7 @@ def get_alerts():
     """Get user alerts - filters trigger/feed alerts to only show for followed users
     
     PI502alt: Also filters out trigger alerts with consecutive days below MINIMUM_TRIGGER_DAYS
+    T42: Also filters out trigger alerts where the parameter is now private/hidden from viewer
     """
     try:
         user_id = session['user_id']
@@ -8544,6 +8545,44 @@ def get_alerts():
         ).order_by(desc(Alert.created_at)).limit(100)
 
         all_alerts = db.session.execute(alerts_stmt).scalars().all()
+
+        # T42: Helper - check if viewer can still see the parameter this trigger alert refers to
+        # Caches per source_user to avoid repeated DB queries
+        _privacy_cache = {}  # source_user_id -> (SavedParameters, circle_level)
+        _param_keywords = {
+            'mood': 'mood_privacy',
+            'anxiety': 'anxiety_privacy',
+            'sleep': 'sleep_quality_privacy',
+            'sleep quality': 'sleep_quality_privacy',
+            'physical activity': 'physical_activity_privacy',
+            'exercise': 'physical_activity_privacy',
+            'energy': 'energy_privacy'
+        }
+
+        def trigger_alert_visible(alert):
+            """T42: Return False if this trigger alert's parameter is now hidden from the viewer."""
+            if not alert.source_user_id or not alert.content:
+                return True  # Can't determine — show it
+            src_id = alert.source_user_id
+            if src_id not in _privacy_cache:
+                recent = SavedParameters.query.filter_by(user_id=src_id).order_by(SavedParameters.updated_at.desc()).first()
+                circle = get_watcher_circle_level(src_id, user_id)
+                _privacy_cache[src_id] = (recent, circle)
+            recent, circle = _privacy_cache[src_id]
+            if not recent:
+                return True  # No params row — show it
+            content_lower = alert.content.lower()
+            for keyword, priv_attr in _param_keywords.items():
+                if keyword in content_lower:
+                    param_priv = getattr(recent, priv_attr, 'private')
+                    if param_priv == 'private':
+                        return False
+                    if param_priv == 'class_a' and circle != 'class_a':
+                        return False
+                    if param_priv == 'class_b' and circle not in ('class_a', 'class_b'):
+                        return False
+                    break  # Found matching keyword
+            return True
 
         # PJ401: Filter alerts based on following status
         # PJ704: CRITICAL FIX - Only filter 'trigger' category alerts by following status
@@ -8565,6 +8604,10 @@ def get_alerts():
                                 # Skip alerts below minimum threshold
                                 logger.debug(f"[GET_ALERTS] Filtering out alert {alert.id} with {alert_days} days (< {MINIMUM_TRIGGER_DAYS} minimum)")
                                 continue
+                        # T42: Skip trigger alerts where the parameter is now hidden from this viewer
+                        if not trigger_alert_visible(alert):
+                            logger.debug(f"[T42] Filtering out alert {alert.id}: parameter now private/hidden from viewer {user_id}")
+                            continue
                     filtered_alerts.append(alert)
             else:
                 # Alerts without source_user_id OR with category 'follow', 'message', 'general' always show
@@ -10840,6 +10883,17 @@ def set_default_privacy():
             db.session.commit()
             rows_updated = result.rowcount
             logger.info(f"[T30] Set {privacy_col}={privacy} for user {user_id}, {rows_updated} rows updated")
+
+        # T42: Privacy changed for all entries — clean up any trigger alerts that
+        # now violate the updated privacy settings.  Without this, alerts generated
+        # before the privacy change remain visible to watchers who should no longer
+        # see the parameter (e.g. Mood set to Private still shows mood alerts).
+        try:
+            cleanup_stale_trigger_alerts_for_user(user_id)
+            logger.info(f"[T42] Ran alert cleanup after set-default-privacy for user {user_id}, param={param}, privacy={privacy}")
+        except Exception as cleanup_err:
+            # Non-fatal: log but don't fail the privacy update itself
+            logger.warning(f"[T42] Alert cleanup after privacy change failed: {cleanup_err}")
 
         return jsonify({
             'success': True,
