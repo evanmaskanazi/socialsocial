@@ -2,6 +2,124 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+T31 Fixes:
+- FIX: Multi-circle membership bug. When a user was added to more than one circle by the same
+  connection, endpoints using scalar_one_or_none() threw MultipleResultsFound and returned
+  "Error loading parameters". Now uses _resolve_lowest_circle() helper which picks the
+  lowest-access circle (public < close_friends < family) across all affected endpoints:
+  get_hierarchical_parameters, check_circle_membership, get_my_circles, get_user_feed_dates,
+  get_user_feed_by_date, get_user_parameters_for_triggers, get_watcher_circle, check_parameter_triggers.
+- UI: Changed "Connect" to "Approve" (and "Connect with Note" to "Approve with Note") on
+  Connection Requests tab, with translations in English, Hebrew, Arabic, and Russian.
+
+T32 Fixes:
+- FIX: No-checkin alerts were never emailed in "new_alerts_only" mode. The job queue only sends
+  emails when the watched user saves diary data, but no_checkin alerts fire precisely because the
+  user ISN'T saving data. Now the trigger scheduler sends emails for no_checkin alerts even in
+  new_alerts_only mode, since the job queue path can never handle them.
+- FIX: Email template for no_checkin alerts used the generic "concerning levels" message instead
+  of the distinct "hasn't checked in for X days" message. Added no_checkin and no_checkin_line
+  translations to send_consolidated_wellness_alert_email in all 4 languages (en, he, ar, ru).
+- FIX: No-checkin duplicate detection was broken — check_duplicate_alert searched for
+  "{username}'s no_checkin" but the actual content uses "{username} hasn't checked in for X days",
+  so the patterns never matched. This caused duplicate no_checkin UI alerts AND (with the email
+  fix above) emails every 5-minute scheduler cycle. Added no_checkin-specific pattern matching
+  with a 24-hour window so at most one no_checkin alert per watched user per day is created.
+
+appFormat5 Fixes:
+
+- FIX: Removed dangling @app.route('/api/parameters/should-redirect-to-diary') decorator that was
+  wrongly applied to get_user_summary(), corrupting the /api/user/summary endpoint
+- FIX: UniqueConstraint on ParameterTrigger now includes 'parameter_name' so multiple
+  triggers per user pair (one per parameter) are allowed without IntegrityError
+
+appFormat6 Fixes:
+- FIX: NP1 notes_privacy migration no longer silently fails during rolling deploys.
+  Previously used SET lock_timeout = '3s' and caught the exception, leaving the model
+  out of sync with the database (column missing but SQLAlchemy querying it on every request).
+  Now retries without timeout if the fast attempt fails, ensuring the column exists before
+  the app serves requests. Failure is logged as CRITICAL instead of a warning.
+- FIX: CS7 diary_reminder_last_sent migration uses same retry pattern.
+- FIX: auto_migrate_database() now sets SET lock_timeout = '5s' at the start of its
+  connection. Previously, ALTER TABLE statements blocked forever during rolling deploys
+  because the old instance held table locks while Render waited for the new instance to
+  open a port — causing a deadlock where neither instance could proceed.
+
+T15a Fixes:
+- FIX: Multi-worker scheduler duplication. All three background schedulers (diary,
+  trigger, job queue) used per-process flags that only prevent double-starts within
+  one Gunicorn worker. With N workers, N copies of each scheduler ran, causing
+  duplicate emails and duplicate job processing. Now each scheduler loop iteration
+  acquires a PostgreSQL advisory lock (pg_try_advisory_lock) before doing work.
+  Only the worker holding the lock processes; others skip and retry next cycle.
+  Advisory lock IDs: diary=100001, trigger=100002, job_queue=100003.
+- FIX: Seven migration functions ran ALTER TABLE without SET lock_timeout, risking
+  indefinite blocking during rolling deploys. Added SET lock_timeout = '5s' to:
+  ensure_notification_settings_schema, ensure_privacy_schema,
+  ensure_user_consents_schema, ensure_saved_parameters_schema,
+  ensure_database_schema, fix_all_schema_issues, create_parameters_table.
+  Pattern matches existing auto_migrate_database() which already had this protection.
+
+T15b Fixes:
+- FIX: Trigger and job-queue schedulers didn't call db.session.remove() in a finally
+  block, unlike the diary scheduler which already did. Without this, connections from
+  background threads return to the pool in a dirty state (uncommitted transaction,
+  stale ORM identity map). Added finally blocks with db.session.remove() to both the
+  trigger scheduler and job-queue scheduler, matching the diary scheduler pattern.
+  Also wrapped the existing bare db.session.rollback() calls in try/except for safety.
+- FIX: auto_migrate_database() CS7 and NP1 retry paths both set lock_timeout = '0'
+  (unlimited) and never restored the function-level '5s' timeout. After either retry
+  path ran, every subsequent ALTER TABLE in the same connection could block forever
+  during a rolling deploy. Both the happy-path reset and retry-path reset now restore
+  lock_timeout to '5s' instead of '0', keeping the connection protected for all
+  remaining migrations.
+
+T15c Fixes:
+- FIX: inspect(engine) NameError in auto_migrate_database() NP1-SAFE block (line ~3088).
+  'engine' was undefined; the bare except swallowed the NameError and always set
+  NOTES_PRIVACY_AVAILABLE = False. Changed to inspect(db.engine) so the flag reflects
+  actual schema state.
+- FIX: start_data_retention_scheduler() was defined but never called. Audit logs, expired
+  tokens, old alerts, and completed jobs accumulated indefinitely. Now wired into
+  init_database() on both the happy path and fallback path, matching the pattern of the
+  other three schedulers.
+- FIX: Duplicate security headers between add_security_headers() and after_request().
+  add_security_headers() set X-Frame-Options: SAMEORIGIN; after_request() overwrote it
+  with DENY in production. Removed the security header block from after_request(),
+  making add_security_headers() the single authority. Logging in after_request() kept.
+- FIX: In-memory rate_limit_store (Redis fallback) grew unboundedly. Individual
+  timestamps were pruned, but empty keys were never deleted. Under sustained Redis
+  outage, every unique IP+endpoint combination created a permanent dict entry.
+  Now deletes keys whose timestamp list is empty after pruning.
+
+T15d Fixes:
+- FIX: Advisory lock leak in all three T15a schedulers. pg_try_advisory_lock acquires a
+  connection-level lock that persists when db.session.remove() returns the connection to
+  the pool. If the next scheduler iteration gets a different pooled connection, it sees
+  the lock as held by another session and skips work — potentially for up to pool_recycle
+  (1800s). Added _release_scheduler_lock() which calls pg_advisory_unlock on the same
+  session before db.session.remove(). All four schedulers now acquire, work, release,
+  then remove. Advisory lock IDs: diary=100001, trigger=100002, job_queue=100003,
+  data_retention=100004.
+- FIX: consecutive_days overwrite in check_parameter_triggers() and
+  run_background_trigger_check_for_watcher(). Both functions clamped consecutive_days
+  via max(trigger.consecutive_days or MIN, MIN) then ~22 lines later unconditionally
+  overwrote it with the raw trigger.consecutive_days. NULL would cause TypeError;
+  0 would match every entry. Removed both overwrite lines; the clamped value is now
+  used throughout. (process_parameter_triggers_async was already correct.)
+- FIX: start_data_retention_scheduler() was missing both T15a (advisory lock) and T15b
+  (db.session.remove in finally) safeguards that the other three schedulers had. With N
+  workers, N copies ran cleanup_old_data() concurrently, and connections returned dirty.
+  Added advisory lock (ID 100004), explicit release, and session cleanup matching the
+  diary/trigger/job_queue pattern.
+
+appFormat8 Fix:
+- FIX: Removed module-level auto_migrate_database() call (was at line ~3131).
+  db.create_all() inside it opens its own connection and blocks on table locks BEFORE
+  the SET lock_timeout on the separate connection could help. This blocked gunicorn
+  from ever opening a port during rolling deploys. The same migrations already run via
+  _background_init() -> init_database() in a background thread after gunicorn starts.
+
 
 10Link Changes:
 - Added /api/users/<user_id>/progress endpoint for viewing another user's progress with privacy checks
@@ -572,11 +690,20 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# T2500: Email deliverability helper — adds headers that prevent Gmail/Hotmail/Yahoo spam filtering
+# T25: Email deliverability helper — adds headers that prevent Gmail/Hotmail/Yahoo spam filtering
 def _add_deliverability_headers(msg, unsubscribe_path='/settings#notification'):
-    """Add anti-spam headers to MIMEMultipart messages for Gmail, Hotmail, Yahoo deliverability."""
+    """Add anti-spam headers to MIMEMultipart messages for Gmail, Hotmail, Yahoo deliverability.
+    
+    Key headers:
+    - List-Unsubscribe: Required by Gmail/Yahoo for bulk senders (Feb 2024 rules)
+    - List-Unsubscribe-Post: One-click unsubscribe support (RFC 8058)
+    - Reply-To: Signals legitimate sender
+    - X-Mailer: Identifies sending application
+    - Feedback-ID: Helps Gmail categorize mail properly
+    """
     app_url = os.environ.get('APP_URL', 'https://therasocial.org')
     from_email = os.environ.get('FROM_EMAIL', 'noreply@therasocial.org')
+    
     msg['Reply-To'] = from_email
     msg['X-Mailer'] = 'TheraSocial/1.0'
     msg['List-Unsubscribe'] = f'<{app_url}{unsubscribe_path}>'
@@ -586,7 +713,7 @@ def _add_deliverability_headers(msg, unsubscribe_path='/settings#notification'):
 
 
 def _html_to_plain_text(html):
-    """T2500: Convert HTML email to plain text fallback for spam filter compliance."""
+    """T25: Convert HTML email to plain text fallback for spam filter compliance."""
     import re as _re
     text = _re.sub(r'<[^>]+>', '', html)
     text = _re.sub(r'\s+', ' ', text).strip()
@@ -618,13 +745,24 @@ except ImportError as e:
     print(f"WARNING: reportlab not available - PDF generation disabled: {e}")
 
 # WeasyPrint for better Unicode/RTL support (preferred method)
-try:
-    from weasyprint import HTML, CSS
-    WEASYPRINT_AVAILABLE = True
-    print("INFO: WeasyPrint available - using for PDF generation with full Unicode support")
-except ImportError as e:
-    WEASYPRINT_AVAILABLE = False
-    print(f"WARNING: weasyprint not available - falling back to reportlab: {e}")
+# LAZY IMPORT: Deferred to first PDF request to prevent OOM worker kills on boot.
+WEASYPRINT_AVAILABLE = None
+_weasyprint_HTML = None
+_weasyprint_CSS = None
+
+def _ensure_weasyprint():
+    global WEASYPRINT_AVAILABLE, _weasyprint_HTML, _weasyprint_CSS
+    if WEASYPRINT_AVAILABLE is not None:
+        return WEASYPRINT_AVAILABLE
+    try:
+        from weasyprint import HTML as _HTML, CSS as _CSS
+        _weasyprint_HTML = _HTML
+        _weasyprint_CSS = _CSS
+        WEASYPRINT_AVAILABLE = True
+    except ImportError as e:
+        WEASYPRINT_AVAILABLE = False
+        print(f"WARNING: weasyprint not available: {e}")
+    return WEASYPRINT_AVAILABLE
 
 try:
     from openpyxl import Workbook
@@ -745,6 +883,46 @@ OAUTH_PROVIDERS = {
     },
 }
 # === END SOCIAL OAUTH CONFIGURATION ===
+
+# =====================
+# APPLOAD: Response compression (non-invasive addition)
+# Gzip compresses the 820KB index.html to ~80-100KB over the wire
+# =====================
+import gzip as _gzip_module
+
+@app.after_request
+def compress_response(response):
+    """Gzip compress text responses for faster delivery"""
+    # Skip if client doesn't accept gzip
+    if 'gzip' not in request.headers.get('Accept-Encoding', ''):
+        return response
+    # Skip if already encoded, or not a text type, or too small to bother
+    if (response.direct_passthrough or
+        response.status_code < 200 or response.status_code >= 300 or
+        'Content-Encoding' in response.headers or
+        len(response.get_data()) < 500):
+        return response
+    content_type = response.content_type or ''
+    if not any(t in content_type for t in ['text/', 'application/json', 'application/javascript']):
+        return response
+    compressed = _gzip_module.compress(response.get_data(), compresslevel=6)
+    response.set_data(compressed)
+    response.headers['Content-Encoding'] = 'gzip'
+    response.headers['Content-Length'] = len(compressed)
+    response.headers['Vary'] = 'Accept-Encoding'
+    return response
+
+# APPLOAD: Cache headers for static assets
+@app.after_request
+def add_cache_headers(response):
+    """Set browser cache headers - long cache for static, no cache for HTML"""
+    if request.path.startswith('/static/'):
+        # Cache static JS/CSS/images for 1 week (they have cache-bust versions)
+        response.headers['Cache-Control'] = 'public, max-age=604800'
+    elif request.path == '/' or request.path.endswith('.html'):
+        # Don't cache HTML pages - always get fresh version
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
 
 # Security headers middleware (Ethics Doc: Privacy and Security by Design)
 @app.after_request
@@ -934,11 +1112,16 @@ def check_rate_limit(user_id, max_requests=100, window=60, endpoint=None):
         # Remove old requests outside window
         user_requests[:] = [req_time for req_time in user_requests if now - req_time < window]
         
+        # T15c: Remove key entirely if no requests remain, preventing unbounded dict growth
+        if not user_requests:
+            del rate_limit_store[key]
+        
         if len(user_requests) >= max_requests:
             return False, len(user_requests), 0
         
-        user_requests.append(now)
-        return True, len(user_requests), 0
+        # Re-create if we just deleted (defaultdict will recreate)
+        rate_limit_store[key].append(now)
+        return True, len(rate_limit_store[key]), 0
 
 
 def rate_limit_endpoint(max_requests=100, window=60, endpoint_name=None):
@@ -1207,8 +1390,9 @@ def send_magic_link_email(user_email, magic_token, user_language='en'):
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
             _add_deliverability_headers(msg)
-            # T2500: Plain text fallback for spam filter compliance
-            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -1341,8 +1525,9 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = recipient_email
             _add_deliverability_headers(msg)
-            # T2500: Plain text fallback for spam filter compliance
-            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -1600,8 +1785,9 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
             _add_deliverability_headers(msg)
-            # T2500: Plain text fallback for spam filter compliance
-            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -1745,8 +1931,9 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
             _add_deliverability_headers(msg)
-            # T2500: Plain text fallback for spam filter compliance
-            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
             logger.info(f"[DAILY REMINDER] Email message created successfully")
 
@@ -1799,6 +1986,16 @@ def check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
             Alert.user_id == watcher_id,
             Alert.alert_type == 'trigger'
         )
+        
+        # T32: no_checkin content uses a different format ("hasn't checked in for X days")
+        # that doesn't match the standard "{username}'s {parameter}" pattern.
+        # Check within last 24 hours to allow one per day as the count increments.
+        if parameter == 'no_checkin':
+            existing = base_query.filter(
+                Alert.created_at >= datetime.now() - timedelta(hours=24),
+                Alert.content.ilike(f"%{watched_username}%hasn't checked in%")
+            ).first()
+            return existing
         
         # Add time constraint only in "daily_reminder" mode
         if ALERT_EMAIL_MODE == "daily_reminder":
@@ -2024,6 +2221,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'hello': 'Hello',
                 'intro': f"We noticed some concerning well-being patterns for {watched_username}:",
                 'param_line': '{param} has been at concerning levels for {days} consecutive days ({date_range})',
+                'no_checkin_line': "hasn't checked in for {days} days — you may want to reach out",
                 'recommendation': 'Consider reaching out to check in on them.',
                 'view_details': 'View Details',
                 'regards': 'Best regards',
@@ -2032,13 +2230,15 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Energy',
                 'sleep_quality': 'Sleep quality',
                 'physical_activity': 'Physical activity',
-                'anxiety': 'Anxiety'
+                'anxiety': 'Anxiety',
+                'no_checkin': 'No check-in'
             },
             'he': {
                 'subject': f'TheraSocial - התראת בריאות עבור {watched_username}',
                 'hello': 'שלום',
                 'intro': f"שמנו לב לדפוסי בריאות מדאיגים עבור {watched_username}:",
                 'param_line': '{param} היה ברמות מדאיגות במשך {days} ימים רצופים ({date_range})',
+                'no_checkin_line': 'לא ביצע/ה צ׳ק-אין במשך {days} ימים — כדאי לבדוק איך הם',
                 'recommendation': 'שקול/י ליצור קשר כדי לבדוק את מצבם.',
                 'view_details': 'צפה בפרטים',
                 'regards': 'בברכה',
@@ -2047,13 +2247,15 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'אנרגיה',
                 'sleep_quality': 'איכות שינה',
                 'physical_activity': 'פעילות גופנית',
-                'anxiety': 'חרדה'
+                'anxiety': 'חרדה',
+                'no_checkin': "אין צ'ק-אין"
             },
             'ar': {
                 'subject': f'TheraSocial - تنبيه صحي لـ {watched_username}',
                 'hello': 'مرحباً',
                 'intro': f"لاحظنا بعض أنماط الصحة المقلقة لـ {watched_username}:",
                 'param_line': '{param} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({date_range})',
+                'no_checkin_line': 'لم يسجل/تسجل الدخول منذ {days} أيام — قد ترغب في التواصل معهم',
                 'recommendation': 'فكر في التواصل للاطمئنان عليهم.',
                 'view_details': 'عرض التفاصيل',
                 'regards': 'مع أطيب التحيات',
@@ -2062,13 +2264,15 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'الطاقة',
                 'sleep_quality': 'جودة النوم',
                 'physical_activity': 'النشاط البدني',
-                'anxiety': 'القلق'
+                'anxiety': 'القلق',
+                'no_checkin': 'لا يوجد تسجيل'
             },
             'ru': {
                 'subject': f'TheraSocial - Оповещение о здоровье {watched_username}',
                 'hello': 'Здравствуйте',
                 'intro': f"Мы заметили тревожные показатели здоровья у {watched_username}:",
                 'param_line': '{param} был на тревожном уровне {days} дней подряд ({date_range})',
+                'no_checkin_line': 'не отмечался/отмечалась {days} дней — возможно, стоит связаться',
                 'recommendation': 'Рассмотрите возможность связаться с ними.',
                 'view_details': 'Подробнее',
                 'regards': 'С уважением',
@@ -2077,7 +2281,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Энергия',
                 'sleep_quality': 'Качество сна',
                 'physical_activity': 'Физическая активность',
-                'anxiety': 'Тревожность'
+                'anxiety': 'Тревожность',
+                'no_checkin': 'Нет отметки'
             }
         }
         
@@ -2090,8 +2295,12 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         # Build parameter list HTML
         param_items = []
         for p in triggered_params:
-            param_display = t.get(p['param_name'], p['param_name'])
-            line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p['days'])).replace('{date_range}', p['date_range'])
+            # T32: Use distinct message for no_checkin alerts
+            if p['param_name'] == 'no_checkin':
+                line = t.get('no_checkin_line', "hasn't checked in for {days} days — you may want to reach out").replace('{days}', str(p['days']))
+            else:
+                param_display = t.get(p['param_name'], p['param_name'])
+                line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p['days'])).replace('{date_range}', p['date_range'])
             param_items.append(f'<li style="margin-bottom: 8px;">{line}</li>')
         
         params_html = '\n'.join(param_items)
@@ -2140,8 +2349,9 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = watcher.email
             _add_deliverability_headers(msg)
-            # T2500: Plain text fallback for spam filter compliance
-            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
             
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -2270,8 +2480,9 @@ def send_notification_email(user_email, notification_title, notification_content
             msg['From'] = app.config['MAIL_DEFAULT_SENDER']
             msg['To'] = user_email
             _add_deliverability_headers(msg)
-            # T2500: Plain text fallback for spam filter compliance
-            msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
+            # T25: Plain text fallback for spam filter compliance
+            _text_fb = _html_to_plain_text(html_content)
+            msg.attach(MIMEText(_text_fb, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
 
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -2410,6 +2621,13 @@ def ensure_notification_settings_schema():
                 logger.info(f"Adding missing columns to notification_settings: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15a: Prevent indefinite blocking during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+
                     for column_name in missing_columns:
                         column_type = required_columns[column_name]
 
@@ -2478,6 +2696,13 @@ def ensure_privacy_schema():
                 logger.info(f"[PL405] Adding missing privacy columns to users: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15a: Prevent indefinite blocking during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+
                     for column_name in missing_columns:
                         column_type = required_columns[column_name]
 
@@ -2551,6 +2776,13 @@ def ensure_user_consents_schema():
                 logger.info(f"[QA FIX] Adding missing GDPR columns to user_consents: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15a: Prevent indefinite blocking during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+
                     for column_name in missing_columns:
                         column_type = required_columns[column_name]
 
@@ -2630,6 +2862,13 @@ def ensure_saved_parameters_schema():
                 logger.info(f"Adding missing columns to saved_parameters: {missing_columns}")
 
                 with db.engine.connect() as connection:
+                    # T15a: Prevent indefinite blocking during rolling deploys
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+
                     for column_name in missing_columns:
                         column_type = all_required[column_name]
 
@@ -2731,6 +2970,15 @@ def auto_migrate_database():
             with db.engine.connect() as conn:
                 # Check if we're using PostgreSQL or SQLite
                 is_postgres = 'postgresql' in str(db.engine.url)
+
+                # DEPLOY FIX: Set lock_timeout so ALTER TABLE fails fast during rolling deploys
+                # Without this, migrations block forever waiting for the old instance's locks,
+                # gunicorn never opens a port, and Render never kills the old instance = deadlock
+                if is_postgres:
+                    try:
+                        conn.execute(text("SET lock_timeout = '5s'"))
+                    except Exception:
+                        pass
 
                 # Update users table
                 if 'users' in inspector.get_table_names():
@@ -2907,6 +3155,85 @@ def auto_migrate_database():
                         conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_timezone VARCHAR(100) DEFAULT 'UTC'"))
                         conn.commit()
                         logger.info("✓ Added diary_reminder_timezone column to notification_settings table")
+                    # CS7: Add deduplication column for diary reminders
+                    if 'diary_reminder_last_sent' not in columns:
+                        try:
+                            logger.info("Adding diary_reminder_last_sent column to notification_settings table...")
+                            conn.execute(text("SET lock_timeout = '3s'"))
+                            conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
+                            conn.execute(text("SET lock_timeout = '5s'"))  # T15b: Restore function-level timeout
+                            conn.commit()
+                            logger.info("✓ Added diary_reminder_last_sent column")
+                        except Exception as cs7_err:
+                            logger.warning(f"diary_reminder_last_sent fast migration failed ({cs7_err}), retrying without timeout...")
+                            try:
+                                conn.rollback()
+                            except Exception:
+                                pass
+                            try:
+                                conn.execute(text("SET lock_timeout = '0'"))
+                                conn.execute(text("ALTER TABLE notification_settings ADD COLUMN diary_reminder_last_sent DATE DEFAULT NULL"))
+                                conn.commit()
+                                logger.info("✓ Added diary_reminder_last_sent column (retry succeeded)")
+                                conn.execute(text("SET lock_timeout = '5s'"))  # T15b: Restore function-level timeout
+                            except Exception as cs7_retry_err:
+                                logger.warning(f"diary_reminder_last_sent retry also failed: {cs7_retry_err}")
+                                try:
+                                    conn.rollback()
+                                except Exception:
+                                    pass
+                                # T15b: Restore function-level timeout after failed retry
+                                try:
+                                    conn.execute(text("SET lock_timeout = '5s'"))
+                                except Exception:
+                                    pass
+
+                # NP1: Add notes_privacy column to saved_parameters table
+                # LOCK_TIMEOUT: Try 3s lock timeout first for fast rolling deploys.
+                # If the old instance holds a lock, retry without timeout to ensure
+                # the column exists before the app starts serving requests.
+                try:
+                    if 'saved_parameters' in inspector.get_table_names():
+                        sp_columns = [col['name'] for col in inspector.get_columns('saved_parameters')]
+                        if 'notes_privacy' not in sp_columns:
+                            logger.info("Adding notes_privacy column to saved_parameters table...")
+                            try:
+                                conn.execute(text("SET lock_timeout = '3s'"))
+                                conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
+                                conn.execute(text("SET lock_timeout = '5s'"))  # T15b: Restore function-level timeout
+                                conn.commit()
+                                logger.info("✓ Added notes_privacy column to saved_parameters")
+                            except Exception as np1_fast_err:
+                                logger.warning(f"notes_privacy fast migration failed ({np1_fast_err}), retrying without timeout...")
+                                try:
+                                    conn.rollback()
+                                except Exception:
+                                    pass
+                                conn.execute(text("SET lock_timeout = '0'"))
+                                conn.execute(text("ALTER TABLE saved_parameters ADD COLUMN notes_privacy VARCHAR(20) DEFAULT 'private'"))
+                                conn.commit()
+                                logger.info("✓ Added notes_privacy column to saved_parameters (retry succeeded)")
+                                conn.execute(text("SET lock_timeout = '5s'"))  # T15b: Restore function-level timeout
+                        else:
+                            logger.info("✓ notes_privacy column already exists in saved_parameters")
+                except Exception as np1_err:
+                    logger.error(f"CRITICAL: notes_privacy migration failed: {np1_err}")
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    # T15b: Restore function-level timeout after failed migration
+                    try:
+                        conn.execute(text("SET lock_timeout = '5s'"))
+                    except Exception:
+                        pass
+
+                # NP1-SAFE: Set flag for whether notes_privacy column exists
+                try:
+                    _np_cols = [c['name'] for c in inspect(db.engine).get_columns('saved_parameters')]
+                    app.config['NOTES_PRIVACY_AVAILABLE'] = 'notes_privacy' in _np_cols
+                except Exception:
+                    app.config['NOTES_PRIVACY_AVAILABLE'] = False
 
                 # Add follow_note column to follows table
                 if 'follows' in inspector.get_table_names():
@@ -3038,8 +3365,12 @@ def auto_migrate_database():
             logger.warning(f"Auto-migration error (may be normal if columns exist): {e}")
 
 
-# Call auto-migration on startup
-auto_migrate_database()
+# auto_migrate_database() is NOT called here at module level.
+# It was blocking gunicorn from opening its port during rolling deploys because
+# db.create_all() acquires table locks that the old instance holds.
+# All the same migrations run via _background_init() -> init_database() in a
+# background thread AFTER gunicorn opens the port and Render kills the old instance.
+# auto_migrate_database()
 
 
 # =====================
@@ -3331,7 +3662,7 @@ class ParameterTrigger(db.Model):
     watcher = db.relationship('User', foreign_keys=[watcher_id], backref='watching_triggers')
     watched = db.relationship('User', foreign_keys=[watched_id], backref='watched_by_triggers')
 
-    __table_args__ = (db.UniqueConstraint('watcher_id', 'watched_id', name='unique_trigger'),)
+    __table_args__ = (db.UniqueConstraint('watcher_id', 'watched_id', 'parameter_name', name='unique_trigger'),)
 
 
 class Profile(db.Model):
@@ -3432,19 +3763,26 @@ class SavedParameters(db.Model):
     physical_activity_privacy = db.Column(db.String(20), default='private')
     anxiety_privacy = db.Column(db.String(20), default='private')
     notes = db.Column(db.Text)
+    # NP1: notes_privacy NOT in ORM - prevents UndefinedColumn. Access via getattr().
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     # REMOVED: privacy = db.Column(db.JSON)  # This line should be removed/commented
 
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),)
 
-    def to_dict(self, viewer_id=None, privacy_level=None):
+    def to_dict(self, viewer_id=None, privacy_level=None, _notes_privacy=None):
+        """Convert parameter to dictionary with privacy filtering.
+        _notes_privacy: optional pre-fetched value to avoid per-row SQL query (NP1-PERF).
+        """
         base_dict = {
             'id': self.id,
             'date': self.date,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
+        # NP1-PERF: Use pre-fetched value if available, else fall back to single-row query
+        notes_priv = _notes_privacy if _notes_privacy is not None else _get_notes_privacy(self.id)
 
         if viewer_id == self.user_id:
             base_dict.update({
@@ -3458,7 +3796,8 @@ class SavedParameters(db.Model):
                 'sleep_quality_privacy': self.sleep_quality_privacy,
                 'physical_activity_privacy': self.physical_activity_privacy,
                 'anxiety_privacy': self.anxiety_privacy,
-                'notes': self.notes
+                'notes': self.notes,
+                'notes_privacy': notes_priv  # NP1: raw SQL read (or pre-fetched)
             })
         else:
             for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
@@ -3469,8 +3808,70 @@ class SavedParameters(db.Model):
                         (param_privacy == 'class_a' and privacy_level == 'class_a'):
                     # Note: 'private' params are excluded - only owner can see
                     base_dict[param] = getattr(self, param)
+            # NP1: Apply same privacy logic to notes
+            if notes_priv == 'public' or \
+                    (notes_priv == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
+                    (notes_priv == 'class_a' and privacy_level == 'class_a'):
+                base_dict['notes'] = self.notes
 
         return base_dict
+
+
+def _get_notes_privacy(params_id):
+    """Read notes_privacy via raw SQL (column not in ORM to prevent UndefinedColumn).
+    Returns 'private' if column doesn't exist or on any error."""
+    try:
+        row = db.session.execute(
+            text("SELECT notes_privacy FROM saved_parameters WHERE id = :pid"),
+            {'pid': params_id}
+        ).first()
+        return row[0] if row and row[0] else 'private'
+    except Exception:
+        return 'private'
+
+
+def _batch_get_notes_privacy(param_ids):
+    """NP1-PERF: Batch-read notes_privacy for multiple params in ONE query.
+    Returns dict {param_id: privacy_value}. Falls back to 'private' on error."""
+    if not param_ids:
+        return {}
+    try:
+        # Build safe parameterized query for IN clause (all IDs are ints from DB)
+        placeholders = ', '.join(f':id_{i}' for i in range(len(param_ids)))
+        bind_params = {f'id_{i}': pid for i, pid in enumerate(param_ids)}
+        rows = db.session.execute(
+            text(f"SELECT id, notes_privacy FROM saved_parameters WHERE id IN ({placeholders})"),
+            bind_params
+        ).fetchall()
+        result = {row[0]: (row[1] or 'private') for row in rows}
+        # Fill in any missing IDs with default
+        for pid in param_ids:
+            if pid not in result:
+                result[pid] = 'private'
+        return result
+    except Exception:
+        return {pid: 'private' for pid in param_ids}
+
+
+# T31: Helper to resolve multi-circle membership to lowest access level
+# When a user is added to more than one circle, use the lowest (least-access) level.
+_CIRCLE_RANK = {
+    'public': 0, 'general': 0,
+    'class_b': 1, 'close_friends': 1,
+    'class_a': 2, 'family': 2
+}
+
+def _resolve_lowest_circle(owner_user_id, member_user_id):
+    """Return the Circle row with the lowest access level for a user in multiple circles.
+    Returns None if the member is not in any of the owner's circles."""
+    circles = Circle.query.filter_by(
+        user_id=owner_user_id,
+        circle_user_id=member_user_id
+    ).all()
+    if not circles:
+        return None
+    # Return the circle with the lowest rank (least access)
+    return min(circles, key=lambda c: _CIRCLE_RANK.get(c.circle_type, 0))
 
 
 class Alert(db.Model):
@@ -3604,6 +4005,7 @@ class NotificationSettings(db.Model):
     # Daily diary reminder time settings (24-hour format, e.g., "09:00" or "21:30")
     diary_reminder_time = db.Column(db.String(5), default='09:00')  # Default 9 AM
     diary_reminder_timezone = db.Column(db.String(100), default='UTC')  # Timezone based on selected city
+    # CS7: diary_reminder_last_sent NOT in ORM - added via migration. Access via raw SQL.
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -3666,6 +4068,13 @@ def ensure_database_schema():
         with db.engine.connect() as conn:
             # Check if we're using PostgreSQL or SQLite
             is_postgres = 'postgresql' in str(db.engine.url)
+
+            # T15a: Prevent indefinite blocking during rolling deploys
+            if is_postgres:
+                try:
+                    conn.execute(text("SET lock_timeout = '5s'"))
+                except Exception:
+                    pass
 
             if is_postgres:
                 # PostgreSQL - Check and add visibility column to posts table
@@ -3905,6 +4314,12 @@ def init_database():
             except Exception as scheduler_err:
                 logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
 
+            # T15c: Start GDPR data retention scheduler (daily cleanup at 3 AM UTC)
+            try:
+                start_data_retention_scheduler()
+            except Exception as scheduler_err:
+                logger.warning(f"Data retention scheduler warning (non-critical): {scheduler_err}")
+
         except Exception as e:
             logger.error(f"Database initialization error: {e}")
             # Try to create tables as fallback
@@ -3935,6 +4350,11 @@ def init_database():
                     start_job_queue_scheduler()
                 except Exception as scheduler_err:
                     logger.warning(f"Job queue scheduler warning (non-critical): {scheduler_err}")
+                # T15c: Start GDPR data retention scheduler (daily cleanup at 3 AM UTC)
+                try:
+                    start_data_retention_scheduler()
+                except Exception as scheduler_err:
+                    logger.warning(f"Data retention scheduler warning (non-critical): {scheduler_err}")
             except Exception as e2:
                 logger.error(f"Failed to create tables: {e2}")
                 if not is_production:
@@ -3947,6 +4367,13 @@ def fix_all_schema_issues():
         with db.engine.connect() as conn:
             # Check if we're using PostgreSQL or SQLite
             is_postgres = 'postgresql' in str(db.engine.url)
+
+            # T15a: Prevent indefinite blocking during rolling deploys
+            if is_postgres:
+                try:
+                    conn.execute(text("SET lock_timeout = '5s'"))
+                except Exception:
+                    pass
             
             # PJ401: Add source_user_id and alert_category columns to alerts table
             inspector = inspect(db.engine)
@@ -4626,6 +5053,12 @@ def create_parameters_table():
         conn = get_db()
         cursor = conn.cursor()
 
+        # T15a: Prevent indefinite blocking during rolling deploys
+        try:
+            cursor.execute("SET lock_timeout = '5s'")
+        except Exception:
+            pass
+
         # Check if parameters table exists and has correct columns
         try:
             cursor.execute("""
@@ -4805,18 +5238,12 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    """Log response details and set security headers"""
+    """Log response details"""
     # Skip logging for health check and static files
     if request.path != '/healthz' and not request.path.startswith('/static'):
         logger.info(f"Request completed: {response.status_code}")
 
-    # Security headers
-    if is_production:
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-
+    # T15c: Security headers removed — add_security_headers() is the single authority
     return response
 
 
@@ -7690,13 +8117,9 @@ def get_user_circles(user_id):
             privacy_level = target_user.circles_privacy or 'private'
             user_privacy_level = privacy_level  # Store for return
 
-            # Check viewer's circle membership with target user
-            viewer_circle = db.session.execute(
-                select(Circle).filter_by(
-                    user_id=user_id,
-                    circle_user_id=current_user_id
-                )
-            ).scalars().first()
+            # T31: Check viewer's circle membership with target user
+            # Use lowest-access circle when user is in multiple circles
+            viewer_circle = _resolve_lowest_circle(user_id, current_user_id)
 
             if viewer_circle:
                 type_mapping_check = {
@@ -7838,11 +8261,8 @@ def get_user_parameters(user_id):
         # Check what circle the current user is in for the target user
         circle_level = 'public'  # Default to public
         if current_user_id != user_id:
-            circle_stmt = select(Circle).filter_by(
-                user_id=user_id,
-                circle_user_id=current_user_id
-            )
-            circle = db.session.execute(circle_stmt).scalar_one_or_none()
+            # T31: Use lowest-access circle when user is in multiple circles
+            circle = _resolve_lowest_circle(user_id, current_user_id)
 
             if circle:
                 # Map circle types to privacy levels
@@ -7860,11 +8280,16 @@ def get_user_parameters(user_id):
             circle_level = 'class_a'
 
         # Get parameters with privacy settings
+        # T25: Always try to include notes_privacy for per-entry filtering.
+        # Uses try/except instead of NOTES_PRIVACY_AVAILABLE flag (which can be False
+        # due to race conditions during background init even when column exists).
+        _has_notes_priv = True
         query = text("""
             SELECT p.date, p.mood, p.energy, p.sleep_quality, 
                    p.physical_activity, p.anxiety, p.notes,
                    p.mood_privacy, p.energy_privacy, p.sleep_quality_privacy,
-                   p.physical_activity_privacy, p.anxiety_privacy
+                   p.physical_activity_privacy, p.anxiety_privacy,
+                   p.notes_privacy
             FROM saved_parameters p
             WHERE p.user_id = :user_id
               AND p.date >= :start_date 
@@ -7872,14 +8297,30 @@ def get_user_parameters(user_id):
             ORDER BY p.date ASC
         """)
 
-        result_proxy = db.session.execute(
-            query,
-            {
-                'user_id': user_id,
-                'start_date': start.isoformat(),
-                'end_date': end.isoformat()
-            }
-        )
+        query_params = {
+            'user_id': user_id,
+            'start_date': start.isoformat(),
+            'end_date': end.isoformat()
+        }
+
+        try:
+            result_proxy = db.session.execute(query, query_params)
+        except Exception:
+            # notes_privacy column doesn't exist yet — retry without it
+            db.session.rollback()
+            _has_notes_priv = False
+            query = text("""
+                SELECT p.date, p.mood, p.energy, p.sleep_quality, 
+                       p.physical_activity, p.anxiety, p.notes,
+                       p.mood_privacy, p.energy_privacy, p.sleep_quality_privacy,
+                       p.physical_activity_privacy, p.anxiety_privacy
+                FROM saved_parameters p
+                WHERE p.user_id = :user_id
+                  AND p.date >= :start_date 
+                  AND p.date <= :end_date
+                ORDER BY p.date ASC
+            """)
+            result_proxy = db.session.execute(query, query_params)
 
         parameters = result_proxy.fetchall()
 
@@ -7926,8 +8367,11 @@ def get_user_parameters(user_id):
             else:
                 param_dict['anxiety'] = None
 
-            # Notes are always private unless user is in class_a
-            if circle_level == 'class_a':
+            # T25: Notes privacy uses per-entry notes_privacy column (matching diary save).
+            # If column was available in query, use it. Otherwise default to 'private' (safest).
+            notes_privacy = row[12] if _has_notes_priv else 'private'
+            notes_privacy = notes_privacy or 'private'  # Handle NULL values
+            if check_param_visibility(notes_privacy, circle_level):
                 param_dict['notes'] = row[6]
             else:
                 param_dict['notes'] = None
@@ -8083,6 +8527,7 @@ def get_alerts():
     """Get user alerts - filters trigger/feed alerts to only show for followed users
     
     PI502alt: Also filters out trigger alerts with consecutive days below MINIMUM_TRIGGER_DAYS
+    T42: Also filters out trigger alerts where the parameter is now private/hidden from viewer
     """
     try:
         user_id = session['user_id']
@@ -8100,6 +8545,44 @@ def get_alerts():
         ).order_by(desc(Alert.created_at)).limit(100)
 
         all_alerts = db.session.execute(alerts_stmt).scalars().all()
+
+        # T42: Helper - check if viewer can still see the parameter this trigger alert refers to
+        # Caches per source_user to avoid repeated DB queries
+        _privacy_cache = {}  # source_user_id -> (SavedParameters, circle_level)
+        _param_keywords = {
+            'mood': 'mood_privacy',
+            'anxiety': 'anxiety_privacy',
+            'sleep': 'sleep_quality_privacy',
+            'sleep quality': 'sleep_quality_privacy',
+            'physical activity': 'physical_activity_privacy',
+            'exercise': 'physical_activity_privacy',
+            'energy': 'energy_privacy'
+        }
+
+        def trigger_alert_visible(alert):
+            """T42: Return False if this trigger alert's parameter is now hidden from the viewer."""
+            if not alert.source_user_id or not alert.content:
+                return True  # Can't determine — show it
+            src_id = alert.source_user_id
+            if src_id not in _privacy_cache:
+                recent = SavedParameters.query.filter_by(user_id=src_id).order_by(SavedParameters.updated_at.desc()).first()
+                circle = get_watcher_circle_level(src_id, user_id)
+                _privacy_cache[src_id] = (recent, circle)
+            recent, circle = _privacy_cache[src_id]
+            if not recent:
+                return True  # No params row — show it
+            content_lower = alert.content.lower()
+            for keyword, priv_attr in _param_keywords.items():
+                if keyword in content_lower:
+                    param_priv = getattr(recent, priv_attr, 'private')
+                    if param_priv == 'private':
+                        return False
+                    if param_priv == 'class_a' and circle != 'class_a':
+                        return False
+                    if param_priv == 'class_b' and circle not in ('class_a', 'class_b'):
+                        return False
+                    break  # Found matching keyword
+            return True
 
         # PJ401: Filter alerts based on following status
         # PJ704: CRITICAL FIX - Only filter 'trigger' category alerts by following status
@@ -8121,6 +8604,10 @@ def get_alerts():
                                 # Skip alerts below minimum threshold
                                 logger.debug(f"[GET_ALERTS] Filtering out alert {alert.id} with {alert_days} days (< {MINIMUM_TRIGGER_DAYS} minimum)")
                                 continue
+                        # T42: Skip trigger alerts where the parameter is now hidden from this viewer
+                        if not trigger_alert_visible(alert):
+                            logger.debug(f"[T42] Filtering out alert {alert.id}: parameter now private/hidden from viewer {user_id}")
+                            continue
                     filtered_alerts.append(alert)
             else:
                 # Alerts without source_user_id OR with category 'follow', 'message', 'general' always show
@@ -8959,12 +9446,8 @@ def check_circle_membership(check_user_id):
     try:
         current_user_id = session.get('user_id')
 
-        # Check if current user is in any of check_user's circles
-        circle_stmt = select(Circle).filter_by(
-            user_id=check_user_id,
-            circle_user_id=current_user_id
-        )
-        circle = db.session.execute(circle_stmt).scalar_one_or_none()
+        # T31: Use lowest-access circle when user is in multiple circles
+        circle = _resolve_lowest_circle(check_user_id, current_user_id)
 
         if circle:
             # Map old types to new if needed
@@ -9002,13 +9485,9 @@ def get_my_circles():
 
             privacy_level = target_user.circles_privacy or 'private'
 
-            # Check viewer's circle membership with target user FIRST (before any privacy checks)
-            viewer_circle = db.session.execute(
-                select(Circle).filter_by(
-                    user_id=target_user_id,
-                    circle_user_id=user_id
-                )
-            ).scalars().first()
+            # T31: Check viewer's circle membership with target user FIRST (before any privacy checks)
+            # Use lowest-access circle when user is in multiple circles
+            viewer_circle = _resolve_lowest_circle(target_user_id, user_id)
 
             if viewer_circle:
                 type_mapping = {
@@ -9512,15 +9991,15 @@ def get_hierarchical_parameters(view_user_id):
         # If viewing own parameters, return all
         if view_user_id == current_user_id:
             params = SavedParameters.query.filter_by(user_id=view_user_id).all()
+            # NP1-PERF: Batch-fetch notes_privacy in one query instead of N queries
+            np_cache = _batch_get_notes_privacy([p.id for p in params])
             return jsonify({
-                'parameters': [p.to_dict(viewer_id=current_user_id) for p in params]
+                'parameters': [p.to_dict(viewer_id=current_user_id, _notes_privacy=np_cache.get(p.id, 'private')) for p in params]
             })
 
-        # Check what circle current user is in for the viewed user
-        circle = Circle.query.filter_by(
-            user_id=view_user_id,
-            circle_user_id=current_user_id
-        ).first()
+        # T31: Check what circle current user is in for the viewed user
+        # Use lowest-access circle when user is in multiple circles
+        circle = _resolve_lowest_circle(view_user_id, current_user_id)
 
         if not circle:
             # Not in any circle - can only see public
@@ -9530,10 +10009,12 @@ def get_hierarchical_parameters(view_user_id):
 
         # Get parameters and apply visibility rules
         params = SavedParameters.query.filter_by(user_id=view_user_id).all()
+        # NP1-PERF: Batch-fetch notes_privacy in one query instead of N queries
+        np_cache = _batch_get_notes_privacy([p.id for p in params])
         visible_params = []
 
         for param in params:
-            param_dict = param.to_dict(viewer_id=current_user_id, privacy_level=privacy_level)
+            param_dict = param.to_dict(viewer_id=current_user_id, privacy_level=privacy_level, _notes_privacy=np_cache.get(param.id, 'private'))
             visible_params.append(param_dict)
 
         return jsonify({'parameters': visible_params})
@@ -9616,11 +10097,9 @@ def get_user_feed_dates(user_id):
 
             return jsonify({'dates': dates_with_visibility})
 
-        # Check circle membership for other users
-        membership = Circle.query.filter_by(
-            user_id=user_id,
-            circle_user_id=current_user_id
-        ).first()
+        # T31: Check circle membership for other users
+        # Use lowest-access circle when user is in multiple circles
+        membership = _resolve_lowest_circle(user_id, current_user_id)
 
         # Determine which visibility levels current user can see
         visible_levels = ['general']  # Everyone can see public
@@ -9725,11 +10204,9 @@ def get_user_feed_by_date(user_id, date):
         if not is_following:
             return jsonify({'error': 'Must be following user to view posts'}), 403
 
-        # Check circle membership
-        membership = Circle.query.filter_by(
-            user_id=user_id,
-            circle_user_id=current_user_id
-        ).first()
+        # T31: Check circle membership
+        # Use lowest-access circle when user is in multiple circles
+        membership = _resolve_lowest_circle(user_id, current_user_id)
 
         # Determine which visibility levels current user can see
         visible_levels = ['general']  # Everyone can see public
@@ -10152,7 +10629,8 @@ def get_parameters():
                     'sleep_quality_privacy': params.sleep_quality_privacy or 'private',
                     'physical_activity_privacy': params.physical_activity_privacy or 'private',
                     'anxiety_privacy': params.anxiety_privacy or 'private',
-                    'notes': params.notes or ''
+                    'notes': params.notes or '',
+                    'notes_privacy': _get_notes_privacy(params.id)  # NP1
                 }
             })
         else:
@@ -10172,7 +10650,8 @@ def get_parameters():
                     'sleep_quality_privacy': 'private',
                     'physical_activity_privacy': 'private',
                     'anxiety_privacy': 'private',
-                    'notes': ''
+                    'notes': '',
+                    'notes_privacy': 'private'  # NP1
                 }
             })
 
@@ -10251,9 +10730,32 @@ def save_parameters():
         if 'notes' in data:
             params.notes = data['notes']
 
+        # NP1: Save notes_privacy via raw SQL (column not in ORM)
+        # Always attempt the save - don't rely on startup flag which may be stale
+        _np_priv_to_save = None
+        if 'notes_privacy' in data:
+            notes_priv = data['notes_privacy']
+            if notes_priv in ['public', 'class_a', 'class_b', 'private']:
+                _np_priv_to_save = notes_priv
+
         params.updated_at = datetime.utcnow()
         db.session.add(params)
         db.session.commit()
+
+        if _np_priv_to_save:
+            try:
+                db.session.execute(
+                    text("UPDATE saved_parameters SET notes_privacy = :np WHERE id = :pid"),
+                    {'np': _np_priv_to_save, 'pid': params.id}
+                )
+                db.session.commit()
+                logger.info(f"[NP1] Saved notes_privacy={_np_priv_to_save} for params id={params.id}")
+            except Exception as np_err:
+                logger.warning(f"[NP1] Could not save notes_privacy: {np_err}")
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
         
         # PJ809: Log parameter values before trigger check
         logger.info(f"[SAVE PARAMS] Saved: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}")
@@ -10275,6 +10777,7 @@ def save_parameters():
             'sleep_quality_privacy': getattr(params, 'sleep_quality_privacy', 'private'),
             'physical_activity_privacy': getattr(params, 'physical_activity_privacy', 'private'),
             'anxiety_privacy': getattr(params, 'anxiety_privacy', 'private'),
+            'notes_privacy': _get_notes_privacy(params.id),  # NP1
             'date': params.date.isoformat() if params.date else None,  # PJ6016: Must be string for JSON
             'notes': params.notes
         }
@@ -10320,7 +10823,8 @@ def save_parameters():
                     'physical_activity': int(params.physical_activity) if params.physical_activity else 0,
                     'anxiety': int(params.anxiety) if params.anxiety else 0
                 },
-                'notes': params.notes or ''
+                'notes': params.notes or '',
+                'notes_privacy': _get_notes_privacy(params.id)  # NP1
             }
         }), 200
 
@@ -10328,6 +10832,79 @@ def save_parameters():
         logger.error(f"Error saving parameters: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to save parameters'}), 500
+
+
+# T30: Batch-update a single parameter's privacy across ALL existing diary entries
+# and store the chosen level as the user's default for future entries.
+@app.route('/api/parameters/set-default-privacy', methods=['POST'])
+@login_required
+def set_default_privacy():
+    """
+    T30: Set a parameter's privacy level for ALL past entries and as the default
+    for all future entries.  Accepts JSON:
+        { "parameter": "mood", "privacy": "class_a" }
+    Valid parameters: mood, energy, sleep_quality, physical_activity, anxiety, notes
+    Valid privacy levels: public, class_a, class_b, private
+    """
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')
+        param = data.get('parameter')
+        privacy = data.get('privacy')
+
+        valid_params = ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'notes']
+        valid_privacy = ['public', 'class_a', 'class_b', 'private']
+
+        if param not in valid_params:
+            return jsonify({'error': 'Invalid parameter'}), 400
+        if privacy not in valid_privacy:
+            return jsonify({'error': 'Invalid privacy level'}), 400
+
+        if param == 'notes':
+            # notes_privacy lives outside the ORM — use raw SQL
+            try:
+                result = db.session.execute(
+                    text("UPDATE saved_parameters SET notes_privacy = :priv WHERE user_id = :uid"),
+                    {'priv': privacy, 'uid': user_id}
+                )
+                db.session.commit()
+                rows_updated = result.rowcount
+                logger.info(f"[T30] Set notes_privacy={privacy} for user {user_id}, {rows_updated} rows updated")
+            except Exception as np_err:
+                logger.warning(f"[T30] Could not batch-update notes_privacy: {np_err}")
+                db.session.rollback()
+                return jsonify({'error': 'Failed to update notes privacy'}), 500
+        else:
+            privacy_col = f"{param}_privacy"
+            result = db.session.execute(
+                text(f"UPDATE saved_parameters SET {privacy_col} = :priv WHERE user_id = :uid"),
+                {'priv': privacy, 'uid': user_id}
+            )
+            db.session.commit()
+            rows_updated = result.rowcount
+            logger.info(f"[T30] Set {privacy_col}={privacy} for user {user_id}, {rows_updated} rows updated")
+
+        # T42: Privacy changed for all entries — clean up any trigger alerts that
+        # now violate the updated privacy settings.  Without this, alerts generated
+        # before the privacy change remain visible to watchers who should no longer
+        # see the parameter (e.g. Mood set to Private still shows mood alerts).
+        try:
+            cleanup_stale_trigger_alerts_for_user(user_id)
+            logger.info(f"[T42] Ran alert cleanup after set-default-privacy for user {user_id}, param={param}, privacy={privacy}")
+        except Exception as cleanup_err:
+            # Non-fatal: log but don't fail the privacy update itself
+            logger.warning(f"[T42] Alert cleanup after privacy change failed: {cleanup_err}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Privacy updated for all entries',
+            'rows_updated': rows_updated
+        }), 200
+
+    except Exception as e:
+        logger.error(f"[T30] Error setting default privacy: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to set default privacy'}), 500
 
 
 # =============================================================================
@@ -11372,7 +11949,29 @@ def start_data_retention_scheduler():
                 time.sleep(sleep_seconds)
                 
                 with app.app_context():
-                    cleanup_old_data()
+                    _retention_lock_acquired = False
+                    try:
+                        # T15d: Only process if this worker holds the advisory lock
+                        if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_DATA_RETENTION):
+                            logger.debug("[DATA RETENTION] Another worker holds the lock, skipping")
+                            continue
+                        _retention_lock_acquired = True
+                        cleanup_old_data()
+                    except Exception as inner_error:
+                        logger.error(f"[DATA RETENTION] Processing error: {inner_error}")
+                        try:
+                            db.session.rollback()
+                        except Exception:
+                            pass
+                    finally:
+                        # T15d: Release advisory lock before returning connection to pool
+                        if _retention_lock_acquired:
+                            _release_scheduler_lock(_SCHEDULER_LOCK_DATA_RETENTION)
+                        # T15d: Always release the DB session so connections return to the pool
+                        try:
+                            db.session.remove()
+                        except Exception:
+                            pass
                     
             except Exception as e:
                 logger.error(f"[DATA RETENTION] Scheduler error: {e}")
@@ -11512,6 +12111,7 @@ def get_parameter_dates():
         })
 
     except Exception as e:
+        db.session.rollback()
         logger.error(f"Get parameter dates error: {str(e)}")
         return jsonify({
             'success': False,
@@ -11623,9 +12223,6 @@ def get_today_status():
         return jsonify({'has_entry_today': False, 'has_complete_entry_today': False, 'error': str(e)})
 
 
-@app.route('/api/parameters/should-redirect-to-diary')
-
-
 # V2: User summary endpoint for home screen dashboard card
 @app.route('/api/user/summary')
 @login_required
@@ -11705,6 +12302,7 @@ def get_user_summary():
         }), 200
         
     except Exception as e:
+        db.session.rollback()
         logger.error(f"User summary error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
@@ -11812,6 +12410,7 @@ def should_redirect_to_diary():
         })
         
     except Exception as e:
+        db.session.rollback()
         logger.error(f"Should redirect check error: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
@@ -11941,6 +12540,7 @@ def get_progress():
         })
         
     except Exception as e:
+        db.session.rollback()
         logger.error(f"Progress data error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
@@ -12922,7 +13522,7 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
     
     # Generate PDF with WeasyPrint
     output = io.BytesIO()
-    HTML(string=html_content).write_pdf(output)
+    _weasyprint_HTML(string=html_content).write_pdf(output)
     output.seek(0)
     
     return output
@@ -12933,7 +13533,7 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
 def generate_pdf_report():
     """Generate PDF report for past 7 days - uses WeasyPrint if available, falls back to reportlab"""
     
-    # Check if any PDF library is available
+    _ensure_weasyprint()
     if not WEASYPRINT_AVAILABLE and not REPORTLAB_AVAILABLE:
         logger.error("PDF generation failed: no PDF library available")
         return jsonify({'error': 'PDF generation not available - install weasyprint or reportlab'}), 500
@@ -13270,8 +13870,9 @@ def email_report():
         msg['From'] = os.environ.get('FROM_EMAIL', 'TheraSocial <onboarding@resend.dev>')
         msg['To'] = recipient
         _add_deliverability_headers(msg)
-        # T2500: Plain text fallback for spam filter compliance
-        msg.attach(MIMEText(_html_to_plain_text(html_content), "plain"))
+        # T25: Plain text fallback for spam filter compliance
+        _text_fb = _html_to_plain_text(html_content)
+        msg.attach(MIMEText(_text_fb, 'plain'))
         msg.attach(MIMEText(html_content, 'html'))
         
         smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
@@ -13378,15 +13979,9 @@ def get_watcher_circle_level(watched_id, watcher_id):
     Returns:
         str: 'class_a', 'class_b', 'public', or None if not in any circle
     """
-    # PJ6015 FIX: Use scalars().first() instead of scalar_one_or_none() to handle duplicate entries
-    # This prevents "Multiple rows were found" error when Circle table has duplicates
+    # T31: Use lowest-access circle when user is in multiple circles
     try:
-        circle = db.session.execute(
-            select(Circle).filter_by(
-                user_id=watched_id,
-                circle_user_id=watcher_id
-            )
-        ).scalars().first()  # Changed from scalar_one_or_none() to handle duplicates
+        circle = _resolve_lowest_circle(watched_id, watcher_id)
 
         if circle:
             return circle.circle_type
@@ -13420,17 +14015,13 @@ def check_parameter_triggers():
         logger.info(f"[PJ815 DEBUG] check_parameter_triggers called for watcher_id={watcher_id}")
         logger.info(f"[PJ815 DEBUG] Found {len(triggers)} trigger rows")
         
-        # Log each trigger's actual flags
-        for i, t in enumerate(triggers):
+        # PERF: Only log first 3 triggers (was doing 175 DB queries for logging)
+        for i, t in enumerate(triggers[:3]):
             watched_user = db.session.get(User, t.watched_id)
             username = watched_user.username if watched_user else f"user_{t.watched_id}"
-            flags = []
-            if t.mood_alert: flags.append('mood')
-            if t.energy_alert: flags.append('energy')
-            if t.sleep_alert: flags.append('sleep')
-            if t.physical_alert: flags.append('activity')
-            if t.anxiety_alert: flags.append('anxiety')
-            logger.info(f"[PJ815 DEBUG] Trigger {i+1}: watched={username}, consecutive_days={t.consecutive_days}, flags={flags}, mood_alert_raw={t.mood_alert}")
+            logger.info(f"[PJ815 DEBUG] Trigger {i+1}: watched={username}, days={t.consecutive_days}")
+        if len(triggers) > 3:
+            logger.info(f"[PJ815 DEBUG] ... and {len(triggers)-3} more (suppressed)")
 
         alerts = []
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -13490,7 +14081,7 @@ def check_parameter_triggers():
             if not watched_user:
                 continue
 
-            consecutive_days = trigger.consecutive_days
+            # T15d: consecutive_days already clamped above — do not re-read raw value
             
             # Determine which schema this trigger uses
             has_new_schema = any([
@@ -13847,145 +14438,23 @@ def check_parameter_triggers():
         logger.info(f"[TRIGGER CHECK] ========================================")
         logger.info(f"[TRIGGER CHECK] Found {len(alerts)} trigger patterns for watcher {watcher_id}")
         
-        alerts_created = 0
-        alerts_skipped_duplicate = 0
-        # PJ6015: Removed alerts_emailed = 0 - now using emails_actually_sent from batch email code
+        # PERF FIX: Return patterns immediately WITHOUT creating alerts or sending emails.
+        # Alert creation happens in background when users save diary entries via
+        # process_parameter_triggers / run_background_trigger_check_for_watcher.
+        # The old code called create_alert_with_email() here which sent SMTP emails
+        # synchronously, hanging for 30+ seconds and killing Render's single worker.
+        logger.info(f"[TRIGGER CHECK] Returning {len(alerts)} patterns (read-only, no alert creation)")
         
-        for alert_data in alerts:
-            try:
-                watched_username = alert_data.get('user', 'Unknown')
-                parameter = alert_data.get('parameter', 'unknown')
-                consecutive_days = alert_data.get('consecutive_days', 0)
-                
-                # Normalize parameter name for consistent duplicate detection
-                normalized_param = parameter.replace(' ', '_').lower()
-                
-                # Build unique key for this alert
-                alert_key = f"{watched_username.lower()}_{normalized_param}"
-                
-                # PJ813 FIX: Build date range string for unique key - each date range should be a separate alert
-                date_range_str = ""
-                date_pattern = ""
-                if alert_data.get('dates') and len(alert_data['dates']) >= 2:
-                    try:
-                        from datetime import datetime as dt
-                        start_date = dt.fromisoformat(alert_data['dates'][0])
-                        end_date = dt.fromisoformat(alert_data['dates'][-1])
-                        date_range_str = f"_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}"
-                        start_str = start_date.strftime('%b %d')
-                        end_str = end_date.strftime('%b %d')
-                        date_pattern = f"({start_str} - {end_str})"
-                    except Exception as e:
-                        logger.warning(f"[PJ815 DEBUG] Could not parse dates: {e}")
-                
-                # PJ813 FIX: Include date range in alert key so different patterns create separate alerts
-                alert_key_with_dates = f"{alert_key}{date_range_str}"
-                
-                logger.info(f"[TRIGGER CHECK] Processing pattern: user={watched_username}, param={parameter}, days={consecutive_days}, dates={date_pattern}, key={alert_key_with_dates}, mode={ALERT_EMAIL_MODE}")
-                
-                # PJ6018: Check for existing alert using helper function that respects ALERT_EMAIL_MODE
-                existing_alert = None
-                if date_pattern:
-                    existing_alert = check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
-                    if existing_alert:
-                        logger.info(f"[PJ815 DEBUG] Found existing alert with date pattern '{date_pattern}': ID={existing_alert.id} (mode={ALERT_EMAIL_MODE})")
-                    else:
-                        logger.info(f"[PJ815 DEBUG] No existing alert with date pattern '{date_pattern}' - will create new (mode={ALERT_EMAIL_MODE})")
-                
-                # Fallback: if no date range available, use broader check
-                if not date_range_str:
-                    existing_alert = check_duplicate_alert_broad(watcher_id, watched_username, parameter)
-                
-                if existing_alert:
-                    logger.info(f"[TRIGGER DUPLICATE] Skipping {watched_username}/{parameter} - alert already exists for this date range (ID: {existing_alert.id}, created: {existing_alert.created_at}, mode={ALERT_EMAIL_MODE})")
-                    alerts_skipped_duplicate += 1
-                    continue
-                
-                # Get the watched user's ID for source_user_id
-                watched_user = User.query.filter_by(username=watched_username).first()
-                source_user_id = watched_user.id if watched_user else None
-                
-                # Create alert content with nicely formatted dates
-                if alert_data.get('dates') and len(alert_data['dates']) >= 2:
-                    try:
-                        # Parse ISO dates and format nicely (e.g., "Dec 5 - Dec 7")
-                        from datetime import datetime as dt
-                        start_date = dt.fromisoformat(alert_data['dates'][0])
-                        end_date = dt.fromisoformat(alert_data['dates'][-1])
-                        start_str = start_date.strftime('%b %d')  # e.g., "Dec 05"
-                        end_str = end_date.strftime('%b %d')      # e.g., "Dec 07"
-                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
-                    except Exception as date_err:
-                        logger.warning(f"[TRIGGER CHECK] Could not parse dates: {date_err}")
-                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days (from {alert_data['dates'][0]} to {alert_data['dates'][-1]})"
-                elif alert_data.get('end_date'):
-                    # Old schema format - has end_date object
-                    try:
-                        end_date = alert_data['end_date']
-                        if hasattr(end_date, 'strftime'):
-                            end_str = end_date.strftime('%b %d')
-                            start_date = end_date - timedelta(days=consecutive_days - 1)
-                            start_str = start_date.strftime('%b %d')
-                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
-                        else:
-                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
-                    except Exception as date_err:
-                        logger.warning(f"[TRIGGER CHECK] Could not format end_date: {date_err}")
-                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
-                else:
-                    content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
-                
-                # Create the alert with email notification
-                logger.info(f"[TRIGGER CREATE] Creating alert for watcher {watcher_id}: {content[:100]}...")
-                
-                alert = create_alert_with_email(
-                    user_id=watcher_id,
-                    title=f"Well-Being Alert for {watched_username}",
-                    content=content,
-                    alert_type='trigger',
-                    source_user_id=source_user_id,
-                    alert_category='trigger'
-                )
-                
-                if alert:
-                    alerts_created += 1
-                    logger.info(f"[TRIGGER CREATE] ✅ Created alert ID {alert.id} for {watched_username}/{parameter}")
-                    # PJ6015: Removed misleading email check - actual emails are sent via batch system below
-                        
-            except Exception as pattern_err:
-                logger.error(f"[TRIGGER CHECK] Error processing pattern: {pattern_err}")
-                logger.error(f"[TRIGGER CHECK] Pattern data: {alert_data}")
-                continue
-        
-        # Commit all created alerts
-        try:
-            db.session.commit()
-            logger.info(f"[TRIGGER CHECK] Committed {alerts_created} new alerts to database")
-        except Exception as commit_err:
-            logger.error(f"[TRIGGER CHECK] Error committing alerts: {commit_err}")
-            db.session.rollback()
-        
-        # PJ6017: REMOVED email sending from frontend polling path
-        # Emails should ONLY be sent from background scheduler when watched users save diary
-        # This prevents duplicate emails when watcher logs in and frontend polls for alerts
-        # The background scheduler (run_background_trigger_check_for_watcher) handles all email sending
-        
-        logger.info(f"[TRIGGER CHECK] Summary: patterns={len(alerts)}, created={alerts_created}, duplicates_skipped={alerts_skipped_duplicate}")
-        logger.info(f"[TRIGGER CHECK] Note: Emails sent via background scheduler only (not on login)")
-        logger.info(f"[TRIGGER CHECK] ========================================")
-
         return jsonify({
             'success': True,
             'alerts': alerts,
             'count': len(alerts),
-            'alerts_created': alerts_created,
-            'alerts_skipped_duplicate': alerts_skipped_duplicate
-            # PJ6017: Removed alerts_emailed - emails only sent from background scheduler
+            'alerts_created': 0,
+            'alerts_skipped_duplicate': 0
         })
 
     except Exception as e:
         logger.error(f"Check triggers error: {str(e)}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({
             'success': False,
@@ -14897,14 +15366,10 @@ def get_friends_updates():
             if not followed_user:
                 continue
             
-            # Determine viewer's circle level for privacy filtering
+            # T31: Determine viewer's circle level for privacy filtering
+            # Use lowest-access circle when user is in multiple circles
             circle_level = 'public'
-            circle = db.session.execute(
-                select(Circle).filter_by(
-                    user_id=follow.followed_id,
-                    circle_user_id=user_id
-                )
-            ).scalars().first()
+            circle = _resolve_lowest_circle(follow.followed_id, user_id)
             if circle:
                 type_mapping = {
                     'public': 'public', 'general': 'public',
@@ -14965,6 +15430,7 @@ def get_friends_updates():
         return jsonify({'updates': updates}), 200
     
     except Exception as e:
+        db.session.rollback()
         logger.error(f"Friends updates error: {str(e)}")
         return jsonify({'error': 'Failed to load friends updates'}), 500
 
@@ -15000,14 +15466,27 @@ def get_following():
                     follower_id=followed_user.id,
                     followed_id=user_id
                 ).first() is not None
+                # CS1: Get last check-in date (always visible regardless of privacy settings)
+                last_checkin = db.session.execute(
+                    select(SavedParameters.date).filter_by(user_id=followed_user.id)
+                    .order_by(SavedParameters.date.desc()).limit(1)
+                ).scalar()
+                last_checkin_date = last_checkin.isoformat() if last_checkin else None
+
                 following.append({
                     'id': followed_user.id,
                     'username': followed_user.username,
+                    'display_name': getattr(followed_user, 'display_name', None) or followed_user.username,
                     'email': followed_user.email,
                     'note': follow.follow_note,  # ADD THIS FIELD
                     'follow_trigger': getattr(follow, 'follow_trigger', False) or False,  # V2: alert tracking status
                     'follows_you': follows_back,  # VINTER2: whether this user follows you back
                     'selected_city': followed_user.selected_city,
+                    'bio': getattr(followed_user, 'bio', None) or '',
+                    'occupation': getattr(followed_user, 'occupation', None) or '',
+                    'last_login': followed_user.last_login.isoformat() if followed_user.last_login else None,
+                    'last_active': followed_user.last_login.isoformat() if followed_user.last_login else None,
+                    'last_checkin_date': last_checkin_date,  # CS1: date of most recent diary entry
                     'created_at': follow.created_at.isoformat()
                 })
 
@@ -15043,12 +15522,8 @@ def get_user_parameters_for_triggers(user_id):
         # V4 FIX: Determine viewer's circle level for privacy filtering
         circle_level = 'public'  # Default for non-circle followers
         if viewer_id != user_id:
-            circle = db.session.execute(
-                select(Circle).filter_by(
-                    user_id=user_id,
-                    circle_user_id=viewer_id
-                )
-            ).scalars().first()
+            # T31: Use lowest-access circle when user is in multiple circles
+            circle = _resolve_lowest_circle(user_id, viewer_id)
             if circle:
                 type_mapping = {
                     'public': 'public',
@@ -15590,6 +16065,61 @@ def process_diary_reminders():
 _diary_reminder_scheduler_started = False
 _diary_reminder_scheduler_lock = threading.Lock()
 
+# T15a: Advisory lock IDs for multi-worker scheduler deduplication
+_SCHEDULER_LOCK_DIARY = 100001
+_SCHEDULER_LOCK_TRIGGER = 100002
+_SCHEDULER_LOCK_JOB_QUEUE = 100003
+_SCHEDULER_LOCK_DATA_RETENTION = 100004
+
+
+def _try_acquire_scheduler_lock(lock_id):
+    """
+    T15a: Try to acquire a PostgreSQL advisory lock (non-blocking).
+    Returns True if this worker should process, False if another worker holds the lock.
+    Falls back to True for SQLite (single-process dev mode).
+    """
+    try:
+        is_postgres = 'postgresql' in str(db.engine.url)
+        if not is_postgres:
+            return True  # SQLite = dev mode, always run
+        result = db.session.execute(
+            text("SELECT pg_try_advisory_lock(:lock_id)"),
+            {'lock_id': lock_id}
+        ).scalar()
+        return bool(result)
+    except Exception as e:
+        logger.warning(f"[SCHEDULER LOCK] Could not check advisory lock {lock_id}: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return False  # If we can't check, don't run (safer)
+
+
+def _release_scheduler_lock(lock_id):
+    """
+    T15d: Explicitly release a PostgreSQL advisory lock before the connection
+    returns to the pool.  Without this, pg_try_advisory_lock holds the lock on
+    the specific pooled connection; if the next scheduler iteration receives a
+    different connection from the pool, it sees the lock as held and skips work.
+    Must be called on the same db.session that acquired the lock (i.e. before
+    db.session.remove()).  No-op for SQLite.
+    """
+    try:
+        is_postgres = 'postgresql' in str(db.engine.url)
+        if not is_postgres:
+            return
+        db.session.execute(
+            text("SELECT pg_advisory_unlock(:lock_id)"),
+            {'lock_id': lock_id}
+        )
+    except Exception as e:
+        logger.warning(f"[SCHEDULER LOCK] Could not release advisory lock {lock_id}: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
 def run_diary_reminder_scheduler():
     """
     Background thread that checks for diary reminders every minute.
@@ -15606,11 +16136,26 @@ def run_diary_reminder_scheduler():
             
             # Process diary reminders within app context
             with app.app_context():
+                _diary_lock_acquired = False
                 try:
+                    # T15a: Only process if this worker holds the advisory lock
+                    if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_DIARY):
+                        logger.debug("[DIARY SCHEDULER] Another worker holds the lock, skipping this cycle")
+                        continue
+
+                    _diary_lock_acquired = True
+
                     now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
                     logger.info(f"[DIARY SCHEDULER] ========================================")
                     logger.info(f"[DIARY SCHEDULER] Checking reminders at UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S')}")
                     
+                    # Set a statement timeout so queries never hang indefinitely
+                    # This prevents the scheduler thread from being permanently stuck
+                    try:
+                        db.session.execute(text("SET statement_timeout = '10s'"))
+                    except Exception:
+                        pass  # Not critical - just prevents hangs
+
                     # Get all users with diary reminders enabled and log their settings
                     all_diary_settings = NotificationSettings.query.filter(
                         NotificationSettings.email_daily_diary_reminder == True
@@ -15679,12 +16224,36 @@ def run_diary_reminder_scheduler():
                                     logger.warning(f"[DIARY SCHEDULER] User {settings.user_id} has no email - skipping")
                                     continue
                                 
+                                # CS7: Dedup check - skip if already sent today (raw SQL since column may not be in ORM)
+                                today_date = now_utc.date()
+                                try:
+                                    _ls_row = db.session.execute(
+                                        text("SELECT diary_reminder_last_sent FROM notification_settings WHERE id = :sid"),
+                                        {'sid': settings.id}
+                                    ).first()
+                                    last_sent = _ls_row[0] if _ls_row else None
+                                except Exception:
+                                    last_sent = None
+                                if last_sent == today_date:
+                                    logger.info(f"[DIARY SCHEDULER] SKIP: Already sent reminder to {user.email} today ({today_date})")
+                                    continue
+                                
                                 logger.info(f"[DIARY SCHEDULER] Sending reminder to user {user.id} ({user.email})...")
                                 user_language = user.preferred_language or 'en'
                                 success = send_daily_diary_reminder_email(user.email, user_language)
                                 
                                 if success:
                                     emails_sent += 1
+                                    # CS7: Mark as sent today via raw SQL
+                                    try:
+                                        db.session.execute(
+                                            text("UPDATE notification_settings SET diary_reminder_last_sent = :td WHERE id = :sid"),
+                                            {'td': today_date, 'sid': settings.id}
+                                        )
+                                        db.session.commit()
+                                    except Exception as mark_err:
+                                        logger.warning(f"[DIARY SCHEDULER] Could not mark reminder sent: {mark_err}")
+                                        db.session.rollback()
                                     logger.info(f"[DIARY SCHEDULER] SUCCESS: Sent reminder to {user.email}")
                                 else:
                                     emails_failed += 1
@@ -15701,7 +16270,19 @@ def run_diary_reminder_scheduler():
                 except Exception as inner_error:
                     logger.error(f"[DIARY SCHEDULER] Processing error: {str(inner_error)}")
                     logger.error(f"[DIARY SCHEDULER] Traceback: {traceback.format_exc()}")
-                    db.session.rollback()
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                finally:
+                    # T15d: Release advisory lock before returning connection to pool
+                    if _diary_lock_acquired:
+                        _release_scheduler_lock(_SCHEDULER_LOCK_DIARY)
+                    # Always release the DB session so connections return to the pool
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
                     
         except Exception as e:
             logger.error(f"[DIARY SCHEDULER] Scheduler error: {str(e)}")
@@ -15814,7 +16395,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
             if not watched_user:
                 continue
 
-            consecutive_days = trigger.consecutive_days
+            # T15d: consecutive_days already clamped above — do not re-read raw value
             
             has_new_schema = any([
                 trigger.mood_alert,
@@ -15905,6 +16486,35 @@ def run_background_trigger_check_for_watcher(watcher_id):
             # OLD SCHEMA processing
             elif has_old_schema:
                 param_name = trigger.parameter_name
+
+                # T30: NO-CHECKIN trigger processing
+                if param_name == 'no_checkin':
+                    from datetime import date as date_type
+                    today = date_type.today()
+                    latest_entry = db.session.execute(
+                        select(SavedParameters).filter(
+                            SavedParameters.user_id == trigger.watched_id
+                        ).order_by(SavedParameters.date.desc()).limit(1)
+                    ).scalars().first()
+
+                    if latest_entry and latest_entry.date:
+                        days_since = (today - latest_entry.date).days
+                    else:
+                        days_since = 999
+
+                    if days_since >= consecutive_days:
+                        pattern_key = (watched_user.username, 'no_checkin', today.isoformat(), str(days_since))
+                        if pattern_key not in patterns_seen:
+                            patterns_seen.add(pattern_key)
+                            alerts.append({
+                                'user': watched_user.username,
+                                'parameter': 'no_checkin',
+                                'consecutive_days': days_since,
+                                'dates': [today.isoformat()],
+                                'values': [days_since],
+                                'condition_text': f"no check-in for {days_since} days"
+                            })
+                    continue
                 condition = trigger.trigger_condition
                 threshold = trigger.trigger_value
 
@@ -16083,7 +16693,10 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 source_user_id = watched_user.id if watched_user else None
                 
                 # PJ817: Generate content with date pattern for ALL streak lengths
-                if alert_data.get('dates') and len(alert_data['dates']) >= 1:
+                # T30: Handle no_checkin triggers with a distinct message
+                if parameter == 'no_checkin':
+                    content = f"{watched_username} hasn't checked in for {consecutive_days} days — you may want to reach out"
+                elif alert_data.get('dates') and len(alert_data['dates']) >= 1:
                     try:
                         from datetime import datetime as dt
                         start_date = dt.fromisoformat(alert_data['dates'][0])
@@ -16186,7 +16799,15 @@ def run_trigger_scheduler():
         try:
             # Process triggers every 5 minutes
             with app.app_context():
+                _trigger_lock_acquired = False
                 try:
+                    # T15a: Only process if this worker holds the advisory lock
+                    if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_TRIGGER):
+                        logger.debug("[TRIGGER SCHEDULER] Another worker holds the lock, skipping this cycle")
+                        time.sleep(300)
+                        continue
+
+                    _trigger_lock_acquired = True
                     now_utc = datetime.utcnow()
                     current_hour = now_utc.hour
                     logger.info(f"[TRIGGER SCHEDULER] ========================================")
@@ -16266,7 +16887,29 @@ def run_trigger_scheduler():
                                 else:
                                     logger.info(f"[TRIGGER SCHEDULER] PI502: Not daily reminder hour (current={current_hour}, reminder={DAILY_REMINDER_HOUR_UTC})")
                         else:
-                            logger.info(f"[TRIGGER SCHEDULER] PI502: Mode is new_alerts_only - no scheduler emails (emails via job queue only)")
+                            # T32: In new_alerts_only mode, the job queue sends emails when users save data.
+                            # But no_checkin alerts fire precisely because the user ISN'T saving data,
+                            # so the job queue path never runs for them. Send emails for no_checkin here.
+                            no_checkin_emails = 0
+                            for watcher_id, triggered_by_user in all_watcher_triggered_params.items():
+                                watcher = db.session.get(User, watcher_id)
+                                if not watcher:
+                                    continue
+                                user_language = watcher.preferred_language or 'en'
+                                
+                                for watched_username, triggered_params in triggered_by_user.items():
+                                    # Filter to only no_checkin params
+                                    no_checkin_params = [p for p in triggered_params if p['param_name'] == 'no_checkin']
+                                    if no_checkin_params:
+                                        logger.info(f"[TRIGGER SCHEDULER] T32: Sending no_checkin email to {watcher.username} for {watched_username}")
+                                        if send_consolidated_wellness_alert_email(watcher_id, watched_username, no_checkin_params, user_language):
+                                            no_checkin_emails += 1
+                                            emails_sent += 1
+                            
+                            if no_checkin_emails > 0:
+                                logger.info(f"[TRIGGER SCHEDULER] T32: Sent {no_checkin_emails} no_checkin emails in new_alerts_only mode")
+                            else:
+                                logger.info(f"[TRIGGER SCHEDULER] PI502: Mode is new_alerts_only - no no_checkin alerts to email (other emails via job queue)")
                         
                         logger.info(f"[TRIGGER SCHEDULER] Completed: total_created={total_created}, total_skipped={total_skipped}, emails={emails_sent}")
                         logger.info(f"[TRIGGER SCHEDULER] ========================================")
@@ -16274,7 +16917,19 @@ def run_trigger_scheduler():
                 except Exception as inner_error:
                     logger.error(f"[TRIGGER SCHEDULER] Processing error: {str(inner_error)}")
                     logger.error(f"[TRIGGER SCHEDULER] Traceback: {traceback.format_exc()}")
-                    db.session.rollback()
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                finally:
+                    # T15d: Release advisory lock before returning connection to pool
+                    if _trigger_lock_acquired:
+                        _release_scheduler_lock(_SCHEDULER_LOCK_TRIGGER)
+                    # T15b: Always release the DB session so connections return to the pool
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
             
             # Sleep for 5 minutes between checks
             time.sleep(300)
@@ -16337,12 +16992,32 @@ def run_job_queue_scheduler():
     while True:
         try:
             with app.app_context():
+                _jobq_lock_acquired = False
                 try:
+                    # T15a: Only process if this worker holds the advisory lock
+                    if not _try_acquire_scheduler_lock(_SCHEDULER_LOCK_JOB_QUEUE):
+                        logger.debug("[JOB QUEUE SCHEDULER] Another worker holds the lock, skipping this cycle")
+                        time.sleep(10)
+                        continue
+
+                    _jobq_lock_acquired = True
                     # Process up to 10 jobs per cycle
                     process_background_jobs(batch_size=10)
                 except Exception as inner_error:
                     logger.error(f"[JOB QUEUE SCHEDULER] Processing error: {str(inner_error)}")
-                    db.session.rollback()
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                finally:
+                    # T15d: Release advisory lock before returning connection to pool
+                    if _jobq_lock_acquired:
+                        _release_scheduler_lock(_SCHEDULER_LOCK_JOB_QUEUE)
+                    # T15b: Always release the DB session so connections return to the pool
+                    try:
+                        db.session.remove()
+                    except Exception:
+                        pass
             
             # Sleep for 10 seconds between job processing cycles
             time.sleep(10)
@@ -17246,6 +17921,7 @@ def get_received_follow_requests():
             'id': req.id,
             'requester_id': req.requester_id,
             'requester_name': req.requester.username,
+            'avatar_color': getattr(req.requester, 'avatar_color', None) or '#6B8BA4',
             'created_at': req.created_at.isoformat()
         } for req in requests]
     })
@@ -17273,11 +17949,35 @@ def respond_to_follow_request(request_id):
             follow_request.privacy_level = privacy_level
             follow_request.responded_at = datetime.utcnow()
 
-            follow = Follow(
+            # T40: Guard against duplicate follow - the requester may already follow the target
+            # (e.g. via direct follow path or a previous accept that didn't clean up the request)
+            existing_follow = Follow.query.filter_by(
                 follower_id=follow_request.requester_id,
                 followed_id=follow_request.target_id
-            )
-            db.session.add(follow)
+            ).first()
+            if not existing_follow:
+                follow = Follow(
+                    follower_id=follow_request.requester_id,
+                    followed_id=follow_request.target_id
+                )
+                db.session.add(follow)
+            else:
+                logger.info(f"[T40] Follow already exists: {follow_request.requester_id} -> {follow_request.target_id}, skipping insert")
+
+            # T40: Create reciprocal follow (target follows requester back) for bidirectional connection
+            existing_reverse = Follow.query.filter_by(
+                follower_id=follow_request.target_id,
+                followed_id=follow_request.requester_id
+            ).first()
+            if not existing_reverse:
+                reverse_follow = Follow(
+                    follower_id=follow_request.target_id,
+                    followed_id=follow_request.requester_id
+                )
+                db.session.add(reverse_follow)
+                logger.info(f"[T40] Created reciprocal follow: {follow_request.target_id} -> {follow_request.requester_id}")
+            else:
+                logger.info(f"[T40] Reciprocal follow already exists: {follow_request.target_id} -> {follow_request.requester_id}")
 
         elif action == 'reject':
             follow_request.status = 'rejected'

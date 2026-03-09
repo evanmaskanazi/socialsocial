@@ -53,8 +53,8 @@
   - NAV: Site name now clickable to navigate to home view
   - HOME: My Summary Status card with streak tracking and Update Diary button
   - HOME: One-Tap Quick Check-In for mood logging
-  - HOME: Recommendations for Today section (personalized wellness tips)
-  - HOME: Friends' Daily Updates feed (shows connection wellness summaries)
+  - HOME: Recommendations for Today section (personalized well-being tips)
+  - HOME: Friends' Daily Updates feed (shows connection well-being summaries)
   - HOME: Alerts & Notifications preview on home page
   - CONNECTIONS: New unified Connections view (replaces Following/Followers in nav)
   - CONNECTIONS: Connection search, My Connections tab, Recommendations tab
@@ -64,7 +64,7 @@
   - COLORS: Warmed-up palette with coral/peach/sage accents
   - MOBILE: Improved margins and spacing for mobile
   - MESSAGES: Message templates button for quick supportive messages
-  - WELLNESS: Caring Nudges after inactivity
+  - WELL-BEING: Caring Nudges after inactivity
   - BACKEND: MINIMUM_TRIGGER_DAYS changed from 3 to 1
   - BACKEND: Magic link expiry changed from 5 years to 10 minutes
   - BACKEND: follow_trigger column + toggle API for connection alert tracking
@@ -280,11 +280,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Thera Social - Anonymous Wellness Community</title>
+    <title>Thera Social - Anonymous Well-Being Community</title>
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
@@ -355,20 +355,81 @@
 }
 
 .follow-note-btn {
-    background: var(--secondary);
-    color: white;
-    border: none;
-    border-radius: 6px;
+    background: transparent;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+    border-radius: 20px;
     cursor: pointer;
     font-weight: 500;
     padding: 0.4rem 0.8rem;
-    font-size: 0.85rem;
-    transition: all 0.2s;
+    font-size: 0.8rem;
+    transition: all 0.25s ease;
+    white-space: nowrap;
 }
 
 .follow-note-btn:hover {
-    opacity: 0.9;
-    transform: scale(1.05);
+    background: var(--primary);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+}
+
+/* T25: Professional connection button styling */
+.conn-action-btn {
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.8rem;
+    padding: 6px 16px;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.conn-action-btn:hover {
+    transform: translateY(-1px);
+}
+
+.conn-action-btn.connect {
+    background: linear-gradient(135deg, #667eea 0%, #7c6dd8 100%);
+    color: white;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+.conn-action-btn.connect:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.conn-action-btn.connect-note {
+    background: transparent;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+}
+
+.conn-action-btn.connect-note:hover {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+}
+
+.conn-action-btn.block {
+    background: transparent;
+    color: #999;
+    border: 1px solid #ddd;
+    font-size: 0.75rem;
+    padding: 4px 12px;
+}
+
+.conn-action-btn.block:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+
+.conn-action-btn.block.blocked {
+    background: #f3f4f6;
+    color: #6b7280;
+    border-color: #d1d5db;
 }
 
 .follow-actions-container {
@@ -521,9 +582,9 @@
             --sage-dark: #7FA882;
             /* Wide and open layout */
             --content-max-width: 1400px;
-            --content-padding: 30px;
+            --content-padding: 20px;
             /* Step 1: Universal mobile width system */
-            --mobile-padding: 16px;
+            --mobile-padding: 12px;
             --mobile-content-width: calc(100vw - (var(--mobile-padding) * 2));
             --mobile-max-content: 600px;
             --card-padding: 16px;
@@ -586,7 +647,7 @@
         .container {
             max-width: var(--content-max-width, 1400px);
             margin: 0 auto;
-            padding: var(--content-padding, 30px);
+            padding: var(--content-padding, 20px);
         }
 
         /* Navigation - P305: Updated styling */
@@ -603,7 +664,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 32px;
+            padding: 10px 24px;
         }
 
         .logo {
@@ -837,10 +898,10 @@
         /* --- Friends Updates: VISIBLE card container --- */
         #friendsUpdatesSection {
             background: var(--white) !important;
-            border-radius: 20px !important;
-            padding: 24px !important;
-            margin-bottom: 28px !important;
-            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border-radius: 16px !important;
+            padding: 18px !important;
+            margin-bottom: 16px !important;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1) !important;
             border: 1px solid rgba(107, 139, 164, 0.08);
             border-left: 5px solid var(--primary-light);
         }
@@ -848,10 +909,10 @@
         /* --- Connections Status: VISIBLE card container --- */
         #connectionStatusSection {
             background: var(--white) !important;
-            border-radius: 20px !important;
-            padding: 24px !important;
-            margin-bottom: 28px !important;
-            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border-radius: 16px !important;
+            padding: 18px !important;
+            margin-bottom: 16px !important;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1) !important;
             border: 1px solid rgba(107, 139, 164, 0.08);
             border-left: 5px solid var(--accent);
         }
@@ -859,10 +920,10 @@
         /* --- Alerts Section: VISIBLE card container --- */
         #homeAlertsSection {
             background: var(--white) !important;
-            border-radius: 20px !important;
-            padding: 24px !important;
-            margin-bottom: 28px !important;
-            box-shadow: 0 2px 16px rgba(107, 139, 164, 0.1) !important;
+            border-radius: 16px !important;
+            padding: 18px !important;
+            margin-bottom: 16px !important;
+            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1) !important;
             border: 1px solid rgba(107, 139, 164, 0.08);
             border-left: 5px solid var(--coral-light);
         }
@@ -1307,7 +1368,7 @@
         .dashboard-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 25px;
+            gap: 16px;
         }
 
         /* V2: Sidebar converted to horizontal top navigation bar */
@@ -1950,6 +2011,29 @@
             border-inline-start-color: var(--success);
         }
 
+        /* Clear All alerts button styling */
+        .clear-all-alerts-btn {
+            background: var(--light) !important;
+            color: var(--gray) !important;
+            border: 1px solid var(--border) !important;
+            transition: all 0.2s ease;
+            font-weight: 500 !important;
+        }
+        .clear-all-alerts-btn:hover {
+            background: var(--coral-light, #fde8e8) !important;
+            color: var(--danger, #dc2626) !important;
+            border-color: var(--danger, #dc2626) !important;
+        }
+        [dir="rtl"] .clear-all-alerts-btn svg {
+            margin-left: 2px;
+            margin-right: 0;
+        }
+
+        /* Reduced spacing for h2 view headings */
+        .view > h2 {
+            margin-bottom: 14px;
+        }
+
         /* About and Support Pages */
         .page-content {
             background: var(--white);
@@ -2007,7 +2091,7 @@
             -webkit-backdrop-filter: blur(16px) saturate(1.15);
             box-shadow: 0 2px 12px rgba(80, 110, 140, 0.10);
             z-index: 999;
-            padding: 6px 0 4px 0;
+            padding: 8px 0 6px 0;
             border-bottom: 1px solid rgba(107, 139, 164, 0.08);
             width: 100% !important;
             max-width: 100vw !important;
@@ -2018,9 +2102,9 @@
             -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
             /* TOP-NAV: Break out of container padding to span full width */
-            margin-left: calc(-1 * var(--content-padding, 30px));
-            margin-right: calc(-1 * var(--content-padding, 30px));
-            width: calc(100% + 2 * var(--content-padding, 30px)) !important;
+            margin-left: calc(-1 * var(--content-padding, 20px));
+            margin-right: calc(-1 * var(--content-padding, 20px));
+            width: calc(100% + 2 * var(--content-padding, 20px)) !important;
         }
 
         .mobile-nav-menu {
@@ -2037,13 +2121,14 @@
         }
 
         .mobile-nav-item {
-            /* P96 FIX: Force exactly 20% width for 5 items - with !important */
+            /* Apple HIG 44px minimum touch target */
             flex: 0 0 20% !important;
             width: 20% !important;
             max-width: 20% !important;
             min-width: 0 !important;
             text-align: center;
-            padding: 6px 0 4px 0;
+            padding: 8px 0 6px 0;
+            min-height: 44px;
             cursor: pointer;
             transition: all 0.25s ease;
             font-size: 12px;
@@ -2072,7 +2157,7 @@
         }
 
         .mobile-nav-icon {
-            font-size: 17px;
+            font-size: 19px;
             line-height: 1;
         }
 
@@ -2128,6 +2213,12 @@
                 /* TOP-NAV: No bottom padding needed — nav is at top now */
             }
 
+            /* Nospace2: Remove gap between navbar and mobile-nav */
+            .dashboard.container {
+                padding-top: 0 !important;
+                margin-top: 4px !important;
+            }
+
             .sidebar {
                 display: none; /* V2: horizontal top nav hidden on mobile, mobile bottom nav used instead */
             }
@@ -2138,6 +2229,11 @@
 
             .mobile-nav {
                 display: block;
+            }
+
+            /* Nospace2: Hide trackingView h2 on mobile - diary page has its own header */
+            #trackingView > h2 {
+                display: none !important;
             }
 
             .main-content {
@@ -2182,13 +2278,14 @@
 
             .conversations-list {
                 width: 100%;
-                height: 160px;
-                max-height: 160px;
-                min-height: 100px;
+                height: auto;
+                max-height: 22vh;
+                min-height: 80px;
                 border-right: none;
                 border-bottom: 2px solid #E5E7EB;
                 flex-shrink: 0;
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .conversation-item {
@@ -2306,8 +2403,9 @@
 
             .nav-menu {
                 gap: 6px;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
                 justify-content: flex-end;
+                align-items: center;
             }
 
             /* PJ6010: MOBILE FIX - Show About and Support links on mobile */
@@ -2318,19 +2416,42 @@
                 padding: 4px 8px;
             }
 
+            /* T30: Hide About/Support when logged in to save space */
+            .auth-only-hide { display: none !important; }
+
             /* Keep language selector visible - compact on mobile */
             .language-selector {
                 padding: 2px 6px;
                 font-size: 11px;
                 border-width: 1.5px;
             }
+
+            /* T30b: Show short language code label on mobile, overlay the select */
+            .lang-code-label {
+                display: inline !important;
+            }
+            .lang-selector-wrap {
+                position: relative;
+            }
+            .lang-selector-wrap .language-selector {
+                position: absolute;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                opacity: 0;
+                padding: 0;
+                margin: 0;
+                border: none;
+                cursor: pointer;
+                z-index: 1;
+            }
             
-            /* Tutorial and Logout buttons - slightly larger for mobile usability */
+            /* T30: Tutorial and Logout buttons - compact single-row layout */
             #tutorialBtn, #logoutBtn {
-                font-size: 13px !important;
-                padding: 6px 12px !important;
-                margin-left: 3px !important;
-                margin-right: 3px !important;
+                font-size: 12px !important;
+                padding: 5px 10px !important;
+                margin-left: 2px !important;
+                margin-right: 2px !important;
+                white-space: nowrap;
             }
             
             /* Mobile Alerts View Styles */
@@ -2345,10 +2466,32 @@
             .mobile-alerts-container {
                 max-height: calc(100vh - 250px);
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
             
             .mobile-alerts-container .alerts-list {
                 max-height: none;
+            }
+
+            /* Mobile scroll improvements */
+            .main-content,
+            #homeView,
+            #progressView,
+            #settingsView,
+            #connectionsView,
+            #circlesView {
+                -webkit-overflow-scrolling: touch;
+                overflow-scrolling: touch;
+            }
+
+            /* Smoother momentum scrolling for all scrollable areas */
+            .alerts-list,
+            .feed-posts,
+            #connectionStatusList,
+            #friendsUpdatesList,
+            #myConnectionsList,
+            #connectionRecommendationsList {
+                -webkit-overflow-scrolling: touch;
             }
         }
         
@@ -2948,6 +3091,27 @@
                 flex-wrap: wrap !important;
             }
 
+            /* T40: Mobile-friendly connection user cards */
+            #connectionsView .user-card,
+            #myConnectionsList .user-card,
+            #connectionRecommendationsList .user-card,
+            #connectionSearchResults .user-card {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                padding: 12px !important;
+            }
+            #connectionsView .user-card > div:last-child,
+            #connectionRecommendationsList .user-card > div:last-child,
+            #connectionSearchResults .user-card > div:last-child {
+                width: 100% !important;
+                justify-content: flex-start !important;
+                gap: 6px !important;
+            }
+            .conn-action-btn {
+                font-size: 0.75rem !important;
+                padding: 5px 12px !important;
+            }
+
             /* MS-4/MS-5: Calendar and content overflow containment */
             .feed-calendar-section .calendar-grid,
             .calendar-container, .calendar-table, table.calendar {
@@ -3032,13 +3196,13 @@
         }
 
         /* ================================================================== */
-        /* FLOW2: Wellness-Informed Visual Design                              */
+        /* FLOW2: Well-Being-Informed Visual Design                              */
         /* Research: Blues/greens = calm & trust; warm coral/peach = social     */
         /* warmth; 60-30-10 rule (white/blue-green/warm accent)               */
         /* Balanced between original vibrancy and Flow1 subtlety              */
         /* ================================================================== */
 
-        /* --- FLOW2: Refined palette — wellness-informed --- */
+        /* --- FLOW2: Refined palette — well-being-informed --- */
         :root {
             --flow-card-shadow: 0 4px 20px rgba(80, 110, 140, 0.10);
             --flow-card-shadow-hover: 0 8px 28px rgba(80, 110, 140, 0.16);
@@ -3680,28 +3844,118 @@
         }
     </style>
 
+    <!-- APPLOAD: Instant loading splash - pure CSS, renders before any JS executes -->
+    <style id="appload-splash-styles">
+        #appload-splash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg, #F4F1EC);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 99999;
+            transition: opacity 0.3s ease;
+        }
+        #appload-splash.fade-out { opacity: 0; pointer-events: none; }
+        #appload-splash .splash-logo { font-size: 2rem; margin-bottom: 1rem; color: var(--primary, #6B8BA4); }
+        #appload-splash .splash-bar {
+            width: 200px; height: 4px; background: var(--light-gray, #E5E5E3);
+            border-radius: 2px; overflow: hidden;
+        }
+        #appload-splash .splash-bar-fill {
+            width: 30%; height: 100%;
+            background: var(--primary, #6B8BA4);
+            border-radius: 2px;
+            animation: appload-slide 1.2s ease-in-out infinite;
+        }
+        @keyframes appload-slide {
+            0% { transform: translateX(-100%); width: 30%; }
+            50% { transform: translateX(150%); width: 50%; }
+            100% { transform: translateX(600%); width: 30%; }
+        }
+    </style>
+
+    <!-- APPLOAD: Splash screen HTML - first painted element -->
+    <div id="appload-splash">
+        <div class="splash-logo">🧠 Thera Social</div>
+        <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+    </div>
+    <!-- APPLOAD: Safety timeout - auto-dismiss splash after 8s if JS stalls -->
+    <script>
+    setTimeout(function() {
+        var s = document.getElementById('appload-splash');
+        if (s) { s.classList.add('fade-out'); setTimeout(function() { s.remove(); }, 300); }
+        var n = document.getElementById('mainNavbar');
+        if (n) n.style.display = '';
+        // APPLOAD2 FIX: Only show auth if nothing else is already visible.
+        // Without this check, the timeout would show login over the dashboard (if user
+        // logged in within 8s), or over the forgot-password/reset-password/consent views.
+        var a = document.getElementById('authContainer');
+        if (a && a.style.display === 'none') {
+            var d = document.getElementById('dashboard');
+            var r = document.getElementById('resetPasswordContainer');
+            var f = document.getElementById('forgotPasswordContainer');
+            var c = document.getElementById('consentModal');
+            var anyVisible = (d && d.style.display !== 'none') ||
+                             (r && r.style.display !== 'none') ||
+                             (f && f.style.display !== 'none') ||
+                             (c && c.style.display !== 'none');
+            if (!anyVisible) {
+                a.style.display = 'flex';
+            }
+        }
+    }, 8000);
+    </script>
+
     <!-- Navigation -->
-    <nav class="navbar">
+    <nav class="navbar" id="mainNavbar" style="display:none">
         <div class="nav-content">
             <div class="logo" data-i18n="nav.logo" style="cursor: pointer;" onclick="showView('home')">🧠 Thera Social</div>
             <div class="nav-menu">
                 <!-- PJ6004: About and Support shown when logged out, language selector at end -->
                 <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
                 <a href="#" class="nav-link auth-only-hide" id="navSupport" data-i18n="nav.support">Support</a>
-                <select id="languageSelector" class="language-selector">
-                    <option value="en">English</option>
-                    <option value="he">עברית</option>
-                    <option value="ar">العربية</option>
-                    <option value="ru">Русский</option>
-                </select>
-                <button class="btn btn-primary" id="tutorialBtn" style="display: none; width: auto; margin-left: 10px; margin-right: 10px;" onclick="startTutorial()" data-i18n="nav.tutorial">Tutorial</button>
-                <button class="btn btn-primary" id="logoutBtn" style="display: none; width: auto;" data-i18n="nav.logout">Logout</button>
+                <div class="lang-selector-wrap" style="display: flex; align-items: center; gap: 2px; position: relative;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <span id="langCodeLabel" class="lang-code-label" style="display: none; font-weight: 700; font-size: 12px; color: var(--primary); pointer-events: none;">EN</span>
+                    <script>
+                    // T30b: Set correct language code immediately from localStorage to prevent flash
+                    (function(){var l=document.getElementById('langCodeLabel');if(l){var c=localStorage.getItem('selectedLanguage')||localStorage.getItem('userLanguage')||'en';var m={'en':'EN','he':'עב','ar':'عر','ru':'РУ'};l.textContent=m[c]||c.toUpperCase();}})();
+                    // T30c: Keep label synced whenever language changes (works on login page too)
+                    // Self-contained — does NOT depend on updateLangCodeLabel which is inside showDashboard
+                    window.addEventListener('languageChanged', function(){
+                        setTimeout(function(){
+                            var l=document.getElementById('langCodeLabel');
+                            if(!l)return;
+                            var c=localStorage.getItem('selectedLanguage')||localStorage.getItem('userLanguage')||'en';
+                            var m={'en':'EN','he':'עב','ar':'عر','ru':'РУ'};
+                            l.textContent=m[c]||c.toUpperCase();
+                        }, 200);
+                    });
+                    </script>
+                    <select id="languageSelector" class="language-selector">
+                        <option value="en">English</option>
+                        <option value="he">עברית</option>
+                        <option value="ar">العربية</option>
+                        <option value="ru">Русский</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" id="tutorialBtn" style="display: none; width: auto; margin-left: 6px; margin-right: 6px; padding: 8px 14px; font-size: 0.9rem; border-radius: 10px;" onclick="startTutorial()">
+                    <span style="display: flex; align-items: center; gap: 5px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span data-i18n="nav.tutorial">Tutorial</span>
+                    </span>
+                </button>
+                <button class="btn btn-primary" id="logoutBtn" style="display: none; width: auto; padding: 8px 14px; font-size: 0.9rem; border-radius: 10px; background: var(--coral, #E8837C); border-color: var(--coral, #E8837C);">
+                    <span style="display: flex; align-items: center; gap: 5px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <span data-i18n="nav.logout">Logout</span>
+                    </span>
+                </button>
             </div>
         </div>
     </nav>
 
     <!-- Auth Container -->
-    <div id="authContainer" class="auth-container">
+    <div id="authContainer" class="auth-container" style="display:none">
         <div class="auth-card fade-in">
             <!-- FIX #1: Login Error Message -->
             <div id="loginErrorMessage" class="login-error-message" style="display: none; background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; color: #dc2626; text-align: center; font-weight: 500;">
@@ -4118,44 +4372,44 @@
         <div class="page-content">
             <h1 class="page-title" data-i18n="about.title">About Thera Social</h1>
             <p style="text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 30px;" data-i18n="about.subtitle">
-                Your safe space for wellness, connection, and personal growth
+                A professional platform for personal empowerment and social well-being
             </p>
 
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
-                    <h3 data-i18n="about.privacy_title">Privacy First</h3>
-                    <p data-i18n="about.privacy_desc">Your wellness journey is private and secure. Share only what you're comfortable with.</p>
+                    <h3 data-i18n="about.privacy_title">Your Data, Your Control</h3>
+                    <p data-i18n="about.privacy_desc">Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and full GDPR compliance. You decide who sees what — always.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
-                    <h3 data-i18n="about.track_title">Track Progress</h3>
-                    <p data-i18n="about.track_desc">Monitor your wellness parameters and see your growth over time with insights.</p>
+                    <h3 data-i18n="about.track_title">Track Your Well-Being</h3>
+                    <p data-i18n="about.track_desc">Monitor your sleep, exercise, mood, energy, and anxiety with an easy daily diary and beautiful visual insights over time.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">💥</div>
+                    <div class="feature-icon">🤝</div>
                     <h3 data-i18n="about.community_title">Supportive Community</h3>
-                    <p data-i18n="about.community_desc">Connect with others on similar journeys in a judgment-free environment.</p>
+                    <p data-i18n="about.community_desc">Share your journey with people who care, receive alerts when someone you love may need support, and grow together in a safe environment.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">💬</div>
-                    <h3 data-i18n="about.communication_title">Safe Communication</h3>
-                    <p data-i18n="about.communication_desc">Private messaging and circles let you control who sees your content.</p>
+                    <div class="feature-icon">👨‍👩‍👧‍👦</div>
+                    <h3 data-i18n="about.communication_title">Strengthen Your Connections</h3>
+                    <p data-i18n="about.communication_desc">Stay meaningfully connected with close friends, family, and your community through private messaging and customizable trust circles.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3 data-i18n="about.goals_title">Goal Setting</h3>
-                    <p data-i18n="about.goals_desc">Set and track personal goals with community support and accountability.</p>
+                    <div class="feature-icon">💪</div>
+                    <h3 data-i18n="about.goals_title">Personal Empowerment</h3>
+                    <p data-i18n="about.goals_desc">Build personal resilience and flourish in every area of life — sports performance, sleep quality, health habits, mood awareness, and social connections.</p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">🌟</div>
+                    <div class="feature-icon">📅</div>
                     <h3 data-i18n="about.checkin_title">Daily Check-ins</h3>
-                    <p data-i18n="about.checkin_desc">Regular parameter tracking helps you understand patterns and triggers.</p>
+                    <p data-i18n="about.checkin_desc">A quick daily check-in helps you understand your patterns in sleep, exercise, mood, and energy — building self-awareness one day at a time.</p>
                 </div>
             </div>
 
@@ -4163,19 +4417,19 @@
                 <h2 style="color: var(--primary); margin-bottom: 20px;" data-i18n="about.team_title">Our Team & Story</h2>
 
                 <p style="margin-bottom: 20px;" data-i18n="about.team_intro">
-                    The primary team behind this is CEO Benny Brandstetter and CTO Evan Askanazi.
+                    TheraSocial was founded by CEO Benjamin Brandstetter and CTO Evan Askanazi, and developed with the consultation of professionals in psychology, clinical social work, strategic consulting, product management, and business.
                 </p>
 
                 <p style="margin-bottom: 15px;" data-i18n="about.story_para1">
-                    Thera Social was created for those who feel disconnected, struggling, or unseen. War veterans carrying invisible wounds, young adults navigating isolation, survivors of trauma and abuse, students overwhelmed by pressure—all deserve genuine connection and support, not just another feed of curated highlights.
+                    The initial idea for TheraSocial was born at a meaningful hackathon hosted by the "Bishvil HaChaim" Association together with Reichman University — an event dedicated to advancing innovation in welfare and quality of life.
                 </p>
 
                 <p style="margin-bottom: 15px;" data-i18n="about.story_para2">
-                    Current social media platforms have failed us. They amplify comparison, enable harassment, and leave the vulnerable more isolated than before. We need something fundamentally different.
+                    We recognized that mainstream social networks are engineered to capture time and attention by leveraging the human need for connection — often leaving people feeling more isolated, not less. We set out to build something fundamentally different.
                 </p>
 
                 <p style="margin-bottom: 20px;" data-i18n="about.story_para3">
-                    That's why we built Thera Social. This platform offers real community support through complete anonymity and customizable trust circles. Share your feelings, track what matters (sleep, mood, health, exercise), and receive alerts on trends in people you care about—all while choosing exactly who sees what. Thera Social isn't designed for endless selfies or internet arguments—it's built for mutual care, authentic check-ins through private messaging, and the meaningful support we all need.
+                    TheraSocial is designed to strengthen the relationships you already have. Track what matters to you — sleep, exercise, mood, health — and stay connected to the people you care about through customizable trust circles and private messaging. Receive gentle alerts when someone close to you may need support. This is not another feed of curated highlights — it is a platform built for mutual care, authentic check-ins, and the meaningful human connections we all need to flourish.
                 </p>
 
                 <p>
@@ -4199,30 +4453,70 @@
         <div class="page-content">
             <h1 class="page-title" data-i18n="support.title">Support Center</h1>
             <p style="text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 30px;" data-i18n="support.subtitle">
-                We're here to help you on your wellness journey
+                We're here to help! Find answers to common questions or send us a message below.
             </p>
 
             <div style="background: var(--light); padding: 25px; border-radius: 15px; margin-bottom: 30px;">
                 <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="support.faq_title">Frequently Asked Questions</h3>
 
                 <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq1_q">How do I track my wellness parameters?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq1_a">Navigate to the Parameters tab in your dashboard. You can input daily values for mood, sleep, exercise, anxiety, and energy levels. Use the calendar to save and load parameters for different dates.</p>
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq1_q">How do I track my daily well-being?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq1_a">Go to the Diary tab in your dashboard. You can rate your sleep quality, mood, energy, physical activity, and anxiety level on a simple 1-4 scale each day. Use the calendar to select any date, set your values with the sliders, and save. Over time, you will see patterns emerge in your Progress page.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq2_q">What are Circles?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq2_a">Circles allow you to organize your connections into groups: General, Close Friends, and Family. You can control who sees your posts based on these circles.</p>
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq2_q">What are Circles and how do they work?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq2_a">Circles let you organize your connections into trust levels: General (acquaintances), Close Friends, and Family. When you post in your feed or save diary entries, you choose which circle can see them. This gives you full control over your privacy — share as much or as little as you want with each group.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq3_q">How do I update my profile?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Go to the Settings tab to update your bio, interests, occupation, goals, and favorite hobbies. These help others understand you better.</p>
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq3_q">Is my data secure?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Absolutely. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and full GDPR compliance. You can view, export, or delete your data at any time from your Settings.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq4_q">Is my data private?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq4_a">Yes! We take privacy seriously. Your wellness data is encrypted and only visible to you unless you choose to share it.</p>
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq4_q">How do alerts and triggers work?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq4_a">You can set well-being alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or their anxiety rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq5_q">How do I change my language preference?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq5_a">You can change the language at any time using the language selector at the top of any page. TheraSocial supports English, Hebrew, Arabic, and Russian, with full right-to-left support for Hebrew and Arabic.</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq6_q">How do I connect with friends and family?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq6_a">Go to the Connections tab to search for users by name or email. You can also share your personal invite link via email, SMS, or WhatsApp. Once connected, you can assign people to your trust circles, send private messages, view their shared diary updates, and set well-being alerts for them.</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq7_q">How do I see my progress over time?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq7_a">The Progress page shows your well-being data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and anxiety change over weeks and months. Look for patterns — for example, how exercise affects your mood the following day.</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq8_q">How do I send a private message?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq8_a">Go to the Messages tab and select a connection. You can type a custom message or use the template button for quick supportive messages when you are not sure what to say. All messages are sent through encrypted channels.</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq9_q">How do I update my profile and settings?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq9_a">In the Settings section, you can update your bio, interests, occupation, goals, and timezone. You can also change your password, toggle notifications and daily diary reminders, export your data, or delete your account.</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq10_q">How do I delete my account?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq10_a">Go to Settings, scroll to the bottom, and select Delete Account. You will be asked to confirm. Please note that this action is permanent and cannot be undone — all your data will be removed from our servers.</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq11_q">Can I export my data?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq11_a">Yes. In your Settings, you will find a Data Export option. This allows you to download all your personal data in accordance with GDPR data portability rights. Your export will include your diary entries, profile information, and connection history.</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 8px;" data-i18n="support.faq12_q">How do I reset my password?</h4>
+                    <p style="color: var(--gray);" data-i18n="support.faq12_a">Click on "Forgot Password" on the login page. Enter your email address, and we will send you a secure link to reset your password. You can also sign in using a magic link sent to your email.</p>
                 </div>
             </div>
 
@@ -4375,11 +4669,11 @@
                   <div id="welcomeCard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 24px; border-radius: 16px; margin-bottom: 20px; position: relative; display: none;">
                       <button onclick="dismissWelcomeCard()" style="position: absolute; top: 10px; right: 14px; background: none; border: none; color: rgba(255,255,255,0.8); font-size: 1.3rem; cursor: pointer; line-height: 1;" title="Dismiss">✕</button>
                       <h3 style="margin: 0 0 8px 0; font-size: 1.1rem;" data-i18n="home.welcome_title">Welcome to TheraSocial!</h3>
-                      <p style="margin: 0; font-size: 0.9rem; opacity: 0.9; line-height: 1.5;" data-i18n="home.welcome_message">Track your daily wellness, connect with friends, and grow together. Start by updating your diary or exploring your connections.</p>
+                      <p style="margin: 0; font-size: 0.9rem; opacity: 0.9; line-height: 1.5;" data-i18n="home.welcome_message">Track your daily well-being, connect with friends, and grow together. Start by updating your diary or exploring your connections.</p>
                   </div>
 
                   <!-- V2: My Summary Status Card -->
-                  <div id="summaryStatusCard" style="background: linear-gradient(135deg, var(--peach-light) 0%, var(--sage-light) 100%); padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.12);">
+                  <div id="summaryStatusCard" style="background: linear-gradient(135deg, var(--peach-light) 0%, var(--sage-light) 100%); padding: 20px; border-radius: 14px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(107, 139, 164, 0.12);">
                       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                           <h3 style="color: var(--primary-dark); font-size: 1.2rem; margin: 0;" data-i18n="home.my_status">My Status Today</h3>
                           <div style="display: flex; gap: 8px; align-items: center;">
@@ -4405,14 +4699,14 @@
                               <div id="summaryExercise" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
                           </div>
                           <div class="param-mini" style="background: var(--white); padding: 12px; border-radius: 12px; text-align: center;">
-                              <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.stress">Stress</div>
+                              <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.anxiety">Anxiety</div>
                               <div id="summaryStress" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
                           </div>
                       </div>
                   </div>
 
                   <!-- V2: One-Tap Quick Check-In -->
-                  <div id="quickCheckinCard" style="background: var(--white); padding: 20px; border-radius: 16px; margin-bottom: 24px; border: 2px dashed var(--coral-light); display: none;">
+                  <div id="quickCheckinCard" style="background: var(--white); padding: 16px; border-radius: 14px; margin-bottom: 16px; border: 2px dashed var(--coral-light); display: none;">
                       <h3 style="color: var(--coral); margin-bottom: 12px; font-size: 1.1rem;" data-i18n="home.quick_checkin_title">⚡ Quick Check-In</h3>
                       <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 12px;" data-i18n="home.quick_checkin_desc">How are you feeling right now? Tap to log your mood quickly.</p>
                       <div style="display: flex; gap: 12px; flex-wrap: wrap;">
@@ -4424,7 +4718,7 @@
                   </div>
 
                   <!-- V2: Recommendations for Today -->
-                  <div id="todayRecommendations" style="background: linear-gradient(135deg, var(--sage-light) 0%, rgba(168,197,171,0.3) 100%); padding: 20px; border-radius: 16px; margin-bottom: 24px;">
+                  <div id="todayRecommendations" style="background: linear-gradient(135deg, var(--sage-light) 0%, rgba(168,197,171,0.3) 100%); padding: 16px; border-radius: 14px; margin-bottom: 16px;">
                       <h3 style="color: var(--sage-dark); margin-bottom: 12px; font-size: 1.1rem;" data-i18n="home.recommendations_today">💡 Recommendations for Today</h3>
                       <div id="todayRecommendationsList" style="display: flex; flex-direction: column; gap: 8px;">
                           <!-- Populated by JS -->
@@ -4432,7 +4726,7 @@
                   </div>
 
                   <!-- V2: Friends' Daily Updates (replaces showing all posts) -->
-                  <div id="friendsUpdatesSection" style="margin-bottom: 24px;">
+                  <div id="friendsUpdatesSection" style="margin-bottom: 16px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="home.friends_updates">Friends' Daily Updates</h3>
                       <div id="friendsUpdatesList" style="display: flex; flex-direction: column; gap: 12px;">
                           <p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_updates">No updates from your connections yet today.</p>
@@ -4440,7 +4734,7 @@
                   </div>
 
                   <!-- HS-4: My Connections Status List -->
-                  <div id="connectionStatusSection" style="margin-bottom: 24px;">
+                  <div id="connectionStatusSection" style="margin-bottom: 16px;">
                       <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="home.connection_status">My Connections Status</h3>
                       <div id="connectionStatusList" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
                           <p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_connections">No connections yet.</p>
@@ -4448,8 +4742,14 @@
                   </div>
 
                   <!-- V2: Alerts & Notifications preview on Home -->
-                  <div id="homeAlertsSection" style="margin-bottom: 24px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="alerts.title">Alerts & Notifications</h3>
+                  <div id="homeAlertsSection" style="margin-bottom: 18px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                          <h3 style="color: var(--primary); font-size: 1.15rem; margin: 0;" data-i18n="alerts.title">Alerts & Notifications</h3>
+                          <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('all')" style="width: auto !important; padding: 5px 12px !important; font-size: 0.78rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                              <span data-i18n="alerts.clear_all">Clear All</span>
+                          </button>
+                      </div>
                       <div id="homeAlertsList" style="max-height: 300px; overflow-y: auto;">
                           <!-- Populated by loadAlerts -->
                       </div>
@@ -4499,81 +4799,13 @@
                   </div>
               </div>
 
-              <!-- Progress View (P305: New - Location + Progress sections) -->
+              <!-- Progress View (P305: New - Progress sections) -->
               <div id="progressView" class="view hidden">
-                  <h2 style="margin-bottom: 20px;" data-i18n="menu.progress">Progress</h2>
-
-                  <!-- City Selector Section -->
-                  <div class="city-selector-container" style="background: var(--light); padding: 28px; border-radius: 16px; margin-bottom: 28px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);">
-                      <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="home.location_settings">Location Settings</h3>
-
-                      <div class="city-selector-wrapper" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
-                          <label style="font-weight: 600; color: var(--dark);" data-i18n="home.select_city">Select City:</label>
-                  <select id="homeCitySelector" class="city-selector">
-    <!-- Israel (10 cities) -->
-    <option value="Jerusalem, Israel" data-i18n="city.jerusalem_israel">Jerusalem, Israel</option>
-    <option value="Tel Aviv, Israel" data-i18n="city.tel_aviv_israel">Tel Aviv, Israel</option>
-    <option value="Haifa, Israel" data-i18n="city.haifa_israel">Haifa, Israel</option>
-    <option value="Beer Sheva, Israel" data-i18n="city.beer_sheva_israel">Beer Sheva, Israel</option>
-    <option value="Netanya, Israel" data-i18n="city.netanya_israel">Netanya, Israel</option>
-    <option value="Rishon LeZion, Israel" data-i18n="city.rishon_lezion_israel">Rishon LeZion, Israel</option>
-    <option value="Petah Tikva, Israel" data-i18n="city.petah_tikva_israel">Petah Tikva, Israel</option>
-    <option value="Ashdod, Israel" data-i18n="city.ashdod_israel">Ashdod, Israel</option>
-    <option value="Eilat, Israel" data-i18n="city.eilat_israel">Eilat, Israel</option>
-    <option value="Herzliya, Israel" data-i18n="city.herzliya_israel">Herzliya, Israel</option>
-    <!-- USA (25 cities) -->
-    <option value="New York City, USA" data-i18n="city.new_york_city_usa">New York City, USA</option>
-    <option value="Los Angeles, USA" data-i18n="city.los_angeles_usa">Los Angeles, USA</option>
-    <option value="Chicago, USA" data-i18n="city.chicago_usa">Chicago, USA</option>
-    <option value="Washington, USA" data-i18n="city.washington_usa">Washington, USA</option>
-    <option value="Houston, USA" data-i18n="city.houston_usa">Houston, USA</option>
-    <option value="San Francisco, USA" data-i18n="city.san_francisco_usa">San Francisco, USA</option>
-    <option value="Boston, USA" data-i18n="city.boston_usa">Boston, USA</option>
-    <option value="Philadelphia, USA" data-i18n="city.philadelphia_usa">Philadelphia, USA</option>
-    <option value="Phoenix, USA" data-i18n="city.phoenix_usa">Phoenix, USA</option>
-    <option value="San Diego, USA" data-i18n="city.san_diego_usa">San Diego, USA</option>
-    <option value="Dallas, USA" data-i18n="city.dallas_usa">Dallas, USA</option>
-    <option value="Seattle, USA" data-i18n="city.seattle_usa">Seattle, USA</option>
-    <option value="Miami, USA" data-i18n="city.miami_usa">Miami, USA</option>
-    <option value="Atlanta, USA" data-i18n="city.atlanta_usa">Atlanta, USA</option>
-    <option value="Denver, USA" data-i18n="city.denver_usa">Denver, USA</option>
-    <option value="Austin, USA" data-i18n="city.austin_usa">Austin, USA</option>
-    <option value="San Jose, USA" data-i18n="city.san_jose_usa">San Jose, USA</option>
-    <option value="Portland, USA" data-i18n="city.portland_usa">Portland, USA</option>
-    <option value="Las Vegas, USA" data-i18n="city.las_vegas_usa">Las Vegas, USA</option>
-    <option value="Minneapolis, USA" data-i18n="city.minneapolis_usa">Minneapolis, USA</option>
-    <option value="Detroit, USA" data-i18n="city.detroit_usa">Detroit, USA</option>
-    <option value="Baltimore, USA" data-i18n="city.baltimore_usa">Baltimore, USA</option>
-    <option value="Nashville, USA" data-i18n="city.nashville_usa">Nashville, USA</option>
-    <option value="Charlotte, USA" data-i18n="city.charlotte_usa">Charlotte, USA</option>
-    <option value="Orlando, USA" data-i18n="city.orlando_usa">Orlando, USA</option>
-    <!-- UK (15 cities) -->
-    <option value="London, UK" data-i18n="city.london_uk">London, UK</option>
-    <option value="Manchester, UK" data-i18n="city.manchester_uk">Manchester, UK</option>
-    <option value="Birmingham, UK" data-i18n="city.birmingham_uk">Birmingham, UK</option>
-    <option value="Edinburgh, UK" data-i18n="city.edinburgh_uk">Edinburgh, UK</option>
-    <option value="Glasgow, UK" data-i18n="city.glasgow_uk">Glasgow, UK</option>
-    <option value="Bristol, UK" data-i18n="city.bristol_uk">Bristol, UK</option>
-    <option value="Liverpool, UK" data-i18n="city.liverpool_uk">Liverpool, UK</option>
-    <option value="Leeds, UK" data-i18n="city.leeds_uk">Leeds, UK</option>
-    <option value="Sheffield, UK" data-i18n="city.sheffield_uk">Sheffield, UK</option>
-    <option value="Newcastle, UK" data-i18n="city.newcastle_uk">Newcastle, UK</option>
-    <option value="Nottingham, UK" data-i18n="city.nottingham_uk">Nottingham, UK</option>
-    <option value="Southampton, UK" data-i18n="city.southampton_uk">Southampton, UK</option>
-    <option value="Cardiff, UK" data-i18n="city.cardiff_uk">Cardiff, UK</option>
-    <option value="Belfast, UK" data-i18n="city.belfast_uk">Belfast, UK</option>
-    <option value="Cambridge, UK" data-i18n="city.cambridge_uk">Cambridge, UK</option>
-</select>
-                      </div>
-
-                      <div class="city-time-display" id="homeCityTimeDisplay" style="font-size: 24px; font-weight: bold; color: var(--primary); text-align: center; padding: 18px; background: var(--white); border-radius: 12px; box-shadow: 0 2px 8px rgba(107, 139, 164, 0.1);">
-                          <!-- Time will be displayed here -->
-                      </div>
-                  </div>
+                  <h2 style="margin-bottom: 16px;" data-i18n="menu.progress">Progress</h2>
 
                   <!-- Progress Chart Section -->
-                  <div id="progressChartSection" class="settings-section" style="background: var(--light); padding: 28px; border-radius: 16px; margin-bottom: 28px; box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);">
-                      <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="progress.title">Your Progress</h3>
+                  <div id="progressChartSection" class="settings-section" style="background: var(--light); padding: 20px; border-radius: 14px; margin-bottom: 18px; box-shadow: 0 2px 10px rgba(107, 139, 164, 0.1);">
+                      <h3 style="color: var(--primary); margin-bottom: 14px; font-size: 1.2rem;" data-i18n="progress.title">Your Progress</h3>
                       
                       <div style="text-align: center; margin-bottom: 20px;">
                           <label data-i18n="progress.view_progress" style="font-weight: 600; margin-right: 10px;">View Progress:</label>
@@ -4732,7 +4964,7 @@
                     <div id="dataExportSection" class="settings-section" style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px;">
                         <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.3rem;" data-i18n="home.data_export">Export Your Data</h3>
 
-                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
+                        <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, well-being diary entries, messages, and more.</p>
 
                         <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
                             <span style="font-size: 24px;">📋</span>
@@ -4865,7 +5097,7 @@
 
                 <!-- Tracking/Parameters View (Enhanced with save/load) -->
                 <div id="trackingView" class="view hidden">
-                    <h2 style="margin-bottom: 20px;" data-i18n="parameters.title">Wellness Parameters</h2>
+                    <h2 style="margin-bottom: 20px;" data-i18n="parameters.title">Well-Being Parameters</h2>
 
                     <!-- P307: Static calendar removed - parameters-social.js generates its own calendar inside parametersContainer -->
                     <div id="parametersContainer" class="parameter-grid">
@@ -4929,7 +5161,7 @@
                   <!-- Connection Tabs -->
                   <div style="display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border);">
                       <button class="conn-tab active" onclick="switchConnectionTab('myConnections')" data-tab="myConnections" data-i18n="connections.my_connections">My Connections</button>
-                      <button class="conn-tab" onclick="switchConnectionTab('recommendations')" data-tab="recommendations" data-i18n="connections.recommended">Recommended</button>
+                      <button class="conn-tab" onclick="switchConnectionTab('recommendations')" data-tab="recommendations" data-i18n="connections.requests">Connection Requests</button>
                   </div>
 
                   <!-- My Connections List -->
@@ -5041,6 +5273,72 @@
                                               <option value="Pacific/Auckland">New Zealand (UTC+12/+13)</option>
                                           </select>
                                       </div>
+
+                                      <!-- Location Settings (moved from Progress view) -->
+                                      <div class="form-group" style="margin-top: 8px;">
+                                          <label class="form-label" data-i18n="home.location_settings">Location Settings</label>
+                                          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                                              <label style="font-weight: 500; color: var(--dark); font-size: 0.9rem;" data-i18n="home.select_city">Select City:</label>
+                                              <select id="homeCitySelector" class="form-input city-selector" style="flex: 1; min-width: 180px;">
+    <!-- Israel (10 cities) -->
+    <option value="Jerusalem, Israel" data-i18n="city.jerusalem_israel">Jerusalem, Israel</option>
+    <option value="Tel Aviv, Israel" data-i18n="city.tel_aviv_israel">Tel Aviv, Israel</option>
+    <option value="Haifa, Israel" data-i18n="city.haifa_israel">Haifa, Israel</option>
+    <option value="Beer Sheva, Israel" data-i18n="city.beer_sheva_israel">Beer Sheva, Israel</option>
+    <option value="Netanya, Israel" data-i18n="city.netanya_israel">Netanya, Israel</option>
+    <option value="Rishon LeZion, Israel" data-i18n="city.rishon_lezion_israel">Rishon LeZion, Israel</option>
+    <option value="Petah Tikva, Israel" data-i18n="city.petah_tikva_israel">Petah Tikva, Israel</option>
+    <option value="Ashdod, Israel" data-i18n="city.ashdod_israel">Ashdod, Israel</option>
+    <option value="Eilat, Israel" data-i18n="city.eilat_israel">Eilat, Israel</option>
+    <option value="Herzliya, Israel" data-i18n="city.herzliya_israel">Herzliya, Israel</option>
+    <!-- USA (25 cities) -->
+    <option value="New York City, USA" data-i18n="city.new_york_city_usa">New York City, USA</option>
+    <option value="Los Angeles, USA" data-i18n="city.los_angeles_usa">Los Angeles, USA</option>
+    <option value="Chicago, USA" data-i18n="city.chicago_usa">Chicago, USA</option>
+    <option value="Washington, USA" data-i18n="city.washington_usa">Washington, USA</option>
+    <option value="Houston, USA" data-i18n="city.houston_usa">Houston, USA</option>
+    <option value="San Francisco, USA" data-i18n="city.san_francisco_usa">San Francisco, USA</option>
+    <option value="Boston, USA" data-i18n="city.boston_usa">Boston, USA</option>
+    <option value="Philadelphia, USA" data-i18n="city.philadelphia_usa">Philadelphia, USA</option>
+    <option value="Phoenix, USA" data-i18n="city.phoenix_usa">Phoenix, USA</option>
+    <option value="San Diego, USA" data-i18n="city.san_diego_usa">San Diego, USA</option>
+    <option value="Dallas, USA" data-i18n="city.dallas_usa">Dallas, USA</option>
+    <option value="Seattle, USA" data-i18n="city.seattle_usa">Seattle, USA</option>
+    <option value="Miami, USA" data-i18n="city.miami_usa">Miami, USA</option>
+    <option value="Atlanta, USA" data-i18n="city.atlanta_usa">Atlanta, USA</option>
+    <option value="Denver, USA" data-i18n="city.denver_usa">Denver, USA</option>
+    <option value="Austin, USA" data-i18n="city.austin_usa">Austin, USA</option>
+    <option value="San Jose, USA" data-i18n="city.san_jose_usa">San Jose, USA</option>
+    <option value="Portland, USA" data-i18n="city.portland_usa">Portland, USA</option>
+    <option value="Las Vegas, USA" data-i18n="city.las_vegas_usa">Las Vegas, USA</option>
+    <option value="Minneapolis, USA" data-i18n="city.minneapolis_usa">Minneapolis, USA</option>
+    <option value="Detroit, USA" data-i18n="city.detroit_usa">Detroit, USA</option>
+    <option value="Baltimore, USA" data-i18n="city.baltimore_usa">Baltimore, USA</option>
+    <option value="Nashville, USA" data-i18n="city.nashville_usa">Nashville, USA</option>
+    <option value="Charlotte, USA" data-i18n="city.charlotte_usa">Charlotte, USA</option>
+    <option value="Orlando, USA" data-i18n="city.orlando_usa">Orlando, USA</option>
+    <!-- UK (15 cities) -->
+    <option value="London, UK" data-i18n="city.london_uk">London, UK</option>
+    <option value="Manchester, UK" data-i18n="city.manchester_uk">Manchester, UK</option>
+    <option value="Birmingham, UK" data-i18n="city.birmingham_uk">Birmingham, UK</option>
+    <option value="Edinburgh, UK" data-i18n="city.edinburgh_uk">Edinburgh, UK</option>
+    <option value="Glasgow, UK" data-i18n="city.glasgow_uk">Glasgow, UK</option>
+    <option value="Bristol, UK" data-i18n="city.bristol_uk">Bristol, UK</option>
+    <option value="Liverpool, UK" data-i18n="city.liverpool_uk">Liverpool, UK</option>
+    <option value="Leeds, UK" data-i18n="city.leeds_uk">Leeds, UK</option>
+    <option value="Sheffield, UK" data-i18n="city.sheffield_uk">Sheffield, UK</option>
+    <option value="Newcastle, UK" data-i18n="city.newcastle_uk">Newcastle, UK</option>
+    <option value="Nottingham, UK" data-i18n="city.nottingham_uk">Nottingham, UK</option>
+    <option value="Southampton, UK" data-i18n="city.southampton_uk">Southampton, UK</option>
+    <option value="Cardiff, UK" data-i18n="city.cardiff_uk">Cardiff, UK</option>
+    <option value="Belfast, UK" data-i18n="city.belfast_uk">Belfast, UK</option>
+    <option value="Cambridge, UK" data-i18n="city.cambridge_uk">Cambridge, UK</option>
+</select>
+                                          </div>
+                                          <div class="city-time-display" id="homeCityTimeDisplay" style="font-size: 20px; font-weight: bold; color: var(--primary); text-align: center; padding: 14px; background: var(--light); border-radius: 10px;">
+                                              <!-- Time will be displayed here -->
+                                          </div>
+                                      </div>
                                   </div>
 
                                   <div style="text-align: center; margin-top: 30px;">
@@ -5120,7 +5418,7 @@
                               <!-- Export Your Data -->
                               <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
                                   <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="home.data_export">Export Your Data</h3>
-                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, wellness diary entries, messages, and more.</p>
+                                  <p style="color: #6B7280; margin-bottom: 20px;" data-i18n="home.data_export_desc">Download a copy of all your personal data stored on TheraSocial. This includes your profile, well-being diary entries, messages, and more.</p>
                                   <div style="background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: start; gap: 10px;">
                                       <span style="font-size: 1.5rem;">📋</span>
                                       <div>
@@ -5239,7 +5537,7 @@
                               <span style="font-weight: 600;" data-i18n="connections.track_alerts">🔔 Track Alerts</span>
                               <button id="connInfoTrackBtn" onclick="toggleConnectionAlert()" style="padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">Enable</button>
                           </div>
-                          <p style="font-size: 0.8rem; color: var(--gray); margin-top: 8px;" data-i18n="connections.track_alerts_desc">Get notified about changes in this person's wellness parameters.</p>
+                          <p style="font-size: 0.8rem; color: var(--gray); margin-top: 8px;" data-i18n="connections.track_alerts_desc">Get notified about changes in this person's well-being parameters.</p>
                       </div>
                       -->
 
@@ -5317,12 +5615,12 @@
 
               <!-- Invite View -->
               <div id="inviteView" class="view hidden">
-    <h2 style="margin-bottom: 20px;" data-i18n="invite.title">Invite Friends to Your Wellness Journey</h2>
+    <h2 style="margin-bottom: 20px;" data-i18n="invite.title">Invite Friends to Your Well-Being Journey</h2>
 
     <div class="invite-section">
         <div class="share-link-card">
             <h3 data-i18n="invite.your_link">Your Personal Invite Link</h3>
-            <p data-i18n="invite.link_description">Share this link with friends and family so they can follow your wellness journey</p>
+            <p data-i18n="invite.link_description">Share this link with friends and family so they can follow your well-being journey</p>
 
             <div class="link-display">
                 <input type="text" id="userInviteLink" readonly class="invite-link-input">
@@ -5405,7 +5703,7 @@
     <div id="mobileNotificationSettingsPanel" style="display: none; background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
         
-        <!-- Email on Alert Toggle (Wellness Alerts) -->
+        <!-- Email on Alert Toggle (Well-Being Alerts) -->
         <div class="toggle-row">
             <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
             <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
@@ -5463,8 +5761,14 @@
         </div>
     </div>
     
-    <!-- PJ6001: Wellness Alerts List for Mobile -->
-    <h3 style="margin-bottom: 10px;" data-i18n="alerts.title">Alerts</h3>
+    <!-- PJ6001: Well-Being Alerts List for Mobile -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0;" data-i18n="alerts.title">Alerts</h3>
+        <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('wellness')" style="width: auto !important; padding: 6px 14px !important; font-size: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span data-i18n="alerts.clear_all">Clear All</span>
+        </button>
+    </div>
     <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div class="alerts-list" id="mobileAlertsList"></div>
         <div id="mobileNoAlertsMessage" style="display: none; text-align: center; padding: 20px; color: #666;">
@@ -5473,7 +5777,13 @@
     </div>
     
     <!-- PJ6001: Notifications List for Mobile (messages, followers, invites) -->
-    <h3 style="margin-bottom: 10px;" data-i18n="notifications.title">Notifications</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0;" data-i18n="notifications.title">Notifications</h3>
+        <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('notifications')" style="width: auto !important; padding: 6px 14px !important; font-size: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span data-i18n="alerts.clear_all">Clear All</span>
+        </button>
+    </div>
     <div class="mobile-alerts-container" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div class="alerts-list" id="mobileNotificationsList"></div>
         <div id="mobileNoNotificationsMessage" style="display: none; text-align: center; padding: 20px; color: #666;">
@@ -5491,7 +5801,7 @@
                 <div id="notificationSettingsPanel" style="display: none; background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 14px;" data-i18n="notifications.email_options">Email Options</h4>
                     
-                    <!-- Email on Alert Toggle (Wellness Alerts only) -->
+                    <!-- Email on Alert Toggle (Well-Being Alerts only) -->
                     <div class="toggle-row">
                         <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_alert">Email me on new alerts</label>
                         <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
@@ -5551,7 +5861,7 @@
                     </div>
                 </div>
                 
-                <!-- PJ6001: Wellness Alerts Section (trigger alerts only) -->
+                <!-- PJ6001: Well-Being Alerts Section (trigger alerts only) -->
                 <h3 style="margin-bottom: 15px;" data-i18n="alerts.title">Alerts</h3>
                 <div class="alerts-list" id="alertsList"></div>
                 
@@ -5735,6 +6045,18 @@
                 // This is a valid user-initiated change
                 console.log('[INTERCEPTOR] VALID USER CHANGE:', storedLang, '->', newValue);
                 
+                // T30b: Update label immediately with the new value, and again after i18n writes localStorage
+                if (typeof updateLangCodeLabel === 'function') {
+                    // Immediate: set from newValue directly
+                    var _lbl = document.getElementById('langCodeLabel');
+                    if (_lbl) {
+                        var _map = {'en':'EN','he':'עב','ar':'عر','ru':'РУ'};
+                        _lbl.textContent = _map[newValue] || newValue.toUpperCase();
+                    }
+                    // Delayed: re-read from localStorage after i18n settles
+                    setTimeout(updateLangCodeLabel, 1000);
+                }
+
                 // Reset the flag after processing a valid change
                 window._userClickedLanguageSelector = false;
                 
@@ -5880,7 +6202,33 @@
     })();
     </script>
     
-    <script src="/static/js/i18n.js?v=Opt1"></script>
+    <!-- T30c: Protect localStorage language from i18n.js init corruption -->
+    <!-- i18n.js defaults to 'en' on load and may overwrite a stored 'he'/'ar'/'ru' -->
+    <!-- FIX: Uses timestamp (_lastLanguageSelectorInteraction) instead of boolean -->
+    <!--       because the boolean gets reset by the interceptor BEFORE i18n.js writes -->
+    <script>
+    (function() {
+        const _origSetItem = Storage.prototype.setItem;
+        Storage.prototype.setItem = function(key, value) {
+            if (key === 'selectedLanguage' || key === 'userLanguage') {
+                const oldValue = localStorage.getItem(key);
+                // Block non-en → en changes UNLESS user interacted with selector recently
+                // Using timestamp because the boolean _userClickedLanguageSelector gets
+                // reset by the INTERCEPTOR before i18n.js calls localStorage.setItem
+                const timeSinceClick = Date.now() - (window._lastLanguageSelectorInteraction || 0);
+                const isRecentUserAction = timeSinceClick < 10000; // 10 second window
+                if (oldValue && oldValue !== 'en' && value === 'en' && !isRecentUserAction) {
+                    console.warn('[T30c STORAGE GUARD] BLOCKED:', key, oldValue, '→', value, '(no recent user interaction, ' + timeSinceClick + 'ms ago)');
+                    return; // Don't corrupt
+                }
+            }
+            return _origSetItem.apply(this, arguments);
+        };
+        console.log('[T30c] localStorage language guard installed (timestamp-based)');
+    })();
+    </script>
+
+    <script src="/static/js/i18n.js?v=T40"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -5991,12 +6339,12 @@
     </script>
     <!-- END ACCT Social login translations -->
 
-    <!-- LL FIX: Alert/wellness translation keys for Hebrew, Arabic, Russian -->
+    <!-- LL FIX: Alert/well-being translation keys for Hebrew, Arabic, Russian -->
     <script>
     (function() {
         const alertTranslations = {
             en: {
-                'alerts.wellness_alert_for': 'Wellness Alert for {username}',
+                'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
                 'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
                 'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
                 'alerts.new_message_from': 'New message from {username}',
@@ -6006,10 +6354,10 @@
                 'alerts.new_follower': 'You have a new follower!',
                 'alerts.no_alerts': 'No alerts',
                 'alerts.welcome_title': 'Welcome to TheraSocial!',
-                'alerts.welcome_message': 'Track your daily wellness, connect with friends, and grow together.',
+                'alerts.welcome_message': 'Track your daily well-being, connect with friends, and grow together.',
                 'params.sleep_quality': 'Sleep',
                 'params.physical_activity': 'Exercise',
-                'params.anxiety': 'Stress'
+                'params.anxiety': 'Anxiety'
             },
             he: {
                 'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
@@ -6025,7 +6373,7 @@
                 'alerts.welcome_message': 'עקבו אחר הבריאות היומית שלכם, התחברו עם חברים וצמחו יחד.',
                 'params.sleep_quality': 'שינה',
                 'params.physical_activity': 'פעילות גופנית',
-                'params.anxiety': 'מתח'
+                'params.anxiety': 'חרדה'
             },
             ar: {
                 'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
@@ -6041,7 +6389,7 @@
                 'alerts.welcome_message': 'تتبع صحتك اليومية، تواصل مع الأصدقاء، وانمو معاً.',
                 'params.sleep_quality': 'النوم',
                 'params.physical_activity': 'التمارين',
-                'params.anxiety': 'التوتر'
+                'params.anxiety': 'القلق'
             },
             ru: {
                 'alerts.wellness_alert_for': 'Оповещение о здоровье {username}',
@@ -6057,7 +6405,7 @@
                 'alerts.welcome_message': 'Отслеживайте своё здоровье, общайтесь с друзьями и развивайтесь вместе.',
                 'params.sleep_quality': 'Сон',
                 'params.physical_activity': 'Физическая активность',
-                'params.anxiety': 'Стресс'
+                'params.anxiety': 'Тревожность'
             }
         };
         function extendI18nAlerts() {
@@ -6066,14 +6414,14 @@
                     if (!window.i18n.translations[lang]) window.i18n.translations[lang] = {};
                     Object.assign(window.i18n.translations[lang], alertTranslations[lang]);
                 });
-                console.log('[LL FIX] Extended i18n with alert/wellness translations');
+                console.log('[LL FIX] Extended i18n with alert/well-being translations');
             }
         }
         extendI18nAlerts();
         document.addEventListener('DOMContentLoaded', extendI18nAlerts);
         window.addEventListener('load', extendI18nAlerts);
 
-        // LL FIX: Global helper to translate wellness alert content
+        // LL FIX: Global helper to translate well-being alert content
         // Used by both loadAlerts() and loadHomeAlerts()
         window._translateWellnessContent = function(content) {
             if (!content || typeof content !== 'string') return content;
@@ -6085,7 +6433,7 @@
                 'energy': 'params.energy',
                 'sleep_quality': 'params.sleep',
                 'physical_activity': 'params.exercise',
-                'anxiety': 'params.stress'
+                'anxiety': 'params.anxiety'
             };
             
             const m = content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
@@ -6109,7 +6457,7 @@
             return content;
         };
         
-        // LL FIX: Global helper to translate wellness alert titles
+        // LL FIX: Global helper to translate well-being alert titles
         window._translateWellnessTitle = function(title) {
             if (!title || typeof title !== 'string') return title;
             const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate.bind(window.i18n) : null;
@@ -6141,7 +6489,7 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=Opt1"></script>
+<script src="/static/js/parameters-social.js?v=T40"></script>
    <script src="/static/js/circles-messages.js?v=Opt1"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
@@ -6676,25 +7024,22 @@ async function loadUserCity() {
                     return;
                 }
 
-                // FIX #5: Check if user needs to fill diary before showing dashboard
-                const needsDiary = await checkAndRedirectToDiary();
-                if (!needsDiary) {
-                    showDashboard();
-                    // Load notification settings after login
-                    console.log('[LOGIN DEBUG] Login successful, calling loadNotificationSettings');
-                    loadNotificationSettings();
+                // FIX: Always go to home after login (diary redirect disabled)
+                showDashboard();
+                // Load notification settings after login
+                console.log('[LOGIN DEBUG] Login successful, calling loadNotificationSettings');
+                loadNotificationSettings();
                     
-                    // PJ812 FIX: Check trigger alerts after login (with delay to ensure session is ready)
-                    console.log('[PJ812] Login successful, will check trigger alerts in 3 seconds');
-                    setTimeout(() => {
-                        if (typeof checkParameterAlerts === 'function') {
-                            console.log('[PJ812] Calling checkParameterAlerts after login');
-                            checkParameterAlerts();
-                        } else {
-                            console.warn('[PJ812] checkParameterAlerts not available');
-                        }
-                    }, 3000);
-                }
+                // PJ812 FIX: Check trigger alerts after login (with delay to ensure session is ready)
+                console.log('[PJ812] Login successful, will check trigger alerts in 3 seconds');
+                setTimeout(() => {
+                    if (typeof checkParameterAlerts === 'function') {
+                        console.log('[PJ812] Calling checkParameterAlerts after login');
+                        checkParameterAlerts();
+                    } else {
+                        console.warn('[PJ812] checkParameterAlerts not available');
+                    }
+                }, 3000);
             } else {
                 // Show translated login error message
                 const lang = localStorage.getItem('selectedLanguage') || 'en';
@@ -6830,12 +7175,9 @@ async function loadUserCity() {
                     }
                 }
 
-                // Check if user needs to fill diary before showing dashboard
-                const needsDiary = await checkAndRedirectToDiary();
-                if (!needsDiary) {
-                    showDashboard();
-                    loadNotificationSettings();
-                }
+                // FIX: Always go to home after signup (diary redirect disabled)
+                showDashboard();
+                loadNotificationSettings();
             } else {
                 showNotification(_t('auth.registration_failed', 'Registration failed. Please try again.'), 'error');
             }
@@ -7084,6 +7426,11 @@ async function loadUserCity() {
         });
 
         function showAuthContainer() {
+            // APPLOAD: Dismiss splash screen and show navbar
+            var splash = document.getElementById('appload-splash');
+            if (splash) { splash.classList.add('fade-out'); setTimeout(function() { splash.remove(); }, 300); }
+            var nav = document.getElementById('mainNavbar');
+            if (nav) nav.style.display = '';
             // PASS FIX: Don't override reset password or forgot password views
             // External scripts and alert polling can trigger 401 → showAuthContainer()
             // even while the user is on the reset password page. Guard against that.
@@ -7217,6 +7564,11 @@ async function checkMagicToken() {
 
 // Show consent modal with optional username
 function showConsentModal() {
+    // APPLOAD: Dismiss splash screen
+    var splash = document.getElementById('appload-splash');
+    if (splash) { splash.classList.add('fade-out'); setTimeout(function() { splash.remove(); }, 300); }
+    var nav = document.getElementById('mainNavbar');
+    if (nav) nav.style.display = '';
     const email = sessionStorage.getItem('userEmail');
     const suggested = sessionStorage.getItem('suggestedUsername');
 
@@ -7374,6 +7726,11 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
 
         // Dashboard Functions
   function showDashboard() {
+    // APPLOAD: Dismiss splash screen and show navbar
+    var splash = document.getElementById('appload-splash');
+    if (splash) { splash.classList.add('fade-out'); setTimeout(function() { splash.remove(); }, 300); }
+    var nav = document.getElementById('mainNavbar');
+    if (nav) nav.style.display = '';
     hideAllViews();
     const dashboard = document.getElementById('dashboard');
     dashboard.style.display = 'block';
@@ -7383,6 +7740,9 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
     dashboard.classList.add('dashboard-entering');
     document.getElementById('logoutBtn').style.display = 'block';
     document.getElementById('tutorialBtn').style.display = 'block';
+
+    // T30b: Update short language code label for mobile
+    if (typeof updateLangCodeLabel === 'function') updateLangCodeLabel();
     // PJ6001: Hide nav links when logged in
     document.querySelectorAll('.auth-only-hide').forEach(el => el.style.display = 'none');
 
@@ -7405,6 +7765,7 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
         if (citySelector || homeCitySelector) {
             updateCityTime();
             // Start time update interval only if we have a selector
+            // T255: Restored to 1s - display shows seconds so interval must match
             setInterval(updateCityTime, 1000);
         }
     }, 100);
@@ -7636,7 +7997,29 @@ function syncLanguageSelector() {
     console.log('[SYNC DEBUG] FINAL STATE:');
     console.log('[SYNC DEBUG]   selector.value:', selector.value);
     console.log('[SYNC DEBUG] ========================================');
+
+    // T30b: Update the short language code label for mobile
+    updateLangCodeLabel();
 }
+
+// T30b: Update the visible short language code label (mobile)
+// ONLY reads localStorage — i18n.currentLanguage and selector.value have init races
+function updateLangCodeLabel() {
+    const label = document.getElementById('langCodeLabel');
+    if (!label) return;
+    const code = localStorage.getItem('selectedLanguage') ||
+                 localStorage.getItem('userLanguage') ||
+                 'en';
+    const codeMap = { 'en': 'EN', 'he': 'עב', 'ar': 'عر', 'ru': 'РУ' };
+    label.textContent = codeMap[code] || code.toUpperCase();
+}
+window.updateLangCodeLabel = updateLangCodeLabel;
+
+// T30c fix: Update label whenever i18n.js fires languageChanged event
+// This catches the initial i18n setup on the login page where no user click happens
+window.addEventListener('languageChanged', function() {
+    setTimeout(updateLangCodeLabel, 200); // slight delay for localStorage to settle
+});
 
 // Make function globally available
 window.syncLanguageSelector = syncLanguageSelector;
@@ -7733,6 +8116,11 @@ window.safeApplyLanguage = safeApplyLanguage;
         }
 
         function showResetPassword(token) {
+            // APPLOAD: Dismiss splash screen and show navbar
+            var splash = document.getElementById('appload-splash');
+            if (splash) { splash.classList.add('fade-out'); setTimeout(function() { splash.remove(); }, 300); }
+            var nav = document.getElementById('mainNavbar');
+            if (nav) nav.style.display = '';
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('forgotPasswordContainer').style.display = 'none';
             document.getElementById('resetPasswordContainer').style.display = 'flex';
@@ -8030,6 +8418,11 @@ function toggleMobileMoreMenu() {
     const moreMenu = document.getElementById('mobileMoreMenu');
     if (moreMenu) {
         if (moreMenu.classList.contains('hidden')) {
+            // CS4: Move menu to document.body to ensure position:fixed works correctly
+            // in iOS Safari when any ancestor has overflow or transform properties
+            if (moreMenu.parentNode !== document.body) {
+                document.body.appendChild(moreMenu);
+            }
             moreMenu.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; // Prevent background scrolling
         } else {
@@ -8446,8 +8839,8 @@ function shareViaEmail() {
     const linkInput = document.getElementById('userInviteLink');
     if (linkInput) {
         const link = linkInput.value;
-        const subject = encodeURIComponent('Join me on my wellness journey!');
-        const body = encodeURIComponent(`I'd love for you to follow my wellness journey on TheraSocial. Click here to connect: ${link}`);
+        const subject = encodeURIComponent('Join me on my well-being journey!');
+        const body = encodeURIComponent(`I'd love for you to follow my well-being journey on TheraSocial. Click here to connect: ${link}`);
         window.location.href = `mailto:?subject=${subject}&body=${body}`;
     }
 }
@@ -8456,7 +8849,7 @@ function shareViaSMS() {
     const linkInput = document.getElementById('userInviteLink');
     if (linkInput) {
         const link = linkInput.value;
-        const message = encodeURIComponent(`Join me on my wellness journey! ${link}`);
+        const message = encodeURIComponent(`Join me on my well-being journey! ${link}`);
         window.location.href = `sms:?body=${message}`;
     }
 }
@@ -8465,7 +8858,7 @@ function shareViaWhatsApp() {
     const linkInput = document.getElementById('userInviteLink');
     if (linkInput) {
         const link = linkInput.value;
-        const message = encodeURIComponent(`Join me on my wellness journey on TheraSocial! ${link}`);
+        const message = encodeURIComponent(`Join me on my well-being journey on TheraSocial! ${link}`);
         window.open(`https://wa.me/?text=${message}`, '_blank');
     }
 }
@@ -11721,15 +12114,14 @@ async function loadFollowing() {
                             <div class="user-location" style="font-size: 0.75rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
                         <div class="follow-actions-container" style="display: flex; gap: 0.5rem; align-items: center;">
-                            <button class="btn-primary follow-btn" data-user-id="${user.id}" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">
+                            <button class="conn-action-btn connect follow-btn" data-user-id="${user.id}" data-i18n="following.follow">
                                 ${pt('following.follow') || 'Connect'}
                             </button>
-                            <button class="btn-secondary follow-note-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" style="font-size: 0.75rem; padding: 4px 8px; white-space: nowrap;" data-i18n="following.with_note">
+                            <button class="conn-action-btn connect-note follow-note-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" data-i18n="following.with_note">
                                 ${window.i18n && window.i18n.t ? window.i18n.t('following.with_note') : 'Connect with Note'}
                             </button>
-                            <button class="block-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" 
+                            <button class="conn-action-btn block${isBlocked ? ' blocked' : ''} block-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" 
                                 data-is-blocked="${isBlocked}"
-                                style="padding: 6px 10px; ${buttonStyle} border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;"
                                 data-i18n="${dataI18n}">
                                 ${buttonText}
                             </button>
@@ -12255,7 +12647,7 @@ function showAddTriggerModal() {
 
     modal.innerHTML = `
         <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%;">
-            <h3>${_t('triggers.add_wellness', 'Add Wellness Trigger')}</h3>
+            <h3>${_t('triggers.add_wellness', 'Add Well-Being Trigger')}</h3>
             <div style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">User to monitor:</label>
                 <select id="triggerUserId" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
@@ -12264,15 +12656,16 @@ function showAddTriggerModal() {
             </div>
             <div style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">Parameter:</label>
-                <select id="triggerParameter" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <select id="triggerParameter" onchange="toggleNoCheckinFields()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     <option value="mood">Mood</option>
                     <option value="sleep_quality">Sleep Quality</option>
                     <option value="physical_activity">Physical Activity</option>
                     <option value="anxiety">Anxiety</option>
                     <option value="energy">Energy</option>
+                    <option value="no_checkin">${_t('trigger_parameter_no_checkin', 'No Check-In')}</option>
                 </select>
             </div>
-            <div style="margin: 20px 0;">
+            <div id="triggerConditionSection" style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">Alert when:</label>
                 <select id="triggerOperator" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     <option value="less_than">Less than</option>
@@ -12280,16 +12673,19 @@ function showAddTriggerModal() {
                     <option value="equals">Equals</option>
                 </select>
             </div>
-            <div style="margin: 20px 0;">
+            <div id="triggerValueSection" style="margin: 20px 0;">
                 <label style="display: block; margin-bottom: 5px;">Value (1-4):</label>
                 <input type="number" id="triggerThreshold" min="1" max="4" value="2"
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 5px;">For how many days (optional, 1 day minimum):</label>
+                <label id="triggerDaysLabel" style="display: block; margin-bottom: 5px;">For how many days (optional, 1 day minimum):</label>
                 <input type="number" id="triggerDays" min="1" max="30"
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
                        placeholder="Leave blank for 1 day">
+                <p id="triggerNoCheckinHint" style="display:none; font-size:0.8rem; color:#6B7280; margin-top:6px; line-height:1.4;">
+                    ${_t('trigger_no_checkin_hint', 'You will be alerted if this person has not updated their diary for the number of days you choose. This can help you stay aware and reach out when someone you care about may need support.')}
+                </p>
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="document.getElementById('addTriggerModal').remove()">
@@ -12347,15 +12743,26 @@ async function createTrigger() {
     }
 
     try {
-        const body = {
-            target_id: parseInt(targetId),
-            parameter: parameter,
-            operator: operator,
-            threshold: parseInt(threshold)
-        };
-
-        if (days) {
-            body.days = parseInt(days);
+        let body;
+        if (parameter === 'no_checkin') {
+            // T30: No-checkin trigger
+            body = {
+                watched_id: parseInt(targetId),
+                parameter_name: 'no_checkin',
+                condition: 'no_checkin',
+                value: 0,
+                consecutive_days: days ? parseInt(days) : 1
+            };
+        } else {
+            body = {
+                target_id: parseInt(targetId),
+                parameter: parameter,
+                operator: operator,
+                threshold: parseInt(threshold)
+            };
+            if (days) {
+                body.days = parseInt(days);
+            }
         }
 
         const response = await fetch('/api/triggers', {
@@ -12404,18 +12811,19 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
     modal.innerHTML = `
         <div class="modal-content" style="background: white; padding: 32px; border-radius: 16px; max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
             <h3 style="color: #4a6b5a; margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 600;">${window.i18n ? window.i18n.translate('trigger_modal_title').replace('{username}', targetUsername) : 'Add Trigger for ' + targetUsername}</h3>
-            <p style="color: #6B7280; font-size: 0.85rem; margin: 0 0 20px 0; line-height: 1.4;">Configure when you'd like to be notified about changes.</p>
+            <p style="color: #6B7280; font-size: 0.85rem; margin: 0 0 20px 0; line-height: 1.4;">${window.i18n ? window.i18n.translate('trigger_modal_subtitle') : 'Configure when you\'d like to be notified about changes.'}</p>
             <div style="margin: 16px 0;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_parameter_label') : 'Parameter:'}</label>
-                <select id="triggerParameter" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151;">
+                <select id="triggerParameter" onchange="toggleNoCheckinFields()" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151;">
                     <option value="mood">${window.i18n ? window.i18n.translate('trigger_parameter_mood') : 'Mood'}</option>
                     <option value="sleep_quality">${window.i18n ? window.i18n.translate('trigger_parameter_sleep_quality') : 'Sleep Quality'}</option>
                     <option value="physical_activity">${window.i18n ? window.i18n.translate('trigger_parameter_physical_activity') : 'Physical Activity'}</option>
                     <option value="anxiety">${window.i18n ? window.i18n.translate('trigger_parameter_anxiety') : 'Anxiety'}</option>
                     <option value="energy">${window.i18n ? window.i18n.translate('trigger_parameter_energy') : 'Energy'}</option>
+                    <option value="no_checkin">${window.i18n ? window.i18n.translate('trigger_parameter_no_checkin') : 'No Check-In'}</option>
                 </select>
             </div>
-            <div style="margin: 16px 0;">
+            <div id="triggerConditionSection" style="margin: 16px 0;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_alert_when') : 'Alert when:'}</label>
                 <select id="triggerOperator" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151;">
                     <option value="less_than">${window.i18n ? window.i18n.translate('trigger_condition_less_than') : 'Less than'}</option>
@@ -12423,16 +12831,19 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
                     <option value="equals">${window.i18n ? window.i18n.translate('trigger_condition_equals') : 'Equals'}</option>
                 </select>
             </div>
-            <div style="margin: 16px 0;">
+            <div id="triggerValueSection" style="margin: 16px 0;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_value_label') : 'Value (1-4):'}</label>
                 <input type="number" id="triggerThreshold" min="1" max="4" value="2"
                        style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151; box-sizing: border-box;">
             </div>
             <div style="margin: 16px 0;">
-                <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger.days_label') : 'For how many days (optional, 1 day minimum):'}</label>
+                <label id="triggerDaysLabel" style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger.days_label') : 'For how many days (optional, 1 day minimum):'}</label>
                 <input type="number" id="triggerDays" min="1" max="30"
                        style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151; box-sizing: border-box;"
                        placeholder="${window.i18n ? window.i18n.translate('trigger.days_placeholder') : 'Leave blank for 1 day'}">
+                <p id="triggerNoCheckinHint" style="display:none; font-size:0.8rem; color:#6B7280; margin-top:6px; line-height:1.4;">
+                    ${window.i18n ? window.i18n.translate('trigger_no_checkin_hint') : 'You will be alerted if this person has not updated their diary for the number of days you choose. This can help you stay aware and reach out when someone you care about may need support.'}
+                </p>
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;">
                 <button class="btn" onclick="document.getElementById('addTriggerModal').remove()" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 10px; font-weight: 500; cursor: pointer;">
@@ -12448,6 +12859,25 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
     document.body.appendChild(modal);
 }
 
+// T30: Toggle visibility of condition/value fields when no_checkin is selected
+function toggleNoCheckinFields() {
+    const param = document.getElementById('triggerParameter');
+    const condSection = document.getElementById('triggerConditionSection');
+    const valSection = document.getElementById('triggerValueSection');
+    const daysLabel = document.getElementById('triggerDaysLabel');
+    const hint = document.getElementById('triggerNoCheckinHint');
+    if (!param) return;
+    const isNoCheckin = param.value === 'no_checkin';
+    if (condSection) condSection.style.display = isNoCheckin ? 'none' : '';
+    if (valSection) valSection.style.display = isNoCheckin ? 'none' : '';
+    if (daysLabel && isNoCheckin) {
+        daysLabel.textContent = window.i18n ? window.i18n.translate('trigger_no_checkin_days_label') : 'Alert after how many days without a check-in (minimum 1):';
+    } else if (daysLabel) {
+        daysLabel.textContent = window.i18n ? window.i18n.translate('trigger.days_label') : 'For how many days (optional, 1 day minimum):';
+    }
+    if (hint) hint.style.display = isNoCheckin ? 'block' : 'none';
+}
+
 async function createTriggerForUser(targetId, targetUsername) {
     const parameter = document.getElementById('triggerParameter').value;
     const operator = document.getElementById('triggerOperator').value;
@@ -12455,13 +12885,25 @@ async function createTriggerForUser(targetId, targetUsername) {
     const days = document.getElementById('triggerDays').value;
 
     try {
-        const body = {
-            watched_id: parseInt(targetId),  // Changed from target_id
-            parameter_name: parameter,       // Changed from parameter
-            condition: operator,              // Changed from operator
-            value: parseInt(threshold),      // Changed from threshold
-            consecutive_days: days ? parseInt(days) : 1  // Changed from days, default to 1
-        };
+        let body;
+        if (parameter === 'no_checkin') {
+            // T30: No-checkin trigger — no operator/threshold needed
+            body = {
+                watched_id: parseInt(targetId),
+                parameter_name: 'no_checkin',
+                condition: 'no_checkin',
+                value: 0,
+                consecutive_days: days ? parseInt(days) : 1
+            };
+        } else {
+            body = {
+                watched_id: parseInt(targetId),
+                parameter_name: parameter,
+                condition: operator,
+                value: parseInt(threshold),
+                consecutive_days: days ? parseInt(days) : 1
+            };
+        }
 
         const response = await fetch('/api/triggers', {
             method: 'POST',
@@ -12511,6 +12953,16 @@ async function loadTriggersForUser(userId, username) {
 
         // Helper function to translate trigger text
         function translateTrigger(trigger) {
+            // T30: Handle no_checkin triggers with a distinct display
+            if (trigger.parameter === 'no_checkin' || trigger.parameter_name === 'no_checkin') {
+                const noCheckinLabel = window.i18n ? window.i18n.t('trigger_parameter_no_checkin') : 'No Check-In';
+                const daysKey = 'trigger_days_format';
+                const daysText = trigger.consecutive_days ?
+                    (window.i18n ? window.i18n.t(daysKey).replace('{count}', trigger.consecutive_days) : `${trigger.consecutive_days} days`)
+                    : '';
+                return `${noCheckinLabel}${daysText ? ` (${daysText})` : ''}`;
+            }
+
             // Translate parameter name
             const paramKey = `trigger_parameter_${trigger.parameter || trigger.parameter_name}`;
             const paramText = window.i18n ? window.i18n.t(paramKey) : (trigger.parameter || trigger.parameter_name);
@@ -12699,10 +13151,10 @@ async function searchUsersToFollow() {
                     ${user.bio ? `<div style="font-size: 0.875rem; color: #666;">${user.bio.slice(0, 50)}...</div>` : ''}
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); followUser(${user.id}); this.disabled=true; this.textContent='Following'">
-                        Follow
+                    <button class="conn-action-btn connect" onclick="event.stopPropagation(); followUser(${user.id}); this.disabled=true; this.textContent='Following'">
+                        Connect
                     </button>
-                   <button class="btn-primary btn-sm" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')" data-i18n="following.with_note">
+                   <button class="conn-action-btn connect-note" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')" data-i18n="following.with_note">
                                 ${window.i18n && window.i18n.translate ? window.i18n.translate('following.with_note') : 'Connect with Note'}
                     </button>
                 </div>
@@ -13031,7 +13483,7 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                             ${window.i18n ? window.i18n.t('trigger_set_alert') : 'Set Alert Triggers'}
                         </h3>
                         <p style="color: #5a7a6a; font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;">
-                            ${window.i18n ? window.i18n.t('trigger_get_notified').replace('{username}', escapeHtml(username)) : `Get notified when ${escapeHtml(username)}'s wellness parameters are concerning`}
+                            ${window.i18n ? window.i18n.t('trigger_get_notified').replace('{username}', escapeHtml(username)) : `Get notified when ${escapeHtml(username)}'s well-being parameters are concerning`}
                         </p>
                         <div id="modalTriggersList" style="margin-bottom: 14px;">
                             <p style="color: #6a8a7a; font-size: 0.9rem;">${_t('loading.triggers', 'Loading triggers...')}</p>
@@ -13812,7 +14264,7 @@ function addBackToFollowingButton(viewId) {
         const circlesHeader = document.querySelector('#circlesView h2');
         if (circlesHeader) circlesHeader.textContent = 'Circles';
         const parametersHeader = document.querySelector('#parametersView h2, #trackingView h2');
-        if (parametersHeader) parametersHeader.textContent = 'Wellness Parameters';
+        if (parametersHeader) parametersHeader.textContent = 'Well-Being Parameters';
         const followingHeader = document.querySelector('#followingView h2');
         if (followingHeader) followingHeader.textContent = 'Following';
         const followersHeader = document.querySelector('#followersView h2');
@@ -13868,13 +14320,13 @@ async function loadAlerts() {
 
         console.log(`📬 Received ${response.alerts?.length || 0} items from API`);
 
-        // PJ6003: Separate alerts (wellness/trigger) from notifications (messages, follows, invites)
+        // PJ6003: Separate alerts (well-being/trigger) from notifications (messages, follows, invites)
         const wellnessAlerts = [];
         const notifications = [];
         
         if (response.alerts && response.alerts.length > 0) {
             response.alerts.forEach(alert => {
-                // Wellness alerts have alert_category='trigger' or type='trigger'
+                // Well-Being alerts have alert_category='trigger' or type='trigger'
                 if (alert.alert_category === 'trigger' || alert.type === 'trigger') {
                     wellnessAlerts.push(alert);
                 } else {
@@ -13884,7 +14336,7 @@ async function loadAlerts() {
             });
         }
         
-        console.log(`📊 Separated: ${wellnessAlerts.length} wellness alerts, ${notifications.length} notifications`);
+        console.log(`📊 Separated: ${wellnessAlerts.length} well-being alerts, ${notifications.length} notifications`);
 
         // Helper function to translate and render an alert/notification item
         function renderItem(alert) {
@@ -13892,15 +14344,15 @@ async function loadAlerts() {
                 let title = alert.title || '';
                 let content = alert.message || alert.content || '';
 
-                // ===== HANDLE WELLNESS ALERT TITLES =====
-                // LL FIX: Use global wellness title translator
+                // ===== HANDLE WELL-BEING ALERT TITLES =====
+                // LL FIX: Use global well-being title translator
                 if (window._translateWellnessTitle) {
                     const translated = window._translateWellnessTitle(title);
                     if (translated !== title) title = translated;
                 }
                 
-                // ===== HANDLE WELLNESS ALERT CONTENT =====
-                // LL FIX: Use global wellness content translator
+                // ===== HANDLE WELL-BEING ALERT CONTENT =====
+                // LL FIX: Use global well-being content translator
                 if (window._translateWellnessContent) {
                     const translated = window._translateWellnessContent(content);
                     if (translated !== content) content = translated;
@@ -14008,7 +14460,7 @@ async function loadAlerts() {
             }
         }
 
-        // Render wellness alerts
+        // Render well-being alerts
         const noAlertsText = translateKey('alerts.no_alerts') || 'No alerts';
         const noNotificationsText = translateKey('notifications.no_notifications') || 'No notifications';
         
@@ -14044,7 +14496,7 @@ async function loadAlerts() {
             }
         }
         
-        console.log(`✅ Rendered ${wellnessAlerts.length} wellness alerts and ${notifications.length} notifications`);
+        console.log(`✅ Rendered ${wellnessAlerts.length} well-being alerts and ${notifications.length} notifications`);
         
         // Update mobile alerts badge (on main nav and in More menu)
         const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
@@ -14172,6 +14624,67 @@ async function dismissAlert(alertId, element) {
     }
 }
 
+// ========== CLEAR ALL ALERTS FUNCTION ==========
+async function clearAllAlerts(type) {
+    try {
+        // Determine which containers to clear
+        const containers = [];
+        if (type === 'wellness' || type === 'all') {
+            containers.push(document.getElementById('alertsList'));
+            containers.push(document.getElementById('mobileAlertsList'));
+            containers.push(document.getElementById('homeAlertsList'));
+        }
+        if (type === 'notifications' || type === 'all') {
+            containers.push(document.getElementById('notificationsList'));
+            containers.push(document.getElementById('mobileNotificationsList'));
+        }
+
+        // Collect all alert IDs from visible containers
+        const alertIds = new Set();
+        containers.forEach(container => {
+            if (!container) return;
+            container.querySelectorAll('.alert-item[data-alert-id]').forEach(item => {
+                alertIds.add(item.getAttribute('data-alert-id'));
+            });
+        });
+
+        if (alertIds.size === 0) return;
+
+        // Dismiss all alerts in parallel
+        const promises = Array.from(alertIds).map(id =>
+            fetch(`/api/alerts/${id}/read`, { method: 'PUT', credentials: 'include' }).catch(() => {})
+        );
+        await Promise.all(promises);
+
+        // Clear all containers
+        const noAlertsText = (window.i18n && window.i18n.translate) ? (window.i18n.translate('alerts.no_alerts') || 'No alerts') : 'No alerts';
+        const noNotificationsText = (window.i18n && window.i18n.translate) ? (window.i18n.translate('notifications.no_notifications') || 'No notifications') : 'No notifications';
+
+        containers.forEach(container => {
+            if (!container) return;
+            const isNotification = container.id && container.id.toLowerCase().includes('notification');
+            container.innerHTML = `<p style="color: var(--gray);">${isNotification ? noNotificationsText : noAlertsText}</p>`;
+        });
+
+        // Update badges
+        const mobileAlertsBadge = document.getElementById('mobileAlertsBadge');
+        const mobileMoreAlertsBadge = document.getElementById('mobileMoreAlertsBadge');
+        if (mobileAlertsBadge) mobileAlertsBadge.style.display = 'none';
+        if (mobileMoreAlertsBadge) mobileMoreAlertsBadge.style.display = 'none';
+
+        // Show no-alerts messages
+        const mobileNoAlertsMsg = document.getElementById('mobileNoAlertsMessage');
+        const mobileNoNotificationsMsg = document.getElementById('mobileNoNotificationsMessage');
+        if (mobileNoAlertsMsg && (type === 'wellness' || type === 'all')) mobileNoAlertsMsg.style.display = 'block';
+        if (mobileNoNotificationsMsg && (type === 'notifications' || type === 'all')) mobileNoNotificationsMsg.style.display = 'block';
+
+        console.log(`✅ Cleared ${alertIds.size} ${type} alerts`);
+    } catch (error) {
+        console.error('Error clearing all alerts:', error);
+    }
+}
+window.clearAllAlerts = clearAllAlerts;
+
 // ========== AUTO-REFRESH ALERTS (KEEP THIS - NO CHANGES) ==========
 // Poll for new alerts every 30 seconds when page is visible
 let alertPollInterval = setInterval(async () => {
@@ -14229,7 +14742,7 @@ document.addEventListener('visibilitychange', async () => {
     }
 });
 
-console.log('✅ Alert auto-refresh enabled (30s polling + visibility change)');
+console.log('✅ Alert auto-refresh enabled (60s polling + visibility change)');
 // ========== END AUTO-REFRESH ALERTS ==========
 
 // Call this when user logs in or navigates to main page
@@ -14854,11 +15367,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
 
         // Auto-refresh alerts
+        // APPLOAD: Reduced from 15s to 60s - alerts aren't time-critical
         setInterval(() => {
             if (currentUser) {
                 loadAlerts().catch(() => {});
             }
-        }, 15000);
+        }, 60000);
 
         // Listen for language changes to reload dynamic content
         window.addEventListener('languageChanged', () => {
@@ -15040,13 +15554,13 @@ async function searchUsersToFollowInstant(query) {
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <button onclick="event.stopPropagation(); ${buttonAction}" style="padding: 6px 10px; ${buttonStyle} color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                <button onclick="event.stopPropagation(); ${buttonAction}" class="conn-action-btn block${isBlocked ? ' blocked' : ''}">
                                     ${buttonLabel}
                                 </button>
-                                <button onclick="event.stopPropagation(); ${followButtonAction}" class="btn ${isFollowing ? '' : 'btn-primary'}" style="padding: 8px 16px; font-size: 14px; width: auto; ${followButtonStyle} ${isFollowing ? 'color: white; border: none; border-radius: 6px; cursor: pointer;' : ''}">
+                                <button onclick="event.stopPropagation(); ${followButtonAction}" class="conn-action-btn${isFollowing ? ' block' : ' connect'}">
                                     ${followButtonText}
                                 </button>
-                                ${!isFollowing ? `<button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width: auto;">
+                                ${!isFollowing ? `<button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" class="conn-action-btn connect-note">
                                     ${withNoteText}
                                 </button>` : ''}
                             </div>
@@ -15260,7 +15774,7 @@ async function updateProgressChart() {
         if (insightsEl) {
             const lang = localStorage.getItem('selectedLanguage') || 'en';
             const startTrackingTexts = {
-                'en': 'Start tracking your wellness to see insights here!',
+                'en': 'Start tracking your well-being to see insights here!',
                 'he': 'התחל לעקוב אחר הבריאות שלך כדי לראות תובנות כאן!',
                 'ar': 'ابدأ بتتبع صحتك لرؤية الرؤى هنا!',
                 'ru': 'Начните отслеживать свое здоровье, чтобы увидеть здесь статистику!'
@@ -15369,7 +15883,7 @@ function updateInsights(data) {
     // FIX #2: Translated "Start tracking" message
     const lang = localStorage.getItem('selectedLanguage') || 'en';
     const startTrackingTexts = {
-        'en': 'Start tracking your wellness to see insights here!',
+        'en': 'Start tracking your well-being to see insights here!',
         'he': 'התחל לעקוב אחר הבריאות שלך כדי לראות תובנות כאן!',
         'ar': 'ابدأ بتتبع صحتك لرؤية الرؤى هنا!',
         'ru': 'Начните отслеживать свое здоровье, чтобы увидеть здесь статистику!'
@@ -15562,7 +16076,7 @@ async function showUserCheckinHistory(userId, username) {
                 listHTML += `
                     <div style="background: var(--light, #f5f6fa); padding: 12px 16px; border-radius: 10px; border-left: 3px solid var(--primary, #667eea);">
                         <div style="font-weight: 600; color: var(--dark, #333); margin-bottom: 4px;">${dateDisplay}</div>
-                        <div style="color: var(--gray, #666); font-size: 0.85rem;">${params.length > 0 ? params.join(' · ') : 'Check-in recorded'}</div>
+                        <div style="color: var(--gray, #666); font-size: 0.85rem;">${params.length > 0 ? params.join(' · ') : _t('msg.checkin_recorded', 'Check-in recorded')}</div>
                     </div>`;
             }
             listHTML += '</div>';
@@ -15570,7 +16084,7 @@ async function showUserCheckinHistory(userId, username) {
             // Add summary at top
             const summaryHTML = `
                 <div style="background: linear-gradient(135deg, rgba(107, 139, 164, 0.1) 0%, rgba(182, 169, 201, 0.1) 100%); padding: 14px; border-radius: 10px; margin-bottom: 12px;">
-                    <strong style="color: var(--primary, #667eea);">${data.totalCheckins} check-ins</strong>
+                    <strong style="color: var(--primary, #667eea);">${data.totalCheckins} ${_t('msg.check_ins_count', 'check-ins')}</strong>
                     <div style="color: var(--gray, #666); font-size: 0.85rem; margin-top: 4px;">
                         ${data.avgMood ? t.mood + ': ' + data.avgMood : ''} 
                         ${data.avgEnergy ? ' · ' + t.energy + ': ' + data.avgEnergy : ''}
@@ -15586,7 +16100,7 @@ async function showUserCheckinHistory(userId, username) {
         console.error('Error loading user checkin history:', error);
         const listContainer = document.getElementById('userCheckinList');
         if (listContainer) {
-            listContainer.innerHTML = `<p style="text-align: center; color: #e53e3e; padding: 20px;">Error loading check-in data</p>`;
+            listContainer.innerHTML = `<p style="text-align: center; color: #e53e3e; padding: 20px;">${_t('msg.error_loading_checkins', 'Error loading check-in data')}</p>`;
         }
     }
 }
@@ -15603,10 +16117,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
     
     // Check if user needs to fill diary - runs ONCE per session after login
-    // The server-side flag ensures this only triggers once per login session
-    setTimeout(() => {
-        checkAndRedirectToDiary();
-    }, 500);
+    // FIX: Diary redirect disabled - always show home
+    // setTimeout(() => {
+    //     checkAndRedirectToDiary();
+    // }, 500);
 });
 
 // PL203: Refresh progress chart when language changes to update insights text
@@ -15748,16 +16262,16 @@ const InlineOnboarding = {
     
     _fallbacks: {
         'onboarding.welcome': 'Welcome to TheraSocial!',
-        'onboarding.welcome_desc': 'Your wellness companion for tracking, connecting, and growing together. This short guide will walk you through everything you need to know.',
+        'onboarding.welcome_desc': 'Your well-being companion for tracking, connecting, and growing together. This short guide will walk you through everything you need to know.',
         'onboarding.welcome_tip': 'You can restart this tour anytime from the Tutorial button in the navigation bar.',
         'onboarding.home': 'Home — Your Daily Dashboard',
-        'onboarding.home_desc': "Your home page shows everything at a glance: today's wellness status, your streak, a quick mood check-in, personalized recommendations, friends' updates, and your journal feed.",
+        'onboarding.home_desc': "Your home page shows everything at a glance: today's well-being status, your streak, a quick mood check-in, personalized recommendations, friends' updates, and your journal feed.",
         'onboarding.home_tip': 'Tip: Use the Quick Check-In to log your mood with a single tap — even on busy days.',
-        'onboarding.diary': 'Diary — Track Your Wellness',
-        'onboarding.diary_desc': 'The Diary is where you record daily wellness: Mood, Energy, Sleep Quality, Physical Activity, and Stress. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
+        'onboarding.diary': 'Diary — Track Your Well-Being',
+        'onboarding.diary_desc': 'The Diary is where you record daily well-being: Mood, Energy, Sleep Quality, Physical Activity, and Anxiety. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
         'onboarding.diary_tip': 'Tip: Consistency is key! Even a quick 30-second check-in helps build meaningful patterns over time.',
         'onboarding.progress': 'Progress — See Your Trends',
-        'onboarding.progress_desc': 'The Progress page shows your wellness data as visual charts and graphs. Track how your mood, sleep, and energy change over weeks and months. Set your location to see local time and weather.',
+        'onboarding.progress_desc': 'The Progress page shows your well-being data as visual charts and graphs. Track how your mood, sleep, and energy change over weeks and months. Set your location to see local time and weather.',
         'onboarding.progress_tip': 'Tip: Look for patterns — for example, how exercise affects your mood the following day.',
         'onboarding.circles': 'Circles — Privacy Levels',
         'onboarding.circles_desc': 'Circles let you organize connections into trust levels: General (acquaintances), Close Friends, and Family. Each circle controls who sees your diary entries and feed posts.',
@@ -15766,19 +16280,19 @@ const InlineOnboarding = {
         'onboarding.messages_desc': "Send private messages to any of your connections. Use the 💬 template button for quick supportive messages when you're not sure what to say.",
         'onboarding.messages_tip': "Tip: A short encouraging message can brighten someone's day — don't overthink it!",
         'onboarding.connections': 'Connections — Build Your Network',
-        'onboarding.connections_desc': 'Find and follow other users in the Connections tab. Browse recommendations, search for people, and manage your connections. Click any connection to view their profile, send a message, or set up wellness alerts.',
-        'onboarding.connections_tip': 'Tip: Follow people you trust to see their wellness updates and support each other.',
+        'onboarding.connections_desc': 'Find and follow other users in the Connections tab. Browse recommendations, search for people, and manage your connections. Click any connection to view their profile, send a message, or set up well-being alerts.',
+        'onboarding.connections_tip': 'Tip: Follow people you trust to see their well-being updates and support each other.',
         'onboarding.invite': 'Invite — Bring Friends Along',
         'onboarding.invite_desc': "Share your unique invite link with friends, family, or your therapist. When they join through your link, they'll be prompted to connect with you. Growing your circle makes the experience more meaningful.",
         'onboarding.invite_tip': 'Tip: Your invite link can be shared via text message, email, WhatsApp, or social media.',
         'onboarding.triggers': 'Triggers & Alerts — Watch Over Loved Ones',
-        'onboarding.triggers_desc': "Set wellness alerts for connections you care about. Visit someone's profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or stress rises above 4. You'll receive email alerts when patterns are detected.",
+        'onboarding.triggers_desc': "Set well-being alerts for connections you care about. Visit someone's profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or anxiety rises above 4. You'll receive email alerts when patterns are detected.",
         'onboarding.triggers_tip': 'Tip: To set a trigger, go to Connections → click a person → View Full Profile → tap the Triggers button next to their name.',
         'onboarding.settings': 'Settings — Personalize Everything',
         'onboarding.settings_desc': 'In Settings, manage your profile (bio, interests, goals, timezone), change your password, toggle notifications and alerts, set a daily diary reminder time, export your data, or delete your account.',
         'onboarding.settings_tip': 'Tip: Set a daily diary reminder to build a consistent tracking habit. Toggle dark mode for comfortable evening use.',
         'onboarding.finish_title': "You're All Set!",
-        'onboarding.finish_desc': 'You now know everything you need to start your TheraSocial wellness journey. Begin by updating your diary, connecting with friends, and checking in daily.',
+        'onboarding.finish_desc': 'You now know everything you need to start your TheraSocial well-being journey. Begin by updating your diary, connecting with friends, and checking in daily.',
         'onboarding.finish_tip': "Remember: Small, consistent steps lead to meaningful change. We're here to support you every step of the way. 💚",
         'onboarding.next': 'Next',
         'onboarding.previous': 'Back',
@@ -15808,6 +16322,11 @@ const InlineOnboarding = {
     
     checkAndShow: async function() {
         try {
+            // CS2: If user dismissed tutorial this session (clicked X or Skip), don't re-show
+            if (sessionStorage.getItem('tutorialDismissedThisSession')) {
+                console.log('[Onboarding] Skipping - dismissed this session');
+                return;
+            }
             const response = await fetch('/api/onboarding/status', { credentials: 'include' });
             if (response.ok) {
                 const data = await response.json();
@@ -16004,11 +16523,15 @@ const InlineOnboarding = {
     skip: async function() {
         const cb = document.getElementById('onboarding-dont-show');
         if (cb && cb.checked) await this.dismiss();
+        // CS2: Mark dismissed this session so it won't reappear until next login
+        sessionStorage.setItem('tutorialDismissedThisSession', 'true');
         this.close();
     },
     finish: async function() { await this.complete(); this.close(); },
     
     close: function() {
+        // CS2: Mark dismissed this session (covers X button close as well)
+        sessionStorage.setItem('tutorialDismissedThisSession', 'true');
         document.querySelectorAll('.onboarding-highlight').forEach(el => {
             el.classList.remove('onboarding-highlight');
             el.style.position = ''; el.style.zIndex = '';
@@ -16032,6 +16555,8 @@ window.checkOnboardingStatus = function() { InlineOnboarding.checkAndShow(); };
 // ===== TUTORIAL FUNCTION =====
 // Starts the onboarding tutorial with the current language
 async function startTutorial() {
+    // CS2: Clear session dismiss flag so Tutorial button always works
+    sessionStorage.removeItem('tutorialDismissedThisSession');
     const currentLang = localStorage.getItem('selectedLanguage') || 'en';
     try {
         const response = await fetch('/api/onboarding/restart', {
@@ -16073,11 +16598,26 @@ async function loadConnections() {
         // Load following data
         const followingResponse = await fetch('/api/following', { credentials: 'include' });
         const followersResponse = await fetch('/api/followers', { credentials: 'include' });
-        const recommendedResponse = await fetch('/api/recommendations', { credentials: 'include' });
+        // T40: Commented out recommendation-based fetch (common city/connections logic) - kept for later
+        // const recommendedResponse = await fetch('/api/recommendations', { credentials: 'include' });
+        // T40: Fetch received follow requests instead of recommendations
+        const followRequestsResponse = await fetch('/api/follow-requests/received', { credentials: 'include' });
+        // T25: Fetch blocked users for Connection Requests tab block/unblock toggle
+        const blockedResponse = await fetch('/api/blocked-users', { credentials: 'include' });
 
         const followingData = followingResponse.ok ? await followingResponse.json() : { following: [] };
         const followersData = followersResponse.ok ? await followersResponse.json() : { followers: [] };
-        const recommendedData = recommendedResponse.ok ? await recommendedResponse.json() : { recommendations: [] };
+        // T40: Commented out recommendation data - replaced by follow requests
+        // const recommendedData = recommendedResponse.ok ? await recommendedResponse.json() : { recommendations: [] };
+        const followRequestsData = followRequestsResponse.ok ? await followRequestsResponse.json() : { requests: [] };
+        // T25: Build blocked user set
+        let blockedUserIds = new Set();
+        if (blockedResponse.ok) {
+            const blockedData = await blockedResponse.json();
+            if (blockedData.blocked_users) {
+                blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+            }
+        }
 
         // Render My Connections (merged following + followers who follow back)
         const myConnectionsList = document.getElementById('myConnectionsList');
@@ -16104,13 +16644,21 @@ async function loadConnections() {
             }
         }
 
-        // Render Recommended
+        // T40: Render Connection Requests (received follow requests only)
+        // T40: Commented out old recommendation-based rendering (common city/connections)
+        /*
+        // OLD: Render Recommended (Connection Requests)
+        // T25: Added Block and Connect with Note buttons matching search results
         const recList = document.getElementById('connectionRecommendationsList');
         if (recList) {
             const recs = recommendedData.recommendations || [];
             if (recs.length > 0) {
-                recList.innerHTML = recs.map(user => `
-                    <div class="user-card">
+                recList.innerHTML = recs.map(user => {
+                    const isBlocked = blockedUserIds.has(user.id);
+                    const blockText = isBlocked ? _t('block.unblock_user', 'Unblock') : _t('block.block_user', 'Block');
+                    const blockClass = isBlocked ? ' blocked' : '';
+                    return `
+                    <div class="user-card" data-user-id="${user.id}">
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B8BA4'}; cursor: pointer;" onclick="viewRecommendedUserProfile(${user.id})">
                             ${escapeHtml(user.username.charAt(0).toUpperCase())}
                         </div>
@@ -16119,11 +16667,128 @@ async function loadConnections() {
                             ${user.reason ? `<div style="font-size: 0.75rem; color: var(--gray);">${escapeHtml(user.reason)}</div>` : ''}
                             <div class="user-location" style="font-size: 0.75rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
-                        <button class="btn-primary follow-btn" onclick="event.stopPropagation(); followAndReload(${user.id})" style="font-size: 0.8rem; padding: 6px 12px; width: auto;" data-i18n="following.follow">Connect</button>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                            <button class="conn-action-btn connect rec-follow-btn" data-user-id="${user.id}" data-i18n="connections.approve">${_t('connections.approve', 'Approve')}</button>
+                            <button class="conn-action-btn connect-note rec-note-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" data-i18n="connections.approve_with_note">${_t('connections.approve_with_note', 'Approve with Note')}</button>
+                            <button class="conn-action-btn block${blockClass} rec-block-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" data-is-blocked="${isBlocked}">${blockText}</button>
+                        </div>
                     </div>
-                `).join('');
+                `}).join('');
+
+                // T25: Add event handlers for Connection Requests buttons
+                recList.querySelectorAll('.rec-follow-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        await followUser(parseInt(btn.dataset.userId));
+                        loadConnections();
+                    });
+                });
+                recList.querySelectorAll('.rec-note-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        await followUserWithNote(parseInt(btn.dataset.userId), btn.dataset.username);
+                    });
+                });
+                recList.querySelectorAll('.rec-block-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const userId = parseInt(btn.dataset.userId);
+                        const username = btn.dataset.username;
+                        const isBlocked = btn.dataset.isBlocked === 'true';
+                        if (isBlocked) {
+                            await unblockUserAndRefresh(userId, username);
+                        } else {
+                            await blockUser(userId, username);
+                        }
+                        loadConnections();
+                    });
+                });
             } else {
-                recList.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No recommendations available right now.</p>';
+                recList.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">' + _t('msg.no_recommendations_now', 'No recommendations available right now.') + '</p>';
+            }
+        }
+        END OLD */
+
+        // T40: NEW - Render received follow requests
+        const recList = document.getElementById('connectionRecommendationsList');
+        if (recList) {
+            const requests = followRequestsData.requests || [];
+            if (requests.length > 0) {
+                recList.innerHTML = requests.map(req => {
+                    const isBlocked = blockedUserIds.has(req.requester_id);
+                    const blockText = isBlocked ? _t('block.unblock_user', 'Unblock') : _t('block.block_user', 'Block');
+                    const blockClass = isBlocked ? ' blocked' : '';
+                    return `
+                    <div class="user-card" data-user-id="${req.requester_id}" data-request-id="${req.id}">
+                        <div class="user-avatar" style="background: ${req.avatar_color || '#6B8BA4'}; cursor: pointer;" onclick="viewRecommendedUserProfile(${req.requester_id})">
+                            ${escapeHtml(req.requester_name.charAt(0).toUpperCase())}
+                        </div>
+                        <div class="user-info" style="cursor: pointer;" onclick="viewRecommendedUserProfile(${req.requester_id})">
+                            <div class="user-name">${escapeHtml(req.requester_name)}</div>
+                            <div style="font-size: 0.75rem; color: var(--gray);">${_t('connections.sent_you_request', 'Sent you a connection request')}</div>
+                            <div style="font-size: 0.7rem; color: var(--gray);">${new Date(req.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                            <button class="conn-action-btn connect req-accept-btn" data-request-id="${req.id}" data-i18n="connections.approve">${_t('connections.approve', 'Accept')}</button>
+                            <button class="conn-action-btn block req-reject-btn" data-request-id="${req.id}" data-i18n="connections.reject">${_t('connections.reject', 'Reject')}</button>
+                            <button class="conn-action-btn block${blockClass} rec-block-btn" data-user-id="${req.requester_id}" data-username="${escapeHtml(req.requester_name)}" data-is-blocked="${isBlocked}">${blockText}</button>
+                        </div>
+                    </div>
+                `}).join('');
+
+                // T40: Add event handlers for follow request Accept/Reject buttons
+                recList.querySelectorAll('.req-accept-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const requestId = parseInt(btn.dataset.requestId);
+                        try {
+                            const resp = await fetch(`/api/follow-requests/${requestId}/respond`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ action: 'accept', privacy_level: 'public' })
+                            });
+                            if (resp.ok) {
+                                if (typeof showNotification === 'function') showNotification(_t('connections.request_accepted', 'Request accepted!'), 'success');
+                            }
+                        } catch (err) { console.error('Accept request error:', err); }
+                        loadConnections();
+                    });
+                });
+                recList.querySelectorAll('.req-reject-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const requestId = parseInt(btn.dataset.requestId);
+                        try {
+                            const resp = await fetch(`/api/follow-requests/${requestId}/respond`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ action: 'reject' })
+                            });
+                            if (resp.ok) {
+                                if (typeof showNotification === 'function') showNotification(_t('connections.request_rejected', 'Request rejected'), 'info');
+                            }
+                        } catch (err) { console.error('Reject request error:', err); }
+                        loadConnections();
+                    });
+                });
+                recList.querySelectorAll('.rec-block-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const userId = parseInt(btn.dataset.userId);
+                        const username = btn.dataset.username;
+                        const isBlocked = btn.dataset.isBlocked === 'true';
+                        if (isBlocked) {
+                            await unblockUserAndRefresh(userId, username);
+                        } else {
+                            await blockUser(userId, username);
+                        }
+                        loadConnections();
+                    });
+                });
+            } else {
+                recList.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">' + _t('connections.no_pending_requests', 'No pending connection requests.') + '</p>';
             }
         }
     } catch (error) {
@@ -16185,12 +16850,12 @@ async function searchConnectionsInstant(query) {
                             <div class="user-info">
                                 <div class="user-name">${escapeHtml(user.username)}</div>
                             </div>
-                            <button class="btn-primary" onclick="followAndReload(${user.id})" style="font-size: 0.8rem; padding: 6px 12px; width: auto;">${_t('following.follow', 'Connect')}</button>
+                            <button class="conn-action-btn connect" onclick="followAndReload(${user.id})" style="width: auto;">${_t('following.follow', 'Connect')}</button>
                         </div>
                     `).join('');
                     resultsDiv.style.display = 'block';
                 } else {
-                    resultsDiv.innerHTML = '<p style="text-align: center; color: var(--gray);">No users found</p>';
+                    resultsDiv.innerHTML = '<p style="text-align: center; color: var(--gray);">' + _t('msg.no_users_found', 'No users found') + '</p>';
                     resultsDiv.style.display = 'block';
                 }
             }
@@ -16700,12 +17365,15 @@ async function loadHomeSummary() {
         const params = data.latest_params || {};
         const paramMap = { 'summaryMood': 'mood', 'summaryEnergy': 'energy', 'summarySleep': 'sleep_quality', 'summaryExercise': 'physical_activity', 'summaryStress': 'anxiety' };
         const emojis = { 4: '😊', 3: '🙂', 2: '😐', 1: '😔' };
+        // Anxiety scale is reversed: 1=calm(best), 4=overwhelming(worst)
+        const anxietyEmojis = { 1: '😊', 2: '🙂', 3: '😐', 4: '😔' };
 
         for (const [elemId, paramKey] of Object.entries(paramMap)) {
             const elem = document.getElementById(elemId);
             if (elem) {
                 const val = params[paramKey];
-                elem.textContent = val ? (emojis[val] || val + '/4') : '—';
+                const emojiMap = paramKey === 'anxiety' ? anxietyEmojis : emojis;
+                elem.textContent = val ? (emojiMap[val] || val + '/4') : '—';
                 elem.style.color = val ? 'var(--primary)' : 'var(--gray)';
             }
         }
@@ -16832,11 +17500,29 @@ async function loadConnectionStatusList() {
                 }
             }
 
+            // CS3: Format last check-in date in user-friendly way (always visible, privacy-independent)
+            let checkinText = '';
+            if (conn.last_checkin_date) {
+                try {
+                    const checkinDate = new Date(conn.last_checkin_date);
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    const checkinDay = new Date(checkinDate); checkinDay.setHours(0,0,0,0);
+                    const diffDays = Math.round((today - checkinDay) / 86400000);
+                    if (diffDays === 0) checkinText = tt('home.checkin_today', 'Checked in today');
+                    else if (diffDays === 1) checkinText = tt('home.checkin_yesterday', 'Checked in yesterday');
+                    else if (diffDays < 7) checkinText = diffDays + ' ' + tt('home.days_ago', 'days ago');
+                    else if (diffDays < 30) checkinText = Math.floor(diffDays/7) + ' ' + tt('home.weeks_ago', 'w ago');
+                    else checkinText = checkinDate.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+                } catch(e) {}
+            }
+
             return '<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light, #f9fafb); border-radius: 12px; cursor: pointer;" onclick="if(typeof showConnectionInfo===\'function\') showConnectionInfo(' + (conn.id || 0) + ')">' +
                 '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + avatar + '</div>' +
                 '<div style="flex: 1; min-width: 0;">' +
                 '<div style="font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><a href="#" onclick="event.stopPropagation(); viewUserProfileFromHome(' + (conn.id || 0) + '); return false;" style="color: var(--dark); text-decoration: none;" onmouseover="this.style.color=\'var(--primary)\'; this.style.textDecoration=\'underline\';" onmouseout="this.style.color=\'var(--dark)\'; this.style.textDecoration=\'none\';">' + name + '</a></div>' +
-                '<div style="font-size: 0.8rem; color: var(--gray);">' + escapeHtml(conn.bio || conn.occupation || '') + '</div>' +
+                /* T30: Checkin dates commented out per design review
+                (checkinText ? '<div style="font-size: 0.72rem; color: var(--gray); margin-top: 2px; opacity: 0.85;">📅 ' + checkinText + '</div>' : '') +
+                */
                 '</div>' +
                 '<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">' +
                 '<span style="width: 8px; height: 8px; border-radius: 50%; background: ' + statusDot + '; display: inline-block;"></span>' +
@@ -16876,7 +17562,7 @@ async function loadFriendsUpdates() {
             energy: tt('params.energy', 'Energy'), 
             sleep_quality: tt('params.sleep', 'Sleep'), 
             physical_activity: tt('params.exercise', 'Exercise'), 
-            anxiety: tt('params.stress', 'Stress') 
+            anxiety: tt('params.anxiety', 'Anxiety') 
         };
 
         listDiv.innerHTML = updates.map(u => {
@@ -16918,6 +17604,19 @@ async function loadHomeAlerts() {
         function translateAlertText(text) {
             if (!text) return 'Alert';
             const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate : null;
+            // T40: Handle "username|invite.alert_content" format
+            if (typeof text === 'string' && text.includes('|')) {
+                const parts = text.split('|');
+                if (parts.length === 2 && (parts[1].startsWith('invite.') || parts[1].startsWith('alerts.'))) {
+                    const [username, i18nKey] = parts;
+                    if (tFn) {
+                        const template = tFn(i18nKey);
+                        if (template && template !== i18nKey) return template.replace('{username}', username);
+                    }
+                    // Fallback: use key as readable text
+                    return username + ' has invited you to connect';
+                }
+            }
             if (text.startsWith('alerts.') || text.startsWith('invite.')) {
                 if (tFn) {
                     const translated = tFn(text);
@@ -16939,7 +17638,7 @@ async function loadHomeAlerts() {
 
         homeAlertsList.innerHTML = alerts.slice(0, 5).map(alert => {
             let displayText = translateAlertText(alert.message || alert.text || alert.title || 'Alert');
-            // LL FIX: Translate wellness alert content patterns (e.g., "julia's anxiety has been...")
+            // LL FIX: Translate well-being alert content patterns (e.g., "julia's anxiety has been...")
             if (window._translateWellnessContent) displayText = window._translateWellnessContent(displayText);
             return `
             <div style="background: var(--peach-light); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
@@ -16988,13 +17687,16 @@ async function sendForgotPasswordMagicLink() {
 }
 
 // V2: Message templates
-const MESSAGE_TEMPLATES = [
-    { icon: '👋', text: 'Hi! Just checking in — how are you doing today?' },
-    { icon: '💪', text: "You're doing great! Keep it up!" },
-    { icon: '🤗', text: "I'm here if you want to talk." },
-    { icon: '🌟', text: 'Remember to take care of yourself today.' },
-    { icon: '❤️', text: 'Thinking of you — sending good vibes!' }
-];
+const MESSAGE_TEMPLATES = (function() {
+    const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+    return [
+    { icon: '\uD83D\uDC4B', text: tt('msg_template.checkin', 'Hi! Just checking in \u2014 how are you doing today?') },
+    { icon: '\uD83D\uDCAA', text: tt('msg_template.great', "You're doing great! Keep it up!") },
+    { icon: '\uD83E\uDD17', text: tt('msg_template.here', "I'm here if you want to talk.") },
+    { icon: '\uD83C\uDF1F', text: tt('msg_template.care', 'Remember to take care of yourself today.') },
+    { icon: '\u2764\uFE0F', text: tt('msg_template.vibes', 'Thinking of you \u2014 sending good vibes!') }
+    ];
+})();
 
 function showMessageTemplates() {
     const input = document.getElementById('messageInput');
@@ -17093,7 +17795,7 @@ setTimeout(() => {
         templateBtn.className = 'btn btn-secondary';
         templateBtn.style.cssText = 'width: auto; padding: 8px 12px; font-size: 0.85rem; margin-right: 4px;';
         templateBtn.textContent = '💬';
-        templateBtn.title = 'Message Templates';
+        templateBtn.title = (window.i18n && window.i18n.translate) ? (window.i18n.translate('msg_template.title') || 'Message Templates') : 'Message Templates';
         templateBtn.addEventListener('click', showMessageTemplates);
         sendBtn.parentNode.insertBefore(templateBtn, sendBtn);
     }
@@ -17104,12 +17806,13 @@ let nudgeTimeout = null;
 function startNudgeTimer() {
     if (nudgeTimeout) clearTimeout(nudgeTimeout);
     nudgeTimeout = setTimeout(() => {
+        const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
         const nudges = [
-            '💚 Take a moment to breathe deeply.',
-            '🌱 Small steps count — check in with yourself today.',
-            '☀️ You showed up today. That matters.',
-            '💧 Have you had water recently? Stay hydrated!',
-            '🧘 A 2-minute stretch can make a difference.'
+            '\uD83D\uDC9A ' + tt('nudge.breathe', 'Take a moment to breathe deeply.'),
+            '\uD83C\uDF31 ' + tt('nudge.steps', 'Small steps count \u2014 check in with yourself today.'),
+            '\u2600\uFE0F ' + tt('nudge.showed_up', 'You showed up today. That matters.'),
+            '\uD83D\uDCA7 ' + tt('nudge.hydrate', 'Have you had water recently? Stay hydrated!'),
+            '\uD83E\uDDD8 ' + tt('nudge.stretch', 'A 2-minute stretch can make a difference.')
         ];
         const nudge = nudges[Math.floor(Math.random() * nudges.length)];
         showNotification(nudge, 'info');

@@ -200,10 +200,15 @@ function saveParameterState(date) {
         }
     });
 
-    // Save notes
+    // Save notes + notes_privacy
     const notesField = document.querySelector('textarea');
     if (notesField) {
         state.notes = notesField.value;
+    }
+    const notesPrivacySel = document.getElementById('notesPrivacySelect');
+    if (notesPrivacySel) {
+        state.notes_privacy = notesPrivacySel.value;
+        window.selectedPrivacy.notes = notesPrivacySel.value;
     }
 
     // Store in session storage for persistence
@@ -243,15 +248,99 @@ function restoreParameterState(state) {
             notesField.value = state.notes;
         }
     }
+    // NP1: Restore notes_privacy
+    if (state.notes_privacy) {
+        const sel = document.getElementById('notesPrivacySelect');
+        if (sel) sel.value = state.notes_privacy;
+        window.selectedPrivacy.notes = state.notes_privacy;
+    }
 }
 
+// T40: Dropdown change now applies privacy to ALL past, current and future days
 function updatePrivacy(categoryId, privacyLevel) {
     if (!window.selectedPrivacy) {
         window.selectedPrivacy = {};
     }
     window.selectedPrivacy[categoryId] = privacyLevel;
-    console.log('Privacy updated:', categoryId, privacyLevel);
+    console.log('Privacy updated (applying to all days):', categoryId, privacyLevel);
+    // T40: Automatically apply to all days when dropdown changes
+    applyPrivacyToAllDaysAuto(categoryId, privacyLevel);
 }
+
+// T40: Apply privacy to all days automatically (no confirmation prompt)
+async function applyPrivacyToAllDaysAuto(categoryId, privacyLevel) {
+    try {
+        const response = await fetch('/api/parameters/set-default-privacy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ parameter: categoryId, privacy: privacyLevel })
+        });
+        const result = await response.json();
+        if (result.success) {
+            const privacyLabels = { 'private': 'Private', 'class_a': 'Family', 'class_b': 'Close Friends', 'public': 'Public' };
+            const label = privacyLabels[privacyLevel] || privacyLevel;
+            const msg = pt('parameters.apply_all_days_success') || `Visibility updated for all diary entries`;
+            if (typeof showNotification === 'function') showNotification(msg, 'success');
+            else if (typeof window.showMessage === 'function') window.showMessage(msg, 'success');
+            console.log('[T40] Privacy applied to all days:', categoryId, '=', label, '- rows updated:', result.rows_updated);
+        } else {
+            console.error('[T40] Failed to apply privacy to all days:', result);
+        }
+    } catch (err) {
+        console.error('[T40] applyPrivacyToAllDaysAuto error:', err);
+    }
+}
+
+// T40: Apply privacy only for today (renamed from old "Apply to all days" - kept for future use)
+// This sets privacy only for the currently selected day's entry
+async function applyPrivacyOnlyToday(categoryId) {
+    const privacy = (window.selectedPrivacy && window.selectedPrivacy[categoryId]) || 'private';
+    console.log('[T40] Applying privacy only for today:', categoryId, privacy);
+    // The current day's privacy is already stored in selectedPrivacy and will be saved with saveParameters()
+    const msg = pt('parameters.apply_only_today') || 'Privacy set for today only';
+    if (typeof showNotification === 'function') showNotification(msg, 'info');
+}
+window.applyPrivacyOnlyToday = applyPrivacyOnlyToday;
+
+// T30: Apply the currently-selected privacy level for a parameter to ALL past & future diary entries
+async function applyPrivacyToAllDays(categoryId) {
+    const privacy = (window.selectedPrivacy && window.selectedPrivacy[categoryId]) || 'private';
+    const privacyLabels = { 'private': 'Private', 'class_a': 'Family', 'class_b': 'Close Friends', 'public': 'Public' };
+    const label = privacyLabels[privacy] || privacy;
+    const paramLabels = { 'mood': 'Mood', 'energy': 'Energy', 'sleep_quality': 'Sleep Quality', 'physical_activity': 'Physical Activity', 'anxiety': 'Anxiety', 'notes': 'Notes' };
+    const paramLabel = paramLabels[categoryId] || categoryId;
+
+    const confirmMsg = pt('parameters.confirm_apply_all_days') ||
+        `Set "${paramLabel}" visibility to "${label}" for all past and future diary entries?`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const response = await fetch('/api/parameters/set-default-privacy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ parameter: categoryId, privacy: privacy })
+        });
+        const result = await response.json();
+        if (result.success) {
+            const msg = pt('parameters.apply_all_days_success') || `Visibility updated for all diary entries (${result.rows_updated} entries)`;
+            if (typeof showNotification === 'function') showNotification(msg, 'success');
+            else if (typeof window.showMessage === 'function') window.showMessage(msg, 'success');
+            else alert(msg);
+        } else {
+            const errMsg = pt('parameters.apply_all_days_error') || 'Failed to update visibility';
+            if (typeof showNotification === 'function') showNotification(errMsg, 'error');
+            else alert(errMsg);
+        }
+    } catch (err) {
+        console.error('[T30] applyPrivacyToAllDays error:', err);
+        const errMsg = pt('parameters.apply_all_days_error') || 'Failed to update visibility';
+        if (typeof showNotification === 'function') showNotification(errMsg, 'error');
+        else alert(errMsg);
+    }
+}
+window.applyPrivacyToAllDays = applyPrivacyToAllDays;
 
 // Load most recent privacy settings from any previous entry
 // This ensures privacy preferences persist even when starting a new day
@@ -294,6 +383,12 @@ async function loadMostRecentPrivacySettings() {
             }
         });
         
+        // NP1: Also load notes_privacy from most recent entry
+        const recentNotesPrivacy = recentResult.data.notes_privacy || 'private';
+        window.selectedPrivacy.notes = recentNotesPrivacy;
+        const recentNotesSel = document.getElementById('notesPrivacySelect');
+        if (recentNotesSel) recentNotesSel.value = recentNotesPrivacy;
+
         console.log('Privacy settings loaded from recent entry:', window.selectedPrivacy);
     } catch (error) {
         console.log('Could not load recent privacy settings:', error);
@@ -378,7 +473,8 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.mood',
         descriptionKey: 'parameters.mood_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['😢', '😁']  // EM1: low=sad, high=great
     },
     {
         id: 'energy',
@@ -386,7 +482,8 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.energy',
         descriptionKey: 'parameters.energy_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['🪫', '⚡']  // EM1: low=depleted, high=energized
     },
     {
         id: 'sleep_quality',
@@ -394,7 +491,8 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.sleep_quality',
         descriptionKey: 'parameters.sleep_quality_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['😣', '✨']  // EM1: low=poor sleep, high=great sleep
     },
     {
         id: 'physical_activity',
@@ -402,7 +500,8 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.physical_activity',
         descriptionKey: 'parameters.physical_activity_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['🛋️', '💪']  // EM1: low=sedentary, high=very active
     },
     {
         id: 'anxiety',
@@ -410,7 +509,9 @@ const PARAMETER_CATEGORIES = [
         nameKey: 'parameters.anxiety',
         descriptionKey: 'parameters.anxiety_desc',
         min: 1,
-        max: 4
+        max: 4,
+        endEmojis: ['😊', '😔'],  // EM1: REVERSED — low(1)=calm/best, high(4)=overwhelming/worst — matches home page anxietyEmojis
+        reversedScale: true
     }
 ];
 
@@ -835,7 +936,7 @@ function initializeParameters() {
 
     // Set default privacy to public for all parameters (matches backend default)
     // These will be overwritten when we auto-load today's saved data
-    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'notes'].forEach(param => {
         if (!window.selectedPrivacy[param]) {
             window.selectedPrivacy[param] = 'private';
         }
@@ -862,7 +963,8 @@ function initializeParameters() {
     const html = `
         <div class="parameters-page">
             <!-- Language Selector -->
-            <div class="language-selector-wrapper">
+            <!-- T40: Hidden on mobile since header bar has language selector -->
+            <div class="language-selector-wrapper diary-content-lang-selector">
                 <select id="languageSelector" class="language-selector">
                     <option value="en">English</option>
                     <option value="he">עברית</option>
@@ -921,37 +1023,77 @@ function initializeParameters() {
         Public
     </option>
 </select>
+                    <!-- T40: "Apply only for today" link - commented out for now (dropdown applies to all days by default)
+                    <a href="#" class="apply-all-days-link" data-category="${category.id}"
+                       onclick="event.preventDefault(); applyPrivacyOnlyToday('${category.id}')"
+                       data-i18n="parameters.apply_only_today"
+                       style="display:block; font-size:11px; color:#6B8BA4; text-align:center; margin-top:3px; text-decoration:underline; cursor:pointer;">Apply only for today</a>
+                    -->
                 </div>
             </div>
             <div class="rating-buttons" id="${category.id}-buttons">
-                ${[1, 2, 3, 4].map(value => `
-                    <button class="rating-button"
+                ${[1, 2, 3, 4].map(value => {
+                    // EM1: Show emoji hint to the SIDE of endpoint buttons (1 and 4)
+                    const hasEmojis = category.endEmojis && category.endEmojis.length === 2;
+                    let emojiBeforeBtn = '';
+                    let emojiAfterBtn = '';
+                    if (hasEmojis && value === 1) {
+                        emojiBeforeBtn = `<span class="rating-endpoint-emoji emoji-before" aria-hidden="true">${category.endEmojis[0]}</span>`;
+                    } else if (hasEmojis && value === 4) {
+                        emojiAfterBtn = `<span class="rating-endpoint-emoji emoji-after" aria-hidden="true">${category.endEmojis[1]}</span>`;
+                    }
+                    return `
+                    ${emojiBeforeBtn}<button class="rating-button"
                             data-category="${category.id}"
                             data-value="${value}"
                             onclick="selectRating('${category.id}', ${value})">
-                        ${value}
-                    </button>
-                `).join('')}
+                        <span class="rating-number">${value}</span>
+                    </button>${emojiAfterBtn}`;
+                }).join('')}
             </div>
         </div>
     `;
 }).join('')}
                 </div>
 
-                <!-- Notes Section -->
+                <!-- Notes Section — NP1: includes privacy dropdown matching parameter cards -->
                 <div class="notes-section">
-                    <label data-i18n="parameters.notes">Notes</label>
+                    <div class="notes-header">
+                        <label data-i18n="parameters.notes">Notes</label>
+                        <div class="privacy-selector">
+                            <select class="privacy-select" id="notesPrivacySelect"
+                                    data-category="notes"
+                                    onchange="updatePrivacy('notes', this.value)">
+                                <option value="private"  data-i18n="privacy.private">Private</option>
+                                <option value="class_a"  data-i18n="privacy.class_a">Family</option>
+                                <option value="class_b"  data-i18n="privacy.class_b">Close Friends</option>
+                                <option value="public"   data-i18n="privacy.public">Public</option>
+                            </select>
+                            <!-- T40: "Apply only for today" link - commented out for now
+                            <a href="#" class="apply-all-days-link" data-category="notes"
+                               onclick="event.preventDefault(); applyPrivacyOnlyToday('notes')"
+                               data-i18n="parameters.apply_only_today"
+                               style="display:block; font-size:11px; color:#6B8BA4; text-align:center; margin-top:3px; text-decoration:underline; cursor:pointer;">Apply only for today</a>
+                            -->
+                        </div>
+                    </div>
                     <textarea id="notesInput"
                               data-i18n-placeholder="parameters.notes_placeholder"
                               placeholder="Additional thoughts for today..."></textarea>
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="action-buttons">
+                <div class="action-buttons" style="justify-content: center;">
                     <button class="btn btn-primary" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
+                    <!-- LOAD BTN: Commented out per UX review
                     <button class="btn btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
+                    -->
+                    <!-- T40: Clear Form button commented out per UX review - Save is centered
                     <button class="btn btn-clear" onclick="clearParameters()" data-i18n="parameters.clear">Clear Form</button>
+                    -->
+                    <!-- HOME BTN: Commented out - diary nav handles return home
                     <button class="btn btn-menu" onclick="goToHome()" data-i18n="parameters.home">Home</button>
+                    -->
                 </div>
             </div>
         </div>
@@ -1001,6 +1143,11 @@ function initializeParameters() {
                                 selector.value = privacyValue;
                             }
                         });
+                        // NP1: Load notes privacy
+                        const autoNotesPrivacy = result.data.notes_privacy || 'private';
+                        window.selectedPrivacy.notes = autoNotesPrivacy;
+                        const autoNotesSel = document.getElementById('notesPrivacySelect');
+                        if (autoNotesSel) autoNotesSel.value = autoNotesPrivacy;
                         
                         // Also load ratings if they exist
                         if (result.data.parameters) {
@@ -1126,22 +1273,31 @@ async function setupLanguageSelector() {
             if (oldLocal !== currentLang) {
                 console.log('[PS LANG DEBUG P101] Updating localStorage from', oldLocal, 'to', currentLang);
             }
+            // T30c: ONLY write localStorage when we have confirmed backend language
+            localStorage.setItem('selectedLanguage', currentLang);
+            localStorage.setItem('userLanguage', currentLang);
+            console.log('[PS LANG DEBUG P101] localStorage updated to:', currentLang);
         } else {
-            // Fallback to localStorage only if backend unavailable
+            // T30c FIX: Backend unavailable (401/not logged in) — use localStorage for UI
+            // but DO NOT overwrite it. The fallback 'en' must not corrupt stored preference.
             currentLang = localStorage.getItem('selectedLanguage') || 
                           localStorage.getItem('userLanguage') ||
                           (window.i18n?.getCurrentLanguage?.()) ||
                           'en';
-            console.log('[PS LANG DEBUG P101] Backend unavailable, using fallback:', currentLang);
+            console.log('[PS LANG DEBUG P101] Backend unavailable, using fallback (not writing localStorage):', currentLang);
         }
     }
 
     console.log('[PS LANG DEBUG P101] Resolved language:', currentLang);
 
-    // Sync localStorage with the determined language
-    localStorage.setItem('selectedLanguage', currentLang);
-    localStorage.setItem('userLanguage', currentLang);
-    console.log('[PS LANG DEBUG P101] localStorage updated to:', currentLang);
+    // T30c: localStorage write moved into the backend-confirmed branch above.
+    // The justLoggedIn branch already has its own localStorage read; write it back
+    // only for that case so the login-time choice is preserved.
+    if (justLoggedIn) {
+        localStorage.setItem('selectedLanguage', currentLang);
+        localStorage.setItem('userLanguage', currentLang);
+        console.log('[PS LANG DEBUG P101] localStorage updated (justLoggedIn) to:', currentLang);
+    }
 
     // CRITICAL FIX: Set programmatic flag BEFORE setting selector value
     console.log('[PS LANG DEBUG P101] Setting selector value with programmatic flag...');
@@ -1581,8 +1737,9 @@ function addParameterStyles() {
 
         .rating-buttons {
             display: flex;
-            gap: 10px;
+            gap: 6px;
             justify-content: center;
+            align-items: center;
         }
 
         .rating-button {
@@ -1596,6 +1753,33 @@ function addParameterStyles() {
             cursor: pointer;
             transition: all 0.3s ease;
             color: #333;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 2px;
+            box-sizing: border-box;
+        }
+
+        /* EM1: Emojis positioned to the SIDE of endpoint buttons */
+        .rating-endpoint-emoji {
+            font-size: 1.3em;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            /* Works for RTL/LTR: flexbox auto-mirrors in RTL */
+        }
+        .rating-endpoint-emoji.emoji-before {
+            margin-inline-end: 2px;
+        }
+        .rating-endpoint-emoji.emoji-after {
+            margin-inline-start: 2px;
+        }
+
+        .rating-number {
+            font-size: 1em;
+            line-height: 1;
+            font-weight: 600;
         }
 
         .rating-button:hover {
@@ -1615,11 +1799,25 @@ function addParameterStyles() {
             margin: 30px 0;
         }
 
+        /* NP1: Notes header with privacy selector */
+        .notes-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        [dir="rtl"] .notes-header {
+            flex-direction: row-reverse;
+        }
+
         .notes-section label {
             display: block;
             font-weight: 600;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 0;
             font-size: 1.1em;
         }
 
@@ -1762,6 +1960,7 @@ function addParameterStyles() {
         @media (max-width: 768px) {
             .parameters-page {
                 padding: 10px;
+                padding-top: 4px;
                 overflow-x: hidden;
                 max-width: 100vw;
                 box-sizing: border-box;
@@ -1777,6 +1976,9 @@ function addParameterStyles() {
                 height: 50px;
                 font-size: 1.1em;
             }
+            .rating-endpoint-emoji {
+                font-size: 1.1em;
+            }
             .action-buttons {
                 flex-direction: column;
                 padding: 0;
@@ -1785,11 +1987,32 @@ function addParameterStyles() {
                 width: 100%;
                 box-sizing: border-box;
             }
+            /* T40: Hide content language selector on mobile - header bar has it */
+            .diary-content-lang-selector {
+                display: none !important;
+            }
             .language-selector-wrapper {
                 position: relative;
                 top: 0;
                 right: 0;
-                margin-bottom: 20px;
+                margin-bottom: 4px;
+            }
+            /* Nospace2: Compact diary header - no need for 60px gap since language selector is relative on mobile */
+            .parameters-header {
+                margin-top: 6px !important;
+                margin-bottom: 10px !important;
+            }
+            .parameters-header h1 {
+                font-size: 1.8em;
+            }
+            .date-section {
+                margin-bottom: 16px;
+            }
+            .date-section label {
+                margin-bottom: 8px;
+            }
+            .date-controls {
+                margin-bottom: 10px;
             }
             .notes-section textarea {
                 width: 100%;
@@ -2022,7 +2245,6 @@ function updateCalendar() {
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day';
-        dayCell.textContent = day;
 
         const cellDate = new Date(year, month, day);
         const cellDateStr = formatDate(cellDate);
@@ -2030,17 +2252,20 @@ function updateCalendar() {
         // Check if this is a future date
         const isFutureDate = cellDate > today;
 
+        // Don't render future days at all - only show days up to current day
+        if (isFutureDate) {
+            // Add empty placeholder to maintain grid layout
+            const emptyCell = document.createElement('div');
+            calendarGrid.appendChild(emptyCell);
+            continue;
+        }
+
+        dayCell.textContent = day;
+
         // Add data-date attribute for targeting
         dayCell.setAttribute('data-date', cellDateStr);
 
-        // Disable future dates
-        if (isFutureDate) {
-            dayCell.style.opacity = '0.3';
-            dayCell.style.cursor = 'not-allowed';
-            dayCell.style.pointerEvents = 'none';
-            dayCell.title = pt('params.future_date') || 'Future date - not available';
-        } else {
-            // Check if this date has saved data and add green dot
+        // Check if this date has saved data and add green dot
             if (datesWithData.has(cellDateStr)) {
                 dayCell.style.position = 'relative';
                 const dot = document.createElement('span');
@@ -2059,9 +2284,8 @@ function updateCalendar() {
                 dayCell.classList.add('selected');
             }
 
-            // Only add click handler for past/present dates
+            // Add click handler for past/present dates
             dayCell.onclick = () => selectDate(cellDate);
-        }
 
         calendarGrid.appendChild(dayCell);
     }
@@ -2467,6 +2691,7 @@ async function saveParameters() {
         sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
         physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
         anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
+        notes_privacy: window.selectedPrivacy.notes || 'private',  // NP1
         notes: notes
     };
 
@@ -2578,6 +2803,11 @@ async function loadParameters(showMsg = true) {
                         selector.value = privacyValue;
                     }
                 });
+                // NP1: Load notes privacy
+                const notesPrivacyValue = result.data.notes_privacy || 'private';
+                window.selectedPrivacy.notes = notesPrivacyValue;
+                const notesPrivacySel = document.getElementById('notesPrivacySelect');
+                if (notesPrivacySel) notesPrivacySel.value = notesPrivacyValue;
             }
             // else: OPT-PRIVACY: Keep current window.selectedPrivacy and dropdown values unchanged
 
@@ -2596,6 +2826,7 @@ async function loadParameters(showMsg = true) {
     sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
     physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
     anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
+    notes_privacy: window.selectedPrivacy.notes || 'private',  // NP1
     notes: result.data.notes || ''
 };
 sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
@@ -2655,6 +2886,9 @@ function clearParameters() {
     if (notesInput) {
         notesInput.value = '';
     }
+
+    // NP1: Keep notes privacy on clear (same as other parameters)
+    // Don't reset notes_privacy - user's preference should persist
 
     window.showMessage(pt('parameters.cleared'), 'info');
 }
@@ -3523,12 +3757,13 @@ if (!document.getElementById('parameterAlertsStyles')) {
 // loadAlerts() fetches the persisted alerts from /api/alerts.
 // PJ812: Increased interval to 5 minutes (300000ms) to prevent excessive API calls.
 // PJ812: Now checks if user is logged in before making API call to avoid 401 errors.
-setInterval(checkParameterAlerts, 300000);  // Changed from 60000 (1 min) to 300000 (5 min)
+// PJ812: Triggers are already processed when users save diary entries.
+// This poll is just a backup check. Delayed 60s so home screen loads first.
+setInterval(checkParameterAlerts, 300000);  // 5 min interval
 
-// Check on page load (but only if logged in)
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('[PJ812] parameters-social.js loaded - will check triggers in 2 seconds');
-    setTimeout(checkParameterAlerts, 2000);
+    console.log('[PJ812] parameters-social.js loaded - trigger check delayed 60s for page load');
+    setTimeout(checkParameterAlerts, 60000);
 });
 
 // Export trigger functions
