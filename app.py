@@ -20,6 +20,11 @@ T32 Fixes:
 - FIX: Email template for no_checkin alerts used the generic "concerning levels" message instead
   of the distinct "hasn't checked in for X days" message. Added no_checkin and no_checkin_line
   translations to send_consolidated_wellness_alert_email in all 4 languages (en, he, ar, ru).
+- FIX: No-checkin duplicate detection was broken — check_duplicate_alert searched for
+  "{username}'s no_checkin" but the actual content uses "{username} hasn't checked in for X days",
+  so the patterns never matched. This caused duplicate no_checkin UI alerts AND (with the email
+  fix above) emails every 5-minute scheduler cycle. Added no_checkin-specific pattern matching
+  with a 24-hour window so at most one no_checkin alert per watched user per day is created.
 
 appFormat5 Fixes:
 
@@ -1981,6 +1986,16 @@ def check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
             Alert.user_id == watcher_id,
             Alert.alert_type == 'trigger'
         )
+        
+        # T32: no_checkin content uses a different format ("hasn't checked in for X days")
+        # that doesn't match the standard "{username}'s {parameter}" pattern.
+        # Check within last 24 hours to allow one per day as the count increments.
+        if parameter == 'no_checkin':
+            existing = base_query.filter(
+                Alert.created_at >= datetime.now() - timedelta(hours=24),
+                Alert.content.ilike(f"%{watched_username}%hasn't checked in%")
+            ).first()
+            return existing
         
         # Add time constraint only in "daily_reminder" mode
         if ALERT_EMAIL_MODE == "daily_reminder":
