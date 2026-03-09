@@ -533,7 +533,7 @@
     <div id="errorMessage"></div>
     <div id="parametersContainer"></div>
 
-<!-- Silent safety interceptor - only alerts on problems -->
+<!-- T30c: Protect localStorage language from i18n.js init corruption -->
 <script>
 const _originalSetItem = Storage.prototype.setItem;
 Storage.prototype.setItem = function(key, value) {
@@ -541,13 +541,10 @@ Storage.prototype.setItem = function(key, value) {
     if (key === 'selectedLanguage' || key === 'userLanguage') {
         const oldValue = localStorage.getItem(key);
 
-        // Only block and alert if trying to reset Hebrew to English
-        if (oldValue === 'he' && value === 'en') {
-            console.error('❌ BLOCKED: Attempt to reset Hebrew → English detected!');
-            console.error(`   Key: ${key}`);
-            console.error(`   Attempted change: 'he' → 'en'`);
-            console.trace('   Source of reset attempt:');
-            return; // Block the change
+        // Block non-en → en changes UNLESS user explicitly clicked the selector
+        if (oldValue && oldValue !== 'en' && value === 'en' && !window._userClickedLanguageSelector) {
+            console.warn('[T30c STORAGE GUARD] BLOCKED:', key, oldValue, '→', value, '(no user interaction)');
+            return; // Don't corrupt
         }
     }
     return _originalSetItem.apply(this, arguments);
@@ -675,7 +672,7 @@ Storage.prototype.setItem = function(key, value) {
 
     <!-- Load scripts -->
     <script src="/static/js/i18n.js?v=R1"></script>
-    <script src="/static/js/parameters-social.js?v=Acc3"></script>
+    <script src="/static/js/parameters-social.js?v=T30c"></script>
     <script src="/static/js/feed-updates.js?v=3.0"></script>
 
     <script>

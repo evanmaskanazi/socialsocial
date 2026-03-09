@@ -6161,6 +6161,26 @@
     })();
     </script>
     
+    <!-- T30c: Protect localStorage language from i18n.js init corruption -->
+    <!-- i18n.js defaults to 'en' on load and may overwrite a stored 'he'/'ar'/'ru' -->
+    <script>
+    (function() {
+        const _origSetItem = Storage.prototype.setItem;
+        Storage.prototype.setItem = function(key, value) {
+            if (key === 'selectedLanguage' || key === 'userLanguage') {
+                const oldValue = localStorage.getItem(key);
+                // Block non-en → en changes UNLESS user explicitly clicked the selector
+                if (oldValue && oldValue !== 'en' && value === 'en' && !window._userClickedLanguageSelector) {
+                    console.warn('[T30c STORAGE GUARD] BLOCKED:', key, oldValue, '→', value, '(no user interaction)');
+                    return; // Don't corrupt
+                }
+            }
+            return _origSetItem.apply(this, arguments);
+        };
+        console.log('[T30c] localStorage language guard installed');
+    })();
+    </script>
+
     <script src="/static/js/i18n.js?v=R1"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
@@ -6416,7 +6436,7 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=Acc3"></script>
+<script src="/static/js/parameters-social.js?v=T30c"></script>
    <script src="/static/js/circles-messages.js?v=Opt1"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
