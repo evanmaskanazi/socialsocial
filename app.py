@@ -10745,6 +10745,68 @@ def save_parameters():
         return jsonify({'error': 'Failed to save parameters'}), 500
 
 
+# T30: Batch-update a single parameter's privacy across ALL existing diary entries
+# and store the chosen level as the user's default for future entries.
+@app.route('/api/parameters/set-default-privacy', methods=['POST'])
+@login_required
+def set_default_privacy():
+    """
+    T30: Set a parameter's privacy level for ALL past entries and as the default
+    for all future entries.  Accepts JSON:
+        { "parameter": "mood", "privacy": "class_a" }
+    Valid parameters: mood, energy, sleep_quality, physical_activity, anxiety, notes
+    Valid privacy levels: public, class_a, class_b, private
+    """
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')
+        param = data.get('parameter')
+        privacy = data.get('privacy')
+
+        valid_params = ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'notes']
+        valid_privacy = ['public', 'class_a', 'class_b', 'private']
+
+        if param not in valid_params:
+            return jsonify({'error': 'Invalid parameter'}), 400
+        if privacy not in valid_privacy:
+            return jsonify({'error': 'Invalid privacy level'}), 400
+
+        if param == 'notes':
+            # notes_privacy lives outside the ORM — use raw SQL
+            try:
+                result = db.session.execute(
+                    text("UPDATE saved_parameters SET notes_privacy = :priv WHERE user_id = :uid"),
+                    {'priv': privacy, 'uid': user_id}
+                )
+                db.session.commit()
+                rows_updated = result.rowcount
+                logger.info(f"[T30] Set notes_privacy={privacy} for user {user_id}, {rows_updated} rows updated")
+            except Exception as np_err:
+                logger.warning(f"[T30] Could not batch-update notes_privacy: {np_err}")
+                db.session.rollback()
+                return jsonify({'error': 'Failed to update notes privacy'}), 500
+        else:
+            privacy_col = f"{param}_privacy"
+            result = db.session.execute(
+                text(f"UPDATE saved_parameters SET {privacy_col} = :priv WHERE user_id = :uid"),
+                {'priv': privacy, 'uid': user_id}
+            )
+            db.session.commit()
+            rows_updated = result.rowcount
+            logger.info(f"[T30] Set {privacy_col}={privacy} for user {user_id}, {rows_updated} rows updated")
+
+        return jsonify({
+            'success': True,
+            'message': f'Privacy updated for all entries',
+            'rows_updated': rows_updated
+        }), 200
+
+    except Exception as e:
+        logger.error(f"[T30] Error setting default privacy: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to set default privacy'}), 500
+
+
 # =============================================================================
 # BACKGROUND JOB QUEUE SYSTEM
 # =============================================================================
@@ -16338,6 +16400,35 @@ def run_background_trigger_check_for_watcher(watcher_id):
             # OLD SCHEMA processing
             elif has_old_schema:
                 param_name = trigger.parameter_name
+
+                # T30: NO-CHECKIN trigger processing
+                if param_name == 'no_checkin':
+                    from datetime import date as date_type
+                    today = date_type.today()
+                    latest_entry = db.session.execute(
+                        select(SavedParameters).filter(
+                            SavedParameters.user_id == trigger.watched_id
+                        ).order_by(SavedParameters.date.desc()).limit(1)
+                    ).scalars().first()
+
+                    if latest_entry and latest_entry.date:
+                        days_since = (today - latest_entry.date).days
+                    else:
+                        days_since = 999
+
+                    if days_since >= consecutive_days:
+                        pattern_key = (watched_user.username, 'no_checkin', today.isoformat(), str(days_since))
+                        if pattern_key not in patterns_seen:
+                            patterns_seen.add(pattern_key)
+                            alerts.append({
+                                'user': watched_user.username,
+                                'parameter': 'no_checkin',
+                                'consecutive_days': days_since,
+                                'dates': [today.isoformat()],
+                                'values': [days_since],
+                                'condition_text': f"no check-in for {days_since} days"
+                            })
+                    continue
                 condition = trigger.trigger_condition
                 threshold = trigger.trigger_value
 
@@ -16516,7 +16607,10 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 source_user_id = watched_user.id if watched_user else None
                 
                 # PJ817: Generate content with date pattern for ALL streak lengths
-                if alert_data.get('dates') and len(alert_data['dates']) >= 1:
+                # T30: Handle no_checkin triggers with a distinct message
+                if parameter == 'no_checkin':
+                    content = f"{watched_username} hasn't checked in for {consecutive_days} days — you may want to reach out"
+                elif alert_data.get('dates') and len(alert_data['dates']) >= 1:
                     try:
                         from datetime import datetime as dt
                         start_date = dt.fromisoformat(alert_data['dates'][0])
