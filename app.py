@@ -17910,6 +17910,21 @@ def respond_to_follow_request(request_id):
             else:
                 logger.info(f"[T40] Follow already exists: {follow_request.requester_id} -> {follow_request.target_id}, skipping insert")
 
+            # T40: Create reciprocal follow (target follows requester back) for bidirectional connection
+            existing_reverse = Follow.query.filter_by(
+                follower_id=follow_request.target_id,
+                followed_id=follow_request.requester_id
+            ).first()
+            if not existing_reverse:
+                reverse_follow = Follow(
+                    follower_id=follow_request.target_id,
+                    followed_id=follow_request.requester_id
+                )
+                db.session.add(reverse_follow)
+                logger.info(f"[T40] Created reciprocal follow: {follow_request.target_id} -> {follow_request.requester_id}")
+            else:
+                logger.info(f"[T40] Reciprocal follow already exists: {follow_request.target_id} -> {follow_request.requester_id}")
+
         elif action == 'reject':
             follow_request.status = 'rejected'
             follow_request.responded_at = datetime.utcnow()
