@@ -17867,6 +17867,7 @@ def get_received_follow_requests():
             'id': req.id,
             'requester_id': req.requester_id,
             'requester_name': req.requester.username,
+            'avatar_color': getattr(req.requester, 'avatar_color', None) or '#6B8BA4',
             'created_at': req.created_at.isoformat()
         } for req in requests]
     })
