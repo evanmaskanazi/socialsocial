@@ -7930,37 +7930,17 @@ function syncLanguageSelector() {
 }
 
 // T30b: Update the visible short language code label (mobile)
-// Reads from multiple sources; cross-references DOM direction as ground truth
+// ONLY reads localStorage — i18n.currentLanguage and selector.value have init races
 function updateLangCodeLabel() {
     const label = document.getElementById('langCodeLabel');
     if (!label) return;
-    const sel = document.getElementById('languageSelector');
-    // Best source: i18n.currentLanguage (reflects actual applied translations)
-    // Fallback: selector value, then localStorage, then page direction hint
-    let code = (window.i18n && window.i18n.currentLanguage) ||
-               (sel && sel.value) ||
-               localStorage.getItem('selectedLanguage') ||
-               localStorage.getItem('userLanguage') ||
-               'en';
-    // Cross-check: if page is RTL but code says 'en', page state wins
-    const isRTL = document.documentElement.dir === 'rtl' || document.body.dir === 'rtl' ||
-                  document.body.getAttribute('dir') === 'rtl';
-    if (isRTL && code === 'en') {
-        // Page is actually RTL — prefer Hebrew (most likely for this app)
-        code = localStorage.getItem('selectedLanguage') || 'he';
-    }
+    const code = localStorage.getItem('selectedLanguage') ||
+                 localStorage.getItem('userLanguage') ||
+                 'en';
     const codeMap = { 'en': 'EN', 'he': 'עב', 'ar': 'عر', 'ru': 'РУ' };
     label.textContent = codeMap[code] || code.toUpperCase();
 }
 window.updateLangCodeLabel = updateLangCodeLabel;
-// T30b: Sync label after i18n.js initialization settles (handles the en→he race)
-document.addEventListener('DOMContentLoaded', function() {
-    updateLangCodeLabel();
-    // Re-sync at 1s, 3s, 5s to catch i18n.js init settling
-    setTimeout(updateLangCodeLabel, 1000);
-    setTimeout(updateLangCodeLabel, 3000);
-    setTimeout(updateLangCodeLabel, 5000);
-});
 
 // Make function globally available
 window.syncLanguageSelector = syncLanguageSelector;
