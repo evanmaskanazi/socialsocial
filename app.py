@@ -2,6 +2,16 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+T31 Fixes:
+- FIX: Multi-circle membership bug. When a user was added to more than one circle by the same
+  connection, endpoints using scalar_one_or_none() threw MultipleResultsFound and returned
+  "Error loading parameters". Now uses _resolve_lowest_circle() helper which picks the
+  lowest-access circle (public < close_friends < family) across all affected endpoints:
+  get_hierarchical_parameters, check_circle_membership, get_my_circles, get_user_feed_dates,
+  get_user_feed_by_date, get_user_parameters_for_triggers, get_watcher_circle, check_parameter_triggers.
+- UI: Changed "Connect" to "Approve" (and "Connect with Note" to "Approve with Note") on
+  Connection Requests tab, with translations in English, Hebrew, Arabic, and Russian.
+
 appFormat5 Fixes:
 
 - FIX: Removed dangling @app.route('/api/parameters/should-redirect-to-diary') decorator that was
@@ -3805,6 +3815,27 @@ def _batch_get_notes_privacy(param_ids):
         return result
     except Exception:
         return {pid: 'private' for pid in param_ids}
+
+
+# T31: Helper to resolve multi-circle membership to lowest access level
+# When a user is added to more than one circle, use the lowest (least-access) level.
+_CIRCLE_RANK = {
+    'public': 0, 'general': 0,
+    'class_b': 1, 'close_friends': 1,
+    'class_a': 2, 'family': 2
+}
+
+def _resolve_lowest_circle(owner_user_id, member_user_id):
+    """Return the Circle row with the lowest access level for a user in multiple circles.
+    Returns None if the member is not in any of the owner's circles."""
+    circles = Circle.query.filter_by(
+        user_id=owner_user_id,
+        circle_user_id=member_user_id
+    ).all()
+    if not circles:
+        return None
+    # Return the circle with the lowest rank (least access)
+    return min(circles, key=lambda c: _CIRCLE_RANK.get(c.circle_type, 0))
 
 
 class Alert(db.Model):
@@ -8050,13 +8081,9 @@ def get_user_circles(user_id):
             privacy_level = target_user.circles_privacy or 'private'
             user_privacy_level = privacy_level  # Store for return
 
-            # Check viewer's circle membership with target user
-            viewer_circle = db.session.execute(
-                select(Circle).filter_by(
-                    user_id=user_id,
-                    circle_user_id=current_user_id
-                )
-            ).scalars().first()
+            # T31: Check viewer's circle membership with target user
+            # Use lowest-access circle when user is in multiple circles
+            viewer_circle = _resolve_lowest_circle(user_id, current_user_id)
 
             if viewer_circle:
                 type_mapping_check = {
@@ -8198,11 +8225,8 @@ def get_user_parameters(user_id):
         # Check what circle the current user is in for the target user
         circle_level = 'public'  # Default to public
         if current_user_id != user_id:
-            circle_stmt = select(Circle).filter_by(
-                user_id=user_id,
-                circle_user_id=current_user_id
-            )
-            circle = db.session.execute(circle_stmt).scalar_one_or_none()
+            # T31: Use lowest-access circle when user is in multiple circles
+            circle = _resolve_lowest_circle(user_id, current_user_id)
 
             if circle:
                 # Map circle types to privacy levels
@@ -9343,12 +9367,8 @@ def check_circle_membership(check_user_id):
     try:
         current_user_id = session.get('user_id')
 
-        # Check if current user is in any of check_user's circles
-        circle_stmt = select(Circle).filter_by(
-            user_id=check_user_id,
-            circle_user_id=current_user_id
-        )
-        circle = db.session.execute(circle_stmt).scalar_one_or_none()
+        # T31: Use lowest-access circle when user is in multiple circles
+        circle = _resolve_lowest_circle(check_user_id, current_user_id)
 
         if circle:
             # Map old types to new if needed
@@ -9386,13 +9406,9 @@ def get_my_circles():
 
             privacy_level = target_user.circles_privacy or 'private'
 
-            # Check viewer's circle membership with target user FIRST (before any privacy checks)
-            viewer_circle = db.session.execute(
-                select(Circle).filter_by(
-                    user_id=target_user_id,
-                    circle_user_id=user_id
-                )
-            ).scalars().first()
+            # T31: Check viewer's circle membership with target user FIRST (before any privacy checks)
+            # Use lowest-access circle when user is in multiple circles
+            viewer_circle = _resolve_lowest_circle(target_user_id, user_id)
 
             if viewer_circle:
                 type_mapping = {
@@ -9902,11 +9918,9 @@ def get_hierarchical_parameters(view_user_id):
                 'parameters': [p.to_dict(viewer_id=current_user_id, _notes_privacy=np_cache.get(p.id, 'private')) for p in params]
             })
 
-        # Check what circle current user is in for the viewed user
-        circle = Circle.query.filter_by(
-            user_id=view_user_id,
-            circle_user_id=current_user_id
-        ).first()
+        # T31: Check what circle current user is in for the viewed user
+        # Use lowest-access circle when user is in multiple circles
+        circle = _resolve_lowest_circle(view_user_id, current_user_id)
 
         if not circle:
             # Not in any circle - can only see public
@@ -10004,11 +10018,9 @@ def get_user_feed_dates(user_id):
 
             return jsonify({'dates': dates_with_visibility})
 
-        # Check circle membership for other users
-        membership = Circle.query.filter_by(
-            user_id=user_id,
-            circle_user_id=current_user_id
-        ).first()
+        # T31: Check circle membership for other users
+        # Use lowest-access circle when user is in multiple circles
+        membership = _resolve_lowest_circle(user_id, current_user_id)
 
         # Determine which visibility levels current user can see
         visible_levels = ['general']  # Everyone can see public
@@ -10113,11 +10125,9 @@ def get_user_feed_by_date(user_id, date):
         if not is_following:
             return jsonify({'error': 'Must be following user to view posts'}), 403
 
-        # Check circle membership
-        membership = Circle.query.filter_by(
-            user_id=user_id,
-            circle_user_id=current_user_id
-        ).first()
+        # T31: Check circle membership
+        # Use lowest-access circle when user is in multiple circles
+        membership = _resolve_lowest_circle(user_id, current_user_id)
 
         # Determine which visibility levels current user can see
         visible_levels = ['general']  # Everyone can see public
@@ -13879,15 +13889,9 @@ def get_watcher_circle_level(watched_id, watcher_id):
     Returns:
         str: 'class_a', 'class_b', 'public', or None if not in any circle
     """
-    # PJ6015 FIX: Use scalars().first() instead of scalar_one_or_none() to handle duplicate entries
-    # This prevents "Multiple rows were found" error when Circle table has duplicates
+    # T31: Use lowest-access circle when user is in multiple circles
     try:
-        circle = db.session.execute(
-            select(Circle).filter_by(
-                user_id=watched_id,
-                circle_user_id=watcher_id
-            )
-        ).scalars().first()  # Changed from scalar_one_or_none() to handle duplicates
+        circle = _resolve_lowest_circle(watched_id, watcher_id)
 
         if circle:
             return circle.circle_type
@@ -15272,14 +15276,10 @@ def get_friends_updates():
             if not followed_user:
                 continue
             
-            # Determine viewer's circle level for privacy filtering
+            # T31: Determine viewer's circle level for privacy filtering
+            # Use lowest-access circle when user is in multiple circles
             circle_level = 'public'
-            circle = db.session.execute(
-                select(Circle).filter_by(
-                    user_id=follow.followed_id,
-                    circle_user_id=user_id
-                )
-            ).scalars().first()
+            circle = _resolve_lowest_circle(follow.followed_id, user_id)
             if circle:
                 type_mapping = {
                     'public': 'public', 'general': 'public',
@@ -15432,12 +15432,8 @@ def get_user_parameters_for_triggers(user_id):
         # V4 FIX: Determine viewer's circle level for privacy filtering
         circle_level = 'public'  # Default for non-circle followers
         if viewer_id != user_id:
-            circle = db.session.execute(
-                select(Circle).filter_by(
-                    user_id=user_id,
-                    circle_user_id=viewer_id
-                )
-            ).scalars().first()
+            # T31: Use lowest-access circle when user is in multiple circles
+            circle = _resolve_lowest_circle(user_id, viewer_id)
             if circle:
                 type_mapping = {
                     'public': 'public',
