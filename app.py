@@ -12,6 +12,15 @@ T31 Fixes:
 - UI: Changed "Connect" to "Approve" (and "Connect with Note" to "Approve with Note") on
   Connection Requests tab, with translations in English, Hebrew, Arabic, and Russian.
 
+T32 Fixes:
+- FIX: No-checkin alerts were never emailed in "new_alerts_only" mode. The job queue only sends
+  emails when the watched user saves diary data, but no_checkin alerts fire precisely because the
+  user ISN'T saving data. Now the trigger scheduler sends emails for no_checkin alerts even in
+  new_alerts_only mode, since the job queue path can never handle them.
+- FIX: Email template for no_checkin alerts used the generic "concerning levels" message instead
+  of the distinct "hasn't checked in for X days" message. Added no_checkin and no_checkin_line
+  translations to send_consolidated_wellness_alert_email in all 4 languages (en, he, ar, ru).
+
 appFormat5 Fixes:
 
 - FIX: Removed dangling @app.route('/api/parameters/should-redirect-to-diary') decorator that was
@@ -2197,6 +2206,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'hello': 'Hello',
                 'intro': f"We noticed some concerning well-being patterns for {watched_username}:",
                 'param_line': '{param} has been at concerning levels for {days} consecutive days ({date_range})',
+                'no_checkin_line': "hasn't checked in for {days} days — you may want to reach out",
                 'recommendation': 'Consider reaching out to check in on them.',
                 'view_details': 'View Details',
                 'regards': 'Best regards',
@@ -2205,13 +2215,15 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Energy',
                 'sleep_quality': 'Sleep quality',
                 'physical_activity': 'Physical activity',
-                'anxiety': 'Anxiety'
+                'anxiety': 'Anxiety',
+                'no_checkin': 'No check-in'
             },
             'he': {
                 'subject': f'TheraSocial - התראת בריאות עבור {watched_username}',
                 'hello': 'שלום',
                 'intro': f"שמנו לב לדפוסי בריאות מדאיגים עבור {watched_username}:",
                 'param_line': '{param} היה ברמות מדאיגות במשך {days} ימים רצופים ({date_range})',
+                'no_checkin_line': 'לא ביצע/ה צ׳ק-אין במשך {days} ימים — כדאי לבדוק איך הם',
                 'recommendation': 'שקול/י ליצור קשר כדי לבדוק את מצבם.',
                 'view_details': 'צפה בפרטים',
                 'regards': 'בברכה',
@@ -2220,13 +2232,15 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'אנרגיה',
                 'sleep_quality': 'איכות שינה',
                 'physical_activity': 'פעילות גופנית',
-                'anxiety': 'חרדה'
+                'anxiety': 'חרדה',
+                'no_checkin': "אין צ'ק-אין"
             },
             'ar': {
                 'subject': f'TheraSocial - تنبيه صحي لـ {watched_username}',
                 'hello': 'مرحباً',
                 'intro': f"لاحظنا بعض أنماط الصحة المقلقة لـ {watched_username}:",
                 'param_line': '{param} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({date_range})',
+                'no_checkin_line': 'لم يسجل/تسجل الدخول منذ {days} أيام — قد ترغب في التواصل معهم',
                 'recommendation': 'فكر في التواصل للاطمئنان عليهم.',
                 'view_details': 'عرض التفاصيل',
                 'regards': 'مع أطيب التحيات',
@@ -2235,13 +2249,15 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'الطاقة',
                 'sleep_quality': 'جودة النوم',
                 'physical_activity': 'النشاط البدني',
-                'anxiety': 'القلق'
+                'anxiety': 'القلق',
+                'no_checkin': 'لا يوجد تسجيل'
             },
             'ru': {
                 'subject': f'TheraSocial - Оповещение о здоровье {watched_username}',
                 'hello': 'Здравствуйте',
                 'intro': f"Мы заметили тревожные показатели здоровья у {watched_username}:",
                 'param_line': '{param} был на тревожном уровне {days} дней подряд ({date_range})',
+                'no_checkin_line': 'не отмечался/отмечалась {days} дней — возможно, стоит связаться',
                 'recommendation': 'Рассмотрите возможность связаться с ними.',
                 'view_details': 'Подробнее',
                 'regards': 'С уважением',
@@ -2250,7 +2266,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Энергия',
                 'sleep_quality': 'Качество сна',
                 'physical_activity': 'Физическая активность',
-                'anxiety': 'Тревожность'
+                'anxiety': 'Тревожность',
+                'no_checkin': 'Нет отметки'
             }
         }
         
@@ -2263,8 +2280,12 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         # Build parameter list HTML
         param_items = []
         for p in triggered_params:
-            param_display = t.get(p['param_name'], p['param_name'])
-            line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p['days'])).replace('{date_range}', p['date_range'])
+            # T32: Use distinct message for no_checkin alerts
+            if p['param_name'] == 'no_checkin':
+                line = t.get('no_checkin_line', "hasn't checked in for {days} days — you may want to reach out").replace('{days}', str(p['days']))
+            else:
+                param_display = t.get(p['param_name'], p['param_name'])
+                line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p['days'])).replace('{date_range}', p['date_range'])
             param_items.append(f'<li style="margin-bottom: 8px;">{line}</li>')
         
         params_html = '\n'.join(param_items)
@@ -16797,7 +16818,29 @@ def run_trigger_scheduler():
                                 else:
                                     logger.info(f"[TRIGGER SCHEDULER] PI502: Not daily reminder hour (current={current_hour}, reminder={DAILY_REMINDER_HOUR_UTC})")
                         else:
-                            logger.info(f"[TRIGGER SCHEDULER] PI502: Mode is new_alerts_only - no scheduler emails (emails via job queue only)")
+                            # T32: In new_alerts_only mode, the job queue sends emails when users save data.
+                            # But no_checkin alerts fire precisely because the user ISN'T saving data,
+                            # so the job queue path never runs for them. Send emails for no_checkin here.
+                            no_checkin_emails = 0
+                            for watcher_id, triggered_by_user in all_watcher_triggered_params.items():
+                                watcher = db.session.get(User, watcher_id)
+                                if not watcher:
+                                    continue
+                                user_language = watcher.preferred_language or 'en'
+                                
+                                for watched_username, triggered_params in triggered_by_user.items():
+                                    # Filter to only no_checkin params
+                                    no_checkin_params = [p for p in triggered_params if p['param_name'] == 'no_checkin']
+                                    if no_checkin_params:
+                                        logger.info(f"[TRIGGER SCHEDULER] T32: Sending no_checkin email to {watcher.username} for {watched_username}")
+                                        if send_consolidated_wellness_alert_email(watcher_id, watched_username, no_checkin_params, user_language):
+                                            no_checkin_emails += 1
+                                            emails_sent += 1
+                            
+                            if no_checkin_emails > 0:
+                                logger.info(f"[TRIGGER SCHEDULER] T32: Sent {no_checkin_emails} no_checkin emails in new_alerts_only mode")
+                            else:
+                                logger.info(f"[TRIGGER SCHEDULER] PI502: Mode is new_alerts_only - no no_checkin alerts to email (other emails via job queue)")
                         
                         logger.info(f"[TRIGGER SCHEDULER] Completed: total_created={total_created}, total_skipped={total_skipped}, emails={emails_sent}")
                         logger.info(f"[TRIGGER SCHEDULER] ========================================")
