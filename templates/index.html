@@ -16633,8 +16633,8 @@ async function loadConnections() {
                             <div class="user-location" style="font-size: 0.75rem;">📍 ${escapeHtml(user.selected_city || user.city || 'Unknown')}</div>
                         </div>
                         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
-                            <button class="conn-action-btn connect rec-follow-btn" data-user-id="${user.id}" data-i18n="following.follow">${_t('following.follow', 'Connect')}</button>
-                            <button class="conn-action-btn connect-note rec-note-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" data-i18n="following.with_note">${_t('following.with_note', 'Connect with Note')}</button>
+                            <button class="conn-action-btn connect rec-follow-btn" data-user-id="${user.id}" data-i18n="connections.approve">${_t('connections.approve', 'Approve')}</button>
+                            <button class="conn-action-btn connect-note rec-note-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" data-i18n="connections.approve_with_note">${_t('connections.approve_with_note', 'Approve with Note')}</button>
                             <button class="conn-action-btn block${blockClass} rec-block-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}" data-is-blocked="${isBlocked}">${blockText}</button>
                         </div>
                     </div>
