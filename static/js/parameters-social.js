@@ -264,6 +264,45 @@ function updatePrivacy(categoryId, privacyLevel) {
     console.log('Privacy updated:', categoryId, privacyLevel);
 }
 
+// T30: Apply the currently-selected privacy level for a parameter to ALL past & future diary entries
+async function applyPrivacyToAllDays(categoryId) {
+    const privacy = (window.selectedPrivacy && window.selectedPrivacy[categoryId]) || 'private';
+    const privacyLabels = { 'private': 'Private', 'class_a': 'Family', 'class_b': 'Close Friends', 'public': 'Public' };
+    const label = privacyLabels[privacy] || privacy;
+    const paramLabels = { 'mood': 'Mood', 'energy': 'Energy', 'sleep_quality': 'Sleep Quality', 'physical_activity': 'Physical Activity', 'anxiety': 'Anxiety', 'notes': 'Notes' };
+    const paramLabel = paramLabels[categoryId] || categoryId;
+
+    const confirmMsg = pt('parameters.confirm_apply_all_days') ||
+        `Set "${paramLabel}" visibility to "${label}" for all past and future diary entries?`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const response = await fetch('/api/parameters/set-default-privacy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ parameter: categoryId, privacy: privacy })
+        });
+        const result = await response.json();
+        if (result.success) {
+            const msg = pt('parameters.apply_all_days_success') || `Visibility updated for all diary entries (${result.rows_updated} entries)`;
+            if (typeof showNotification === 'function') showNotification(msg, 'success');
+            else if (typeof window.showMessage === 'function') window.showMessage(msg, 'success');
+            else alert(msg);
+        } else {
+            const errMsg = pt('parameters.apply_all_days_error') || 'Failed to update visibility';
+            if (typeof showNotification === 'function') showNotification(errMsg, 'error');
+            else alert(errMsg);
+        }
+    } catch (err) {
+        console.error('[T30] applyPrivacyToAllDays error:', err);
+        const errMsg = pt('parameters.apply_all_days_error') || 'Failed to update visibility';
+        if (typeof showNotification === 'function') showNotification(errMsg, 'error');
+        else alert(errMsg);
+    }
+}
+window.applyPrivacyToAllDays = applyPrivacyToAllDays;
+
 // Load most recent privacy settings from any previous entry
 // This ensures privacy preferences persist even when starting a new day
 async function loadMostRecentPrivacySettings() {
@@ -944,6 +983,10 @@ function initializeParameters() {
         Public
     </option>
 </select>
+                    <a href="#" class="apply-all-days-link" data-category="${category.id}"
+                       onclick="event.preventDefault(); applyPrivacyToAllDays('${category.id}')"
+                       data-i18n="parameters.apply_all_days"
+                       style="display:block; font-size:11px; color:#6B8BA4; text-align:center; margin-top:3px; text-decoration:underline; cursor:pointer;">Apply to all days</a>
                 </div>
             </div>
             <div class="rating-buttons" id="${category.id}-buttons">
@@ -984,6 +1027,10 @@ function initializeParameters() {
                                 <option value="class_b"  data-i18n="privacy.class_b">Close Friends</option>
                                 <option value="public"   data-i18n="privacy.public">Public</option>
                             </select>
+                            <a href="#" class="apply-all-days-link" data-category="notes"
+                               onclick="event.preventDefault(); applyPrivacyToAllDays('notes')"
+                               data-i18n="parameters.apply_all_days"
+                               style="display:block; font-size:11px; color:#6B8BA4; text-align:center; margin-top:3px; text-decoration:underline; cursor:pointer;">Apply to all days</a>
                         </div>
                     </div>
                     <textarea id="notesInput"

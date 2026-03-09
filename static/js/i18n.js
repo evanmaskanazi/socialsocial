@@ -658,6 +658,17 @@ const translations = {
 'trigger_cancel': 'Cancel',
 'trigger_create': 'Create Trigger',
 'trigger_created_success': 'Trigger created successfully',
+// T30: No-checkin trigger translations
+'trigger_parameter_no_checkin': 'No Check-In',
+'trigger_condition_no_checkin': 'no check-in',
+'trigger_no_checkin_days_label': 'Alert after how many days without a check-in (minimum 1):',
+'trigger_no_checkin_hint': 'You will be alerted if this person has not updated their diary for the number of days you choose. This can help you stay aware and reach out when someone you care about may need support.',
+'trigger_modal_subtitle': 'Configure when you\'d like to be notified about changes.',
+// T30: Apply privacy to all days
+'parameters.apply_all_days': 'Apply to all days',
+'parameters.confirm_apply_all_days': 'Set this visibility level for all past and future diary entries?',
+'parameters.apply_all_days_success': 'Visibility updated for all diary entries',
+'parameters.apply_all_days_error': 'Failed to update visibility',
 'parameters_no_data': 'No data available for this period',
  'block.block_user': 'Block',
     'block.unblock_user': 'Unblock',
@@ -1864,6 +1875,17 @@ const translations = {
 'trigger_cancel': 'ביטול',
 'trigger_create': 'צור התראה',
 'trigger_created_success': 'ההתראה נוצרה בהצלחה',
+// T30: No-checkin trigger translations
+'trigger_parameter_no_checkin': 'אין צ\'ק-אין',
+'trigger_condition_no_checkin': 'אין צ\'ק-אין',
+'trigger_no_checkin_days_label': 'התראה אחרי כמה ימים ללא צ\'ק-אין (מינימום 1):',
+'trigger_no_checkin_hint': 'תקבל/י התראה אם אדם זה לא עדכן את היומן שלו במספר הימים שתבחר/י. זה יכול לעזור לך להישאר מודע/ת ולפנות כשמישהו שאכפת לך ממנו עשוי להזדקק לתמיכה.',
+'trigger_modal_subtitle': 'הגדר/י מתי תרצה/י לקבל התראה על שינויים.',
+// T30: Apply privacy to all days
+'parameters.apply_all_days': 'החל על כל הימים',
+'parameters.confirm_apply_all_days': 'להגדיר רמת נראות זו לכל רשומות היומן בעבר ובעתיד?',
+'parameters.apply_all_days_success': 'הנראות עודכנה לכל רשומות היומן',
+'parameters.apply_all_days_error': 'עדכון הנראות נכשל',
 'parameters_no_data': 'אין נתונים זמינים לתקופה זו',
 
  // Support page
@@ -3324,6 +3346,17 @@ const translations = {
 'trigger_cancel': 'إلغاء',
 'trigger_create': 'إنشاء تنبيه',
 'trigger_created_success': 'تم إنشاء التنبيه بنجاح',
+// T30: No-checkin trigger translations
+'trigger_parameter_no_checkin': 'عدم تسجيل الدخول',
+'trigger_condition_no_checkin': 'عدم تسجيل الدخول',
+'trigger_no_checkin_days_label': 'التنبيه بعد كم يوم بدون تسجيل دخول (الحد الأدنى 1):',
+'trigger_no_checkin_hint': 'سيتم تنبيهك إذا لم يقم هذا الشخص بتحديث يومياته للعدد من الأيام الذي تختاره. يمكن أن يساعدك هذا في البقاء على اطلاع والتواصل عندما يحتاج شخص تهتم به إلى الدعم.',
+'trigger_modal_subtitle': 'اختر متى تريد أن يتم إعلامك بالتغييرات.',
+// T30: Apply privacy to all days
+'parameters.apply_all_days': 'تطبيق على جميع الأيام',
+'parameters.confirm_apply_all_days': 'تعيين مستوى الرؤية هذا لجميع إدخالات اليوميات السابقة والمستقبلية؟',
+'parameters.apply_all_days_success': 'تم تحديث الرؤية لجميع إدخالات اليوميات',
+'parameters.apply_all_days_error': 'فشل تحديث الرؤية',
 'parameters_no_data': 'لا توجد بيانات متاحة لهذه الفترة',
 
 
@@ -4692,6 +4725,17 @@ const translations = {
 'trigger_cancel': 'Отмена',
 'trigger_create': 'Создать оповещение',
 'trigger_created_success': 'Оповещение успешно создано',
+// T30: No-checkin trigger translations
+'trigger_parameter_no_checkin': 'Нет отметки',
+'trigger_condition_no_checkin': 'нет отметки',
+'trigger_no_checkin_days_label': 'Уведомить после скольких дней без отметки (минимум 1):',
+'trigger_no_checkin_hint': 'Вы получите уведомление, если этот человек не обновлял свой дневник в течение выбранного вами количества дней. Это поможет вам быть в курсе и обратиться к тому, кому может понадобиться поддержка.',
+'trigger_modal_subtitle': 'Настройте, когда вы хотите получать уведомления об изменениях.',
+// T30: Apply privacy to all days
+'parameters.apply_all_days': 'Применить ко всем дням',
+'parameters.confirm_apply_all_days': 'Установить этот уровень видимости для всех прошлых и будущих записей дневника?',
+'parameters.apply_all_days_success': 'Видимость обновлена для всех записей дневника',
+'parameters.apply_all_days_error': 'Не удалось обновить видимость',
 'parameters_no_data': 'Нет данных за этот период',
         // City names
   // Russian city translations - Israel, USA, UK only (MVP)
