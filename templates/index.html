@@ -7977,6 +7977,12 @@ function updateLangCodeLabel() {
 }
 window.updateLangCodeLabel = updateLangCodeLabel;
 
+// T30c fix: Update label whenever i18n.js fires languageChanged event
+// This catches the initial i18n setup on the login page where no user click happens
+window.addEventListener('languageChanged', function() {
+    setTimeout(updateLangCodeLabel, 200); // slight delay for localStorage to settle
+});
+
 // Make function globally available
 window.syncLanguageSelector = syncLanguageSelector;
 
