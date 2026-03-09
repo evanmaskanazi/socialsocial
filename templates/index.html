@@ -3895,6 +3895,10 @@
                 <div class="lang-selector-wrap" style="display: flex; align-items: center; gap: 2px; position: relative;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                     <span id="langCodeLabel" class="lang-code-label" style="display: none; font-weight: 700; font-size: 12px; color: var(--primary); pointer-events: none;">EN</span>
+                    <script>
+                    // T30b: Set correct language code immediately from localStorage to prevent flash
+                    (function(){var l=document.getElementById('langCodeLabel');if(l){var c=localStorage.getItem('selectedLanguage')||localStorage.getItem('userLanguage')||'en';var m={'en':'EN','he':'עב','ar':'عر','ru':'РУ'};l.textContent=m[c]||c.toUpperCase();}})();
+                    </script>
                     <select id="languageSelector" class="language-selector">
                         <option value="en">English</option>
                         <option value="he">עברית</option>
@@ -6158,6 +6162,8 @@
         }
         
         console.log('[PRE-FETCH] ========================================');
+        // T30b: Sync language code label after pre-fetch may have updated localStorage
+        if (typeof updateLangCodeLabel === 'function') updateLangCodeLabel();
     })();
     </script>
     
@@ -7933,12 +7939,20 @@ function syncLanguageSelector() {
 function updateLangCodeLabel() {
     const label = document.getElementById('langCodeLabel');
     if (!label) return;
-    const selector = document.getElementById('languageSelector');
-    const code = (selector && selector.value) || localStorage.getItem('selectedLanguage') || 'en';
+    // Priority: localStorage (source of truth) > i18n > selector > fallback
+    const code = localStorage.getItem('selectedLanguage') ||
+                 localStorage.getItem('userLanguage') ||
+                 (window.i18n && window.i18n.currentLanguage) ||
+                 (document.getElementById('languageSelector') || {}).value ||
+                 'en';
     const codeMap = { 'en': 'EN', 'he': 'עב', 'ar': 'عر', 'ru': 'РУ' };
     label.textContent = codeMap[code] || code.toUpperCase();
 }
 window.updateLangCodeLabel = updateLangCodeLabel;
+// T30b: Sync label on initial page load (before login)
+document.addEventListener('DOMContentLoaded', function() {
+    updateLangCodeLabel();
+});
 
 // Make function globally available
 window.syncLanguageSelector = syncLanguageSelector;
