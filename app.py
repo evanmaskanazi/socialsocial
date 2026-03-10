@@ -9348,6 +9348,32 @@ def circles():
                 circle_type=circle_type
             )
             db.session.add(circle)
+
+            # T2: Auto-accept any pending follow request from this user when adding to circle
+            pending_request = FollowRequest.query.filter_by(
+                requester_id=circle_user_id,
+                target_id=user_id,
+                status='pending'
+            ).first()
+            if pending_request:
+                pending_request.status = 'accepted'
+                pending_request.privacy_level = circle_type
+                pending_request.responded_at = datetime.utcnow()
+                # Create follow relationships if not existing
+                existing_follow = Follow.query.filter_by(
+                    follower_id=circle_user_id,
+                    followed_id=user_id
+                ).first()
+                if not existing_follow:
+                    db.session.add(Follow(follower_id=circle_user_id, followed_id=user_id))
+                existing_reverse = Follow.query.filter_by(
+                    follower_id=user_id,
+                    followed_id=circle_user_id
+                ).first()
+                if not existing_reverse:
+                    db.session.add(Follow(follower_id=user_id, followed_id=circle_user_id))
+                logger.info(f"[T2] Auto-accepted follow request from user {circle_user_id} when adding to circle {circle_type}")
+
             db.session.commit()
 
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
@@ -17933,6 +17959,7 @@ def get_received_follow_requests():
             'requester_id': req.requester_id,
             'requester_name': req.requester.username,
             'avatar_color': getattr(req.requester, 'avatar_color', None) or '#6B8BA4',
+            'selected_city': getattr(req.requester, 'selected_city', None) or '',
             'created_at': req.created_at.isoformat()
         } for req in requests]
     })
