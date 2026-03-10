@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!-- ST4 CHANGES:
+  1. FIX: About/Support links now visible on mobile when logged out (removed auth-only-hide !important override)
+  2. FIX: Logo image (LogoNew.jfif) added to navbar in both desktop and mobile views
+  3. FIX: Clicking non-connected user profile now redirects to Connections tab (was 'following')
+  4. FIX: Error message updated to "must be connected" (was "must follow")
+-->
 <!-- CLEAN4: Session retry for cold start + Trigger days UI fix -->
 
 <!-- CLEAN4 CHANGES:
@@ -2401,6 +2407,12 @@
                 font-size: 18px;
             }
 
+            /* ST4: Scale logo image on mobile */
+            .logo img {
+                height: 28px !important;
+                width: 28px !important;
+            }
+
             .nav-menu {
                 gap: 6px;
                 flex-wrap: nowrap;
@@ -2416,8 +2428,8 @@
                 padding: 4px 8px;
             }
 
-            /* T30: Hide About/Support when logged in to save space */
-            .auth-only-hide { display: none !important; }
+            /* T30: About/Support visibility on mobile managed by JS inline styles */
+            /* ST4: Removed .auth-only-hide { display: none !important } that was hiding About/Support even when logged out */
 
             /* Keep language selector visible - compact on mobile */
             .language-selector {
@@ -3908,7 +3920,7 @@
     <!-- Navigation -->
     <nav class="navbar" id="mainNavbar" style="display:none">
         <div class="nav-content">
-            <div class="logo" data-i18n="nav.logo" style="cursor: pointer;" onclick="showView('home')">🧠 Thera Social</div>
+            <div class="logo" style="cursor: pointer; display: flex; align-items: center; gap: 8px;" onclick="showView('home')"><img src="/static/images/LogoNew.jfif" alt="TheraSocial" style="height: 36px; width: 36px; border-radius: 8px; object-fit: contain;"> <span data-i18n="nav.logo">TheraSocial</span></div>
             <div class="nav-menu">
                 <!-- PJ6004: About and Support shown when logged out, language selector at end -->
                 <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
@@ -13613,8 +13625,8 @@ async function loadUserProfileView(userId) {
                     showBlockedMessage();
                     return;
                 }
-                showNotification(_t('msg.must_follow_profile', 'You must follow this user to view their profile'), 'error');
-                showView('following');
+                showNotification(_t('msg.must_follow_profile', 'You must be connected with this user to view their profile'), 'error');
+                showView('connections');
                 return;
             }
             throw new Error('Failed to load profile');
