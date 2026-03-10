@@ -781,10 +781,11 @@ async function loadCircleRecommendations() {
         console.log('[CircleRecs] Container found');
 
         // Show loading state
-        recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;">Loading recommendations...</p>`;
+        recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;">Loading requests...</p>`;
 
-        console.log('[CircleRecs] Fetching /api/circles/recommendations...');
-        const response = await fetch("/api/circles/recommendations", {
+        // T2: Fetch pending follow requests (same source as Connection Requests tab)
+        console.log('[CircleRecs] Fetching /api/follow-requests/received...');
+        const response = await fetch("/api/follow-requests/received", {
             credentials: 'include'
         });
         
@@ -792,68 +793,54 @@ async function loadCircleRecommendations() {
         console.log('[CircleRecs] Response ok:', response.ok);
         
         if (!response.ok) {
-            console.error("[CircleRecs] FAILED to load circle recommendations");
+            console.error("[CircleRecs] FAILED to load follow requests");
             console.error("[CircleRecs] Status:", response.status);
             const errorText = await response.text();
             console.error("[CircleRecs] Response body:", errorText);
-            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
             return;
         }
 
         const data = await response.json();
         console.log('[CircleRecs] Response data:', JSON.stringify(data, null, 2));
-        
-        // Log debug info from backend if available
-        if (data.debug) {
-            console.log('[CircleRecs] Backend debug info:');
-            console.log('[CircleRecs]   - User city:', data.debug.user_city);
-            console.log('[CircleRecs]   - Following count:', data.debug.following_count);
-            console.log('[CircleRecs]   - Followers count:', data.debug.followers_count);
-            console.log('[CircleRecs]   - Mutual count:', data.debug.mutual_count);
-            console.log('[CircleRecs]   - In circles count:', data.debug.in_circles_count);
-        }
 
-        if (!data.recommendations || data.recommendations.length === 0) {
-            console.log('[CircleRecs] No recommendations returned from API');
-            console.log('[CircleRecs] This could mean:');
-            console.log('[CircleRecs]   1. No users in same city');
-            console.log('[CircleRecs]   2. All potential users already in circles');
-            console.log('[CircleRecs]   3. No following/follower connections');
-            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+        const requests = data.requests || [];
+        if (requests.length === 0) {
+            console.log('[CircleRecs] No pending follow requests');
+            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
             if (window.i18n && window.i18n.applyLanguage) {
                 window.i18n.applyLanguage(window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en");
             }
             return;
         }
 
-        console.log('[CircleRecs] Building HTML for', data.recommendations.length, 'recommendations');
+        console.log('[CircleRecs] Building HTML for', requests.length, 'pending requests');
         let html = "";
-        data.recommendations.forEach((user, index) => {
-            console.log(`[CircleRecs] Rec ${index + 1}: ${user.username} (${user.selected_city}) - ${user.reason}`);
-            const reasonKey = user.reason_key || "circles.reason_default";
+        requests.forEach((req, index) => {
+            console.log(`[CircleRecs] Req ${index + 1}: ${req.requester_name} (${req.selected_city || 'no city'})`);
             // Escape username for onclick to prevent XSS and quote issues
-            const escapedUsername = (user.username || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+            const escapedUsername = (req.requester_name || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
             html += `
                 <div class="member-item" style="display: flex; align-items: center; gap: 15px; padding: 12px; border-radius: 10px; transition: background 0.2s; margin-bottom: 8px; background: #f8f9fa;">
-                    <div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                        ${(user.username || "U")[0].toUpperCase()}
+                    <div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: ${req.avatar_color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        ${(req.requester_name || "U")[0].toUpperCase()}
                     </div>
                     <div style="flex-grow: 1;">
                         <div style="font-weight: 600; color: #667eea; cursor: pointer;" 
-                             onclick="window.location.href='/?view=profile&user_id=${user.id}'"
+                             onclick="window.location.href='/?view=profile&user_id=${req.requester_id}'"
                              onmouseover="this.style.textDecoration='underline'" 
-                             onmouseout="this.style.textDecoration='none'">${user.username}</div>
-                        <div style="font-size: 12px; color: #8898aa;" data-i18n="${reasonKey}">${user.reason}</div>
-                        ${user.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${user.selected_city}</div>` : ""}
+                             onmouseout="this.style.textDecoration='none'">${req.requester_name}</div>
+                        <div style="font-size: 12px; color: #8898aa;" data-i18n="circles.reason_pending_request">Sent you a connection request</div>
+                        ${req.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${req.selected_city}</div>` : ""}
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <button onclick="showCircleAddMenu(${user.id}, '${escapedUsername}')" 
+                        <button onclick="showCircleAddMenu(${req.requester_id}, '${escapedUsername}')" 
                             style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
                             onmouseover="this.style.transform='scale(1.05)'" 
                             onmouseout="this.style.transform='scale(1)'">
                             <span data-i18n="circles.add_to_circle">Add to Circle</span>
                         </button>
-                        <button onclick="blockUser(${user.id}, '${escapedUsername}')" 
+                        <button onclick="blockUser(${req.requester_id}, '${escapedUsername}')" 
                             style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
                             onmouseover="this.style.transform='scale(1.05)'; this.style.background='#dc2626';" 
                             onmouseout="this.style.transform='scale(1)'; this.style.background='#ef4444';">
@@ -871,7 +858,7 @@ async function loadCircleRecommendations() {
             window.i18n.applyLanguage(currentLang);
         }
         
-        console.log('[CircleRecs] SUCCESS: Displayed', data.recommendations.length, 'recommendations');
+        console.log('[CircleRecs] SUCCESS: Displayed', requests.length, 'pending requests');
         console.log('[CircleRecs] ========================================');
 
     } catch (error) {
@@ -880,7 +867,7 @@ async function loadCircleRecommendations() {
         console.error("[CircleRecs] Stack:", error.stack);
         const recommendationsContainer = document.getElementById("circleRecommendationsList");
         if (recommendationsContainer) {
-            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
         }
     }
 }
@@ -1317,7 +1304,9 @@ function addCircleTranslations() {
             'privacy.public': 'Public',
             'privacy.class_b': 'Close Friends',
             'privacy.class_a': 'Family',
-            'privacy.private': 'Private'
+            'privacy.private': 'Private',
+            'circles.reason_pending_request': 'Sent you a connection request',
+            'circles.no_recommendations': 'No pending requests'
         });
 
         // Update Hebrew translations
@@ -1344,7 +1333,9 @@ function addCircleTranslations() {
             'privacy.public': 'ציבורי',
             'privacy.class_b': 'חברים קרובים',
             'privacy.class_a': 'משפחה',
-            'privacy.private': 'פרטי'
+            'privacy.private': 'פרטי',
+            'circles.reason_pending_request': 'שלח לך בקשת חיבור',
+            'circles.no_recommendations': 'אין בקשות ממתינות'
         });
 
         // Update Arabic translations
@@ -1371,7 +1362,9 @@ function addCircleTranslations() {
             'privacy.public': 'عام',
             'privacy.class_b': 'الأصدقاء المقربون',
             'privacy.class_a': 'العائلة',
-            'privacy.private': 'خاص'
+            'privacy.private': 'خاص',
+            'circles.reason_pending_request': 'أرسل لك طلب اتصال',
+            'circles.no_recommendations': 'لا توجد طلبات معلقة'
         });
 
         // Update Russian translations
@@ -1399,7 +1392,9 @@ function addCircleTranslations() {
             'privacy.public': 'Публичный',
             'privacy.class_b': 'Близкие друзья',
             'privacy.class_a': 'Семья',
-            'privacy.private': 'Приватный'
+            'privacy.private': 'Приватный',
+            'circles.reason_pending_request': 'Отправил вам запрос на подключение',
+            'circles.no_recommendations': 'Нет ожидающих запросов'
         });
 
         // Update privacy dropdown translations immediately
