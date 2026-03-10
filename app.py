@@ -2,6 +2,9 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+ST4 Fixes:
+- FIX: Invite page (/invite/<username>) now shows actual username instead of generic "User" word
+- Uses markupsafe.escape for safe HTML rendering of usernames
 
 T31 Fixes:
 - FIX: Multi-circle membership bug. When a user was added to more than one circle by the same
@@ -17386,60 +17389,56 @@ def public_invite_page(username):
             browser_lang = request.accept_languages.best_match(['en', 'he', 'ar', 'ru'], default='en')
             default_language = browser_lang
 
-        # Translations for invite page
-        # Translated "User" word for each language (replaces username display)
-        user_word = {
-            'en': 'User',
-            'he': 'משתמש/ת',
-            'ar': 'المستخدم',
-            'ru': 'Пользователь'
-        }
+        # ST4: Use actual username instead of generic "User" word
+        # Escape username for safe HTML rendering
+        from markupsafe import escape as html_escape
+        safe_username = str(html_escape(username))
 
         translations = {
             'en': {
-                'title': f"Join {user_word['en']}'s Wellness Journey",
+                'title': f"Join {safe_username}'s Wellness Journey",
                 'subtitle': 'Follow their progress on TheraSocial',
                 'followers': 'Followers',
                 'following': 'Following',
-                'description': f'{user_word["en"]} is tracking their well-being journey and wants to share it with you.',
+                'description': f'{safe_username} is tracking their well-being journey and wants to share it with you.',
                 'join_text': 'Join TheraSocial to follow their progress and support their health, well-being and prosperity goals.',
-                'follow_btn': f'Follow {user_word["en"]}',
+                'follow_btn': f'Follow {safe_username}',
                 'dashboard_btn': 'Go to Dashboard',
                 'already_following': 'Already Following',
                 'request_pending': 'Request Pending'
             },
             'he': {
-                'title': f'הצטרף/י למסע הבריאות של {user_word["he"]}',
+                'title': f'הצטרף/י למסע הבריאות של {safe_username}',
                 'subtitle': 'עקוב/י אחרי ההתקדמות שלו/ה ב-TheraSocial',
                 'followers': 'עוקבים',
                 'following': 'עוקב/ת אחרי',
-                'description': f'{user_word["he"]} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
+                'description': f'{safe_username} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
                 'join_text': 'הצטרף/י ל-TheraSocial כדי לעקוב אחרי ההתקדמות שלו/ה ולתמוך ביעדי הבריאות, הרווחה והשגשוג שלו/ה.',
-                'follow_btn': f'עקוב/י אחרי {user_word["he"]}',
+                'follow_btn': f'עקוב/י אחרי {safe_username}',
                 'dashboard_btn': 'עבור ללוח הבקרה',
                 'already_following': 'כבר עוקב/ת',
                 'request_pending': 'בקשה ממתינה'
             },
             'ar': {
-                'title': f'انضم إلى رحلة {user_word["ar"]} الصحية',
+                'title': f'انضم إلى رحلة {safe_username} الصحية',
                 'subtitle': 'تابع تقدمهم على TheraSocial',
                 'followers': 'المتابعون',
                 'following': 'يتابع',
-                'description': f'{user_word["ar"]} يتتبع رحلته الصحية ويريد مشاركتها معك.',
+                'description': f'{safe_username} يتتبع رحلته الصحية ويريد مشاركتها معك.',
                 'join_text': 'انضم إلى TheraSocial لمتابعة تقدمهم ودعم أهدافهم في الصحة والرفاهية والازدهار.',
-                'follow_btn': f'تابع {user_word["ar"]}',
+                'follow_btn': f'تابع {safe_username}',
                 'dashboard_btn': 'اذهب إلى لوحة التحكم',
                 'already_following': 'متابع بالفعل',
                 'request_pending': 'طلب قيد الانتظار'
             },
             'ru': {
-                'title': f'Присоединяйтесь к пути здоровья {user_word["ru"]}',
+                'title': f'Присоединяйтесь к пути здоровья {safe_username}',
                 'subtitle': 'Следите за их прогрессом на TheraSocial',
                 'followers': 'Подписчики',
                 'following': 'Подписки',
-                'description': f'{user_word["ru"]} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
+                'description': f'{safe_username} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
                 'join_text': 'Присоединяйтесь к TheraSocial, чтобы следить за их прогрессом и поддерживать их цели в области здоровья, благополучия и процветания.',
-                'follow_btn': f'Подписаться на {user_word["ru"]}',
+                'follow_btn': f'Подписаться на {safe_username}',
                 'dashboard_btn': 'Перейти к панели',
                 'already_following': 'Уже подписаны',
                 'request_pending': 'Запрос ожидает'
