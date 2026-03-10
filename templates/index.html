@@ -10766,7 +10766,7 @@ async function loadUserCircles(userId) {
 
         if (!response.ok) {
             if (response.status === 403) {
-                showNotification(_t('msg.must_follow_circles', 'You must follow this user to view their circles'), 'error');
+                showNotification(_t('msg.must_follow_circles', 'You must be connected with this user to view their circles'), 'error');
                 // PJ601: Reset viewingUserId to prevent navigation loop bug
                 viewingUserId = null;
                 window.viewingUserId = null;
@@ -11642,7 +11642,7 @@ async function loadUserParametersForDate(userId, dateStr) {
 
         if (!response.ok) {
             if (response.status === 403) {
-                showNotification(_t('msg.must_follow_params', 'You must follow this user to view their parameters'), 'error');
+                showNotification(_t('msg.must_follow_params', 'You must be connected with this user to view their parameters'), 'error');
                 return;
             }
             throw new Error('Failed to load parameters for date');
@@ -13344,7 +13344,7 @@ async function viewUserParameters(userId, username) {
         if (response.status === 403) {
             console.log('[DEBUG] Forbidden - must follow user');
             closeLoadingModal();
-            showNotification(_t('msg.must_follow_params', 'You must follow this user to view their parameters'), 'error');
+            showNotification(_t('msg.must_follow_params', 'You must be connected with this user to view their parameters'), 'error');
             return;
         }
 
@@ -14084,7 +14084,7 @@ async function loadUserFeed(userId) {
 
         if (!response.ok) {
             if (response.status === 403) {
-                showNotification(_t('msg.must_follow_feed', 'You must follow this user to view their feed'), 'error');
+                showNotification(_t('msg.must_follow_feed', 'You must be connected with this user to view their feed'), 'error');
                 // PJ601: Reset viewingUserId to prevent navigation loop bug
                 viewingUserId = null;
                 window.viewingUserId = null;
@@ -16301,7 +16301,7 @@ const InlineOnboarding = {
         'onboarding.diary_desc': 'The Diary is where you record daily well-being: Mood, Energy, Sleep Quality, Physical Activity, and Anxiety. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
         'onboarding.diary_tip': 'Tip: Consistency is key! Even a quick 30-second check-in helps build meaningful patterns over time.',
         'onboarding.progress': 'Progress — See Your Trends',
-        'onboarding.progress_desc': 'The Progress page shows your well-being data as visual charts and graphs. Track how your mood, sleep, and energy change over weeks and months. Set your location to see local time and weather.',
+        'onboarding.progress_desc': 'The Progress page shows your well-being data as visual charts and graphs. Track how your mood, sleep, and energy change over weeks and months.',
         'onboarding.progress_tip': 'Tip: Look for patterns — for example, how exercise affects your mood the following day.',
         'onboarding.circles': 'Circles — Privacy Levels',
         'onboarding.circles_desc': 'Circles let you organize connections into trust levels: General (acquaintances), Close Friends, and Family. Each circle controls who sees your diary entries and feed posts.',
