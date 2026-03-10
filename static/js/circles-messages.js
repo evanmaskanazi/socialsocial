@@ -781,7 +781,7 @@ async function loadCircleRecommendations() {
         console.log('[CircleRecs] Container found');
 
         // Show loading state
-        recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;">Loading recommendations...</p>`;
+        recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;">Loading requests...</p>`;
 
         // T2: Fetch pending follow requests (same source as Connection Requests tab)
         console.log('[CircleRecs] Fetching /api/follow-requests/received...');
@@ -797,7 +797,7 @@ async function loadCircleRecommendations() {
             console.error("[CircleRecs] Status:", response.status);
             const errorText = await response.text();
             console.error("[CircleRecs] Response body:", errorText);
-            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
             return;
         }
 
@@ -807,7 +807,7 @@ async function loadCircleRecommendations() {
         const requests = data.requests || [];
         if (requests.length === 0) {
             console.log('[CircleRecs] No pending follow requests');
-            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
             if (window.i18n && window.i18n.applyLanguage) {
                 window.i18n.applyLanguage(window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en");
             }
@@ -867,7 +867,7 @@ async function loadCircleRecommendations() {
         console.error("[CircleRecs] Stack:", error.stack);
         const recommendationsContainer = document.getElementById("circleRecommendationsList");
         if (recommendationsContainer) {
-            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
         }
     }
 }
