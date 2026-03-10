@@ -4,6 +4,7 @@
   2. FIX: Logo image (LogoNew.jfif) added to navbar in both desktop and mobile views
   3. FIX: Clicking non-connected user profile now redirects to Connections tab (was 'following')
   4. FIX: Error message updated to "must be connected" (was "must follow")
+  5. FIX: About/Support pages no longer flash-replaced by login form (APPLOAD2 8s timer now checks aboutPage/supportPage)
 -->
 <!-- CLEAN4: Session retry for cold start + Trigger days UI fix -->
 
@@ -3900,16 +3901,21 @@
         // APPLOAD2 FIX: Only show auth if nothing else is already visible.
         // Without this check, the timeout would show login over the dashboard (if user
         // logged in within 8s), or over the forgot-password/reset-password/consent views.
+        // ST4: Also check aboutPage and supportPage to prevent login from appearing over them
         var a = document.getElementById('authContainer');
         if (a && a.style.display === 'none') {
             var d = document.getElementById('dashboard');
             var r = document.getElementById('resetPasswordContainer');
             var f = document.getElementById('forgotPasswordContainer');
             var c = document.getElementById('consentModal');
+            var ab = document.getElementById('aboutPage');
+            var sp = document.getElementById('supportPage');
             var anyVisible = (d && d.style.display !== 'none') ||
                              (r && r.style.display !== 'none') ||
                              (f && f.style.display !== 'none') ||
-                             (c && c.style.display !== 'none');
+                             (c && c.style.display !== 'none') ||
+                             (ab && !ab.classList.contains('hidden')) ||
+                             (sp && !sp.classList.contains('hidden'));
             if (!anyVisible) {
                 a.style.display = 'flex';
             }
