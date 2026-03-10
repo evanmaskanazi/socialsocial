@@ -6246,7 +6246,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T40"></script>
+    <script src="/static/js/i18n.js?v=T2"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -10631,7 +10631,7 @@ async function loadCircleRecommendations() {
         }
 
         // Show loading state
-        recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;">${_t('loading.recommendations', 'Loading recommendations...')}</p>`;
+        recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;">${_t('loading.requests', 'Loading requests...')}</p>`;
 
         // T2: Fetch pending follow requests (same source as Connection Requests tab)
         const response = await fetch("/api/follow-requests/received", {
@@ -10642,7 +10642,7 @@ async function loadCircleRecommendations() {
         
         if (!response.ok) {
             console.error("[CircleRecs] Failed to load follow requests, status:", response.status);
-            recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
             return;
         }
 
@@ -10652,7 +10652,7 @@ async function loadCircleRecommendations() {
         const requests = data.requests || [];
         if (requests.length === 0) {
             console.log('[CircleRecs] No pending follow requests');
-            recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
             // PJ4007: Use safe wrapper to protect language selector
             safeApplyLanguage(window.i18n?.getCurrentLanguage?.() || "en");
             return;
@@ -10697,7 +10697,7 @@ async function loadCircleRecommendations() {
         console.error("[CircleRecs] Error loading circle recommendations:", error);
         const recommendationsContainer = document.getElementById("circleRecommendationsList");
         if (recommendationsContainer) {
-            recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;" data-i18n="circles.no_recommendations">No recommendations available</p>`;
+            recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
         }
     }
 }
