@@ -15314,6 +15314,18 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         }, 800);
         
+        // ST10: Handle ?tutorial=start from diary page Tutorial button
+        const tutorialParam = urlParams.get('tutorial');
+        if (tutorialParam === 'start') {
+            console.log('[ST10] tutorial=start param detected, launching tutorial');
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setTimeout(() => {
+                if (typeof startTutorial === 'function') {
+                    startTutorial();
+                }
+            }, 1200);
+        }
+        
         // Verification: Check toggle states after a delay
         setTimeout(() => {
             console.log('[VERIFICATION] ========================================');
