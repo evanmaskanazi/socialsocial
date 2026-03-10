@@ -1305,7 +1305,8 @@ function addCircleTranslations() {
             'privacy.class_b': 'Close Friends',
             'privacy.class_a': 'Family',
             'privacy.private': 'Private',
-            'circles.reason_pending_request': 'Sent you a connection request'
+            'circles.reason_pending_request': 'Sent you a connection request',
+            'circles.no_recommendations': 'No pending requests'
         });
 
         // Update Hebrew translations
@@ -1333,7 +1334,8 @@ function addCircleTranslations() {
             'privacy.class_b': 'חברים קרובים',
             'privacy.class_a': 'משפחה',
             'privacy.private': 'פרטי',
-            'circles.reason_pending_request': 'שלח לך בקשת חיבור'
+            'circles.reason_pending_request': 'שלח לך בקשת חיבור',
+            'circles.no_recommendations': 'אין בקשות ממתינות'
         });
 
         // Update Arabic translations
@@ -1361,7 +1363,8 @@ function addCircleTranslations() {
             'privacy.class_b': 'الأصدقاء المقربون',
             'privacy.class_a': 'العائلة',
             'privacy.private': 'خاص',
-            'circles.reason_pending_request': 'أرسل لك طلب اتصال'
+            'circles.reason_pending_request': 'أرسل لك طلب اتصال',
+            'circles.no_recommendations': 'لا توجد طلبات معلقة'
         });
 
         // Update Russian translations
@@ -1390,7 +1393,8 @@ function addCircleTranslations() {
             'privacy.class_b': 'Близкие друзья',
             'privacy.class_a': 'Семья',
             'privacy.private': 'Приватный',
-            'circles.reason_pending_request': 'Отправил вам запрос на подключение'
+            'circles.reason_pending_request': 'Отправил вам запрос на подключение',
+            'circles.no_recommendations': 'Нет ожидающих запросов'
         });
 
         // Update privacy dropdown translations immediately
