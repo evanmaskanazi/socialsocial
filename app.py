@@ -3,6 +3,14 @@
 Complete app.py for Social Social Platform - V4 10Link
 
 
+ST10T1 Fixes:
+- FIX: Permission model now requires TARGET user to have added CURRENT user to their connections
+  before current user can view target's profile, parameters, circles, or posts.
+  Previously, User A could see User B's data simply by following B (A's unilateral action).
+  Now, User B must follow A (B's consent) for A to access B's data.
+  Changed follow direction in: get_user_profile, get_user_posts, get_user_circles, get_user_parameters
+  (follower_id=user_id, followed_id=current_user_id instead of the reverse)
+- Trigger eligibility unaffected: triggers already require circle membership (get_watcher_circle_level)
 
 ST4 Fixes:
 - FIX: Invite page (/invite/<username>) now shows actual username instead of generic "User" word
@@ -7928,10 +7936,11 @@ def get_user_profile(user_id):
         if is_blocked_by_target:
             return jsonify({'error': 'account_not_available', 'blocked': True}), 403
 
-        # Check if following this user
+        # ST10T1: Check if target user has added current user to their connections
+        # (target follows current user = target has consented to share data with current user)
         is_following = Follow.query.filter_by(
-            follower_id=current_user_id,
-            followed_id=user_id
+            follower_id=user_id,
+            followed_id=current_user_id
         ).first() is not None
 
         # PJ401: Also check if current user is in target user's circles
@@ -7944,7 +7953,7 @@ def get_user_profile(user_id):
         allow_preview = request.args.get('allow_preview', 'false').lower() == 'true'
 
         if not is_following and not is_in_circle and user_id != current_user_id and not allow_preview:
-            return jsonify({'error': 'Must be following user or in their circles to view profile'}), 403
+            return jsonify({'error': 'Must be connected with this user to view profile'}), 403
 
         user = User.query.get(user_id)
         if not user:
@@ -7980,10 +7989,10 @@ def get_user_posts(user_id):
     try:
         current_user_id = session.get('user_id')
 
-        # Check if following this user
+        # ST10T1: Check if target user has added current user to their connections
         is_following = Follow.query.filter_by(
-            follower_id=current_user_id,
-            followed_id=user_id
+            follower_id=user_id,
+            followed_id=current_user_id
         ).first() is not None
 
         # PJ401: Also check if current user is in target user's circles
@@ -7995,7 +8004,7 @@ def get_user_posts(user_id):
         is_in_circle = membership is not None
 
         if not is_following and not is_in_circle and user_id != current_user_id:
-            return jsonify({'error': 'Must be following user or in their circles to view posts'}), 403
+            return jsonify({'error': 'Must be connected with this user to view posts'}), 403
 
         # If viewing own posts, return all
         if user_id == current_user_id:
@@ -8095,10 +8104,10 @@ def get_user_circles(user_id):
     try:
         current_user_id = session.get('user_id')
 
-        # Check if following this user
+        # ST10T1: Check if target user has added current user to their connections
         is_following = Follow.query.filter_by(
-            follower_id=current_user_id,
-            followed_id=user_id
+            follower_id=user_id,
+            followed_id=current_user_id
         ).first() is not None
 
         # PJ401: Also check if current user is in target user's circles
@@ -8108,7 +8117,7 @@ def get_user_circles(user_id):
         ).first() is not None
 
         if not is_following and not is_in_circle and user_id != current_user_id:
-            return jsonify({'error': 'Must be following user or in their circles to view circles'}), 403
+            return jsonify({'error': 'Must be connected with this user to view circles'}), 403
 
         # Initialize viewer_circle_type
         viewer_circle_type = None
@@ -8235,10 +8244,10 @@ def get_user_parameters(user_id):
     try:
         current_user_id = session.get('user_id')
 
-        # Check if following this user
+        # ST10T1: Check if target user has added current user to their connections
         is_following = Follow.query.filter_by(
-            follower_id=current_user_id,
-            followed_id=user_id
+            follower_id=user_id,
+            followed_id=current_user_id
         ).first() is not None
 
         # PJ401: Also check if current user is in target user's circles
@@ -8248,7 +8257,7 @@ def get_user_parameters(user_id):
         ).first() is not None
 
         if not is_following and not is_in_circle and user_id != current_user_id:
-            return jsonify({'error': 'Must be following user or in their circles to view parameters'}), 403
+            return jsonify({'error': 'Must be connected with this user to view parameters'}), 403
 
         # Get date range from query params (REQUIRED)
         start_date = request.args.get('start_date')
@@ -10201,14 +10210,14 @@ def get_user_feed_by_date(user_id, date):
 
             return jsonify({'posts': posts_data})
 
-        # Check if following this user
+        # ST10T1: Check if target user has added current user to their connections
         is_following = Follow.query.filter_by(
-            follower_id=current_user_id,
-            followed_id=user_id
+            follower_id=user_id,
+            followed_id=current_user_id
         ).first() is not None
 
         if not is_following:
-            return jsonify({'error': 'Must be following user to view posts'}), 403
+            return jsonify({'error': 'Must be connected with this user to view posts'}), 403
 
         # T31: Check circle membership
         # Use lowest-access circle when user is in multiple circles
@@ -12559,10 +12568,10 @@ def get_user_progress(user_id):
     try:
         current_user_id = session.get('user_id')
         
-        # Check if following or in circle
+        # ST10T1: Check if target user has added current user to their connections
         is_following = Follow.query.filter_by(
-            follower_id=current_user_id,
-            followed_id=user_id
+            follower_id=user_id,
+            followed_id=current_user_id
         ).first() is not None
         
         is_in_circle = Circle.query.filter_by(
@@ -12571,7 +12580,7 @@ def get_user_progress(user_id):
         ).first() is not None
         
         if not is_following and not is_in_circle and user_id != current_user_id:
-            return jsonify({'error': 'Must be following user or in their circles'}), 403
+            return jsonify({'error': 'Must be connected with this user'}), 403
         
         days = request.args.get('days', 30, type=int)
         if days > 365:
