@@ -5258,6 +5258,8 @@ def after_request(response):
         logger.info(f"Request completed: {response.status_code}")
 
     # T15c: Security headers removed — add_security_headers() is the single authority
+    if request.path == '/' or request.path.endswith('.html'):
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
     return response
 
 
