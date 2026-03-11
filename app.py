@@ -2,6 +2,14 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+T7 Fix:
+- FEATURE: Added /api/auth/check-username endpoint for live username availability
+  checking during signup. Returns {available: true/false} without revealing user info.
+  Rate-limited (20/5min). Purely additive — no existing code modified.
+- FIX: All 7 username-uniqueness checks now use case-insensitive comparison via
+  func.lower(). Previously "kevin" and "Kevin" could coexist. Affected: register,
+  check-username, profile PUT, magic link, set-username, save-consent, OAuth callback.
+  Each is a single-line filter swap; no surrounding logic changed.
 
 ST10T1 Fixes:
 - FIX: Permission model now requires TARGET user to have added CURRENT user to their connections
@@ -5604,7 +5612,7 @@ def register():
             return jsonify({'error': 'Email already registered'}), 400
 
         existing_username = db.session.execute(
-            select(User).filter_by(username=username)
+            select(User).filter(func.lower(User.username) == username.lower())
         ).scalar_one_or_none()
 
         if existing_username:
@@ -5661,6 +5669,34 @@ def register():
         logger.error(f"Registration error: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Registration failed'}), 500
+
+
+@app.route('/api/auth/check-username', methods=['POST'])
+@rate_limit(max_attempts=20, window_minutes=5)
+def check_username_availability():
+    """T7: Check if a username is available (for live signup validation)"""
+    try:
+        data = request.json
+        username = sanitize_input(data.get('username', '').strip())
+
+        if not username:
+            return jsonify({'available': False, 'reason': 'empty'}), 200
+
+        if len(username) > 80:
+            return jsonify({'available': False, 'reason': 'too_long'}), 200
+
+        if not validate_username(username):
+            return jsonify({'available': False, 'reason': 'invalid_format'}), 200
+
+        existing = db.session.execute(
+            select(User).filter(func.lower(User.username) == username.lower())
+        ).scalar_one_or_none()
+
+        return jsonify({'available': existing is None}), 200
+
+    except Exception as e:
+        logger.error(f"Check username error: {e}")
+        return jsonify({'available': False, 'reason': 'error'}), 200
 
 
 @app.route('/api/auth/login', methods=['POST'])
@@ -5839,7 +5875,7 @@ def get_current_user():
             if new_username and new_username != user.username:
                 # Check if username is already taken
                 existing = db.session.execute(
-                    select(User).filter(User.username == new_username, User.id != user.id)
+                    select(User).filter(func.lower(User.username) == new_username.lower(), User.id != user.id)
                 ).scalar_one_or_none()
                 if existing:
                     return jsonify({'error': 'Username already taken'}), 400
@@ -6042,7 +6078,7 @@ def request_magic_link():
 
             # Check if this username is taken
             existing = db.session.execute(
-                select(User).filter_by(username=email_username)
+                select(User).filter(func.lower(User.username) == email_username.lower())
             ).scalar_one_or_none()
 
             # If taken, add random suffix
@@ -6170,7 +6206,7 @@ def set_username():
         # Check if username taken (excluding current user)
         existing = db.session.execute(
             select(User).filter(
-                User.username == new_username,
+                func.lower(User.username) == new_username.lower(),
                 User.id != user.id
             )
         ).scalar_one_or_none()
@@ -6210,7 +6246,7 @@ def save_consent():
             # Check if username is available
             existing = db.session.execute(
                 select(User).filter(
-                    User.username == username,
+                    func.lower(User.username) == username.lower(),
                     User.id != user.id
                 )
             ).scalar_one_or_none()
@@ -7654,7 +7690,7 @@ def oauth_callback(provider):
 
             # Check if username taken
             existing = db.session.execute(
-                select(User).filter_by(username=base_username)
+                select(User).filter(func.lower(User.username) == base_username.lower())
             ).scalar_one_or_none()
             if existing:
                 username = f"{base_username}_{sec.token_hex(4)}"
