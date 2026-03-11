@@ -7762,6 +7762,27 @@ async function submitConsent() {
         return;
     }
 
+    // T7: Block submission if username is taken (same weight as unchecked agreements)
+    if (username) {
+        try {
+            const checkResp = await fetch('/api/auth/check-username', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: username })
+            });
+            const checkData = await checkResp.json();
+            if (!checkData.available) {
+                const lang = localStorage.getItem('selectedLanguage') || 'en';
+                const msgs = { en: 'Username is already taken. Please choose another.', he: 'שם המשתמש תפוס. אנא בחר/י שם אחר.', ar: 'اسم المستخدم مأخوذ. يرجى اختيار اسم آخر.', ru: 'Имя пользователя занято. Выберите другое.' };
+                document.getElementById('consentError').textContent = msgs[lang] || msgs.en;
+                document.getElementById('consentError').style.display = 'block';
+                return;
+            }
+        } catch (e) {
+            // Network error — let backend handle it
+        }
+    }
+
     try {
         const response = await fetch('/api/auth/save-consent', {
             method: 'POST',
