@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- T7: Added live username availability check during signup.
+     Debounced input on signupUsernameInput calls /api/auth/check-username
+     and shows green/red hint. Purely additive — no existing code modified. -->
 <!-- ST4 CHANGES:
   1. FIX: About/Support links now visible on mobile when logged out (removed auth-only-hide !important override)
   2. FIX: Logo image (LogoNew.jfif) added to navbar in both desktop and mobile views
@@ -4076,6 +4079,7 @@
                                data-i18n-placeholder="username.blank_for_email"
                                placeholder="Leave blank to use email prefix">
                         <small style="color: #666;" id="signupEmailPrefixHint"></small>
+                        <small id="usernameAvailabilityHint" style="display: none; margin-top: 4px; font-size: 12px;"></small>
                     </div>
 
                     <button type="submit" class="btn btn-primary" data-i18n="btn.signup">Sign Up</button>
@@ -7304,6 +7308,54 @@ async function loadUserCity() {
           hintEl.textContent = '';
       }
   });
+
+  // T7: Debounced username availability check during signup
+  (function() {
+      let checkTimer = null;
+      const usernameInput = document.getElementById('signupUsernameInput');
+      const hintEl = document.getElementById('usernameAvailabilityHint');
+      if (!usernameInput || !hintEl) return;
+
+      usernameInput.addEventListener('input', function() {
+          clearTimeout(checkTimer);
+          const val = this.value.trim();
+          if (!val) { hintEl.style.display = 'none'; return; }
+          if (val.length < 2) { hintEl.style.display = 'none'; return; }
+
+          hintEl.style.display = 'block';
+          hintEl.style.color = '#666';
+          hintEl.textContent = '...';
+
+          checkTimer = setTimeout(async () => {
+              try {
+                  const resp = await fetch('/api/auth/check-username', {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify({ username: val })
+                  });
+                  const data = await resp.json();
+                  if (usernameInput.value.trim() !== val) return; // stale
+                  const lang = localStorage.getItem('selectedLanguage') || 'en';
+                  if (data.available) {
+                      hintEl.style.color = '#22c55e';
+                      const msgs = { en: 'Username available', he: 'שם משתמש פנוי', ar: 'اسم المستخدم متاح', ru: 'Имя пользователя свободно' };
+                      hintEl.textContent = msgs[lang] || msgs.en;
+                  } else {
+                      hintEl.style.color = '#ef4444';
+                      if (data.reason === 'invalid_format') {
+                          const msgs = { en: 'Letters, numbers, underscores only', he: 'אותיות, מספרים וקו תחתון בלבד', ar: 'أحرف وأرقام وشرطة سفلية فقط', ru: 'Только буквы, цифры и подчёркивание' };
+                          hintEl.textContent = msgs[lang] || msgs.en;
+                      } else {
+                          const msgs = { en: 'Username taken', he: 'שם משתמש תפוס', ar: 'اسم المستخدم مأخوذ', ru: 'Имя пользователя занято' };
+                          hintEl.textContent = msgs[lang] || msgs.en;
+                      }
+                  }
+              } catch (e) {
+                  hintEl.style.display = 'none';
+              }
+          }, 500);
+      });
+  })();
 
 
 // Forgot Password form
