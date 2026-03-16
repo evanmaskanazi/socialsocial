@@ -6251,7 +6251,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T2"></script>
+    <script src="/static/js/i18n.js?v=T8"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -6380,7 +6380,8 @@
                 'alerts.welcome_message': 'Track your daily well-being, connect with friends, and grow together.',
                 'params.sleep_quality': 'Sleep',
                 'params.physical_activity': 'Exercise',
-                'params.anxiety': 'Anxiety'
+                'params.anxiety': 'Anxiety',
+                'params.calm': 'Calm'
             },
             he: {
                 'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
@@ -6396,7 +6397,8 @@
                 'alerts.welcome_message': 'עקבו אחר הבריאות היומית שלכם, התחברו עם חברים וצמחו יחד.',
                 'params.sleep_quality': 'שינה',
                 'params.physical_activity': 'פעילות גופנית',
-                'params.anxiety': 'חרדה'
+                'params.anxiety': 'חרדה',
+                'params.calm': 'רוגע'
             },
             ar: {
                 'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
@@ -6412,7 +6414,8 @@
                 'alerts.welcome_message': 'تتبع صحتك اليومية، تواصل مع الأصدقاء، وانمو معاً.',
                 'params.sleep_quality': 'النوم',
                 'params.physical_activity': 'التمارين',
-                'params.anxiety': 'القلق'
+                'params.anxiety': 'القلق',
+                'params.calm': 'الهدوء'
             },
             ru: {
                 'alerts.wellness_alert_for': 'Оповещение о здоровье {username}',
@@ -6428,7 +6431,8 @@
                 'alerts.welcome_message': 'Отслеживайте своё здоровье, общайтесь с друзьями и развивайтесь вместе.',
                 'params.sleep_quality': 'Сон',
                 'params.physical_activity': 'Физическая активность',
-                'params.anxiety': 'Тревожность'
+                'params.anxiety': 'Тревожность',
+                'params.calm': 'Спокойствие'
             }
         };
         function extendI18nAlerts() {
@@ -6456,7 +6460,8 @@
                 'energy': 'params.energy',
                 'sleep_quality': 'params.sleep',
                 'physical_activity': 'params.exercise',
-                'anxiety': 'params.anxiety'
+                // T8: Map to calm label when in calm mode
+                'anxiety': window.ANXIETY_DISPLAY_MODE === 'calm' ? 'params.calm' : 'params.anxiety'
             };
             
             const m = content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
@@ -6512,7 +6517,7 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=T40"></script>
+<script src="/static/js/parameters-social.js?v=T8"></script>
    <script src="/static/js/circles-messages.js?v=T2"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
@@ -11780,7 +11785,10 @@ async function loadUserParametersForDate(userId, dateStr) {
             displayParameterReadOnly('moodInput', params.mood, 'Mood');
             displayParameterReadOnly('sleepInput', params.sleep_quality, 'Sleep');
             displayParameterReadOnly('exerciseInput', params.physical_activity, 'Exercise');
-            displayParameterReadOnly('anxietyInput', params.anxiety, 'Anxiety');
+            // T8: In calm mode, invert anxiety and change label
+            const anxLabel = window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calm' : 'Anxiety';
+            const anxVal = (params.anxiety != null && window.ANXIETY_DISPLAY_MODE === 'calm') ? (5 - parseInt(params.anxiety)) : params.anxiety;
+            displayParameterReadOnly('anxietyInput', anxVal, anxLabel);
             displayParameterReadOnly('energyInput', params.energy, 'Energy');
 
             // Display notes if present
@@ -11834,7 +11842,7 @@ function clearParameterDisplays() {
     displayParameterReadOnly('moodInput', null, 'Mood');
     displayParameterReadOnly('sleepInput', null, 'Sleep');
     displayParameterReadOnly('exerciseInput', null, 'Exercise');
-    displayParameterReadOnly('anxietyInput', null, 'Anxiety');
+    displayParameterReadOnly('anxietyInput', null, window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calm' : 'Anxiety');
 
     const notesElement = document.getElementById('parameterNotes');
     if (notesElement) {
@@ -12801,7 +12809,7 @@ function showAddTriggerModal() {
                     <option value="mood">Mood</option>
                     <option value="sleep_quality">Sleep Quality</option>
                     <option value="physical_activity">Physical Activity</option>
-                    <option value="anxiety">Anxiety</option>
+                    <option value="anxiety">${window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calm' : 'Anxiety'}</option>
                     <option value="energy">Energy</option>
                     <option value="no_checkin">${_t('trigger_parameter_no_checkin', 'No Check-In')}</option>
                 </select>
@@ -12959,7 +12967,7 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
                     <option value="mood">${window.i18n ? window.i18n.translate('trigger_parameter_mood') : 'Mood'}</option>
                     <option value="sleep_quality">${window.i18n ? window.i18n.translate('trigger_parameter_sleep_quality') : 'Sleep Quality'}</option>
                     <option value="physical_activity">${window.i18n ? window.i18n.translate('trigger_parameter_physical_activity') : 'Physical Activity'}</option>
-                    <option value="anxiety">${window.i18n ? window.i18n.translate('trigger_parameter_anxiety') : 'Anxiety'}</option>
+                    <option value="anxiety">${window.ANXIETY_DISPLAY_MODE === 'calm' ? (window.i18n ? window.i18n.translate('parameters.calm') : 'Calm') : (window.i18n ? window.i18n.translate('trigger_parameter_anxiety') : 'Anxiety')}</option>
                     <option value="energy">${window.i18n ? window.i18n.translate('trigger_parameter_energy') : 'Energy'}</option>
                     <option value="no_checkin">${window.i18n ? window.i18n.translate('trigger_parameter_no_checkin') : 'No Check-In'}</option>
                 </select>
@@ -13563,7 +13571,10 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                 energy: `⚡ ${window.i18n ? window.i18n.translate('parameters.energy') : 'Energy'}`,
                 sleep_quality: `😴 ${window.i18n ? window.i18n.translate('parameters.sleep_quality') : 'Sleep Quality'}`,
                 physical_activity: `🏃 ${window.i18n ? window.i18n.translate('parameters.physical_activity') : 'Physical Activity'}`,
-                anxiety: `😰 ${window.i18n ? window.i18n.translate('parameters.anxiety') : 'Anxiety'}`
+                // T8: Calm mode label
+                anxiety: window.ANXIETY_DISPLAY_MODE === 'calm'
+                    ? `😌 ${window.i18n ? window.i18n.translate('parameters.calm') : 'Calm'}`
+                    : `😰 ${window.i18n ? window.i18n.translate('parameters.anxiety') : 'Anxiety'}`
             };
 
             for (const [key, label] of Object.entries(paramLabels)) {
@@ -15950,13 +15961,18 @@ function renderProgressChart(data) {
     
     // FIX #2: Get translated labels based on current language
     const lang = localStorage.getItem('selectedLanguage') || 'en';
+    // T8: Calm mode label variants
+    const isCalm = window.ANXIETY_DISPLAY_MODE === 'calm';
     const chartLabels = {
-        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: 'Anxiety' },
-        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: 'חרדה' },
-        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: 'القلق' },
-        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: 'Тревога' }
+        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm ? 'Calm' : 'Anxiety' },
+        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm ? 'רוגע' : 'חרדה' },
+        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm ? 'الهدوء' : 'القلق' },
+        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm ? 'Спокойствие' : 'Тревога' }
     };
     const labels_t = chartLabels[lang] || chartLabels['en'];
+    
+    // T8: In calm mode, invert anxiety chart data (display = 5 - stored)
+    const anxietyChartData = (data.anxiety || []).map(v => (v != null && isCalm) ? (5 - v) : v);
     
     // Prepare data - FIX #2: Include Anxiety as 5th parameter
     const labels = data.dates || [];
@@ -15996,7 +16012,7 @@ function renderProgressChart(data) {
         // FIX #2: Added Anxiety as 5th parameter
         {
             label: labels_t.anxiety,
-            data: data.anxiety || [],
+            data: anxietyChartData,
             borderColor: '#FC8181',
             backgroundColor: 'rgba(252, 129, 129, 0.1)',
             tension: 0.3,
@@ -16146,11 +16162,13 @@ async function showUserCheckinHistory(userId, username) {
     modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
     
     const lang = localStorage.getItem('selectedLanguage') || 'en';
+    // T8: Calm mode label variants for user history chart
+    const isCalm2 = window.ANXIETY_DISPLAY_MODE === 'calm';
     const chartLabels = {
-        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: 'Anxiety', title: "'s Check-in History", close: 'Close', loading: 'Loading...', noData: 'No check-in data available for this user.', last30: 'Last 30 days', date: 'Date' },
-        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: 'חרדה', title: " - היסטוריית צ'ק-אין", close: 'סגור', loading: 'טוען...', noData: 'אין נתוני צ\'ק-אין עבור משתמש זה.', last30: '30 הימים האחרונים', date: 'תאריך' },
-        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: 'القلق', title: ' - سجل التسجيل', close: 'إغلاق', loading: 'جاري التحميل...', noData: 'لا توجد بيانات تسجيل لهذا المستخدم.', last30: 'آخر 30 يوم', date: 'التاريخ' },
-        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: 'Тревога', title: ' - история отметок', close: 'Закрыть', loading: 'Загрузка...', noData: 'Нет данных для этого пользователя.', last30: 'Последние 30 дней', date: 'Дата' }
+        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm2 ? 'Calm' : 'Anxiety', title: "'s Check-in History", close: 'Close', loading: 'Loading...', noData: 'No check-in data available for this user.', last30: 'Last 30 days', date: 'Date' },
+        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm2 ? 'רוגע' : 'חרדה', title: " - היסטוריית צ'ק-אין", close: 'סגור', loading: 'טוען...', noData: 'אין נתוני צ\'ק-אין עבור משתמש זה.', last30: '30 הימים האחרונים', date: 'תאריך' },
+        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm2 ? 'الهدوء' : 'القلق', title: ' - سجل التسجيل', close: 'إغلاق', loading: 'جاري التحميل...', noData: 'لا توجد بيانات تسجيل لهذا المستخدم.', last30: 'آخر 30 يوم', date: 'التاريخ' },
+        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm2 ? 'Спокойствие' : 'Тревога', title: ' - история отметок', close: 'Закрыть', loading: 'Загрузка...', noData: 'Нет данных для этого пользователя.', last30: 'Последние 30 дней', date: 'Дата' }
     };
     const t = chartLabels[lang] || chartLabels['en'];
     
@@ -16195,7 +16213,7 @@ async function showUserCheckinHistory(userId, username) {
                         { label: t.energy, data: data.energy || [], borderColor: '#48BB78', tension: 0.3, fill: false, pointRadius: 3 },
                         { label: t.sleep, data: data.sleep || [], borderColor: '#9F7AEA', tension: 0.3, fill: false, pointRadius: 3 },
                         { label: t.activity, data: data.activity || [], borderColor: '#F6AD55', tension: 0.3, fill: false, pointRadius: 3 },
-                        { label: t.anxiety, data: data.anxiety || [], borderColor: '#FC8181', tension: 0.3, fill: false, pointRadius: 3 }
+                        { label: t.anxiety, data: (data.anxiety || []).map(v => (v != null && isCalm2) ? (5 - v) : v), borderColor: '#FC8181', tension: 0.3, fill: false, pointRadius: 3 }
                     ].filter(ds => ds.data.some(v => v !== null && v !== undefined))
                 },
                 options: {
@@ -17524,8 +17542,12 @@ async function loadHomeSummary() {
         for (const [elemId, paramKey] of Object.entries(paramMap)) {
             const elem = document.getElementById(elemId);
             if (elem) {
-                const val = params[paramKey];
-                const emojiMap = paramKey === 'anxiety' ? anxietyEmojis : emojis;
+                let val = params[paramKey];
+                // T8: In calm mode, invert anxiety for display and use standard emojis
+                if (paramKey === 'anxiety' && val && window.ANXIETY_DISPLAY_MODE === 'calm') {
+                    val = 5 - parseInt(val);
+                }
+                const emojiMap = (paramKey === 'anxiety' && window.ANXIETY_DISPLAY_MODE !== 'calm') ? anxietyEmojis : emojis;
                 elem.textContent = val ? (emojiMap[val] || val + '/4') : '—';
                 elem.style.color = val ? 'var(--primary)' : 'var(--gray)';
             }
