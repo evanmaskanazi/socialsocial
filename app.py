@@ -705,7 +705,7 @@ MINIMUM_TRIGGER_DAYS = 1  # CLEAN: Set to 1 for immediate single-day triggers
 # Options:
 #   "anxiety" — Display as "Anxiety" with reversed scale (1=best, 4=worst).
 #               Emojis: 1=😊, 4=😔. Triggers fire on HIGH values (>=3).
-#   "calm"    — Display as "Calm" with standard scale (1=worst, 4=best).
+#   "calm"    — Display as "Calmness" with standard scale (1=worst, 4=best).
 #               Values shown to user are inverted (display = 5 - stored).
 #               Emojis: 1=😔, 4=😊 (matches other 4 parameters).
 #               Triggers fire on LOW displayed values (<=2), same stored data.
@@ -713,7 +713,7 @@ MINIMUM_TRIGGER_DAYS = 1  # CLEAN: Set to 1 for immediate single-day triggers
 # Changing this value and redeploying instantly switches ALL users' display.
 # No data migration needed — stored values are never modified.
 # =============================================================================
-ANXIETY_DISPLAY_MODE = "calm"  # Options: "anxiety" or "calm"
+ANXIETY_DISPLAY_MODE = "anxiety"  # Options: "anxiety" or "calm"
 # =============================================================================
 
 from flask import (
@@ -1671,8 +1671,8 @@ def get_notification_translations(language='en'):
         'en': {
             # Follow notifications
             'follow.alert_title': '{username} connected with you',
-            'follow.alert_content': 'You have a new connection!',
-            'follow.new_follower': 'You have a new connection!',
+            'follow.alert_content': 'You have been added to a new connection',
+            'follow.new_follower': 'You have been added to a new connection',
             # Message notifications
             'message.alert_title': 'New message from {username}',
             'message.alert_content': 'You have received a new message',
@@ -1683,8 +1683,8 @@ def get_notification_translations(language='en'):
         'he': {
             # Follow notifications
             'follow.alert_title': '{username} התחבר/ה אליך',
-            'follow.alert_content': 'יש לך חיבור חדש!',
-            'follow.new_follower': 'יש לך חיבור חדש!',
+            'follow.alert_content': 'נוספת לחיבור חדש',
+            'follow.new_follower': 'נוספת לחיבור חדש',
             # Message notifications
             'message.alert_title': 'הודעה חדשה מ-{username}',
             'message.alert_content': 'קיבלת הודעה חדשה',
@@ -1695,8 +1695,8 @@ def get_notification_translations(language='en'):
         'ar': {
             # Follow notifications
             'follow.alert_title': '{username} اتصل بك',
-            'follow.alert_content': 'لديك اتصال جديد!',
-            'follow.new_follower': 'لديك اتصال جديد!',
+            'follow.alert_content': 'تمت إضافتك إلى اتصال جديد',
+            'follow.new_follower': 'تمت إضافتك إلى اتصال جديد',
             # Message notifications
             'message.alert_title': 'رسالة جديدة من {username}',
             'message.alert_content': 'لقد تلقيت رسالة جديدة',
@@ -1707,8 +1707,8 @@ def get_notification_translations(language='en'):
         'ru': {
             # Follow notifications
             'follow.alert_title': '{username} подключился к вам',
-            'follow.alert_content': 'У вас новое подключение!',
-            'follow.new_follower': 'У вас новое подключение!',
+            'follow.alert_content': 'Вас добавили в новое подключение',
+            'follow.new_follower': 'Вас добавили в новое подключение',
             # Message notifications
             'message.alert_title': 'Новое сообщение от {username}',
             'message.alert_content': 'Вы получили новое сообщение',
@@ -2162,7 +2162,7 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
                                 if 'new_message' in key:
                                     email_title = f"New message from {username}"
                                 elif 'started_following' in key:
-                                    email_title = f"{username} connected with you"
+                                    email_title = f"{username} has added you to their connection list"
                                 elif 'invitation' in key.lower():
                                     email_title = "New invitation"
                                 else:
@@ -2602,7 +2602,7 @@ def create_notification_with_email(user_id, title, content, alert_type='info', s
                             if 'new_message' in key:
                                 email_title = f"New message from {username}"
                             elif 'started_following' in key:
-                                email_title = f"{username} connected with you"
+                                email_title = f"{username} has added you to their connection list"
                             elif 'invitation' in key.lower():
                                 email_title = "New invitation"
                             else:
@@ -8866,7 +8866,7 @@ def notification_settings():
                                         if 'new_message' in title_data.get('key', ''):
                                             alert_title = f"New message from {alert_title}"
                                         elif 'started_following' in title_data.get('key', ''):
-                                            alert_title = f"{alert_title} started following you"
+                                            alert_title = f"{alert_title} has added you to their connection list"
                                         elif 'invitation' in title_data.get('key', '').lower():
                                             alert_title = "New invitation"
                                 except:
@@ -9417,20 +9417,24 @@ def circles():
                 pending_request.status = 'accepted'
                 pending_request.privacy_level = circle_type
                 pending_request.responded_at = datetime.utcnow()
-                # Create follow relationships if not existing
-                existing_follow = Follow.query.filter_by(
-                    follower_id=circle_user_id,
-                    followed_id=user_id
-                ).first()
-                if not existing_follow:
-                    db.session.add(Follow(follower_id=circle_user_id, followed_id=user_id))
-                existing_reverse = Follow.query.filter_by(
-                    follower_id=user_id,
-                    followed_id=circle_user_id
-                ).first()
-                if not existing_reverse:
-                    db.session.add(Follow(follower_id=user_id, followed_id=circle_user_id))
                 logger.info(f"[T2] Auto-accepted follow request from user {circle_user_id} when adding to circle {circle_type}")
+
+            # T9: Always ensure bidirectional Follow relationships exist when adding to circle.
+            # Without this, users added via search (circleconnectw flow) don't appear in connections.
+            existing_follow = Follow.query.filter_by(
+                follower_id=circle_user_id,
+                followed_id=user_id
+            ).first()
+            if not existing_follow:
+                db.session.add(Follow(follower_id=circle_user_id, followed_id=user_id))
+                logger.info(f"[T9] Created follow {circle_user_id} -> {user_id} when adding to circle")
+            existing_reverse = Follow.query.filter_by(
+                follower_id=user_id,
+                followed_id=circle_user_id
+            ).first()
+            if not existing_reverse:
+                db.session.add(Follow(follower_id=user_id, followed_id=circle_user_id))
+                logger.info(f"[T9] Created reverse follow {user_id} -> {circle_user_id} when adding to circle")
 
             db.session.commit()
 
@@ -15354,7 +15358,8 @@ def follow_user(user_id):
         db.session.commit()
 
         # Create alert for followed user
-        alert_content = 'You have a new follower!'
+        # T9: Updated wording from "following" to "connection" language
+        alert_content = 'You have been added to a new connection'
         if follow_note:
             alert_content += f' They said: "{follow_note}"'
         if follow_trigger:
@@ -15363,7 +15368,7 @@ def follow_user(user_id):
         # PJ6001: Use create_notification_with_email for follow notifications (not wellness alerts)
         alert = create_notification_with_email(
             user_id=user_id,
-            title=f'{current_user.username} started following you',
+            title=f'{current_user.username} has added you to their connection list',
             content=alert_content,
             alert_type='info',
             source_user_id=current_user_id,
@@ -18147,6 +18152,19 @@ def respond_to_follow_request(request_id):
                 logger.info(f"[T40] Created reciprocal follow: {follow_request.target_id} -> {follow_request.requester_id}")
             else:
                 logger.info(f"[T40] Reciprocal follow already exists: {follow_request.target_id} -> {follow_request.requester_id}")
+
+            # T9: Send email notification to the requester that their request was accepted
+            target_user = db.session.get(User, follow_request.target_id)
+            if target_user:
+                create_notification_with_email(
+                    user_id=follow_request.requester_id,
+                    title=f'{target_user.username} accepted your connection request',
+                    content=f'{target_user.username} has accepted your connection request. You are now connected!',
+                    alert_type='info',
+                    source_user_id=follow_request.target_id,
+                    alert_category='follow'
+                )
+                logger.info(f"[T9] Sent accept notification to requester {follow_request.requester_id} from {target_user.username}")
 
         elif action == 'reject':
             follow_request.status = 'rejected'
