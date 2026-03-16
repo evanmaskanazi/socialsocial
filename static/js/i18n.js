@@ -96,6 +96,7 @@ const translations = {
         'triggers.sleep': 'Sleep Quality Alert',
         'triggers.physical': 'Physical Activity Alert',
         'triggers.anxiety': 'Anxiety Alert',
+        'triggers.calm': 'Calm Alert',
         'triggers.set': 'Set Alert Triggers',
         'triggers.watching': 'Watching Diary For',
         'about.team_title': 'Our Team & Story',
@@ -241,6 +242,7 @@ const translations = {
 'mood': 'Mood',
 'physical_activity': 'Physical Activity',
 'anxiety': 'Anxiety',
+'calm': 'Calm',
 'energy': 'Energy',
 'less_than': 'Less Than',
 'greater_than': 'Greater Than',
@@ -523,6 +525,7 @@ const translations = {
     'params.sleep': 'Sleep',
     'params.exercise': 'Exercise',
     'params.stress': 'Anxiety',
+    'params.stress_calm': 'Calm',
 
     // About page
     'about.title': 'About TheraSocial',
@@ -580,6 +583,7 @@ const translations = {
         'tooltip.sleep_quality': 'This tracks how well you slept, not just how long. Quality matters as much as quantity, and one rough night doesn\'t define a pattern.\n1 = Poor - Barely slept or very disrupted, woke unrefreshed\n2 = Restless - Some sleep but frequently woke, still tired\n3 = Fair - Slept reasonably well with minor interruptions\n4 = Good - Slept soundly, woke feeling refreshed\n\nRemember: Sleep is affected by anxiety, environment, health, and many other factors. You\'re tracking patterns to understand what helps or hinders your rest, not to achieve perfect sleep every night.',
         'tooltip.physical_activity': 'This scale captures your overall physical activity - considering both how long and how intensely you moved today.\n1 = Minimal - Rest day, very light movement, or brief activity (under 15 min)\n2 = Light - Short activity (15-30 min) at easy pace, OR longer gentle movement (Examples: short walk, stretching, light household tasks)\n3 = Moderate - 30-60 min of moderate activity OR shorter vigorous activity (Examples: brisk walk, active errands, standard workout)\n4 = Substantial - Extended activity (60+ min), high-intensity workout, OR multiple activity sessions\n\nRemember: This tracks your movement patterns, not your worth. Rest is essential. The goal is awareness and gradual progress, not perfection.',
         'tooltip.anxiety': 'Anxiety is a normal human emotion that everyone experiences. This scale tracks how much anxiety interferes with your daily life, not whether you feel anxious at all.\n1 = Manageable - Feeling calm or any anxiety present doesn\'t interfere with activities\n2 = Noticeable - Some anxiety, but still able to do what you need to do\n3 = Challenging - Anxiety is making some activities difficult\n4 = Overwhelming - Anxiety is significantly interfering with daily functioning\n\nRemember: The goal isn\'t to eliminate all anxiety, but to keep it at levels where you can still engage with your life.',
+        'tooltip.calm': 'This scale tracks your overall sense of calm and emotional ease.\n1 = Overwhelmed - Significant distress interfering with daily functioning\n2 = Uneasy - Noticeable tension making some activities difficult\n3 = Settled - Generally at ease, minor tension doesn\'t interfere\n4 = Serene - Feeling calm and emotionally balanced\n\nRemember: The goal isn\'t perfection, but maintaining levels where you can engage with your life.',
 
         // Parameters page
         'parameters.title': 'Diary',
@@ -637,6 +641,7 @@ const translations = {
 'parameter_sleep_quality': 'Sleep Quality',
 'parameter_physical_activity': 'Physical Activity',
 'parameter_anxiety': 'Anxiety',
+'parameter_calm': 'Calm',
 'parameter_energy': 'Energy',
 'condition_less_than': 'Less than',
 'condition_greater_than': 'Greater than',
@@ -647,6 +652,7 @@ const translations = {
 'trigger_parameter_sleep_quality': 'Sleep Quality',
 'trigger_parameter_physical_activity': 'Physical Activity',
 'trigger_parameter_anxiety': 'Anxiety',
+'trigger_parameter_calm': 'Calm',
 'trigger_parameter_energy': 'Energy',
 'trigger_condition_less_than': 'less than',
 'trigger_condition_greater_than': 'greater than',
@@ -747,6 +753,8 @@ const translations = {
     'parameters.exercise_desc': 'Physical activity level',
     'parameters.anxiety': 'Anxiety',
     'parameters.anxiety_desc': 'Level of anxiety experienced',
+    'parameters.calm': 'Calm',
+    'parameters.calm_desc': 'Level of calm experienced',
     'parameters.notes': 'Notes',
     'parameters.notes_placeholder': 'Additional thoughts for today...',
     'parameters.save': 'Save Diary',
@@ -773,6 +781,7 @@ const translations = {
     'chart.sleep': 'Sleep',
     'chart.activity': 'Activity',
     'chart.anxiety': 'Anxiety',
+    'chart.calm': 'Calm',
 
     // Auth error (already implemented inline)
     'auth.invalid_credentials': 'You have entered an invalid username or password',
@@ -1257,6 +1266,7 @@ const translations = {
         'triggers.param_sleep': 'Sleep Quality',
         'triggers.param_activity': 'Physical Activity',
         'triggers.param_anxiety': 'Anxiety',
+        'triggers.param_calm': 'Calm',
         'triggers.loading': 'Loading...',
 
         // E. Circles/messages hardcoded strings
@@ -1570,10 +1580,12 @@ const translations = {
     'params.sleep_quality': 'איכות שינה',
     'params.physical_activity': 'פעילות גופנית',
     'params.anxiety': 'חרדה',
+    'params.calm': 'רוגע',
     // V4: Missing params keys
     'params.sleep': 'שינה',
     'params.exercise': 'פעילות גופנית',
     'params.stress': 'חרדה',
+    'params.stress_calm': 'רוגע',
 
         'block.block_user': 'חסום',
     'block.unblock_user': 'בטל חסימה',
@@ -1598,6 +1610,7 @@ const translations = {
         'tooltip.sleep_quality': 'זה עוקב אחר כמה טוב ישנת, לא רק כמה זמן. איכות חשובה כמו כמות, ולילה קשה אחד לא מגדיר דפוס.\n1 = גרוע - כמעט לא ישנתי או שינה מופרעת מאוד, התעוררתי לא רענן\n2 = חסר מנוחה - קצת שינה אבל התעוררתי הרבה, עדיין עייף\n3 = סביר - ישנתי די טוב עם הפרעות קלות\n4 = טוב - ישנתי היטב, התעוררתי מרגיש רענן\n\nזכור: השינה מושפעת מחרדה, סביבה, בריאות וגורמים רבים אחרים. אתה עוקב אחר דפוסים כדי להבין מה עוזר או מפריע למנוחה שלך, לא כדי להשיג שינה מושלמת כל לילה.',
         'tooltip.physical_activity': 'סולם זה מתעד את הפעילות הגופנית הכוללת שלך - בהתחשב גם בכמה זמן וגם באיזו אינטנסיביות זזת היום.\n1 = מינימלי - יום מנוחה, תנועה קלה מאוד, או פעילות קצרה (פחות מ-15 דקות)\n2 = קל - פעילות קצרה (15-30 דקות) בקצב נוח, או תנועה עדינה ארוכה יותר (דוגמאות: הליכה קצרה, מתיחות, עבודות בית קלות)\n3 = בינוני - 30-60 דקות של פעילות מתונה או פעילות אינטנסיבית קצרה יותר (דוגמאות: הליכה מהירה, סידורים פעילים, אימון סטנדרטי)\n4 = משמעותי - פעילות ממושכת (60+ דקות), אימון בעצימות גבוהה, או מספר סשנים של פעילות\n\nזכור: זה עוקב אחר דפוסי התנועה שלך, לא הערך שלך. מנוחה חיונית. המטרה היא מודעות והתקדמות הדרגתית, לא שלמות.',
         'tooltip.anxiety': 'חרדה היא רגש אנושי נורמלי שכולם חווים. סולם זה עוקב אחר כמה החרדה מפריעה לחיי היומיום שלך, לא האם אתה מרגיש חרדה בכלל.\n1 = ניתן לניהול - מרגיש רגוע או כל חרדה קיימת לא מפריעה לפעילויות\n2 = מורגש - קצת חרדה, אבל עדיין מסוגל לעשות מה שצריך\n3 = מאתגר - החרדה מקשה על חלק מהפעילויות\n4 = מציף - החרדה מפריעה משמעותית לתפקוד היומיומי\n\nזכור: המטרה היא לא לחסל את כל החרדה, אלא לשמור אותה ברמות שבהן אתה עדיין יכול להיות מעורב בחייך.',
+        'tooltip.calm': 'סולם זה עוקב אחר תחושת הרוגע והשלווה הרגשית שלך.\n1 = מוצף - מצוקה משמעותית המפריעה לתפקוד היומיומי\n2 = לא נוח - מתח מורגש המקשה על חלק מהפעילויות\n3 = מיושב - בדרך כלל רגוע, מתח קל לא מפריע\n4 = שליו - מרגיש רגוע ומאוזן רגשית\n\nזכור: המטרה היא לא שלמות, אלא לשמור על רמות שבהן אתה יכול להיות מעורב בחייך.',
 
             'parameters.select_date': 'בחר תאריך',
     'parameters.mood': 'מצב רוח',
@@ -1612,6 +1625,8 @@ const translations = {
     'parameters.exercise_desc': 'רמת פעילות גופנית',
     'parameters.anxiety': 'חרדה',
     'parameters.anxiety_desc': 'רמת החרדה שחוויתי',
+    'parameters.calm': 'רוגע',
+    'parameters.calm_desc': 'רמת הרוגע שחוויתי',
     'parameters.notes': 'הערות',
     'parameters.notes_placeholder': 'מחשבות נוספות להיום...',
  'reports.title': 'הפקת דוח',
@@ -1630,6 +1645,7 @@ const translations = {
     'chart.sleep': 'שינה',
     'chart.activity': 'פעילות',
     'chart.anxiety': 'חרדה',
+    'chart.calm': 'רוגע',
 
     // Auth error
     'auth.invalid_credentials': 'הזנת שם משתמש או סיסמה לא תקינים',
@@ -1769,6 +1785,7 @@ const translations = {
 'mood': 'מצב_רוח',
 'physical_activity': 'פעילות_גופנית',
 'anxiety': 'חרדה',
+'calm': 'רוגע',
 'energy': 'אנרגיה',
 'less_than': 'פחות_מ',
 'greater_than': 'יותר_מ',
@@ -1783,6 +1800,7 @@ const translations = {
 'parameter_sleep_quality': 'איכות שינה',
 'parameter_physical_activity': 'פעילות גופנית',
 'parameter_anxiety': 'חרדה',
+'parameter_calm': 'רוגע',
 'parameter_energy': 'אנרגיה',
 'condition_less_than': 'פחות מ',
 'condition_greater_than': 'יותר מ',
@@ -1827,6 +1845,7 @@ const translations = {
         'triggers.sleep': 'התראת איכות שינה',
         'triggers.physical': 'התראת פעילות גופנית',
         'triggers.anxiety': 'התראת חרדה',
+        'triggers.calm': 'התראת רוגע',
         'triggers.set': 'הגדר התראות',
 
 
@@ -1873,6 +1892,7 @@ const translations = {
 'trigger_parameter_sleep_quality': 'איכות שינה',
 'trigger_parameter_physical_activity': 'פעילות גופנית',
 'trigger_parameter_anxiety': 'חרדה',
+'trigger_parameter_calm': 'רוגע',
 'trigger_parameter_energy': 'אנרגיה',
 'trigger_condition_less_than': 'פחות מ',
 'trigger_condition_greater_than': 'יותר מ',
@@ -2655,6 +2675,7 @@ const translations = {
         'triggers.param_sleep': 'איכות שינה',
         'triggers.param_activity': 'פעילות גופנית',
         'triggers.param_anxiety': 'חרדה',
+        'triggers.param_calm': 'רוגע',
         'triggers.loading': 'טוען...',
 
         // E. מחרוזות מעגלים/הודעות
@@ -2903,6 +2924,7 @@ const translations = {
         'tooltip.sleep_quality': 'يتتبع هذا مدى جودة نومك، وليس فقط مدته. الجودة مهمة بقدر الكمية، وليلة صعبة واحدة لا تحدد نمطاً.\n1 = سيء - بالكاد نمت أو نوم متقطع جداً، استيقظت غير منتعش\n2 = مضطرب - بعض النوم لكن استيقظت كثيراً، لا أزال متعباً\n3 = مقبول - نمت بشكل معقول مع انقطاعات طفيفة\n4 = جيد - نمت بعمق، استيقظت منتعشاً\n\nتذكر: النوم يتأثر بالضغط والبيئة والصحة وعوامل أخرى كثيرة. أنت تتبع الأنماط لفهم ما يساعد أو يعيق راحتك، وليس لتحقيق نوم مثالي كل ليلة.',
         'tooltip.physical_activity': 'يلتقط هذا المقياس نشاطك البدني الإجمالي - مع الأخذ في الاعتبار المدة والشدة.\n1 = الحد الأدنى - يوم راحة، حركة خفيفة جداً، أو نشاط قصير (أقل من 15 دقيقة)\n2 = خفيف - نشاط قصير (15-30 دقيقة) بوتيرة سهلة، أو حركة لطيفة أطول (أمثلة: مشي قصير، تمدد، أعمال منزلية خفيفة)\n3 = معتدل - 30-60 دقيقة من النشاط المعتدل أو نشاط مكثف أقصر (أمثلة: مشي سريع، مهام نشطة، تمرين عادي)\n4 = كبير - نشاط ممتد (60+ دقيقة)، تمرين عالي الكثافة، أو جلسات نشاط متعددة\n\nتذكر: هذا يتتبع أنماط حركتك، وليس قيمتك. الراحة ضرورية. الهدف هو الوعي والتقدم التدريجي، وليس الكمال.',
         'tooltip.anxiety': 'القلق هو عاطفة إنسانية طبيعية يمر بها الجميع. يتتبع هذا المقياس مدى تأثير القلق على حياتك اليومية، وليس ما إذا كنت تشعر بالقلق أصلاً.\n1 = يمكن التحكم فيه - أشعر بالهدوء أو أي قلق موجود لا يتداخل مع الأنشطة\n2 = ملحوظ - بعض القلق، لكن لا أزال قادراً على فعل ما أحتاج إليه\n3 = صعب - القلق يجعل بعض الأنشطة صعبة\n4 = طاغٍ - القلق يتداخل بشكل كبير مع الأداء اليومي\n\nتذكر: الهدف ليس القضاء على كل القلق، بل الحفاظ عليه في مستويات يمكنك فيها الاستمرار في التفاعل مع حياتك.',
+        'tooltip.calm': 'يتتبع هذا المقياس إحساسك العام بالهدوء والراحة النفسية.\n1 = مرهق - ضغط كبير يتدخل في الأداء اليومي\n2 = غير مرتاح - توتر ملحوظ يجعل بعض الأنشطة صعبة\n3 = مستقر - مرتاح بشكل عام، التوتر الخفيف لا يتدخل\n4 = هادئ - أشعر بالهدوء والتوازن النفسي\n\nتذكر: الهدف ليس الكمال، بل الحفاظ على مستويات يمكنك فيها التفاعل مع حياتك.',
 
            'parameters.select_date': 'اختر التاريخ',
     'parameters.mood': 'المزاج',
@@ -2917,6 +2939,8 @@ const translations = {
     'parameters.exercise_desc': 'مستوى النشاط البدني',
     'parameters.anxiety': 'القلق',
     'parameters.anxiety_desc': 'مستوى القلق المُجرب',
+    'parameters.calm': 'الهدوء',
+    'parameters.calm_desc': 'مستوى الهدوء المُجرب',
     'parameters.notes': 'ملاحظات',
     'parameters.notes_placeholder': 'أفكار إضافية لليوم...',
     'auth.create_account': 'إنشاء حساب',
@@ -3111,6 +3135,7 @@ const translations = {
     'chart.sleep': 'النوم',
     'chart.activity': 'النشاط',
     'chart.anxiety': 'القلق',
+    'chart.calm': 'الهدوء',
 
     // Auth error
     'auth.invalid_credentials': 'لقد أدخلت اسم مستخدم أو كلمة مرور غير صالحة',
@@ -3143,6 +3168,7 @@ const translations = {
         'triggers.sleep': 'تنبيه جودة النوم',
         'triggers.physical': 'تنبيه النشاط البدني',
         'triggers.anxiety': 'تنبيه القلق',
+        'triggers.calm': 'تنبيه الهدوء',
         'triggers.set': 'تعيين تنبيهات التحذير',
         'menu.more': 'المزيد',
 'menu.social': 'اجتماعي',
@@ -3197,10 +3223,12 @@ const translations = {
     'params.sleep_quality': 'جودة النوم',
     'params.physical_activity': 'النشاط البدني',
     'params.anxiety': 'القلق',
+    'params.calm': 'الهدوء',
     // V4: Missing params keys
     'params.sleep': 'النوم',
     'params.exercise': 'التمارين',
     'params.stress': 'القلق',
+    'params.stress_calm': 'الهدوء',
 'invite.copy': 'نسخ الرابط',
 'invite.email': 'البريد الإلكتروني',
 'invite.sms': 'رسالة نصية',
@@ -3328,6 +3356,7 @@ const translations = {
 'parameter_sleep_quality': 'جودة النوم',
 'parameter_physical_activity': 'النشاط البدني',
 'parameter_anxiety': 'القلق',
+'parameter_calm': 'الهدوء',
 'parameter_energy': 'الطاقة',
 'condition_less_than': 'أقل من',
 'condition_greater_than': 'أكبر من',
@@ -3349,6 +3378,7 @@ const translations = {
 'mood': 'المزاج',
 'physical_activity': 'النشاط_البدني',
 'anxiety': 'القلق',
+'calm': 'الهدوء',
 'energy': 'الطاقة',
 'less_than': 'أقل_من',
 'greater_than': 'أكبر_من',
@@ -3357,6 +3387,7 @@ const translations = {
 'trigger_parameter_sleep_quality': 'جودة النوم',
 'trigger_parameter_physical_activity': 'النشاط البدني',
 'trigger_parameter_anxiety': 'القلق',
+'trigger_parameter_calm': 'الهدوء',
 'trigger_parameter_energy': 'الطاقة',
 'trigger_condition_less_than': 'أقل من',
 'trigger_condition_greater_than': 'أكبر من',
@@ -4053,6 +4084,7 @@ const translations = {
         'triggers.param_sleep': 'جودة النوم',
         'triggers.param_activity': 'النشاط البدني',
         'triggers.param_anxiety': 'القلق',
+        'triggers.param_calm': 'الهدوء',
         'triggers.loading': 'جارٍ التحميل...',
 
         // E. نصوص الدوائر/الرسائل
@@ -4302,6 +4334,7 @@ const translations = {
         'tooltip.sleep_quality': 'Это отслеживает, насколько хорошо вы спали, а не только как долго. Качество важно так же, как и количество, и одна плохая ночь не определяет паттерн.\n1 = Плохо - Почти не спал или очень прерывистый сон, проснулся неотдохнувшим\n2 = Беспокойно - Немного поспал, но часто просыпался, всё ещё устал\n3 = Удовлетворительно - Спал достаточно хорошо с небольшими перерывами\n4 = Хорошо - Спал крепко, проснулся отдохнувшим\n\nПомните: На сон влияют тревожность, окружающая среда, здоровье и многие другие факторы. Вы отслеживаете паттерны, чтобы понять, что помогает или мешает вашему отдыху, а не чтобы достичь идеального сна каждую ночь.',
         'tooltip.physical_activity': 'Эта шкала отражает вашу общую физическую активность - учитывая как продолжительность, так и интенсивность движения сегодня.\n1 = Минимально - День отдыха, очень лёгкое движение или короткая активность (менее 15 мин)\n2 = Лёгкая - Короткая активность (15-30 мин) в лёгком темпе ИЛИ более длительное мягкое движение (Примеры: короткая прогулка, растяжка, лёгкая домашняя работа)\n3 = Умеренная - 30-60 мин умеренной активности ИЛИ более короткая интенсивная активность (Примеры: быстрая прогулка, активные дела, стандартная тренировка)\n4 = Значительная - Продолжительная активность (60+ мин), высокоинтенсивная тренировка ИЛИ несколько сессий активности\n\nПомните: Это отслеживает ваши паттерны движения, а не вашу ценность. Отдых необходим. Цель - осознанность и постепенный прогресс, а не совершенство.',
         'tooltip.anxiety': 'Тревога - это нормальная человеческая эмоция, которую испытывает каждый. Эта шкала отслеживает, насколько тревога мешает вашей повседневной жизни, а не то, чувствуете ли вы тревогу вообще.\n1 = Управляемая - Чувствую спокойствие или любая присутствующая тревога не мешает деятельности\n2 = Заметная - Некоторая тревога, но всё ещё могу делать то, что нужно\n3 = Сложная - Тревога затрудняет некоторые виды деятельности\n4 = Подавляющая - Тревога значительно мешает повседневному функционированию\n\nПомните: Цель не в том, чтобы устранить всю тревогу, а в том, чтобы поддерживать её на уровнях, при которых вы всё ещё можете участвовать в своей жизни.',
+        'tooltip.calm': 'Эта шкала отслеживает ваше общее чувство спокойствия и эмоционального комфорта.\n1 = Подавлен - Значительный стресс мешает повседневному функционированию\n2 = Неспокоен - Заметное напряжение затрудняет некоторые виды деятельности\n3 = Уравновешен - В целом спокоен, небольшое напряжение не мешает\n4 = Безмятежен - Чувствую спокойствие и эмоциональный баланс\n\nПомните: Цель не в совершенстве, а в поддержании уровней, при которых вы можете участвовать в своей жизни.',
 
          'parameters.select_date': 'Выберите дату',
     'parameters.mood': 'Настроение',
@@ -4316,6 +4349,8 @@ const translations = {
     'parameters.exercise_desc': 'Уровень физической активности',
     'parameters.anxiety': 'Тревожность',
     'parameters.anxiety_desc': 'Уровень испытанной тревожности',
+    'parameters.calm': 'Спокойствие',
+    'parameters.calm_desc': 'Уровень испытанного спокойствия',
     'parameters.notes': 'Заметки',
     'parameters.notes_placeholder': 'Дополнительные мысли на сегодня...',
 
@@ -4366,10 +4401,12 @@ const translations = {
     'params.sleep_quality': 'качество сна',
     'params.physical_activity': 'физическая активность',
     'params.anxiety': 'тревожность',
+    'params.calm': 'спокойствие',
     // V4: Missing params keys
     'params.sleep': 'Сон',
     'params.exercise': 'Упражнения',
     'params.stress': 'Тревожность',
+    'params.stress_calm': 'Спокойствие',
     'support.quick_help': 'Быстрая помощь',
     'support.faq_link': 'Часто задаваемые вопросы',
     'support.help_center': 'Центр помощи',
@@ -4412,6 +4449,7 @@ const translations = {
     'chart.sleep': 'Сон',
     'chart.activity': 'Активность',
     'chart.anxiety': 'Тревога',
+    'chart.calm': 'Спокойствие',
 
       'block.block_user': 'Заблокировать',
     'block.unblock_user': 'Разблокировать',
@@ -4632,6 +4670,7 @@ const translations = {
         'triggers.sleep': 'Оповещение о качестве сна',
         'triggers.physical': 'Оповещение о физической активности',
         'triggers.anxiety': 'Оповещение о тревоге',
+        'triggers.calm': 'Оповещение о спокойствии',
         'triggers.set': 'Установить триггеры оповещений',
 
 'auth.username_placeholder': 'Выберите имя пользователя',
@@ -4739,6 +4778,7 @@ const translations = {
 'parameter_sleep_quality': 'Качество сна',
 'parameter_physical_activity': 'Физическая активность',
 'parameter_anxiety': 'Тревожность',
+'parameter_calm': 'Спокойствие',
 'parameter_energy': 'Энергия',
 'condition_less_than': 'Меньше чем',
 'condition_greater_than': 'Больше чем',
@@ -4747,6 +4787,7 @@ const translations = {
 'trigger_parameter_sleep_quality': 'Качество сна',
 'trigger_parameter_physical_activity': 'Физическая активность',
 'trigger_parameter_anxiety': 'Тревожность',
+'trigger_parameter_calm': 'Спокойствие',
 'trigger_parameter_energy': 'Энергия',
 'trigger_condition_less_than': 'меньше чем',
 'trigger_condition_greater_than': 'больше чем',
@@ -5002,6 +5043,7 @@ const translations = {
 'mood': 'настроение',
 'physical_activity': 'физическая_активность',
 'anxiety': 'тревожность',
+'calm': 'спокойствие',
 'energy': 'энергия',
 'less_than': 'меньше_чем',
 'greater_than': 'больше_чем',
@@ -5451,6 +5493,7 @@ const translations = {
         'triggers.param_sleep': 'Качество сна',
         'triggers.param_activity': 'Физическая активность',
         'triggers.param_anxiety': 'Тревожность',
+        'triggers.param_calm': 'Спокойствие',
         'triggers.loading': 'Загрузка...',
 
         // E. Строки кругов/сообщений
