@@ -12903,11 +12903,22 @@ async function createTrigger() {
                 consecutive_days: days ? parseInt(days) : 1
             };
         } else {
+            // T9a: When in calm mode and parameter is anxiety, convert display values
+            // back to storage scale before sending to backend
+            let storageOperator = operator;
+            let storageThreshold = parseInt(threshold);
+
+            if (parameter === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm') {
+                storageThreshold = 5 - storageThreshold;
+                if (operator === 'less_than') storageOperator = 'greater_than';
+                else if (operator === 'greater_than') storageOperator = 'less_than';
+            }
+
             body = {
                 target_id: parseInt(targetId),
                 parameter: parameter,
-                operator: operator,
-                threshold: parseInt(threshold)
+                operator: storageOperator,
+                threshold: storageThreshold
             };
             if (days) {
                 body.days = parseInt(days);
@@ -13045,11 +13056,24 @@ async function createTriggerForUser(targetId, targetUsername) {
                 consecutive_days: days ? parseInt(days) : 1
             };
         } else {
+            // T9a: When in calm mode and parameter is anxiety, convert display values
+            // back to storage scale before sending to backend
+            let storageOperator = operator;
+            let storageThreshold = parseInt(threshold);
+
+            if (parameter === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm') {
+                // Invert value: user entered calmness 3 → store anxiety 2
+                storageThreshold = 5 - storageThreshold;
+                // Invert condition: less_than ↔ greater_than
+                if (operator === 'less_than') storageOperator = 'greater_than';
+                else if (operator === 'greater_than') storageOperator = 'less_than';
+            }
+
             body = {
                 watched_id: parseInt(targetId),
                 parameter_name: parameter,
-                condition: operator,
-                value: parseInt(threshold),
+                condition: storageOperator,
+                value: storageThreshold,
                 consecutive_days: days ? parseInt(days) : 1
             };
         }
@@ -13112,13 +13136,29 @@ async function loadTriggersForUser(userId, username) {
                 return `${noCheckinLabel}${daysText ? ` (${daysText})` : ''}`;
             }
 
+            // T9a: Determine parameter name, condition, and value
+            // When ANXIETY_DISPLAY_MODE is "calm", invert anxiety triggers for display
+            let paramName = trigger.parameter || trigger.parameter_name;
+            let condition = trigger.condition;
+            let displayValue = trigger.value;
+
+            if (paramName === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm') {
+                // Swap parameter key to calm
+                paramName = 'calm';
+                // Invert value: stored anxiety 2 → display calmness 3
+                displayValue = 5 - trigger.value;
+                // Invert condition: greater_than ↔ less_than
+                if (condition === 'greater_than') condition = 'less_than';
+                else if (condition === 'less_than') condition = 'greater_than';
+            }
+
             // Translate parameter name
-            const paramKey = `trigger_parameter_${trigger.parameter || trigger.parameter_name}`;
-            const paramText = window.i18n ? window.i18n.t(paramKey) : (trigger.parameter || trigger.parameter_name);
+            const paramKey = `trigger_parameter_${paramName}`;
+            const paramText = window.i18n ? window.i18n.t(paramKey) : paramName;
 
             // Translate condition
-            const conditionKey = `trigger_condition_${trigger.condition}`;
-            const conditionText = window.i18n ? window.i18n.t(conditionKey) : trigger.condition;
+            const conditionKey = `trigger_condition_${condition}`;
+            const conditionText = window.i18n ? window.i18n.t(conditionKey) : condition;
 
             // Translate days
             const daysKey = 'trigger_days_format';
@@ -13126,7 +13166,7 @@ async function loadTriggersForUser(userId, username) {
                 (window.i18n ? window.i18n.t(daysKey).replace('{count}', trigger.consecutive_days) : `${trigger.consecutive_days} days`)
                 : '';
 
-            return `${paramText}: ${conditionText} ${trigger.value}${daysText ? ` (${daysText})` : ''}`;
+            return `${paramText}: ${conditionText} ${displayValue}${daysText ? ` (${daysText})` : ''}`;
         }
 
         const removeText = window.i18n ? window.i18n.t('trigger_remove') : 'Remove';
