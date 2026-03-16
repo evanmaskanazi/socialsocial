@@ -402,8 +402,9 @@ function showTooltip(categoryId, event) {
         event.stopPropagation();
     }
 
-    // Get the translated tooltip text
-    const tooltipKey = `tooltip.${categoryId}`;
+    // T9a: resolve tooltip key — use 'calm' when anxiety display mode is calm
+    const resolvedId = (categoryId === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm') ? 'calm' : categoryId;
+    const tooltipKey = `tooltip.${resolvedId}`;
     const tooltipText = pt(tooltipKey);
 
     // Get the category info for the title
@@ -1125,9 +1126,9 @@ function initializeParameters() {
             <div class="parameter-header">
                 <span class="parameter-emoji" data-category="${category.id}">${category.emoji}</span>
                 <div class="parameter-info">
-                    <span class="parameter-name" data-i18n="${category.nameKey}">${category.nameKey}</span>
+                    <span class="parameter-name" data-i18n="${category.nameKey}">${pt(category.nameKey)}</span>
                     <span class="tooltip-icon" data-tooltip-key="tooltip.${category.id}" onclick="showTooltip('${category.id}', event)" title="">ⓘ</span>
-                    <span class="parameter-description" data-i18n="${category.descriptionKey}">${category.descriptionKey}</span>
+                    <span class="parameter-description" data-i18n="${category.descriptionKey}">${pt(category.descriptionKey)}</span>
                 </div>
                 <div class="privacy-selector">
           <select class="privacy-select"
