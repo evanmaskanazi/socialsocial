@@ -531,11 +531,11 @@ window._applyAnxietyDisplayMode = function() {
     // Patch existing DOM: diary page parameter label
     document.querySelectorAll('[data-i18n="parameters.anxiety"]').forEach(el => {
         el.setAttribute('data-i18n', 'parameters.calm');
-        el.textContent = window.i18n ? window.i18n.translate('parameters.calm') : 'Calm';
+        el.textContent = window.i18n ? window.i18n.translate('parameters.calm') : 'Calmness';
     });
     document.querySelectorAll('[data-i18n="parameters.anxiety_desc"]').forEach(el => {
         el.setAttribute('data-i18n', 'parameters.calm_desc');
-        el.textContent = window.i18n ? window.i18n.translate('parameters.calm_desc') : 'Level of calm experienced';
+        el.textContent = window.i18n ? window.i18n.translate('parameters.calm_desc') : 'Level of calmness experienced';
     });
 
     // Patch existing DOM: parameter emoji span
@@ -560,7 +560,7 @@ window._applyAnxietyDisplayMode = function() {
     // Patch home page summary label
     document.querySelectorAll('[data-i18n="params.anxiety"]').forEach(el => {
         el.setAttribute('data-i18n', 'params.calm');
-        el.textContent = window.i18n ? window.i18n.translate('params.calm') : 'Calm';
+        el.textContent = window.i18n ? window.i18n.translate('params.calm') : 'Calmness';
     });
 
     // If diary data is already loaded, re-transform the selected anxiety button
@@ -675,8 +675,8 @@ const addParameterTranslations = () => {
                 'parameters.physical_activity_desc': 'Physical activity level',
                 'parameters.anxiety': 'Anxiety',
                 'parameters.anxiety_desc': 'Level of anxiety experienced',
-                'parameters.calm': 'Calm',
-                'parameters.calm_desc': 'Level of calm experienced',
+                'parameters.calm': 'Calmness',
+                'parameters.calm_desc': 'Level of calmness experienced',
                 'parameters.notes': 'Notes',
                 'parameters.notes_placeholder': 'Additional thoughts for today...',
                 'parameters.save': 'Save Parameters',
@@ -744,8 +744,8 @@ const addParameterTranslations = () => {
                 'parameters.physical_activity_desc': 'רמת פעילות גופנית',
                 'parameters.anxiety': 'חרדה',
                 'parameters.anxiety_desc': 'רמת החרדה שחוויתי',
-                'parameters.calm': 'רוגע',
-                'parameters.calm_desc': 'רמת הרוגע שחוויתי',
+                'parameters.calm': 'שלווה',
+                'parameters.calm_desc': 'רמת השלווה שחוויתי',
                 'parameters.notes': 'הערות',
                 'parameters.notes_placeholder': 'מחשבות נוספות להיום...',
                 'parameters.save': 'שמור פרמטרים',
@@ -812,8 +812,8 @@ const addParameterTranslations = () => {
                 'parameters.physical_activity_desc': 'مستوى النشاط البدني',
                 'parameters.anxiety': 'القلق',
                 'parameters.anxiety_desc': 'مستوى القلق المُجرب',
-                'parameters.calm': 'الهدوء',
-                'parameters.calm_desc': 'مستوى الهدوء المُجرب',
+                'parameters.calm': 'السكينة',
+                'parameters.calm_desc': 'مستوى السكينة المُجرب',
                 'parameters.notes': 'ملاحظات',
                 'parameters.notes_placeholder': 'أفكار إضافية لليوم...',
                 'parameters.save': 'حفظ المعاملات',
@@ -880,8 +880,8 @@ const addParameterTranslations = () => {
                 'parameters.physical_activity_desc': 'Уровень физической активности',
                 'parameters.anxiety': 'Тревожность',
                 'parameters.anxiety_desc': 'Уровень испытанной тревожности',
-                'parameters.calm': 'Спокойствие',
-                'parameters.calm_desc': 'Уровень испытанного спокойствия',
+                'parameters.calm': 'Умиротворение',
+                'parameters.calm_desc': 'Уровень испытанного умиротворения',
                 'parameters.notes': 'Заметки',
                 'parameters.notes_placeholder': 'Дополнительные мысли на сегодня...',
                 'parameters.save': 'Сохранить параметры',
@@ -3439,7 +3439,7 @@ function addTriggerSettings(container, userId, username) {
         { name: 'physical_activity', label: 'Physical Activity', icon: '🏃',
           thresholds: { yellow: [2,2], orange: [[1,2],[2,1]], red: [1,1] } },
         { name: 'anxiety',
-          label: (window.ANXIETY_DISPLAY_MODE === 'calm') ? 'Calm' : 'Anxiety',
+          label: (window.ANXIETY_DISPLAY_MODE === 'calm') ? 'Calmness' : 'Anxiety',
           icon: (window.ANXIETY_DISPLAY_MODE === 'calm') ? '😌' : '😰',
           thresholds: (window.ANXIETY_DISPLAY_MODE === 'calm')
             ? { yellow: [2,2], orange: [[1,2],[2,1]], red: [1,1] }

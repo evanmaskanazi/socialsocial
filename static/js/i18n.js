@@ -97,6 +97,7 @@ const translations = {
         'triggers.physical': 'Physical Activity Alert',
         'triggers.anxiety': 'Anxiety Alert',
         'triggers.calm': 'Calm Alert',
+        'triggers.calmness': 'Calmness Alert',
         'triggers.set': 'Set Alert Triggers',
         'triggers.watching': 'Watching Diary For',
         'about.team_title': 'Our Team & Story',
@@ -243,6 +244,7 @@ const translations = {
 'physical_activity': 'Physical Activity',
 'anxiety': 'Anxiety',
 'calm': 'Calm',
+'calmness': 'Calmness',
 'energy': 'Energy',
 'less_than': 'Less Than',
 'greater_than': 'Greater Than',
@@ -261,9 +263,10 @@ const translations = {
         'alerts.mark_read': 'Mark as read',
         'alerts.clear_all': 'Clear all',
         'alerts.welcome_title': 'Welcome to TheraSocial!',
-        'alerts.started_following': '{username} connected with you',
-'alerts.new_follower': 'You have a new follower!',
-'alerts.accepted_request': '{username} accepted your follow request',
+        'alerts.started_following': '{username} has added you to their connection list',
+'alerts.new_follower': 'You have been added to a new connection',
+'alerts.accepted_request': '{username} accepted your connection request',
+'alerts.connection_added': '{username} has added you to their connection list',
 'alerts.follow_request': '{username} wants to follow you',
 'alerts.new_post': '{username} created a new post',
 'alerts.new_comment': '{username} commented on your post',
@@ -501,10 +504,10 @@ const translations = {
 
     // PJ6003 - Notification Translations (for alerts list rendering)
     'alerts.new_message_from': 'New message from {username}',
-    'alerts.started_following': '{username} connected with you',
-    'alerts.accepted_request': '{username} accepted your follow request',
+    'alerts.started_following': '{username} has added you to their connection list',
+    'alerts.accepted_request': '{username} accepted your connection request',
     'alerts.follow_request': '{username} wants to follow you',
-    'alerts.new_follower': 'You have a new follower!',
+    'alerts.new_follower': 'You have been added to a new connection',
 
     // PJ6003 - Invite Translations
 
@@ -642,6 +645,7 @@ const translations = {
 'parameter_physical_activity': 'Physical Activity',
 'parameter_anxiety': 'Anxiety',
 'parameter_calm': 'Calm',
+'parameter_calmness': 'Calmness',
 'parameter_energy': 'Energy',
 'condition_less_than': 'Less than',
 'condition_greater_than': 'Greater than',
@@ -653,6 +657,7 @@ const translations = {
 'trigger_parameter_physical_activity': 'Physical Activity',
 'trigger_parameter_anxiety': 'Anxiety',
 'trigger_parameter_calm': 'Calm',
+'trigger_parameter_calmness': 'Calmness',
 'trigger_parameter_energy': 'Energy',
 'trigger_condition_less_than': 'less than',
 'trigger_condition_greater_than': 'greater than',
@@ -754,7 +759,9 @@ const translations = {
     'parameters.anxiety': 'Anxiety',
     'parameters.anxiety_desc': 'Level of anxiety experienced',
     'parameters.calm': 'Calm',
+    'parameters.calmness': 'Calmness',
     'parameters.calm_desc': 'Level of calm experienced',
+    'parameters.calmness_desc': 'Level of calmness experienced',
     'parameters.notes': 'Notes',
     'parameters.notes_placeholder': 'Additional thoughts for today...',
     'parameters.save': 'Save Diary',
@@ -782,6 +789,7 @@ const translations = {
     'chart.activity': 'Activity',
     'chart.anxiety': 'Anxiety',
     'chart.calm': 'Calm',
+    'chart.calmness': 'Calmness',
 
     // Auth error (already implemented inline)
     'auth.invalid_credentials': 'You have entered an invalid username or password',
@@ -996,8 +1004,8 @@ const translations = {
     // Notification types
     'notifications.new_message': 'New message from {username}',
     'notifications.message_sent': 'Message sent',
-    'notifications.new_follower': '{username} connected with you',
-    'notifications.you_have_new_follower': 'You have a new follower!',
+    'notifications.new_follower': '{username} has added you to their connection list',
+    'notifications.you_have_new_follower': 'You have a new connection!',
     'notifications.new_invitation': 'New Invitation',
     'notifications.invitation_content': '{username} has invited you to connect',
 
@@ -1267,6 +1275,7 @@ const translations = {
         'triggers.param_activity': 'Physical Activity',
         'triggers.param_anxiety': 'Anxiety',
         'triggers.param_calm': 'Calm',
+        'triggers.param_calmness': 'Calmness',
         'triggers.loading': 'Loading...',
 
         // E. Circles/messages hardcoded strings
@@ -1534,8 +1543,8 @@ const translations = {
     // Notification types
     'notifications.new_message': 'הודעה חדשה מ-{username}',
     'notifications.message_sent': 'הודעה נשלחה',
-    'notifications.new_follower': '{username} התחיל/ה לעקוב אחריך',
-    'notifications.you_have_new_follower': 'יש לך עוקב/ת חדש/ה!',
+    'notifications.new_follower': '{username} הוסיף/ה אותך לרשימת הקשרים שלהם',
+    'notifications.you_have_new_follower': 'יש לך חיבור חדש!',
     'notifications.new_invitation': 'הזמנה חדשה',
     'notifications.invitation_content': '{username} הזמין/ה אותך לעקוב אחריו/ה',
 
@@ -1560,10 +1569,10 @@ const translations = {
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'הודעה חדשה מ-{username}',
-    'alerts.started_following': '{username} התחבר/ה אליך',
-    'alerts.accepted_request': '{username} אישר/ה את בקשת המעקב שלך',
+    'alerts.started_following': '{username} הוסיף/ה אותך לרשימת הקשרים שלהם',
+    'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
     'alerts.follow_request': '{username} רוצה לעקוב אחריך',
-    'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
+    'alerts.new_follower': 'נוספת לחיבור חדש',
 
     // PJ6003 - Invite Translations
 
@@ -1581,6 +1590,7 @@ const translations = {
     'params.physical_activity': 'פעילות גופנית',
     'params.anxiety': 'חרדה',
     'params.calm': 'רוגע',
+    'params.calmness': 'שלווה',
     // V4: Missing params keys
     'params.sleep': 'שינה',
     'params.exercise': 'פעילות גופנית',
@@ -1626,6 +1636,7 @@ const translations = {
     'parameters.anxiety': 'חרדה',
     'parameters.anxiety_desc': 'רמת החרדה שחוויתי',
     'parameters.calm': 'רוגע',
+    'parameters.calmness': 'שלווה',
     'parameters.calm_desc': 'רמת הרוגע שחוויתי',
     'parameters.notes': 'הערות',
     'parameters.notes_placeholder': 'מחשבות נוספות להיום...',
@@ -1646,6 +1657,7 @@ const translations = {
     'chart.activity': 'פעילות',
     'chart.anxiety': 'חרדה',
     'chart.calm': 'רוגע',
+    'chart.calmness': 'שלווה',
 
     // Auth error
     'auth.invalid_credentials': 'הזנת שם משתמש או סיסמה לא תקינים',
@@ -1786,6 +1798,7 @@ const translations = {
 'physical_activity': 'פעילות_גופנית',
 'anxiety': 'חרדה',
 'calm': 'רוגע',
+'calmness': 'שלווה',
 'energy': 'אנרגיה',
 'less_than': 'פחות_מ',
 'greater_than': 'יותר_מ',
@@ -2255,9 +2268,9 @@ const translations = {
         'alerts.clear_all': 'נקה הכל',
         'alerts.welcome_title': 'ברוכים הבאים ל-TheraSocial!',
 'alerts.welcome_message': 'חשבונך נוצר בהצלחה. התחל בעדכון הפרופיל שלך.',
-'alerts.started_following': '{username} התחבר/ה אליך',
-'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
-'alerts.accepted_request': '{username} אישר/ה את בקשת המעקב שלך',
+'alerts.started_following': '{username} הוסיף/ה אותך לרשימת הקשרים שלהם',
+'alerts.new_follower': 'נוספת לחיבור חדש',
+'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
 'alerts.follow_request': '{username} רוצה לעקוב אחריך',
 'alerts.new_post': '{username} יצר/ה פוסט חדש',
 'alerts.new_comment': '{username} הגיב/ה על הפוסט שלך',
@@ -2940,6 +2953,7 @@ const translations = {
     'parameters.anxiety': 'القلق',
     'parameters.anxiety_desc': 'مستوى القلق المُجرب',
     'parameters.calm': 'الهدوء',
+    'parameters.calmness': 'السكينة',
     'parameters.calm_desc': 'مستوى الهدوء المُجرب',
     'parameters.notes': 'ملاحظات',
     'parameters.notes_placeholder': 'أفكار إضافية لليوم...',
@@ -3077,8 +3091,8 @@ const translations = {
     // Notification types
     'notifications.new_message': 'رسالة جديدة من {username}',
     'notifications.message_sent': 'تم إرسال الرسالة',
-    'notifications.new_follower': 'بدأ {username} بمتابعتك',
-    'notifications.you_have_new_follower': 'لديك متابع جديد!',
+    'notifications.new_follower': '{username} أضافك إلى قائمة اتصالاتهم',
+    'notifications.you_have_new_follower': 'لديك اتصال جديد!',
     'notifications.new_invitation': 'دعوة جديدة',
     'notifications.invitation_content': 'دعاك {username} لمتابعته',
 
@@ -3136,6 +3150,7 @@ const translations = {
     'chart.activity': 'النشاط',
     'chart.anxiety': 'القلق',
     'chart.calm': 'الهدوء',
+    'chart.calmness': 'السكينة',
 
     // Auth error
     'auth.invalid_credentials': 'لقد أدخلت اسم مستخدم أو كلمة مرور غير صالحة',
@@ -3203,10 +3218,10 @@ const translations = {
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'رسالة جديدة من {username}',
-    'alerts.started_following': 'بدأ {username} بمتابعتك',
-    'alerts.accepted_request': 'قبل {username} طلب المتابعة الخاص بك',
+    'alerts.started_following': '{username} أضافك إلى قائمة اتصالاتهم',
+    'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
     'alerts.follow_request': 'يريد {username} متابعتك',
-    'alerts.new_follower': 'لديك متابع جديد!',
+    'alerts.new_follower': 'تمت إضافتك إلى اتصال جديد',
 
     // PJ6003 - Invite Translations
 
@@ -3224,6 +3239,7 @@ const translations = {
     'params.physical_activity': 'النشاط البدني',
     'params.anxiety': 'القلق',
     'params.calm': 'الهدوء',
+    'params.calmness': 'السكينة',
     // V4: Missing params keys
     'params.sleep': 'النوم',
     'params.exercise': 'التمارين',
@@ -3379,6 +3395,7 @@ const translations = {
 'physical_activity': 'النشاط_البدني',
 'anxiety': 'القلق',
 'calm': 'الهدوء',
+'calmness': 'السكينة',
 'energy': 'الطاقة',
 'less_than': 'أقل_من',
 'greater_than': 'أكبر_من',
@@ -3687,9 +3704,9 @@ const translations = {
         'alerts.clear_all': 'مسح الكل',
         'alerts.welcome_title': 'مرحبًا بك في TheraSocial!',
 'alerts.welcome_message': 'تم إنشاء حسابك بنجاح. ابدأ بتحديث ملفك الشخصي.',
-'alerts.started_following': '{username} بدأ بمتابعتك',
-'alerts.new_follower': 'لديك متابع جديد!',
-'alerts.accepted_request': '{username} قبل طلب المتابعة الخاص بك',
+'alerts.started_following': '{username} أضافك إلى قائمة اتصالاتهم',
+'alerts.new_follower': 'تمت إضافتك إلى اتصال جديد',
+'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
 'alerts.follow_request': '{username} يريد متابعتك',
 'alerts.new_post': '{username} أنشأ منشوراً جديداً',
 'alerts.new_comment': '{username} علّق على منشورك',
@@ -4350,6 +4367,7 @@ const translations = {
     'parameters.anxiety': 'Тревожность',
     'parameters.anxiety_desc': 'Уровень испытанной тревожности',
     'parameters.calm': 'Спокойствие',
+    'parameters.calmness': 'Умиротворение',
     'parameters.calm_desc': 'Уровень испытанного спокойствия',
     'parameters.notes': 'Заметки',
     'parameters.notes_placeholder': 'Дополнительные мысли на сегодня...',
@@ -4381,10 +4399,10 @@ const translations = {
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'Новое сообщение от {username}',
-    'alerts.started_following': '{username} подписался на вас',
-    'alerts.accepted_request': '{username} принял(а) ваш запрос на подписку',
+    'alerts.started_following': '{username} добавил(а) вас в список контактов',
+    'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
     'alerts.follow_request': '{username} хочет подписаться на вас',
-    'alerts.new_follower': 'У вас новый подписчик!',
+    'alerts.new_follower': 'Вас добавили в новое подключение',
 
     // PJ6003 - Invite Translations
 
@@ -4402,6 +4420,7 @@ const translations = {
     'params.physical_activity': 'физическая активность',
     'params.anxiety': 'тревожность',
     'params.calm': 'спокойствие',
+    'params.calmness': 'умиротворение',
     // V4: Missing params keys
     'params.sleep': 'Сон',
     'params.exercise': 'Упражнения',
@@ -4450,6 +4469,7 @@ const translations = {
     'chart.activity': 'Активность',
     'chart.anxiety': 'Тревога',
     'chart.calm': 'Спокойствие',
+    'chart.calmness': 'Умиротворение',
 
       'block.block_user': 'Заблокировать',
     'block.unblock_user': 'Разблокировать',
@@ -4515,8 +4535,8 @@ const translations = {
     // Notification types
     'notifications.new_message': 'Новое сообщение от {username}',
     'notifications.message_sent': 'Сообщение отправлено',
-    'notifications.new_follower': '{username} подписался на вас',
-    'notifications.you_have_new_follower': 'У вас новый подписчик!',
+    'notifications.new_follower': '{username} добавил(а) вас в список контактов',
+    'notifications.you_have_new_follower': 'У вас новый контакт!',
     'notifications.new_invitation': 'Новое приглашение',
     'notifications.invitation_content': '{username} пригласил(а) вас подписаться',
 
@@ -5044,6 +5064,7 @@ const translations = {
 'physical_activity': 'физическая_активность',
 'anxiety': 'тревожность',
 'calm': 'спокойствие',
+'calmness': 'умиротворение',
 'energy': 'энергия',
 'less_than': 'меньше_чем',
 'greater_than': 'больше_чем',
@@ -5096,8 +5117,8 @@ const translations = {
         'alerts.clear_all': 'Очистить всё',
         'alerts.welcome_title': 'Добро пожаловать в TheraSocial!',
 'alerts.welcome_message': 'Ваш аккаунт успешно создан. Начните с обновления вашего профиля.',
-'alerts.started_following': '{username} начал/а следить за вами',
-'alerts.new_follower': 'У вас новый подписчик!',
+'alerts.started_following': '{username} добавил(а) вас в список контактов',
+'alerts.new_follower': 'Вас добавили в новое подключение',
 'alerts.accepted_request': '{username} принял/а ваш запрос на подписку',
 'alerts.follow_request': '{username} хочет следить за вами',
 'alerts.new_post': '{username} создал/а новый пост',
