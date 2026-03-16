@@ -6251,7 +6251,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T8"></script>
+    <script src="/static/js/i18n.js?v=T9"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -6371,25 +6371,25 @@
                 'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
                 'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
                 'alerts.new_message_from': 'New message from {username}',
-                'alerts.started_following': '{username} started following you',
-                'alerts.accepted_request': '{username} accepted your follow request',
+                'alerts.started_following': '{username} has added you to their connection list',
+                'alerts.accepted_request': '{username} accepted your connection request',
                 'alerts.follow_request': '{username} wants to follow you',
-                'alerts.new_follower': 'You have a new follower!',
+                'alerts.new_follower': 'You have been added to a new connection',
                 'alerts.no_alerts': 'No alerts',
                 'alerts.welcome_title': 'Welcome to TheraSocial!',
                 'alerts.welcome_message': 'Track your daily well-being, connect with friends, and grow together.',
                 'params.sleep_quality': 'Sleep',
                 'params.physical_activity': 'Exercise',
                 'params.anxiety': 'Anxiety',
-                'params.calm': 'Calm'
+                'params.calm': 'Calmness'
             },
             he: {
                 'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
                 'alerts.wellness_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
                 'alerts.wellness_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
                 'alerts.new_message_from': 'הודעה חדשה מ-{username}',
-                'alerts.started_following': '{username} התחיל/ה לעקוב אחריך',
-                'alerts.accepted_request': '{username} אישר/ה את בקשת המעקב שלך',
+                'alerts.started_following': '{username} הוסיף/ה אותך לרשימת הקשרים שלהם',
+                'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
                 'alerts.follow_request': '{username} רוצה לעקוב אחריך',
                 'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
                 'alerts.no_alerts': 'אין התראות',
@@ -6398,15 +6398,15 @@
                 'params.sleep_quality': 'שינה',
                 'params.physical_activity': 'פעילות גופנית',
                 'params.anxiety': 'חרדה',
-                'params.calm': 'רוגע'
+                'params.calm': 'שלווה'
             },
             ar: {
                 'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
                 'alerts.wellness_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
                 'alerts.new_message_from': 'رسالة جديدة من {username}',
-                'alerts.started_following': 'بدأ {username} بمتابعتك',
-                'alerts.accepted_request': 'قبل {username} طلب المتابعة الخاص بك',
+                'alerts.started_following': '{username} أضافك إلى قائمة اتصالاتهم',
+                'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
                 'alerts.follow_request': '{username} يريد متابعتك',
                 'alerts.new_follower': 'لديك متابع جديد!',
                 'alerts.no_alerts': 'لا توجد تنبيهات',
@@ -6415,15 +6415,15 @@
                 'params.sleep_quality': 'النوم',
                 'params.physical_activity': 'التمارين',
                 'params.anxiety': 'القلق',
-                'params.calm': 'الهدوء'
+                'params.calm': 'السكينة'
             },
             ru: {
                 'alerts.wellness_alert_for': 'Оповещение о здоровье {username}',
                 'alerts.wellness_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
                 'alerts.new_message_from': 'Новое сообщение от {username}',
-                'alerts.started_following': '{username} подписался на вас',
-                'alerts.accepted_request': '{username} принял(а) ваш запрос на подписку',
+                'alerts.started_following': '{username} добавил(а) вас в список контактов',
+                'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
                 'alerts.follow_request': '{username} хочет подписаться на вас',
                 'alerts.new_follower': 'У вас новый подписчик!',
                 'alerts.no_alerts': 'Нет уведомлений',
@@ -6432,7 +6432,7 @@
                 'params.sleep_quality': 'Сон',
                 'params.physical_activity': 'Физическая активность',
                 'params.anxiety': 'Тревожность',
-                'params.calm': 'Спокойствие'
+                'params.calm': 'Умиротворение'
             }
         };
         function extendI18nAlerts() {
@@ -6517,8 +6517,8 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=T8"></script>
-   <script src="/static/js/circles-messages.js?v=T2"></script>
+<script src="/static/js/parameters-social.js?v=T9"></script>
+   <script src="/static/js/circles-messages.js?v=T9"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -11786,7 +11786,7 @@ async function loadUserParametersForDate(userId, dateStr) {
             displayParameterReadOnly('sleepInput', params.sleep_quality, 'Sleep');
             displayParameterReadOnly('exerciseInput', params.physical_activity, 'Exercise');
             // T8: In calm mode, invert anxiety and change label
-            const anxLabel = window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calm' : 'Anxiety';
+            const anxLabel = window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calmness' : 'Anxiety';
             const anxVal = (params.anxiety != null && window.ANXIETY_DISPLAY_MODE === 'calm') ? (5 - parseInt(params.anxiety)) : params.anxiety;
             displayParameterReadOnly('anxietyInput', anxVal, anxLabel);
             displayParameterReadOnly('energyInput', params.energy, 'Energy');
@@ -11842,7 +11842,7 @@ function clearParameterDisplays() {
     displayParameterReadOnly('moodInput', null, 'Mood');
     displayParameterReadOnly('sleepInput', null, 'Sleep');
     displayParameterReadOnly('exerciseInput', null, 'Exercise');
-    displayParameterReadOnly('anxietyInput', null, window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calm' : 'Anxiety');
+    displayParameterReadOnly('anxietyInput', null, window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calmness' : 'Anxiety');
 
     const notesElement = document.getElementById('parameterNotes');
     if (notesElement) {
@@ -12809,7 +12809,7 @@ function showAddTriggerModal() {
                     <option value="mood">Mood</option>
                     <option value="sleep_quality">Sleep Quality</option>
                     <option value="physical_activity">Physical Activity</option>
-                    <option value="anxiety">${window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calm' : 'Anxiety'}</option>
+                    <option value="anxiety">${window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calmness' : 'Anxiety'}</option>
                     <option value="energy">Energy</option>
                     <option value="no_checkin">${_t('trigger_parameter_no_checkin', 'No Check-In')}</option>
                 </select>
@@ -14541,14 +14541,14 @@ async function loadAlerts() {
                         const template = translateKey('alerts.new_message_from') || 'New message from {username}';
                         title = template.replace('{username}', username);
                     }
-                    else if (title.includes('started following you')) {
-                        const username = title.split(' started following you')[0];
-                        const template = translateKey('alerts.started_following') || '{username} started following you';
+                    else if (title.includes('connection list') || title.includes('started following you')) {
+                        const username = title.split(' has added you')[0] || title.split(' started following')[0];
+                        const template = translateKey('alerts.started_following') || '{username} has added you to their connection list';
                         title = template.replace('{username}', username);
                     }
-                    else if (title.includes('accepted your follow request')) {
-                        const username = title.split(' accepted your follow request')[0];
-                        const template = translateKey('alerts.accepted_request') || '{username} accepted your follow request';
+                    else if (title.includes('accepted your connection request') || title.includes('accepted your follow request')) {
+                        const username = title.split(' accepted your connection request')[0] || title.split(' accepted your follow request')[0];
+                        const template = translateKey('alerts.accepted_request') || '{username} accepted your connection request';
                         title = template.replace('{username}', username);
                     }
                     else if (title.includes('wants to follow you')) {
@@ -14570,8 +14570,8 @@ async function loadAlerts() {
                         content = translated;
                     }
                 }
-                else if (content === 'You have a new follower!' || content === 'You have a new follower') {
-                    content = translateKey('alerts.new_follower') || 'You have a new follower!';
+                else if (content === 'You have been added to a new connection' || content === 'You have a new connection!' || content === 'You have a new follower!' || content === 'You have a new follower') {
+                    content = translateKey('alerts.new_follower') || 'You have been added to a new connection';
                 }
                 else if (content && typeof content === 'string' && content.includes('|')) {
                     const parts = content.split('|');
@@ -15964,7 +15964,7 @@ function renderProgressChart(data) {
     // T8: Calm mode label variants
     const isCalm = window.ANXIETY_DISPLAY_MODE === 'calm';
     const chartLabels = {
-        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm ? 'Calm' : 'Anxiety' },
+        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm ? 'Calmness' : 'Anxiety' },
         'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm ? 'רוגע' : 'חרדה' },
         'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm ? 'الهدوء' : 'القلق' },
         'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm ? 'Спокойствие' : 'Тревога' }
@@ -16165,7 +16165,7 @@ async function showUserCheckinHistory(userId, username) {
     // T8: Calm mode label variants for user history chart
     const isCalm2 = window.ANXIETY_DISPLAY_MODE === 'calm';
     const chartLabels = {
-        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm2 ? 'Calm' : 'Anxiety', title: "'s Check-in History", close: 'Close', loading: 'Loading...', noData: 'No check-in data available for this user.', last30: 'Last 30 days', date: 'Date' },
+        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm2 ? 'Calmness' : 'Anxiety', title: "'s Check-in History", close: 'Close', loading: 'Loading...', noData: 'No check-in data available for this user.', last30: 'Last 30 days', date: 'Date' },
         'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm2 ? 'רוגע' : 'חרדה', title: " - היסטוריית צ'ק-אין", close: 'סגור', loading: 'טוען...', noData: 'אין נתוני צ\'ק-אין עבור משתמש זה.', last30: '30 הימים האחרונים', date: 'תאריך' },
         'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm2 ? 'الهدوء' : 'القلق', title: ' - سجل التسجيل', close: 'إغلاق', loading: 'جاري التحميل...', noData: 'لا توجد بيانات تسجيل لهذا المستخدم.', last30: 'آخر 30 يوم', date: 'التاريخ' },
         'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm2 ? 'Спокойствие' : 'Тревога', title: ' - история отметок', close: 'Закрыть', loading: 'Загрузка...', noData: 'Нет данных для этого пользователя.', last30: 'Последние 30 дней', date: 'Дата' }
