@@ -713,7 +713,7 @@ MINIMUM_TRIGGER_DAYS = 1  # CLEAN: Set to 1 for immediate single-day triggers
 # Changing this value and redeploying instantly switches ALL users' display.
 # No data migration needed — stored values are never modified.
 # =============================================================================
-ANXIETY_DISPLAY_MODE = "anxiety"  # Options: "anxiety" or "calm"
+ANXIETY_DISPLAY_MODE = "calm"  # Options: "anxiety" or "calm"
 # =============================================================================
 
 from flask import (
