@@ -1276,7 +1276,11 @@ function initializeParameters() {
                         // Also load ratings if they exist
                         if (result.data.parameters) {
                             Object.keys(result.data.parameters).forEach(categoryId => {
-                                const value = result.data.parameters[categoryId];
+                                let value = result.data.parameters[categoryId];
+                                // T9b: Convert anxiety from storage to display value
+                                if (categoryId === 'anxiety' && value != null && window.anxietyToDisplay) {
+                                    value = window.anxietyToDisplay(value);
+                                }
                                 if (value) {
                                     selectRating(categoryId, value);
                                 }
@@ -2901,6 +2905,14 @@ async function loadParameters(showMsg = true) {
             // Load ratings
             selectedRatings = result.data.parameters || {};
 
+            // T9b FIX: Check hasRealData BEFORE anxiety display conversion.
+            // anxietyToDisplay(0) returns 5 in calm mode, which makes blank days
+            // appear to have data, triggering a privacy reset to 'private'.
+            // selectedRatings is a reference to result.data.parameters, so mutating
+            // one mutates both — the check must happen on the raw API values.
+            const hasRealData = result.data.parameters && 
+                Object.values(result.data.parameters).some(v => v && v > 0);
+
             // T8: Convert anxiety from storage value to display value
             if (selectedRatings.anxiety != null && window.anxietyToDisplay) {
                 selectedRatings.anxiety = window.anxietyToDisplay(selectedRatings.anxiety);
@@ -2910,10 +2922,6 @@ async function loadParameters(showMsg = true) {
             Object.keys(selectedRatings).forEach(categoryId => {
                 selectRating(categoryId, selectedRatings[categoryId]);
             });
-
-            // OPT-PRIVACY: Check if this day has real saved data (any non-zero parameter)
-            const hasRealData = result.data.parameters && 
-                Object.values(result.data.parameters).some(v => v && v > 0);
 
             // OPT-PRIVACY: Only overwrite privacy settings if the day has actual saved data.
             // When navigating from a filled day to an empty day, this preserves the
