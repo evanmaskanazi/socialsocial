@@ -696,6 +696,26 @@ DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 =
 MINIMUM_TRIGGER_DAYS = 1  # CLEAN: Set to 1 for immediate single-day triggers
 # =============================================================================
 
+# =============================================================================
+# T8: ANXIETY DISPLAY MODE CONFIGURATION
+# =============================================================================
+# Controls how the anxiety parameter is displayed across the entire app.
+# The database always stores anxiety as 1=calm/best to 4=overwhelming/worst.
+#
+# Options:
+#   "anxiety" — Display as "Anxiety" with reversed scale (1=best, 4=worst).
+#               Emojis: 1=😊, 4=😔. Triggers fire on HIGH values (>=3).
+#   "calm"    — Display as "Calm" with standard scale (1=worst, 4=best).
+#               Values shown to user are inverted (display = 5 - stored).
+#               Emojis: 1=😔, 4=😊 (matches other 4 parameters).
+#               Triggers fire on LOW displayed values (<=2), same stored data.
+#
+# Changing this value and redeploying instantly switches ALL users' display.
+# No data migration needed — stored values are never modified.
+# =============================================================================
+ANXIETY_DISPLAY_MODE = "anxiety"  # Options: "anxiety" or "calm"
+# =============================================================================
+
 from flask import (
     Flask, request, jsonify, session,
     render_template, send_from_directory, redirect, url_for
@@ -14146,6 +14166,43 @@ def check_parameter_triggers():
             if not watcher_circle:
                 continue
 
+            # T8 FIX (Bug A+B): Handle no_checkin BEFORE the parameters count gate.
+            # no_checkin triggers fire when users DON'T have entries, so the gate
+            # (len(parameters) < consecutive_days) would block them precisely when
+            # they should fire. Also, no_checkin was not in param_mapping, so the
+            # old-schema code path silently skipped it.
+            if trigger.parameter_name == 'no_checkin':
+                watched_user = db.session.get(User, trigger.watched_id)
+                if not watched_user:
+                    continue
+                from datetime import date as date_type
+                today = date_type.today()
+                latest_entry = db.session.execute(
+                    select(SavedParameters).filter(
+                        SavedParameters.user_id == trigger.watched_id
+                    ).order_by(SavedParameters.date.desc()).limit(1)
+                ).scalars().first()
+
+                if latest_entry and latest_entry.date:
+                    days_since = (today - latest_entry.date).days
+                else:
+                    days_since = 999
+
+                if days_since >= consecutive_days:
+                    pattern_key = (watched_user.username, 'no_checkin', today.isoformat(), str(days_since))
+                    if pattern_key not in patterns_seen:
+                        patterns_seen.add(pattern_key)
+                        alerts.append({
+                            'user': watched_user.username,
+                            'parameter': 'no_checkin',
+                            'consecutive_days': days_since,
+                            'dates': [today.isoformat()],
+                            'values': [days_since],
+                            'condition_text': f"no check-in for {days_since} days"
+                        })
+                        logger.info(f"[T8 FIX] no_checkin alert for {watched_user.username}: {days_since} days since last check-in")
+                continue  # no_checkin is fully handled — skip to next trigger
+
             parameters = db.session.execute(
                 select(SavedParameters).filter(
                     SavedParameters.user_id == trigger.watched_id,
@@ -16460,6 +16517,42 @@ def run_background_trigger_check_for_watcher(watcher_id):
             if not watcher_circle:
                 continue
 
+            # T8 FIX (Bug A): Handle no_checkin BEFORE the parameters count gate.
+            # no_checkin triggers fire when users DON'T have entries, so the gate
+            # (len(parameters) < consecutive_days) would block them precisely when
+            # they should fire.
+            if trigger.parameter_name == 'no_checkin':
+                watched_user = db.session.get(User, trigger.watched_id)
+                if not watched_user:
+                    continue
+                from datetime import date as date_type
+                today = date_type.today()
+                latest_entry = db.session.execute(
+                    select(SavedParameters).filter(
+                        SavedParameters.user_id == trigger.watched_id
+                    ).order_by(SavedParameters.date.desc()).limit(1)
+                ).scalars().first()
+
+                if latest_entry and latest_entry.date:
+                    days_since = (today - latest_entry.date).days
+                else:
+                    days_since = 999
+
+                if days_since >= consecutive_days:
+                    pattern_key = (watched_user.username, 'no_checkin', today.isoformat(), str(days_since))
+                    if pattern_key not in patterns_seen:
+                        patterns_seen.add(pattern_key)
+                        alerts.append({
+                            'user': watched_user.username,
+                            'parameter': 'no_checkin',
+                            'consecutive_days': days_since,
+                            'dates': [today.isoformat()],
+                            'values': [days_since],
+                            'condition_text': f"no check-in for {days_since} days"
+                        })
+                        logger.info(f"[T8 FIX] Background no_checkin alert for {watched_user.username}: {days_since} days")
+                continue  # no_checkin is fully handled — skip to next trigger
+
             parameters = db.session.execute(
                 select(SavedParameters).filter(
                     SavedParameters.user_id == trigger.watched_id,
@@ -18173,7 +18266,8 @@ def get_trigger_settings():
     """
     return jsonify({
         'minimum_trigger_days': MINIMUM_TRIGGER_DAYS,
-        'alert_email_mode': ALERT_EMAIL_MODE
+        'alert_email_mode': ALERT_EMAIL_MODE,
+        'anxiety_display_mode': ANXIETY_DISPLAY_MODE
     })
 
 
