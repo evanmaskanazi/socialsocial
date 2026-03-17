@@ -6440,6 +6440,7 @@
                 'alerts.new_message_from': 'New message from {username}',
                 'alerts.started_following': '{username} accepted your connection request',
                 'alerts.accepted_request': '{username} accepted your connection request',
+                'alerts.accepted_content': '{username} has accepted your connection request. You are now connected!',
                 'alerts.follow_request': '{username} wants to follow you',
                 'alerts.new_follower': 'You have been added to a new connection',
                 'alerts.no_alerts': 'No alerts',
@@ -6457,6 +6458,7 @@
                 'alerts.new_message_from': 'הודעה חדשה מ-{username}',
                 'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
                 'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
+                'alerts.accepted_content': '{username} אישר/ה את בקשת ההתחברות שלך. אתם מחוברים כעת!',
                 'alerts.follow_request': '{username} רוצה לעקוב אחריך',
                 'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
                 'alerts.no_alerts': 'אין התראות',
@@ -6474,6 +6476,7 @@
                 'alerts.new_message_from': 'رسالة جديدة من {username}',
                 'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
                 'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
+                'alerts.accepted_content': '{username} قبل طلب الاتصال الخاص بك. أنتما متصلان الآن!',
                 'alerts.follow_request': '{username} يريد متابعتك',
                 'alerts.new_follower': 'لديك متابع جديد!',
                 'alerts.no_alerts': 'لا توجد تنبيهات',
@@ -6491,6 +6494,7 @@
                 'alerts.new_message_from': 'Новое сообщение от {username}',
                 'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
                 'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
+                'alerts.accepted_content': '{username} принял(а) ваш запрос на подключение. Вы теперь связаны!',
                 'alerts.follow_request': '{username} хочет подписаться на вас',
                 'alerts.new_follower': 'У вас новый подписчик!',
                 'alerts.no_alerts': 'Нет уведомлений',
@@ -14686,6 +14690,12 @@ async function loadAlerts() {
                 }
                 else if (content === 'You have been added to a new connection' || content === 'You have a new connection!' || content === 'You have a new follower!' || content === 'You have a new follower') {
                     content = translateKey('alerts.new_follower') || 'You have been added to a new connection';
+                }
+                // T11: Translate "accepted your connection request. You are now connected!" content
+                else if (content && content.includes('has accepted your connection request')) {
+                    const username = content.split(' has accepted')[0];
+                    const template = translateKey('alerts.accepted_content') || '{username} has accepted your connection request. You are now connected!';
+                    content = template.replace('{username}', username);
                 }
                 else if (content && typeof content === 'string' && content.includes('|')) {
                     const parts = content.split('|');
