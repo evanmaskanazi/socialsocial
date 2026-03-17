@@ -9454,6 +9454,7 @@ def circles():
                     source_user_id=user_id,
                     alert_category='follow'
                 )
+                db.session.commit()
                 logger.info(f"[T11] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add)")
 
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
