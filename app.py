@@ -2162,7 +2162,7 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
                                 if 'new_message' in key:
                                     email_title = f"New message from {username}"
                                 elif 'started_following' in key:
-                                    email_title = f"{username} has added you to their connection list"
+                                    email_title = f"{username} accepted your connection request"
                                 elif 'invitation' in key.lower():
                                     email_title = "New invitation"
                                 else:
@@ -2272,7 +2272,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Energy',
                 'sleep_quality': 'Sleep quality',
                 'physical_activity': 'Physical activity',
-                'anxiety': 'Anxiety',
+                # T11: Use Calmness when ANXIETY_DISPLAY_MODE is calm
+                'anxiety': 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety',
                 'no_checkin': 'No check-in'
             },
             'he': {
@@ -2289,7 +2290,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'אנרגיה',
                 'sleep_quality': 'איכות שינה',
                 'physical_activity': 'פעילות גופנית',
-                'anxiety': 'חרדה',
+                # T11: Use שלווה when ANXIETY_DISPLAY_MODE is calm
+                'anxiety': 'שלווה' if ANXIETY_DISPLAY_MODE == 'calm' else 'חרדה',
                 'no_checkin': "אין צ'ק-אין"
             },
             'ar': {
@@ -2306,7 +2308,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'الطاقة',
                 'sleep_quality': 'جودة النوم',
                 'physical_activity': 'النشاط البدني',
-                'anxiety': 'القلق',
+                # T11: Use السكينة when ANXIETY_DISPLAY_MODE is calm
+                'anxiety': 'السكينة' if ANXIETY_DISPLAY_MODE == 'calm' else 'القلق',
                 'no_checkin': 'لا يوجد تسجيل'
             },
             'ru': {
@@ -2323,7 +2326,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Энергия',
                 'sleep_quality': 'Качество сна',
                 'physical_activity': 'Физическая активность',
-                'anxiety': 'Тревожность',
+                # T11: Use Спокойствие when ANXIETY_DISPLAY_MODE is calm
+                'anxiety': 'Спокойствие' if ANXIETY_DISPLAY_MODE == 'calm' else 'Тревожность',
                 'no_checkin': 'Нет отметки'
             }
         }
@@ -2602,7 +2606,7 @@ def create_notification_with_email(user_id, title, content, alert_type='info', s
                             if 'new_message' in key:
                                 email_title = f"New message from {username}"
                             elif 'started_following' in key:
-                                email_title = f"{username} has added you to their connection list"
+                                email_title = f"{username} accepted your connection request"
                             elif 'invitation' in key.lower():
                                 email_title = "New invitation"
                             else:
@@ -8866,7 +8870,7 @@ def notification_settings():
                                         if 'new_message' in title_data.get('key', ''):
                                             alert_title = f"New message from {alert_title}"
                                         elif 'started_following' in title_data.get('key', ''):
-                                            alert_title = f"{alert_title} has added you to their connection list"
+                                            alert_title = f"{alert_title} accepted your connection request"
                                         elif 'invitation' in title_data.get('key', '').lower():
                                             alert_title = "New invitation"
                                 except:
@@ -9437,6 +9441,20 @@ def circles():
                 logger.info(f"[T9] Created reverse follow {user_id} -> {circle_user_id} when adding to circle")
 
             db.session.commit()
+
+            # T11: Send "accepted your connection request" notification to the user being added
+            # Same notification as when accepting via Connection Requests tab (connectpage flow)
+            current_user = db.session.get(User, user_id)
+            if current_user:
+                create_notification_with_email(
+                    user_id=circle_user_id,
+                    title=f'{current_user.username} accepted your connection request',
+                    content=f'{current_user.username} has accepted your connection request. You are now connected!',
+                    alert_type='info',
+                    source_user_id=user_id,
+                    alert_category='follow'
+                )
+                logger.info(f"[T11] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add)")
 
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
             return jsonify({'success': True, 'message': 'User added to circle'})
@@ -15366,10 +15384,11 @@ def follow_user(user_id):
             alert_content += ' (Following your parameters)'
 
         # PJ6001: Use create_notification_with_email for follow notifications (not wellness alerts)
+        # T11: Use same "accepted" language as circle-add and connection-request-accept flows
         alert = create_notification_with_email(
             user_id=user_id,
-            title=f'{current_user.username} has added you to their connection list',
-            content=alert_content,
+            title=f'{current_user.username} accepted your connection request',
+            content=f'{current_user.username} has accepted your connection request. You are now connected!',
             alert_type='info',
             source_user_id=current_user_id,
             alert_category='follow'
