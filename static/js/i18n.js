@@ -263,7 +263,7 @@ const translations = {
         'alerts.mark_read': 'Mark as read',
         'alerts.clear_all': 'Clear all',
         'alerts.welcome_title': 'Welcome to TheraSocial!',
-        'alerts.started_following': '{username} has added you to their connection list',
+        'alerts.started_following': '{username} accepted your connection request',
 'alerts.new_follower': 'You have been added to a new connection',
 'alerts.accepted_request': '{username} accepted your connection request',
 'alerts.connection_added': '{username} has added you to their connection list',
@@ -504,7 +504,7 @@ const translations = {
 
     // PJ6003 - Notification Translations (for alerts list rendering)
     'alerts.new_message_from': 'New message from {username}',
-    'alerts.started_following': '{username} has added you to their connection list',
+    'alerts.started_following': '{username} accepted your connection request',
     'alerts.accepted_request': '{username} accepted your connection request',
     'alerts.follow_request': '{username} wants to follow you',
     'alerts.new_follower': 'You have been added to a new connection',
@@ -1569,7 +1569,7 @@ const translations = {
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'הודעה חדשה מ-{username}',
-    'alerts.started_following': '{username} הוסיף/ה אותך לרשימת הקשרים שלהם',
+    'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
     'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
     'alerts.follow_request': '{username} רוצה לעקוב אחריך',
     'alerts.new_follower': 'נוספת לחיבור חדש',
@@ -2268,7 +2268,7 @@ const translations = {
         'alerts.clear_all': 'נקה הכל',
         'alerts.welcome_title': 'ברוכים הבאים ל-TheraSocial!',
 'alerts.welcome_message': 'חשבונך נוצר בהצלחה. התחל בעדכון הפרופיל שלך.',
-'alerts.started_following': '{username} הוסיף/ה אותך לרשימת הקשרים שלהם',
+'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
 'alerts.new_follower': 'נוספת לחיבור חדש',
 'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
 'alerts.follow_request': '{username} רוצה לעקוב אחריך',
@@ -3218,7 +3218,7 @@ const translations = {
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'رسالة جديدة من {username}',
-    'alerts.started_following': '{username} أضافك إلى قائمة اتصالاتهم',
+    'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
     'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
     'alerts.follow_request': 'يريد {username} متابعتك',
     'alerts.new_follower': 'تمت إضافتك إلى اتصال جديد',
@@ -3704,7 +3704,7 @@ const translations = {
         'alerts.clear_all': 'مسح الكل',
         'alerts.welcome_title': 'مرحبًا بك في TheraSocial!',
 'alerts.welcome_message': 'تم إنشاء حسابك بنجاح. ابدأ بتحديث ملفك الشخصي.',
-'alerts.started_following': '{username} أضافك إلى قائمة اتصالاتهم',
+'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
 'alerts.new_follower': 'تمت إضافتك إلى اتصال جديد',
 'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
 'alerts.follow_request': '{username} يريد متابعتك',
@@ -4399,7 +4399,7 @@ const translations = {
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'Новое сообщение от {username}',
-    'alerts.started_following': '{username} добавил(а) вас в список контактов',
+    'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
     'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
     'alerts.follow_request': '{username} хочет подписаться на вас',
     'alerts.new_follower': 'Вас добавили в новое подключение',
@@ -5117,7 +5117,7 @@ const translations = {
         'alerts.clear_all': 'Очистить всё',
         'alerts.welcome_title': 'Добро пожаловать в TheraSocial!',
 'alerts.welcome_message': 'Ваш аккаунт успешно создан. Начните с обновления вашего профиля.',
-'alerts.started_following': '{username} добавил(а) вас в список контактов',
+'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
 'alerts.new_follower': 'Вас добавили в новое подключение',
 'alerts.accepted_request': '{username} принял/а ваш запрос на подписку',
 'alerts.follow_request': '{username} хочет следить за вами',
