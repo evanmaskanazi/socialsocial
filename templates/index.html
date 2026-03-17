@@ -3712,8 +3712,75 @@
                 color: white !important;
             }
             .main-content {
-                padding: 20px !important;
+                padding: 16px !important;
                 border-radius: 16px !important;
+            }
+        }
+
+        /* T11: Mobile symmetry improvements */
+        @media (max-width: 480px) {
+            /* T11: Consistent padding on small mobile screens */
+            .main-content {
+                padding: 14px !important;
+            }
+
+            /* T11: Summary params grid - use fixed 2 columns for visual balance */
+            #summaryParams {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 10px !important;
+            }
+
+            /* T11: Summary status card - tighter padding on mobile */
+            #summaryStatusCard {
+                padding: 16px !important;
+            }
+
+            /* T11: Center the streak badge and update button row */
+            #summaryStatusCard > div:first-child {
+                justify-content: center !important;
+                text-align: center;
+            }
+
+            /* T11: Connection tabs - equal width for visual balance */
+            .conn-tab {
+                flex: 1 !important;
+                text-align: center !important;
+            }
+
+            /* T11: Connection and search result cards - consistent full width */
+            #connectionsView .user-card,
+            #myConnectionsList .user-card,
+            #connectionRecommendationsList .user-card,
+            #connectionSearchResults .user-card {
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+
+            /* T11: Connection search - full width */
+            #connectionSearchInput {
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            /* T11: Ensure all home cards stretch equally */
+            #welcomeCard,
+            #summaryStatusCard,
+            #quickCheckinCard,
+            #todayRecommendations,
+            #friendsUpdatesSection,
+            #connectionStatusSection,
+            #homeAlertsSection {
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+
+            /* T11: View headings - consistent centering */
+            .view > h2 {
+                text-align: center !important;
             }
         }
 
@@ -6251,7 +6318,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T9"></script>
+    <script src="/static/js/i18n.js?v=T11q"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -6371,7 +6438,7 @@
                 'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
                 'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
                 'alerts.new_message_from': 'New message from {username}',
-                'alerts.started_following': '{username} has added you to their connection list',
+                'alerts.started_following': '{username} accepted your connection request',
                 'alerts.accepted_request': '{username} accepted your connection request',
                 'alerts.follow_request': '{username} wants to follow you',
                 'alerts.new_follower': 'You have been added to a new connection',
@@ -6388,7 +6455,7 @@
                 'alerts.wellness_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
                 'alerts.wellness_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
                 'alerts.new_message_from': 'הודעה חדשה מ-{username}',
-                'alerts.started_following': '{username} הוסיף/ה אותך לרשימת הקשרים שלהם',
+                'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
                 'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
                 'alerts.follow_request': '{username} רוצה לעקוב אחריך',
                 'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
@@ -6405,7 +6472,7 @@
                 'alerts.wellness_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
                 'alerts.new_message_from': 'رسالة جديدة من {username}',
-                'alerts.started_following': '{username} أضافك إلى قائمة اتصالاتهم',
+                'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
                 'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
                 'alerts.follow_request': '{username} يريد متابعتك',
                 'alerts.new_follower': 'لديك متابع جديد!',
@@ -6422,7 +6489,7 @@
                 'alerts.wellness_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
                 'alerts.new_message_from': 'Новое сообщение от {username}',
-                'alerts.started_following': '{username} добавил(а) вас в список контактов',
+                'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
                 'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
                 'alerts.follow_request': '{username} хочет подписаться на вас',
                 'alerts.new_follower': 'У вас новый подписчик!',
@@ -6517,8 +6584,8 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=T9b"></script>
-   <script src="/static/js/circles-messages.js?v=T9"></script>
+<script src="/static/js/parameters-social.js?v=T11q"></script>
+   <script src="/static/js/circles-messages.js?v=T11q"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -14581,9 +14648,16 @@ async function loadAlerts() {
                         const template = translateKey('alerts.new_message_from') || 'New message from {username}';
                         title = template.replace('{username}', username);
                     }
-                    else if (title.includes('connection list') || title.includes('started following you')) {
-                        const username = title.split(' has added you')[0] || title.split(' started following')[0];
-                        const template = translateKey('alerts.started_following') || '{username} has added you to their connection list';
+                    else if (title.includes('connection list') || title.includes('started following you') || title.includes('started following')) {
+                        // T11: Fix - prioritize 'started following' split for old format titles
+                        // to avoid treating 'started following you' as part of the username
+                        let username;
+                        if (title.includes(' started following')) {
+                            username = title.split(' started following')[0];
+                        } else {
+                            username = title.split(' has added you')[0];
+                        }
+                        const template = translateKey('alerts.accepted_request') || '{username} accepted your connection request';
                         title = template.replace('{username}', username);
                     }
                     else if (title.includes('accepted your connection request') || title.includes('accepted your follow request')) {
