@@ -1759,6 +1759,31 @@ def translate_alert_content(title, content, user_language='en'):
         username = content.split('|')[0]
         translated_title = translated_title.replace('{username}', username)
     
+    # T11: Translate plain English "accepted your connection request" patterns
+    # These are stored as plain strings, not i18n keys
+    accepted_title_translations = {
+        'en': '{username} accepted your connection request',
+        'he': '{username} אישר/ה את בקשת ההתחברות שלך',
+        'ar': '{username} قبل طلب الاتصال الخاص بك',
+        'ru': '{username} принял(а) ваш запрос на подключение'
+    }
+    accepted_content_translations = {
+        'en': '{username} has accepted your connection request. You are now connected!',
+        'he': '{username} אישר/ה את בקשת ההתחברות שלך. אתם מחוברים כעת!',
+        'ar': '{username} قبل طلب الاتصال الخاص بك. أنتما متصلان الآن!',
+        'ru': '{username} принял(а) ваш запрос на подключение. Вы теперь связаны!'
+    }
+    
+    if 'accepted your connection request' in translated_title:
+        username = translated_title.split(' accepted your connection request')[0]
+        template = accepted_title_translations.get(user_language, accepted_title_translations['en'])
+        translated_title = template.replace('{username}', username)
+    
+    if 'has accepted your connection request' in translated_content:
+        username = translated_content.split(' has accepted')[0]
+        template = accepted_content_translations.get(user_language, accepted_content_translations['en'])
+        translated_content = template.replace('{username}', username)
+    
     logger.info(f"[PJ6003] Translated notification - title: '{title}' -> '{translated_title}', content: '{content}' -> '{translated_content}'")
     
     return translated_title, translated_content
