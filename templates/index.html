@@ -299,7 +299,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js"></script>
+    <script src="/static/js/follow-requests.js?v=T11q"></script>
 
 
     <style>
@@ -9095,11 +9095,18 @@ function sendFollowRequestFromInvite(userId) {
         .then(response => response.json())
         .then(data => {
             if (data.message) {
-                showNotification(_t('msg.follow_sent', 'Follow request sent!'), 'success');
+                showNotification(_t('msg.follow_sent', 'Connection request sent!'), 'success');
                 // Reload recommendations
                 setTimeout(() => loadUserRecommendations(), 1000);
             } else {
-                showNotification(data.error || _t('msg.follow_failed', 'Failed to send request'), 'error');
+                // T11: Translate known backend error messages
+                let errorMsg = data.error || '';
+                if (errorMsg === 'Request already pending') {
+                    errorMsg = _t('msg.request_already_pending', 'Connection request is already pending');
+                } else {
+                    errorMsg = errorMsg || _t('msg.follow_failed', 'Failed to send request');
+                }
+                showNotification(errorMsg, 'error');
             }
         })
         .catch(error => {
@@ -17939,6 +17946,13 @@ async function loadHomeAlerts() {
             let displayText = translateAlertText(alert.message || alert.text || alert.title || 'Alert');
             // LL FIX: Translate well-being alert content patterns (e.g., "julia's anxiety has been...")
             if (window._translateWellnessContent) displayText = window._translateWellnessContent(displayText);
+            // T11: Translate "accepted your connection request" content on home page
+            if (displayText && displayText.includes('has accepted your connection request')) {
+                const username = displayText.split(' has accepted')[0];
+                const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate : null;
+                const template = tFn ? (tFn('alerts.accepted_content') || '{username} has accepted your connection request. You are now connected!') : '{username} has accepted your connection request. You are now connected!';
+                displayText = template.replace('{username}', username);
+            }
             return `
             <div style="background: var(--peach-light); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.2rem;">🔔</span>
