@@ -266,6 +266,7 @@ const translations = {
         'alerts.started_following': '{username} accepted your connection request',
 'alerts.new_follower': 'You have been added to a new connection',
 'alerts.accepted_request': '{username} accepted your connection request',
+'alerts.accepted_content': '{username} has accepted your connection request. You are now connected!',
 'alerts.connection_added': '{username} has added you to their connection list',
 'alerts.follow_request': '{username} wants to follow you',
 'alerts.new_post': '{username} created a new post',
@@ -506,6 +507,7 @@ const translations = {
     'alerts.new_message_from': 'New message from {username}',
     'alerts.started_following': '{username} accepted your connection request',
     'alerts.accepted_request': '{username} accepted your connection request',
+    'alerts.accepted_content': '{username} has accepted your connection request. You are now connected!',
     'alerts.follow_request': '{username} wants to follow you',
     'alerts.new_follower': 'You have been added to a new connection',
 
@@ -1571,6 +1573,7 @@ const translations = {
     'alerts.new_message_from': 'הודעה חדשה מ-{username}',
     'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
     'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
+    'alerts.accepted_content': '{username} אישר/ה את בקשת ההתחברות שלך. אתם מחוברים כעת!',
     'alerts.follow_request': '{username} רוצה לעקוב אחריך',
     'alerts.new_follower': 'נוספת לחיבור חדש',
 
@@ -2271,6 +2274,7 @@ const translations = {
 'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
 'alerts.new_follower': 'נוספת לחיבור חדש',
 'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
+'alerts.accepted_content': '{username} אישר/ה את בקשת ההתחברות שלך. אתם מחוברים כעת!',
 'alerts.follow_request': '{username} רוצה לעקוב אחריך',
 'alerts.new_post': '{username} יצר/ה פוסט חדש',
 'alerts.new_comment': '{username} הגיב/ה על הפוסט שלך',
@@ -3220,6 +3224,7 @@ const translations = {
     'alerts.new_message_from': 'رسالة جديدة من {username}',
     'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
     'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
+    'alerts.accepted_content': '{username} قبل طلب الاتصال الخاص بك. أنتما متصلان الآن!',
     'alerts.follow_request': 'يريد {username} متابعتك',
     'alerts.new_follower': 'تمت إضافتك إلى اتصال جديد',
 
@@ -3707,6 +3712,7 @@ const translations = {
 'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
 'alerts.new_follower': 'تمت إضافتك إلى اتصال جديد',
 'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
+'alerts.accepted_content': '{username} قبل طلب الاتصال الخاص بك. أنتما متصلان الآن!',
 'alerts.follow_request': '{username} يريد متابعتك',
 'alerts.new_post': '{username} أنشأ منشوراً جديداً',
 'alerts.new_comment': '{username} علّق على منشورك',
@@ -4401,6 +4407,7 @@ const translations = {
     'alerts.new_message_from': 'Новое сообщение от {username}',
     'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
     'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
+    'alerts.accepted_content': '{username} принял(а) ваш запрос на подключение. Вы теперь связаны!',
     'alerts.follow_request': '{username} хочет подписаться на вас',
     'alerts.new_follower': 'Вас добавили в новое подключение',
 
@@ -5120,6 +5127,7 @@ const translations = {
 'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
 'alerts.new_follower': 'Вас добавили в новое подключение',
 'alerts.accepted_request': '{username} принял/а ваш запрос на подписку',
+'alerts.accepted_content': '{username} принял(а) ваш запрос на подключение. Вы теперь связаны!',
 'alerts.follow_request': '{username} хочет следить за вами',
 'alerts.new_post': '{username} создал/а новый пост',
 'alerts.new_comment': '{username} прокомментировал/а ваш пост',
