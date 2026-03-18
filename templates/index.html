@@ -299,7 +299,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js"></script>
+    <script src="/static/js/follow-requests.js?v=T11q"></script>
 
 
     <style>
@@ -3712,8 +3712,75 @@
                 color: white !important;
             }
             .main-content {
-                padding: 20px !important;
+                padding: 16px !important;
                 border-radius: 16px !important;
+            }
+        }
+
+        /* T11: Mobile symmetry improvements */
+        @media (max-width: 480px) {
+            /* T11: Consistent padding on small mobile screens */
+            .main-content {
+                padding: 14px !important;
+            }
+
+            /* T11: Summary params grid - use fixed 2 columns for visual balance */
+            #summaryParams {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 10px !important;
+            }
+
+            /* T11: Summary status card - tighter padding on mobile */
+            #summaryStatusCard {
+                padding: 16px !important;
+            }
+
+            /* T11: Center the streak badge and update button row */
+            #summaryStatusCard > div:first-child {
+                justify-content: center !important;
+                text-align: center;
+            }
+
+            /* T11: Connection tabs - equal width for visual balance */
+            .conn-tab {
+                flex: 1 !important;
+                text-align: center !important;
+            }
+
+            /* T11: Connection and search result cards - consistent full width */
+            #connectionsView .user-card,
+            #myConnectionsList .user-card,
+            #connectionRecommendationsList .user-card,
+            #connectionSearchResults .user-card {
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+
+            /* T11: Connection search - full width */
+            #connectionSearchInput {
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            /* T11: Ensure all home cards stretch equally */
+            #welcomeCard,
+            #summaryStatusCard,
+            #quickCheckinCard,
+            #todayRecommendations,
+            #friendsUpdatesSection,
+            #connectionStatusSection,
+            #homeAlertsSection {
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+
+            /* T11: View headings - consistent centering */
+            .view > h2 {
+                text-align: center !important;
             }
         }
 
@@ -6251,7 +6318,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T2"></script>
+    <script src="/static/js/i18n.js?v=T11q"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -6371,24 +6438,27 @@
                 'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
                 'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
                 'alerts.new_message_from': 'New message from {username}',
-                'alerts.started_following': '{username} started following you',
-                'alerts.accepted_request': '{username} accepted your follow request',
+                'alerts.started_following': '{username} accepted your connection request',
+                'alerts.accepted_request': '{username} accepted your connection request',
+                'alerts.accepted_content': '{username} has accepted your connection request. You are now connected!',
                 'alerts.follow_request': '{username} wants to follow you',
-                'alerts.new_follower': 'You have a new follower!',
+                'alerts.new_follower': 'You have been added to a new connection',
                 'alerts.no_alerts': 'No alerts',
                 'alerts.welcome_title': 'Welcome to TheraSocial!',
                 'alerts.welcome_message': 'Track your daily well-being, connect with friends, and grow together.',
                 'params.sleep_quality': 'Sleep',
                 'params.physical_activity': 'Exercise',
-                'params.anxiety': 'Anxiety'
+                'params.anxiety': 'Anxiety',
+                'params.calm': 'Calmness'
             },
             he: {
                 'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
                 'alerts.wellness_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
                 'alerts.wellness_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
                 'alerts.new_message_from': 'הודעה חדשה מ-{username}',
-                'alerts.started_following': '{username} התחיל/ה לעקוב אחריך',
-                'alerts.accepted_request': '{username} אישר/ה את בקשת המעקב שלך',
+                'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
+                'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
+                'alerts.accepted_content': '{username} אישר/ה את בקשת ההתחברות שלך. אתם מחוברים כעת!',
                 'alerts.follow_request': '{username} רוצה לעקוב אחריך',
                 'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
                 'alerts.no_alerts': 'אין התראות',
@@ -6396,15 +6466,17 @@
                 'alerts.welcome_message': 'עקבו אחר הבריאות היומית שלכם, התחברו עם חברים וצמחו יחד.',
                 'params.sleep_quality': 'שינה',
                 'params.physical_activity': 'פעילות גופנית',
-                'params.anxiety': 'חרדה'
+                'params.anxiety': 'חרדה',
+                'params.calm': 'שלווה'
             },
             ar: {
                 'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
                 'alerts.wellness_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
                 'alerts.new_message_from': 'رسالة جديدة من {username}',
-                'alerts.started_following': 'بدأ {username} بمتابعتك',
-                'alerts.accepted_request': 'قبل {username} طلب المتابعة الخاص بك',
+                'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
+                'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
+                'alerts.accepted_content': '{username} قبل طلب الاتصال الخاص بك. أنتما متصلان الآن!',
                 'alerts.follow_request': '{username} يريد متابعتك',
                 'alerts.new_follower': 'لديك متابع جديد!',
                 'alerts.no_alerts': 'لا توجد تنبيهات',
@@ -6412,15 +6484,17 @@
                 'alerts.welcome_message': 'تتبع صحتك اليومية، تواصل مع الأصدقاء، وانمو معاً.',
                 'params.sleep_quality': 'النوم',
                 'params.physical_activity': 'التمارين',
-                'params.anxiety': 'القلق'
+                'params.anxiety': 'القلق',
+                'params.calm': 'السكينة'
             },
             ru: {
                 'alerts.wellness_alert_for': 'Оповещение о здоровье {username}',
                 'alerts.wellness_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
                 'alerts.new_message_from': 'Новое сообщение от {username}',
-                'alerts.started_following': '{username} подписался на вас',
-                'alerts.accepted_request': '{username} принял(а) ваш запрос на подписку',
+                'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
+                'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
+                'alerts.accepted_content': '{username} принял(а) ваш запрос на подключение. Вы теперь связаны!',
                 'alerts.follow_request': '{username} хочет подписаться на вас',
                 'alerts.new_follower': 'У вас новый подписчик!',
                 'alerts.no_alerts': 'Нет уведомлений',
@@ -6428,7 +6502,8 @@
                 'alerts.welcome_message': 'Отслеживайте своё здоровье, общайтесь с друзьями и развивайтесь вместе.',
                 'params.sleep_quality': 'Сон',
                 'params.physical_activity': 'Физическая активность',
-                'params.anxiety': 'Тревожность'
+                'params.anxiety': 'Тревожность',
+                'params.calm': 'Умиротворение'
             }
         };
         function extendI18nAlerts() {
@@ -6456,7 +6531,8 @@
                 'energy': 'params.energy',
                 'sleep_quality': 'params.sleep',
                 'physical_activity': 'params.exercise',
-                'anxiety': 'params.anxiety'
+                // T8: Map to calm label when in calm mode
+                'anxiety': window.ANXIETY_DISPLAY_MODE === 'calm' ? 'params.calm' : 'params.anxiety'
             };
             
             const m = content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
@@ -6512,8 +6588,8 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=T40"></script>
-   <script src="/static/js/circles-messages.js?v=T2"></script>
+<script src="/static/js/parameters-social.js?v=T11q"></script>
+   <script src="/static/js/circles-messages.js?v=T11q"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -9019,11 +9095,18 @@ function sendFollowRequestFromInvite(userId) {
         .then(response => response.json())
         .then(data => {
             if (data.message) {
-                showNotification(_t('msg.follow_sent', 'Follow request sent!'), 'success');
+                showNotification(_t('msg.follow_sent', 'Connection request sent!'), 'success');
                 // Reload recommendations
                 setTimeout(() => loadUserRecommendations(), 1000);
             } else {
-                showNotification(data.error || _t('msg.follow_failed', 'Failed to send request'), 'error');
+                // T11: Translate known backend error messages
+                let errorMsg = data.error || '';
+                if (errorMsg === 'Request already pending') {
+                    errorMsg = _t('msg.request_already_pending', 'Connection request is already pending');
+                } else {
+                    errorMsg = errorMsg || _t('msg.follow_failed', 'Failed to send request');
+                }
+                showNotification(errorMsg, 'error');
             }
         })
         .catch(error => {
@@ -11780,7 +11863,10 @@ async function loadUserParametersForDate(userId, dateStr) {
             displayParameterReadOnly('moodInput', params.mood, 'Mood');
             displayParameterReadOnly('sleepInput', params.sleep_quality, 'Sleep');
             displayParameterReadOnly('exerciseInput', params.physical_activity, 'Exercise');
-            displayParameterReadOnly('anxietyInput', params.anxiety, 'Anxiety');
+            // T8: In calm mode, invert anxiety and change label
+            const anxLabel = window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calmness' : 'Anxiety';
+            const anxVal = (params.anxiety != null && window.ANXIETY_DISPLAY_MODE === 'calm') ? (5 - parseInt(params.anxiety)) : params.anxiety;
+            displayParameterReadOnly('anxietyInput', anxVal, anxLabel);
             displayParameterReadOnly('energyInput', params.energy, 'Energy');
 
             // Display notes if present
@@ -11834,7 +11920,7 @@ function clearParameterDisplays() {
     displayParameterReadOnly('moodInput', null, 'Mood');
     displayParameterReadOnly('sleepInput', null, 'Sleep');
     displayParameterReadOnly('exerciseInput', null, 'Exercise');
-    displayParameterReadOnly('anxietyInput', null, 'Anxiety');
+    displayParameterReadOnly('anxietyInput', null, window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calmness' : 'Anxiety');
 
     const notesElement = document.getElementById('parameterNotes');
     if (notesElement) {
@@ -12801,7 +12887,7 @@ function showAddTriggerModal() {
                     <option value="mood">Mood</option>
                     <option value="sleep_quality">Sleep Quality</option>
                     <option value="physical_activity">Physical Activity</option>
-                    <option value="anxiety">Anxiety</option>
+                    <option value="anxiety">${window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calmness' : 'Anxiety'}</option>
                     <option value="energy">Energy</option>
                     <option value="no_checkin">${_t('trigger_parameter_no_checkin', 'No Check-In')}</option>
                 </select>
@@ -12895,11 +12981,22 @@ async function createTrigger() {
                 consecutive_days: days ? parseInt(days) : 1
             };
         } else {
+            // T9a: When in calm mode and parameter is anxiety, convert display values
+            // back to storage scale before sending to backend
+            let storageOperator = operator;
+            let storageThreshold = parseInt(threshold);
+
+            if (parameter === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm') {
+                storageThreshold = 5 - storageThreshold;
+                if (operator === 'less_than') storageOperator = 'greater_than';
+                else if (operator === 'greater_than') storageOperator = 'less_than';
+            }
+
             body = {
                 target_id: parseInt(targetId),
                 parameter: parameter,
-                operator: operator,
-                threshold: parseInt(threshold)
+                operator: storageOperator,
+                threshold: storageThreshold
             };
             if (days) {
                 body.days = parseInt(days);
@@ -12959,7 +13056,7 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
                     <option value="mood">${window.i18n ? window.i18n.translate('trigger_parameter_mood') : 'Mood'}</option>
                     <option value="sleep_quality">${window.i18n ? window.i18n.translate('trigger_parameter_sleep_quality') : 'Sleep Quality'}</option>
                     <option value="physical_activity">${window.i18n ? window.i18n.translate('trigger_parameter_physical_activity') : 'Physical Activity'}</option>
-                    <option value="anxiety">${window.i18n ? window.i18n.translate('trigger_parameter_anxiety') : 'Anxiety'}</option>
+                    <option value="anxiety">${window.ANXIETY_DISPLAY_MODE === 'calm' ? (window.i18n ? window.i18n.translate('parameters.calm') : 'Calm') : (window.i18n ? window.i18n.translate('trigger_parameter_anxiety') : 'Anxiety')}</option>
                     <option value="energy">${window.i18n ? window.i18n.translate('trigger_parameter_energy') : 'Energy'}</option>
                     <option value="no_checkin">${window.i18n ? window.i18n.translate('trigger_parameter_no_checkin') : 'No Check-In'}</option>
                 </select>
@@ -13037,11 +13134,24 @@ async function createTriggerForUser(targetId, targetUsername) {
                 consecutive_days: days ? parseInt(days) : 1
             };
         } else {
+            // T9a: When in calm mode and parameter is anxiety, convert display values
+            // back to storage scale before sending to backend
+            let storageOperator = operator;
+            let storageThreshold = parseInt(threshold);
+
+            if (parameter === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm') {
+                // Invert value: user entered calmness 3 → store anxiety 2
+                storageThreshold = 5 - storageThreshold;
+                // Invert condition: less_than ↔ greater_than
+                if (operator === 'less_than') storageOperator = 'greater_than';
+                else if (operator === 'greater_than') storageOperator = 'less_than';
+            }
+
             body = {
                 watched_id: parseInt(targetId),
                 parameter_name: parameter,
-                condition: operator,
-                value: parseInt(threshold),
+                condition: storageOperator,
+                value: storageThreshold,
                 consecutive_days: days ? parseInt(days) : 1
             };
         }
@@ -13104,13 +13214,29 @@ async function loadTriggersForUser(userId, username) {
                 return `${noCheckinLabel}${daysText ? ` (${daysText})` : ''}`;
             }
 
+            // T9a: Determine parameter name, condition, and value
+            // When ANXIETY_DISPLAY_MODE is "calm", invert anxiety triggers for display
+            let paramName = trigger.parameter || trigger.parameter_name;
+            let condition = trigger.condition;
+            let displayValue = trigger.value;
+
+            if (paramName === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm') {
+                // Swap parameter key to calm
+                paramName = 'calm';
+                // Invert value: stored anxiety 2 → display calmness 3
+                displayValue = 5 - trigger.value;
+                // Invert condition: greater_than ↔ less_than
+                if (condition === 'greater_than') condition = 'less_than';
+                else if (condition === 'less_than') condition = 'greater_than';
+            }
+
             // Translate parameter name
-            const paramKey = `trigger_parameter_${trigger.parameter || trigger.parameter_name}`;
-            const paramText = window.i18n ? window.i18n.t(paramKey) : (trigger.parameter || trigger.parameter_name);
+            const paramKey = `trigger_parameter_${paramName}`;
+            const paramText = window.i18n ? window.i18n.t(paramKey) : paramName;
 
             // Translate condition
-            const conditionKey = `trigger_condition_${trigger.condition}`;
-            const conditionText = window.i18n ? window.i18n.t(conditionKey) : trigger.condition;
+            const conditionKey = `trigger_condition_${condition}`;
+            const conditionText = window.i18n ? window.i18n.t(conditionKey) : condition;
 
             // Translate days
             const daysKey = 'trigger_days_format';
@@ -13118,7 +13244,7 @@ async function loadTriggersForUser(userId, username) {
                 (window.i18n ? window.i18n.t(daysKey).replace('{count}', trigger.consecutive_days) : `${trigger.consecutive_days} days`)
                 : '';
 
-            return `${paramText}: ${conditionText} ${trigger.value}${daysText ? ` (${daysText})` : ''}`;
+            return `${paramText}: ${conditionText} ${displayValue}${daysText ? ` (${daysText})` : ''}`;
         }
 
         const removeText = window.i18n ? window.i18n.t('trigger_remove') : 'Remove';
@@ -13563,7 +13689,10 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                 energy: `⚡ ${window.i18n ? window.i18n.translate('parameters.energy') : 'Energy'}`,
                 sleep_quality: `😴 ${window.i18n ? window.i18n.translate('parameters.sleep_quality') : 'Sleep Quality'}`,
                 physical_activity: `🏃 ${window.i18n ? window.i18n.translate('parameters.physical_activity') : 'Physical Activity'}`,
-                anxiety: `😰 ${window.i18n ? window.i18n.translate('parameters.anxiety') : 'Anxiety'}`
+                // T8: Calm mode label
+                anxiety: window.ANXIETY_DISPLAY_MODE === 'calm'
+                    ? `😌 ${window.i18n ? window.i18n.translate('parameters.calm') : 'Calm'}`
+                    : `😰 ${window.i18n ? window.i18n.translate('parameters.anxiety') : 'Anxiety'}`
             };
 
             for (const [key, label] of Object.entries(paramLabels)) {
@@ -14530,14 +14659,21 @@ async function loadAlerts() {
                         const template = translateKey('alerts.new_message_from') || 'New message from {username}';
                         title = template.replace('{username}', username);
                     }
-                    else if (title.includes('started following you')) {
-                        const username = title.split(' started following you')[0];
-                        const template = translateKey('alerts.started_following') || '{username} started following you';
+                    else if (title.includes('connection list') || title.includes('started following you') || title.includes('started following')) {
+                        // T11: Fix - prioritize 'started following' split for old format titles
+                        // to avoid treating 'started following you' as part of the username
+                        let username;
+                        if (title.includes(' started following')) {
+                            username = title.split(' started following')[0];
+                        } else {
+                            username = title.split(' has added you')[0];
+                        }
+                        const template = translateKey('alerts.accepted_request') || '{username} accepted your connection request';
                         title = template.replace('{username}', username);
                     }
-                    else if (title.includes('accepted your follow request')) {
-                        const username = title.split(' accepted your follow request')[0];
-                        const template = translateKey('alerts.accepted_request') || '{username} accepted your follow request';
+                    else if (title.includes('accepted your connection request') || title.includes('accepted your follow request')) {
+                        const username = title.split(' accepted your connection request')[0] || title.split(' accepted your follow request')[0];
+                        const template = translateKey('alerts.accepted_request') || '{username} accepted your connection request';
                         title = template.replace('{username}', username);
                     }
                     else if (title.includes('wants to follow you')) {
@@ -14559,8 +14695,14 @@ async function loadAlerts() {
                         content = translated;
                     }
                 }
-                else if (content === 'You have a new follower!' || content === 'You have a new follower') {
-                    content = translateKey('alerts.new_follower') || 'You have a new follower!';
+                else if (content === 'You have been added to a new connection' || content === 'You have a new connection!' || content === 'You have a new follower!' || content === 'You have a new follower') {
+                    content = translateKey('alerts.new_follower') || 'You have been added to a new connection';
+                }
+                // T11: Translate "accepted your connection request. You are now connected!" content
+                else if (content && content.includes('has accepted your connection request')) {
+                    const username = content.split(' has accepted')[0];
+                    const template = translateKey('alerts.accepted_content') || '{username} has accepted your connection request. You are now connected!';
+                    content = template.replace('{username}', username);
                 }
                 else if (content && typeof content === 'string' && content.includes('|')) {
                     const parts = content.split('|');
@@ -15950,13 +16092,18 @@ function renderProgressChart(data) {
     
     // FIX #2: Get translated labels based on current language
     const lang = localStorage.getItem('selectedLanguage') || 'en';
+    // T8: Calm mode label variants
+    const isCalm = window.ANXIETY_DISPLAY_MODE === 'calm';
     const chartLabels = {
-        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: 'Anxiety' },
-        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: 'חרדה' },
-        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: 'القلق' },
-        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: 'Тревога' }
+        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm ? 'Calmness' : 'Anxiety' },
+        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm ? 'רוגע' : 'חרדה' },
+        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm ? 'الهدوء' : 'القلق' },
+        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm ? 'Спокойствие' : 'Тревога' }
     };
     const labels_t = chartLabels[lang] || chartLabels['en'];
+    
+    // T8: In calm mode, invert anxiety chart data (display = 5 - stored)
+    const anxietyChartData = (data.anxiety || []).map(v => (v != null && isCalm) ? (5 - v) : v);
     
     // Prepare data - FIX #2: Include Anxiety as 5th parameter
     const labels = data.dates || [];
@@ -15996,7 +16143,7 @@ function renderProgressChart(data) {
         // FIX #2: Added Anxiety as 5th parameter
         {
             label: labels_t.anxiety,
-            data: data.anxiety || [],
+            data: anxietyChartData,
             borderColor: '#FC8181',
             backgroundColor: 'rgba(252, 129, 129, 0.1)',
             tension: 0.3,
@@ -16146,11 +16293,13 @@ async function showUserCheckinHistory(userId, username) {
     modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
     
     const lang = localStorage.getItem('selectedLanguage') || 'en';
+    // T8: Calm mode label variants for user history chart
+    const isCalm2 = window.ANXIETY_DISPLAY_MODE === 'calm';
     const chartLabels = {
-        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: 'Anxiety', title: "'s Check-in History", close: 'Close', loading: 'Loading...', noData: 'No check-in data available for this user.', last30: 'Last 30 days', date: 'Date' },
-        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: 'חרדה', title: " - היסטוריית צ'ק-אין", close: 'סגור', loading: 'טוען...', noData: 'אין נתוני צ\'ק-אין עבור משתמש זה.', last30: '30 הימים האחרונים', date: 'תאריך' },
-        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: 'القلق', title: ' - سجل التسجيل', close: 'إغلاق', loading: 'جاري التحميل...', noData: 'لا توجد بيانات تسجيل لهذا المستخدم.', last30: 'آخر 30 يوم', date: 'التاريخ' },
-        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: 'Тревога', title: ' - история отметок', close: 'Закрыть', loading: 'Загрузка...', noData: 'Нет данных для этого пользователя.', last30: 'Последние 30 дней', date: 'Дата' }
+        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm2 ? 'Calmness' : 'Anxiety', title: "'s Check-in History", close: 'Close', loading: 'Loading...', noData: 'No check-in data available for this user.', last30: 'Last 30 days', date: 'Date' },
+        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm2 ? 'רוגע' : 'חרדה', title: " - היסטוריית צ'ק-אין", close: 'סגור', loading: 'טוען...', noData: 'אין נתוני צ\'ק-אין עבור משתמש זה.', last30: '30 הימים האחרונים', date: 'תאריך' },
+        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm2 ? 'الهدوء' : 'القلق', title: ' - سجل التسجيل', close: 'إغلاق', loading: 'جاري التحميل...', noData: 'لا توجد بيانات تسجيل لهذا المستخدم.', last30: 'آخر 30 يوم', date: 'التاريخ' },
+        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm2 ? 'Спокойствие' : 'Тревога', title: ' - история отметок', close: 'Закрыть', loading: 'Загрузка...', noData: 'Нет данных для этого пользователя.', last30: 'Последние 30 дней', date: 'Дата' }
     };
     const t = chartLabels[lang] || chartLabels['en'];
     
@@ -16195,7 +16344,7 @@ async function showUserCheckinHistory(userId, username) {
                         { label: t.energy, data: data.energy || [], borderColor: '#48BB78', tension: 0.3, fill: false, pointRadius: 3 },
                         { label: t.sleep, data: data.sleep || [], borderColor: '#9F7AEA', tension: 0.3, fill: false, pointRadius: 3 },
                         { label: t.activity, data: data.activity || [], borderColor: '#F6AD55', tension: 0.3, fill: false, pointRadius: 3 },
-                        { label: t.anxiety, data: data.anxiety || [], borderColor: '#FC8181', tension: 0.3, fill: false, pointRadius: 3 }
+                        { label: t.anxiety, data: (data.anxiety || []).map(v => (v != null && isCalm2) ? (5 - v) : v), borderColor: '#FC8181', tension: 0.3, fill: false, pointRadius: 3 }
                     ].filter(ds => ds.data.some(v => v !== null && v !== undefined))
                 },
                 options: {
@@ -17524,8 +17673,12 @@ async function loadHomeSummary() {
         for (const [elemId, paramKey] of Object.entries(paramMap)) {
             const elem = document.getElementById(elemId);
             if (elem) {
-                const val = params[paramKey];
-                const emojiMap = paramKey === 'anxiety' ? anxietyEmojis : emojis;
+                let val = params[paramKey];
+                // T8: In calm mode, invert anxiety for display and use standard emojis
+                if (paramKey === 'anxiety' && val && window.ANXIETY_DISPLAY_MODE === 'calm') {
+                    val = 5 - parseInt(val);
+                }
+                const emojiMap = (paramKey === 'anxiety' && window.ANXIETY_DISPLAY_MODE !== 'calm') ? anxietyEmojis : emojis;
                 elem.textContent = val ? (emojiMap[val] || val + '/4') : '—';
                 elem.style.color = val ? 'var(--primary)' : 'var(--gray)';
             }
@@ -17793,6 +17946,13 @@ async function loadHomeAlerts() {
             let displayText = translateAlertText(alert.message || alert.text || alert.title || 'Alert');
             // LL FIX: Translate well-being alert content patterns (e.g., "julia's anxiety has been...")
             if (window._translateWellnessContent) displayText = window._translateWellnessContent(displayText);
+            // T11: Translate "accepted your connection request" content on home page
+            if (displayText && displayText.includes('has accepted your connection request')) {
+                const username = displayText.split(' has accepted')[0];
+                const tFn = (window.i18n && window.i18n.translate) ? window.i18n.translate : null;
+                const template = tFn ? (tFn('alerts.accepted_content') || '{username} has accepted your connection request. You are now connected!') : '{username} has accepted your connection request. You are now connected!';
+                displayText = template.replace('{username}', username);
+            }
             return `
             <div style="background: var(--peach-light); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.2rem;">🔔</span>

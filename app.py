@@ -696,6 +696,26 @@ DAILY_REMINDER_HOUR_UTC = 0  # Hour in UTC when daily reminder sends (0-23). 0 =
 MINIMUM_TRIGGER_DAYS = 1  # CLEAN: Set to 1 for immediate single-day triggers
 # =============================================================================
 
+# =============================================================================
+# T8: ANXIETY DISPLAY MODE CONFIGURATION
+# =============================================================================
+# Controls how the anxiety parameter is displayed across the entire app.
+# The database always stores anxiety as 1=calm/best to 4=overwhelming/worst.
+#
+# Options:
+#   "anxiety" — Display as "Anxiety" with reversed scale (1=best, 4=worst).
+#               Emojis: 1=😊, 4=😔. Triggers fire on HIGH values (>=3).
+#   "calm"    — Display as "Calmness" with standard scale (1=worst, 4=best).
+#               Values shown to user are inverted (display = 5 - stored).
+#               Emojis: 1=😔, 4=😊 (matches other 4 parameters).
+#               Triggers fire on LOW displayed values (<=2), same stored data.
+#
+# Changing this value and redeploying instantly switches ALL users' display.
+# No data migration needed — stored values are never modified.
+# =============================================================================
+ANXIETY_DISPLAY_MODE = "calm"  # Options: "anxiety" or "calm"
+# =============================================================================
+
 from flask import (
     Flask, request, jsonify, session,
     render_template, send_from_directory, redirect, url_for
@@ -1651,8 +1671,8 @@ def get_notification_translations(language='en'):
         'en': {
             # Follow notifications
             'follow.alert_title': '{username} connected with you',
-            'follow.alert_content': 'You have a new connection!',
-            'follow.new_follower': 'You have a new connection!',
+            'follow.alert_content': 'You have been added to a new connection',
+            'follow.new_follower': 'You have been added to a new connection',
             # Message notifications
             'message.alert_title': 'New message from {username}',
             'message.alert_content': 'You have received a new message',
@@ -1663,8 +1683,8 @@ def get_notification_translations(language='en'):
         'he': {
             # Follow notifications
             'follow.alert_title': '{username} התחבר/ה אליך',
-            'follow.alert_content': 'יש לך חיבור חדש!',
-            'follow.new_follower': 'יש לך חיבור חדש!',
+            'follow.alert_content': 'נוספת לחיבור חדש',
+            'follow.new_follower': 'נוספת לחיבור חדש',
             # Message notifications
             'message.alert_title': 'הודעה חדשה מ-{username}',
             'message.alert_content': 'קיבלת הודעה חדשה',
@@ -1675,8 +1695,8 @@ def get_notification_translations(language='en'):
         'ar': {
             # Follow notifications
             'follow.alert_title': '{username} اتصل بك',
-            'follow.alert_content': 'لديك اتصال جديد!',
-            'follow.new_follower': 'لديك اتصال جديد!',
+            'follow.alert_content': 'تمت إضافتك إلى اتصال جديد',
+            'follow.new_follower': 'تمت إضافتك إلى اتصال جديد',
             # Message notifications
             'message.alert_title': 'رسالة جديدة من {username}',
             'message.alert_content': 'لقد تلقيت رسالة جديدة',
@@ -1687,8 +1707,8 @@ def get_notification_translations(language='en'):
         'ru': {
             # Follow notifications
             'follow.alert_title': '{username} подключился к вам',
-            'follow.alert_content': 'У вас новое подключение!',
-            'follow.new_follower': 'У вас новое подключение!',
+            'follow.alert_content': 'Вас добавили в новое подключение',
+            'follow.new_follower': 'Вас добавили в новое подключение',
             # Message notifications
             'message.alert_title': 'Новое сообщение от {username}',
             'message.alert_content': 'Вы получили новое сообщение',
@@ -1738,6 +1758,31 @@ def translate_alert_content(title, content, user_language='en'):
     if '{username}' in translated_title and content and '|' in content:
         username = content.split('|')[0]
         translated_title = translated_title.replace('{username}', username)
+    
+    # T11: Translate plain English "accepted your connection request" patterns
+    # These are stored as plain strings, not i18n keys
+    accepted_title_translations = {
+        'en': '{username} accepted your connection request',
+        'he': '{username} אישר/ה את בקשת ההתחברות שלך',
+        'ar': '{username} قبل طلب الاتصال الخاص بك',
+        'ru': '{username} принял(а) ваш запрос на подключение'
+    }
+    accepted_content_translations = {
+        'en': '{username} has accepted your connection request. You are now connected!',
+        'he': '{username} אישר/ה את בקשת ההתחברות שלך. אתם מחוברים כעת!',
+        'ar': '{username} قبل طلب الاتصال الخاص بك. أنتما متصلان الآن!',
+        'ru': '{username} принял(а) ваш запрос на подключение. Вы теперь связаны!'
+    }
+    
+    if 'accepted your connection request' in translated_title:
+        username = translated_title.split(' accepted your connection request')[0]
+        template = accepted_title_translations.get(user_language, accepted_title_translations['en'])
+        translated_title = template.replace('{username}', username)
+    
+    if 'has accepted your connection request' in translated_content:
+        username = translated_content.split(' has accepted')[0]
+        template = accepted_content_translations.get(user_language, accepted_content_translations['en'])
+        translated_content = template.replace('{username}', username)
     
     logger.info(f"[PJ6003] Translated notification - title: '{title}' -> '{translated_title}', content: '{content}' -> '{translated_content}'")
     
@@ -2142,7 +2187,7 @@ def create_alert_with_email(user_id, title, content, alert_type='info', source_u
                                 if 'new_message' in key:
                                     email_title = f"New message from {username}"
                                 elif 'started_following' in key:
-                                    email_title = f"{username} connected with you"
+                                    email_title = f"{username} accepted your connection request"
                                 elif 'invitation' in key.lower():
                                     email_title = "New invitation"
                                 else:
@@ -2252,7 +2297,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Energy',
                 'sleep_quality': 'Sleep quality',
                 'physical_activity': 'Physical activity',
-                'anxiety': 'Anxiety',
+                # T11: Use Calmness when ANXIETY_DISPLAY_MODE is calm
+                'anxiety': 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety',
                 'no_checkin': 'No check-in'
             },
             'he': {
@@ -2269,7 +2315,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'אנרגיה',
                 'sleep_quality': 'איכות שינה',
                 'physical_activity': 'פעילות גופנית',
-                'anxiety': 'חרדה',
+                # T11: Use שלווה when ANXIETY_DISPLAY_MODE is calm
+                'anxiety': 'שלווה' if ANXIETY_DISPLAY_MODE == 'calm' else 'חרדה',
                 'no_checkin': "אין צ'ק-אין"
             },
             'ar': {
@@ -2286,7 +2333,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'الطاقة',
                 'sleep_quality': 'جودة النوم',
                 'physical_activity': 'النشاط البدني',
-                'anxiety': 'القلق',
+                # T11: Use السكينة when ANXIETY_DISPLAY_MODE is calm
+                'anxiety': 'السكينة' if ANXIETY_DISPLAY_MODE == 'calm' else 'القلق',
                 'no_checkin': 'لا يوجد تسجيل'
             },
             'ru': {
@@ -2303,7 +2351,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Энергия',
                 'sleep_quality': 'Качество сна',
                 'physical_activity': 'Физическая активность',
-                'anxiety': 'Тревожность',
+                # T11: Use Спокойствие when ANXIETY_DISPLAY_MODE is calm
+                'anxiety': 'Спокойствие' if ANXIETY_DISPLAY_MODE == 'calm' else 'Тревожность',
                 'no_checkin': 'Нет отметки'
             }
         }
@@ -2582,7 +2631,7 @@ def create_notification_with_email(user_id, title, content, alert_type='info', s
                             if 'new_message' in key:
                                 email_title = f"New message from {username}"
                             elif 'started_following' in key:
-                                email_title = f"{username} connected with you"
+                                email_title = f"{username} accepted your connection request"
                             elif 'invitation' in key.lower():
                                 email_title = "New invitation"
                             else:
@@ -8846,7 +8895,7 @@ def notification_settings():
                                         if 'new_message' in title_data.get('key', ''):
                                             alert_title = f"New message from {alert_title}"
                                         elif 'started_following' in title_data.get('key', ''):
-                                            alert_title = f"{alert_title} started following you"
+                                            alert_title = f"{alert_title} accepted your connection request"
                                         elif 'invitation' in title_data.get('key', '').lower():
                                             alert_title = "New invitation"
                                 except:
@@ -9397,22 +9446,41 @@ def circles():
                 pending_request.status = 'accepted'
                 pending_request.privacy_level = circle_type
                 pending_request.responded_at = datetime.utcnow()
-                # Create follow relationships if not existing
-                existing_follow = Follow.query.filter_by(
-                    follower_id=circle_user_id,
-                    followed_id=user_id
-                ).first()
-                if not existing_follow:
-                    db.session.add(Follow(follower_id=circle_user_id, followed_id=user_id))
-                existing_reverse = Follow.query.filter_by(
-                    follower_id=user_id,
-                    followed_id=circle_user_id
-                ).first()
-                if not existing_reverse:
-                    db.session.add(Follow(follower_id=user_id, followed_id=circle_user_id))
                 logger.info(f"[T2] Auto-accepted follow request from user {circle_user_id} when adding to circle {circle_type}")
 
+            # T9: Always ensure bidirectional Follow relationships exist when adding to circle.
+            # Without this, users added via search (circleconnectw flow) don't appear in connections.
+            existing_follow = Follow.query.filter_by(
+                follower_id=circle_user_id,
+                followed_id=user_id
+            ).first()
+            if not existing_follow:
+                db.session.add(Follow(follower_id=circle_user_id, followed_id=user_id))
+                logger.info(f"[T9] Created follow {circle_user_id} -> {user_id} when adding to circle")
+            existing_reverse = Follow.query.filter_by(
+                follower_id=user_id,
+                followed_id=circle_user_id
+            ).first()
+            if not existing_reverse:
+                db.session.add(Follow(follower_id=user_id, followed_id=circle_user_id))
+                logger.info(f"[T9] Created reverse follow {user_id} -> {circle_user_id} when adding to circle")
+
             db.session.commit()
+
+            # T11: Send "accepted your connection request" notification to the user being added
+            # Same notification as when accepting via Connection Requests tab (connectpage flow)
+            current_user = db.session.get(User, user_id)
+            if current_user:
+                create_notification_with_email(
+                    user_id=circle_user_id,
+                    title=f'{current_user.username} accepted your connection request',
+                    content=f'{current_user.username} has accepted your connection request. You are now connected!',
+                    alert_type='info',
+                    source_user_id=user_id,
+                    alert_category='follow'
+                )
+                db.session.commit()
+                logger.info(f"[T11] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add)")
 
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
             return jsonify({'success': True, 'message': 'User added to circle'})
@@ -14146,6 +14214,43 @@ def check_parameter_triggers():
             if not watcher_circle:
                 continue
 
+            # T8 FIX (Bug A+B): Handle no_checkin BEFORE the parameters count gate.
+            # no_checkin triggers fire when users DON'T have entries, so the gate
+            # (len(parameters) < consecutive_days) would block them precisely when
+            # they should fire. Also, no_checkin was not in param_mapping, so the
+            # old-schema code path silently skipped it.
+            if trigger.parameter_name == 'no_checkin':
+                watched_user = db.session.get(User, trigger.watched_id)
+                if not watched_user:
+                    continue
+                from datetime import date as date_type
+                today = date_type.today()
+                latest_entry = db.session.execute(
+                    select(SavedParameters).filter(
+                        SavedParameters.user_id == trigger.watched_id
+                    ).order_by(SavedParameters.date.desc()).limit(1)
+                ).scalars().first()
+
+                if latest_entry and latest_entry.date:
+                    days_since = (today - latest_entry.date).days
+                else:
+                    days_since = 999
+
+                if days_since >= consecutive_days:
+                    pattern_key = (watched_user.username, 'no_checkin', today.isoformat(), str(days_since))
+                    if pattern_key not in patterns_seen:
+                        patterns_seen.add(pattern_key)
+                        alerts.append({
+                            'user': watched_user.username,
+                            'parameter': 'no_checkin',
+                            'consecutive_days': days_since,
+                            'dates': [today.isoformat()],
+                            'values': [days_since],
+                            'condition_text': f"no check-in for {days_since} days"
+                        })
+                        logger.info(f"[T8 FIX] no_checkin alert for {watched_user.username}: {days_since} days since last check-in")
+                continue  # no_checkin is fully handled — skip to next trigger
+
             parameters = db.session.execute(
                 select(SavedParameters).filter(
                     SavedParameters.user_id == trigger.watched_id,
@@ -15297,17 +15402,19 @@ def follow_user(user_id):
         db.session.commit()
 
         # Create alert for followed user
-        alert_content = 'You have a new follower!'
+        # T9: Updated wording from "following" to "connection" language
+        alert_content = 'You have been added to a new connection'
         if follow_note:
             alert_content += f' They said: "{follow_note}"'
         if follow_trigger:
             alert_content += ' (Following your parameters)'
 
         # PJ6001: Use create_notification_with_email for follow notifications (not wellness alerts)
+        # T11: Use same "accepted" language as circle-add and connection-request-accept flows
         alert = create_notification_with_email(
             user_id=user_id,
-            title=f'{current_user.username} started following you',
-            content=alert_content,
+            title=f'{current_user.username} accepted your connection request',
+            content=f'{current_user.username} has accepted your connection request. You are now connected!',
             alert_type='info',
             source_user_id=current_user_id,
             alert_category='follow'
@@ -16459,6 +16566,42 @@ def run_background_trigger_check_for_watcher(watcher_id):
             watcher_circle = get_watcher_circle_level(trigger.watched_id, watcher_id)
             if not watcher_circle:
                 continue
+
+            # T8 FIX (Bug A): Handle no_checkin BEFORE the parameters count gate.
+            # no_checkin triggers fire when users DON'T have entries, so the gate
+            # (len(parameters) < consecutive_days) would block them precisely when
+            # they should fire.
+            if trigger.parameter_name == 'no_checkin':
+                watched_user = db.session.get(User, trigger.watched_id)
+                if not watched_user:
+                    continue
+                from datetime import date as date_type
+                today = date_type.today()
+                latest_entry = db.session.execute(
+                    select(SavedParameters).filter(
+                        SavedParameters.user_id == trigger.watched_id
+                    ).order_by(SavedParameters.date.desc()).limit(1)
+                ).scalars().first()
+
+                if latest_entry and latest_entry.date:
+                    days_since = (today - latest_entry.date).days
+                else:
+                    days_since = 999
+
+                if days_since >= consecutive_days:
+                    pattern_key = (watched_user.username, 'no_checkin', today.isoformat(), str(days_since))
+                    if pattern_key not in patterns_seen:
+                        patterns_seen.add(pattern_key)
+                        alerts.append({
+                            'user': watched_user.username,
+                            'parameter': 'no_checkin',
+                            'consecutive_days': days_since,
+                            'dates': [today.isoformat()],
+                            'values': [days_since],
+                            'condition_text': f"no check-in for {days_since} days"
+                        })
+                        logger.info(f"[T8 FIX] Background no_checkin alert for {watched_user.username}: {days_since} days")
+                continue  # no_checkin is fully handled — skip to next trigger
 
             parameters = db.session.execute(
                 select(SavedParameters).filter(
@@ -18055,6 +18198,19 @@ def respond_to_follow_request(request_id):
             else:
                 logger.info(f"[T40] Reciprocal follow already exists: {follow_request.target_id} -> {follow_request.requester_id}")
 
+            # T9: Send email notification to the requester that their request was accepted
+            target_user = db.session.get(User, follow_request.target_id)
+            if target_user:
+                create_notification_with_email(
+                    user_id=follow_request.requester_id,
+                    title=f'{target_user.username} accepted your connection request',
+                    content=f'{target_user.username} has accepted your connection request. You are now connected!',
+                    alert_type='info',
+                    source_user_id=follow_request.target_id,
+                    alert_category='follow'
+                )
+                logger.info(f"[T9] Sent accept notification to requester {follow_request.requester_id} from {target_user.username}")
+
         elif action == 'reject':
             follow_request.status = 'rejected'
             follow_request.responded_at = datetime.utcnow()
@@ -18173,7 +18329,8 @@ def get_trigger_settings():
     """
     return jsonify({
         'minimum_trigger_days': MINIMUM_TRIGGER_DAYS,
-        'alert_email_mode': ALERT_EMAIL_MODE
+        'alert_email_mode': ALERT_EMAIL_MODE,
+        'anxiety_display_mode': ANXIETY_DISPLAY_MODE
     })
 
 

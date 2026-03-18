@@ -402,8 +402,9 @@ function showTooltip(categoryId, event) {
         event.stopPropagation();
     }
 
-    // Get the translated tooltip text
-    const tooltipKey = `tooltip.${categoryId}`;
+    // T9a: resolve tooltip key — use 'calm' when anxiety display mode is calm
+    const resolvedId = (categoryId === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm') ? 'calm' : categoryId;
+    const tooltipKey = `tooltip.${resolvedId}`;
     const tooltipText = pt(tooltipKey);
 
     // Get the category info for the title
@@ -466,6 +467,120 @@ const CIRCLE_EMOJIS = {
 };
 
 // Diary entries use 1-4 scale (Fix #2 only affects the chart Y-axis, not entry values)
+
+// =============================================================================
+// T8: ANXIETY DISPLAY MODE — configurable anxiety/calm parameter display
+// =============================================================================
+// The database ALWAYS stores anxiety as 1=calm(best) to 4=overwhelming(worst).
+// When ANXIETY_DISPLAY_MODE = "anxiety": displayed as-is (reversed scale, 1=best).
+// When ANXIETY_DISPLAY_MODE = "calm": display value = 5 - stored, so 1=worst, 4=best
+//   matching the other 4 parameters. Label changes to "Calm".
+// The mode is fetched from /api/config/trigger-settings on page load.
+// =============================================================================
+window.ANXIETY_DISPLAY_MODE = 'anxiety';  // default; overridden by server config
+
+// T8: Convert stored anxiety value (1-4) to display value based on mode
+window.anxietyToDisplay = function(storedVal) {
+    if (storedVal == null) return null;
+    const v = parseInt(storedVal);
+    if (isNaN(v)) return null;
+    return window.ANXIETY_DISPLAY_MODE === 'calm' ? (5 - v) : v;
+};
+
+// T8: Convert display value back to storage value
+window.anxietyToStorage = function(displayVal) {
+    if (displayVal == null) return null;
+    const v = parseInt(displayVal);
+    if (isNaN(v)) return null;
+    return window.ANXIETY_DISPLAY_MODE === 'calm' ? (5 - v) : v;
+};
+
+// T8: Fetch anxiety display mode from server config
+// Called early on page load; patches DOM if mode is "calm"
+window._fetchAnxietyDisplayMode = async function() {
+    try {
+        const resp = await fetch('/api/config/trigger-settings');
+        if (resp.ok) {
+            const cfg = await resp.json();
+            if (cfg.anxiety_display_mode === 'calm') {
+                window.ANXIETY_DISPLAY_MODE = 'calm';
+                console.log('[T8] Anxiety display mode: calm');
+                window._applyAnxietyDisplayMode();
+            } else {
+                console.log('[T8] Anxiety display mode: anxiety (default)');
+            }
+        }
+    } catch (e) {
+        console.warn('[T8] Could not fetch anxiety display mode, using default:', e);
+    }
+};
+
+// T8: Patch the DOM when mode is "calm" — swaps labels and endpoint emojis
+window._applyAnxietyDisplayMode = function() {
+    if (window.ANXIETY_DISPLAY_MODE !== 'calm') return;
+
+    // Update the PARAMETER_CATEGORIES object for any future renders
+    const anxCat = PARAMETER_CATEGORIES.find(c => c.id === 'anxiety');
+    if (anxCat) {
+        anxCat.nameKey = 'parameters.calm';
+        anxCat.descriptionKey = 'parameters.calm_desc';
+        anxCat.emoji = '😌';
+        anxCat.endEmojis = ['😔', '😊'];  // standard: low=bad, high=good
+        anxCat.reversedScale = false;
+    }
+
+    // Patch existing DOM: diary page parameter label
+    document.querySelectorAll('[data-i18n="parameters.anxiety"]').forEach(el => {
+        el.setAttribute('data-i18n', 'parameters.calm');
+        el.textContent = window.i18n ? window.i18n.translate('parameters.calm') : 'Calmness';
+    });
+    document.querySelectorAll('[data-i18n="parameters.anxiety_desc"]').forEach(el => {
+        el.setAttribute('data-i18n', 'parameters.calm_desc');
+        el.textContent = window.i18n ? window.i18n.translate('parameters.calm_desc') : 'Level of calmness experienced';
+    });
+
+    // Patch existing DOM: parameter emoji span
+    const emojiSpan = document.querySelector('.parameter-emoji[data-category="anxiety"]');
+    if (emojiSpan) emojiSpan.textContent = '😌';
+
+    // Patch existing DOM: endpoint emojis on rating buttons
+    const anxietyButtons = document.getElementById('anxiety-buttons');
+    if (anxietyButtons) {
+        const emojiBefore = anxietyButtons.querySelector('.emoji-before');
+        const emojiAfter = anxietyButtons.querySelector('.emoji-after');
+        if (emojiBefore) emojiBefore.textContent = '😔';
+        if (emojiAfter) emojiAfter.textContent = '😊';
+    }
+
+    // Patch existing DOM: tooltip
+    const tooltipBtn = document.querySelector('[data-tooltip-param="anxiety"]');
+    if (tooltipBtn) {
+        tooltipBtn.setAttribute('data-tooltip-param', 'calm');
+    }
+
+    // Patch home page summary label
+    document.querySelectorAll('[data-i18n="params.anxiety"]').forEach(el => {
+        el.setAttribute('data-i18n', 'params.calm');
+        el.textContent = window.i18n ? window.i18n.translate('params.calm') : 'Calmness';
+    });
+
+    // If diary data is already loaded, re-transform the selected anxiety button
+    if (window.selectedRatings && window.selectedRatings.anxiety) {
+        const displayVal = window.anxietyToDisplay(window.selectedRatings.anxiety);
+        if (displayVal !== window.selectedRatings.anxiety) {
+            // The stored value was loaded raw; re-select with the display value
+            window.selectedRatings.anxiety = displayVal;
+            selectRating('anxiety', displayVal);
+        }
+    }
+
+    console.log('[T8] Applied calm display mode to DOM');
+};
+
+// T8: Kick off the config fetch (runs async, patches DOM when ready)
+window._fetchAnxietyDisplayMode();
+// =============================================================================
+
 const PARAMETER_CATEGORIES = [
     {
         id: 'mood',
@@ -561,6 +676,8 @@ const addParameterTranslations = () => {
                 'parameters.physical_activity_desc': 'Physical activity level',
                 'parameters.anxiety': 'Anxiety',
                 'parameters.anxiety_desc': 'Level of anxiety experienced',
+                'parameters.calm': 'Calmness',
+                'parameters.calm_desc': 'Level of calmness experienced',
                 'parameters.notes': 'Notes',
                 'parameters.notes_placeholder': 'Additional thoughts for today...',
                 'parameters.save': 'Save Parameters',
@@ -600,6 +717,7 @@ const addParameterTranslations = () => {
                 'tooltip.sleep_quality': 'This tracks how well you slept, not just how long. Quality matters as much as quantity, and one rough night doesn\'t define a pattern.\n\n1 = Poor - Barely slept or very disrupted, woke unrefreshed\n2 = Restless - Some sleep but frequently woke, still tired\n3 = Fair - Slept reasonably well with minor interruptions\n4 = Good - Slept soundly, woke feeling refreshed\n\nRemember: Sleep is affected by stress, environment, health, and many other factors. You\'re tracking patterns to understand what helps or hinders your rest, not to achieve perfect sleep every night.',
                 'tooltip.physical_activity': 'This scale captures your overall physical activity - considering both how long and how intensely you moved today.\n\n1 = Minimal - Rest day, very light movement, or brief activity (under 15 min)\n2 = Light - Short activity (15-30 min) at easy pace, OR longer gentle movement (Examples: short walk, stretching, light household tasks)\n3 = Moderate - 30-60 min of moderate activity OR shorter vigorous activity (Examples: brisk walk, active errands, standard workout)\n4 = Substantial - Extended activity (60+ min), high-intensity workout, OR multiple activity sessions\n\nRemember: This tracks your movement patterns, not your worth. Rest is essential. The goal is awareness and gradual progress, not perfection.',
                 'tooltip.anxiety': 'Anxiety is a normal human emotion that everyone experiences. This scale tracks how much anxiety interferes with your daily life, not whether you feel anxious at all.\n\n1 = Manageable - Feeling calm or any anxiety present doesn\'t interfere with activities\n2 = Noticeable - Some anxiety, but still able to do what you need to do\n3 = Challenging - Anxiety is making some activities difficult\n4 = Overwhelming - Anxiety is significantly interfering with daily functioning\n\nRemember: The goal isn\'t to eliminate all anxiety, but to keep it at levels where you can still engage with your life.',
+                'tooltip.calm': 'This scale tracks your overall sense of calm and emotional ease throughout the day.\n\n1 = Overwhelmed - Significant distress interfering with daily functioning\n2 = Uneasy - Noticeable tension making some activities difficult\n3 = Settled - Generally at ease, minor tension doesn\'t interfere\n4 = Serene - Feeling calm and emotionally balanced\n\nRemember: The goal isn\'t perfection, but maintaining levels where you can engage with your life.',
                 // Invite CTA translations
                 'invite.cta_title': '🎉 Great job tracking your wellness!',
                 'invite.cta_subtitle': 'Share your journey with others:',
@@ -627,6 +745,8 @@ const addParameterTranslations = () => {
                 'parameters.physical_activity_desc': 'רמת פעילות גופנית',
                 'parameters.anxiety': 'חרדה',
                 'parameters.anxiety_desc': 'רמת החרדה שחוויתי',
+                'parameters.calm': 'שלווה',
+                'parameters.calm_desc': 'רמת השלווה שחוויתי',
                 'parameters.notes': 'הערות',
                 'parameters.notes_placeholder': 'מחשבות נוספות להיום...',
                 'parameters.save': 'שמור פרמטרים',
@@ -693,6 +813,8 @@ const addParameterTranslations = () => {
                 'parameters.physical_activity_desc': 'مستوى النشاط البدني',
                 'parameters.anxiety': 'القلق',
                 'parameters.anxiety_desc': 'مستوى القلق المُجرب',
+                'parameters.calm': 'السكينة',
+                'parameters.calm_desc': 'مستوى السكينة المُجرب',
                 'parameters.notes': 'ملاحظات',
                 'parameters.notes_placeholder': 'أفكار إضافية لليوم...',
                 'parameters.save': 'حفظ المعاملات',
@@ -759,6 +881,8 @@ const addParameterTranslations = () => {
                 'parameters.physical_activity_desc': 'Уровень физической активности',
                 'parameters.anxiety': 'Тревожность',
                 'parameters.anxiety_desc': 'Уровень испытанной тревожности',
+                'parameters.calm': 'Умиротворение',
+                'parameters.calm_desc': 'Уровень испытанного умиротворения',
                 'parameters.notes': 'Заметки',
                 'parameters.notes_placeholder': 'Дополнительные мысли на сегодня...',
                 'parameters.save': 'Сохранить параметры',
@@ -1002,9 +1126,9 @@ function initializeParameters() {
             <div class="parameter-header">
                 <span class="parameter-emoji" data-category="${category.id}">${category.emoji}</span>
                 <div class="parameter-info">
-                    <span class="parameter-name" data-i18n="${category.nameKey}">${category.nameKey}</span>
+                    <span class="parameter-name" data-i18n="${category.nameKey}">${pt(category.nameKey)}</span>
                     <span class="tooltip-icon" data-tooltip-key="tooltip.${category.id}" onclick="showTooltip('${category.id}', event)" title="">ⓘ</span>
-                    <span class="parameter-description" data-i18n="${category.descriptionKey}">${category.descriptionKey}</span>
+                    <span class="parameter-description" data-i18n="${category.descriptionKey}">${pt(category.descriptionKey)}</span>
                 </div>
                 <div class="privacy-selector">
           <select class="privacy-select"
@@ -1152,7 +1276,11 @@ function initializeParameters() {
                         // Also load ratings if they exist
                         if (result.data.parameters) {
                             Object.keys(result.data.parameters).forEach(categoryId => {
-                                const value = result.data.parameters[categoryId];
+                                let value = result.data.parameters[categoryId];
+                                // T9b: Convert anxiety from storage to display value
+                                if (categoryId === 'anxiety' && value != null && window.anxietyToDisplay) {
+                                    value = window.anxietyToDisplay(value);
+                                }
                                 if (value) {
                                     selectRating(categoryId, value);
                                 }
@@ -2685,7 +2813,8 @@ async function saveParameters() {
         energy: selectedRatings.energy || null,
         sleep_quality: selectedRatings.sleep_quality || null,
         physical_activity: selectedRatings.physical_activity || null,
-        anxiety: selectedRatings.anxiety || null,
+        // T8: Convert anxiety from display value back to storage value
+        anxiety: window.anxietyToStorage ? window.anxietyToStorage(selectedRatings.anxiety) : (selectedRatings.anxiety || null),
         mood_privacy: window.selectedPrivacy.mood || 'private',
         energy_privacy: window.selectedPrivacy.energy || 'private',
         sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
@@ -2776,14 +2905,23 @@ async function loadParameters(showMsg = true) {
             // Load ratings
             selectedRatings = result.data.parameters || {};
 
+            // T9b FIX: Check hasRealData BEFORE anxiety display conversion.
+            // anxietyToDisplay(0) returns 5 in calm mode, which makes blank days
+            // appear to have data, triggering a privacy reset to 'private'.
+            // selectedRatings is a reference to result.data.parameters, so mutating
+            // one mutates both — the check must happen on the raw API values.
+            const hasRealData = result.data.parameters && 
+                Object.values(result.data.parameters).some(v => v && v > 0);
+
+            // T8: Convert anxiety from storage value to display value
+            if (selectedRatings.anxiety != null && window.anxietyToDisplay) {
+                selectedRatings.anxiety = window.anxietyToDisplay(selectedRatings.anxiety);
+            }
+
             // Update UI
             Object.keys(selectedRatings).forEach(categoryId => {
                 selectRating(categoryId, selectedRatings[categoryId]);
             });
-
-            // OPT-PRIVACY: Check if this day has real saved data (any non-zero parameter)
-            const hasRealData = result.data.parameters && 
-                Object.values(result.data.parameters).some(v => v && v > 0);
 
             // OPT-PRIVACY: Only overwrite privacy settings if the day has actual saved data.
             // When navigating from a filled day to an empty day, this preserves the
@@ -3309,8 +3447,12 @@ function addTriggerSettings(container, userId, username) {
           thresholds: { yellow: [2,2], orange: [[1,2],[2,1]], red: [1,1] } },
         { name: 'physical_activity', label: 'Physical Activity', icon: '🏃',
           thresholds: { yellow: [2,2], orange: [[1,2],[2,1]], red: [1,1] } },
-        { name: 'anxiety', label: 'Anxiety', icon: '😰',
-          thresholds: { yellow: [3,3], orange: [[3,4],[4,3]], red: [4,4] } }
+        { name: 'anxiety',
+          label: (window.ANXIETY_DISPLAY_MODE === 'calm') ? 'Calmness' : 'Anxiety',
+          icon: (window.ANXIETY_DISPLAY_MODE === 'calm') ? '😌' : '😰',
+          thresholds: (window.ANXIETY_DISPLAY_MODE === 'calm')
+            ? { yellow: [2,2], orange: [[1,2],[2,1]], red: [1,1] }
+            : { yellow: [3,3], orange: [[3,4],[4,3]], red: [4,4] } }
     ];
 
     // Load existing triggers
@@ -3354,7 +3496,8 @@ function addTriggerSettings(container, userId, username) {
                     margin-inline-start: auto;
                 `;
 
-                if (param.name === 'anxiety') {
+                if (param.name === 'anxiety' && window.ANXIETY_DISPLAY_MODE !== 'calm') {
+                    // Anxiety mode: high values (3,4) are concerning
                     thresholdInfo.innerHTML = `
                         <span style="color: #ffc107;">●</span> 3 for 1+ days |
                         <span style="color: #ff9800;">●</span> 3&4 mix |
@@ -3446,13 +3589,13 @@ function getParameterIcon(paramName) {
 
 function getValueColor(paramName, value) {
     const val = parseInt(value);
-    if (paramName === 'anxiety') {
-        // For anxiety, high is bad
+    if (paramName === 'anxiety' && window.ANXIETY_DISPLAY_MODE !== 'calm') {
+        // For anxiety mode, high is bad (stored value shown as-is)
         if (val >= 3) return '#ff4444';
         if (val === 2) return '#ff8800';
         return '#44ff44';
     } else {
-        // For others, low is bad
+        // For all others (and calm mode where display is already inverted), low is bad
         if (val <= 2) return '#ff4444';
         if (val === 3) return '#ff8800';
         return '#44ff44';

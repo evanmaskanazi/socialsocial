@@ -76,6 +76,19 @@ class FollowRequestsManager {
         this.initialized = false;
     }
 
+    // T11: Translation helper - uses i18n if available, falls back to default
+    _t(key, fallback) {
+        if (window.i18n && window.i18n.translate) {
+            const translated = window.i18n.translate(key);
+            if (translated && translated !== key) return translated;
+        }
+        // Also try window._t if available
+        if (typeof window._t === 'function') {
+            return window._t(key, fallback);
+        }
+        return fallback;
+    }
+
     async init() {
         if (this.initialized) return;
 
@@ -112,7 +125,7 @@ class FollowRequestsManager {
 
                 // Show notification for new requests
                 if (this.requests.length > oldCount && oldCount > 0) {
-                    this.showNotification('New follow request received!');
+                    this.showNotification(this._t('msg.new_follow_request', 'New follow request received!'));
                 }
 
                 // Update UI
@@ -158,9 +171,9 @@ class FollowRequestsManager {
             container.innerHTML = `
                 <div class="follow-requests-empty">
                     <div class="empty-icon">👥</div>
-                    <h3>No pending follow requests</h3>
-                    <p>When someone wants to follow your wellness journey, you'll see their request here.</p>
-                    <p class="hint">Share your profile link to invite others to follow you!</p>
+                    <h3>${this._t('connections.no_pending_requests', 'No pending follow requests')}</h3>
+                    <p>${this._t('connections.pending_desc', "When someone wants to follow your wellness journey, you'll see their request here.")}</p>
+                    <p class="hint">${this._t('connections.share_hint', 'Share your profile link to invite others to follow you!')}</p>
                 </div>
             `;
             return;
@@ -169,24 +182,24 @@ class FollowRequestsManager {
         container.innerHTML = `
             <div class="follow-requests-section">
                 <div class="section-header">
-                    <h2>Follow Requests (${this.requests.length})</h2>
-                    <p class="section-subtitle">Choose what level of access to grant each person</p>
+                    <h2>${this._t('connections.requests', 'Follow Requests')} (${this.requests.length})</h2>
+                    <p class="section-subtitle">${this._t('connections.privacy_choose', 'Choose what level of access to grant each person')}</p>
                 </div>
 
                 <div class="privacy-explanation">
-                    <h4>Privacy Levels Explained:</h4>
+                    <h4>${this._t('connections.privacy_explained', 'Privacy Levels Explained:')}</h4>
                     <div class="privacy-levels">
                         <div class="privacy-level">
-                            <span class="privacy-badge public">Public</span>
-                            <span>Basic parameters only</span>
+                            <span class="privacy-badge public">${this._t('circles.public', 'Public')}</span>
+                            <span>${this._t('connections.privacy_public_desc', 'Basic parameters only')}</span>
                         </div>
                         <div class="privacy-level">
-                            <span class="privacy-badge class_b">Class B</span>
-                            <span>More details for close friends</span>
+                            <span class="privacy-badge class_b">${this._t('circles.class_b', 'Close Friends')}</span>
+                            <span>${this._t('connections.privacy_classb_desc', 'More details for close friends')}</span>
                         </div>
                         <div class="privacy-level">
-                            <span class="privacy-badge class_a">Class A</span>
-                            <span>Full access for family members</span>
+                            <span class="privacy-badge class_a">${this._t('circles.class_a', 'Family')}</span>
+                            <span>${this._t('connections.privacy_classa_desc', 'Full access for family members')}</span>
                         </div>
                     </div>
                 </div>
@@ -220,20 +233,20 @@ class FollowRequestsManager {
 
                 <div class="request-controls">
                     <div class="privacy-selector-wrapper">
-                        <label for="privacy-${request.id}">Grant access:</label>
+                        <label for="privacy-${request.id}">${this._t('connections.grant_access', 'Grant access:')}</label>
                         <select class="privacy-select" id="privacy-${request.id}" data-request-id="${request.id}">
-                            <option value="public">Public Access</option>
-                            <option value="class_b" selected>Class B (Friends)</option>
-                            <option value="class_a">Class A (Family)</option>
+                            <option value="public">${this._t('circles.public', 'Public Access')}</option>
+                            <option value="class_b" selected>${this._t('circles.class_b', 'Close Friends')}</option>
+                            <option value="class_a">${this._t('circles.class_a', 'Family')}</option>
                         </select>
                     </div>
 
                     <div class="request-actions">
                         <button class="btn-accept" data-request-id="${request.id}" onclick="followRequestsManager.acceptRequest(${request.id})">
-                            ✓ Accept
+                            ✓ ${this._t('connections.approve', 'Accept')}
                         </button>
                         <button class="btn-reject" data-request-id="${request.id}" onclick="followRequestsManager.rejectRequest(${request.id})">
-                            ✗ Reject
+                            ✗ ${this._t('connections.reject', 'Reject')}
                         </button>
                     </div>
                 </div>
@@ -283,7 +296,7 @@ class FollowRequestsManager {
     }
 
     async rejectRequest(requestId) {
-        if (confirm('Are you sure you want to reject this follow request?')) {
+        if (confirm(this._t('connections.confirm_reject', 'Are you sure you want to reject this follow request?'))) {
             await this.respondToRequest(requestId, 'reject');
         }
     }
@@ -315,17 +328,17 @@ class FollowRequestsManager {
 
                 // Show success message
                 const message = action === 'accept' ?
-                    `Follow request accepted! They can now see your ${privacyLevel.replace('_', ' ')} parameters.` :
-                    'Follow request rejected.';
+                    this._t('connections.request_accepted', 'Follow request accepted!') :
+                    this._t('connections.request_rejected', 'Follow request rejected.');
 
                 this.showMessage(message, 'success');
             } else {
                 const error = await response.json();
-                this.showMessage(error.error || `Failed to ${action} request`, 'error');
+                this.showMessage(error.error || this._t('msg.follow_failed', `Failed to ${action} request`), 'error');
             }
         } catch (error) {
             console.error(`Error ${action}ing follow request:`, error);
-            this.showMessage(`Failed to ${action} request. Please try again.`, 'error');
+            this.showMessage(this._t('msg.follow_request_failed', `Failed to ${action} request. Please try again.`), 'error');
         }
     }
 
@@ -370,16 +383,23 @@ class FollowRequestsManager {
             });
 
             if (response.ok) {
-                this.showMessage('Follow request sent! You\'ll be notified when they respond.', 'success');
+                this.showMessage(this._t('msg.follow_sent', 'Connection request sent!'), 'success');
                 return true;
             } else {
                 const error = await response.json();
-                this.showMessage(error.error || 'Failed to send follow request', 'error');
+                // T11: Translate known backend error messages
+                let errorMsg = error.error || '';
+                if (errorMsg === 'Request already pending') {
+                    errorMsg = this._t('msg.request_already_pending', 'Connection request is already pending');
+                } else {
+                    errorMsg = errorMsg || this._t('msg.follow_request_failed', 'Failed to send follow request');
+                }
+                this.showMessage(errorMsg, 'error');
                 return false;
             }
         } catch (error) {
             console.error('Error sending follow request:', error);
-            this.showMessage('Failed to send follow request. Please try again.', 'error');
+            this.showMessage(this._t('msg.follow_request_failed', 'Failed to send follow request. Please try again.'), 'error');
             return false;
         }
     }
