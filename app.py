@@ -9355,7 +9355,8 @@ def circles():
                         'id': user.id,
                         'username': user.username,
                         'email': user.email,
-                        'display_name': user.username
+                        'display_name': user.username,
+                        'selected_city': user.selected_city or ''
                     }
                 logger.warning(f"User {circle.circle_user_id} not found for circle {circle.id}")
                 return None
