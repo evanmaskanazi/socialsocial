@@ -9479,6 +9479,34 @@ def circles():
 
             db.session.commit()
 
+            # T50: Notify the user being added to the circle (same alert as connection accept).
+            # Duplicate-suppression: skip if an accept notification was already sent within 5 min
+            # (e.g. from the T2 auto-accept path or a direct follow that just happened).
+            current_user = db.session.get(User, user_id)
+            if current_user:
+                recent_cutoff = datetime.utcnow() - timedelta(minutes=5)
+                existing_accept_alert = Alert.query.filter(
+                    Alert.user_id == circle_user_id,
+                    Alert.source_user_id == user_id,
+                    Alert.alert_category == 'follow',
+                    Alert.title.contains('accepted your connection request'),
+                    Alert.created_at >= recent_cutoff
+                ).first()
+
+                if not existing_accept_alert:
+                    create_notification_with_email(
+                        user_id=circle_user_id,
+                        title=f'{current_user.username} accepted your connection request',
+                        content=f'{current_user.username} has accepted your connection request. You are now connected!',
+                        alert_type='info',
+                        source_user_id=user_id,
+                        alert_category='follow'
+                    )
+                    db.session.commit()
+                    logger.info(f"[T50] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add)")
+                else:
+                    logger.info(f"[T50] Skipped duplicate accept notification for user {circle_user_id} (already sent within 5 min)")
+
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
             return jsonify({'success': True, 'message': 'User added to circle'})
 
