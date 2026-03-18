@@ -696,7 +696,7 @@ const addParameterTranslations = () => {
 'privacy.private': 'Private',
                 'error.loading': 'Error loading parameters',
                 // Common UI elements
-                'common.back_to_following': '← Back to Following',
+                'common.back_to_following': '← Back to Connections',
                 'common.monday': 'Mon',
                 'common.tuesday': 'Tue',
                 'common.wednesday': 'Wed',
@@ -723,10 +723,10 @@ const addParameterTranslations = () => {
                 'invite.cta_subtitle': 'Share your journey with others:',
                 'invite.copy_link': '📋 Copy Your Invite Link',
                 'invite.invite_friends': '👥 Invite Friends',
-                'invite.find_people': '🔍 Find People to Follow',
+                'invite.find_people': '🔍 Find People to Connect With',
                 'invite.link_copied': 'Invite link copied to clipboard! 📋',
                 'invite.search_users': 'Search users to invite',
-                'follow.search_users': 'Search users to follow'
+                'follow.search_users': 'Search users to connect with'
             });
         }
 
@@ -765,7 +765,7 @@ const addParameterTranslations = () => {
 'privacy.private': 'פרטי',
                 'error.loading': 'שגיאה בטעינת פרמטרים',
                 // Common UI elements
-                'common.back_to_following': '→ חזרה למעקב',
+                'common.back_to_following': '→ חזרה לחיבורים',
                 'common.monday': 'ב\'',
                 'common.tuesday': 'ג\'',
                 'common.wednesday': 'ד\'',
@@ -794,7 +794,7 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 מצא אנשים לעקוב',
                 'invite.link_copied': 'קישור ההזמנה הועתק ללוח! 📋',
                 'invite.search_users': 'חפש משתמשים להזמנה',
-                'follow.search_users': 'חפש משתמשים לעקוב'
+                'follow.search_users': 'חפש משתמשים להתחבר'
             });
         }
 
@@ -833,7 +833,7 @@ const addParameterTranslations = () => {
 'privacy.private': 'خاص',
                 'error.loading': 'خطأ في تحميل المعاملات',
                 // Common UI elements
-                'common.back_to_following': '→ العودة إلى المتابعة',
+                'common.back_to_following': '→ العودة إلى الاتصالات',
                 'common.monday': 'الاثنين',
                 'common.tuesday': 'الثلاثاء',
                 'common.wednesday': 'الأربعاء',
@@ -862,7 +862,7 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 ابحث عن أشخاص للمتابعة',
                 'invite.link_copied': 'تم نسخ رابط الدعوة إلى الحافظة! 📋',
                 'invite.search_users': 'البحث عن مستخدمين للدعوة',
-                'follow.search_users': 'البحث عن مستخدمين للمتابعة'
+                'follow.search_users': 'البحث عن مستخدمين للتواصل'
             });
         }
 
@@ -901,7 +901,7 @@ const addParameterTranslations = () => {
 'privacy.private': 'Приватный',
                 'error.loading': 'Ошибка загрузки параметров',
                 // Common UI elements
-                'common.back_to_following': '← Назад к подпискам',
+                'common.back_to_following': '← Назад к контактам',
                 'common.monday': 'Пн',
                 'common.tuesday': 'Вт',
                 'common.wednesday': 'Ср',
