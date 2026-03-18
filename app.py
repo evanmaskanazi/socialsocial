@@ -9467,6 +9467,16 @@ def circles():
                 pending_request.responded_at = datetime.utcnow()
                 logger.info(f"[T2] Auto-accepted follow request from user {circle_user_id} when adding to circle {circle_type}")
 
+            # T30: Ensure I follow the user I'm adding to my circle (so they appear in my connections).
+            # One-way only: do NOT create the reverse follow (them -> me).
+            existing_follow = Follow.query.filter_by(
+                follower_id=user_id,
+                followed_id=circle_user_id
+            ).first()
+            if not existing_follow:
+                db.session.add(Follow(follower_id=user_id, followed_id=circle_user_id))
+                logger.info(f"[T30] Created follow {user_id} -> {circle_user_id} when adding to circle")
+
             db.session.commit()
 
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
