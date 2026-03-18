@@ -9467,52 +9467,7 @@ def circles():
                 pending_request.responded_at = datetime.utcnow()
                 logger.info(f"[T2] Auto-accepted follow request from user {circle_user_id} when adding to circle {circle_type}")
 
-            # T9: Always ensure bidirectional Follow relationships exist when adding to circle.
-            # Without this, users added via search (circleconnectw flow) don't appear in connections.
-            existing_follow = Follow.query.filter_by(
-                follower_id=circle_user_id,
-                followed_id=user_id
-            ).first()
-            if not existing_follow:
-                db.session.add(Follow(follower_id=circle_user_id, followed_id=user_id))
-                logger.info(f"[T9] Created follow {circle_user_id} -> {user_id} when adding to circle")
-            existing_reverse = Follow.query.filter_by(
-                follower_id=user_id,
-                followed_id=circle_user_id
-            ).first()
-            if not existing_reverse:
-                db.session.add(Follow(follower_id=user_id, followed_id=circle_user_id))
-                logger.info(f"[T9] Created reverse follow {user_id} -> {circle_user_id} when adding to circle")
-
             db.session.commit()
-
-            # T21: Send "accepted your connection request" notification to the user being added
-            # Only if no recent accept notification exists (prevents duplicate with Connection Requests accept)
-            current_user = db.session.get(User, user_id)
-            if current_user:
-                from datetime import timedelta
-                recent_cutoff = datetime.utcnow() - timedelta(minutes=5)
-                existing_accept_alert = Alert.query.filter(
-                    Alert.user_id == circle_user_id,
-                    Alert.source_user_id == user_id,
-                    Alert.alert_category == 'follow',
-                    Alert.title.contains('accepted your connection request'),
-                    Alert.created_at >= recent_cutoff
-                ).first()
-                
-                if not existing_accept_alert:
-                    create_notification_with_email(
-                        user_id=circle_user_id,
-                        title=f'{current_user.username} accepted your connection request',
-                        content=f'{current_user.username} has accepted your connection request. You are now connected!',
-                        alert_type='info',
-                        source_user_id=user_id,
-                        alert_category='follow'
-                    )
-                    db.session.commit()
-                    logger.info(f"[T21] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add)")
-                else:
-                    logger.info(f"[T21] Skipped duplicate accept notification for user {circle_user_id} from {current_user.username} (already sent within 5 min)")
 
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
             return jsonify({'success': True, 'message': 'User added to circle'})
