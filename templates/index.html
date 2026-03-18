@@ -4870,7 +4870,7 @@
                           <textarea class="post-input" data-i18n="feed.placeholder" placeholder="How are you feeling today?" id="postInput"></textarea>
                           <div class="post-actions">
                               <select class="visibility-select" id="visibilitySelect">
-                                  <option value="general" data-i18n="privacy.public">Public</option>
+                                  <option value="general" data-i18n="privacy.public">General</option>
                                   <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
                                   <option value="family" data-i18n="privacy.class_a">Family</option>
                                   <option value="private" data-i18n="privacy.private" selected>Private</option>
@@ -5104,7 +5104,7 @@
                             min-width: 200px;
                         " onchange="(function(el){ console.log('Privacy dropdown changed to:', el.value); updateCirclesPrivacy(el.value); })(this)">
                             <option value="private" data-i18n="circles.visibility_private">Private 🔒</option>
-                            <option value="public" data-i18n="circles.visibility_public">Public 🌍</option>
+                            <option value="public" data-i18n="circles.visibility_public">General 🌍</option>
                             <option value="class_b" data-i18n="circles.visibility_class_b">Close Friends 👥</option>
                             <option value="class_a" data-i18n="circles.visibility_class_a">Family 👨‍👩‍👧‍👦</option>
                         </select>
@@ -5126,7 +5126,7 @@
                     <div class="circles-container">
                         <div class="circle-card">
                             <div class="circle-header">
-                                <span class="circle-title" data-i18n="circles.title_public">Public</span>
+                                <span class="circle-title" data-i18n="circles.title_public">General</span>
                                 <span class="circle-count" id="generalCount">0</span>
                             </div>
                             <div class="circle-members" id="generalMembers">
@@ -6318,7 +6318,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T21"></script>
+    <script src="/static/js/i18n.js?v=T25"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -6588,8 +6588,8 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=T21"></script>
-   <script src="/static/js/circles-messages.js?v=T21"></script>
+<script src="/static/js/parameters-social.js?v=T25"></script>
+   <script src="/static/js/circles-messages.js?v=T25"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -9449,10 +9449,10 @@ async function loadUserFeedForDate(userId, dateStr) {
         }
 
         const circleNames = {
-            1: '🌍 Public',
+            1: '🌍 General',
             2: '👥 Close Friends',
             3: '👨‍👩‍👧‍👦 Family',
-            'general': '🌍 Public',
+            'general': '🌍 General',
             'close_friends': '👥 Close Friends',
             'family': '👨‍👩‍👧‍👦 Family',
             'private': '🔒 Private'
@@ -9464,7 +9464,7 @@ async function loadUserFeedForDate(userId, dateStr) {
                     <div class="post-header">
                         <span class="post-category">${post.category || 'General'}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
-                        ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 General'})</span>` : ''}
                     </div>
                     <div class="post-content">${post.content}</div>
                     ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
@@ -10912,10 +10912,10 @@ function showCircleAddMenu(userId, username) {
     const currentLang = window.i18n && window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en";
     
     const labels = {
-        "en": { public: "Public", close_friends: "Close Friends", family: "Family", title: "Add to which circle?" },
-        "he": { public: "ציבורי", close_friends: "חברים קרובים", family: "משפחה", title: "להוסיף לאיזה מעגל?" },
+        "en": { public: "General", close_friends: "Close Friends", family: "Family", title: "Add to which circle?" },
+        "he": { public: "כללי", close_friends: "חברים קרובים", family: "משפחה", title: "להוסיף לאיזה מעגל?" },
         "ar": { public: "عام", close_friends: "أصدقاء مقربون", family: "عائلة", title: "إضافة إلى أي دائرة?" },
-        "ru": { public: "Публичный", close_friends: "Близкие друзья", family: "Семья", title: "Добавить в какой круг?" }
+        "ru": { public: "Общий", close_friends: "Близкие друзья", family: "Семья", title: "Добавить в какой круг?" }
     };
     
     const t = labels[currentLang] || labels["en"];
@@ -11040,7 +11040,7 @@ async function loadUserCircles(userId) {
                     userPrivacyText = t('circles.title_class_b', 'Close Friends');
                     userPrivacyIcon = '👥';
                 } else {
-                    userPrivacyText = t('circles.visibility_public', 'Public');
+                    userPrivacyText = t('circles.visibility_public', 'General');
                     userPrivacyIcon = '🌍';
                 }
 
@@ -11052,7 +11052,7 @@ async function loadUserCircles(userId) {
                     viewerAccessText = t('circles.title_class_b', 'Close Friends');
                     viewerAccessIcon = '👥';
                 } else {
-                    viewerAccessText = t('circles.title_public', 'Public');
+                    viewerAccessText = t('circles.title_public', 'General');
                     viewerAccessIcon = '🌍';
                 }
 
@@ -11113,7 +11113,7 @@ async function loadUserCircles(userId) {
                     'private': 'Private 🔒',
                     'class_a': 'Family 👨‍👩‍👧‍👦',
                     'class_b': 'Close Friends 👥',
-                    'public': 'Public 🌍'
+                    'public': 'General 🌍'
                 };
                 privacySelect.title = `This user's circles are ${privacyLabels[data.user_privacy] || data.user_privacy}`;
             }
@@ -11152,7 +11152,7 @@ async function loadUserCircles(userId) {
                 accessLevelText = t('circles.title_class_b', 'Close Friends');
                 accessIcon = '👥';
             } else {
-                accessLevelText = t('circles.title_public', 'Public');
+                accessLevelText = t('circles.title_public', 'General');
                 accessIcon = '🌍';
             }
 
@@ -11249,7 +11249,7 @@ function updateCircleDisplay(type, members) {
     if (type === 'general') {
         containerId = 'generalMembers';
         countId = 'generalCount';
-        displayLabel = '🌍 Public';
+        displayLabel = '🌍 General';
     } else if (type === 'close_friends') {
         containerId = 'closeFriendsMembers';
         countId = 'closeFriendsCount';
@@ -11371,7 +11371,7 @@ function updateCircleDisplay(type, members) {
                             </div>
                            <select onclick="event.stopPropagation();" onchange="addToCircle(${user.id}, this.value, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" style="width: 100%;">
     <option value="">${(window.i18n && window.i18n.t ? window.i18n.t('circles.add_to') : 'Add to circle...')}</option>
-   <option value="general" data-i18n="privacy.public">Public</option>
+   <option value="general" data-i18n="privacy.public">General</option>
     <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
     <option value="family" data-i18n="privacy.class_a">Family</option>
 </select>
@@ -11395,7 +11395,7 @@ function updateCircleDisplay(type, members) {
                 });
 
                 const circleLabels = {
-    'general': '🌍 Public',
+    'general': '🌍 General',
     'close_friends': '👥 Close Friends',
     'family': '👨‍👩‍👧‍👦 Family'
 };
@@ -13892,6 +13892,10 @@ async function loadUserProfileView(userId) {
 
         const userData = await response.json();
 
+        // T25: Remove any existing partial-profile banner from previous views
+        const existingBanner = document.getElementById('partialProfileBanner');
+        if (existingBanner) existingBanner.remove();
+
         // Update header
         const profileHeader = document.querySelector('#profileView h2');
         if (profileHeader) {
@@ -13907,6 +13911,82 @@ async function loadUserProfileView(userId) {
         if (profileUsername) {
             profileUsername.textContent = userData.username;
         }
+
+        // T25: Handle partial profile (not connected)
+        if (userData.is_partial) {
+            // Show red banner
+            const banner = document.createElement('div');
+            banner.id = 'partialProfileBanner';
+            banner.style.cssText = 'background: #e53e3e; color: white; padding: 12px 20px; border-radius: 8px; margin: 15px auto; max-width: 600px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;';
+            const closeBtn = document.createElement('span');
+            closeBtn.textContent = '✕';
+            closeBtn.style.cssText = 'cursor: pointer; font-size: 18px; margin-inline-end: 8px;';
+            closeBtn.onclick = function() { banner.remove(); };
+            const msg = document.createElement('span');
+            msg.textContent = _t('msg.partial_profile_notice', 'You must be connected with this user to see full profile');
+            banner.appendChild(closeBtn);
+            banner.appendChild(msg);
+            const profileSection = document.querySelector('#profileView .profile-section');
+            if (profileSection) {
+                profileSection.parentNode.insertBefore(banner, profileSection);
+            }
+
+            // Show birth year and bio (above the line)
+            const birthYearInput = document.getElementById('profileBirthYear');
+            const birthYearUpdateBtn = document.getElementById('birthYearUpdateBtn');
+            if (birthYearInput) {
+                birthYearInput.value = userData.birth_year || '';
+                birthYearInput.disabled = true;
+                birthYearInput.style.backgroundColor = '#f3f4f6';
+                birthYearInput.style.cursor = 'default';
+            }
+            if (birthYearUpdateBtn) birthYearUpdateBtn.style.display = 'none';
+
+            const bioElement = document.getElementById('profileBio');
+            if (bioElement) {
+                bioElement.value = userData.bio || '';
+                bioElement.disabled = true;
+                bioElement.style.backgroundColor = '#f3f4f6';
+                bioElement.style.cursor = 'default';
+            }
+
+            // Hide fields below the line: interests, occupation, goals, hobbies
+            const interestsElement = document.getElementById('profileInterests');
+            const occupationElement = document.getElementById('profileOccupation');
+            const goalsElement = document.getElementById('profileGoals');
+            const hobbiesElement = document.getElementById('profileFavoriteHobbies');
+            if (interestsElement) interestsElement.closest('.form-group').style.display = 'none';
+            if (occupationElement) occupationElement.closest('.form-group').style.display = 'none';
+            if (goalsElement) goalsElement.closest('.form-group').style.display = 'none';
+            if (hobbiesElement) hobbiesElement.closest('.form-group').style.display = 'none';
+
+            // Hide save button
+            const saveButton = document.getElementById('updateProfileBtn');
+            if (saveButton) saveButton.style.display = 'none';
+
+            // Hide Change Password, Delete Account, Appearance, Data Export sections
+            ['changePasswordSection', 'accountDeletionSection', 'profileAppearanceSection', 'dataExportSection'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+
+            // Add back button and action buttons
+            addBackToFollowingButton('profileView');
+            addUserProfileActionButtons(userId, userData.username, true);
+            window.isProfilePreview = false;
+            return;
+        }
+
+        // --- Full profile (connected user) continues below ---
+        // Ensure hidden fields from a previous partial view are re-shown
+        const interestsGroup = document.getElementById('profileInterests');
+        const occupationGroup = document.getElementById('profileOccupation');
+        const goalsGroup = document.getElementById('profileGoals');
+        const hobbiesGroup = document.getElementById('profileFavoriteHobbies');
+        if (interestsGroup && interestsGroup.closest('.form-group')) interestsGroup.closest('.form-group').style.display = '';
+        if (occupationGroup && occupationGroup.closest('.form-group')) occupationGroup.closest('.form-group').style.display = '';
+        if (goalsGroup && goalsGroup.closest('.form-group')) goalsGroup.closest('.form-group').style.display = '';
+        if (hobbiesGroup && hobbiesGroup.closest('.form-group')) hobbiesGroup.closest('.form-group').style.display = '';
 
         // 10Link: Add trigger button (left of name) and check-in history button (right of name)
         // Remove any previously added 10Link buttons
@@ -14386,10 +14466,10 @@ async function loadUserFeed(userId) {
         }
 
         const circleNames = {
-            1: '🌍 Public',
+            1: '🌍 General',
             2: '👥 Close Friends',
             3: '👨‍👩‍👧‍👦 Family',
-            'general': '🌍 Public',
+            'general': '🌍 General',
             'close_friends': '👥 Close Friends',
             'family': '👨‍👩‍👧‍👦 Family',
             'private': '🔒 Private'
@@ -14401,7 +14481,7 @@ async function loadUserFeed(userId) {
                     <div class="post-header">
                         <span class="post-category">${post.category || 'General'}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
-                        ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 Public'})</span>` : ''}
+                        ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 General'})</span>` : ''}
                     </div>
                     <div class="post-content">${post.content}</div>
                     ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
