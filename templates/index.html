@@ -299,7 +299,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=T11q"></script>
+    <script src="/static/js/follow-requests.js?v=T21"></script>
 
 
     <style>
@@ -5649,7 +5649,7 @@
         <div style="position: relative; max-width: 600px; margin: 0 auto;">
             <input type="text"
                 id="followSearchInput"
-                placeholder="Search users to follow..."
+                placeholder="Search for new connections..."
                 data-i18n-placeholder="follow.search_users"
                 style="
                     width: 100%;
@@ -6318,7 +6318,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T11q"></script>
+    <script src="/static/js/i18n.js?v=T21"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -6441,7 +6441,7 @@
                 'alerts.started_following': '{username} accepted your connection request',
                 'alerts.accepted_request': '{username} accepted your connection request',
                 'alerts.accepted_content': '{username} has accepted your connection request. You are now connected!',
-                'alerts.follow_request': '{username} wants to follow you',
+                'alerts.follow_request': '{username} wants to connect with you',
                 'alerts.new_follower': 'You have been added to a new connection',
                 'alerts.no_alerts': 'No alerts',
                 'alerts.welcome_title': 'Welcome to TheraSocial!',
@@ -6459,8 +6459,8 @@
                 'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
                 'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
                 'alerts.accepted_content': '{username} אישר/ה את בקשת ההתחברות שלך. אתם מחוברים כעת!',
-                'alerts.follow_request': '{username} רוצה לעקוב אחריך',
-                'alerts.new_follower': 'יש לך עוקב/ת חדש/ה!',
+                'alerts.follow_request': '{username} רוצה להתחבר אליך',
+                'alerts.new_follower': 'נוספת לחיבור חדש!',
                 'alerts.no_alerts': 'אין התראות',
                 'alerts.welcome_title': 'ברוכים הבאים ל-TheraSocial!',
                 'alerts.welcome_message': 'עקבו אחר הבריאות היומית שלכם, התחברו עם חברים וצמחו יחד.',
@@ -6477,8 +6477,8 @@
                 'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
                 'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
                 'alerts.accepted_content': '{username} قبل طلب الاتصال الخاص بك. أنتما متصلان الآن!',
-                'alerts.follow_request': '{username} يريد متابعتك',
-                'alerts.new_follower': 'لديك متابع جديد!',
+                'alerts.follow_request': '{username} يريد التواصل معك',
+                'alerts.new_follower': 'تمت إضافتك إلى اتصال جديد!',
                 'alerts.no_alerts': 'لا توجد تنبيهات',
                 'alerts.welcome_title': 'مرحباً بك في TheraSocial!',
                 'alerts.welcome_message': 'تتبع صحتك اليومية، تواصل مع الأصدقاء، وانمو معاً.',
@@ -6495,8 +6495,8 @@
                 'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
                 'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
                 'alerts.accepted_content': '{username} принял(а) ваш запрос на подключение. Вы теперь связаны!',
-                'alerts.follow_request': '{username} хочет подписаться на вас',
-                'alerts.new_follower': 'У вас новый подписчик!',
+                'alerts.follow_request': '{username} хочет связаться с вами',
+                'alerts.new_follower': 'Вас добавили в новое подключение!',
                 'alerts.no_alerts': 'Нет уведомлений',
                 'alerts.welcome_title': 'Добро пожаловать в TheraSocial!',
                 'alerts.welcome_message': 'Отслеживайте своё здоровье, общайтесь с друзьями и развивайтесь вместе.',
@@ -6588,8 +6588,8 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=T11q"></script>
-   <script src="/static/js/circles-messages.js?v=T11q"></script>
+<script src="/static/js/parameters-social.js?v=T21"></script>
+   <script src="/static/js/circles-messages.js?v=T21"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -12128,7 +12128,7 @@ async function loadFollowing() {
         // Ensure we're loading current user's following (not viewing another user)
         const header = document.querySelector('#followingView h2');
         if (header) {
-            header.textContent = 'Following';
+            header.textContent = _t('following.title', 'Connections');
         }
 
         // Remove any existing back buttons (we're in our own following view now)
@@ -12950,7 +12950,7 @@ async function loadFollowingForTriggers() {
                     `<option value="${user.id}">${user.username}</option>`
                 ).join('');
         } else {
-            select.innerHTML = `<option value="">${_t('triggers.no_users_followed', 'No users followed')}</option>`;
+            select.innerHTML = `<option value="">${_t('triggers.no_users_followed', 'No connected users')}</option>`;
         }
     } catch (error) {
         console.error('Error loading following for triggers:', error);
@@ -14676,9 +14676,9 @@ async function loadAlerts() {
                         const template = translateKey('alerts.accepted_request') || '{username} accepted your connection request';
                         title = template.replace('{username}', username);
                     }
-                    else if (title.includes('wants to follow you')) {
-                        const username = title.split(' wants to follow you')[0];
-                        const template = translateKey('alerts.follow_request') || '{username} wants to follow you';
+                    else if (title.includes('wants to connect with you') || title.includes('wants to follow you')) {
+                        const username = title.split(' wants to ')[0];
+                        const template = translateKey('alerts.follow_request') || '{username} wants to connect with you';
                         title = template.replace('{username}', username);
                     }
                     else if (title === 'New Follow Request') {
@@ -14712,7 +14712,7 @@ async function loadAlerts() {
                         content = template.replace('{username}', username);
                     }
                 }
-                else if (content === 'Someone wants to follow your journey') {
+                else if (content === 'Someone wants to follow your journey' || content === 'Someone wants to connect with you') {
                     content = translateKey('invite.legacy_alert_content') || 'Someone has invited you to connect';
                 }
 
