@@ -7085,7 +7085,7 @@ def get_data_processing_info():
             },
             {
                 'name': 'Social Features',
-                'purpose': 'To enable following, messaging, and community features',
+                'purpose': 'To enable connections, messaging, and community features',
                 'legal_basis': 'Contract performance',
                 'data_categories': ['messages', 'posts', 'follows', 'circles'],
                 'retention': DATA_RETENTION_PERIODS['messages']['period'],
@@ -9264,7 +9264,7 @@ def circles():
                 ).scalar_one_or_none()
 
                 if not is_following:
-                    return jsonify({'error': 'Must be following user to view circles'}), 403
+                    return jsonify({'error': 'Must be connected to user to view circles'}), 403
 
                 # If circles are private AND viewing someone else's, return empty
                 if circles_privacy == 'private':
@@ -9467,20 +9467,33 @@ def circles():
 
             db.session.commit()
 
-            # T11: Send "accepted your connection request" notification to the user being added
-            # Same notification as when accepting via Connection Requests tab (connectpage flow)
+            # T21: Send "accepted your connection request" notification to the user being added
+            # Only if no recent accept notification exists (prevents duplicate with Connection Requests accept)
             current_user = db.session.get(User, user_id)
             if current_user:
-                create_notification_with_email(
-                    user_id=circle_user_id,
-                    title=f'{current_user.username} accepted your connection request',
-                    content=f'{current_user.username} has accepted your connection request. You are now connected!',
-                    alert_type='info',
-                    source_user_id=user_id,
-                    alert_category='follow'
-                )
-                db.session.commit()
-                logger.info(f"[T11] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add)")
+                from datetime import timedelta
+                recent_cutoff = datetime.utcnow() - timedelta(minutes=5)
+                existing_accept_alert = Alert.query.filter(
+                    Alert.user_id == circle_user_id,
+                    Alert.source_user_id == user_id,
+                    Alert.alert_category == 'follow',
+                    Alert.title.contains('accepted your connection request'),
+                    Alert.created_at >= recent_cutoff
+                ).first()
+                
+                if not existing_accept_alert:
+                    create_notification_with_email(
+                        user_id=circle_user_id,
+                        title=f'{current_user.username} accepted your connection request',
+                        content=f'{current_user.username} has accepted your connection request. You are now connected!',
+                        alert_type='info',
+                        source_user_id=user_id,
+                        alert_category='follow'
+                    )
+                    db.session.commit()
+                    logger.info(f"[T21] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add)")
+                else:
+                    logger.info(f"[T21] Skipped duplicate accept notification for user {circle_user_id} from {current_user.username} (already sent within 5 min)")
 
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
             return jsonify({'success': True, 'message': 'User added to circle'})
@@ -9862,7 +9875,7 @@ def get_circle_recommendations():
                         'username': followed_user.username,
                         'email': followed_user.email,
                         'selected_city': followed_user.selected_city,
-                        'reason': 'Same city (following)',
+                        'reason': 'Same city',
                         'reason_key': 'circles.reason_same_city'
                     })
 
@@ -9882,7 +9895,7 @@ def get_circle_recommendations():
                         'username': followed_user.username,
                         'email': followed_user.email,
                         'selected_city': followed_user.selected_city,
-                        'reason': 'You follow',
+                        'reason': 'Connected',
                         'reason_key': 'circles.reason_following'
                     })
 
@@ -14084,7 +14097,7 @@ def set_parameter_triggers(user_id):
         ).scalar_one_or_none()
 
         if not follow:
-            return jsonify({'error': 'You must be following this user'}), 400
+            return jsonify({'error': 'You must be connected to this user'}), 400
 
         trigger = db.session.execute(
             select(ParameterTrigger).filter_by(
@@ -15366,7 +15379,7 @@ def follow_user(user_id):
             return jsonify({'error': 'User not found'}), 404
 
         if current_user_id == user_id:
-            return jsonify({'error': 'Cannot follow yourself'}), 400
+            return jsonify({'error': 'Cannot connect with yourself'}), 400
 
         # Check if already following
         existing = Follow.query.filter_by(
@@ -15382,7 +15395,7 @@ def follow_user(user_id):
             if hasattr(existing, 'follow_trigger'):
                 existing.follow_trigger = follow_trigger
             db.session.commit()
-            return jsonify({'success': True, 'message': 'Follow updated'}), 200
+            return jsonify({'success': True, 'message': 'Connection updated'}), 200
 
         # Create new follow
         current_user.follow(user_to_follow, note=follow_note)
@@ -15407,7 +15420,7 @@ def follow_user(user_id):
         if follow_note:
             alert_content += f' They said: "{follow_note}"'
         if follow_trigger:
-            alert_content += ' (Following your parameters)'
+            alert_content += ' (Tracking your parameters)'
 
         # PJ6001: Use create_notification_with_email for follow notifications (not wellness alerts)
         # T11: Use same "accepted" language as circle-add and connection-request-accept flows
@@ -15429,13 +15442,13 @@ def follow_user(user_id):
             db.session.add(message)
 
         db.session.commit()
-        return jsonify({'success': True, 'message': 'User followed'})
+        return jsonify({'success': True, 'message': 'User connected'})
 
     except Exception as e:
         logger.error(f"Follow error: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         db.session.rollback()
-        return jsonify({'error': 'Failed to follow user'}), 500
+        return jsonify({'error': 'Failed to connect with user'}), 500
 
 
 @app.route('/api/unfollow/<int:user_id>', methods=['POST'])
@@ -15453,12 +15466,12 @@ def unfollow_user(user_id):
         current_user.unfollow(user_to_unfollow)
         db.session.commit()
 
-        return jsonify({'success': True, 'message': 'User unfollowed'})
+        return jsonify({'success': True, 'message': 'Connection removed'})
 
     except Exception as e:
         logger.error(f"Unfollow error: {str(e)}")
         db.session.rollback()
-        return jsonify({'error': 'Failed to unfollow user'}), 500
+        return jsonify({'error': 'Failed to remove connection'}), 500
 
 
 # V2 FIX: Toggle alert tracking for a followed user
@@ -15476,7 +15489,7 @@ def toggle_follow_trigger(user_id):
         ).first()
         
         if not follow:
-            return jsonify({'error': 'Not following this user'}), 404
+            return jsonify({'error': 'Not connected to this user'}), 404
         
         # Toggle the trigger
         current_val = follow.follow_trigger if follow.follow_trigger else False
@@ -15514,7 +15527,7 @@ def get_follow_trigger_status(user_id):
         ).first()
         
         if not follow:
-            return jsonify({'error': 'Not following this user'}), 404
+            return jsonify({'error': 'Not connected to this user'}), 404
         
         return jsonify({
             'follow_trigger': follow.follow_trigger if follow.follow_trigger else False
@@ -15686,7 +15699,7 @@ def get_following():
 
     except Exception as e:
         logger.error(f"Get following error: {str(e)}")
-        return jsonify({'error': 'Failed to get following'}), 500
+        return jsonify({'error': 'Failed to get connections'}), 500
 
 
 @app.route('/api/parameters/user/<int:user_id>', methods=['GET'])
@@ -15811,7 +15824,7 @@ def get_followers():
 
     except Exception as e:
         logger.error(f"Get followers error: {str(e)}")
-        return jsonify({'error': 'Failed to get followers'}), 500
+        return jsonify({'error': 'Failed to get connections'}), 500
 
 
 # =====================
@@ -17615,50 +17628,50 @@ def public_invite_page(username):
         translations = {
             'en': {
                 'title': f"Join {safe_username}'s Wellness Journey",
-                'subtitle': 'Follow their progress on TheraSocial',
-                'followers': 'Followers',
-                'following': 'Following',
+                'subtitle': 'See their progress on TheraSocial',
+                'followers': 'Connections',
+                'following': 'Connected',
                 'description': f'{safe_username} is tracking their well-being journey and wants to share it with you.',
-                'join_text': 'Join TheraSocial to follow their progress and support their health, well-being and prosperity goals.',
-                'follow_btn': f'Follow {safe_username}',
+                'join_text': 'Join TheraSocial to see their progress and support their health, well-being and prosperity goals.',
+                'follow_btn': f'Connect with {safe_username}',
                 'dashboard_btn': 'Go to Dashboard',
-                'already_following': 'Already Following',
+                'already_following': 'Already Connected',
                 'request_pending': 'Request Pending'
             },
             'he': {
                 'title': f'הצטרף/י למסע הבריאות של {safe_username}',
-                'subtitle': 'עקוב/י אחרי ההתקדמות שלו/ה ב-TheraSocial',
-                'followers': 'עוקבים',
-                'following': 'עוקב/ת אחרי',
+                'subtitle': 'צפה בהתקדמות שלו/ה ב-TheraSocial',
+                'followers': 'חיבורים',
+                'following': 'מחובר/ת',
                 'description': f'{safe_username} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
-                'join_text': 'הצטרף/י ל-TheraSocial כדי לעקוב אחרי ההתקדמות שלו/ה ולתמוך ביעדי הבריאות, הרווחה והשגשוג שלו/ה.',
-                'follow_btn': f'עקוב/י אחרי {safe_username}',
+                'join_text': 'הצטרף/י ל-TheraSocial כדי לצפות בהתקדמות שלו/ה ולתמוך ביעדי הבריאות, הרווחה והשגשוג שלו/ה.',
+                'follow_btn': f'התחבר/י עם {safe_username}',
                 'dashboard_btn': 'עבור ללוח הבקרה',
-                'already_following': 'כבר עוקב/ת',
+                'already_following': 'כבר מחובר/ת',
                 'request_pending': 'בקשה ממתינה'
             },
             'ar': {
                 'title': f'انضم إلى رحلة {safe_username} الصحية',
                 'subtitle': 'تابع تقدمهم على TheraSocial',
-                'followers': 'المتابعون',
-                'following': 'يتابع',
+                'followers': 'الاتصالات',
+                'following': 'متصل',
                 'description': f'{safe_username} يتتبع رحلته الصحية ويريد مشاركتها معك.',
-                'join_text': 'انضم إلى TheraSocial لمتابعة تقدمهم ودعم أهدافهم في الصحة والرفاهية والازدهار.',
-                'follow_btn': f'تابع {safe_username}',
+                'join_text': 'انضم إلى TheraSocial لمشاهدة تقدمهم ودعم أهدافهم في الصحة والرفاهية والازدهار.',
+                'follow_btn': f'تواصل مع {safe_username}',
                 'dashboard_btn': 'اذهب إلى لوحة التحكم',
-                'already_following': 'متابع بالفعل',
+                'already_following': 'متصل بالفعل',
                 'request_pending': 'طلب قيد الانتظار'
             },
             'ru': {
                 'title': f'Присоединяйтесь к пути здоровья {safe_username}',
-                'subtitle': 'Следите за их прогрессом на TheraSocial',
-                'followers': 'Подписчики',
-                'following': 'Подписки',
+                'subtitle': 'Смотрите их прогресс на TheraSocial',
+                'followers': 'Контакты',
+                'following': 'Подключён',
                 'description': f'{safe_username} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
-                'join_text': 'Присоединяйтесь к TheraSocial, чтобы следить за их прогрессом и поддерживать их цели в области здоровья, благополучия и процветания.',
-                'follow_btn': f'Подписаться на {safe_username}',
+                'join_text': 'Присоединяйтесь к TheraSocial, чтобы видеть их прогресс и поддерживать их цели в области здоровья, благополучия и процветания.',
+                'follow_btn': f'Связаться с {safe_username}',
                 'dashboard_btn': 'Перейти к панели',
-                'already_following': 'Уже подписаны',
+                'already_following': 'Уже подключён',
                 'request_pending': 'Запрос ожидает'
             }
         }
@@ -17982,7 +17995,7 @@ def get_user_feed(user_id, date_str):
             return jsonify({'error': 'User not found'}), 404
 
         if user_id != current_user_id and not current_user.is_following(target_user):
-            return jsonify({'error': 'You must follow this user to view their feed'}), 403
+            return jsonify({'error': 'You must be connected to this user to view their feed'}), 403
 
         post = Post.query.filter_by(user_id=user_id).filter(
             db.func.date(Post.created_at) == date_str
@@ -18043,7 +18056,7 @@ def get_user_parameters_by_date(user_id, date_str):
             return jsonify({'error': 'User not found'}), 404
 
         if user_id != current_user_id and not current_user.is_following(target_user):
-            return jsonify({'error': 'You must follow this user to view their parameters'}), 403
+            return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
 
         params = SavedParameters.query.filter_by(
             user_id=user_id,
@@ -18117,7 +18130,7 @@ def create_follow_request():
         )
         db.session.commit()
 
-        return jsonify({'message': 'Follow request sent'}), 200
+        return jsonify({'message': 'Connection request sent'}), 200
 
     except Exception as e:
         logger.error(f"Error: {str(e)}")
