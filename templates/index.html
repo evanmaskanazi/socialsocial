@@ -13923,7 +13923,11 @@ async function loadUserProfileView(userId) {
             closeBtn.style.cssText = 'cursor: pointer; font-size: 18px; margin-inline-end: 8px;';
             closeBtn.onclick = function() { banner.remove(); };
             const msg = document.createElement('span');
-            msg.textContent = _t('msg.partial_profile_notice', 'You must be connected with this user to see full profile');
+            const translatedMsg = _t('msg.partial_profile_notice', 'You must be connected with this user to see full profile');
+            // T25: Guard against _t returning the raw key when translation is missing
+            msg.textContent = (translatedMsg === 'msg.partial_profile_notice') 
+                ? 'You must be connected with this user to see full profile' 
+                : translatedMsg;
             banner.appendChild(closeBtn);
             banner.appendChild(msg);
             const profileSection = document.querySelector('#profileView .profile-section');
