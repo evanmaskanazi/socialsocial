@@ -1,4 +1,5 @@
 # In Render shell or local Python environment:
+
 # python
 
 from app import app, db, Alert, User, Follow, Message
