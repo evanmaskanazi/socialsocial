@@ -9188,46 +9188,11 @@ async function searchUsersToInviteInstant(query) {
                         window.i18n.translate('following.no_users') : 'No users found';
                     resultsContainer.innerHTML = `<p style="text-align: center; color: #6B7280; padding: 15px;">${noUsersText}</p>`;
                 } else {
-                    // T25: Match connections search - fetch blocked users for Block/Unblock toggle
-                    let blockedUserIds = new Set();
-                    try {
-                        const blockedResponse = await fetch('/api/blocked-users', { credentials: 'include' });
-                        if (blockedResponse.ok) {
-                            const blockedData = await blockedResponse.json();
-                            if (blockedData.blocked_users) {
-                                blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
-                            }
-                        }
-                    } catch (e) {
-                        console.error('[T25] Error fetching blocked users:', e);
-                    }
-
-                    // T25: Use same translated labels as connections search
-                    const followText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('following.follow') : 'Connect';
-                    const unfollowText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('following.unfollow') : 'Remove Connection';
-                    const withNoteText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('following.with_note') : 'Connect with Note';
-                    const blockText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('block.block_user') : 'Block';
-                    const unblockText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('block.unblock_user') : 'Unblock';
+                    const sendRequestText = window.i18n && window.i18n.translate ? 
+                        window.i18n.translate('invite.send_request') : 'Send Request';
                     
                     // PJ6014: Updated to show mutual/city info like circle recommendations
                     resultsContainer.innerHTML = users.map(user => {
-                        const isBlocked = blockedUserIds.has(user.id);
-                        const buttonLabel = isBlocked ? unblockText : blockText;
-                        const buttonAction = isBlocked 
-                            ? `unblockUserFromSearchToggle(${user.id})`
-                            : `blockUserFromSearchToggle(${user.id}, '${user.username.replace(/'/g, "\\'")}')`;
-
-                        const isFollowing = user.is_following === true;
-                        const followButtonText = isFollowing ? unfollowText : followText;
-                        const followButtonAction = isFollowing 
-                            ? `unfollowUserFromSearch(${user.id})`
-                            : `followUserFromSearch(${user.id})`;
-
                         // Build reason string like circle recommendations
                         let reason = '';
                         if (user.is_mutual && user.is_same_city) {
@@ -9239,7 +9204,7 @@ async function searchUsersToInviteInstant(query) {
                         }
                         
                         return `
-                        <div class="search-result-item" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
+                        <div class="search-result-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
                             <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromInviteSearch(${user.id})">
                                 <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
                                     ${user.username.charAt(0).toUpperCase()}
@@ -9250,16 +9215,10 @@ async function searchUsersToInviteInstant(query) {
                                     ${user.selected_city ? `<small style="color: #6B7280;">📍 ${user.selected_city}</small>` : ''}
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <button onclick="event.stopPropagation(); ${buttonAction}" class="conn-action-btn block${isBlocked ? ' blocked' : ''}">
-                                    ${buttonLabel}
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button onclick="event.stopPropagation(); sendFollowRequestFromInviteSearch(${user.id})" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; width: auto; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">
+                                    ${sendRequestText}
                                 </button>
-                                <button onclick="event.stopPropagation(); ${followButtonAction}" class="conn-action-btn${isFollowing ? ' block' : ' connect'}">
-                                    ${followButtonText}
-                                </button>
-                                ${!isFollowing ? `<button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" class="conn-action-btn connect-note">
-                                    ${withNoteText}
-                                </button>` : ''}
                             </div>
                         </div>
                     `}).join('');
@@ -9277,13 +9236,10 @@ async function searchUsersToInviteInstant(query) {
 }
 
 // PJ702: View user profile from invite search results
-// T25: Removed preview mode — non-connected users now see partial profile (matching connections behavior)
 async function viewUserProfileFromInviteSearch(userId) {
     // Clear search and hide results
-    const ii = document.getElementById('inviteSearchInput');
-    const ir = document.getElementById('inviteSearchResults');
-    if (ii) ii.value = '';
-    if (ir) ir.style.display = 'none';
+    document.getElementById('inviteSearchInput').value = '';
+    document.getElementById('inviteSearchResults').style.display = 'none';
     
     // Check if blocked first
     try {
@@ -9296,7 +9252,7 @@ async function viewUserProfileFromInviteSearch(userId) {
         console.error('Error checking block status:', e);
     }
     
-    // Navigate to user profile — no preview, partial profile for non-connected
+    // T25: Navigate to user profile — no preview, shows partial profile for non-connected
     viewUserProfile(userId);
 }
 
@@ -16003,25 +15959,14 @@ async function searchUsersToFollowInstant(query) {
 }
 
 // FIX #6: Helper function to follow user from search results
-// T25: Added null guards for cross-tab use (connections, invite)
 async function followUserFromSearch(userId) {
     try {
         await apiCall(`/follow/${userId}`, 'POST', {});
         showNotification(_t('msg.followed_success', 'Successfully followed user'), 'success');
         
-        // Clear all possible search contexts
-        const fi = document.getElementById('followSearchInput');
-        const fr = document.getElementById('followSearchResults');
-        const ii = document.getElementById('inviteSearchInput');
-        const ir = document.getElementById('inviteSearchResults');
-        const ci = document.getElementById('connectionSearchInput');
-        const cr = document.getElementById('connectionSearchResults');
-        if (fi) fi.value = '';
-        if (fr) fr.style.display = 'none';
-        if (ii) ii.value = '';
-        if (ir) ir.style.display = 'none';
-        if (ci) ci.value = '';
-        if (cr) cr.style.display = 'none';
+        // Clear search and reload following
+        document.getElementById('followSearchInput').value = '';
+        document.getElementById('followSearchResults').style.display = 'none';
         
         if (typeof loadFollowing === 'function') {
             await loadFollowing();
@@ -16032,7 +15977,6 @@ async function followUserFromSearch(userId) {
 }
 
 // FIX #6: Helper function to follow user with note from search results  
-// T25: Added null guards for cross-tab use
 async function followUserWithNoteFromSearch(userId, username) {
     const note = prompt(_t('connections.add_note_optional', 'Add a note (optional):'));
     if (note !== null) {
@@ -16040,15 +15984,9 @@ async function followUserWithNoteFromSearch(userId, username) {
             await apiCall(`/follow/${userId}`, 'POST', { note: note });
             showNotification(_t('msg.followed_with_note', 'Successfully followed user with note'), 'success');
             
-            // Clear all possible search contexts
-            const fi = document.getElementById('followSearchInput');
-            const fr = document.getElementById('followSearchResults');
-            const ii = document.getElementById('inviteSearchInput');
-            const ir = document.getElementById('inviteSearchResults');
-            if (fi) fi.value = '';
-            if (fr) fr.style.display = 'none';
-            if (ii) ii.value = '';
-            if (ir) ir.style.display = 'none';
+            // Clear search and reload following
+            document.getElementById('followSearchInput').value = '';
+            document.getElementById('followSearchResults').style.display = 'none';
             
             if (typeof loadFollowing === 'function') {
                 await loadFollowing();
@@ -16060,21 +15998,14 @@ async function followUserWithNoteFromSearch(userId, username) {
 }
 
 // PJ706: Helper function to unfollow user from search results
-// T25: Added null guards for cross-tab use
 async function unfollowUserFromSearch(userId) {
     try {
         await apiCall(`/unfollow/${userId}`, 'POST', {});
         showNotification(_t('msg.unfollow_success', 'Successfully unfollowed user'), 'success');
         
-        // Clear all possible search contexts
-        const fi = document.getElementById('followSearchInput');
-        const fr = document.getElementById('followSearchResults');
-        const ii = document.getElementById('inviteSearchInput');
-        const ir = document.getElementById('inviteSearchResults');
-        if (fi) fi.value = '';
-        if (fr) fr.style.display = 'none';
-        if (ii) ii.value = '';
-        if (ir) ir.style.display = 'none';
+        // Clear search and reload following
+        document.getElementById('followSearchInput').value = '';
+        document.getElementById('followSearchResults').style.display = 'none';
         
         if (typeof loadFollowing === 'function') {
             await loadFollowing();
@@ -16091,17 +16022,16 @@ window.followUserWithNoteFromSearch = followUserWithNoteFromSearch;
 window.unfollowUserFromSearch = unfollowUserFromSearch;
 
 // PJN451: View user profile from search results
-// T25: Added null guards and support for connections tab context
 async function viewUserProfileFromSearch(userId) {
-    // Clear search and hide results — handle both follow and connection search contexts
-    const followInput = document.getElementById('followSearchInput');
-    const followResults = document.getElementById('followSearchResults');
-    const connInput = document.getElementById('connectionSearchInput');
-    const connResults = document.getElementById('connectionSearchResults');
-    if (followInput) followInput.value = '';
-    if (followResults) followResults.style.display = 'none';
-    if (connInput) connInput.value = '';
-    if (connResults) connResults.style.display = 'none';
+    // T25: Clear ALL search contexts (follow, connection, invite) with null guards
+    const fi = document.getElementById('followSearchInput');
+    const fr = document.getElementById('followSearchResults');
+    const ci = document.getElementById('connectionSearchInput');
+    const cr = document.getElementById('connectionSearchResults');
+    if (fi) fi.value = '';
+    if (fr) fr.style.display = 'none';
+    if (ci) ci.value = '';
+    if (cr) cr.style.display = 'none';
     
     // Navigate to user profile
     viewUserProfile(userId);
