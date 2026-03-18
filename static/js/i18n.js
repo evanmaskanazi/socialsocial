@@ -275,11 +275,11 @@ const translations = {
 
         // Circles page
        'circles.visibility_label': 'Circle Visibility',
-'circles.visibility_public': 'Public 🌍',
+'circles.visibility_public': 'General 🌍',
 
 'circles.visibility_private': 'Private 🔒',
 'circles.no_permission': 'You don\'t have permission to view this circle',
-'circles.title_public': 'Public 🌍',
+'circles.title_public': 'General 🌍',
 
 'circles.your_access_level': 'Your Level of Access',
 'circles.restricted_access': 'Restricted Access',
@@ -302,7 +302,7 @@ const translations = {
         'circles.user_removed': 'User removed from circle',
         'circles.add_to': 'Add to circle...',
         'circles.visibility_label': 'Circle Visibility',
-'circles.visibility_public': 'Public 🌍',
+'circles.visibility_public': 'General 🌍',
 
 'circles.visibility_private': 'Private 🔒',
 'circles.no_permission': 'You don\'t have permission to view this circle',
@@ -563,7 +563,7 @@ const translations = {
     'btn.back': 'Back to Home',
     'circles.title': 'My Circles',
             'circles.search_placeholder': 'Search users to add to circles...',
-            'circles.public': 'Public 🌍',
+            'circles.public': 'General 🌍',
 
             'circles.members': 'Members',
             'circles.no_members': 'No members in this circle yet',
@@ -575,7 +575,7 @@ const translations = {
             'circles.remove_confirm': 'Remove this member from the circle?',
 
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': 'Public',
+            'privacy.public': 'General',
             'privacy.private': 'Private',
 
             // Invite alerts
@@ -1420,6 +1420,7 @@ const translations = {
         'msg.profile_load_failed': 'Failed to load user profile',
         'msg.params_load_failed': 'Failed to load user parameters',
         'msg.must_follow_profile': 'You must be connected with this user to view their profile',
+        'msg.partial_profile_notice': 'You must be connected with this user to see full profile',
         'msg.must_follow_feed': 'You must be connected with this user to view their feed',
         'msg.feed_load_failed': 'Failed to load user feed',
         'msg.export_preparing': 'Preparing your data export...',
@@ -2281,7 +2282,7 @@ const translations = {
 'alerts.new_comment': '{username} הגיב/ה על הפוסט שלך',
         // Circles page
    'circles.visibility_label': 'נראות מעגלים',
-'circles.visibility_public': 'ציבורי 🌍',
+'circles.visibility_public': 'כללי 🌍',
 
 'circles.your_access_level': 'רמת הגישה שלך',
 'circles.visibility_private': 'פרטי 🔒',
@@ -2312,7 +2313,7 @@ const translations = {
 'circles.circles_private': 'מעגלים מוגדרים כפרטיים',
 'circles.privacy_updated': 'הגדרת הפרטיות עודכנה',
 'error.updating_privacy': 'שגיאה בעדכון הפרטיות',
-'circles.title_public': 'ציבורי 🌍',
+'circles.title_public': 'כללי 🌍',
   'auth.invalid_credentials': 'הזנת שם משתמש או סיסמה לא תקינים',
 
         // Progress chart - FIX #2
@@ -2384,7 +2385,7 @@ const translations = {
         'mood.energetic': '🔥 אנרגטי',
           'circles.title': 'המעגלים שלי',
             'circles.search_placeholder': 'חפש משתמשים להוספה למעגלים...',
-            'circles.public': 'ציבורי',
+            'circles.public': 'כללי',
 
             'circles.members': 'חברים',
             'circles.no_members': 'אין חברים במעגל זה עדיין',
@@ -2396,7 +2397,7 @@ const translations = {
             'circles.remove_confirm': 'להסיר את החבר הזה מהמעגל?',
 
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': 'ציבורי',
+            'privacy.public': 'כללי',
 
 'privacy.private': 'פרטי',
 
@@ -2836,6 +2837,7 @@ const translations = {
         'msg.profile_load_failed': 'טעינת פרופיל המשתמש נכשלה',
         'msg.params_load_failed': 'טעינת פרמטרי המשתמש נכשלה',
         'msg.must_follow_profile': 'עליך להתחבר למשתמש זה כדי לצפות בפרופיל שלו',
+        'msg.partial_profile_notice': 'עליך להתחבר למשתמש זה כדי לראות את הפרופיל המלא',
         'msg.must_follow_feed': 'עליך להתחבר למשתמש זה כדי לצפות בפיד שלו',
         'msg.feed_load_failed': 'טעינת הפיד של המשתמש נכשלה',
         'msg.export_preparing': 'מכין את ייצוא הנתונים שלך...',
@@ -4252,6 +4254,7 @@ const translations = {
         'msg.profile_load_failed': 'فشل تحميل ملف المستخدم',
         'msg.params_load_failed': 'فشل تحميل معاملات المستخدم',
         'msg.must_follow_profile': 'يجب أن تكون متصلاً بهذا المستخدم لعرض ملفه الشخصي',
+        'msg.partial_profile_notice': 'يجب أن تكون متصلاً بهذا المستخدم لرؤية الملف الشخصي الكامل',
         'msg.must_follow_feed': 'يجب أن تكون متصلاً بهذا المستخدم لعرض خلاصته',
         'msg.feed_load_failed': 'فشل تحميل خلاصة المستخدم',
         'msg.export_preparing': 'جارٍ تحضير تصدير بياناتك...',
@@ -5137,7 +5140,7 @@ const translations = {
 
         // Circles page
   'circles.visibility_label': 'Видимость кругов',
-'circles.visibility_public': 'Публичный 🌍',
+'circles.visibility_public': 'Общий 🌍',
 
 'circles.visibility_private': 'Приватный 🔒',
 'circles.no_permission': 'У вас нет разрешения на просмотр этого круга',
@@ -5160,7 +5163,7 @@ const translations = {
         'circles.remove_confirm': 'Удалить этого пользователя из круга?',
         'circles.user_removed': 'Пользователь удалён из круга',
         'circles.add_to': 'Добавить в круг...',
-        'circles.title_public': 'Публичный 🌍',
+        'circles.title_public': 'Общий 🌍',
 
 'circles.your_access_level': 'Ваш уровень доступа',
 'circles.remove': 'Удалить',
@@ -5210,7 +5213,7 @@ const translations = {
         'mood.energetic': '🔥 Энергичный',
          'circles.title': 'Мои круги',
             'circles.search_placeholder': 'Искать пользователей для добавления в круги...',
-            'circles.public': 'Публичный',
+            'circles.public': 'Общий',
 
 
             'circles.members': 'Участники',
@@ -5223,7 +5226,7 @@ const translations = {
             'circles.remove_confirm': 'Удалить этого участника из круга?',
 
             // Privacy levels (for parameters - aligned with circles)
-            'privacy.public': 'Публичный',
+            'privacy.public': 'Общий',
 
 'privacy.private': 'Приватный',
 
@@ -5668,6 +5671,7 @@ const translations = {
         'msg.profile_load_failed': 'Не удалось загрузить профиль пользователя',
         'msg.params_load_failed': 'Не удалось загрузить параметры пользователя',
         'msg.must_follow_profile': 'Вы должны быть подключены к этому пользователю, чтобы просматривать его профиль',
+        'msg.partial_profile_notice': 'Вы должны быть подключены к этому пользователю, чтобы увидеть полный профиль',
         'msg.must_follow_feed': 'Вы должны быть подключены к этому пользователю, чтобы просматривать его ленту',
         'msg.feed_load_failed': 'Не удалось загрузить ленту пользователя',
         'msg.export_preparing': 'Подготовка экспорта данных...',

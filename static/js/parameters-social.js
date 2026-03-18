@@ -278,7 +278,7 @@ async function applyPrivacyToAllDaysAuto(categoryId, privacyLevel) {
         });
         const result = await response.json();
         if (result.success) {
-            const privacyLabels = { 'private': 'Private', 'class_a': 'Family', 'class_b': 'Close Friends', 'public': 'Public' };
+            const privacyLabels = { 'private': 'Private', 'class_a': 'Family', 'class_b': 'Close Friends', 'public': 'General' };
             const label = privacyLabels[privacyLevel] || privacyLevel;
             const msg = pt('parameters.apply_all_days_success') || `Visibility updated for all diary entries`;
             if (typeof showNotification === 'function') showNotification(msg, 'success');
@@ -306,7 +306,7 @@ window.applyPrivacyOnlyToday = applyPrivacyOnlyToday;
 // T30: Apply the currently-selected privacy level for a parameter to ALL past & future diary entries
 async function applyPrivacyToAllDays(categoryId) {
     const privacy = (window.selectedPrivacy && window.selectedPrivacy[categoryId]) || 'private';
-    const privacyLabels = { 'private': 'Private', 'class_a': 'Family', 'class_b': 'Close Friends', 'public': 'Public' };
+    const privacyLabels = { 'private': 'Private', 'class_a': 'Family', 'class_b': 'Close Friends', 'public': 'General' };
     const label = privacyLabels[privacy] || privacy;
     const paramLabels = { 'mood': 'Mood', 'energy': 'Energy', 'sleep_quality': 'Sleep Quality', 'physical_activity': 'Physical Activity', 'anxiety': 'Anxiety', 'notes': 'Notes' };
     const paramLabel = paramLabels[categoryId] || categoryId;
@@ -690,7 +690,7 @@ const addParameterTranslations = () => {
                 'parameters.no_saved': 'No saved parameters for this date',
                 'parameters.today_label': 'Today',
                 'error.saving': 'Error saving parameters',
-                'privacy.public': 'Public',
+                'privacy.public': 'General',
 'privacy.class_b': 'Close Friends',
 'privacy.class_a': 'Family',
 'privacy.private': 'Private',
@@ -759,7 +759,7 @@ const addParameterTranslations = () => {
                 'parameters.no_saved': 'אין פרמטרים שמורים לתאריך זה',
                 'parameters.today_label': 'היום',
                 'error.saving': 'שגיאה בשמירת פרמטרים',
-                'privacy.public': 'ציבורי',
+                'privacy.public': 'כללי',
 'privacy.class_b': 'חברים קרובים',
 'privacy.class_a': 'משפחה',
 'privacy.private': 'פרטי',
@@ -895,7 +895,7 @@ const addParameterTranslations = () => {
                 'parameters.no_saved': 'Нет сохраненных параметров для этой даты',
                 'parameters.today_label': 'Сегодня',
                 'error.saving': 'Ошибка сохранения параметров',
-                'privacy.public': 'Публичный',
+                'privacy.public': 'Общий',
 'privacy.class_b': 'Близкие друзья',
 'privacy.class_a': 'Семья',
 'privacy.private': 'Приватный',
@@ -1144,7 +1144,7 @@ function initializeParameters() {
         Close Friends
     </option>
     <option value="public" data-i18n="privacy.public" ${privacy === 'public' ? 'selected' : ''}>
-        Public
+        General
     </option>
 </select>
                     <!-- T40: "Apply only for today" link - commented out for now (dropdown applies to all days by default)
@@ -1191,7 +1191,7 @@ function initializeParameters() {
                                 <option value="private"  data-i18n="privacy.private">Private</option>
                                 <option value="class_a"  data-i18n="privacy.class_a">Family</option>
                                 <option value="class_b"  data-i18n="privacy.class_b">Close Friends</option>
-                                <option value="public"   data-i18n="privacy.public">Public</option>
+                                <option value="public"   data-i18n="privacy.public">General</option>
                             </select>
                             <!-- T40: "Apply only for today" link - commented out for now
                             <a href="#" class="apply-all-days-link" data-category="notes"

@@ -455,7 +455,7 @@ window.circlesHTML = `
 <div class="circle-privacy-section" id="circlesPrivacySelector" style="display: none;">
     <label data-i18n="circles.privacy_label">Circle Visibility</label>
     <select id="circlesPrivacySelect" class="privacy-select" onchange="updateCirclesPrivacy(this.value)">
-        <option value="public" data-i18n="privacy.public">Public</option>
+        <option value="public" data-i18n="privacy.public">General</option>
         <option value="class_b" data-i18n="privacy.class_b">Close Friends</option>
         <option value="class_a" data-i18n="privacy.class_a">Family</option>
         <option value="private" data-i18n="privacy.private">Private</option>
@@ -478,7 +478,7 @@ window.circlesHTML = `
         <div class="circle-card" data-circle="general">
             <div class="circle-header">
                 <span class="circle-icon">👥</span>
-                <span class="circle-title" data-i18n="circles.title_public">Public</span>
+                <span class="circle-title" data-i18n="circles.title_public">General</span>
                 <span class="circle-count" id="publicCount">0</span>
             </div>
             <div class="circle-members" id="publicMembers">
@@ -877,10 +877,10 @@ function showCircleAddMenu(userId, username) {
     const currentLang = window.i18n && window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en";
     
     const labels = {
-        "en": { public: "Public", close_friends: "Close Friends", family: "Family", title: "Add to which circle?" },
-        "he": { public: "ציבורי", close_friends: "חברים קרובים", family: "משפחה", title: "להוסיף לאיזה מעגל?" },
+        "en": { public: "General", close_friends: "Close Friends", family: "Family", title: "Add to which circle?" },
+        "he": { public: "כללי", close_friends: "חברים קרובים", family: "משפחה", title: "להוסיף לאיזה מעגל?" },
         "ar": { public: "عام", close_friends: "أصدقاء مقربون", family: "عائلة", title: "إضافة إلى أي دائرة?" },
-        "ru": { public: "Публичный", close_friends: "Близкие друзья", family: "Семья", title: "Добавить в какой круг?" }
+        "ru": { public: "Общий", close_friends: "Близкие друзья", family: "Семья", title: "Добавить в какой круг?" }
     };
     
     const t = labels[currentLang] || labels["en"];
@@ -1069,7 +1069,7 @@ async function searchUsers() {
                     </div>
                     <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-inline-start: 10px; flex-shrink: 0;" onclick="event.stopPropagation()">
                         <option value="">Add to circle...</option>
-                        <option value="public" data-i18n="circles.public">Public</option>
+                        <option value="public" data-i18n="circles.public">General</option>
                         <option value="class_b" data-i18n="circles.class_b">Close Friends</option>
                         <option value="class_a" data-i18n="circles.class_a">Family</option>
                     </select>
@@ -1208,7 +1208,7 @@ function updateCircleTitles() {
     // Update Public circle title
     const publicTitle = document.querySelector('[data-circle="general"] .circle-title');
     if (publicTitle) {
-        publicTitle.textContent = t('circles.title_public', 'Public');
+        publicTitle.textContent = t('circles.title_public', 'General');
     }
 
     // Update Class B circle title
@@ -1249,11 +1249,11 @@ async function addToCircle(userId, circleType, username) {
         }
 
        const circleNames = {
-    'public': t('circles.public', 'Public'),
+    'public': t('circles.public', 'General'),
     'class_b': t('circles.class_b', 'Close Friends'),
     'class_a': t('circles.class_a', 'Family'),
     // Support old names for backwards compatibility
-    'general': t('circles.public', 'Public'),
+    'general': t('circles.public', 'General'),
     'close_friends': t('circles.class_b', 'Close Friends'),
     'family': t('circles.class_a', 'Family')
 };
@@ -1283,7 +1283,7 @@ function addCircleTranslations() {
         // Update English translations
       // Update English translations
         Object.assign(window.i18n.translations.en, {
-           'circles.public': 'Public',
+           'circles.public': 'General',
             'circles.class_b': 'Close Friends',
             'circles.class_a': 'Family',
             'circles.add_to_circle': 'Add to Circle',
@@ -1294,14 +1294,14 @@ function addCircleTranslations() {
             'circles.no_members': 'No members yet',
             'circles.visibility_label': 'Who can see your circles',
             'circles.visibility_private': 'Private',
-            'circles.visibility_public': 'Public',
+            'circles.visibility_public': 'General',
             'circles.visibility_class_b': 'Close Friends',
             'circles.visibility_class_a': 'Family',
-            'circles.title_public': 'Public',
+            'circles.title_public': 'General',
 'circles.title_class_b': 'Close Friends',
 'circles.title_class_a': 'Family',
 'circles.your_access_level': 'Your Level of Access',
-            'privacy.public': 'Public',
+            'privacy.public': 'General',
             'privacy.class_b': 'Close Friends',
             'privacy.class_a': 'Family',
             'privacy.private': 'Private',
@@ -1312,7 +1312,7 @@ function addCircleTranslations() {
         // Update Hebrew translations
       // Update Hebrew translations
         Object.assign(window.i18n.translations.he, {
-            'circles.public': 'ציבורי',
+            'circles.public': 'כללי',
             'circles.class_b': 'חברים קרובים',
             'circles.class_a': 'משפחה',
             'circles.add_to_circle': 'הוסף למעגל',
@@ -1323,14 +1323,14 @@ function addCircleTranslations() {
             'circles.no_members': 'עדיין אין חברים',
             'circles.visibility_label': 'מי יכול לראות את המעגלים שלך',
             'circles.visibility_private': 'פרטי',
-            'circles.visibility_public': 'ציבורי',
+            'circles.visibility_public': 'כללי',
             'circles.visibility_class_b': 'חברים קרובים ❤️',
             'circles.visibility_class_a': 'משפחה 👨‍👩‍👧‍👦',
             'circles.your_access_level': 'רמת הגישה שלך',
-            'circles.title_public': 'ציבורי',
+            'circles.title_public': 'כללי',
 'circles.title_class_b': 'חברים קרובים',
 'circles.title_class_a': 'משפחה',
-            'privacy.public': 'ציבורי',
+            'privacy.public': 'כללי',
             'privacy.class_b': 'חברים קרובים',
             'privacy.class_a': 'משפחה',
             'privacy.private': 'פרטי',
@@ -1371,7 +1371,7 @@ function addCircleTranslations() {
      // Update Russian translations
      // Update Russian translations
         Object.assign(window.i18n.translations.ru, {
-             'circles.public': 'Публичный',
+             'circles.public': 'Общий',
             'circles.class_b': 'Близкие друзья',
             'circles.class_a': 'Семья',
             'circles.add_to_circle': 'Добавить в круг',
@@ -1382,14 +1382,14 @@ function addCircleTranslations() {
             'circles.no_members': 'Пока нет участников',
             'circles.visibility_label': 'Кто может видеть ваши круги',
             'circles.visibility_private': 'Приватный',
-            'circles.visibility_public': 'Публичный',
+            'circles.visibility_public': 'Общий',
             'circles.visibility_class_b': 'Близкие друзья ❤️',
             'circles.visibility_class_a': 'Семья 👨‍👩‍👧‍👦',
             'circles.your_access_level': 'Ваш уровень доступа',
-            'circles.title_public': 'Публичный',
+            'circles.title_public': 'Общий',
 'circles.title_class_b': 'Близкие друзья',
 'circles.title_class_a': 'Семья',
-            'privacy.public': 'Публичный',
+            'privacy.public': 'Общий',
             'privacy.class_b': 'Близкие друзья',
             'privacy.class_a': 'Семья',
             'privacy.private': 'Приватный',
