@@ -8039,8 +8039,22 @@ def get_user_profile(user_id):
         # PJ501: Allow preview mode for recommended users (view basic profile without following)
         allow_preview = request.args.get('allow_preview', 'false').lower() == 'true'
 
+        # T25: Return partial profile when not connected (instead of 403)
+        # Shows birth_year and bio only; hides interests, occupation, goals, hobbies
         if not is_following and not is_in_circle and user_id != current_user_id and not allow_preview:
-            return jsonify({'error': 'Must be connected with this user to view profile'}), 403
+            user = User.query.get(user_id)
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            profile = user.profile if user.profile else None
+            return jsonify({
+                'id': user.id,
+                'username': user.username,
+                'birth_year': user.birth_year,
+                'bio': profile.bio if profile else '',
+                'is_partial': True,
+                'is_following': is_following,
+                'is_preview': False
+            })
 
         user = User.query.get(user_id)
         if not user:
@@ -8361,7 +8375,8 @@ def get_user_parameters(user_id):
             return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
 
         # Check what circle the current user is in for the target user
-        circle_level = 'public'  # Default to public
+        # T25: Default to 'none' — must be explicitly in a circle to see parameters
+        circle_level = 'none'
         if current_user_id != user_id:
             # T31: Use lowest-access circle when user is in multiple circles
             circle = _resolve_lowest_circle(user_id, current_user_id)
@@ -8376,7 +8391,7 @@ def get_user_parameters(user_id):
                     'class_a': 'class_a',
                     'family': 'class_a'
                 }
-                circle_level = type_mapping.get(circle.circle_type, 'public')
+                circle_level = type_mapping.get(circle.circle_type, 'none')
         else:
             # User viewing their own parameters - full access
             circle_level = 'class_a'
@@ -8489,6 +8504,9 @@ def get_user_parameters(user_id):
 
 def check_param_visibility(param_privacy, viewer_circle_level):
     """Helper function to check if a parameter should be visible based on privacy and viewer's circle"""
+    # T25: If viewer is not in any circle, no parameters are visible
+    if viewer_circle_level == 'none':
+        return False
     if param_privacy == 'public':
         return True
     elif param_privacy == 'class_b':
@@ -12732,7 +12750,8 @@ def get_user_progress(user_id):
             days = 365
         
         # Determine circle level for privacy
-        circle_level = 'public'
+        # T25: Default to 'none' — must be explicitly in a circle to see parameters
+        circle_level = 'none'
         if current_user_id != user_id:
             circle_stmt = select(Circle).filter_by(
                 user_id=user_id,
@@ -12745,12 +12764,13 @@ def get_user_progress(user_id):
                     'class_b': 'class_b', 'close_friends': 'class_b',
                     'class_a': 'class_a', 'family': 'class_a'
                 }
-                circle_level = type_mapping.get(circle.circle_type, 'public')
+                circle_level = type_mapping.get(circle.circle_type, 'none')
         else:
             circle_level = 'class_a'
         
         # Privacy hierarchy - Check10: Added 'private': 3 so private params are never visible
-        privacy_levels = {'public': 0, 'class_b': 1, 'class_a': 2, 'private': 3}
+        # T25: Added 'none': -1 so non-circle members see no parameters
+        privacy_levels = {'none': -1, 'public': 0, 'class_b': 1, 'class_a': 2, 'private': 3}
         viewer_level = privacy_levels.get(circle_level, 0)
         
         def can_see(privacy_setting):
@@ -15567,7 +15587,8 @@ def get_friends_updates():
             
             # T31: Determine viewer's circle level for privacy filtering
             # Use lowest-access circle when user is in multiple circles
-            circle_level = 'public'
+            # T25: Default to 'none' — must be explicitly in a circle to see parameters
+            circle_level = 'none'
             circle = _resolve_lowest_circle(follow.followed_id, user_id)
             if circle:
                 type_mapping = {
@@ -15575,7 +15596,7 @@ def get_friends_updates():
                     'class_b': 'class_b', 'close_friends': 'class_b',
                     'class_a': 'class_a', 'family': 'class_a'
                 }
-                circle_level = type_mapping.get(circle.circle_type, 'public')
+                circle_level = type_mapping.get(circle.circle_type, 'none')
             
             # Get the latest parameter entry within the last 7 days
             latest_params = SavedParameters.query.filter(
@@ -15719,7 +15740,8 @@ def get_user_parameters_for_triggers(user_id):
                 return jsonify({'error': 'Not authorized'}), 403
 
         # V4 FIX: Determine viewer's circle level for privacy filtering
-        circle_level = 'public'  # Default for non-circle followers
+        # T25: Default to 'none' — must be explicitly in a circle to see parameters
+        circle_level = 'none'
         if viewer_id != user_id:
             # T31: Use lowest-access circle when user is in multiple circles
             circle = _resolve_lowest_circle(user_id, viewer_id)
@@ -15732,7 +15754,7 @@ def get_user_parameters_for_triggers(user_id):
                     'class_a': 'class_a',
                     'family': 'class_a'
                 }
-                circle_level = type_mapping.get(circle.circle_type, 'public')
+                circle_level = type_mapping.get(circle.circle_type, 'none')
         else:
             # User viewing own parameters - full access
             circle_level = 'class_a'
@@ -18058,6 +18080,20 @@ def get_user_parameters_by_date(user_id, date_str):
         if user_id != current_user_id and not current_user.is_following(target_user):
             return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
 
+        # T25: Determine circle level — must be explicitly in a circle to see parameters
+        circle_level = 'none'
+        if user_id != current_user_id:
+            circle = _resolve_lowest_circle(user_id, current_user_id)
+            if circle:
+                type_mapping = {
+                    'public': 'public', 'general': 'public',
+                    'class_b': 'class_b', 'close_friends': 'class_b',
+                    'class_a': 'class_a', 'family': 'class_a'
+                }
+                circle_level = type_mapping.get(circle.circle_type, 'none')
+        else:
+            circle_level = 'class_a'
+
         params = SavedParameters.query.filter_by(
             user_id=user_id,
             date=date_str
@@ -18068,11 +18104,11 @@ def get_user_parameters_by_date(user_id, date_str):
                 'success': True,
                 'data': {
                     'parameters': {
-                        'mood': params.mood,
-                        'energy': params.energy,
-                        'sleep_quality': params.sleep_quality,
-                        'physical_activity': params.physical_activity,
-                        'anxiety': params.anxiety
+                        'mood': params.mood if check_param_visibility(params.mood_privacy or 'public', circle_level) else None,
+                        'energy': params.energy if check_param_visibility(params.energy_privacy or 'public', circle_level) else None,
+                        'sleep_quality': params.sleep_quality if check_param_visibility(params.sleep_quality_privacy or 'public', circle_level) else None,
+                        'physical_activity': params.physical_activity if check_param_visibility(params.physical_activity_privacy or 'public', circle_level) else None,
+                        'anxiety': params.anxiety if check_param_visibility(params.anxiety_privacy or 'public', circle_level) else None
                     },
                     'notes': params.notes or ''
                 }
