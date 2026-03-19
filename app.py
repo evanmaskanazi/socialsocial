@@ -142,6 +142,17 @@ appFormat8 Fix:
   from ever opening a port during rolling deploys. The same migrations already run via
   _background_init() -> init_database() in a background thread after gunicorn starts.
 
+T40 Changes:
+- Renamed "Anxiety" to "Calmness" in all report translations (en, he, ar, ru) for
+  Excel, PDF, and email reports when ANXIETY_DISPLAY_MODE is "calm".
+  English: Calmness, Hebrew: שלווה, Arabic: السكينة, Russian: Спокойствие.
+- Inverted anxiety values to calmness (display = 5 - stored) in get_week_data() so
+  all downstream report generators (Excel, PDF, email) receive calmness values.
+- Unified color scale across ALL parameters including calmness:
+  4=green (#C8E6C9), 3=yellow (#FFF9C4), 2=orange (#FFE0B2), 1=red (#FFCDD2).
+  Previously anxiety used an inverted color scale; now all parameters use the same
+  scale where 4=best(green) and 1=worst(red).
+
 
 10Link Changes:
 - Added /api/users/<user_id>/progress endpoint for viewing another user's progress with privacy checks
@@ -13011,9 +13022,9 @@ def get_report_translations(lang='en'):
             'sleep': 'Sleep',
             'sleep_scale': '(1-4)',
             'sleep_notes': 'Sleep Notes',
-            'anxiety': 'Anxiety',
+            'anxiety': 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety',
             'anxiety_scale': '(1-4)',
-            'anxiety_notes': 'Anxiety Notes',
+            'anxiety_notes': ('Calmness Notes' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety Notes'),
             'motivation': 'Motivation',
             'motivation_scale': '(1-4)',
             'motivation_notes': 'Motivation Notes',
@@ -13032,7 +13043,7 @@ def get_report_translations(lang='en'):
             'energy_level': 'Energy:',
             'social_activity': 'Social Activity:',
             'sleep_quality': 'Sleep Quality:',
-            'anxiety_level': 'Anxiety Level:',
+            'anxiety_level': ('Calmness Level:' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety Level:'),
             'motivation_level': 'Motivation:',
             'medication_level': 'Medication:',
             'physical_level': 'Physical Activity:',
@@ -13062,9 +13073,9 @@ def get_report_translations(lang='en'):
             'sleep': 'שינה',
             'sleep_scale': '(1-4)',
             'sleep_notes': 'שינה הערות',
-            'anxiety': 'חרדה',
+            'anxiety': 'שלווה' if ANXIETY_DISPLAY_MODE == 'calm' else 'חרדה',
             'anxiety_scale': '(1-4)',
-            'anxiety_notes': 'חרדה הערות',
+            'anxiety_notes': ('שלווה הערות' if ANXIETY_DISPLAY_MODE == 'calm' else 'חרדה הערות'),
             'motivation': 'מוטיבציה',
             'motivation_scale': '(1-4)',
             'motivation_notes': 'מוטיבציה הערות',
@@ -13083,7 +13094,7 @@ def get_report_translations(lang='en'):
             'energy_level': 'אנרגיה:',
             'social_activity': 'פעילות חברתית:',
             'sleep_quality': 'איכות שינה:',
-            'anxiety_level': 'רמת חרדה:',
+            'anxiety_level': ('רמת שלווה:' if ANXIETY_DISPLAY_MODE == 'calm' else 'רמת חרדה:'),
             'motivation_level': 'מוטיבציה:',
             'medication_level': 'תרופות:',
             'physical_level': 'פעילות גופנית:',
@@ -13113,9 +13124,9 @@ def get_report_translations(lang='en'):
             'sleep': 'النوم',
             'sleep_scale': '(1-4)',
             'sleep_notes': 'ملاحظات النوم',
-            'anxiety': 'القلق',
+            'anxiety': 'السكينة' if ANXIETY_DISPLAY_MODE == 'calm' else 'القلق',
             'anxiety_scale': '(1-4)',
-            'anxiety_notes': 'ملاحظات القلق',
+            'anxiety_notes': ('ملاحظات السكينة' if ANXIETY_DISPLAY_MODE == 'calm' else 'ملاحظات القلق'),
             'motivation': 'التحفيز',
             'motivation_scale': '(1-4)',
             'motivation_notes': 'ملاحظات التحفيز',
@@ -13134,7 +13145,7 @@ def get_report_translations(lang='en'):
             'energy_level': 'الطاقة:',
             'social_activity': 'النشاط الاجتماعي:',
             'sleep_quality': 'جودة النوم:',
-            'anxiety_level': 'مستوى القلق:',
+            'anxiety_level': ('مستوى السكينة:' if ANXIETY_DISPLAY_MODE == 'calm' else 'مستوى القلق:'),
             'motivation_level': 'التحفيز:',
             'medication_level': 'الأدوية:',
             'physical_level': 'النشاط البدني:',
@@ -13164,9 +13175,9 @@ def get_report_translations(lang='en'):
             'sleep': 'Сон',
             'sleep_scale': '(1-4)',
             'sleep_notes': 'Заметки о сне',
-            'anxiety': 'Тревога',
+            'anxiety': 'Спокойствие' if ANXIETY_DISPLAY_MODE == 'calm' else 'Тревога',
             'anxiety_scale': '(1-4)',
-            'anxiety_notes': 'Заметки о тревоге',
+            'anxiety_notes': ('Заметки о спокойствии' if ANXIETY_DISPLAY_MODE == 'calm' else 'Заметки о тревоге'),
             'motivation': 'Мотивация',
             'motivation_scale': '(1-4)',
             'motivation_notes': 'Заметки о мотивации',
@@ -13185,7 +13196,7 @@ def get_report_translations(lang='en'):
             'energy_level': 'Энергия:',
             'social_activity': 'Социальная активность:',
             'sleep_quality': 'Качество сна:',
-            'anxiety_level': 'Уровень тревоги:',
+            'anxiety_level': ('Уровень спокойствия:' if ANXIETY_DISPLAY_MODE == 'calm' else 'Уровень тревоги:'),
             'motivation_level': 'Мотивация:',
             'medication_level': 'Лекарства:',
             'physical_level': 'Физическая активность:',
@@ -13202,7 +13213,9 @@ def get_report_translations(lang='en'):
 
 def get_value_color(value, is_anxiety=False):
     """Get color for parameter value. Green=good, Red=bad.
-    For anxiety, scale is inverted (4=bad, 1=good)"""
+    T40: Uniform color scale for all parameters (4=green, 1=red).
+    When ANXIETY_DISPLAY_MODE is 'calm', anxiety values are already
+    inverted to calmness before reaching this function."""
     if value is None or value == '':
         return None
     try:
@@ -13210,12 +13223,8 @@ def get_value_color(value, is_anxiety=False):
     except (ValueError, TypeError):
         return None
     
-    if is_anxiety:
-        # Anxiety: 1=green (low anxiety=good), 4=red (high anxiety=bad)
-        colors = {1: 'C8E6C9', 2: 'FFF9C4', 3: 'FFE0B2', 4: 'FFCDD2'}
-    else:
-        # Other metrics: 4=green (high=good), 1=red (low=bad)
-        colors = {4: 'C8E6C9', 3: 'FFF9C4', 2: 'FFE0B2', 1: 'FFCDD2'}
+    # T40: Uniform color scale for all parameters including calmness
+    colors = {4: 'C8E6C9', 3: 'FFF9C4', 2: 'FFE0B2', 1: 'FFCDD2'}
     
     return colors.get(val, None)
 
@@ -13254,6 +13263,12 @@ def get_week_data(user_id, days=7):
             'medication': getattr(p, 'medication', None) if p else None,
             'physical': getattr(p, 'physical_activity', None) if p else None,
         }
+        # T40: Invert anxiety to calmness for reports when in calm mode
+        if ANXIETY_DISPLAY_MODE == 'calm' and day_data['anxiety'] is not None:
+            try:
+                day_data['anxiety'] = 5 - int(day_data['anxiety'])
+            except (ValueError, TypeError):
+                pass
         week_data.append(day_data)
         current_date += timedelta(days=1)
     
@@ -13401,10 +13416,10 @@ def generate_excel_report():
                 if color:
                     cell.fill = PatternFill('solid', fgColor=color)
                 
-                # Anxiety (inverted scale)
+                # Calmness (T40: values already inverted in get_week_data, uniform colors)
                 val = day['anxiety']
                 cell = ws.cell(row=row_idx, column=12, value=val)
-                color = get_value_color(val, is_anxiety=True)
+                color = get_value_color(val, is_anxiety=False)
                 if color:
                     cell.fill = PatternFill('solid', fgColor=color)
                 
@@ -13459,7 +13474,7 @@ def generate_excel_report():
             (t['energy_level'], format_avg(summary['avg_energy'])),
             (t['social_activity'], format_avg(summary['avg_social'])),
             (t['sleep_quality'], format_avg(summary['avg_sleep'])),
-            (t['anxiety_level'], format_avg(summary['avg_anxiety'], is_anxiety=True)),
+            (t['anxiety_level'], format_avg(summary['avg_anxiety'])),
             (t['motivation_level'], format_avg(summary['avg_motivation'])),
             (t['medication_level'], format_avg(summary['avg_medication'])),
             (t['physical_level'], format_avg(summary['avg_physical'])),
@@ -13520,29 +13535,18 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
     text_align = 'right' if lang in ['he', 'ar'] else 'left'
     
     def get_color_class(val, is_anxiety=False):
-        """Get CSS class for cell coloring"""
+        """Get CSS class for cell coloring. T40: Uniform scale for all params."""
         if val is None:
             return ''
-        if is_anxiety:
-            # Anxiety: lower is better (1=green, 4=red)
-            if val == 1:
-                return 'bg-green'
-            elif val == 2:
-                return 'bg-yellow'
-            elif val == 3:
-                return 'bg-orange'
-            else:
-                return 'bg-red'
+        # T40: Uniform color scale (4=green, 1=red) for all parameters
+        if val == 4:
+            return 'bg-green'
+        elif val == 3:
+            return 'bg-yellow'
+        elif val == 2:
+            return 'bg-orange'
         else:
-            # Others: higher is better (4=green, 1=red)
-            if val == 4:
-                return 'bg-green'
-            elif val == 3:
-                return 'bg-yellow'
-            elif val == 2:
-                return 'bg-orange'
-            else:
-                return 'bg-red'
+            return 'bg-red'
     
     def format_avg(val, is_anxiety=False):
         if val is None:
@@ -13565,7 +13569,7 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
                 <td class="{get_color_class(day['mood'], False)}">{day['mood'] if day['mood'] else '-'}</td>
                 <td class="{get_color_class(day['energy'], False)}">{day['energy'] if day['energy'] else '-'}</td>
                 <td class="{get_color_class(day['sleep'], False)}">{day['sleep'] if day['sleep'] else '-'}</td>
-                <td class="{get_color_class(day['anxiety'], True)}">{day['anxiety'] if day['anxiety'] else '-'}</td>
+                <td class="{get_color_class(day['anxiety'], False)}">{day['anxiety'] if day['anxiety'] else '-'}</td>
                 <td class="{get_color_class(day['physical'], False)}">{day['physical'] if day['physical'] else '-'}</td>
                 <td class="bg-green">✓</td>
             </tr>
@@ -13688,7 +13692,7 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
         <div class="summary-item">{t['mood_level']} {format_avg(summary['avg_mood'])}</div>
         <div class="summary-item">{t['energy_level']} {format_avg(summary['avg_energy'])}</div>
         <div class="summary-item">{t['sleep_quality']} {format_avg(summary['avg_sleep'])}</div>
-        <div class="summary-item">{t['anxiety_level']} {format_avg(summary['avg_anxiety'], is_anxiety=True)}</div>
+        <div class="summary-item">{t['anxiety_level']} {format_avg(summary['avg_anxiety'])}</div>
         <div class="summary-item">{t['physical_level']} {format_avg(summary['avg_physical'])}</div>
     </body>
     </html>
@@ -13812,7 +13816,7 @@ def generate_pdf_report():
                         get_pdf_color(day['mood'], False),
                         get_pdf_color(day['energy'], False),
                         get_pdf_color(day['sleep'], False),
-                        get_pdf_color(day['anxiety'], True),
+                        get_pdf_color(day['anxiety'], False),
                         get_pdf_color(day['physical'], False),
                         HexColor('#C8E6C9')
                     ]
@@ -13869,7 +13873,7 @@ def generate_pdf_report():
             {t['mood_level']} {format_avg(summary['avg_mood'])}
             {t['energy_level']} {format_avg(summary['avg_energy'])}
             {t['sleep_quality']} {format_avg(summary['avg_sleep'])}
-            {t['anxiety_level']} {format_avg(summary['avg_anxiety'], is_anxiety=True)}
+            {t['anxiety_level']} {format_avg(summary['avg_anxiety'])}
             {t['physical_level']} {format_avg(summary['avg_physical'])}
             """
             
@@ -13978,14 +13982,12 @@ def email_report():
         """
         
         def get_css_class(val, is_anxiety=False):
+            """T40: Uniform color scale for all parameters"""
             try:
                 v = int(val)
             except:
                 return ''
-            if is_anxiety:
-                return {1: 'green', 2: 'yellow', 3: 'orange', 4: 'red'}.get(v, '')
-            else:
-                return {4: 'green', 3: 'yellow', 2: 'orange', 1: 'red'}.get(v, '')
+            return {4: 'green', 3: 'yellow', 2: 'orange', 1: 'red'}.get(v, '')
         
         for day in week_data:
             if day['has_checkin']:
@@ -13996,7 +13998,7 @@ def email_report():
                     <td class="{get_css_class(day['mood'])}">{day['mood'] or '-'}</td>
                     <td class="{get_css_class(day['energy'])}">{day['energy'] or '-'}</td>
                     <td class="{get_css_class(day['sleep'])}">{day['sleep'] or '-'}</td>
-                    <td class="{get_css_class(day['anxiety'], True)}">{day['anxiety'] or '-'}</td>
+                    <td class="{get_css_class(day['anxiety'])}">{day['anxiety'] or '-'}</td>
                     <td class="{get_css_class(day['physical'])}">{day['physical'] or '-'}</td>
                     <td class="green">✓</td>
                 </tr>
@@ -14020,7 +14022,7 @@ def email_report():
                 <div class="summary-item">{t['mood_level']} {format_avg(summary['avg_mood'])}</div>
                 <div class="summary-item">{t['energy_level']} {format_avg(summary['avg_energy'])}</div>
                 <div class="summary-item">{t['sleep_quality']} {format_avg(summary['avg_sleep'])}</div>
-                <div class="summary-item">{t['anxiety_level']} {format_avg(summary['avg_anxiety'], is_anxiety=True)}</div>
+                <div class="summary-item">{t['anxiety_level']} {format_avg(summary['avg_anxiety'])}</div>
                 <div class="summary-item">{t['physical_level']} {format_avg(summary['avg_physical'])}</div>
             </div>
         </body>
