@@ -16417,6 +16417,12 @@ async function showUserCheckinHistory(userId, username) {
     // Fetch data
     try {
         const response = await fetch(`/api/users/${userId}/progress?days=30`, { credentials: 'include' });
+        // T45: Handle 403 with same error notification as trigger button
+        if (response.status === 403) {
+            modal.remove();
+            showNotification(_t('msg.must_follow_params', 'You must be connected with this user to view their parameters'), 'error');
+            return;
+        }
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         
@@ -16460,11 +16466,13 @@ async function showUserCheckinHistory(userId, username) {
                 const dateDisplay = dateObj.toLocaleDateString(lang === 'he' ? 'he-IL' : lang === 'ar' ? 'ar-SA' : lang === 'ru' ? 'ru-RU' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 
                 let params = [];
-                if (ci.mood !== undefined) params.push(`${t.mood}: ${ci.mood}`);
-                if (ci.energy !== undefined) params.push(`${t.energy}: ${ci.energy}`);
-                if (ci.sleep !== undefined) params.push(`${t.sleep}: ${ci.sleep}`);
-                if (ci.activity !== undefined) params.push(`${t.activity}: ${ci.activity}`);
-                if (ci.anxiety !== undefined) params.push(`${t.anxiety}: ${ci.anxiety}`);
+                // T45: Show N/A for privacy-blocked params (dimmed), matching parameters modal "Private" display
+                const fmtParam = (val, label) => {
+                    if (val === 'N/A') return `<span style="opacity: 0.5;">${label}: N/A</span>`;
+                    if (val !== undefined) return `${label}: ${val}`;
+                    return null;
+                };
+                [fmtParam(ci.mood, t.mood), fmtParam(ci.energy, t.energy), fmtParam(ci.sleep, t.sleep), fmtParam(ci.activity, t.activity), fmtParam(ci.anxiety, t.anxiety)].forEach(p => { if (p) params.push(p); });
                 
                 listHTML += `
                     <div style="background: var(--light, #f5f6fa); padding: 12px 16px; border-radius: 10px; border-left: 3px solid var(--primary, #667eea);">
