@@ -5635,7 +5635,7 @@
                       <div style="display: flex; flex-direction: column; gap: 10px;">
                           <button onclick="messageFromConnectionInfo()" class="btn btn-primary" style="width: 100%;" data-i18n="connections.send_message">💬 Send Message</button>
                           <button onclick="viewProfileFromConnectionInfo()" class="btn" style="width: 100%; background: var(--light); color: var(--primary);" data-i18n="connections.view_profile">👤 View Full Profile</button>
-                          <button onclick="removeConnectionFromInfo()" class="btn" style="width: 100%; background: var(--danger); color: white; opacity: 0.8;" data-i18n="connections.remove">Remove Connection</button>
+                          <button onclick="removeConnectionFromInfo()" class="btn" style="width: 100%; background: var(--danger); color: white; opacity: 0.8;" data-i18n="connections.remove">Disconnect</button>
                       </div>
                   </div>
               </div>
@@ -9147,7 +9147,8 @@ async function viewUserProfileFromHome(userId) {
     } catch (e) {
         console.error('Error checking block status:', e);
     }
-    viewUserProfile(userId, true);
+    // T40: Use same profile view as connections tab (not preview mode)
+    viewUserProfile(userId);
 }
 window.viewUserProfileFromHome = viewUserProfileFromHome;
 
@@ -12242,7 +12243,7 @@ async function loadFollowing() {
                         </div>
                         <div class="follow-actions-container">
                             <button class="btn-secondary unfollow-btn" data-user-id="${user.id}" data-i18n="following.unfollow">
-                                ${pt('following.unfollow') || 'Remove Connection'}
+                                ${pt('following.unfollow') || 'Disconnect'}
                             </button>
                             ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.75rem; padding: 2px 6px; background: #d1fae5; border-radius: 4px;" data-i18n="following.following_back">${pt('following.following_back') || 'Connected'}</span>` : ''}
                         </div>
@@ -13462,11 +13463,11 @@ async function unfollowUser(userId) {
             credentials: 'include'
         });
 
-        if (!response.ok) throw new Error('Failed to unfollow user');
-        showNotification(_t('msg.unfollow_success', 'Successfully unfollowed user'), 'success');
+        if (!response.ok) throw new Error('Failed to disconnect');
+        showNotification(_t('msg.unfollow_success', 'Connection removed successfully'), 'success');
     } catch (error) {
-        console.error('Error unfollowing user:', error);
-        showNotification(_t('circles.unfollow_failed', 'Failed to unfollow user'), 'error');
+        console.error('Error disconnecting user:', error);
+        showNotification(_t('circles.unfollow_failed', 'Failed to disconnect'), 'error');
     }
 }
 
@@ -14194,7 +14195,7 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
     const labels = {
         'en': { 
             follow: 'Connect', 
-            unfollow: 'Remove Connection',
+            unfollow: 'Disconnect',
             followWithNote: 'Connect with Note', 
             addToCircle: 'Add to Circle',
             block: 'Block',
@@ -14202,7 +14203,7 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         },
         'he': { 
             follow: 'התחבר', 
-            unfollow: 'הסר חיבור',
+            unfollow: 'נתק חיבור',
             followWithNote: 'התחבר עם הערה', 
             addToCircle: 'הוסף למעגל',
             block: 'חסום',
@@ -14210,7 +14211,7 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         },
         'ar': { 
             follow: 'اتصل', 
-            unfollow: 'إزالة الاتصال',
+            unfollow: 'قطع الاتصال',
             followWithNote: 'اتصل مع ملاحظة', 
             addToCircle: 'إضافة إلى دائرة',
             block: 'حظر',
@@ -14218,7 +14219,7 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         },
         'ru': { 
             follow: 'Подключиться', 
-            unfollow: 'Удалить контакт',
+            unfollow: 'Отключить',
             followWithNote: 'Подключиться с заметкой', 
             addToCircle: 'Добавить в круг',
             block: 'Заблокировать',
@@ -14249,20 +14250,20 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
         unfollowBtn.onmouseover = () => { unfollowBtn.style.background = '#f8d7da'; unfollowBtn.style.borderColor = '#f5c6cb'; unfollowBtn.style.color = '#dc3545'; };
         unfollowBtn.onmouseout = () => { unfollowBtn.style.background = 'white'; unfollowBtn.style.borderColor = '#dee2e6'; unfollowBtn.style.color = '#6c757d'; };
         unfollowBtn.onclick = async () => {
-            if (confirm(lang === 'he' ? `האם להסיר חיבור עם ${username}?` : 
-                       lang === 'ar' ? `هل تريد إزالة الاتصال مع ${username}؟` :
-                       lang === 'ru' ? `Удалить контакт ${username}?` :
-                       `Remove connection with ${username}?`)) {
+            if (confirm(lang === 'he' ? `לנתק חיבור עם ${username}?` : 
+                       lang === 'ar' ? `قطع الاتصال مع ${username}؟` :
+                       lang === 'ru' ? `Отключить ${username}?` :
+                       `Disconnect from ${username}?`)) {
                 try {
                     const response = await fetch(`/api/unfollow/${userId}`, { 
                         method: 'DELETE', 
                         credentials: 'include' 
                     });
                     if (response.ok) {
-                        showNotification(lang === 'he' ? 'החיבור הוסר' : 
-                                        lang === 'ar' ? 'تمت إزالة الاتصال' :
-                                        lang === 'ru' ? 'Контакт удален' :
-                                        'Connection removed', 'success');
+                        showNotification(lang === 'he' ? 'החיבור נותק' : 
+                                        lang === 'ar' ? 'تم قطع الاتصال' :
+                                        lang === 'ru' ? 'Отключено' :
+                                        'Disconnected', 'success');
                         addUserActionButtonsToView(viewId, userId, username); // Refresh buttons
                     }
                 } catch (e) {
@@ -15880,7 +15881,7 @@ async function searchUsersToFollowInstant(query) {
                     const followText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('following.follow') : 'Connect';
                     const unfollowText = window.i18n && window.i18n.translate ? 
-                        window.i18n.translate('following.unfollow') : 'Remove Connection';
+                        window.i18n.translate('following.unfollow') : 'Disconnect';
                     const withNoteText = window.i18n && window.i18n.translate ? 
                         window.i18n.translate('following.with_note') : 'Connect with Note';
                     const blockText = window.i18n && window.i18n.translate ? 
@@ -16001,7 +16002,7 @@ async function followUserWithNoteFromSearch(userId, username) {
 async function unfollowUserFromSearch(userId) {
     try {
         await apiCall(`/unfollow/${userId}`, 'POST', {});
-        showNotification(_t('msg.unfollow_success', 'Successfully unfollowed user'), 'success');
+        showNotification(_t('msg.unfollow_success', 'Connection removed successfully'), 'success');
         
         // Clear search and reload following
         document.getElementById('followSearchInput').value = '';
@@ -16011,7 +16012,7 @@ async function unfollowUserFromSearch(userId) {
             await loadFollowing();
         }
     } catch (error) {
-        showNotification(_t('circles.unfollow_failed', 'Failed to unfollow user'), 'error');
+        showNotification(_t('circles.unfollow_failed', 'Failed to disconnect'), 'error');
     }
 }
 
@@ -17352,11 +17353,11 @@ function viewProfileFromConnectionInfo() {
 async function removeConnectionFromInfo() {
     if (!currentConnectionInfoUserId) return;
     const username = document.getElementById('connInfoUsername').textContent;
-    if (!confirm(`Unfollow ${username}?`)) return;
+    if (!confirm(_t('msg.confirm_disconnect', `Disconnect from ${username}?`).replace('{username}', username))) return;
     await unfollowUser(currentConnectionInfoUserId);
     closeConnectionInfo();
     loadConnections();
-    showNotification(`Unfollowed ${username}`, 'info');
+    showNotification(_t('msg.disconnected_from', `Disconnected from ${username}`).replace('{username}', username), 'info');
 }
 
 // Close modal on backdrop click
