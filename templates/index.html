@@ -17353,11 +17353,17 @@ function viewProfileFromConnectionInfo() {
 async function removeConnectionFromInfo() {
     if (!currentConnectionInfoUserId) return;
     const username = document.getElementById('connInfoUsername').textContent;
-    if (!confirm(_t('msg.confirm_disconnect', `Disconnect from ${username}?`).replace('{username}', username))) return;
+    const confirmMsg = (window.i18n && window.i18n.translate) 
+        ? (window.i18n.translate('msg.confirm_disconnect') || `Disconnect from ${username}?`).replace('{username}', username)
+        : `Disconnect from ${username}?`;
+    if (!confirm(confirmMsg)) return;
     await unfollowUser(currentConnectionInfoUserId);
     closeConnectionInfo();
     loadConnections();
-    showNotification(_t('msg.disconnected_from', `Disconnected from ${username}`).replace('{username}', username), 'info');
+    const disconnectMsg = (window.i18n && window.i18n.translate)
+        ? (window.i18n.translate('msg.disconnected_from') || `Disconnected from ${username}`).replace('{username}', username)
+        : `Disconnected from ${username}`;
+    showNotification(disconnectMsg, 'info');
 }
 
 // Close modal on backdrop click
