@@ -13538,6 +13538,10 @@ def generate_pdf_with_weasyprint(user, lang, t, week_data, summary, start_date, 
         """Get CSS class for cell coloring. T40: Uniform scale for all params."""
         if val is None:
             return ''
+        try:
+            val = int(val)
+        except (ValueError, TypeError):
+            return ''
         # T40: Uniform color scale (4=green, 1=red) for all parameters
         if val == 4:
             return 'bg-green'
