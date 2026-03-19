@@ -12756,13 +12756,10 @@ def get_user_progress(user_id):
         
         # Determine circle level for privacy
         # T25: Default to 'none' — must be explicitly in a circle to see parameters
+        # T45: Use _resolve_lowest_circle for consistent multi-circle privacy (matches /api/users/<id>/parameters)
         circle_level = 'none'
         if current_user_id != user_id:
-            circle_stmt = select(Circle).filter_by(
-                user_id=user_id,
-                circle_user_id=current_user_id
-            )
-            circle = db.session.execute(circle_stmt).scalar_one_or_none()
+            circle = _resolve_lowest_circle(user_id, current_user_id)
             if circle:
                 type_mapping = {
                     'public': 'public', 'general': 'public',
@@ -12840,16 +12837,32 @@ def get_user_progress(user_id):
             activity_data.append(activity_val)
             anxiety_data.append(anxiety_val)
             
-            # Build checkin list entry
+            # T45: Build checkin list entry — always include all 5 params.
+            # Shows actual value if accessible, 'N/A' if privacy-blocked, omits if no data recorded.
+            # This matches the trigger/parameters modal which shows "Private" for blocked params.
             checkin_entry = {
                 'date': p.date.strftime('%Y-%m-%d'),
                 'date_display': date_str
             }
-            if mood_val is not None: checkin_entry['mood'] = mood_val
-            if energy_val is not None: checkin_entry['energy'] = energy_val
-            if sleep_val is not None: checkin_entry['sleep'] = sleep_val
-            if activity_val is not None: checkin_entry['activity'] = activity_val
-            if anxiety_val is not None: checkin_entry['anxiety'] = anxiety_val
+            raw_mood = safe_int(getattr(p, 'mood', None))
+            raw_energy = safe_int(getattr(p, 'energy', None))
+            raw_sleep = safe_int(getattr(p, 'sleep_quality', None))
+            raw_activity = safe_int(getattr(p, 'physical_activity', None))
+            raw_anxiety = safe_int(getattr(p, 'anxiety', None))
+
+            for key, raw_val, visible_val, privacy in [
+                ('mood', raw_mood, mood_val, mood_privacy),
+                ('energy', raw_energy, energy_val, energy_privacy),
+                ('sleep', raw_sleep, sleep_val, sleep_privacy),
+                ('activity', raw_activity, activity_val, activity_privacy),
+                ('anxiety', raw_anxiety, anxiety_val, anxiety_privacy),
+            ]:
+                if can_see(privacy):
+                    if visible_val is not None:
+                        checkin_entry[key] = visible_val
+                else:
+                    checkin_entry[key] = 'N/A'
+
             checkin_list.append(checkin_entry)
         
         def calc_avg(data):
