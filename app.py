@@ -15447,21 +15447,30 @@ def follow_user(user_id):
 
         db.session.commit()
 
-        # Create alert for followed user
-        # T9: Updated wording from "following" to "connection" language
-        alert_content = 'You have been added to a new connection'
-        if follow_note:
-            alert_content += f' They said: "{follow_note}"'
-        if follow_trigger:
-            alert_content += ' (Tracking your parameters)'
+        # T400: Also create a FollowRequest so the target user gets an invite to connect back
+        existing_request = FollowRequest.query.filter_by(
+            requester_id=current_user_id,
+            target_id=user_id
+        ).first()
+        if existing_request:
+            if existing_request.status != 'pending':
+                existing_request.status = 'pending'
+                existing_request.created_at = datetime.utcnow()
+        else:
+            new_request = FollowRequest(
+                requester_id=current_user_id,
+                target_id=user_id
+            )
+            db.session.add(new_request)
+        db.session.commit()
 
+        # T400: Use invite alert language (matches Send Request flow)
         # PJ6001: Use create_notification_with_email for follow notifications (not wellness alerts)
-        # T11: Use same "accepted" language as circle-add and connection-request-accept flows
         alert = create_notification_with_email(
             user_id=user_id,
-            title=f'{current_user.username} accepted your connection request',
-            content=f'{current_user.username} has accepted your connection request. You are now connected!',
-            alert_type='info',
+            title="invite.alert_title",
+            content=f"{current_user.username}|invite.alert_content",
+            alert_type='follow_request',
             source_user_id=current_user_id,
             alert_category='follow'
         )
