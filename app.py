@@ -9490,33 +9490,73 @@ def circles():
 
             db.session.commit()
 
-            # T50: Notify the user being added to the circle (same alert as connection accept).
-            # Duplicate-suppression: skip if an accept notification was already sent within 5 min
-            # (e.g. from the T2 auto-accept path or a direct follow that just happened).
+            # T400: Alert and request logic depends on whether we're responding to a pending request
             current_user = db.session.get(User, user_id)
             if current_user:
                 recent_cutoff = datetime.utcnow() - timedelta(minutes=5)
-                existing_accept_alert = Alert.query.filter(
-                    Alert.user_id == circle_user_id,
-                    Alert.source_user_id == user_id,
-                    Alert.alert_category == 'follow',
-                    Alert.title.contains('accepted your connection request'),
-                    Alert.created_at >= recent_cutoff
-                ).first()
 
-                if not existing_accept_alert:
-                    create_notification_with_email(
-                        user_id=circle_user_id,
-                        title=f'{current_user.username} accepted your connection request',
-                        content=f'{current_user.username} has accepted your connection request. You are now connected!',
-                        alert_type='info',
-                        source_user_id=user_id,
-                        alert_category='follow'
-                    )
-                    db.session.commit()
-                    logger.info(f"[T50] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add)")
+                if pending_request:
+                    # T400: This is a RESPONSE to their request — send "accepted" alert, no new outgoing request
+                    existing_accept_alert = Alert.query.filter(
+                        Alert.user_id == circle_user_id,
+                        Alert.source_user_id == user_id,
+                        Alert.alert_category == 'follow',
+                        Alert.alert_type == 'info',
+                        Alert.created_at >= recent_cutoff
+                    ).first()
+
+                    if not existing_accept_alert:
+                        create_notification_with_email(
+                            user_id=circle_user_id,
+                            title=f'{current_user.username} accepted your connection request',
+                            content=f'{current_user.username} has accepted your connection request. You are now connected!',
+                            alert_type='info',
+                            source_user_id=user_id,
+                            alert_category='follow'
+                        )
+                        db.session.commit()
+                        logger.info(f"[T400] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add, responding to request)")
+                    else:
+                        logger.info(f"[T400] Skipped duplicate accept notification for user {circle_user_id} (already sent within 5 min)")
                 else:
-                    logger.info(f"[T50] Skipped duplicate accept notification for user {circle_user_id} (already sent within 5 min)")
+                    # T400: This is a NEW action — create FollowRequest and send invite alert
+                    existing_request = FollowRequest.query.filter_by(
+                        requester_id=user_id,
+                        target_id=circle_user_id
+                    ).first()
+                    if existing_request:
+                        if existing_request.status != 'pending':
+                            existing_request.status = 'pending'
+                            existing_request.created_at = datetime.utcnow()
+                    else:
+                        new_request = FollowRequest(
+                            requester_id=user_id,
+                            target_id=circle_user_id
+                        )
+                        db.session.add(new_request)
+                    db.session.commit()
+
+                    existing_invite_alert = Alert.query.filter(
+                        Alert.user_id == circle_user_id,
+                        Alert.source_user_id == user_id,
+                        Alert.alert_category == 'follow',
+                        Alert.alert_type == 'follow_request',
+                        Alert.created_at >= recent_cutoff
+                    ).first()
+
+                    if not existing_invite_alert:
+                        create_notification_with_email(
+                            user_id=circle_user_id,
+                            title="invite.alert_title",
+                            content=f"{current_user.username}|invite.alert_content",
+                            alert_type='follow_request',
+                            source_user_id=user_id,
+                            alert_category='follow'
+                        )
+                        db.session.commit()
+                        logger.info(f"[T400] Sent invite notification to user {circle_user_id} from {current_user.username} (circle add, new action)")
+                    else:
+                        logger.info(f"[T400] Skipped duplicate invite notification for user {circle_user_id} (already sent within 5 min)")
 
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
             return jsonify({'success': True, 'message': 'User added to circle'})
@@ -15447,21 +15487,30 @@ def follow_user(user_id):
 
         db.session.commit()
 
-        # Create alert for followed user
-        # T9: Updated wording from "following" to "connection" language
-        alert_content = 'You have been added to a new connection'
-        if follow_note:
-            alert_content += f' They said: "{follow_note}"'
-        if follow_trigger:
-            alert_content += ' (Tracking your parameters)'
+        # T400: Also create a FollowRequest so the target user gets an invite to connect back
+        existing_request = FollowRequest.query.filter_by(
+            requester_id=current_user_id,
+            target_id=user_id
+        ).first()
+        if existing_request:
+            if existing_request.status != 'pending':
+                existing_request.status = 'pending'
+                existing_request.created_at = datetime.utcnow()
+        else:
+            new_request = FollowRequest(
+                requester_id=current_user_id,
+                target_id=user_id
+            )
+            db.session.add(new_request)
+        db.session.commit()
 
+        # T400: Use invite alert language (matches Send Request flow)
         # PJ6001: Use create_notification_with_email for follow notifications (not wellness alerts)
-        # T11: Use same "accepted" language as circle-add and connection-request-accept flows
         alert = create_notification_with_email(
             user_id=user_id,
-            title=f'{current_user.username} accepted your connection request',
-            content=f'{current_user.username} has accepted your connection request. You are now connected!',
-            alert_type='info',
+            title="invite.alert_title",
+            content=f"{current_user.username}|invite.alert_content",
+            alert_type='follow_request',
             source_user_id=current_user_id,
             alert_category='follow'
         )

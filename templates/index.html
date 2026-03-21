@@ -5731,7 +5731,8 @@
                 </button>
             </div>
 
-            <!-- Flow: Search bar moved into invite link card -->
+            <!-- T400: Commented out - invite search no longer needed, Connect button on Connections page now sends requests -->
+            <!--
             <div style="margin: 20px 0 0 0;">
                 <div style="position: relative; max-width: 600px;">
                     <input type="text"
@@ -5751,7 +5752,6 @@
                     >
                 </div>
 
-                <!-- Invite Search Results Container -->
                 <div id="inviteSearchResults" style="
                     display: none;
                     background: white;
@@ -5762,6 +5762,10 @@
                     max-width: 600px;
                 "></div>
             </div>
+            -->
+            <!-- T400: Hidden stubs so existing JS references don't error -->
+            <input type="hidden" id="inviteSearchInput">
+            <div id="inviteSearchResults" style="display:none;"></div>
         </div>
 
         <!-- Flow: Commented out - Suggested People to Invite section and recommendations list -->
