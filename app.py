@@ -9548,7 +9548,7 @@ def circles():
                 elif was_already_connected:
                     # T601q: User is already in connections — do NOT create FollowRequest or invite alert.
                     # Only send a "added to circle" notification.
-                    circle_display = {'public': 'Friends', 'class_b': 'Close Friends', 'class_a': 'Family'}.get(circle_type, circle_type)
+                    circle_display = {'public': 'General', 'class_b': 'Close Friends', 'class_a': 'Family'}.get(circle_type, circle_type)
                     create_notification_with_email(
                         user_id=circle_user_id,
                         title="circles.added_to_circle_title",
