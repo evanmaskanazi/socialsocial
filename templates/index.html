@@ -15185,14 +15185,17 @@ async function checkAndLoadTriggerAlerts() {
         function translateKey(key) {
             if (window.i18n && window.i18n.translate) {
                 const result = window.i18n.translate(key);
-                // Debug: log when translation returns the key itself (meaning not found)
+                // T601q: translate() returns the key itself when not found (truthy),
+                // which breaks every `translateKey(x) || 'fallback'` pattern.
+                // Return null so callers' || fallbacks work correctly.
                 if (result === key) {
                     console.warn('[i18n] Translation not found for key:', key);
+                    return null;
                 }
                 return result;
             }
-            console.warn('[i18n] window.i18n not available, returning raw key:', key);
-            return key;
+            console.warn('[i18n] window.i18n not available, returning null for key:', key);
+            return null;
         }
 
         // Support Form - auto-populate name/email if logged in
