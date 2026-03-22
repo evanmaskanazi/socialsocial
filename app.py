@@ -167,6 +167,12 @@ T600q Changes:
 - FIX: Unfollowing a user now also removes them from all of the current user's circles.
   Previously, circle memberships persisted after disconnection, leaving stale entries.
   Circle entries are deleted before the commit in unfollow_user().
+
+T601q Changes:
+- FIX: Circle-add alert logic now has three branches: (1) pending_request → accepted alert,
+  (2) was_already_connected → circle-added notification only (no FollowRequest, no invite),
+  (3) new user → FollowRequest + invite alert (same as before). Previously branch (2) didn't
+  exist, so adding an existing connection to a new circle sent a spurious invite alert.
 - Circle-based privacy applied to progress data (mood, energy, sleep, activity, anxiety)
 - Returns checkin list, chart data, and averages
 
@@ -9503,6 +9509,8 @@ def circles():
                 follower_id=user_id,
                 followed_id=circle_user_id
             ).first()
+            # T601q: Capture connection status BEFORE T30 might create a new follow
+            was_already_connected = existing_follow is not None
             if not existing_follow:
                 db.session.add(Follow(follower_id=user_id, followed_id=circle_user_id))
                 logger.info(f"[T30] Created follow {user_id} -> {circle_user_id} when adding to circle")
@@ -9537,6 +9545,20 @@ def circles():
                         logger.info(f"[T400] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add, responding to request)")
                     else:
                         logger.info(f"[T400] Skipped duplicate accept notification for user {circle_user_id} (already sent within 5 min)")
+                elif was_already_connected:
+                    # T601q: User is already in connections — do NOT create FollowRequest or invite alert.
+                    # Only send a "added to circle" notification.
+                    circle_display = {'public': 'Friends', 'class_b': 'Close Friends', 'class_a': 'Family'}.get(circle_type, circle_type)
+                    create_notification_with_email(
+                        user_id=circle_user_id,
+                        title="circles.added_to_circle_title",
+                        content=f"{current_user.username}|{circle_display}|circles.added_to_circle_content",
+                        alert_type='info',
+                        source_user_id=user_id,
+                        alert_category='circle'
+                    )
+                    db.session.commit()
+                    logger.info(f"[T601q] Sent circle-added notification to user {circle_user_id} from {current_user.username} (already connected, circle: {circle_type})")
                 else:
                     # T400: This is a NEW action — create FollowRequest and send invite alert
                     existing_request = FollowRequest.query.filter_by(
