@@ -6609,7 +6609,13 @@
 
     // Global translation helper - safe fallback when i18n not loaded
     function _t(key, fallback) {
-        return (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+        // T601q: translate() returns the key itself when no translation is found, which is truthy.
+        // Check explicitly so the caller's fallback is used when the key isn't in the dictionary.
+        if (window.i18n && window.i18n.translate) {
+            const result = window.i18n.translate(key);
+            return (result && result !== key) ? result : (fallback || key);
+        }
+        return fallback || key;
     }
 
     // Helper function to format message time with translation
@@ -14745,13 +14751,13 @@ async function loadAlerts() {
                     }
                 } catch (e) {
                     // Not JSON, handle as plain string
-                    if (title.startsWith('alerts.') || title.startsWith('invite.')) {
+                    if (title.startsWith('alerts.') || title.startsWith('invite.') || title.startsWith('circles.')) {
                         const translated = translateKey(title);
                         if (!translated || translated === title) {
                             if (title === 'invite.alert_title') {
                                 title = translateKey('invite.alert_title') || 'New Invitation';
                             } else {
-                                title = title.replace('alerts.', '').replace('invite.', '').replace(/_/g, ' ');
+                                title = title.replace('alerts.', '').replace('invite.', '').replace('circles.', '').replace(/_/g, ' ');
                             }
                         } else {
                             title = translated;
@@ -14790,10 +14796,10 @@ async function loadAlerts() {
                 }
 
                 // ===== HANDLE CONTENT =====
-                if (content.startsWith('alerts.') || content.startsWith('invite.')) {
+                if (content.startsWith('alerts.') || content.startsWith('invite.') || content.startsWith('circles.')) {
                     const translated = translateKey(content);
                     if (!translated || translated === content) {
-                        content = content.replace('alerts.', '').replace('invite.', '').replace(/_/g, ' ');
+                        content = content.replace('alerts.', '').replace('invite.', '').replace('circles.', '').replace(/_/g, ' ');
                     } else {
                         content = translated;
                     }
@@ -14809,7 +14815,14 @@ async function loadAlerts() {
                 }
                 else if (content && typeof content === 'string' && content.includes('|')) {
                     const parts = content.split('|');
-                    if (parts.length === 2) {
+                    // T601q: Handle 3-part format: username|circleName|i18nKey (circle-added alerts)
+                    if (parts.length === 3) {
+                        const [username, circleName, i18nKey] = parts;
+                        const translatedCircle = translateKey('circles.circle_name_' + circleName) || circleName;
+                        const template = translateKey(i18nKey) || '{username} added you to their {circle} circle';
+                        content = template.replace('{username}', username).replace('{circle}', translatedCircle);
+                    }
+                    else if (parts.length === 2) {
                         const [username, i18nKey] = parts;
                         const template = translateKey(i18nKey) || '{username} has invited you to connect';
                         content = template.replace('{username}', username);
@@ -14832,7 +14845,7 @@ async function loadAlerts() {
                     const inviteWords = ['invited', 'הזמין/ה', 'הזמינה', 'הזמין', 'دعاك', 'دعتك', 'пригласил(а)', 'пригласил', 'пригласила'];
                     for (const word of inviteWords) {
                         if (contentHtml.includes(escapeHtml(word))) {
-                            const linkHtml = `<a href="#" onclick="event.stopPropagation(); showView('connectionsView'); setTimeout(() => switchConnectionTab('recommendations'), 150); return false;" style="color: var(--primary); text-decoration: underline; cursor: pointer;">${escapeHtml(word)}</a>`;
+                            const linkHtml = `<a href="#" onclick="event.stopPropagation(); showView('connections'); setTimeout(() => switchConnectionTab('recommendations'), 150); return false;" style="color: var(--primary); text-decoration: underline; cursor: pointer;">${escapeHtml(word)}</a>`;
                             contentHtml = contentHtml.replace(escapeHtml(word), linkHtml);
                             break;
                         }
@@ -18059,6 +18072,16 @@ async function loadHomeAlerts() {
             // T40: Handle "username|invite.alert_content" format
             if (typeof text === 'string' && text.includes('|')) {
                 const parts = text.split('|');
+                // T601q: Handle 3-part format: username|circleName|i18nKey (circle-added alerts)
+                if (parts.length === 3 && parts[2].startsWith('circles.')) {
+                    const [username, circleName, i18nKey] = parts;
+                    const translatedCircle = (tFn && tFn('circles.circle_name_' + circleName) !== 'circles.circle_name_' + circleName) ? tFn('circles.circle_name_' + circleName) : circleName;
+                    if (tFn) {
+                        const template = tFn(i18nKey);
+                        if (template && template !== i18nKey) return template.replace('{username}', username).replace('{circle}', translatedCircle);
+                    }
+                    return username + ' added you to their ' + translatedCircle + ' circle';
+                }
                 if (parts.length === 2 && (parts[1].startsWith('invite.') || parts[1].startsWith('alerts.'))) {
                     const [username, i18nKey] = parts;
                     if (tFn) {
@@ -18069,12 +18092,12 @@ async function loadHomeAlerts() {
                     return username + ' has invited you to connect';
                 }
             }
-            if (text.startsWith('alerts.') || text.startsWith('invite.')) {
+            if (text.startsWith('alerts.') || text.startsWith('invite.') || text.startsWith('circles.')) {
                 if (tFn) {
                     const translated = tFn(text);
                     if (translated && translated !== text) return translated;
                 }
-                return text.replace('alerts.', '').replace('invite.', '').replace(/_/g, ' ');
+                return text.replace('alerts.', '').replace('invite.', '').replace('circles.', '').replace(/_/g, ' ');
             }
             // Handle JSON-encoded title with {username} params
             try {
