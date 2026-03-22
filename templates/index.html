@@ -290,7 +290,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Thera Social - Anonymous Well-Being Community</title>
+    <title>Thera Social - Human Network Infrastructure</title>
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -11695,7 +11695,12 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
             if (!messageInput.value) {
                 messageInput.value = messageToSend;
             }
-            showNotification(error.message || 'Failed to send message', 'error');
+            // T600q: Translate blocked error from backend
+            let errorMsg = error.message || 'Failed to send message';
+            if (errorMsg === 'Unable to send message to this user') {
+                errorMsg = _t('msg.blocked_send_message', errorMsg);
+            }
+            showNotification(errorMsg, 'error');
         } finally {
             // PJ812: Reset flag after completion, but keep debounce time active
             isMessageSending = false;
@@ -12612,7 +12617,11 @@ async function followUser(userId, note = '', trigger = false) {
             credentials: 'include'
         });
 
-        if (!response.ok) throw new Error('Failed to follow user');
+        if (!response.ok) {
+            // T600q: Parse response to surface blocked message
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Failed to follow user');
+        }
         showNotification(_t('msg.followed_success', 'Successfully followed user'), 'success');
 
         // Refresh following list if visible
@@ -12623,7 +12632,12 @@ async function followUser(userId, note = '', trigger = false) {
         return true;
     } catch (error) {
         console.error('Error following user:', error);
-        showNotification(_t('msg.follow_user_failed', 'Failed to follow user'), 'error');
+        // T600q: Translate blocked error from backend
+        let errorMsg = error.message || _t('msg.follow_user_failed', 'Failed to follow user');
+        if (error.message === 'Unable to connect with this user') {
+            errorMsg = _t('msg.blocked_connect', error.message);
+        }
+        showNotification(errorMsg, 'error');
         return false;
     }
 }
@@ -14812,12 +14826,25 @@ async function loadAlerts() {
                     content = translateKey('notifications.new_notification') || 'You have a new notification';
                 }
 
+                // T600q: For invite alerts, make the "invited" word a clickable link to Connection Requests tab
+                let contentHtml = escapeHtml(content);
+                if (alert.type === 'follow_request') {
+                    const inviteWords = ['invited', 'הזמין/ה', 'הזמינה', 'הזמין', 'دعاك', 'دعتك', 'пригласил(а)', 'пригласил', 'пригласила'];
+                    for (const word of inviteWords) {
+                        if (contentHtml.includes(escapeHtml(word))) {
+                            const linkHtml = `<a href="#" onclick="event.stopPropagation(); showView('connectionsView'); setTimeout(() => switchConnectionTab('recommendations'), 150); return false;" style="color: var(--primary); text-decoration: underline; cursor: pointer;">${escapeHtml(word)}</a>`;
+                            contentHtml = contentHtml.replace(escapeHtml(word), linkHtml);
+                            break;
+                        }
+                    }
+                }
+
                 return `
                     <div class="alert-item ${alert.type || 'info'}"
                          data-alert-id="${alert.id}"
                          onclick="dismissAlert(${alert.id}, this)">
                         <strong>${escapeHtml(title)}</strong><br>
-                        <small>${escapeHtml(content)}</small>
+                        <small>${contentHtml}</small>
                         <span class="alert-dismiss" style="position: absolute; top: 8px; right: 8px; opacity: 0.3; font-size: 1.2rem; transition: opacity 0.2s;">×</span>
                     </div>
                 `;
@@ -15977,7 +16004,12 @@ async function followUserFromSearch(userId) {
             await loadFollowing();
         }
     } catch (error) {
-        showNotification(_t('msg.follow_user_failed', 'Failed to follow user'), 'error');
+        // T600q: Translate blocked error from backend
+        let errorMsg = error.message || _t('msg.follow_user_failed', 'Failed to follow user');
+        if (error.message === 'Unable to connect with this user') {
+            errorMsg = _t('msg.blocked_connect', error.message);
+        }
+        showNotification(errorMsg, 'error');
     }
 }
 
@@ -15997,7 +16029,12 @@ async function followUserWithNoteFromSearch(userId, username) {
                 await loadFollowing();
             }
         } catch (error) {
-            showNotification(_t('msg.follow_user_failed', 'Failed to follow user'), 'error');
+            // T600q: Translate blocked error from backend
+            let errorMsg = error.message || _t('msg.follow_user_failed', 'Failed to follow user');
+            if (error.message === 'Unable to connect with this user') {
+                errorMsg = _t('msg.blocked_connect', error.message);
+            }
+            showNotification(errorMsg, 'error');
         }
     }
 }

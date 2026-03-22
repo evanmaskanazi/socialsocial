@@ -156,6 +156,23 @@ T40 Changes:
 
 10Link Changes:
 - Added /api/users/<user_id>/progress endpoint for viewing another user's progress with privacy checks
+
+T600q Changes:
+- FIX: Blocking enforcement on messages. When user A is blocked by user B, A's POST to
+  /api/messages with recipient_id=B now returns 403 "Unable to send message to this user"
+  instead of silently delivering the message. Check added after recipient existence validation.
+- FIX: Blocking enforcement on connections. POST to /api/follow/<user_id> and
+  /api/follow-requests now returns 403 "Unable to connect with this user" when the target
+  has blocked the requester. Checks added after self-follow validation.
+- FIX: Unfollowing a user now also removes them from all of the current user's circles.
+  Previously, circle memberships persisted after disconnection, leaving stale entries.
+  Circle entries are deleted before the commit in unfollow_user().
+
+T601q Changes:
+- FIX: Circle-add alert logic now has three branches: (1) pending_request → accepted alert,
+  (2) was_already_connected → circle-added notification only (no FollowRequest, no invite),
+  (3) new user → FollowRequest + invite alert (same as before). Previously branch (2) didn't
+  exist, so adding an existing connection to a new circle sent a spurious invite alert.
 - Circle-based privacy applied to progress data (mood, energy, sleep, activity, anxiety)
 - Returns checkin list, chart data, and averages
 
@@ -9088,6 +9105,14 @@ def messages():
             if recipient_id == user_id:
                 return jsonify({'error': 'Cannot send message to yourself'}), 400
 
+            # T600q: Check if sender is blocked by recipient
+            is_blocked_by_recipient = BlockedUser.query.filter_by(
+                blocker_id=recipient_id,
+                blocked_id=user_id
+            ).first() is not None
+            if is_blocked_by_recipient:
+                return jsonify({'error': 'Unable to send message to this user', 'blocked': True}), 403
+
             # Check content
             moderation = content_moderator.check_content(content)
             if not moderation['safe']:
@@ -9484,6 +9509,8 @@ def circles():
                 follower_id=user_id,
                 followed_id=circle_user_id
             ).first()
+            # T601q: Capture connection status BEFORE T30 might create a new follow
+            was_already_connected = existing_follow is not None
             if not existing_follow:
                 db.session.add(Follow(follower_id=user_id, followed_id=circle_user_id))
                 logger.info(f"[T30] Created follow {user_id} -> {circle_user_id} when adding to circle")
@@ -9518,6 +9545,20 @@ def circles():
                         logger.info(f"[T400] Sent accept notification to user {circle_user_id} from {current_user.username} (circle add, responding to request)")
                     else:
                         logger.info(f"[T400] Skipped duplicate accept notification for user {circle_user_id} (already sent within 5 min)")
+                elif was_already_connected:
+                    # T601q: User is already in connections — do NOT create FollowRequest or invite alert.
+                    # Only send a "added to circle" notification.
+                    circle_display = {'public': 'Friends', 'class_b': 'Close Friends', 'class_a': 'Family'}.get(circle_type, circle_type)
+                    create_notification_with_email(
+                        user_id=circle_user_id,
+                        title="circles.added_to_circle_title",
+                        content=f"{current_user.username}|{circle_display}|circles.added_to_circle_content",
+                        alert_type='info',
+                        source_user_id=user_id,
+                        alert_category='circle'
+                    )
+                    db.session.commit()
+                    logger.info(f"[T601q] Sent circle-added notification to user {circle_user_id} from {current_user.username} (already connected, circle: {circle_type})")
                 else:
                     # T400: This is a NEW action — create FollowRequest and send invite alert
                     existing_request = FollowRequest.query.filter_by(
@@ -15454,6 +15495,14 @@ def follow_user(user_id):
         if current_user_id == user_id:
             return jsonify({'error': 'Cannot connect with yourself'}), 400
 
+        # T600q: Check if current user is blocked by target user
+        is_blocked_by_target = BlockedUser.query.filter_by(
+            blocker_id=user_id,
+            blocked_id=current_user_id
+        ).first() is not None
+        if is_blocked_by_target:
+            return jsonify({'error': 'Unable to connect with this user', 'blocked': True}), 403
+
         # Check if already following
         existing = Follow.query.filter_by(
             follower_id=current_user_id,
@@ -15546,6 +15595,16 @@ def unfollow_user(user_id):
             return jsonify({'error': 'User not found'}), 404
 
         current_user.unfollow(user_to_unfollow)
+
+        # T600q: Also remove the unfollowed user from all of current user's circles
+        circle_memberships = Circle.query.filter_by(
+            user_id=current_user_id,
+            circle_user_id=user_id
+        ).all()
+        for cm in circle_memberships:
+            db.session.delete(cm)
+            logger.info(f"[T600q] Removed user {user_id} from circle {cm.circle_type} for user {current_user_id}")
+
         db.session.commit()
 
         return jsonify({'success': True, 'message': 'Connection removed'})
@@ -18193,6 +18252,14 @@ def create_follow_request():
 
         if not target_id or requester_id == target_id:
             return jsonify({'error': 'Invalid target'}), 400
+
+        # T600q: Check if requester is blocked by target
+        is_blocked_by_target = BlockedUser.query.filter_by(
+            blocker_id=target_id,
+            blocked_id=requester_id
+        ).first() is not None
+        if is_blocked_by_target:
+            return jsonify({'error': 'Unable to connect with this user', 'blocked': True}), 403
 
         existing = FollowRequest.query.filter_by(
             requester_id=requester_id,
