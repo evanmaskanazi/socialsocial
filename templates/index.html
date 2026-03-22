@@ -290,7 +290,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Thera Social - Anonymous Well-Being Community</title>
+    <title>Thera Social - Human Network Infrastructure</title>
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -6609,7 +6609,13 @@
 
     // Global translation helper - safe fallback when i18n not loaded
     function _t(key, fallback) {
-        return (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+        // T601q: translate() returns the key itself when no translation is found, which is truthy.
+        // Check explicitly so the caller's fallback is used when the key isn't in the dictionary.
+        if (window.i18n && window.i18n.translate) {
+            const result = window.i18n.translate(key);
+            return (result && result !== key) ? result : (fallback || key);
+        }
+        return fallback || key;
     }
 
     // Helper function to format message time with translation
@@ -11695,7 +11701,12 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
             if (!messageInput.value) {
                 messageInput.value = messageToSend;
             }
-            showNotification(error.message || 'Failed to send message', 'error');
+            // T600q: Translate blocked error from backend
+            let errorMsg = error.message || 'Failed to send message';
+            if (errorMsg === 'Unable to send message to this user') {
+                errorMsg = _t('msg.blocked_send_message', errorMsg);
+            }
+            showNotification(errorMsg, 'error');
         } finally {
             // PJ812: Reset flag after completion, but keep debounce time active
             isMessageSending = false;
@@ -12612,7 +12623,11 @@ async function followUser(userId, note = '', trigger = false) {
             credentials: 'include'
         });
 
-        if (!response.ok) throw new Error('Failed to follow user');
+        if (!response.ok) {
+            // T600q: Parse response to surface blocked message
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Failed to follow user');
+        }
         showNotification(_t('msg.followed_success', 'Successfully followed user'), 'success');
 
         // Refresh following list if visible
@@ -12623,7 +12638,12 @@ async function followUser(userId, note = '', trigger = false) {
         return true;
     } catch (error) {
         console.error('Error following user:', error);
-        showNotification(_t('msg.follow_user_failed', 'Failed to follow user'), 'error');
+        // T600q: Translate blocked error from backend
+        let errorMsg = error.message || _t('msg.follow_user_failed', 'Failed to follow user');
+        if (error.message === 'Unable to connect with this user') {
+            errorMsg = _t('msg.blocked_connect', error.message);
+        }
+        showNotification(errorMsg, 'error');
         return false;
     }
 }
@@ -14731,13 +14751,13 @@ async function loadAlerts() {
                     }
                 } catch (e) {
                     // Not JSON, handle as plain string
-                    if (title.startsWith('alerts.') || title.startsWith('invite.')) {
+                    if (title.startsWith('alerts.') || title.startsWith('invite.') || title.startsWith('circles.')) {
                         const translated = translateKey(title);
                         if (!translated || translated === title) {
                             if (title === 'invite.alert_title') {
                                 title = translateKey('invite.alert_title') || 'New Invitation';
                             } else {
-                                title = title.replace('alerts.', '').replace('invite.', '').replace(/_/g, ' ');
+                                title = title.replace('alerts.', '').replace('invite.', '').replace('circles.', '').replace(/_/g, ' ');
                             }
                         } else {
                             title = translated;
@@ -14776,10 +14796,10 @@ async function loadAlerts() {
                 }
 
                 // ===== HANDLE CONTENT =====
-                if (content.startsWith('alerts.') || content.startsWith('invite.')) {
+                if (content.startsWith('alerts.') || content.startsWith('invite.') || content.startsWith('circles.')) {
                     const translated = translateKey(content);
                     if (!translated || translated === content) {
-                        content = content.replace('alerts.', '').replace('invite.', '').replace(/_/g, ' ');
+                        content = content.replace('alerts.', '').replace('invite.', '').replace('circles.', '').replace(/_/g, ' ');
                     } else {
                         content = translated;
                     }
@@ -14795,7 +14815,14 @@ async function loadAlerts() {
                 }
                 else if (content && typeof content === 'string' && content.includes('|')) {
                     const parts = content.split('|');
-                    if (parts.length === 2) {
+                    // T601q: Handle 3-part format: username|circleName|i18nKey (circle-added alerts)
+                    if (parts.length === 3) {
+                        const [username, circleName, i18nKey] = parts;
+                        const translatedCircle = translateKey('circles.circle_name_' + circleName) || circleName;
+                        const template = translateKey(i18nKey) || '{username} added you to their {circle} circle';
+                        content = template.replace('{username}', username).replace('{circle}', translatedCircle);
+                    }
+                    else if (parts.length === 2) {
                         const [username, i18nKey] = parts;
                         const template = translateKey(i18nKey) || '{username} has invited you to connect';
                         content = template.replace('{username}', username);
@@ -14812,12 +14839,25 @@ async function loadAlerts() {
                     content = translateKey('notifications.new_notification') || 'You have a new notification';
                 }
 
+                // T600q: For invite alerts, make the "invited" word a clickable link to Connection Requests tab
+                let contentHtml = escapeHtml(content);
+                if (alert.type === 'follow_request') {
+                    const inviteWords = ['invited', 'הזמין/ה', 'הזמינה', 'הזמין', 'دعاك', 'دعتك', 'пригласил(а)', 'пригласил', 'пригласила'];
+                    for (const word of inviteWords) {
+                        if (contentHtml.includes(escapeHtml(word))) {
+                            const linkHtml = `<a href="#" onclick="event.stopPropagation(); showView('connections'); setTimeout(() => switchConnectionTab('recommendations'), 150); return false;" style="color: var(--primary); text-decoration: underline; cursor: pointer;">${escapeHtml(word)}</a>`;
+                            contentHtml = contentHtml.replace(escapeHtml(word), linkHtml);
+                            break;
+                        }
+                    }
+                }
+
                 return `
                     <div class="alert-item ${alert.type || 'info'}"
                          data-alert-id="${alert.id}"
                          onclick="dismissAlert(${alert.id}, this)">
                         <strong>${escapeHtml(title)}</strong><br>
-                        <small>${escapeHtml(content)}</small>
+                        <small>${contentHtml}</small>
                         <span class="alert-dismiss" style="position: absolute; top: 8px; right: 8px; opacity: 0.3; font-size: 1.2rem; transition: opacity 0.2s;">×</span>
                     </div>
                 `;
@@ -15145,14 +15185,17 @@ async function checkAndLoadTriggerAlerts() {
         function translateKey(key) {
             if (window.i18n && window.i18n.translate) {
                 const result = window.i18n.translate(key);
-                // Debug: log when translation returns the key itself (meaning not found)
+                // T601q: translate() returns the key itself when not found (truthy),
+                // which breaks every `translateKey(x) || 'fallback'` pattern.
+                // Return null so callers' || fallbacks work correctly.
                 if (result === key) {
                     console.warn('[i18n] Translation not found for key:', key);
+                    return null;
                 }
                 return result;
             }
-            console.warn('[i18n] window.i18n not available, returning raw key:', key);
-            return key;
+            console.warn('[i18n] window.i18n not available, returning null for key:', key);
+            return null;
         }
 
         // Support Form - auto-populate name/email if logged in
@@ -15977,7 +16020,12 @@ async function followUserFromSearch(userId) {
             await loadFollowing();
         }
     } catch (error) {
-        showNotification(_t('msg.follow_user_failed', 'Failed to follow user'), 'error');
+        // T600q: Translate blocked error from backend
+        let errorMsg = error.message || _t('msg.follow_user_failed', 'Failed to follow user');
+        if (error.message === 'Unable to connect with this user') {
+            errorMsg = _t('msg.blocked_connect', error.message);
+        }
+        showNotification(errorMsg, 'error');
     }
 }
 
@@ -15997,7 +16045,12 @@ async function followUserWithNoteFromSearch(userId, username) {
                 await loadFollowing();
             }
         } catch (error) {
-            showNotification(_t('msg.follow_user_failed', 'Failed to follow user'), 'error');
+            // T600q: Translate blocked error from backend
+            let errorMsg = error.message || _t('msg.follow_user_failed', 'Failed to follow user');
+            if (error.message === 'Unable to connect with this user') {
+                errorMsg = _t('msg.blocked_connect', error.message);
+            }
+            showNotification(errorMsg, 'error');
         }
     }
 }
@@ -18022,6 +18075,16 @@ async function loadHomeAlerts() {
             // T40: Handle "username|invite.alert_content" format
             if (typeof text === 'string' && text.includes('|')) {
                 const parts = text.split('|');
+                // T601q: Handle 3-part format: username|circleName|i18nKey (circle-added alerts)
+                if (parts.length === 3 && parts[2].startsWith('circles.')) {
+                    const [username, circleName, i18nKey] = parts;
+                    const translatedCircle = (tFn && tFn('circles.circle_name_' + circleName) !== 'circles.circle_name_' + circleName) ? tFn('circles.circle_name_' + circleName) : circleName;
+                    if (tFn) {
+                        const template = tFn(i18nKey);
+                        if (template && template !== i18nKey) return template.replace('{username}', username).replace('{circle}', translatedCircle);
+                    }
+                    return username + ' added you to their ' + translatedCircle + ' circle';
+                }
                 if (parts.length === 2 && (parts[1].startsWith('invite.') || parts[1].startsWith('alerts.'))) {
                     const [username, i18nKey] = parts;
                     if (tFn) {
@@ -18032,12 +18095,12 @@ async function loadHomeAlerts() {
                     return username + ' has invited you to connect';
                 }
             }
-            if (text.startsWith('alerts.') || text.startsWith('invite.')) {
+            if (text.startsWith('alerts.') || text.startsWith('invite.') || text.startsWith('circles.')) {
                 if (tFn) {
                     const translated = tFn(text);
                     if (translated && translated !== text) return translated;
                 }
-                return text.replace('alerts.', '').replace('invite.', '').replace(/_/g, ' ');
+                return text.replace('alerts.', '').replace('invite.', '').replace('circles.', '').replace(/_/g, ' ');
             }
             // Handle JSON-encoded title with {username} params
             try {
