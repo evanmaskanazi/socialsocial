@@ -2286,13 +2286,25 @@
                 overflow: hidden;
             }
 
+            /* T800q: Mobile message panel toggle - conversations vs chat */
+            .messages-container.mobile-chat-active .conversations-list {
+                display: none !important;
+            }
+            .messages-container:not(.mobile-chat-active) .chat-area {
+                display: none !important;
+            }
+            .messages-container.mobile-chat-active .chat-area {
+                display: flex !important;
+                flex: 1;
+            }
+
             .conversations-list {
                 width: 100%;
                 height: auto;
-                max-height: 22vh;
-                min-height: 80px;
+                flex: 1;
+                min-height: 0;
                 border-right: none;
-                border-bottom: 2px solid #E5E7EB;
+                border-bottom: none;
                 flex-shrink: 0;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
@@ -2312,6 +2324,24 @@
 
             .chat-header {
                 padding: 10px 12px;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            /* T800q: Mobile back button in chat header */
+            .mobile-chat-back-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: 1px solid #E5E7EB;
+                border-radius: 8px;
+                padding: 6px 10px;
+                cursor: pointer;
+                font-size: 16px;
+                color: var(--primary, #6B8BA4);
                 flex-shrink: 0;
             }
 
@@ -4522,6 +4552,10 @@
                     TheraSocial is designed to strengthen the relationships you already have. Track what matters to you — sleep, exercise, mood, health — and stay connected to the people you care about through customizable trust circles and private messaging. Receive gentle alerts when someone close to you may need support. This is not another feed of curated highlights — it is a platform built for mutual care, authentic check-ins, and the meaningful human connections we all need to flourish.
                 </p>
 
+                <p style="margin-bottom: 20px;" data-i18n="about.origin_details">
+                    The TheraSocial project originated at a social innovation hackathon organized by HaKaveret (The Hive) in partnership with the "Bishvil HaChaim" Association and Reichman University in 2025. Development began on July 1, 2025. Our headquarters are in Israel, and the platform officially launched on March 1, 2026.
+                </p>
+
                 <p>
                     <span data-i18n="about.find_team">You can find</span>
                     <a href="https://www.linkedin.com/in/bennybrandst/" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: bold;">Benny Brandstetter</a>
@@ -4662,7 +4696,7 @@
             </li>
             <li class="mobile-nav-item" data-view="more" onclick="toggleMobileMoreMenu()">
                 <span class="mobile-nav-icon">☰</span>
-                <span class="mobile-nav-label" data-i18n="menu.more">More</span>
+                <span class="mobile-nav-label" data-i18n="menu.more">Menu</span>
                 <span class="mobile-alerts-badge" id="mobileAlertsBadge" style="display: none;"></span>
             </li>
         </ul>
@@ -4673,7 +4707,7 @@
         <div class="mobile-more-menu-backdrop" onclick="closeMobileMoreMenu()"></div>
         <div class="mobile-more-menu-sheet">
             <div class="mobile-more-menu-header">
-                <h3 data-i18n="menu.more">More</h3>
+                <h3 data-i18n="menu.more">Menu</h3>
                 <button class="mobile-more-close-btn" onclick="closeMobileMoreMenu()">✕</button>
             </div>
             <ul class="mobile-more-menu-list">
@@ -6322,7 +6356,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T25"></script>
+    <script src="/static/js/i18n.js?v=T800q"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -6592,8 +6626,8 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=T25"></script>
-   <script src="/static/js/circles-messages.js?v=T25"></script>
+<script src="/static/js/parameters-social.js?v=T800q"></script>
+   <script src="/static/js/circles-messages.js?v=T800q"></script>
 <script src="/static/js/feed-updates.js?v=3.20"></script>
 <script>
     // API Configuration
@@ -11581,6 +11615,30 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
     document.getElementById('messageInput').disabled = false;
     document.getElementById('sendMessageBtn').disabled = false;
 
+    // T800q: On mobile, activate chat panel (hide conversations, show chat)
+    const messagesContainer = document.querySelector('.messages-container');
+    if (messagesContainer && window.innerWidth <= 768) {
+        messagesContainer.classList.add('mobile-chat-active');
+        // Inject back button into chat header if not already present
+        const chatHeader = document.getElementById('chatHeader');
+        if (chatHeader && !chatHeader.querySelector('.mobile-chat-back-btn')) {
+            const backBtn = document.createElement('button');
+            backBtn.className = 'mobile-chat-back-btn';
+            backBtn.innerHTML = '←';
+            backBtn.onclick = function() {
+                messagesContainer.classList.remove('mobile-chat-active');
+            };
+            chatHeader.insertBefore(backBtn, chatHeader.firstChild);
+        }
+        // Ensure username text is after the button
+        const existingText = chatHeader.childNodes;
+        let hasTextNode = false;
+        existingText.forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) hasTextNode = true; });
+        if (!hasTextNode) {
+            chatHeader.appendChild(document.createTextNode(username));
+        }
+    }
+
     document.querySelectorAll('.conversation-item').forEach(item => {
         item.classList.remove('active');
         if (item.dataset.userId == userId) {
@@ -13939,20 +13997,34 @@ async function loadUserProfileView(userId) {
 
         // T25: Handle partial profile (not connected)
         if (userData.is_partial) {
-            // Show red banner
+            // Show banner
             const banner = document.createElement('div');
             banner.id = 'partialProfileBanner';
-            banner.style.cssText = 'background: #e53e3e; color: white; padding: 12px 20px; border-radius: 8px; margin: 15px auto; max-width: 600px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;';
+            // T800q: Different message and color based on whether current user already connected
+            const isConnectedOrPending = userData.current_user_connected || userData.has_pending_request;
+            if (isConnectedOrPending) {
+                banner.style.cssText = 'background: #3182ce; color: white; padding: 12px 20px; border-radius: 8px; margin: 15px auto; max-width: 600px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;';
+            } else {
+                banner.style.cssText = 'background: #e53e3e; color: white; padding: 12px 20px; border-radius: 8px; margin: 15px auto; max-width: 600px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;';
+            }
             const closeBtn = document.createElement('span');
             closeBtn.textContent = '✕';
             closeBtn.style.cssText = 'cursor: pointer; font-size: 18px; margin-inline-end: 8px;';
             closeBtn.onclick = function() { banner.remove(); };
             const msg = document.createElement('span');
-            const translatedMsg = _t('msg.partial_profile_notice', 'You must be connected with this user to see full profile');
-            // T25: Guard against _t returning the raw key when translation is missing
-            msg.textContent = (translatedMsg === 'msg.partial_profile_notice') 
-                ? 'You must be connected with this user to see full profile' 
-                : translatedMsg;
+            if (isConnectedOrPending) {
+                // T800q: User already sent connection — show confirmation message
+                const sentMsg = _t('msg.connection_request_sent', 'Connection request sent. Waiting for this user to accept.');
+                msg.textContent = (sentMsg === 'msg.connection_request_sent')
+                    ? 'Connection request sent. Waiting for this user to accept.'
+                    : sentMsg;
+            } else {
+                // T800q: Not connected at all — show limited profile message
+                const translatedMsg = _t('msg.partial_profile_notice', 'This profile is limited. To see the full profile, go to Connections and send a connection request.');
+                msg.textContent = (translatedMsg === 'msg.partial_profile_notice') 
+                    ? 'This profile is limited. To see the full profile, go to Connections and send a connection request.' 
+                    : translatedMsg;
+            }
             banner.appendChild(closeBtn);
             banner.appendChild(msg);
             const profileSection = document.querySelector('#profileView .profile-section');
@@ -18085,13 +18157,14 @@ async function loadHomeAlerts() {
                     }
                     return username + ' added you to their ' + translatedCircle + ' circle';
                 }
-                if (parts.length === 2 && (parts[1].startsWith('invite.') || parts[1].startsWith('alerts.'))) {
+                if (parts.length === 2 && (parts[1].startsWith('invite.') || parts[1].startsWith('alerts.') || parts[1].startsWith('circles.'))) {
                     const [username, i18nKey] = parts;
                     if (tFn) {
                         const template = tFn(i18nKey);
                         if (template && template !== i18nKey) return template.replace('{username}', username);
                     }
-                    // Fallback: use key as readable text
+                    // T800q: Fallback based on key type
+                    if (i18nKey.startsWith('circles.')) return username + ' added you to a circle';
                     return username + ' has invited you to connect';
                 }
             }
