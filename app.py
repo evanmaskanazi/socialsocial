@@ -1706,7 +1706,10 @@ def get_notification_translations(language='en'):
             'message.alert_content': 'You have received a new message',
             # Invite notifications  
             'invite.alert_title': 'New Invitation',
-            'invite.alert_content': '{username} has invited you to connect'
+            'invite.alert_content': '{username} has invited you to connect',
+            # T800q: Circle notifications
+            'circles.added_to_circle_title': 'Circle Update',
+            'circles.added_to_circle_content': '{username} added you to a circle'
         },
         'he': {
             # Follow notifications
@@ -1718,7 +1721,10 @@ def get_notification_translations(language='en'):
             'message.alert_content': 'קיבלת הודעה חדשה',
             # Invite notifications
             'invite.alert_title': 'הזמנה חדשה',
-            'invite.alert_content': '{username} הזמין/ה אותך להתחבר'
+            'invite.alert_content': '{username} הזמין/ה אותך להתחבר',
+            # T800q: Circle notifications
+            'circles.added_to_circle_title': 'עדכון מעגל',
+            'circles.added_to_circle_content': '{username} הוסיף/ה אותך למעגל'
         },
         'ar': {
             # Follow notifications
@@ -1730,7 +1736,10 @@ def get_notification_translations(language='en'):
             'message.alert_content': 'لقد تلقيت رسالة جديدة',
             # Invite notifications
             'invite.alert_title': 'دعوة جديدة',
-            'invite.alert_content': 'دعاك {username} للاتصال'
+            'invite.alert_content': 'دعاك {username} للاتصال',
+            # T800q: Circle notifications
+            'circles.added_to_circle_title': 'تحديث الدائرة',
+            'circles.added_to_circle_content': '{username} أضافك إلى دائرة'
         },
         'ru': {
             # Follow notifications
@@ -1742,7 +1751,10 @@ def get_notification_translations(language='en'):
             'message.alert_content': 'Вы получили новое сообщение',
             # Invite notifications
             'invite.alert_title': 'Новое приглашение',
-            'invite.alert_content': '{username} пригласил(а) вас подключиться'
+            'invite.alert_content': '{username} пригласил(а) вас подключиться',
+            # T800q: Circle notifications
+            'circles.added_to_circle_title': 'Обновление круга',
+            'circles.added_to_circle_content': '{username} добавил(а) вас в круг'
         }
     }
     return translations.get(language, translations['en'])
@@ -3869,9 +3881,10 @@ class SavedParameters(db.Model):
 
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),)
 
-    def to_dict(self, viewer_id=None, privacy_level=None, _notes_privacy=None):
+    def to_dict(self, viewer_id=None, privacy_level=None, _notes_privacy=None, viewer_circles=None):
         """Convert parameter to dictionary with privacy filtering.
         _notes_privacy: optional pre-fetched value to avoid per-row SQL query (NP1-PERF).
+        viewer_circles: T800q - optional set of circle types the viewer is in (for non-hierarchical checks).
         """
         base_dict = {
             'id': self.id,
@@ -3901,14 +3914,29 @@ class SavedParameters(db.Model):
         else:
             for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
                 param_privacy = getattr(self, f"{param}_privacy", 'public')
-                # Only show if public, or if viewer has proper access level (NOT private)
-                if param_privacy == 'public' or \
+                # T800q: Non-hierarchical circle visibility
+                # public → visible to ANY circle member (public, class_b, class_a)
+                # class_b → visible ONLY to class_b members
+                # class_a → visible ONLY to class_a members
+                if viewer_circles is not None:
+                    if param_privacy == 'public' and len(viewer_circles) > 0:
+                        base_dict[param] = getattr(self, param)
+                    elif param_privacy == 'class_b' and 'class_b' in viewer_circles:
+                        base_dict[param] = getattr(self, param)
+                    elif param_privacy == 'class_a' and 'class_a' in viewer_circles:
+                        base_dict[param] = getattr(self, param)
+                elif param_privacy == 'public' or \
                         (param_privacy == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
                         (param_privacy == 'class_a' and privacy_level == 'class_a'):
                     # Note: 'private' params are excluded - only owner can see
                     base_dict[param] = getattr(self, param)
             # NP1: Apply same privacy logic to notes
-            if notes_priv == 'public' or \
+            if viewer_circles is not None:
+                if (notes_priv == 'public' and len(viewer_circles) > 0) or \
+                        (notes_priv == 'class_b' and 'class_b' in viewer_circles) or \
+                        (notes_priv == 'class_a' and 'class_a' in viewer_circles):
+                    base_dict['notes'] = self.notes
+            elif notes_priv == 'public' or \
                     (notes_priv == 'class_b' and privacy_level in ['class_b', 'class_a']) or \
                     (notes_priv == 'class_a' and privacy_level == 'class_a'):
                 base_dict['notes'] = self.notes
@@ -3971,6 +3999,24 @@ def _resolve_lowest_circle(owner_user_id, member_user_id):
         return None
     # Return the circle with the lowest rank (least access)
     return min(circles, key=lambda c: _CIRCLE_RANK.get(c.circle_type, 0))
+
+
+# T800q: Helper to get ALL circle types a viewer is in (for non-hierarchical visibility)
+def _get_all_viewer_circle_types(owner_user_id, member_user_id):
+    """Return a set of normalized circle types the member is in for the given owner.
+    Used for T800q non-hierarchical parameter visibility checks."""
+    circles = Circle.query.filter_by(
+        user_id=owner_user_id,
+        circle_user_id=member_user_id
+    ).all()
+    if not circles:
+        return set()
+    type_mapping = {
+        'public': 'public', 'general': 'public',
+        'class_b': 'class_b', 'close_friends': 'class_b',
+        'class_a': 'class_a', 'family': 'class_a'
+    }
+    return {type_mapping.get(c.circle_type, c.circle_type) for c in circles}
 
 
 class Alert(db.Model):
@@ -8531,14 +8577,16 @@ def get_user_parameters(user_id):
 
 
 def check_param_visibility(param_privacy, viewer_circle_level):
-    """Helper function to check if a parameter should be visible based on privacy and viewer's circle"""
+    """Helper function to check if a parameter should be visible based on privacy and viewer's circle.
+    T800q: Updated for non-hierarchical visibility — class_b only visible to class_b, class_a only to class_a."""
     # T25: If viewer is not in any circle, no parameters are visible
     if viewer_circle_level == 'none':
         return False
     if param_privacy == 'public':
         return True
     elif param_privacy == 'class_b':
-        return viewer_circle_level in ['class_b', 'class_a']
+        # T800q: Close Friends params ONLY visible to Close Friends circle members
+        return viewer_circle_level == 'class_b'
     elif param_privacy == 'class_a':
         return viewer_circle_level == 'class_a'
     return False
@@ -8727,7 +8775,8 @@ def get_alerts():
                         return False
                     if param_priv == 'class_a' and circle != 'class_a':
                         return False
-                    if param_priv == 'class_b' and circle not in ('class_a', 'class_b'):
+                    # T800q: class_b only visible to class_b (not class_a)
+                    if param_priv == 'class_b' and circle != 'class_b':
                         return False
                     break  # Found matching keyword
             return True
@@ -9548,11 +9597,12 @@ def circles():
                 elif was_already_connected:
                     # T601q: User is already in connections — do NOT create FollowRequest or invite alert.
                     # Only send a "added to circle" notification.
-                    circle_display = {'public': 'General', 'class_b': 'Close Friends', 'class_a': 'Family'}.get(circle_type, circle_type)
+                    # T800q: Commented out circle_display — notification no longer includes circle type
+                    # circle_display = {'public': 'General', 'class_b': 'Close Friends', 'class_a': 'Family'}.get(circle_type, circle_type)
                     create_notification_with_email(
                         user_id=circle_user_id,
                         title="circles.added_to_circle_title",
-                        content=f"{current_user.username}|{circle_display}|circles.added_to_circle_content",
+                        content=f"{current_user.username}|circles.added_to_circle_content",
                         alert_type='info',
                         source_user_id=user_id,
                         alert_category='circle'
@@ -10262,14 +10312,16 @@ def get_hierarchical_parameters(view_user_id):
             })
 
         # T31: Check what circle current user is in for the viewed user
-        # Use lowest-access circle when user is in multiple circles
-        circle = _resolve_lowest_circle(view_user_id, current_user_id)
+        # T800q: Use ALL circle memberships for non-hierarchical visibility
+        viewer_circles = _get_all_viewer_circle_types(view_user_id, current_user_id)
 
-        if not circle:
+        if not viewer_circles:
             # Not in any circle - can only see public
             privacy_level = 'public'
         else:
-            privacy_level = circle.circle_type
+            # T800q: Still resolve lowest for backward-compat privacy_level
+            circle = _resolve_lowest_circle(view_user_id, current_user_id)
+            privacy_level = circle.circle_type if circle else 'public'
 
         # Get parameters and apply visibility rules
         params = SavedParameters.query.filter_by(user_id=view_user_id).all()
@@ -10278,7 +10330,7 @@ def get_hierarchical_parameters(view_user_id):
         visible_params = []
 
         for param in params:
-            param_dict = param.to_dict(viewer_id=current_user_id, privacy_level=privacy_level, _notes_privacy=np_cache.get(param.id, 'private'))
+            param_dict = param.to_dict(viewer_id=current_user_id, privacy_level=privacy_level, _notes_privacy=np_cache.get(param.id, 'private'), viewer_circles=viewer_circles)
             visible_params.append(param_dict)
 
         return jsonify({'parameters': visible_params})
