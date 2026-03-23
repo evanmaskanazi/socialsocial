@@ -8120,6 +8120,20 @@ def get_user_profile(user_id):
             if not user:
                 return jsonify({'error': 'User not found'}), 404
             profile = user.profile if user.profile else None
+            # T800q: Check if current user already connected TO this user or has pending request
+            current_user_follows = Follow.query.filter_by(
+                follower_id=current_user_id,
+                followed_id=user_id
+            ).first() is not None
+            current_user_in_circle = Circle.query.filter_by(
+                user_id=current_user_id,
+                circle_user_id=user_id
+            ).first() is not None
+            has_pending_request = FollowRequest.query.filter_by(
+                requester_id=current_user_id,
+                target_id=user_id,
+                status='pending'
+            ).first() is not None
             return jsonify({
                 'id': user.id,
                 'username': user.username,
@@ -8127,7 +8141,9 @@ def get_user_profile(user_id):
                 'bio': profile.bio if profile else '',
                 'is_partial': True,
                 'is_following': is_following,
-                'is_preview': False
+                'is_preview': False,
+                'current_user_connected': current_user_follows or current_user_in_circle,
+                'has_pending_request': has_pending_request
             })
 
         user = User.query.get(user_id)
