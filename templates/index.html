@@ -18157,13 +18157,14 @@ async function loadHomeAlerts() {
                     }
                     return username + ' added you to their ' + translatedCircle + ' circle';
                 }
-                if (parts.length === 2 && (parts[1].startsWith('invite.') || parts[1].startsWith('alerts.'))) {
+                if (parts.length === 2 && (parts[1].startsWith('invite.') || parts[1].startsWith('alerts.') || parts[1].startsWith('circles.'))) {
                     const [username, i18nKey] = parts;
                     if (tFn) {
                         const template = tFn(i18nKey);
                         if (template && template !== i18nKey) return template.replace('{username}', username);
                     }
-                    // Fallback: use key as readable text
+                    // T800q: Fallback based on key type
+                    if (i18nKey.startsWith('circles.')) return username + ' added you to a circle';
                     return username + ' has invited you to connect';
                 }
             }
