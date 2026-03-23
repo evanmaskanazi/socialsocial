@@ -13997,20 +13997,34 @@ async function loadUserProfileView(userId) {
 
         // T25: Handle partial profile (not connected)
         if (userData.is_partial) {
-            // Show red banner
+            // Show banner
             const banner = document.createElement('div');
             banner.id = 'partialProfileBanner';
-            banner.style.cssText = 'background: #e53e3e; color: white; padding: 12px 20px; border-radius: 8px; margin: 15px auto; max-width: 600px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;';
+            // T800q: Different message and color based on whether current user already connected
+            const isConnectedOrPending = userData.current_user_connected || userData.has_pending_request;
+            if (isConnectedOrPending) {
+                banner.style.cssText = 'background: #3182ce; color: white; padding: 12px 20px; border-radius: 8px; margin: 15px auto; max-width: 600px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;';
+            } else {
+                banner.style.cssText = 'background: #e53e3e; color: white; padding: 12px 20px; border-radius: 8px; margin: 15px auto; max-width: 600px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;';
+            }
             const closeBtn = document.createElement('span');
             closeBtn.textContent = '✕';
             closeBtn.style.cssText = 'cursor: pointer; font-size: 18px; margin-inline-end: 8px;';
             closeBtn.onclick = function() { banner.remove(); };
             const msg = document.createElement('span');
-            const translatedMsg = _t('msg.partial_profile_notice', 'This profile is limited. To see the full profile, go to Connections and send a connection request.');
-            // T25: Guard against _t returning the raw key when translation is missing
-            msg.textContent = (translatedMsg === 'msg.partial_profile_notice') 
-                ? 'This profile is limited. To see the full profile, go to Connections and send a connection request.' 
-                : translatedMsg;
+            if (isConnectedOrPending) {
+                // T800q: User already sent connection — show confirmation message
+                const sentMsg = _t('msg.connection_request_sent', 'Connection request sent. Waiting for this user to accept.');
+                msg.textContent = (sentMsg === 'msg.connection_request_sent')
+                    ? 'Connection request sent. Waiting for this user to accept.'
+                    : sentMsg;
+            } else {
+                // T800q: Not connected at all — show limited profile message
+                const translatedMsg = _t('msg.partial_profile_notice', 'This profile is limited. To see the full profile, go to Connections and send a connection request.');
+                msg.textContent = (translatedMsg === 'msg.partial_profile_notice') 
+                    ? 'This profile is limited. To see the full profile, go to Connections and send a connection request.' 
+                    : translatedMsg;
+            }
             banner.appendChild(closeBtn);
             banner.appendChild(msg);
             const profileSection = document.querySelector('#profileView .profile-section');
