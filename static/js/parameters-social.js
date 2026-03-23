@@ -455,6 +455,60 @@ function handleTooltipEscape(e) {
 window.showTooltip = showTooltip;
 window.closeTooltip = closeTooltip;
 
+// T800q: Privacy info modal - explains all 4 privacy levels
+function showPrivacyInfoModal(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    // Remove existing modal if present
+    const existing = document.getElementById('privacyInfoModal');
+    if (existing) existing.remove();
+
+    const title = pt('privacy.info_title') || 'Circle Privacy Levels';
+    const privInfo = pt('privacy.info_private') || 'Private — Only you can see this. No one else has access.';
+    const famInfo = pt('privacy.info_family') || 'Family — Only users you have placed in your Family circle can see this.';
+    const cfInfo = pt('privacy.info_close_friends') || 'Close Friends — Only users you have placed in your Close Friends circle can see this.';
+    const genInfo = pt('privacy.info_general') || 'General — Users in any of your circles (General, Close Friends, or Family) can see this.';
+
+    const modal = document.createElement('div');
+    modal.className = 'tooltip-modal';
+    modal.id = 'privacyInfoModal';
+    modal.innerHTML = `
+        <div class="tooltip-content" style="max-width: 400px;">
+            <button class="tooltip-close" onclick="closePrivacyInfoModal()">×</button>
+            <h3>🔒 ${title}</h3>
+            <div style="text-align:start; line-height:1.8; margin-top:10px;">
+                <p style="margin-bottom:8px;"><strong>🔒</strong> ${privInfo}</p>
+                <p style="margin-bottom:8px;"><strong>👨‍👩‍👧‍👦</strong> ${famInfo}</p>
+                <p style="margin-bottom:8px;"><strong>👥</strong> ${cfInfo}</p>
+                <p style="margin-bottom:0;"><strong>🌐</strong> ${genInfo}</p>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closePrivacyInfoModal();
+    });
+    document.addEventListener('keydown', function handler(e) {
+        if (e.key === 'Escape') {
+            closePrivacyInfoModal();
+            document.removeEventListener('keydown', handler);
+        }
+    });
+}
+
+function closePrivacyInfoModal() {
+    const modal = document.getElementById('privacyInfoModal');
+    if (modal) modal.remove();
+}
+
+window.showPrivacyInfoModal = showPrivacyInfoModal;
+window.closePrivacyInfoModal = closePrivacyInfoModal;
+
 // ESSENTIAL 5 PARAMETER CATEGORIES ONLY - ratings 1-4
 const CIRCLE_EMOJIS = {
     'private': '🔒',
@@ -1147,6 +1201,7 @@ function initializeParameters() {
         General
     </option>
 </select>
+                    <span class="privacy-info-btn" onclick="showPrivacyInfoModal(event)" title="Privacy levels" style="cursor:pointer; font-size:16px; margin-inline-start:4px; vertical-align:middle; color:#6B8BA4;">🔒ⓘ</span>
                     <!-- T40: "Apply only for today" link - commented out for now (dropdown applies to all days by default)
                     <a href="#" class="apply-all-days-link" data-category="${category.id}"
                        onclick="event.preventDefault(); applyPrivacyOnlyToday('${category.id}')"
