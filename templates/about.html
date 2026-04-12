@@ -95,7 +95,15 @@
 
         .feature-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+
+        /* U5: Smoother card transitions */
+        .feature-card {
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .feature-card:active {
+            transform: translateY(-2px);
         }
 
         .feature-icon {
@@ -299,9 +307,9 @@
 
                 <div class="feature-card">
                     <div class="feature-icon">👨‍👩‍👧‍👦</div>
-                    <div class="feature-title" data-i18n="about.communication_title">Strengthen Your Connections</div>
+                    <div class="feature-title" data-i18n="about.communication_title">Support Your Real-Life Relationships</div>
                     <p class="feature-desc" data-i18n="about.communication_desc">
-                        Stay meaningfully connected with close friends, family, and your community through private messaging and customizable trust circles.
+                        TheraSocial is designed to complement — not replace — the close relationships you already have. Use private messaging and customizable trust circles to stay attuned to the people you see and care about every day.
                     </p>
                 </div>
 

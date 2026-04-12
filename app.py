@@ -8466,25 +8466,19 @@ def get_user_parameters(user_id):
 
         # Check what circle the current user is in for the target user
         # T25: Default to 'none' — must be explicitly in a circle to see parameters
+        # U5: Use ALL circle memberships for non-hierarchical multi-circle visibility
+        viewer_circles = None
         circle_level = 'none'
         if current_user_id != user_id:
-            # T31: Use lowest-access circle when user is in multiple circles
-            circle = _resolve_lowest_circle(user_id, current_user_id)
-
-            if circle:
-                # Map circle types to privacy levels
-                type_mapping = {
-                    'public': 'public',
-                    'general': 'public',
-                    'class_b': 'class_b',
-                    'close_friends': 'class_b',
-                    'class_a': 'class_a',
-                    'family': 'class_a'
-                }
-                circle_level = type_mapping.get(circle.circle_type, 'none')
+            viewer_circles = _get_all_viewer_circle_types(user_id, current_user_id)
+            if not viewer_circles:
+                circle_level = 'none'
+            else:
+                circle_level = 'public'  # fallback for legacy code paths
         else:
             # User viewing their own parameters - full access
             circle_level = 'class_a'
+            viewer_circles = {'public', 'class_b', 'class_a'}
 
         # Get parameters with privacy settings
         # T25: Always try to include notes_privacy for per-entry filtering.
@@ -8541,35 +8535,35 @@ def get_user_parameters(user_id):
             # Check privacy for each parameter
             # mood
             mood_privacy = row[7] or 'public'
-            if check_param_visibility(mood_privacy, circle_level):
+            if check_param_visibility(mood_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['mood'] = row[1]
             else:
                 param_dict['mood'] = None
 
             # energy
             energy_privacy = row[8] or 'public'
-            if check_param_visibility(energy_privacy, circle_level):
+            if check_param_visibility(energy_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['energy'] = row[2]
             else:
                 param_dict['energy'] = None
 
             # sleep_quality
             sleep_privacy = row[9] or 'public'
-            if check_param_visibility(sleep_privacy, circle_level):
+            if check_param_visibility(sleep_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['sleep_quality'] = row[3]
             else:
                 param_dict['sleep_quality'] = None
 
             # physical_activity
             activity_privacy = row[10] or 'public'
-            if check_param_visibility(activity_privacy, circle_level):
+            if check_param_visibility(activity_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['physical_activity'] = row[4]
             else:
                 param_dict['physical_activity'] = None
 
             # anxiety
             anxiety_privacy = row[11] or 'public'
-            if check_param_visibility(anxiety_privacy, circle_level):
+            if check_param_visibility(anxiety_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['anxiety'] = row[5]
             else:
                 param_dict['anxiety'] = None
@@ -8578,7 +8572,7 @@ def get_user_parameters(user_id):
             # If column was available in query, use it. Otherwise default to 'private' (safest).
             notes_privacy = row[12] if _has_notes_priv else 'private'
             notes_privacy = notes_privacy or 'private'  # Handle NULL values
-            if check_param_visibility(notes_privacy, circle_level):
+            if check_param_visibility(notes_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['notes'] = row[6]
             else:
                 param_dict['notes'] = None
@@ -8592,9 +8586,22 @@ def get_user_parameters(user_id):
         return jsonify({'error': 'Failed to load parameters'}), 500
 
 
-def check_param_visibility(param_privacy, viewer_circle_level):
+def check_param_visibility(param_privacy, viewer_circle_level, viewer_circles=None):
     """Helper function to check if a parameter should be visible based on privacy and viewer's circle.
-    T800q: Updated for non-hierarchical visibility — class_b only visible to class_b, class_a only to class_a."""
+    T800q: Updated for non-hierarchical visibility — class_b only visible to class_b, class_a only to class_a.
+    U5: Added viewer_circles (set) support. When a user is in BOTH class_b AND class_a circles,
+    they can see public, class_b, AND class_a parameters."""
+    # U5: If viewer_circles set is provided, use multi-circle check
+    if viewer_circles is not None:
+        if not viewer_circles:
+            return False
+        if param_privacy == 'public':
+            return True
+        elif param_privacy == 'class_b':
+            return 'class_b' in viewer_circles
+        elif param_privacy == 'class_a':
+            return 'class_a' in viewer_circles
+        return False
     # T25: If viewer is not in any circle, no parameters are visible
     if viewer_circle_level == 'none':
         return False
@@ -8778,7 +8785,7 @@ def get_alerts():
             src_id = alert.source_user_id
             if src_id not in _privacy_cache:
                 recent = SavedParameters.query.filter_by(user_id=src_id).order_by(SavedParameters.updated_at.desc()).first()
-                circle = get_watcher_circle_level(src_id, user_id)
+                circle = get_watcher_all_circles(src_id, user_id)
                 _privacy_cache[src_id] = (recent, circle)
             recent, circle = _privacy_cache[src_id]
             if not recent:
@@ -8789,10 +8796,10 @@ def get_alerts():
                     param_priv = getattr(recent, priv_attr, 'private')
                     if param_priv == 'private':
                         return False
-                    if param_priv == 'class_a' and circle != 'class_a':
+                    # U5: Use multi-circle set check
+                    if param_priv == 'class_a' and 'class_a' not in circle:
                         return False
-                    # T800q: class_b only visible to class_b (not class_a)
-                    if param_priv == 'class_b' and circle != 'class_b':
+                    if param_priv == 'class_b' and 'class_b' not in circle:
                         return False
                     break  # Found matching keyword
             return True
@@ -11441,15 +11448,16 @@ def process_parameter_triggers_async(user_id, param_snapshot):
             return None
         
         # Helper function to check privacy permissions
-        def can_see_parameter(param_privacy, watcher_circle):
+        # U5: Updated for multi-circle visibility
+        def can_see_parameter(param_privacy, watcher_circles_set):
             if param_privacy == 'private':
                 return False
             elif param_privacy == 'class_a':
-                return watcher_circle == 'class_a'
+                return 'class_a' in watcher_circles_set
             elif param_privacy == 'class_b':
-                return watcher_circle in ['class_b', 'class_a']
+                return 'class_b' in watcher_circles_set
             elif param_privacy == 'public':
-                return True
+                return len(watcher_circles_set) > 0
             return False
         
         # Helper to safely convert values to numbers
@@ -11496,7 +11504,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                 logger.info(f"[TRIGGER PROCESS ASYNC] Skipping - not enough params ({len(all_params)} < {consecutive_days})")
                 continue
             
-            watcher_circle = get_watcher_circle_level(user_id, watcher_id)
+            watcher_circle = get_watcher_all_circles(user_id, watcher_id)
             if not watcher_circle:
                 logger.info(f"[TRIGGER PROCESS ASYNC] Skipping - watcher {watcher_id} not in any circle")
                 continue
@@ -11791,16 +11799,17 @@ def process_parameter_triggers(user_id, params):
             logger.info(f"[TRIGGER PROCESS] Trigger {i+1}: watcher={watcher_name}, days={t.consecutive_days}, new_flags={flags}, old_param={t.parameter_name}")
         
         # PJ815: Helper function to check privacy permissions
-        def can_see_parameter(param_privacy, watcher_circle):
+        # U5: Updated for multi-circle visibility
+        def can_see_parameter(param_privacy, watcher_circles_set):
             """Check if watcher can see this parameter based on privacy and circle level"""
             if param_privacy == 'private':
                 return False
             elif param_privacy == 'class_a':
-                return watcher_circle == 'class_a'
+                return 'class_a' in watcher_circles_set
             elif param_privacy == 'class_b':
-                return watcher_circle in ['class_b', 'class_a']
+                return 'class_b' in watcher_circles_set
             elif param_privacy == 'public':
-                return True
+                return len(watcher_circles_set) > 0
             return False
         
         # PJ815: Track patterns already alerted to prevent duplicates
@@ -11837,7 +11846,8 @@ def process_parameter_triggers(user_id, params):
                 continue
             
             # Get watcher's circle level for privacy check
-            watcher_circle = get_watcher_circle_level(user_id, watcher_id)
+            # U5: Use ALL circle memberships
+            watcher_circle = get_watcher_all_circles(user_id, watcher_id)
             if not watcher_circle:
                 logger.info(f"[TRIGGER PROCESS] Skipping watcher {watcher_id} - not in any circle")
                 continue
@@ -12082,14 +12092,14 @@ def cleanup_stale_trigger_alerts_for_user(affected_user_id):
     """
     try:
         # Helper function to check privacy permissions
-        def can_see_parameter(param_privacy, watcher_circle):
+        def can_see_parameter(param_privacy, watcher_circle):  # U5: watcher_circle is now a set
             """Check if watcher can see this parameter based on privacy and circle level"""
             if param_privacy == 'private':
                 return False
             elif param_privacy == 'class_a':
-                return watcher_circle == 'class_a'
+                return 'class_a' in watcher_circle
             elif param_privacy == 'class_b':
-                return watcher_circle in ['class_b', 'class_a']
+                return 'class_b' in watcher_circle
             elif param_privacy == 'public':
                 return True
             return False
@@ -12107,7 +12117,7 @@ def cleanup_stale_trigger_alerts_for_user(affected_user_id):
             watcher_id = trigger.watcher_id
 
             # Get watcher's circle level
-            watcher_circle = get_watcher_circle_level(affected_user_id, watcher_id)
+            watcher_circle = get_watcher_all_circles(affected_user_id, watcher_id)
 
             if not watcher_circle:
                 # Watcher not in any circle - remove all their alerts for this user
@@ -12323,14 +12333,14 @@ def cleanup_all_stale_trigger_alerts():
         logger.info("Starting global trigger alerts cleanup...")
 
         # Helper function to check privacy permissions
-        def can_see_parameter(param_privacy, watcher_circle):
+        def can_see_parameter(param_privacy, watcher_circle):  # U5: watcher_circle is now a set
             """Check if watcher can see this parameter based on privacy and circle level"""
             if param_privacy == 'private':
                 return False
             elif param_privacy == 'class_a':
-                return watcher_circle == 'class_a'
+                return 'class_a' in watcher_circle
             elif param_privacy == 'class_b':
-                return watcher_circle in ['class_b', 'class_a']
+                return 'class_b' in watcher_circle
             elif param_privacy == 'public':
                 return True
             return False
@@ -12371,7 +12381,7 @@ def cleanup_all_stale_trigger_alerts():
             watched_id = watched_user.id
 
             # Get watcher's circle level
-            watcher_circle = get_watcher_circle_level(watched_id, watcher_id)
+            watcher_circle = get_watcher_all_circles(watched_id, watcher_id)
 
             if not watcher_circle:
                 # Watcher not in any circle - remove alert
@@ -12905,28 +12915,22 @@ def get_user_progress(user_id):
         
         # Determine circle level for privacy
         # T25: Default to 'none' — must be explicitly in a circle to see parameters
-        # T45: Use _resolve_lowest_circle for consistent multi-circle privacy (matches /api/users/<id>/parameters)
+        # U5: Use ALL circle memberships for non-hierarchical multi-circle visibility
+        viewer_circles = None
         circle_level = 'none'
         if current_user_id != user_id:
-            circle = _resolve_lowest_circle(user_id, current_user_id)
-            if circle:
-                type_mapping = {
-                    'public': 'public', 'general': 'public',
-                    'class_b': 'class_b', 'close_friends': 'class_b',
-                    'class_a': 'class_a', 'family': 'class_a'
-                }
-                circle_level = type_mapping.get(circle.circle_type, 'none')
+            viewer_circles = _get_all_viewer_circle_types(user_id, current_user_id)
+            if not viewer_circles:
+                circle_level = 'none'
+            else:
+                circle_level = 'public'
         else:
             circle_level = 'class_a'
+            viewer_circles = {'public', 'class_b', 'class_a'}
         
-        # Privacy hierarchy - Check10: Added 'private': 3 so private params are never visible
-        # T25: Added 'none': -1 so non-circle members see no parameters
-        privacy_levels = {'none': -1, 'public': 0, 'class_b': 1, 'class_a': 2, 'private': 3}
-        viewer_level = privacy_levels.get(circle_level, 0)
-        
+        # U5: Use check_param_visibility with viewer_circles for consistent non-hierarchical checks
         def can_see(privacy_setting):
-            param_level = privacy_levels.get(privacy_setting or 'public', 0)
-            return viewer_level >= param_level
+            return check_param_visibility(privacy_setting or 'public', circle_level, viewer_circles=viewer_circles)
         
         end_date = datetime.now().date()
         start_date = end_date - timedelta(days=days)
@@ -14335,6 +14339,16 @@ def get_watcher_circle_level(watched_id, watcher_id):
         return None
 
 
+def get_watcher_all_circles(watched_id, watcher_id):
+    """U5: Get ALL circle types the watcher is in for the watched user.
+    Returns a set of normalized circle types for multi-circle visibility checks."""
+    try:
+        return _get_all_viewer_circle_types(watched_id, watcher_id)
+    except Exception as e:
+        logger.error(f"[GET_WATCHER_CIRCLES] Error: watched={watched_id}, watcher={watcher_id}: {e}")
+        return set()
+
+
 @app.route('/api/parameters/check-triggers', methods=['GET'])
 @login_required
 def check_parameter_triggers():
@@ -14387,14 +14401,14 @@ def check_parameter_triggers():
                     return None
             return None
 
-        def can_see_parameter(param_privacy, watcher_circle):
+        def can_see_parameter(param_privacy, watcher_circle):  # U5: watcher_circle is now a set
             """Check if watcher can see this parameter based on privacy and circle level"""
             if param_privacy == 'private':
                 return False
             elif param_privacy == 'class_a':
-                return watcher_circle == 'class_a'
+                return 'class_a' in watcher_circle
             elif param_privacy == 'class_b':
-                return watcher_circle in ['class_b', 'class_a']
+                return 'class_b' in watcher_circle
             elif param_privacy == 'public':
                 return True
             return False
@@ -14405,7 +14419,7 @@ def check_parameter_triggers():
             if consecutive_days < MINIMUM_TRIGGER_DAYS:
                 continue
 
-            watcher_circle = get_watcher_circle_level(trigger.watched_id, watcher_id)
+            watcher_circle = get_watcher_all_circles(trigger.watched_id, watcher_id)
             if not watcher_circle:
                 continue
 
@@ -14862,14 +14876,14 @@ def cleanup_trigger_privacy():
         user_id = session.get('user_id')
 
         # Helper function (copy from main fix)
-        def can_see_parameter(param_privacy, watcher_circle):
+        def can_see_parameter(param_privacy, watcher_circle):  # U5: watcher_circle is now a set
             """Check if watcher can see this parameter based on privacy and circle level"""
             if param_privacy == 'private':
                 return False
             elif param_privacy == 'class_a':
-                return watcher_circle == 'class_a'
+                return 'class_a' in watcher_circle
             elif param_privacy == 'class_b':
-                return watcher_circle in ['class_b', 'class_a']
+                return 'class_b' in watcher_circle
             elif param_privacy == 'public':
                 return True
             return False
@@ -14906,7 +14920,7 @@ def cleanup_trigger_privacy():
             watched_id = watched_user.id
 
             # Get watcher's circle level using the helper function
-            watcher_circle = get_watcher_circle_level(watched_id, watcher_id)
+            watcher_circle = get_watcher_all_circles(watched_id, watcher_id)
 
             if not watcher_circle:
                 # Watcher not in any circle - should not have this alert
@@ -14997,13 +15011,13 @@ def cleanup_all_trigger_privacy():
         # if not current_user.is_admin:
         #     return jsonify({'error': 'Admin access required'}), 403
 
-        def can_see_parameter(param_privacy, watcher_circle):
+        def can_see_parameter(param_privacy, watcher_circle):  # U5: watcher_circle is now a set
             if param_privacy == 'private':
                 return False
             elif param_privacy == 'class_a':
-                return watcher_circle == 'class_a'
+                return 'class_a' in watcher_circle
             elif param_privacy == 'class_b':
-                return watcher_circle in ['class_b', 'class_a']
+                return 'class_b' in watcher_circle
             elif param_privacy == 'public':
                 return True
             return False
@@ -15032,7 +15046,7 @@ def cleanup_all_trigger_privacy():
                 continue
 
             watched_id = watched_user.id
-            watcher_circle = get_watcher_circle_level(watched_id, watcher_id)
+            watcher_circle = get_watcher_all_circles(watched_id, watcher_id)
 
             if not watcher_circle:
                 db.session.delete(alert)
@@ -15775,17 +15789,9 @@ def get_friends_updates():
                 continue
             
             # T31: Determine viewer's circle level for privacy filtering
-            # Use lowest-access circle when user is in multiple circles
+            # U5: Use ALL circle memberships for non-hierarchical multi-circle visibility
             # T25: Default to 'none' — must be explicitly in a circle to see parameters
-            circle_level = 'none'
-            circle = _resolve_lowest_circle(follow.followed_id, user_id)
-            if circle:
-                type_mapping = {
-                    'public': 'public', 'general': 'public',
-                    'class_b': 'class_b', 'close_friends': 'class_b',
-                    'class_a': 'class_a', 'family': 'class_a'
-                }
-                circle_level = type_mapping.get(circle.circle_type, 'none')
+            viewer_circles = _get_all_viewer_circle_types(follow.followed_id, user_id)
             
             # Get the latest parameter entry within the last 7 days
             latest_params = SavedParameters.query.filter(
@@ -15809,7 +15815,7 @@ def get_friends_updates():
                 value = getattr(latest_params, param_name, None)
                 if value:
                     param_privacy = getattr(latest_params, privacy_map[param_name], 'public') or 'public'
-                    if check_param_visibility(param_privacy, circle_level):
+                    if check_param_visibility(param_privacy, 'none', viewer_circles=viewer_circles):
                         visible_params.append({
                             'parameter_name': param_name,
                             'value': value
@@ -15930,23 +15936,19 @@ def get_user_parameters_for_triggers(user_id):
 
         # V4 FIX: Determine viewer's circle level for privacy filtering
         # T25: Default to 'none' — must be explicitly in a circle to see parameters
+        # U5: Use ALL circle memberships for non-hierarchical multi-circle visibility
+        viewer_circles = None
         circle_level = 'none'
         if viewer_id != user_id:
-            # T31: Use lowest-access circle when user is in multiple circles
-            circle = _resolve_lowest_circle(user_id, viewer_id)
-            if circle:
-                type_mapping = {
-                    'public': 'public',
-                    'general': 'public',
-                    'class_b': 'class_b',
-                    'close_friends': 'class_b',
-                    'class_a': 'class_a',
-                    'family': 'class_a'
-                }
-                circle_level = type_mapping.get(circle.circle_type, 'none')
+            viewer_circles = _get_all_viewer_circle_types(user_id, viewer_id)
+            if not viewer_circles:
+                circle_level = 'none'
+            else:
+                circle_level = 'public'
         else:
             # User viewing own parameters - full access
             circle_level = 'class_a'
+            viewer_circles = {'public', 'class_b', 'class_a'}
 
         # V4 FIX: Map parameter names to their privacy column names
         privacy_map = {
@@ -15975,7 +15977,7 @@ def get_user_parameters_for_triggers(user_id):
                     # VINTER FIX: Use 'public' as default for NULL privacy (matches get_hierarchical_parameters behavior)
                     # Previously defaulted to 'private' which blocked all Friends Daily Updates visibility
                     param_privacy = getattr(param, privacy_map[param_name], 'public') or 'public'
-                    if check_param_visibility(param_privacy, circle_level):
+                    if check_param_visibility(param_privacy, circle_level, viewer_circles=viewer_circles):
                         result['parameters'].append({
                             'date': param.date.isoformat() if hasattr(param.date, 'isoformat') else str(param.date),
                             'parameter_name': param_name,
@@ -16770,13 +16772,13 @@ def run_background_trigger_check_for_watcher(watcher_id):
                     return None
             return None
 
-        def can_see_parameter(param_privacy, watcher_circle):
+        def can_see_parameter(param_privacy, watcher_circle):  # U5: watcher_circle is now a set
             if param_privacy == 'private':
                 return False
             elif param_privacy == 'class_a':
-                return watcher_circle == 'class_a'
+                return 'class_a' in watcher_circle
             elif param_privacy == 'class_b':
-                return watcher_circle in ['class_b', 'class_a']
+                return 'class_b' in watcher_circle
             elif param_privacy == 'public':
                 return True
             return False
@@ -16787,7 +16789,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
             if consecutive_days < MINIMUM_TRIGGER_DAYS:
                 continue
 
-            watcher_circle = get_watcher_circle_level(trigger.watched_id, watcher_id)
+            watcher_circle = get_watcher_all_circles(trigger.watched_id, watcher_id)
             if not watcher_circle:
                 continue
 
@@ -18270,18 +18272,18 @@ def get_user_parameters_by_date(user_id, date_str):
             return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
 
         # T25: Determine circle level — must be explicitly in a circle to see parameters
+        # U5: Use ALL circle memberships for non-hierarchical multi-circle visibility
+        viewer_circles = None
         circle_level = 'none'
         if user_id != current_user_id:
-            circle = _resolve_lowest_circle(user_id, current_user_id)
-            if circle:
-                type_mapping = {
-                    'public': 'public', 'general': 'public',
-                    'class_b': 'class_b', 'close_friends': 'class_b',
-                    'class_a': 'class_a', 'family': 'class_a'
-                }
-                circle_level = type_mapping.get(circle.circle_type, 'none')
+            viewer_circles = _get_all_viewer_circle_types(user_id, current_user_id)
+            if not viewer_circles:
+                circle_level = 'none'
+            else:
+                circle_level = 'public'
         else:
             circle_level = 'class_a'
+            viewer_circles = {'public', 'class_b', 'class_a'}
 
         params = SavedParameters.query.filter_by(
             user_id=user_id,
@@ -18293,11 +18295,11 @@ def get_user_parameters_by_date(user_id, date_str):
                 'success': True,
                 'data': {
                     'parameters': {
-                        'mood': params.mood if check_param_visibility(params.mood_privacy or 'public', circle_level) else None,
-                        'energy': params.energy if check_param_visibility(params.energy_privacy or 'public', circle_level) else None,
-                        'sleep_quality': params.sleep_quality if check_param_visibility(params.sleep_quality_privacy or 'public', circle_level) else None,
-                        'physical_activity': params.physical_activity if check_param_visibility(params.physical_activity_privacy or 'public', circle_level) else None,
-                        'anxiety': params.anxiety if check_param_visibility(params.anxiety_privacy or 'public', circle_level) else None
+                        'mood': params.mood if check_param_visibility(params.mood_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None,
+                        'energy': params.energy if check_param_visibility(params.energy_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None,
+                        'sleep_quality': params.sleep_quality if check_param_visibility(params.sleep_quality_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None,
+                        'physical_activity': params.physical_activity if check_param_visibility(params.physical_activity_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None,
+                        'anxiety': params.anxiety if check_param_visibility(params.anxiety_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None
                     },
                     'notes': params.notes or ''
                 }
