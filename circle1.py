@@ -1,4 +1,5 @@
 import psycopg2, os
+
 conn = psycopg2.connect(os.environ['DATABASE_URL'])
 cursor = conn.cursor()
 
