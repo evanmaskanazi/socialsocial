@@ -5342,9 +5342,18 @@ def create_admin_user():
         admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
         admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
 
+        # L60: Skip if this email is also configured as a system operator
+        # (create_system_operators will handle it instead to avoid duplicates)
+        for i in range(1, 11):
+            op_email = os.environ.get(f'OPERATOR_{i}_EMAIL', '').strip()
+            if op_email and op_email.lower() == admin_email.lower():
+                logger.info(f"[L60] Skipping admin creation for {admin_email} — handled by OPERATOR_{i} env vars")
+                return
+
         # Check if admin exists - SQLAlchemy 2.0 style
+        # L60: Use .first() to handle edge case of duplicate emails
         stmt = select(User).filter_by(email=admin_email)
-        admin = db.session.execute(stmt).scalar_one_or_none()
+        admin = db.session.execute(stmt).scalars().first()
 
         if not admin:
             admin = User(
@@ -5388,7 +5397,8 @@ def create_admin_user():
 # All fields except SCOPE_TYPE and SCOPE_VALUE are required for each slot.
 # SCOPE_TYPE defaults to 'all', SCOPE_VALUE defaults to ''.
 def create_system_operators():
-    """Create System Operator accounts from environment variables if they don't exist"""
+    """Create System Operator accounts from environment variables if they don't exist.
+    Also cleans up duplicate email rows automatically on startup."""
     created_count = 0
     for i in range(1, 11):  # Support up to 10 operators
         email = os.environ.get(f'OPERATOR_{i}_EMAIL', '').strip()
@@ -5406,24 +5416,58 @@ def create_system_operators():
             username = f'operator_{i}'
 
         try:
-            # Check if this operator already exists by email
-            existing = db.session.execute(
+            # L60: Find ALL rows with this email to detect and clean up duplicates
+            all_matches = db.session.execute(
                 select(User).filter_by(email=email)
-            ).scalar_one_or_none()
+            ).scalars().all()
+
+            if len(all_matches) > 1:
+                # Duplicate rows exist — keep the best one (prefer system_operator role, then lowest id)
+                logger.warning(f"[L60] Found {len(all_matches)} duplicate rows for {email}, cleaning up...")
+                # Prefer to keep the system_operator, otherwise keep the first (lowest id)
+                keep = None
+                for u in all_matches:
+                    if u.role == 'system_operator':
+                        keep = u
+                        break
+                if not keep:
+                    keep = all_matches[0]
+                for u in all_matches:
+                    if u.id != keep.id:
+                        logger.info(f"[L60] Deleting duplicate user id={u.id} username={u.username} role={u.role}")
+                        db.session.delete(u)
+                db.session.commit()
+                all_matches = [keep]
+                logger.info(f"[L60] Kept user id={keep.id} username={keep.username} role={keep.role}")
+
+            existing = all_matches[0] if all_matches else None
 
             if existing:
                 logger.info(f"[L60] System Operator already exists: {email}")
-                # Ensure role is correct in case account was created as regular user
-                if existing.role != 'system_operator':
+                # Ensure role is correct in case account was created as regular user or admin
+                if existing.role not in ('system_operator', 'admin'):
                     existing.role = 'system_operator'
                     db.session.commit()
                     logger.info(f"[L60] Updated role to system_operator for: {email}")
+                # Ensure scope exists
+                existing_scope = db.session.execute(
+                    select(OperatorScope).filter_by(operator_id=existing.id)
+                ).scalars().first()
+                if not existing_scope and existing.role == 'system_operator':
+                    scope = OperatorScope(
+                        operator_id=existing.id,
+                        scope_type=scope_type,
+                        scope_value=scope_value
+                    )
+                    db.session.add(scope)
+                    db.session.commit()
+                    logger.info(f"[L60] Created missing scope for operator {email}: {scope_type}={scope_value}")
                 continue
 
             # Also check username collision
             username_taken = db.session.execute(
                 select(User).filter_by(username=username)
-            ).scalar_one_or_none()
+            ).scalars().first()
             if username_taken:
                 logger.warning(f"[L60] Username '{username}' already taken, skipping OPERATOR_{i}")
                 continue
@@ -5903,16 +5947,17 @@ def register():
             return jsonify({'error': msg}), 400
 
         # Check if user exists - SQLAlchemy 2.0 style
+        # L60: Use .first() to handle edge case of duplicate emails
         existing_email = db.session.execute(
             select(User).filter_by(email=email)
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if existing_email:
             return jsonify({'error': 'Email already registered'}), 400
 
         existing_username = db.session.execute(
             select(User).filter(func.lower(User.username) == username.lower())
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if existing_username:
             return jsonify({'error': 'Username already taken'}), 400
@@ -5989,7 +6034,7 @@ def check_username_availability():
 
         existing = db.session.execute(
             select(User).filter(func.lower(User.username) == username.lower())
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         return jsonify({'available': existing is None}), 200
 
@@ -6015,14 +6060,15 @@ def login():
             return jsonify({'error': 'Invalid input length'}), 400
 
         # FD-3: Find user by email or username
+        # L60: Use .first() instead of scalar_one_or_none() to handle edge case of duplicate emails
         user = db.session.execute(
             select(User).filter_by(email=login_id)
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if not user:
             user = db.session.execute(
                 select(User).filter_by(username=login_id)
-            ).scalar_one_or_none()
+            ).scalars().first()
 
         if not user or not user.check_password(password):
             # CHANGE 7: Audit log failed login attempt (Ethics: Security)
@@ -6368,7 +6414,7 @@ def request_magic_link():
 
         user = db.session.execute(
             select(User).filter_by(email=email)
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if not user:
             import secrets
@@ -6378,7 +6424,7 @@ def request_magic_link():
             # Check if this username is taken
             existing = db.session.execute(
                 select(User).filter(func.lower(User.username) == email_username.lower())
-            ).scalar_one_or_none()
+            ).scalars().first()
 
             # If taken, add random suffix
             if existing:
@@ -7716,7 +7762,7 @@ def forgot_password():
 
         user = db.session.execute(
             select(User).filter_by(email=email)
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if not user:
             logger.info(f"Password reset requested for non-existent email: {email}")
