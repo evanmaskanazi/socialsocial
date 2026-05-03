@@ -3470,6 +3470,33 @@ def auto_migrate_database():
                     except Exception as e:
                         logger.warning(f"Posts visibility migration skipped: {e}")
 
+                # L60: Create operator_scopes table
+                if 'operator_scopes' not in inspector.get_table_names():
+                    logger.info("L60: Creating operator_scopes table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE operator_scopes (
+                                id SERIAL PRIMARY KEY,
+                                operator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                scope_type VARCHAR(30) NOT NULL DEFAULT 'all',
+                                scope_value VARCHAR(200) DEFAULT '',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE operator_scopes (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                operator_id INTEGER NOT NULL,
+                                scope_type VARCHAR(30) NOT NULL DEFAULT 'all',
+                                scope_value VARCHAR(200) DEFAULT '',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(operator_id) REFERENCES users(id) ON DELETE CASCADE
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ L60: Created operator_scopes table")
+
                 logger.info("Database auto-migration completed successfully")
 
         except Exception as e:
@@ -4201,6 +4228,27 @@ class BackgroundJob(db.Model):
     
     def __repr__(self):
         return f'<BackgroundJob {self.id} {self.job_type} {self.status}>'
+
+
+# L60: System Operator scope assignment — defines which user segment an operator can view
+class OperatorScope(db.Model):
+    __tablename__ = 'operator_scopes'
+    id = db.Column(db.Integer, primary_key=True)
+    operator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    scope_type = db.Column(db.String(30), nullable=False, default='all')  # 'all', 'city', 'country', 'age_range', 'group'
+    scope_value = db.Column(db.String(200), default='')  # e.g. 'Jerusalem, Israel' or '1980-1995' or group id
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    operator = db.relationship('User', backref=db.backref('operator_scopes', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'operator_id': self.operator_id,
+            'scope_type': self.scope_type,
+            'scope_value': self.scope_value,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
 
 
 def ensure_database_schema():
@@ -5366,6 +5414,22 @@ def admin_required(f):
     return decorated_function
 
 
+# L60: System Operator access decorator
+def operator_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        user = db.session.get(User, session['user_id'])
+        if not user or user.role not in ('system_operator', 'admin'):
+            return jsonify({'error': 'Operator privileges required'}), 403
+
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 # =====================
 # REQUEST HANDLERS
 # =====================
@@ -5585,6 +5649,17 @@ def messages_page():
 @login_required
 def parameters_page():
     return render_template('parameters.html')
+
+
+# L60: Operator dashboard page route
+@app.route('/operator/dashboard')
+@login_required
+def operator_dashboard_page():
+    """System Operator dashboard — redirects non-operators to home"""
+    user = db.session.get(User, session['user_id'])
+    if not user or user.role not in ('system_operator', 'admin'):
+        return redirect('/')
+    return render_template('index.html')
 
 
 @app.route('/diary-redirect')
@@ -15428,6 +15503,299 @@ def admin_job_queue_stats():
     except Exception as e:
         logger.error(f"Job queue stats error: {str(e)}")
         return jsonify({'error': 'Failed to get job queue stats'}), 500
+
+
+# =====================
+# L60: SYSTEM OPERATOR API
+# =====================
+
+@app.route('/api/admin/create-operator', methods=['POST'])
+@admin_required
+@require_csrf
+def create_operator():
+    """Admin creates a System Operator account with scope assignment"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+        scope_type = data.get('scope_type', 'all').strip()
+        scope_value = data.get('scope_value', '').strip()
+
+        if not username or not email or not password:
+            return jsonify({'error': 'Username, email, and password are required'}), 400
+        if len(username) < 3 or len(username) > 80:
+            return jsonify({'error': 'Username must be 3-80 characters'}), 400
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters'}), 400
+        if scope_type not in ('all', 'city', 'country', 'age_range', 'group'):
+            return jsonify({'error': 'Invalid scope type'}), 400
+
+        # Check duplicates
+        if db.session.execute(select(User).filter_by(email=email)).scalar_one_or_none():
+            return jsonify({'error': 'Email already registered'}), 409
+        if db.session.execute(select(User).filter_by(username=username)).scalar_one_or_none():
+            return jsonify({'error': 'Username already taken'}), 409
+
+        operator = User(
+            username=username,
+            email=email,
+            role='system_operator',
+            is_active=True
+        )
+        operator.set_password(password)
+        db.session.add(operator)
+        db.session.flush()
+
+        # Create profile
+        profile = Profile(user_id=operator.id)
+        db.session.add(profile)
+
+        # Create scope
+        scope = OperatorScope(
+            operator_id=operator.id,
+            scope_type=scope_type,
+            scope_value=scope_value
+        )
+        db.session.add(scope)
+
+        db.session.commit()
+        logger.info(f"[L60] System Operator created: {username} (scope: {scope_type}={scope_value})")
+
+        return jsonify({
+            'success': True,
+            'operator': operator.to_dict(),
+            'scope': scope.to_dict()
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Create operator error: {e}")
+        return jsonify({'error': 'Failed to create operator'}), 500
+
+
+def _build_operator_scope_filter(operator_user):
+    """L60: Build SQLAlchemy filter clauses from operator's scope(s).
+    Returns a list of filter conditions to apply to User queries."""
+    scopes = OperatorScope.query.filter_by(operator_id=operator_user.id).all()
+    if not scopes:
+        # No scope defined = see all (admin-like)
+        return []
+    
+    filters = []
+    for scope in scopes:
+        if scope.scope_type == 'all':
+            return []  # 'all' overrides everything
+        elif scope.scope_type == 'city':
+            filters.append(User.selected_city == scope.scope_value)
+        elif scope.scope_type == 'country':
+            # Match by country suffix (e.g. ", Israel")
+            filters.append(User.selected_city.ilike(f'%{scope.scope_value}'))
+        elif scope.scope_type == 'age_range':
+            # scope_value format: "1980-1995"
+            try:
+                parts = scope.scope_value.split('-')
+                year_start, year_end = int(parts[0]), int(parts[1])
+                filters.append(User.birth_year >= year_start)
+                filters.append(User.birth_year <= year_end)
+            except (ValueError, IndexError):
+                pass
+    return filters
+
+
+@app.route('/api/operator/stats')
+@operator_required
+def operator_stats():
+    """L60: Aggregate platform statistics for System Operators, scoped by assignment."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+
+        # Base user query (exclude admin/operator accounts from stats)
+        base_q = select(User).filter(User.role == 'user')
+        for f in scope_filters:
+            base_q = base_q.filter(f)
+
+        # Total registered users in scope
+        count_q = select(func.count(User.id)).filter(User.role == 'user')
+        for f in scope_filters:
+            count_q = count_q.filter(f)
+        total_users = db.session.execute(count_q).scalar() or 0
+
+        # Active users in scope (active = is_active True)
+        active_q = select(func.count(User.id)).filter(User.role == 'user', User.is_active == True)
+        for f in scope_filters:
+            active_q = active_q.filter(f)
+        active_users = db.session.execute(active_q).scalar() or 0
+
+        # New users in last 7 days
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        new_q = select(func.count(User.id)).filter(
+            User.role == 'user', User.created_at >= seven_days_ago
+        )
+        for f in scope_filters:
+            new_q = new_q.filter(f)
+        new_users_7d = db.session.execute(new_q).scalar() or 0
+
+        # New users in last 30 days
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        new30_q = select(func.count(User.id)).filter(
+            User.role == 'user', User.created_at >= thirty_days_ago
+        )
+        for f in scope_filters:
+            new30_q = new30_q.filter(f)
+        new_users_30d = db.session.execute(new30_q).scalar() or 0
+
+        # Check-in rate: users who logged at least 1 parameter in last 7 days / total users
+        checkin_subq = select(SavedParameters.user_id).filter(
+            SavedParameters.date >= seven_days_ago.strftime('%Y-%m-%d')
+        ).distinct().subquery()
+        if scope_filters:
+            checkin_q = select(func.count()).select_from(
+                select(User.id).filter(
+                    User.role == 'user',
+                    User.id.in_(select(checkin_subq.c.user_id))
+                ).filter(*scope_filters).subquery()
+            )
+        else:
+            checkin_q = select(func.count()).select_from(checkin_subq)
+        users_checked_in = db.session.execute(checkin_q).scalar() or 0
+        checkin_rate = round((users_checked_in / total_users * 100), 1) if total_users > 0 else 0
+
+        # Users logged in today
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_q = select(func.count(User.id)).filter(
+            User.role == 'user', User.last_login >= today_start
+        )
+        for f in scope_filters:
+            today_q = today_q.filter(f)
+        active_today = db.session.execute(today_q).scalar() or 0
+
+        return jsonify({
+            'total_users': total_users,
+            'active_users': active_users,
+            'new_users_7d': new_users_7d,
+            'new_users_30d': new_users_30d,
+            'checkin_rate_7d': checkin_rate,
+            'users_checked_in_7d': users_checked_in,
+            'active_today': active_today
+        })
+
+    except Exception as e:
+        logger.error(f"Operator stats error: {e}")
+        return jsonify({'error': 'Failed to get stats'}), 500
+
+
+@app.route('/api/operator/breakdown/city')
+@operator_required
+def operator_breakdown_city():
+    """L60: User count breakdown by city, scoped by operator assignment."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+
+        q = select(
+            User.selected_city, func.count(User.id).label('count')
+        ).filter(User.role == 'user').group_by(User.selected_city).order_by(desc('count'))
+        for f in scope_filters:
+            q = q.filter(f)
+
+        rows = db.session.execute(q).all()
+        breakdown = [{'city': row[0] or 'Unknown', 'count': row[1]} for row in rows]
+
+        return jsonify({'breakdown': breakdown})
+
+    except Exception as e:
+        logger.error(f"Operator city breakdown error: {e}")
+        return jsonify({'error': 'Failed to get breakdown'}), 500
+
+
+@app.route('/api/operator/breakdown/age')
+@operator_required
+def operator_breakdown_age():
+    """L60: User count breakdown by age bracket, scoped by operator assignment."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+        current_year = datetime.utcnow().year
+
+        # Define age brackets
+        brackets = [
+            ('18-24', current_year - 24, current_year - 18),
+            ('25-34', current_year - 34, current_year - 25),
+            ('35-44', current_year - 44, current_year - 35),
+            ('45-54', current_year - 54, current_year - 45),
+            ('55-64', current_year - 64, current_year - 55),
+            ('65+', 1900, current_year - 65),
+        ]
+
+        breakdown = []
+        for label, year_start, year_end in brackets:
+            q = select(func.count(User.id)).filter(
+                User.role == 'user',
+                User.birth_year >= year_start,
+                User.birth_year <= year_end
+            )
+            for f in scope_filters:
+                q = q.filter(f)
+            count = db.session.execute(q).scalar() or 0
+            breakdown.append({'bracket': label, 'count': count})
+
+        return jsonify({'breakdown': breakdown})
+
+    except Exception as e:
+        logger.error(f"Operator age breakdown error: {e}")
+        return jsonify({'error': 'Failed to get breakdown'}), 500
+
+
+@app.route('/api/operator/registrations')
+@operator_required
+def operator_registrations():
+    """L60: Daily registration counts for the last N days (default 30)."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+        days = min(int(request.args.get('days', 30)), 90)
+        start_date = datetime.utcnow() - timedelta(days=days)
+
+        # Use date truncation for grouping
+        is_postgres = 'postgresql' in str(db.engine.url)
+        if is_postgres:
+            date_expr = func.date_trunc('day', User.created_at)
+        else:
+            date_expr = func.date(User.created_at)
+
+        q = select(
+            date_expr.label('day'), func.count(User.id).label('count')
+        ).filter(
+            User.role == 'user', User.created_at >= start_date
+        ).group_by('day').order_by(text('day'))
+        for f in scope_filters:
+            q = q.filter(f)
+
+        rows = db.session.execute(q).all()
+        data = [{'date': str(row[0])[:10], 'count': row[1]} for row in rows]
+
+        return jsonify({'registrations': data})
+
+    except Exception as e:
+        logger.error(f"Operator registrations error: {e}")
+        return jsonify({'error': 'Failed to get registrations'}), 500
+
+
+@app.route('/api/operator/scope')
+@operator_required
+def operator_get_scope():
+    """L60: Return the current operator's scope assignment."""
+    try:
+        scopes = OperatorScope.query.filter_by(operator_id=session['user_id']).all()
+        return jsonify({'scopes': [s.to_dict() for s in scopes]})
+    except Exception as e:
+        logger.error(f"Operator scope error: {e}")
+        return jsonify({'error': 'Failed to get scope'}), 500
 
 
 # =====================
