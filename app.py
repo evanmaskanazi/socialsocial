@@ -4446,6 +4446,7 @@ def init_database():
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 logger.info("Database schema created successfully")
                 create_admin_user()
+                create_system_operators()  # L60: Create operator accounts from env vars
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
@@ -4460,6 +4461,7 @@ def init_database():
                 ensure_privacy_schema()  # ← PL405: Privacy columns
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
+                create_system_operators()  # L60: Create operator accounts from env vars
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
@@ -5376,6 +5378,105 @@ def create_admin_user():
     except Exception as e:
         logger.error(f"Error creating admin user: {e}")
         db.session.rollback()
+
+
+# L60: Create System Operator accounts from environment variables on startup.
+# Supports multiple operators via numbered env vars:
+#   OPERATOR_1_EMAIL, OPERATOR_1_PASSWORD, OPERATOR_1_USERNAME, OPERATOR_1_SCOPE_TYPE, OPERATOR_1_SCOPE_VALUE
+#   OPERATOR_2_EMAIL, OPERATOR_2_PASSWORD, OPERATOR_2_USERNAME, OPERATOR_2_SCOPE_TYPE, OPERATOR_2_SCOPE_VALUE
+#   ... up to OPERATOR_10_*
+# All fields except SCOPE_TYPE and SCOPE_VALUE are required for each slot.
+# SCOPE_TYPE defaults to 'all', SCOPE_VALUE defaults to ''.
+def create_system_operators():
+    """Create System Operator accounts from environment variables if they don't exist"""
+    created_count = 0
+    for i in range(1, 11):  # Support up to 10 operators
+        email = os.environ.get(f'OPERATOR_{i}_EMAIL', '').strip()
+        password = os.environ.get(f'OPERATOR_{i}_PASSWORD', '').strip()
+        username = os.environ.get(f'OPERATOR_{i}_USERNAME', '').strip()
+        scope_type = os.environ.get(f'OPERATOR_{i}_SCOPE_TYPE', 'all').strip()
+        scope_value = os.environ.get(f'OPERATOR_{i}_SCOPE_VALUE', '').strip()
+
+        # Skip empty slots
+        if not email or not password:
+            continue
+
+        # Default username from email prefix if not provided
+        if not username:
+            username = f'operator_{i}'
+
+        try:
+            # Check if this operator already exists by email
+            existing = db.session.execute(
+                select(User).filter_by(email=email)
+            ).scalar_one_or_none()
+
+            if existing:
+                logger.info(f"[L60] System Operator already exists: {email}")
+                # Ensure role is correct in case account was created as regular user
+                if existing.role != 'system_operator':
+                    existing.role = 'system_operator'
+                    db.session.commit()
+                    logger.info(f"[L60] Updated role to system_operator for: {email}")
+                continue
+
+            # Also check username collision
+            username_taken = db.session.execute(
+                select(User).filter_by(username=username)
+            ).scalar_one_or_none()
+            if username_taken:
+                logger.warning(f"[L60] Username '{username}' already taken, skipping OPERATOR_{i}")
+                continue
+
+            # Validate scope_type
+            if scope_type not in ('all', 'city', 'country', 'age_range', 'group'):
+                logger.warning(f"[L60] Invalid OPERATOR_{i}_SCOPE_TYPE '{scope_type}', defaulting to 'all'")
+                scope_type = 'all'
+
+            # Create the operator account
+            operator = User(
+                username=username,
+                email=email,
+                role='system_operator',
+                is_active=True
+            )
+            operator.set_password(password)
+            db.session.add(operator)
+            db.session.flush()
+
+            # Create profile
+            profile = Profile(user_id=operator.id)
+            db.session.add(profile)
+
+            # Create scope assignment
+            scope = OperatorScope(
+                operator_id=operator.id,
+                scope_type=scope_type,
+                scope_value=scope_value
+            )
+            db.session.add(scope)
+
+            # Create welcome alert
+            alert = Alert(
+                user_id=operator.id,
+                title='Welcome System Operator!',
+                content='Your operator dashboard is ready. Use the Dashboard tab to view platform statistics.',
+                alert_type='success'
+            )
+            db.session.add(alert)
+
+            db.session.commit()
+            created_count += 1
+            logger.info(f"[L60] System Operator created: {username} ({email}), scope: {scope_type}={scope_value}")
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"[L60] Error creating OPERATOR_{i} ({email}): {e}")
+
+    if created_count > 0:
+        logger.info(f"[L60] Created {created_count} new System Operator account(s)")
+    else:
+        logger.info("[L60] No new System Operator accounts to create")
 
 
 # =====================
