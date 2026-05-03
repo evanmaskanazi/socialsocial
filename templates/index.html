@@ -17701,7 +17701,7 @@ async function loadOperatorDashboard() {
             if (cityData.breakdown && cityData.breakdown.length > 0) {
                 cityContainer.innerHTML = cityData.breakdown.map(item =>
                     '<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee;">' +
-                    '<span>' + _escapeHtml(item.city) + '</span>' +
+                    '<span>' + escapeHtml(item.city) + '</span>' +
                     '<strong>' + item.count + '</strong></div>'
                 ).join('');
             } else {
