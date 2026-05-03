@@ -5709,7 +5709,7 @@
                               </div>
                           </div>
 
-                          <!-- L60: System Dashboard sub-panel (only visible for operators/admins) -->
+                          <!-- L60/L80: System Dashboard sub-panel (only visible for operators/admins) -->
                           <div id="settingsOperatorPanel" style="display: none;">
                               <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="operator.title">System Dashboard</h3>
 
@@ -5718,7 +5718,18 @@
                                   <span data-i18n="operator.scope_label">Your scope:</span> <strong id="operatorScopeText">All users</strong>
                               </div>
 
-                              <!-- Stats cards -->
+                              <!-- L80: Date range picker -->
+                              <div style="background: var(--light); border-radius: 12px; padding: 14px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                                  <span style="font-size: 0.85rem; font-weight: 600; color: var(--dark);" data-i18n="operator.date_range">Date Range:</span>
+                                  <select id="opDateRange" onchange="onOpDateRangeChange()" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.85rem;">
+                                      <option value="7">7 days</option>
+                                      <option value="30" selected>30 days</option>
+                                      <option value="60">60 days</option>
+                                      <option value="90">90 days</option>
+                                  </select>
+                              </div>
+
+                              <!-- Stats cards (unchanged from L60) -->
                               <div id="operatorStatsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
                                   <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
                                       <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.total_users">Total Users</div>
@@ -5746,28 +5757,85 @@
                                   </div>
                               </div>
 
-                              <!-- Breakdowns -->
+                              <!-- L80: Charts section — Registration + Check-in trends -->
                               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
                                   <div style="background: var(--light); border-radius: 12px; padding: 16px;">
-                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.by_city">Users by City</h4>
-                                      <div id="opBreakdownCity" style="font-size: 0.85rem; color: #555;">
-                                          <span style="color: #aaa;" data-i18n="operator.loading">Loading...</span>
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.reg_trend">Registration Trend</h4>
+                                      <div style="position: relative; height: 200px;">
+                                          <canvas id="opChartRegistrations"></canvas>
                                       </div>
                                   </div>
                                   <div style="background: var(--light); border-radius: 12px; padding: 16px;">
-                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.by_age">Users by Age</h4>
-                                      <div id="opBreakdownAge" style="font-size: 0.85rem; color: #555;">
-                                          <span style="color: #aaa;" data-i18n="operator.loading">Loading...</span>
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.checkin_trend">Check-in Trend</h4>
+                                      <div style="position: relative; height: 200px;">
+                                          <canvas id="opChartCheckins"></canvas>
                                       </div>
                                   </div>
                               </div>
 
-                              <!-- Registration trend -->
-                              <div style="background: var(--light); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-                                  <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.reg_trend">Registration Trend (30 days)</h4>
-                                  <div id="opRegTrend" style="font-size: 0.85rem; color: #555;">
-                                      <span style="color: #aaa;" data-i18n="operator.loading">Loading...</span>
+                              <!-- L80: Charts section — City bar + Age bar -->
+                              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                                  <div style="background: var(--light); border-radius: 12px; padding: 16px;">
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.by_city">Users by City</h4>
+                                      <div style="position: relative; height: 200px;">
+                                          <canvas id="opChartCity"></canvas>
+                                      </div>
                                   </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 16px;">
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.by_age">Users by Age</h4>
+                                      <div style="position: relative; height: 200px;">
+                                          <canvas id="opChartAge"></canvas>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              <!-- L80: Filterable user segments table -->
+                              <div style="background: var(--light); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                                  <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.user_segments">User Segments</h4>
+                                  <!-- Filters row -->
+                                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center;">
+                                      <select id="opFilterCity" onchange="loadOperatorSegments(1)" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.82rem;">
+                                          <option value="" data-i18n="operator.all_cities">All Cities</option>
+                                      </select>
+                                      <select id="opFilterAge" onchange="loadOperatorSegments(1)" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.82rem;">
+                                          <option value="" data-i18n="operator.all_ages">All Ages</option>
+                                          <option value="18-24">18-24</option>
+                                          <option value="25-34">25-34</option>
+                                          <option value="35-44">35-44</option>
+                                          <option value="45-54">45-54</option>
+                                          <option value="55-64">55-64</option>
+                                          <option value="65-120">65+</option>
+                                      </select>
+                                      <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;">
+                                          <input type="checkbox" id="opFilterActive" onchange="loadOperatorSegments(1)">
+                                          <span data-i18n="operator.active_only">Active only</span>
+                                      </label>
+                                      <select id="opSortBy" onchange="loadOperatorSegments(1)" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.82rem;">
+                                          <option value="created_at" data-i18n="operator.sort_newest">Newest first</option>
+                                          <option value="last_login" data-i18n="operator.sort_recent">Recently active</option>
+                                          <option value="username" data-i18n="operator.sort_name">By name</option>
+                                          <option value="city" data-i18n="operator.sort_city">By city</option>
+                                      </select>
+                                  </div>
+                                  <!-- Table -->
+                                  <div style="overflow-x: auto;">
+                                      <table id="opSegmentsTable" style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                                          <thead>
+                                              <tr style="border-bottom: 2px solid var(--border);">
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_username">Username</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_city">City</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_age">Age</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_joined">Joined</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_last_active">Last Active</th>
+                                              </tr>
+                                          </thead>
+                                          <tbody id="opSegmentsBody">
+                                              <tr><td colspan="5" style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</td></tr>
+                                          </tbody>
+                                      </table>
+                                  </div>
+                                  <!-- Pagination -->
+                                  <div id="opSegmentsPagination" style="display: flex; justify-content: center; gap: 8px; margin-top: 10px;"></div>
                               </div>
 
                               <!-- Refresh -->
@@ -17663,8 +17731,33 @@ document.addEventListener('click', (e) => {
 
 
 // --- L60: OPERATOR DASHBOARD FUNCTIONS ---
+// L80: Chart instances for cleanup
+let opChartRegInstance = null;
+let opChartCheckinInstance = null;
+let opChartCityInstance = null;
+let opChartAgeInstance = null;
+
+// L80: Helper to destroy a chart safely
+function _destroyOpChart(instance) {
+    if (instance) { try { instance.destroy(); } catch(e) {} }
+    return null;
+}
+
+// L80: Get selected date range days
+function _getOpDays() {
+    const sel = document.getElementById('opDateRange');
+    return sel ? parseInt(sel.value) || 30 : 30;
+}
+
+// L80: Called when date range dropdown changes
+function onOpDateRangeChange() {
+    loadOperatorDashboard();
+}
+window.onOpDateRangeChange = onOpDateRangeChange;
+
 async function loadOperatorDashboard() {
-    console.log('[L60] Loading operator dashboard...');
+    console.log('[L80] Loading operator dashboard...');
+    const days = _getOpDays();
     try {
         // Load scope info
         const scopeRes = await fetch('/api/operator/scope', { credentials: 'include' });
@@ -17693,71 +17786,176 @@ async function loadOperatorDashboard() {
             document.getElementById('opStatToday').textContent = stats.active_today;
         }
 
-        // Load city breakdown
+        // L80: Load registration trend as Chart.js line chart
+        const regRes = await fetch('/api/operator/registrations?days=' + days, { credentials: 'include' });
+        if (regRes.ok) {
+            const regData = await regRes.json();
+            opChartRegInstance = _destroyOpChart(opChartRegInstance);
+            const ctx = document.getElementById('opChartRegistrations');
+            if (ctx && regData.registrations && regData.registrations.length > 0) {
+                opChartRegInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: regData.registrations.map(r => r.date.slice(5)),
+                        datasets: [{
+                            label: _t('operator.registrations', 'Registrations'),
+                            data: regData.registrations.map(r => r.count),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102,126,234,0.15)',
+                            fill: true, tension: 0.3, pointRadius: 2
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
+            }
+        }
+
+        // L80: Load check-in trend as Chart.js line chart
+        const checkinRes = await fetch('/api/operator/checkins?days=' + days, { credentials: 'include' });
+        if (checkinRes.ok) {
+            const checkinData = await checkinRes.json();
+            opChartCheckinInstance = _destroyOpChart(opChartCheckinInstance);
+            const ctx2 = document.getElementById('opChartCheckins');
+            if (ctx2 && checkinData.checkins && checkinData.checkins.length > 0) {
+                opChartCheckinInstance = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: checkinData.checkins.map(r => r.date.slice(5)),
+                        datasets: [{
+                            label: _t('operator.checkins', 'Check-ins'),
+                            data: checkinData.checkins.map(r => r.count),
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40,167,69,0.15)',
+                            fill: true, tension: 0.3, pointRadius: 2
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
+            }
+        }
+
+        // L80: Load city breakdown as bar chart
         const cityRes = await fetch('/api/operator/breakdown/city', { credentials: 'include' });
         if (cityRes.ok) {
             const cityData = await cityRes.json();
-            const cityContainer = document.getElementById('opBreakdownCity');
-            if (cityData.breakdown && cityData.breakdown.length > 0) {
-                cityContainer.innerHTML = cityData.breakdown.map(item =>
-                    '<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee;">' +
-                    '<span>' + escapeHtml(item.city) + '</span>' +
-                    '<strong>' + item.count + '</strong></div>'
-                ).join('');
-            } else {
-                cityContainer.innerHTML = '<div style="color: #aaa;">' + _t('operator.no_data', 'No data available') + '</div>';
+            opChartCityInstance = _destroyOpChart(opChartCityInstance);
+            const ctx3 = document.getElementById('opChartCity');
+            if (ctx3 && cityData.breakdown && cityData.breakdown.length > 0) {
+                // Populate city filter dropdown
+                const cityFilter = document.getElementById('opFilterCity');
+                if (cityFilter && cityFilter.options.length <= 1) {
+                    cityData.breakdown.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.city;
+                        opt.textContent = item.city;
+                        cityFilter.appendChild(opt);
+                    });
+                }
+                opChartCityInstance = new Chart(ctx3, {
+                    type: 'bar',
+                    data: {
+                        labels: cityData.breakdown.map(b => b.city),
+                        datasets: [{
+                            data: cityData.breakdown.map(b => b.count),
+                            backgroundColor: ['#667eea','#764ba2','#17a2b8','#28a745','#fd7e14','#dc3545','#6f42c1','#20c997','#e83e8c','#ffc107']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
             }
         }
 
-        // Load age breakdown
+        // L80: Load age breakdown as bar chart
         const ageRes = await fetch('/api/operator/breakdown/age', { credentials: 'include' });
         if (ageRes.ok) {
             const ageData = await ageRes.json();
-            const ageContainer = document.getElementById('opBreakdownAge');
-            if (ageData.breakdown && ageData.breakdown.length > 0) {
-                ageContainer.innerHTML = ageData.breakdown.map(item =>
-                    '<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee;">' +
-                    '<span>' + item.bracket + '</span>' +
-                    '<strong>' + item.count + '</strong></div>'
-                ).join('');
-            } else {
-                ageContainer.innerHTML = '<div style="color: #aaa;">' + _t('operator.no_data', 'No data available') + '</div>';
+            opChartAgeInstance = _destroyOpChart(opChartAgeInstance);
+            const ctx4 = document.getElementById('opChartAge');
+            if (ctx4 && ageData.breakdown && ageData.breakdown.length > 0) {
+                opChartAgeInstance = new Chart(ctx4, {
+                    type: 'bar',
+                    data: {
+                        labels: ageData.breakdown.map(b => b.bracket),
+                        datasets: [{
+                            data: ageData.breakdown.map(b => b.count),
+                            backgroundColor: ['#667eea','#764ba2','#17a2b8','#28a745','#fd7e14','#dc3545']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
             }
         }
 
-        // Load registration trend
-        const regRes = await fetch('/api/operator/registrations?days=30', { credentials: 'include' });
-        if (regRes.ok) {
-            const regData = await regRes.json();
-            const regContainer = document.getElementById('opRegTrend');
-            if (regData.registrations && regData.registrations.length > 0) {
-                // Simple bar-style display
-                const maxCount = Math.max(...regData.registrations.map(r => r.count), 1);
-                regContainer.innerHTML = regData.registrations.map(item => {
-                    const pct = Math.max((item.count / maxCount) * 100, 2);
-                    return '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">' +
-                        '<span style="min-width: 75px; font-size: 0.78rem; color: #888;">' + item.date.slice(5) + '</span>' +
-                        '<div style="flex: 1; background: #eee; border-radius: 4px; height: 14px;">' +
-                        '<div style="width: ' + pct + '%; background: #667eea; border-radius: 4px; height: 100%;"></div></div>' +
-                        '<span style="min-width: 24px; text-align: right; font-size: 0.82rem; font-weight: 600;">' + item.count + '</span></div>';
-                }).join('');
-            } else {
-                regContainer.innerHTML = '<div style="color: #aaa;">' + _t('operator.no_data', 'No data available') + '</div>';
-            }
-        }
+        // L80: Load user segments table
+        loadOperatorSegments(1);
 
-        // L60: Translate operator view
+        // Translate operator view
         if (typeof translatePage === 'function') {
             translatePage(currentLanguage);
         }
 
     } catch (err) {
-        console.error('[L60] Operator dashboard error:', err);
+        console.error('[L80] Operator dashboard error:', err);
+    }
+}
+
+// L80: Load filterable user segments table
+async function loadOperatorSegments(page) {
+    try {
+        const city = document.getElementById('opFilterCity')?.value || '';
+        const ageRange = document.getElementById('opFilterAge')?.value || '';
+        const activeOnly = document.getElementById('opFilterActive')?.checked ? 'true' : '';
+        const sortBy = document.getElementById('opSortBy')?.value || 'created_at';
+
+        let url = '/api/operator/segments?page=' + page + '&per_page=15&sort_by=' + sortBy;
+        if (city) url += '&city=' + encodeURIComponent(city);
+        if (ageRange) {
+            const parts = ageRange.split('-');
+            url += '&age_min=' + parts[0] + '&age_max=' + parts[1];
+        }
+        if (activeOnly) url += '&active_only=true';
+
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const tbody = document.getElementById('opSegmentsBody');
+        if (!tbody) return;
+
+        if (!data.users || data.users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #aaa;">' + _t('operator.no_data', 'No data available') + '</td></tr>';
+        } else {
+            tbody.innerHTML = data.users.map(u =>
+                '<tr style="border-bottom: 1px solid var(--border);">' +
+                '<td style="padding: 6px 8px;">' + escapeHtml(u.username) + '</td>' +
+                '<td style="padding: 6px 8px;">' + escapeHtml(u.city) + '</td>' +
+                '<td style="padding: 6px 8px;">' + (u.age || '—') + '</td>' +
+                '<td style="padding: 6px 8px;">' + (u.joined || '—') + '</td>' +
+                '<td style="padding: 6px 8px;">' + (u.last_active || '—') + '</td>' +
+                '</tr>'
+            ).join('');
+        }
+
+        // Render pagination
+        const pagDiv = document.getElementById('opSegmentsPagination');
+        if (pagDiv && data.pages > 1) {
+            let html = '';
+            for (let i = 1; i <= data.pages; i++) {
+                const active = i === data.page;
+                html += '<button onclick="loadOperatorSegments(' + i + ')" style="padding: 4px 10px; border-radius: 6px; border: 1px solid ' + (active ? 'var(--primary)' : 'var(--border)') + '; background: ' + (active ? 'var(--primary)' : 'white') + '; color: ' + (active ? 'white' : 'var(--dark)') + '; cursor: pointer; font-size: 0.8rem;">' + i + '</button>';
+            }
+            pagDiv.innerHTML = html;
+        } else if (pagDiv) {
+            pagDiv.innerHTML = '';
+        }
+    } catch (err) {
+        console.error('[L80] Segments load error:', err);
     }
 }
 
 // Expose globally
 window.loadOperatorDashboard = loadOperatorDashboard;
+window.loadOperatorSegments = loadOperatorSegments;
 
 
 // --- V3: SETTINGS VIEW (Full profile editing + account settings) ---
