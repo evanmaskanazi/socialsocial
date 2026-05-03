@@ -4803,11 +4803,7 @@
                     <span class="mobile-more-icon">⚙️</span>
                     <span class="mobile-more-label" data-i18n="menu.settings">Settings</span>
                 </li>
-                <!-- L60: Operator dashboard in mobile more menu (hidden unless operator/admin) -->
-                <li class="mobile-more-menu-item" id="mobileOperatorNav" onclick="showViewFromMore('operator')" style="display: none;">
-                    <span class="mobile-more-icon">📋</span>
-                    <span class="mobile-more-label" data-i18n="menu.operator">Dashboard</span>
-                </li>
+                <!-- L60: Operator dashboard accessed via Settings, not mobile nav -->
                 <!-- 10Link: Triggers moved from mobile nav to other user's profile view -->
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('alerts')">
                     <span class="mobile-more-icon">🔔</span>
@@ -4855,11 +4851,7 @@
                         <span class="sidebar-icon">⚙️</span>
                         <span class="sidebar-label" data-i18n="menu.settings">Settings</span>
                     </li>
-                    <!-- L60: Operator dashboard nav (hidden unless role=system_operator or admin) -->
-                    <li class="sidebar-item" data-view="operator" id="operatorNavItem" style="display: none;">
-                        <span class="sidebar-icon">📋</span>
-                        <span class="sidebar-label" data-i18n="menu.operator">Dashboard</span>
-                    </li>
+                    <!-- L60: Operator dashboard accessed via Settings, not as separate sidebar tab -->
                     <!-- 10Link: Triggers moved from nav bar to other user's profile view -->
                     <!-- <li class="sidebar-item" id="triggersNavItem" ... removed --> 
                 </ul>
@@ -5405,6 +5397,11 @@
                                   data-i18n="settings.notification_btn" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
                               Notification
                           </button>
+                          <!-- L60: System Dashboard sub-tab — only visible for system_operator and admin roles -->
+                          <button class="settings-sub-btn" id="settingsSubOperator" onclick="switchSettingsTab('operator')"
+                                  data-i18n="operator.dashboard_btn" style="display: none; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
+                              System Dashboard
+                          </button>
                       </div>
 
                       <!-- Right panel: content area -->
@@ -5712,6 +5709,75 @@
                               </div>
                           </div>
 
+                          <!-- L60: System Dashboard sub-panel (only visible for operators/admins) -->
+                          <div id="settingsOperatorPanel" style="display: none;">
+                              <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="operator.title">System Dashboard</h3>
+
+                              <!-- Scope indicator -->
+                              <div id="operatorScopeInfo" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem;">
+                                  <span data-i18n="operator.scope_label">Your scope:</span> <strong id="operatorScopeText">All users</strong>
+                              </div>
+
+                              <!-- Stats cards -->
+                              <div id="operatorStatsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.total_users">Total Users</div>
+                                      <div id="opStatTotal" style="font-size: 1.5rem; font-weight: 700; color: #667eea;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.active_users">Active Users</div>
+                                      <div id="opStatActive" style="font-size: 1.5rem; font-weight: 700; color: #28a745;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.new_7d">New (7 days)</div>
+                                      <div id="opStatNew7" style="font-size: 1.5rem; font-weight: 700; color: #17a2b8;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.new_30d">New (30 days)</div>
+                                      <div id="opStatNew30" style="font-size: 1.5rem; font-weight: 700; color: #6f42c1;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.checkin_rate">Check-in Rate (7d)</div>
+                                      <div id="opStatCheckin" style="font-size: 1.5rem; font-weight: 700; color: #fd7e14;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.active_today">Active Today</div>
+                                      <div id="opStatToday" style="font-size: 1.5rem; font-weight: 700; color: #20c997;">—</div>
+                                  </div>
+                              </div>
+
+                              <!-- Breakdowns -->
+                              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                                  <div style="background: var(--light); border-radius: 12px; padding: 16px;">
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.by_city">Users by City</h4>
+                                      <div id="opBreakdownCity" style="font-size: 0.85rem; color: #555;">
+                                          <span style="color: #aaa;" data-i18n="operator.loading">Loading...</span>
+                                      </div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 16px;">
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.by_age">Users by Age</h4>
+                                      <div id="opBreakdownAge" style="font-size: 0.85rem; color: #555;">
+                                          <span style="color: #aaa;" data-i18n="operator.loading">Loading...</span>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              <!-- Registration trend -->
+                              <div style="background: var(--light); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                                  <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.reg_trend">Registration Trend (30 days)</h4>
+                                  <div id="opRegTrend" style="font-size: 0.85rem; color: #555;">
+                                      <span style="color: #aaa;" data-i18n="operator.loading">Loading...</span>
+                                  </div>
+                              </div>
+
+                              <!-- Refresh -->
+                              <div style="text-align: center;">
+                                  <button onclick="loadOperatorDashboard()" class="btn" style="padding: 8px 24px; border-radius: 8px; background: var(--primary); color: white; border: none; cursor: pointer;">
+                                      <span data-i18n="operator.refresh">Refresh Data</span>
+                                  </button>
+                              </div>
+                          </div>
+
                       </div>
                   </div>
               </div>
@@ -6002,75 +6068,6 @@
               </div>
               </div>
 
-
-              <!-- L60: Operator Dashboard View -->
-              <div id="operatorView" class="view hidden">
-                  <h2 style="margin-bottom: 20px;" data-i18n="operator.title">System Dashboard</h2>
-
-                  <!-- Scope indicator -->
-                  <div id="operatorScopeInfo" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem;">
-                      <span data-i18n="operator.scope_label">Your scope:</span> <strong id="operatorScopeText">All users</strong>
-                  </div>
-
-                  <!-- Stats cards -->
-                  <div id="operatorStatsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px;">
-                      <div class="stat-card" style="background: var(--card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;">
-                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.total_users">Total Users</div>
-                          <div id="opStatTotal" style="font-size: 1.6rem; font-weight: 700; color: #667eea;">—</div>
-                      </div>
-                      <div class="stat-card" style="background: var(--card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;">
-                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.active_users">Active Users</div>
-                          <div id="opStatActive" style="font-size: 1.6rem; font-weight: 700; color: #28a745;">—</div>
-                      </div>
-                      <div class="stat-card" style="background: var(--card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;">
-                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.new_7d">New (7 days)</div>
-                          <div id="opStatNew7" style="font-size: 1.6rem; font-weight: 700; color: #17a2b8;">—</div>
-                      </div>
-                      <div class="stat-card" style="background: var(--card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;">
-                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.new_30d">New (30 days)</div>
-                          <div id="opStatNew30" style="font-size: 1.6rem; font-weight: 700; color: #6f42c1;">—</div>
-                      </div>
-                      <div class="stat-card" style="background: var(--card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;">
-                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.checkin_rate">Check-in Rate (7d)</div>
-                          <div id="opStatCheckin" style="font-size: 1.6rem; font-weight: 700; color: #fd7e14;">—</div>
-                      </div>
-                      <div class="stat-card" style="background: var(--card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;">
-                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.active_today">Active Today</div>
-                          <div id="opStatToday" style="font-size: 1.6rem; font-weight: 700; color: #20c997;">—</div>
-                      </div>
-                  </div>
-
-                  <!-- Breakdown sections -->
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
-                      <div style="background: var(--card-bg, #fff); border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                          <h3 style="margin: 0 0 12px 0; font-size: 1rem;" data-i18n="operator.by_city">Users by City</h3>
-                          <div id="opBreakdownCity" style="font-size: 0.88rem; color: #555;">
-                              <div style="color: #aaa; padding: 10px 0;" data-i18n="operator.loading">Loading...</div>
-                          </div>
-                      </div>
-                      <div style="background: var(--card-bg, #fff); border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                          <h3 style="margin: 0 0 12px 0; font-size: 1rem;" data-i18n="operator.by_age">Users by Age</h3>
-                          <div id="opBreakdownAge" style="font-size: 0.88rem; color: #555;">
-                              <div style="color: #aaa; padding: 10px 0;" data-i18n="operator.loading">Loading...</div>
-                          </div>
-                      </div>
-                  </div>
-
-                  <!-- Registration trend -->
-                  <div style="background: var(--card-bg, #fff); border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 24px;">
-                      <h3 style="margin: 0 0 12px 0; font-size: 1rem;" data-i18n="operator.reg_trend">Registration Trend (30 days)</h3>
-                      <div id="opRegTrend" style="font-size: 0.88rem; color: #555;">
-                          <div style="color: #aaa; padding: 10px 0;" data-i18n="operator.loading">Loading...</div>
-                      </div>
-                  </div>
-
-                  <!-- Refresh button -->
-                  <div style="text-align: center; margin-top: 10px;">
-                      <button onclick="loadOperatorDashboard()" class="btn btn-primary" style="padding: 8px 24px; border-radius: 8px; background: #667eea; color: white; border: none; cursor: pointer;">
-                          <span data-i18n="operator.refresh">Refresh Data</span>
-                      </button>
-                  </div>
-              </div>
 
 
            </main>
@@ -6508,7 +6505,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T800q"></script>
+    <script src="/static/js/i18n.js?v=L60a"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8164,17 +8161,6 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
 
         currentUserId = currentUser.id; // Ensure user ID is set
         console.log('[DEBUG] Page load - set currentUserId to:', currentUserId);
-
-        // L60: Show operator nav item for system_operator and admin roles
-        const opNav = document.getElementById('operatorNavItem');
-        const mobileOpNav = document.getElementById('mobileOperatorNav');
-        if (currentUser.role === 'system_operator' || currentUser.role === 'admin') {
-            if (opNav) opNav.style.display = '';
-            if (mobileOpNav) mobileOpNav.style.display = '';
-        } else {
-            if (opNav) opNav.style.display = 'none';
-            if (mobileOpNav) mobileOpNav.style.display = 'none';
-        }
     }
 
   initFeedCalendar();
@@ -8473,7 +8459,7 @@ window.safeApplyLanguage = safeApplyLanguage;
     // SCREEN FIX: Hide ALL views on initial dashboard load, then show only homeView
     const allViewIds = ['homeView', 'progressView', 'profileView', 'circlesView', 'messagesView', 
                         'trackingView', 'followingView', 'followersView', 'inviteView', 'alertsView', 'feedView',
-                        'connectionsView', 'settingsView', 'operatorView'];
+                        'connectionsView', 'settingsView'];
     
     allViewIds.forEach(viewId => {
         const view = document.getElementById(viewId);
@@ -8589,7 +8575,7 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
         // SCREEN FIX: Enhanced view hiding in sidebar handler
         const allViewIds = ['homeView', 'progressView', 'profileView', 'circlesView', 'messagesView', 
                             'trackingView', 'followingView', 'followersView', 'inviteView', 'alertsView',
-                            'connectionsView', 'settingsView', 'operatorView'];
+                            'connectionsView', 'settingsView'];
         
         allViewIds.forEach(viewId => {
             const view = document.getElementById(viewId);
@@ -8946,7 +8932,7 @@ function showView(viewName, resetContext) {
     // SCREEN FIX: Enhanced view hiding - explicitly hide ALL views by ID to ensure complete hiding
     const allViewIds = ['homeView', 'progressView', 'profileView', 'circlesView', 'messagesView', 
                         'trackingView', 'followingView', 'followersView', 'inviteView', 'alertsView',
-                        'connectionsView', 'settingsView', 'operatorView'];
+                        'connectionsView', 'settingsView'];
     
     allViewIds.forEach(viewId => {
         const view = document.getElementById(viewId);
@@ -9122,10 +9108,7 @@ function showView(viewName, resetContext) {
                 // V2: Load settings view
                 loadSettings();
                 break;
-            case 'operator':
-                // L60: Load operator dashboard
-                loadOperatorDashboard();
-                break;
+            // L60: Operator dashboard is now a sub-tab of Settings, not a standalone view
         }
     }
 }
@@ -17836,6 +17819,12 @@ async function loadSettings() {
         const dmToggle = document.getElementById('settingsDarkModeToggle');
         if (dmToggle) dmToggle.checked = isDark;
 
+        // L60: Show System Dashboard sub-tab for operators and admins
+        const opBtn = document.getElementById('settingsSubOperator');
+        if (opBtn && currentUser && (currentUser.role === 'system_operator' || currentUser.role === 'admin')) {
+            opBtn.style.display = '';
+        }
+
     } catch (error) {
         console.error('[Fix10C] Error loading settings:', error);
     }
@@ -17846,14 +17835,17 @@ function switchSettingsTab(tab) {
     const profilePanel = document.getElementById('settingsProfilePanel');
     const accountPanel = document.getElementById('settingsAccountPanel');
     const notifPanel = document.getElementById('settingsNotificationPanel');
+    const operatorPanel = document.getElementById('settingsOperatorPanel');  // L60
     const profileBtn = document.getElementById('settingsSubProfile');
     const accountBtn = document.getElementById('settingsSubAccount');
     const notifBtn = document.getElementById('settingsSubNotification');
+    const operatorBtn = document.getElementById('settingsSubOperator');  // L60
     
     // Hide all panels
     profilePanel.style.display = 'none';
     accountPanel.style.display = 'none';
     notifPanel.style.display = 'none';
+    if (operatorPanel) operatorPanel.style.display = 'none';  // L60
     
     // Reset all buttons
     const inactiveStyle = { background: 'transparent', color: 'var(--dark)' };
@@ -17861,13 +17853,23 @@ function switchSettingsTab(tab) {
         btn.style.background = inactiveStyle.background;
         btn.style.color = inactiveStyle.color;
     });
+    if (operatorBtn) {  // L60
+        operatorBtn.style.background = inactiveStyle.background;
+        operatorBtn.style.color = inactiveStyle.color;
+    }
     
     // Activate selected tab
-    const activeBtn = tab === 'profile' ? profileBtn : tab === 'account' ? accountBtn : notifBtn;
-    const activePanel = tab === 'profile' ? profilePanel : tab === 'account' ? accountPanel : notifPanel;
-    activeBtn.style.background = 'var(--primary)';
-    activeBtn.style.color = 'white';
-    activePanel.style.display = '';
+    let activeBtn, activePanel;
+    if (tab === 'profile') { activeBtn = profileBtn; activePanel = profilePanel; }
+    else if (tab === 'account') { activeBtn = accountBtn; activePanel = accountPanel; }
+    else if (tab === 'operator') { activeBtn = operatorBtn; activePanel = operatorPanel; }  // L60
+    else { activeBtn = notifBtn; activePanel = notifPanel; }
+    
+    if (activeBtn) {
+        activeBtn.style.background = 'var(--primary)';
+        activeBtn.style.color = 'white';
+    }
+    if (activePanel) activePanel.style.display = '';
 
     // Sync dark mode toggle when switching to account tab
     if (tab === 'account') {
@@ -17876,6 +17878,11 @@ function switchSettingsTab(tab) {
         if (dmToggle) dmToggle.checked = isDark;
         // CLEAN: Load optional consent preferences
         loadSettingsConsentPreferences();
+    }
+
+    // L60: Load operator dashboard data when switching to operator tab
+    if (tab === 'operator') {
+        loadOperatorDashboard();
     }
 }
 
