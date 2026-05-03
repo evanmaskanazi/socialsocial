@@ -3,6 +3,11 @@
 Complete app.py for Social Social Platform - V4 10Link
 
 T7 Fix:
+# L80: Phase 2 — Dashboard UI enhancements
+# - Added /api/operator/checkins endpoint: daily check-in trend (distinct users per day)
+# - Added /api/operator/segments endpoint: filterable, paginated user segment table
+#   with city/age/active filters and sorting
+# - Both endpoints respect existing OperatorScope scoping from L60
 - FEATURE: Added /api/auth/check-username endpoint for live username availability
   checking during signup. Returns {available: true/false} without revealing user info.
   Rate-limited (20/5min). Purely additive — no existing code modified.
@@ -15943,6 +15948,132 @@ def operator_get_scope():
     except Exception as e:
         logger.error(f"Operator scope error: {e}")
         return jsonify({'error': 'Failed to get scope'}), 500
+
+
+# L80: Phase 2 — Enhanced dashboard endpoints with Chart.js support
+
+@app.route('/api/operator/checkins')
+@operator_required
+def operator_checkin_trend():
+    """L80: Daily check-in counts (parameter saves) for the last N days."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+        days = min(int(request.args.get('days', 30)), 90)
+        start_date = datetime.utcnow() - timedelta(days=days)
+
+        is_postgres = 'postgresql' in str(db.engine.url)
+        if is_postgres:
+            date_expr = func.date_trunc('day', SavedParameters.created_at)
+        else:
+            date_expr = func.date(SavedParameters.created_at)
+
+        # Count distinct users who checked in each day (not total parameter saves)
+        q = select(
+            date_expr.label('day'),
+            func.count(func.distinct(SavedParameters.user_id)).label('count')
+        ).filter(
+            SavedParameters.created_at >= start_date
+        )
+
+        # Apply scope filters via a subquery on User
+        if scope_filters:
+            scoped_user_ids = select(User.id).filter(User.role == 'user')
+            for f in scope_filters:
+                scoped_user_ids = scoped_user_ids.filter(f)
+            q = q.filter(SavedParameters.user_id.in_(scoped_user_ids))
+
+        q = q.group_by('day').order_by(text('day'))
+        rows = db.session.execute(q).all()
+        data = [{'date': str(row[0])[:10], 'count': row[1]} for row in rows]
+
+        return jsonify({'checkins': data})
+
+    except Exception as e:
+        logger.error(f"Operator checkin trend error: {e}")
+        return jsonify({'error': 'Failed to get checkin trend'}), 500
+
+
+@app.route('/api/operator/segments')
+@operator_required
+def operator_user_segments():
+    """L80: Filterable user segment table for the operator dashboard.
+    Query params: city, age_min, age_max, active_only, sort_by, page, per_page"""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+
+        q = select(
+            User.id, User.username, User.selected_city, User.birth_year,
+            User.created_at, User.last_login, User.is_active
+        ).filter(User.role == 'user')
+
+        for f in scope_filters:
+            q = q.filter(f)
+
+        # Apply optional filters from query params
+        filter_city = request.args.get('city')
+        if filter_city:
+            q = q.filter(User.selected_city == filter_city)
+
+        current_year = datetime.utcnow().year
+        age_min = request.args.get('age_min', type=int)
+        age_max = request.args.get('age_max', type=int)
+        if age_min:
+            q = q.filter(User.birth_year <= current_year - age_min)
+        if age_max:
+            q = q.filter(User.birth_year >= current_year - age_max)
+
+        active_only = request.args.get('active_only')
+        if active_only == 'true':
+            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+            q = q.filter(User.last_login >= seven_days_ago)
+
+        # Sorting
+        sort_by = request.args.get('sort_by', 'created_at')
+        sort_map = {
+            'created_at': User.created_at.desc(),
+            'last_login': User.last_login.desc().nullslast() if 'postgresql' in str(db.engine.url) else User.last_login.desc(),
+            'username': User.username.asc(),
+            'city': User.selected_city.asc(),
+        }
+        q = q.order_by(sort_map.get(sort_by, User.created_at.desc()))
+
+        # Pagination
+        page = max(int(request.args.get('page', 1)), 1)
+        per_page = min(int(request.args.get('per_page', 25)), 100)
+        offset = (page - 1) * per_page
+
+        # Get total count
+        count_q = select(func.count()).select_from(q.subquery())
+        total = db.session.execute(count_q).scalar() or 0
+
+        # Get page of results
+        rows = db.session.execute(q.limit(per_page).offset(offset)).all()
+        users = []
+        for row in rows:
+            age = current_year - row[3] if row[3] else None
+            users.append({
+                'id': row[0],
+                'username': row[1],
+                'city': row[2] or 'Unknown',
+                'age': age,
+                'joined': str(row[4])[:10] if row[4] else None,
+                'last_active': str(row[5])[:10] if row[5] else 'Never',
+                'is_active': row[6]
+            })
+
+        return jsonify({
+            'users': users,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': (total + per_page - 1) // per_page
+        })
+
+    except Exception as e:
+        logger.error(f"Operator segments error: {e}")
+        return jsonify({'error': 'Failed to get segments'}), 500
 
 
 # =====================
