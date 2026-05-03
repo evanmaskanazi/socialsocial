@@ -17889,9 +17889,9 @@ async function loadOperatorDashboard() {
         // L80: Load user segments table
         loadOperatorSegments(1);
 
-        // Translate operator view
-        if (typeof translatePage === 'function') {
-            translatePage(currentLanguage);
+        // L80: Re-apply translations to operator panel after rendering
+        if (window.i18n && typeof window.i18n.applyLanguage === 'function') {
+            window.i18n.applyLanguage(window.i18n.getCurrentLanguage());
         }
 
     } catch (err) {
