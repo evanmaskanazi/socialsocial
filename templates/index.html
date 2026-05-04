@@ -5892,7 +5892,7 @@
                                                   <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.broadcast_col_status">Status</th>
                                               </tr>
                                           </thead>
-                                          <tbody id="opBroadcastBody">
+                                          <tbody id="opBroadcastHistoryBody">
                                               <tr><td colspan="4" style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</td></tr>
                                           </tbody>
                                       </table>
@@ -17978,8 +17978,8 @@ async function loadOperatorDashboard() {
         loadOperatorSegments(1);
 
         // L100: Load broadcast history and inbox
-        loadOperatorBroadcastHistory(1);
-        loadOperatorInbox(1);
+        await loadOperatorBroadcastHistory(1);
+        await loadOperatorInbox(1);
 
         // L100: Populate broadcast city filter from city breakdown data
         const broadcastCityFilter = document.getElementById('opBroadcastCity');
@@ -18133,7 +18133,7 @@ async function loadOperatorBroadcastHistory(page) {
         if (!res.ok) return;
         const data = await res.json();
 
-        const tbody = document.getElementById('opBroadcastBody');
+        const tbody = document.getElementById('opBroadcastHistoryBody');
         if (!tbody) return;
 
         if (!data.broadcasts || data.broadcasts.length === 0) {
