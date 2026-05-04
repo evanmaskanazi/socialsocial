@@ -2,6 +2,17 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+# L100: Phase 3 — Communications layer
+# - Added OperatorBroadcast model: stores broadcast messages sent by operators
+# - Added OperatorInboundEmail model: stores inbound emails received via Resend webhooks
+# - Added /api/operator/broadcast POST endpoint: sends broadcast emails via Resend batch API
+#   with segment filtering (city, age_min, age_max, active_only) and scope enforcement
+# - Added /api/operator/broadcasts GET endpoint: lists sent broadcasts with pagination
+# - Added /api/operator/inbound-email POST endpoint: receives Resend webhook payloads
+# - Added /api/operator/inbox GET endpoint: lists inbound emails with pagination
+# - Added /api/operator/inbox/<id>/read PATCH endpoint: marks inbound email as read
+# - All new endpoints respect existing OperatorScope scoping from L60
+
 T7 Fix:
 # L80: Phase 2 — Dashboard UI enhancements
 # - Added /api/operator/checkins endpoint: daily check-in trend (distinct users per day)
@@ -762,6 +773,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, and_, or_, desc, func, inspect, text
 # SMTP email (Resend.com compatible)
 import smtplib
+import requests as http_requests  # L100: For Resend batch API (broadcast emails)
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -3502,6 +3514,79 @@ def auto_migrate_database():
                     conn.commit()
                     logger.info("✓ L60: Created operator_scopes table")
 
+                # L100: Create operator_broadcasts table
+                if 'operator_broadcasts' not in inspector.get_table_names():
+                    logger.info("L100: Creating operator_broadcasts table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE operator_broadcasts (
+                                id SERIAL PRIMARY KEY,
+                                operator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                subject VARCHAR(500) NOT NULL,
+                                body TEXT NOT NULL,
+                                filter_city VARCHAR(200) DEFAULT '',
+                                filter_age_min INTEGER,
+                                filter_age_max INTEGER,
+                                filter_active_only BOOLEAN DEFAULT FALSE,
+                                recipient_count INTEGER DEFAULT 0,
+                                status VARCHAR(30) DEFAULT 'sent',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE operator_broadcasts (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                operator_id INTEGER NOT NULL,
+                                subject VARCHAR(500) NOT NULL,
+                                body TEXT NOT NULL,
+                                filter_city VARCHAR(200) DEFAULT '',
+                                filter_age_min INTEGER,
+                                filter_age_max INTEGER,
+                                filter_active_only BOOLEAN DEFAULT FALSE,
+                                recipient_count INTEGER DEFAULT 0,
+                                status VARCHAR(30) DEFAULT 'sent',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(operator_id) REFERENCES users(id) ON DELETE CASCADE
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ L100: Created operator_broadcasts table")
+
+                # L100: Create operator_inbound_emails table
+                if 'operator_inbound_emails' not in inspector.get_table_names():
+                    logger.info("L100: Creating operator_inbound_emails table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE operator_inbound_emails (
+                                id SERIAL PRIMARY KEY,
+                                from_email VARCHAR(500) NOT NULL,
+                                from_name VARCHAR(200) DEFAULT '',
+                                to_email VARCHAR(500) DEFAULT '',
+                                subject VARCHAR(500) DEFAULT '',
+                                body_text TEXT DEFAULT '',
+                                body_html TEXT DEFAULT '',
+                                is_read BOOLEAN DEFAULT FALSE,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE operator_inbound_emails (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                from_email VARCHAR(500) NOT NULL,
+                                from_name VARCHAR(200) DEFAULT '',
+                                to_email VARCHAR(500) DEFAULT '',
+                                subject VARCHAR(500) DEFAULT '',
+                                body_text TEXT DEFAULT '',
+                                body_html TEXT DEFAULT '',
+                                is_read BOOLEAN DEFAULT FALSE,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ L100: Created operator_inbound_emails table")
+
                 logger.info("Database auto-migration completed successfully")
 
         except Exception as e:
@@ -4252,6 +4337,65 @@ class OperatorScope(db.Model):
             'operator_id': self.operator_id,
             'scope_type': self.scope_type,
             'scope_value': self.scope_value,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+# L100: Operator broadcast message — stores messages sent by operators to user segments
+class OperatorBroadcast(db.Model):
+    __tablename__ = 'operator_broadcasts'
+    id = db.Column(db.Integer, primary_key=True)
+    operator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    subject = db.Column(db.String(500), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    filter_city = db.Column(db.String(200), default='')
+    filter_age_min = db.Column(db.Integer)
+    filter_age_max = db.Column(db.Integer)
+    filter_active_only = db.Column(db.Boolean, default=False)
+    recipient_count = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(30), default='sent')  # 'sent', 'failed', 'partial'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    operator = db.relationship('User', backref=db.backref('broadcasts', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'operator_id': self.operator_id,
+            'subject': self.subject,
+            'body': self.body,
+            'filter_city': self.filter_city,
+            'filter_age_min': self.filter_age_min,
+            'filter_age_max': self.filter_age_max,
+            'filter_active_only': self.filter_active_only,
+            'recipient_count': self.recipient_count,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+# L100: Operator inbound email — stores emails received via Resend webhook
+class OperatorInboundEmail(db.Model):
+    __tablename__ = 'operator_inbound_emails'
+    id = db.Column(db.Integer, primary_key=True)
+    from_email = db.Column(db.String(500), nullable=False)
+    from_name = db.Column(db.String(200), default='')
+    to_email = db.Column(db.String(500), default='')
+    subject = db.Column(db.String(500), default='')
+    body_text = db.Column(db.Text, default='')
+    body_html = db.Column(db.Text, default='')
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'from_email': self.from_email,
+            'from_name': self.from_name,
+            'to_email': self.to_email,
+            'subject': self.subject,
+            'body_text': self.body_text,
+            'is_read': self.is_read,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
@@ -16074,6 +16218,314 @@ def operator_user_segments():
     except Exception as e:
         logger.error(f"Operator segments error: {e}")
         return jsonify({'error': 'Failed to get segments'}), 500
+
+
+# =====================
+# L100: OPERATOR COMMUNICATIONS LAYER
+# =====================
+
+@app.route('/api/operator/broadcast', methods=['POST'])
+@operator_required
+def operator_send_broadcast():
+    """L100: Send a broadcast email to a filtered user segment via Resend batch API.
+    Falls back to individual SMTP sends if Resend API key is not configured.
+    Respects OperatorScope scoping — operator can only reach users within their scope."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body required'}), 400
+
+        subject = (data.get('subject') or '').strip()
+        body = (data.get('body') or '').strip()
+        if not subject or not body:
+            return jsonify({'error': 'Subject and body are required'}), 400
+
+        # Build recipient query with scope enforcement
+        scope_filters = _build_operator_scope_filter(user)
+        q = select(User.id, User.email, User.username, User.preferred_language).filter(
+            User.role == 'user', User.is_active == True
+        )
+        for f in scope_filters:
+            q = q.filter(f)
+
+        # Apply optional segment filters from request body
+        filter_city = data.get('filter_city', '').strip()
+        if filter_city:
+            q = q.filter(User.selected_city == filter_city)
+
+        current_year = datetime.utcnow().year
+        filter_age_min = data.get('filter_age_min')
+        filter_age_max = data.get('filter_age_max')
+        if filter_age_min:
+            q = q.filter(User.birth_year <= current_year - int(filter_age_min))
+        if filter_age_max:
+            q = q.filter(User.birth_year >= current_year - int(filter_age_max))
+
+        filter_active = data.get('filter_active_only', False)
+        if filter_active:
+            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+            q = q.filter(User.last_login >= seven_days_ago)
+
+        recipients = db.session.execute(q).all()
+        if not recipients:
+            return jsonify({'error': 'No recipients match the selected filters'}), 400
+
+        # Build broadcast record
+        broadcast = OperatorBroadcast(
+            operator_id=user.id,
+            subject=subject,
+            body=body,
+            filter_city=filter_city,
+            filter_age_min=int(filter_age_min) if filter_age_min else None,
+            filter_age_max=int(filter_age_max) if filter_age_max else None,
+            filter_active_only=bool(filter_active),
+            recipient_count=len(recipients),
+            status='sending'
+        )
+        db.session.add(broadcast)
+        db.session.commit()
+
+        # Attempt Resend batch API first, fall back to SMTP loop
+        resend_api_key = os.environ.get('RESEND_API_KEY', os.environ.get('SMTP_PASSWORD', ''))
+        from_email = app.config.get('MAIL_DEFAULT_SENDER', 'TheraSocial <onboarding@resend.dev>')
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+
+        sent_count = 0
+        failed_count = 0
+
+        if resend_api_key and resend_api_key.startswith('re_'):
+            # Use Resend batch API (POST /emails/batch)
+            logger.info(f"[L100 BROADCAST] Sending via Resend batch API to {len(recipients)} recipients")
+            # Resend batch API accepts up to 100 emails per call
+            batch_size = 100
+            for i in range(0, len(recipients), batch_size):
+                batch = recipients[i:i + batch_size]
+                emails_payload = []
+                for r in batch:
+                    is_rtl = (r[3] or 'en') in ('he', 'ar')
+                    text_dir = 'rtl' if is_rtl else 'ltr'
+                    text_align = 'right' if is_rtl else 'left'
+                    html = f'''<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;direction:{text_dir};text-align:{text_align};background:#f5f5f5;margin:0;padding:20px;">
+<div style="max-width:600px;margin:0 auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;text-align:center;">
+<h1 style="color:white;margin:0;font-size:24px;">TheraSocial</h1></div>
+<div style="padding:40px 30px;">
+<h2 style="color:#667eea;margin-top:0;">{subject}</h2>
+<p style="color:#333;line-height:1.6;white-space:pre-wrap;">{body}</p>
+<div style="text-align:center;margin:30px 0;">
+<a href="{app_url}" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:25px;display:inline-block;font-weight:bold;">Open TheraSocial</a>
+</div></div>
+<div style="background:#f8f9fa;padding:20px 30px;border-top:1px solid #eee;">
+<p style="color:#999;font-size:12px;margin:0;">TheraSocial Team</p></div></div></body></html>'''
+                    emails_payload.append({
+                        'from': from_email,
+                        'to': [r[1]],
+                        'subject': subject,
+                        'html': html
+                    })
+
+                try:
+                    resp = http_requests.post(
+                        'https://api.resend.com/emails/batch',
+                        headers={
+                            'Authorization': f'Bearer {resend_api_key}',
+                            'Content-Type': 'application/json'
+                        },
+                        json=emails_payload,
+                        timeout=30
+                    )
+                    if resp.status_code in (200, 201):
+                        sent_count += len(batch)
+                        logger.info(f"[L100 BROADCAST] Batch {i // batch_size + 1}: {len(batch)} sent OK")
+                    else:
+                        failed_count += len(batch)
+                        logger.error(f"[L100 BROADCAST] Batch {i // batch_size + 1} failed: {resp.status_code} {resp.text[:200]}")
+                except Exception as batch_err:
+                    failed_count += len(batch)
+                    logger.error(f"[L100 BROADCAST] Batch {i // batch_size + 1} error: {batch_err}")
+
+        else:
+            # Fallback: individual SMTP sends (existing pattern)
+            logger.info(f"[L100 BROADCAST] No Resend API key, falling back to SMTP for {len(recipients)} recipients")
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', '')
+
+            try:
+                with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                    server.login(smtp_user, smtp_pass)
+                    for r in recipients:
+                        try:
+                            is_rtl = (r[3] or 'en') in ('he', 'ar')
+                            text_dir = 'rtl' if is_rtl else 'ltr'
+                            text_align = 'right' if is_rtl else 'left'
+                            html = f'''<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;direction:{text_dir};text-align:{text_align};background:#f5f5f5;margin:0;padding:20px;">
+<div style="max-width:600px;margin:0 auto;background:white;border-radius:8px;overflow:hidden;">
+<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;text-align:center;">
+<h1 style="color:white;margin:0;">TheraSocial</h1></div>
+<div style="padding:40px 30px;">
+<h2 style="color:#667eea;">{subject}</h2>
+<p style="color:#333;line-height:1.6;white-space:pre-wrap;">{body}</p>
+</div></div></body></html>'''
+                            msg = MIMEMultipart('alternative')
+                            msg['Subject'] = subject
+                            msg['From'] = from_email
+                            msg['To'] = r[1]
+                            _add_deliverability_headers(msg)
+                            msg.attach(MIMEText(body, 'plain'))
+                            msg.attach(MIMEText(html, 'html'))
+                            server.sendmail(from_email, r[1], msg.as_string())
+                            sent_count += 1
+                        except Exception as send_err:
+                            failed_count += 1
+                            logger.error(f"[L100 BROADCAST] SMTP send to {r[1]} failed: {send_err}")
+            except Exception as smtp_err:
+                failed_count = len(recipients)
+                logger.error(f"[L100 BROADCAST] SMTP connection failed: {smtp_err}")
+
+        # Update broadcast status
+        broadcast.status = 'sent' if failed_count == 0 else ('partial' if sent_count > 0 else 'failed')
+        broadcast.recipient_count = sent_count
+        db.session.commit()
+
+        logger.info(f"[L100 BROADCAST] Complete: {sent_count} sent, {failed_count} failed")
+        return jsonify({
+            'message': f'Broadcast sent to {sent_count} recipients',
+            'sent': sent_count,
+            'failed': failed_count,
+            'broadcast_id': broadcast.id,
+            'status': broadcast.status
+        })
+
+    except Exception as e:
+        logger.error(f"[L100 BROADCAST] Error: {e}")
+        return jsonify({'error': 'Failed to send broadcast'}), 500
+
+
+@app.route('/api/operator/broadcasts')
+@operator_required
+def operator_list_broadcasts():
+    """L100: List sent broadcasts for the current operator, with pagination."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        page = max(int(request.args.get('page', 1)), 1)
+        per_page = min(int(request.args.get('per_page', 10)), 50)
+
+        q = OperatorBroadcast.query.filter_by(operator_id=user.id).order_by(
+            OperatorBroadcast.created_at.desc()
+        )
+        total = q.count()
+        broadcasts = q.offset((page - 1) * per_page).limit(per_page).all()
+
+        return jsonify({
+            'broadcasts': [b.to_dict() for b in broadcasts],
+            'total': total,
+            'page': page,
+            'pages': (total + per_page - 1) // per_page
+        })
+
+    except Exception as e:
+        logger.error(f"[L100] List broadcasts error: {e}")
+        return jsonify({'error': 'Failed to list broadcasts'}), 500
+
+
+@app.route('/api/operator/inbound-email', methods=['POST'])
+def operator_inbound_email():
+    """L100: Resend webhook endpoint for inbound emails.
+    Receives email.received events from Resend and stores them for operator review.
+    This endpoint is NOT behind operator_required — Resend POST webhooks are unauthenticated
+    but should be verified via webhook signature in production."""
+    try:
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({'error': 'No payload'}), 400
+
+        # Resend webhook payload structure (email.received event)
+        event_type = data.get('type', '')
+        event_data = data.get('data', data)  # Resend wraps in {type, data} or sends flat
+
+        # Extract email fields — Resend uses 'from', 'to', 'subject', 'text', 'html'
+        from_field = event_data.get('from', '')
+        from_email_addr = from_field if isinstance(from_field, str) else (from_field[0] if isinstance(from_field, list) else '')
+        from_name = ''
+        # Parse "Name <email>" format
+        if '<' in from_email_addr and '>' in from_email_addr:
+            from_name = from_email_addr[:from_email_addr.index('<')].strip().strip('"')
+            from_email_addr = from_email_addr[from_email_addr.index('<') + 1:from_email_addr.index('>')]
+
+        to_field = event_data.get('to', '')
+        to_email = to_field if isinstance(to_field, str) else (to_field[0] if isinstance(to_field, list) else '')
+
+        inbound = OperatorInboundEmail(
+            from_email=from_email_addr[:500],
+            from_name=from_name[:200],
+            to_email=(to_email if isinstance(to_email, str) else str(to_email))[:500],
+            subject=(event_data.get('subject', '') or '')[:500],
+            body_text=(event_data.get('text', '') or '')[:50000],
+            body_html=(event_data.get('html', '') or '')[:100000],
+        )
+        db.session.add(inbound)
+        db.session.commit()
+
+        logger.info(f"[L100 INBOUND] Stored inbound email from {from_email_addr}: {inbound.subject[:60]}")
+        return jsonify({'message': 'Email received', 'id': inbound.id}), 200
+
+    except Exception as e:
+        logger.error(f"[L100 INBOUND] Webhook error: {e}")
+        return jsonify({'error': 'Webhook processing failed'}), 500
+
+
+@app.route('/api/operator/inbox')
+@operator_required
+def operator_inbox():
+    """L100: List inbound emails for the operator inbox, with pagination and read filter."""
+    try:
+        page = max(int(request.args.get('page', 1)), 1)
+        per_page = min(int(request.args.get('per_page', 15)), 50)
+        unread_only = request.args.get('unread_only', 'false') == 'true'
+
+        q = OperatorInboundEmail.query
+        if unread_only:
+            q = q.filter_by(is_read=False)
+        q = q.order_by(OperatorInboundEmail.created_at.desc())
+
+        total = q.count()
+        unread_count = OperatorInboundEmail.query.filter_by(is_read=False).count()
+        emails = q.offset((page - 1) * per_page).limit(per_page).all()
+
+        return jsonify({
+            'emails': [e.to_dict() for e in emails],
+            'total': total,
+            'unread_count': unread_count,
+            'page': page,
+            'pages': (total + per_page - 1) // per_page
+        })
+
+    except Exception as e:
+        logger.error(f"[L100] Inbox error: {e}")
+        return jsonify({'error': 'Failed to load inbox'}), 500
+
+
+@app.route('/api/operator/inbox/<int:email_id>/read', methods=['PATCH'])
+@operator_required
+def operator_mark_email_read(email_id):
+    """L100: Mark an inbound email as read."""
+    try:
+        email_obj = db.session.get(OperatorInboundEmail, email_id)
+        if not email_obj:
+            return jsonify({'error': 'Email not found'}), 404
+
+        email_obj.is_read = True
+        db.session.commit()
+        return jsonify({'message': 'Marked as read', 'id': email_id})
+
+    except Exception as e:
+        logger.error(f"[L100] Mark read error: {e}")
+        return jsonify({'error': 'Failed to mark as read'}), 500
 
 
 # =====================
