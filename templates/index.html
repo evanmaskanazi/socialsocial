@@ -5971,8 +5971,17 @@
 
                               <!-- L140: Operator Alerts Section -->
                               <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;">
-                                  <h4 style="margin: 0 0 12px 0; font-size: 0.95rem;" data-i18n="operator.alerts_title">🔔 System Alerts</h4>
-                                  <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                                      <h4 style="margin: 0; font-size: 0.95rem;" data-i18n="operator.alerts_title">🔔 System Alerts</h4>
+                                      <span id="opAlertsTotal" style="font-size: 0.78rem; color: #888;"></span>
+                                  </div>
+                                  <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+                                      <select id="opAlertDaysFilter" onchange="loadOperatorAlerts(1)"
+                                              style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.82rem;">
+                                          <option value="7" data-i18n="operator.alerts_7d">Last 7 days</option>
+                                          <option value="14" data-i18n="operator.alerts_14d">Last 14 days</option>
+                                          <option value="30" data-i18n="operator.alerts_30d">Last 30 days</option>
+                                      </select>
                                       <select id="opAlertCategoryFilter" onchange="loadOperatorAlerts(1)"
                                               style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.82rem;">
                                           <option value="" data-i18n="operator.alerts_all">All Categories</option>
@@ -5981,10 +5990,10 @@
                                           <option value="general">General</option>
                                       </select>
                                   </div>
-                                  <div id="opAlertsList" style="max-height: 300px; overflow-y: auto;">
+                                  <div id="opAlertsList" style="max-height: 400px; overflow-y: auto;">
                                       <div style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</div>
                                   </div>
-                                  <div id="opAlertsPager" style="text-align: center; margin-top: 8px; font-size: 0.8rem;"></div>
+                                  <div id="opAlertsPager" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.82rem;"></div>
                               </div>
 
                               <!-- L140: Phase 5 — System Health Section -->
@@ -18462,31 +18471,61 @@ window.flagUser = flagUser;
 async function loadOperatorAlerts(page) {
     const listEl = document.getElementById('opAlertsList');
     const pager = document.getElementById('opAlertsPager');
+    const totalEl = document.getElementById('opAlertsTotal');
     if (!listEl) return;
     const category = (document.getElementById('opAlertCategoryFilter') || {}).value || '';
+    const days = (document.getElementById('opAlertDaysFilter') || {}).value || 7;
     try {
-        const res = await fetch('/api/operator/alerts?page=' + (page || 1) + '&per_page=15&category=' + category, { credentials: 'include' });
+        const res = await fetch('/api/operator/alerts?page=' + (page || 1) + '&per_page=20&category=' + category + '&days=' + days, { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
+
+        if (totalEl) totalEl.textContent = data.total + ' ' + _t('operator.alerts_total_label', 'alerts');
+
         if (!data.alerts || data.alerts.length === 0) {
             listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;">' + _t('operator.no_alerts', 'No alerts') + '</div>';
         } else {
-            listEl.innerHTML = data.alerts.map(a => {
-                const typeColor = a.type === 'warning' ? '#fd7e14' : (a.type === 'error' ? '#dc3545' : '#667eea');
-                return '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:start;">' +
-                    '<span style="color:' + typeColor + ';font-size:1rem;">●</span>' +
-                    '<div style="flex:1;min-width:0;">' +
-                    '<div style="font-weight:600;font-size:0.85rem;">' + escapeHtml(a.title || '') + '</div>' +
-                    '<div style="font-size:0.8rem;color:#888;">' + escapeHtml(a.message || '') + '</div>' +
-                    '<div style="font-size:0.72rem;color:#aaa;margin-top:2px;">' + (a.created_at ? a.created_at.slice(0, 16).replace('T', ' ') : '') + ' · ' + escapeHtml(a.alert_category || '') + '</div>' +
-                    '</div></div>';
-            }).join('');
-        }
-        if (pager && data.pages > 1) {
+            // Group alerts by date
+            const groups = {};
+            data.alerts.forEach(a => {
+                const dateKey = a.created_at ? a.created_at.slice(0, 10) : 'Unknown';
+                if (!groups[dateKey]) groups[dateKey] = [];
+                groups[dateKey].push(a);
+            });
+
             let html = '';
-            for (let i = 1; i <= data.pages; i++) {
-                html += '<button onclick="loadOperatorAlerts(' + i + ')" style="margin:0 2px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;' + (i === data.page ? 'background:var(--primary);color:white;' : 'background:white;') + '">' + i + '</button>';
-            }
+            Object.keys(groups).forEach(dateKey => {
+                // Date header
+                const dateLabel = dateKey !== 'Unknown' ? new Date(dateKey + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : dateKey;
+                html += '<div style="padding:8px 14px;background:var(--light);font-size:0.78rem;font-weight:600;color:var(--primary);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1;">' + escapeHtml(dateLabel) + ' <span style="color:#aaa;font-weight:400;">(' + groups[dateKey].length + ')</span></div>';
+
+                groups[dateKey].forEach(a => {
+                    const typeColor = a.type === 'warning' ? '#fd7e14' : (a.type === 'error' ? '#dc3545' : '#667eea');
+                    const catBadge = a.alert_category ? '<span style="background:' + (a.alert_category === 'trigger' ? '#f0e6ff' : '#e6f0ff') + ';color:' + (a.alert_category === 'trigger' ? '#764ba2' : '#667eea') + ';padding:1px 6px;border-radius:4px;font-size:0.7rem;margin-left:6px;">' + escapeHtml(a.alert_category) + '</span>' : '';
+                    const timeStr = a.created_at ? a.created_at.slice(11, 16) : '';
+                    const srcUser = a.source_username ? ' · @' + escapeHtml(a.source_username) : '';
+                    html += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:start;">' +
+                        '<span style="color:' + typeColor + ';font-size:0.7rem;margin-top:3px;">●</span>' +
+                        '<div style="flex:1;min-width:0;">' +
+                        '<div style="font-weight:600;font-size:0.84rem;">' + escapeHtml(a.title || '') + catBadge + '</div>' +
+                        '<div style="font-size:0.8rem;color:#666;margin-top:2px;">' + escapeHtml(a.message || '') + '</div>' +
+                        '<div style="font-size:0.72rem;color:#aaa;margin-top:3px;">' + timeStr + srcUser + '</div>' +
+                        '</div></div>';
+                });
+            });
+            listEl.innerHTML = html;
+        }
+
+        // Compact prev/next pager
+        if (pager && data.pages > 1) {
+            const cp = data.page;
+            const tp = data.pages;
+            let html = '';
+            html += '<button onclick="loadOperatorAlerts(1)" ' + (cp === 1 ? 'disabled' : '') + ' style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;background:white;">«</button>';
+            html += '<button onclick="loadOperatorAlerts(' + (cp - 1) + ')" ' + (cp === 1 ? 'disabled' : '') + ' style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;background:white;">‹ ' + _t('operator.prev', 'Prev') + '</button>';
+            html += '<span style="padding:4px 8px;font-size:0.82rem;color:var(--dark);">' + cp + ' / ' + tp + '</span>';
+            html += '<button onclick="loadOperatorAlerts(' + (cp + 1) + ')" ' + (cp === tp ? 'disabled' : '') + ' style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;background:white;">' + _t('operator.next', 'Next') + ' ›</button>';
+            html += '<button onclick="loadOperatorAlerts(' + tp + ')" ' + (cp === tp ? 'disabled' : '') + ' style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;background:white;">»</button>';
             pager.innerHTML = html;
         } else if (pager) { pager.innerHTML = ''; }
     } catch (err) { console.error('[L140] Load operator alerts error:', err); }
