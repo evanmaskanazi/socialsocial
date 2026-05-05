@@ -16778,7 +16778,8 @@ def operator_unflag_user():
 @operator_required
 def operator_alerts():
     """L140: Route system alerts to operators in scope.
-    Shows alerts from users in the operator's assigned scope."""
+    Shows alerts from users in the operator's assigned scope.
+    Supports ?days=7 (default) for date-range filtering."""
     try:
         user = db.session.get(User, session['user_id'])
         scope_filters = _build_operator_scope_filter(user)
@@ -16786,11 +16787,15 @@ def operator_alerts():
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         category = request.args.get('category', '')
+        days = request.args.get('days', 7, type=int)
+        days = max(1, min(90, days))
+
+        cutoff = datetime.utcnow() - timedelta(days=days)
 
         # Get alerts from users in scope (via source_user_id -> User)
-        q = db.session.query(Alert).join(
+        q = db.session.query(Alert, User.username).join(
             User, Alert.source_user_id == User.id
-        ).filter(User.role == 'user')
+        ).filter(User.role == 'user', Alert.created_at >= cutoff)
 
         for f in scope_filters:
             q = q.filter(f)
@@ -16800,13 +16805,20 @@ def operator_alerts():
 
         q = q.order_by(Alert.created_at.desc())
         total = q.count()
-        alerts = q.offset((page - 1) * per_page).limit(per_page).all()
+        results = q.offset((page - 1) * per_page).limit(per_page).all()
+
+        alerts_out = []
+        for alert_obj, username in results:
+            d = alert_obj.to_dict()
+            d['source_username'] = username
+            alerts_out.append(d)
 
         return jsonify({
-            'alerts': [a.to_dict() for a in alerts],
+            'alerts': alerts_out,
             'total': total,
             'page': page,
-            'pages': (total + per_page - 1) // per_page
+            'pages': (total + per_page - 1) // per_page,
+            'days': days
         })
 
     except Exception as e:
