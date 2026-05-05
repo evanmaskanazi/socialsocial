@@ -2,6 +2,20 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+# L140: Phase 4 — Account management & SaaS features
+# - Added /api/operator/inactive-accounts GET endpoint: lists users inactive beyond configurable threshold
+# - Added /api/operator/flag-user POST endpoint: operators can flag/deactivate inactive accounts
+# - Added /api/operator/unflag-user POST endpoint: operators can reactivate flagged accounts
+# - Added /api/operator/alerts GET endpoint: routes system alerts to operators in scope
+# - Added /api/operator/settings GET/PUT endpoints: configurable inactivity threshold per operator
+# - All new endpoints respect existing OperatorScope scoping from L60
+#
+# L140: Phase 5 — System health
+# - Added request_metrics_middleware: records endpoint, response time, status code per request
+# - Added SystemMetric model: stores request-level performance metrics
+# - Added /api/operator/system-health GET endpoint: aggregated response time and request count stats
+# - Added system health chart display on operator dashboard
+
 # L100: Phase 3 — Communications layer
 # - Added OperatorBroadcast model: stores broadcast messages sent by operators
 # - Added OperatorInboundEmail model: stores inbound emails received via Resend webhooks
@@ -3587,6 +3601,39 @@ def auto_migrate_database():
                     conn.commit()
                     logger.info("✓ L100: Created operator_inbound_emails table")
 
+                # L140: Create system_metrics table
+                if 'system_metrics' not in inspector.get_table_names():
+                    logger.info("L140: Creating system_metrics table...")
+                    conn.execute(text("""
+                        CREATE TABLE system_metrics (
+                            id SERIAL PRIMARY KEY,
+                            endpoint VARCHAR(200) NOT NULL,
+                            method VARCHAR(10) NOT NULL,
+                            status_code INTEGER NOT NULL,
+                            response_time_ms FLOAT NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """))
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS ix_system_metrics_endpoint ON system_metrics(endpoint)"))
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS ix_system_metrics_created_at ON system_metrics(created_at)"))
+                    conn.commit()
+                    logger.info("✓ L140: Created system_metrics table")
+
+                # L140: Create operator_settings table
+                if 'operator_settings' not in inspector.get_table_names():
+                    logger.info("L140: Creating operator_settings table...")
+                    conn.execute(text("""
+                        CREATE TABLE operator_settings (
+                            id SERIAL PRIMARY KEY,
+                            operator_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                            inactivity_threshold_days INTEGER DEFAULT 30,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """))
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS ix_operator_settings_operator_id ON operator_settings(operator_id)"))
+                    conn.commit()
+                    logger.info("✓ L140: Created operator_settings table")
+
                 logger.info("Database auto-migration completed successfully")
 
         except Exception as e:
@@ -4398,6 +4445,27 @@ class OperatorInboundEmail(db.Model):
             'is_read': self.is_read,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+
+# L140: System request metrics — stores endpoint performance data
+class SystemMetric(db.Model):
+    __tablename__ = 'system_metrics'
+    id = db.Column(db.Integer, primary_key=True)
+    endpoint = db.Column(db.String(200), nullable=False, index=True)
+    method = db.Column(db.String(10), nullable=False)
+    status_code = db.Column(db.Integer, nullable=False)
+    response_time_ms = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+
+# L140: Operator settings — configurable thresholds per operator
+class OperatorSettings(db.Model):
+    __tablename__ = 'operator_settings'
+    id = db.Column(db.Integer, primary_key=True)
+    operator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True, index=True)
+    inactivity_threshold_days = db.Column(db.Integer, default=30)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    operator = db.relationship('User', backref=db.backref('operator_settings', uselist=False))
 
 
 def ensure_database_schema():
@@ -5735,6 +5803,7 @@ def before_request():
     if request.path == '/healthz':
         return
     request.request_id = str(uuid.uuid4())
+    request._start_time = time.time()  # L140: Track request start for metrics
     if not request.path.startswith('/static'):
         logger.info(f"Request started: {request.method} {request.path}")
 
@@ -5745,6 +5814,21 @@ def after_request(response):
     # Skip logging for health check and static files
     if request.path != '/healthz' and not request.path.startswith('/static'):
         logger.info(f"Request completed: {response.status_code}")
+
+        # L140: Record request metric for API endpoints (not static/health)
+        if request.path.startswith('/api/') and hasattr(request, '_start_time'):
+            try:
+                elapsed_ms = (time.time() - request._start_time) * 1000
+                metric = SystemMetric(
+                    endpoint=request.path,
+                    method=request.method,
+                    status_code=response.status_code,
+                    response_time_ms=round(elapsed_ms, 2)
+                )
+                db.session.add(metric)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()  # Don't let metrics recording break the request
 
     # T15c: Security headers removed — add_security_headers() is the single authority
     if request.path == '/' or request.path.endswith('.html'):
@@ -16526,6 +16610,279 @@ def operator_mark_email_read(email_id):
     except Exception as e:
         logger.error(f"[L100] Mark read error: {e}")
         return jsonify({'error': 'Failed to mark as read'}), 500
+
+
+# =====================
+# L140: PHASE 4 — ACCOUNT MANAGEMENT & ALERT ROUTING
+# =====================
+
+@app.route('/api/operator/settings', methods=['GET', 'PUT'])
+@operator_required
+def operator_settings_endpoint():
+    """L140: Get or update operator-specific settings (e.g. inactivity threshold)."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        settings = OperatorSettings.query.filter_by(operator_id=user.id).first()
+
+        if request.method == 'GET':
+            return jsonify({
+                'inactivity_threshold_days': settings.inactivity_threshold_days if settings else 30
+            })
+
+        # PUT
+        data = request.get_json() or {}
+        threshold = data.get('inactivity_threshold_days', 30)
+        threshold = max(1, min(365, int(threshold)))  # clamp 1-365
+
+        if not settings:
+            settings = OperatorSettings(operator_id=user.id, inactivity_threshold_days=threshold)
+            db.session.add(settings)
+        else:
+            settings.inactivity_threshold_days = threshold
+        db.session.commit()
+
+        log_audit('operator_update_settings', 'operator_settings', settings.id,
+                  details={'inactivity_threshold_days': threshold})
+        return jsonify({'message': 'Settings updated', 'inactivity_threshold_days': threshold})
+
+    except Exception as e:
+        logger.error(f"[L140] Operator settings error: {e}")
+        return jsonify({'error': 'Failed to load settings'}), 500
+
+
+@app.route('/api/operator/inactive-accounts')
+@operator_required
+def operator_inactive_accounts():
+    """L140: List users inactive beyond the operator's configured threshold, scoped."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+
+        # Get operator's threshold setting
+        settings = OperatorSettings.query.filter_by(operator_id=user.id).first()
+        threshold_days = settings.inactivity_threshold_days if settings else 30
+
+        cutoff = datetime.utcnow() - timedelta(days=threshold_days)
+
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+
+        # Users who haven't logged in since cutoff (or never logged in)
+        q = User.query.filter(
+            User.role == 'user',
+            User.is_active == True,
+            db.or_(User.last_login < cutoff, User.last_login.is_(None))
+        )
+        for f in scope_filters:
+            q = q.filter(f)
+
+        q = q.order_by(User.last_login.asc().nullsfirst())
+        total = q.count()
+        users = q.offset((page - 1) * per_page).limit(per_page).all()
+
+        now = datetime.utcnow()
+        results = []
+        for u in users:
+            days_inactive = (now - u.last_login).days if u.last_login else (now - u.created_at).days if u.created_at else None
+            results.append({
+                'id': u.id,
+                'username': u.username,
+                'email': u.email,
+                'selected_city': u.selected_city or '',
+                'last_login': u.last_login.isoformat() if u.last_login else None,
+                'created_at': u.created_at.isoformat() if u.created_at else None,
+                'days_inactive': days_inactive
+            })
+
+        return jsonify({
+            'users': results,
+            'total': total,
+            'page': page,
+            'pages': (total + per_page - 1) // per_page,
+            'threshold_days': threshold_days
+        })
+
+    except Exception as e:
+        logger.error(f"[L140] Inactive accounts error: {e}")
+        return jsonify({'error': 'Failed to load inactive accounts'}), 500
+
+
+@app.route('/api/operator/flag-user', methods=['POST'])
+@operator_required
+def operator_flag_user():
+    """L140: Deactivate (flag) an inactive user account."""
+    try:
+        data = request.get_json() or {}
+        target_user_id = data.get('user_id')
+        reason = data.get('reason', 'inactivity')
+
+        if not target_user_id:
+            return jsonify({'error': 'user_id required'}), 400
+
+        target = db.session.get(User, target_user_id)
+        if not target or target.role != 'user':
+            return jsonify({'error': 'User not found'}), 404
+
+        # Verify operator has scope over this user
+        operator_user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(operator_user)
+        if scope_filters:
+            scoped_q = User.query.filter(User.id == target_user_id)
+            for f in scope_filters:
+                scoped_q = scoped_q.filter(f)
+            if not scoped_q.first():
+                return jsonify({'error': 'User not in your scope'}), 403
+
+        target.is_active = False
+        db.session.commit()
+
+        log_audit('operator_flag_user', 'user', target_user_id,
+                  details={'reason': reason, 'operator_id': session['user_id']})
+
+        return jsonify({'message': f'User {target.username} deactivated', 'user_id': target_user_id})
+
+    except Exception as e:
+        logger.error(f"[L140] Flag user error: {e}")
+        return jsonify({'error': 'Failed to deactivate user'}), 500
+
+
+@app.route('/api/operator/unflag-user', methods=['POST'])
+@operator_required
+def operator_unflag_user():
+    """L140: Reactivate a previously flagged user account."""
+    try:
+        data = request.get_json() or {}
+        target_user_id = data.get('user_id')
+
+        if not target_user_id:
+            return jsonify({'error': 'user_id required'}), 400
+
+        target = db.session.get(User, target_user_id)
+        if not target or target.role != 'user':
+            return jsonify({'error': 'User not found'}), 404
+
+        target.is_active = True
+        db.session.commit()
+
+        log_audit('operator_unflag_user', 'user', target_user_id,
+                  details={'operator_id': session['user_id']})
+
+        return jsonify({'message': f'User {target.username} reactivated', 'user_id': target_user_id})
+
+    except Exception as e:
+        logger.error(f"[L140] Unflag user error: {e}")
+        return jsonify({'error': 'Failed to reactivate user'}), 500
+
+
+@app.route('/api/operator/alerts')
+@operator_required
+def operator_alerts():
+    """L140: Route system alerts to operators in scope.
+    Shows alerts from users in the operator's assigned scope."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        category = request.args.get('category', '')
+
+        # Get alerts from users in scope (via source_user_id -> User)
+        q = db.session.query(Alert).join(
+            User, Alert.source_user_id == User.id
+        ).filter(User.role == 'user')
+
+        for f in scope_filters:
+            q = q.filter(f)
+
+        if category:
+            q = q.filter(Alert.alert_category == category)
+
+        q = q.order_by(Alert.created_at.desc())
+        total = q.count()
+        alerts = q.offset((page - 1) * per_page).limit(per_page).all()
+
+        return jsonify({
+            'alerts': [a.to_dict() for a in alerts],
+            'total': total,
+            'page': page,
+            'pages': (total + per_page - 1) // per_page
+        })
+
+    except Exception as e:
+        logger.error(f"[L140] Operator alerts error: {e}")
+        return jsonify({'error': 'Failed to load alerts'}), 500
+
+
+# =====================
+# L140: PHASE 5 — SYSTEM HEALTH
+# =====================
+
+@app.route('/api/operator/system-health')
+@operator_required
+def operator_system_health():
+    """L140: Aggregated system health metrics — avg response time, request counts, error rates."""
+    try:
+        days = request.args.get('days', 7, type=int)
+        days = max(1, min(90, days))
+        cutoff = datetime.utcnow() - timedelta(days=days)
+
+        # Overall stats
+        overall = db.session.query(
+            func.count(SystemMetric.id).label('total_requests'),
+            func.avg(SystemMetric.response_time_ms).label('avg_response_ms'),
+            func.max(SystemMetric.response_time_ms).label('max_response_ms'),
+            func.min(SystemMetric.response_time_ms).label('min_response_ms')
+        ).filter(SystemMetric.created_at >= cutoff).first()
+
+        # Error rate (4xx + 5xx)
+        error_count = db.session.query(func.count(SystemMetric.id)).filter(
+            SystemMetric.created_at >= cutoff,
+            SystemMetric.status_code >= 400
+        ).scalar() or 0
+
+        total_req = overall.total_requests or 0
+        error_rate = round((error_count / total_req * 100), 2) if total_req > 0 else 0
+
+        # Daily breakdown for chart
+        daily = db.session.query(
+            func.date(SystemMetric.created_at).label('day'),
+            func.count(SystemMetric.id).label('count'),
+            func.avg(SystemMetric.response_time_ms).label('avg_ms')
+        ).filter(
+            SystemMetric.created_at >= cutoff
+        ).group_by(func.date(SystemMetric.created_at)).order_by(func.date(SystemMetric.created_at)).all()
+
+        daily_data = [{'date': str(d.day), 'requests': d.count, 'avg_ms': round(d.avg_ms, 1)} for d in daily]
+
+        # Slowest endpoints
+        slow = db.session.query(
+            SystemMetric.endpoint,
+            func.avg(SystemMetric.response_time_ms).label('avg_ms'),
+            func.count(SystemMetric.id).label('count')
+        ).filter(
+            SystemMetric.created_at >= cutoff
+        ).group_by(SystemMetric.endpoint).order_by(
+            func.avg(SystemMetric.response_time_ms).desc()
+        ).limit(10).all()
+
+        slow_endpoints = [{'endpoint': s.endpoint, 'avg_ms': round(s.avg_ms, 1), 'count': s.count} for s in slow]
+
+        return jsonify({
+            'total_requests': total_req,
+            'avg_response_ms': round(overall.avg_response_ms, 1) if overall.avg_response_ms else 0,
+            'max_response_ms': round(overall.max_response_ms, 1) if overall.max_response_ms else 0,
+            'min_response_ms': round(overall.min_response_ms, 1) if overall.min_response_ms else 0,
+            'error_rate': error_rate,
+            'error_count': error_count,
+            'daily': daily_data,
+            'slow_endpoints': slow_endpoints,
+            'days': days
+        })
+
+    except Exception as e:
+        logger.error(f"[L140] System health error: {e}")
+        return jsonify({'error': 'Failed to load system health'}), 500
 
 
 # =====================
