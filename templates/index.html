@@ -5932,6 +5932,130 @@
                                       <div id="opInboxDetailBody" style="background: var(--light); padding: 16px; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;"></div>
                                   </div>
                               </div>
+
+                              <!-- L140: Phase 4 — Account Management Section -->
+                              <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                                  <h4 style="margin: 0 0 12px 0; font-size: 0.95rem;" data-i18n="operator.acct_mgmt_title">🔧 Account Management</h4>
+
+                                  <!-- Inactivity Threshold Setting -->
+                                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+                                      <span style="font-size: 0.85rem;" data-i18n="operator.inactivity_threshold">Inactivity threshold (days):</span>
+                                      <input id="opInactivityThreshold" type="number" min="1" max="365" value="30"
+                                             style="width: 70px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem;">
+                                      <button onclick="saveOperatorThreshold()"
+                                              style="padding: 6px 14px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.82rem;">
+                                          <span data-i18n="operator.save_threshold">Save</span>
+                                      </button>
+                                      <span id="opThresholdStatus" style="font-size: 0.8rem; color: var(--sage);"></span>
+                                  </div>
+
+                                  <!-- Inactive Accounts Table -->
+                                  <div style="overflow-x: auto;">
+                                      <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                                          <thead>
+                                              <tr style="background: var(--light);">
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_username">Username</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_city">City</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.acct_days_inactive">Days Inactive</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_last_active">Last Active</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.acct_actions">Actions</th>
+                                              </tr>
+                                          </thead>
+                                          <tbody id="opInactiveAccountsBody">
+                                              <tr><td colspan="5" style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</td></tr>
+                                          </tbody>
+                                      </table>
+                                  </div>
+                                  <div id="opInactiveAccountsPager" style="text-align: center; margin-top: 8px; font-size: 0.8rem;"></div>
+                              </div>
+
+                              <!-- L140: Operator Alerts Section -->
+                              <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                                      <h4 style="margin: 0; font-size: 0.95rem;" data-i18n="operator.alerts_title">🔔 System Alerts</h4>
+                                      <span id="opAlertsTotal" style="font-size: 0.78rem; color: #888;"></span>
+                                  </div>
+                                  <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+                                      <select id="opAlertDaysFilter" onchange="loadOperatorAlerts(1)"
+                                              style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.82rem;">
+                                          <option value="7" data-i18n="operator.alerts_7d">Last 7 days</option>
+                                          <option value="14" data-i18n="operator.alerts_14d">Last 14 days</option>
+                                          <option value="30" data-i18n="operator.alerts_30d">Last 30 days</option>
+                                      </select>
+                                      <select id="opAlertCategoryFilter" onchange="loadOperatorAlerts(1)"
+                                              style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.82rem;">
+                                          <option value="" data-i18n="operator.alerts_all">All Categories</option>
+                                          <option value="trigger">Trigger</option>
+                                          <option value="feed">Feed</option>
+                                          <option value="general">General</option>
+                                      </select>
+                                  </div>
+                                  <div id="opAlertsList" style="max-height: 400px; overflow-y: auto;">
+                                      <div style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</div>
+                                  </div>
+                                  <div id="opAlertsPager" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.82rem;"></div>
+                              </div>
+
+                              <!-- L140: Phase 5 — System Health Section -->
+                              <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                                  <h4 style="margin: 0 0 12px 0; font-size: 0.95rem;" data-i18n="operator.health_title">📊 System Health</h4>
+                                  <div style="display: flex; gap: 8px; margin-bottom: 14px; align-items: center;">
+                                      <span style="font-size: 0.85rem;" data-i18n="operator.health_period">Period:</span>
+                                      <select id="opHealthDays" onchange="loadOperatorHealth()"
+                                              style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.82rem;">
+                                          <option value="7">7 days</option>
+                                          <option value="14">14 days</option>
+                                          <option value="30">30 days</option>
+                                      </select>
+                                  </div>
+                                  <!-- Health stats grid -->
+                                  <div id="opHealthStatsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px;">
+                                      <div style="background: var(--light); padding: 10px 14px; border-radius: 10px; text-align: center;">
+                                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.health_total_req">Total Requests</div>
+                                          <div id="opHealthTotalReq" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">—</div>
+                                      </div>
+                                      <div style="background: var(--light); padding: 10px 14px; border-radius: 10px; text-align: center;">
+                                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.health_avg_ms">Avg Response</div>
+                                          <div id="opHealthAvgMs" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">—</div>
+                                      </div>
+                                      <div style="background: var(--light); padding: 10px 14px; border-radius: 10px; text-align: center;">
+                                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.health_error_rate">Error Rate</div>
+                                          <div id="opHealthErrorRate" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">—</div>
+                                      </div>
+                                      <div style="background: var(--light); padding: 10px 14px; border-radius: 10px; text-align: center;">
+                                          <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.health_max_ms">Max Response</div>
+                                          <div id="opHealthMaxMs" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">—</div>
+                                      </div>
+                                  </div>
+                                  <!-- Health charts -->
+                                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                                      <div style="background: var(--light); padding: 14px; border-radius: 10px;">
+                                          <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.health_req_chart">Requests / Day</h4>
+                                          <canvas id="opHealthReqChart" height="180"></canvas>
+                                      </div>
+                                      <div style="background: var(--light); padding: 14px; border-radius: 10px;">
+                                          <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.health_latency_chart">Avg Latency / Day</h4>
+                                          <canvas id="opHealthLatencyChart" height="180"></canvas>
+                                      </div>
+                                  </div>
+                                  <!-- Slowest endpoints -->
+                                  <h4 style="margin: 0 0 8px 0; font-size: 0.9rem;" data-i18n="operator.health_slow_endpoints">Slowest Endpoints</h4>
+                                  <div style="overflow-x: auto;">
+                                      <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                                          <thead>
+                                              <tr style="background: var(--light);">
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.health_endpoint">Endpoint</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.health_avg_ms">Avg (ms)</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.health_count">Requests</th>
+                                              </tr>
+                                          </thead>
+                                          <tbody id="opHealthSlowBody">
+                                              <tr><td colspan="3" style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</td></tr>
+                                          </tbody>
+                                      </table>
+                                  </div>
+                              </div>
+
                           </div>
 
                       </div>
@@ -6661,7 +6785,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=L100"></script>
+    <script src="/static/js/i18n.js?v=L140"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -17981,6 +18105,14 @@ async function loadOperatorDashboard() {
         await loadOperatorBroadcastHistory(1);
         await loadOperatorInbox(1);
 
+        // L140: Load Phase 4 — Account Management data
+        await loadOperatorSettings();
+        await loadInactiveAccounts(1);
+        await loadOperatorAlerts(1);
+
+        // L140: Load Phase 5 — System Health data
+        await loadOperatorHealth();
+
         // L100: Populate broadcast city filter from city breakdown data
         const broadcastCityFilter = document.getElementById('opBroadcastCity');
         if (broadcastCityFilter && broadcastCityFilter.options.length <= 1) {
@@ -18255,6 +18387,212 @@ async function openInboxEmail(emailId) {
     }
 }
 window.openInboxEmail = openInboxEmail;
+
+
+// --- L140: PHASE 4 — Account Management Functions ---
+let _opHealthReqChart = null;
+let _opHealthLatencyChart = null;
+
+async function loadOperatorSettings() {
+    try {
+        const res = await fetch('/api/operator/settings', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const inp = document.getElementById('opInactivityThreshold');
+        if (inp) inp.value = data.inactivity_threshold_days || 30;
+    } catch (err) { console.error('[L140] Load operator settings error:', err); }
+}
+
+async function saveOperatorThreshold() {
+    const inp = document.getElementById('opInactivityThreshold');
+    const statusEl = document.getElementById('opThresholdStatus');
+    if (!inp) return;
+    try {
+        const res = await fetch('/api/operator/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+            credentials: 'include',
+            body: JSON.stringify({ inactivity_threshold_days: parseInt(inp.value) || 30 })
+        });
+        if (res.ok) {
+            if (statusEl) { statusEl.textContent = '✓ ' + _t('operator.saved', 'Saved'); setTimeout(() => statusEl.textContent = '', 2000); }
+            loadInactiveAccounts(1);
+        }
+    } catch (err) { console.error('[L140] Save threshold error:', err); }
+}
+window.saveOperatorThreshold = saveOperatorThreshold;
+
+async function loadInactiveAccounts(page) {
+    const tbody = document.getElementById('opInactiveAccountsBody');
+    const pager = document.getElementById('opInactiveAccountsPager');
+    if (!tbody) return;
+    try {
+        const res = await fetch('/api/operator/inactive-accounts?page=' + (page || 1) + '&per_page=10', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.users || data.users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#aaa;">' + _t('operator.no_inactive', 'No inactive accounts') + '</td></tr>';
+        } else {
+            tbody.innerHTML = data.users.map(u =>
+                '<tr style="border-bottom:1px solid var(--border);">' +
+                '<td style="padding:6px 8px;">' + escapeHtml(u.username) + '</td>' +
+                '<td style="padding:6px 8px;">' + escapeHtml(u.selected_city || '') + '</td>' +
+                '<td style="padding:6px 8px; font-weight:600; color:#dc3545;">' + (u.days_inactive != null ? u.days_inactive : '—') + '</td>' +
+                '<td style="padding:6px 8px;">' + (u.last_login ? u.last_login.slice(0, 10) : _t('operator.never', 'Never')) + '</td>' +
+                '<td style="padding:6px 8px;"><button onclick="flagUser(' + u.id + ',\'' + escapeHtml(u.username) + '\')" style="padding:4px 10px;background:#dc3545;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.78rem;">' + _t('operator.deactivate', 'Deactivate') + '</button></td>' +
+                '</tr>'
+            ).join('');
+        }
+        if (pager && data.pages > 1) {
+            let html = '';
+            for (let i = 1; i <= data.pages; i++) {
+                html += '<button onclick="loadInactiveAccounts(' + i + ')" style="margin:0 2px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;' + (i === data.page ? 'background:var(--primary);color:white;' : 'background:white;') + '">' + i + '</button>';
+            }
+            pager.innerHTML = html;
+        } else if (pager) { pager.innerHTML = ''; }
+    } catch (err) { console.error('[L140] Load inactive accounts error:', err); }
+}
+window.loadInactiveAccounts = loadInactiveAccounts;
+
+async function flagUser(userId, username) {
+    if (!confirm(_t('operator.confirm_deactivate', 'Deactivate user') + ' ' + username + '?')) return;
+    try {
+        const res = await fetch('/api/operator/flag-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+            credentials: 'include',
+            body: JSON.stringify({ user_id: userId, reason: 'inactivity' })
+        });
+        if (res.ok) { loadInactiveAccounts(1); }
+    } catch (err) { console.error('[L140] Flag user error:', err); }
+}
+window.flagUser = flagUser;
+
+async function loadOperatorAlerts(page) {
+    const listEl = document.getElementById('opAlertsList');
+    const pager = document.getElementById('opAlertsPager');
+    const totalEl = document.getElementById('opAlertsTotal');
+    if (!listEl) return;
+    const category = (document.getElementById('opAlertCategoryFilter') || {}).value || '';
+    const days = (document.getElementById('opAlertDaysFilter') || {}).value || 7;
+    try {
+        const res = await fetch('/api/operator/alerts?page=' + (page || 1) + '&per_page=20&category=' + category + '&days=' + days, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (totalEl) totalEl.textContent = data.total + ' ' + _t('operator.alerts_total_label', 'alerts');
+
+        if (!data.alerts || data.alerts.length === 0) {
+            listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;">' + _t('operator.no_alerts', 'No alerts') + '</div>';
+        } else {
+            // Group alerts by date
+            const groups = {};
+            data.alerts.forEach(a => {
+                const dateKey = a.created_at ? a.created_at.slice(0, 10) : 'Unknown';
+                if (!groups[dateKey]) groups[dateKey] = [];
+                groups[dateKey].push(a);
+            });
+
+            let html = '';
+            Object.keys(groups).forEach(dateKey => {
+                // Date header
+                const dateLabel = dateKey !== 'Unknown' ? new Date(dateKey + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : dateKey;
+                html += '<div style="padding:8px 14px;background:var(--light);font-size:0.78rem;font-weight:600;color:var(--primary);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1;">' + escapeHtml(dateLabel) + ' <span style="color:#aaa;font-weight:400;">(' + groups[dateKey].length + ')</span></div>';
+
+                groups[dateKey].forEach(a => {
+                    const typeColor = a.type === 'warning' ? '#fd7e14' : (a.type === 'error' ? '#dc3545' : '#667eea');
+                    const catBadge = a.alert_category ? '<span style="background:' + (a.alert_category === 'trigger' ? '#f0e6ff' : '#e6f0ff') + ';color:' + (a.alert_category === 'trigger' ? '#764ba2' : '#667eea') + ';padding:1px 6px;border-radius:4px;font-size:0.7rem;margin-left:6px;">' + escapeHtml(a.alert_category) + '</span>' : '';
+                    const timeStr = a.created_at ? a.created_at.slice(11, 16) : '';
+                    const srcUser = a.source_username ? ' · @' + escapeHtml(a.source_username) : '';
+                    html += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:start;">' +
+                        '<span style="color:' + typeColor + ';font-size:0.7rem;margin-top:3px;">●</span>' +
+                        '<div style="flex:1;min-width:0;">' +
+                        '<div style="font-weight:600;font-size:0.84rem;">' + escapeHtml(a.title || '') + catBadge + '</div>' +
+                        '<div style="font-size:0.8rem;color:#666;margin-top:2px;">' + escapeHtml(a.message || '') + '</div>' +
+                        '<div style="font-size:0.72rem;color:#aaa;margin-top:3px;">' + timeStr + srcUser + '</div>' +
+                        '</div></div>';
+                });
+            });
+            listEl.innerHTML = html;
+        }
+
+        // Compact prev/next pager
+        if (pager && data.pages > 1) {
+            const cp = data.page;
+            const tp = data.pages;
+            let html = '';
+            html += '<button onclick="loadOperatorAlerts(1)" ' + (cp === 1 ? 'disabled' : '') + ' style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;background:white;">«</button>';
+            html += '<button onclick="loadOperatorAlerts(' + (cp - 1) + ')" ' + (cp === 1 ? 'disabled' : '') + ' style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;background:white;">‹ ' + _t('operator.prev', 'Prev') + '</button>';
+            html += '<span style="padding:4px 8px;font-size:0.82rem;color:var(--dark);">' + cp + ' / ' + tp + '</span>';
+            html += '<button onclick="loadOperatorAlerts(' + (cp + 1) + ')" ' + (cp === tp ? 'disabled' : '') + ' style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;background:white;">' + _t('operator.next', 'Next') + ' ›</button>';
+            html += '<button onclick="loadOperatorAlerts(' + tp + ')" ' + (cp === tp ? 'disabled' : '') + ' style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78rem;background:white;">»</button>';
+            pager.innerHTML = html;
+        } else if (pager) { pager.innerHTML = ''; }
+    } catch (err) { console.error('[L140] Load operator alerts error:', err); }
+}
+window.loadOperatorAlerts = loadOperatorAlerts;
+
+
+// --- L140: PHASE 5 — System Health Functions ---
+async function loadOperatorHealth() {
+    const days = (document.getElementById('opHealthDays') || {}).value || 7;
+    try {
+        const res = await fetch('/api/operator/system-health?days=' + days, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update stat cards
+        const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        setTxt('opHealthTotalReq', (data.total_requests || 0).toLocaleString());
+        setTxt('opHealthAvgMs', (data.avg_response_ms || 0) + ' ms');
+        setTxt('opHealthErrorRate', (data.error_rate || 0) + '%');
+        setTxt('opHealthMaxMs', (data.max_response_ms || 0) + ' ms');
+
+        // Requests/day chart
+        if (typeof Chart !== 'undefined' && data.daily && data.daily.length > 0) {
+            const labels = data.daily.map(d => d.date.slice(5));
+            const reqData = data.daily.map(d => d.requests);
+            const latData = data.daily.map(d => d.avg_ms);
+
+            const reqCanvas = document.getElementById('opHealthReqChart');
+            if (reqCanvas) {
+                if (_opHealthReqChart) _opHealthReqChart.destroy();
+                _opHealthReqChart = new Chart(reqCanvas.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels, datasets: [{ label: _t('operator.health_requests', 'Requests'), data: reqData, backgroundColor: 'rgba(102, 126, 234, 0.6)', borderRadius: 4 }] },
+                    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                });
+            }
+
+            const latCanvas = document.getElementById('opHealthLatencyChart');
+            if (latCanvas) {
+                if (_opHealthLatencyChart) _opHealthLatencyChart.destroy();
+                _opHealthLatencyChart = new Chart(latCanvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels, datasets: [{ label: _t('operator.health_avg_ms', 'Avg (ms)'), data: latData, borderColor: '#764ba2', backgroundColor: 'rgba(118, 75, 162, 0.1)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                });
+            }
+        }
+
+        // Slowest endpoints table
+        const slowBody = document.getElementById('opHealthSlowBody');
+        if (slowBody) {
+            if (!data.slow_endpoints || data.slow_endpoints.length === 0) {
+                slowBody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:12px;color:#aaa;">' + _t('operator.no_data', 'No data available') + '</td></tr>';
+            } else {
+                slowBody.innerHTML = data.slow_endpoints.map(s =>
+                    '<tr style="border-bottom:1px solid var(--border);">' +
+                    '<td style="padding:6px 8px;font-family:monospace;font-size:0.78rem;">' + escapeHtml(s.endpoint) + '</td>' +
+                    '<td style="padding:6px 8px;">' + s.avg_ms + '</td>' +
+                    '<td style="padding:6px 8px;">' + s.count + '</td>' +
+                    '</tr>'
+                ).join('');
+            }
+        }
+    } catch (err) { console.error('[L140] Load system health error:', err); }
+}
+window.loadOperatorHealth = loadOperatorHealth;
 
 
 // --- V3: SETTINGS VIEW (Full profile editing + account settings) ---

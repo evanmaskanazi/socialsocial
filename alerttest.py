@@ -5,6 +5,7 @@
 from app import app, db, Alert, User, Follow, Message
 import json
 
+
 # Create test client
 client = app.test_client()
 
