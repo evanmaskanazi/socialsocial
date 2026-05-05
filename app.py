@@ -2,7 +2,23 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+# L100: Phase 3 — Communications layer
+# - Added OperatorBroadcast model: stores broadcast messages sent by operators
+# - Added OperatorInboundEmail model: stores inbound emails received via Resend webhooks
+# - Added /api/operator/broadcast POST endpoint: sends broadcast emails via Resend batch API
+#   with segment filtering (city, age_min, age_max, active_only) and scope enforcement
+# - Added /api/operator/broadcasts GET endpoint: lists sent broadcasts with pagination
+# - Added /api/operator/inbound-email POST endpoint: receives Resend webhook payloads
+# - Added /api/operator/inbox GET endpoint: lists inbound emails with pagination
+# - Added /api/operator/inbox/<id>/read PATCH endpoint: marks inbound email as read
+# - All new endpoints respect existing OperatorScope scoping from L60
+
 T7 Fix:
+# L80: Phase 2 — Dashboard UI enhancements
+# - Added /api/operator/checkins endpoint: daily check-in trend (distinct users per day)
+# - Added /api/operator/segments endpoint: filterable, paginated user segment table
+#   with city/age/active filters and sorting
+# - Both endpoints respect existing OperatorScope scoping from L60
 - FEATURE: Added /api/auth/check-username endpoint for live username availability
   checking during signup. Returns {available: true/false} without revealing user info.
   Rate-limited (20/5min). Purely additive — no existing code modified.
@@ -757,6 +773,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, and_, or_, desc, func, inspect, text
 # SMTP email (Resend.com compatible)
 import smtplib
+import requests as http_requests  # L100: For Resend batch API (broadcast emails)
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -3470,6 +3487,106 @@ def auto_migrate_database():
                     except Exception as e:
                         logger.warning(f"Posts visibility migration skipped: {e}")
 
+                # L60: Create operator_scopes table
+                if 'operator_scopes' not in inspector.get_table_names():
+                    logger.info("L60: Creating operator_scopes table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE operator_scopes (
+                                id SERIAL PRIMARY KEY,
+                                operator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                scope_type VARCHAR(30) NOT NULL DEFAULT 'all',
+                                scope_value VARCHAR(200) DEFAULT '',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE operator_scopes (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                operator_id INTEGER NOT NULL,
+                                scope_type VARCHAR(30) NOT NULL DEFAULT 'all',
+                                scope_value VARCHAR(200) DEFAULT '',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(operator_id) REFERENCES users(id) ON DELETE CASCADE
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ L60: Created operator_scopes table")
+
+                # L100: Create operator_broadcasts table
+                if 'operator_broadcasts' not in inspector.get_table_names():
+                    logger.info("L100: Creating operator_broadcasts table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE operator_broadcasts (
+                                id SERIAL PRIMARY KEY,
+                                operator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                subject VARCHAR(500) NOT NULL,
+                                body TEXT NOT NULL,
+                                filter_city VARCHAR(200) DEFAULT '',
+                                filter_age_min INTEGER,
+                                filter_age_max INTEGER,
+                                filter_active_only BOOLEAN DEFAULT FALSE,
+                                recipient_count INTEGER DEFAULT 0,
+                                status VARCHAR(30) DEFAULT 'sent',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE operator_broadcasts (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                operator_id INTEGER NOT NULL,
+                                subject VARCHAR(500) NOT NULL,
+                                body TEXT NOT NULL,
+                                filter_city VARCHAR(200) DEFAULT '',
+                                filter_age_min INTEGER,
+                                filter_age_max INTEGER,
+                                filter_active_only BOOLEAN DEFAULT FALSE,
+                                recipient_count INTEGER DEFAULT 0,
+                                status VARCHAR(30) DEFAULT 'sent',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(operator_id) REFERENCES users(id) ON DELETE CASCADE
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ L100: Created operator_broadcasts table")
+
+                # L100: Create operator_inbound_emails table
+                if 'operator_inbound_emails' not in inspector.get_table_names():
+                    logger.info("L100: Creating operator_inbound_emails table...")
+                    if is_postgres:
+                        conn.execute(text("""
+                            CREATE TABLE operator_inbound_emails (
+                                id SERIAL PRIMARY KEY,
+                                from_email VARCHAR(500) NOT NULL,
+                                from_name VARCHAR(200) DEFAULT '',
+                                to_email VARCHAR(500) DEFAULT '',
+                                subject VARCHAR(500) DEFAULT '',
+                                body_text TEXT DEFAULT '',
+                                body_html TEXT DEFAULT '',
+                                is_read BOOLEAN DEFAULT FALSE,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        conn.execute(text("""
+                            CREATE TABLE operator_inbound_emails (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                from_email VARCHAR(500) NOT NULL,
+                                from_name VARCHAR(200) DEFAULT '',
+                                to_email VARCHAR(500) DEFAULT '',
+                                subject VARCHAR(500) DEFAULT '',
+                                body_text TEXT DEFAULT '',
+                                body_html TEXT DEFAULT '',
+                                is_read BOOLEAN DEFAULT FALSE,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    conn.commit()
+                    logger.info("✓ L100: Created operator_inbound_emails table")
+
                 logger.info("Database auto-migration completed successfully")
 
         except Exception as e:
@@ -4203,6 +4320,86 @@ class BackgroundJob(db.Model):
         return f'<BackgroundJob {self.id} {self.job_type} {self.status}>'
 
 
+# L60: System Operator scope assignment — defines which user segment an operator can view
+class OperatorScope(db.Model):
+    __tablename__ = 'operator_scopes'
+    id = db.Column(db.Integer, primary_key=True)
+    operator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    scope_type = db.Column(db.String(30), nullable=False, default='all')  # 'all', 'city', 'country', 'age_range', 'group'
+    scope_value = db.Column(db.String(200), default='')  # e.g. 'Jerusalem, Israel' or '1980-1995' or group id
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    operator = db.relationship('User', backref=db.backref('operator_scopes', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'operator_id': self.operator_id,
+            'scope_type': self.scope_type,
+            'scope_value': self.scope_value,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+# L100: Operator broadcast message — stores messages sent by operators to user segments
+class OperatorBroadcast(db.Model):
+    __tablename__ = 'operator_broadcasts'
+    id = db.Column(db.Integer, primary_key=True)
+    operator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    subject = db.Column(db.String(500), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    filter_city = db.Column(db.String(200), default='')
+    filter_age_min = db.Column(db.Integer)
+    filter_age_max = db.Column(db.Integer)
+    filter_active_only = db.Column(db.Boolean, default=False)
+    recipient_count = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(30), default='sent')  # 'sent', 'failed', 'partial'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    operator = db.relationship('User', backref=db.backref('broadcasts', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'operator_id': self.operator_id,
+            'subject': self.subject,
+            'body': self.body,
+            'filter_city': self.filter_city,
+            'filter_age_min': self.filter_age_min,
+            'filter_age_max': self.filter_age_max,
+            'filter_active_only': self.filter_active_only,
+            'recipient_count': self.recipient_count,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+# L100: Operator inbound email — stores emails received via Resend webhook
+class OperatorInboundEmail(db.Model):
+    __tablename__ = 'operator_inbound_emails'
+    id = db.Column(db.Integer, primary_key=True)
+    from_email = db.Column(db.String(500), nullable=False)
+    from_name = db.Column(db.String(200), default='')
+    to_email = db.Column(db.String(500), default='')
+    subject = db.Column(db.String(500), default='')
+    body_text = db.Column(db.Text, default='')
+    body_html = db.Column(db.Text, default='')
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'from_email': self.from_email,
+            'from_name': self.from_name,
+            'to_email': self.to_email,
+            'subject': self.subject,
+            'body_text': self.body_text,
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
 def ensure_database_schema():
     """Automatically ensure all required columns exist"""
     # Guard: Skip if already run in this process
@@ -4398,6 +4595,7 @@ def init_database():
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 logger.info("Database schema created successfully")
                 create_admin_user()
+                create_system_operators()  # L60: Create operator accounts from env vars
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
@@ -4412,6 +4610,7 @@ def init_database():
                 ensure_privacy_schema()  # ← PL405: Privacy columns
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
+                create_system_operators()  # L60: Create operator accounts from env vars
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
@@ -5292,9 +5491,18 @@ def create_admin_user():
         admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
         admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
 
+        # L60: Skip if this email is also configured as a system operator
+        # (create_system_operators will handle it instead to avoid duplicates)
+        for i in range(1, 11):
+            op_email = os.environ.get(f'OPERATOR_{i}_EMAIL', '').strip()
+            if op_email and op_email.lower() == admin_email.lower():
+                logger.info(f"[L60] Skipping admin creation for {admin_email} — handled by OPERATOR_{i} env vars")
+                return
+
         # Check if admin exists - SQLAlchemy 2.0 style
+        # L60: Use .first() to handle edge case of duplicate emails
         stmt = select(User).filter_by(email=admin_email)
-        admin = db.session.execute(stmt).scalar_one_or_none()
+        admin = db.session.execute(stmt).scalars().first()
 
         if not admin:
             admin = User(
@@ -5330,6 +5538,140 @@ def create_admin_user():
         db.session.rollback()
 
 
+# L60: Create System Operator accounts from environment variables on startup.
+# Supports multiple operators via numbered env vars:
+#   OPERATOR_1_EMAIL, OPERATOR_1_PASSWORD, OPERATOR_1_USERNAME, OPERATOR_1_SCOPE_TYPE, OPERATOR_1_SCOPE_VALUE
+#   OPERATOR_2_EMAIL, OPERATOR_2_PASSWORD, OPERATOR_2_USERNAME, OPERATOR_2_SCOPE_TYPE, OPERATOR_2_SCOPE_VALUE
+#   ... up to OPERATOR_10_*
+# All fields except SCOPE_TYPE and SCOPE_VALUE are required for each slot.
+# SCOPE_TYPE defaults to 'all', SCOPE_VALUE defaults to ''.
+def create_system_operators():
+    """Create System Operator accounts from environment variables if they don't exist.
+    Also cleans up duplicate email rows automatically on startup."""
+    created_count = 0
+    for i in range(1, 11):  # Support up to 10 operators
+        email = os.environ.get(f'OPERATOR_{i}_EMAIL', '').strip()
+        password = os.environ.get(f'OPERATOR_{i}_PASSWORD', '').strip()
+        username = os.environ.get(f'OPERATOR_{i}_USERNAME', '').strip()
+        scope_type = os.environ.get(f'OPERATOR_{i}_SCOPE_TYPE', 'all').strip()
+        scope_value = os.environ.get(f'OPERATOR_{i}_SCOPE_VALUE', '').strip()
+
+        # Skip empty slots
+        if not email or not password:
+            continue
+
+        # Default username from email prefix if not provided
+        if not username:
+            username = f'operator_{i}'
+
+        try:
+            # L60: Find ALL rows with this email to detect and clean up duplicates
+            all_matches = db.session.execute(
+                select(User).filter_by(email=email)
+            ).scalars().all()
+
+            if len(all_matches) > 1:
+                # Duplicate rows exist — keep the best one (prefer system_operator role, then lowest id)
+                logger.warning(f"[L60] Found {len(all_matches)} duplicate rows for {email}, cleaning up...")
+                # Prefer to keep the system_operator, otherwise keep the first (lowest id)
+                keep = None
+                for u in all_matches:
+                    if u.role == 'system_operator':
+                        keep = u
+                        break
+                if not keep:
+                    keep = all_matches[0]
+                for u in all_matches:
+                    if u.id != keep.id:
+                        logger.info(f"[L60] Deleting duplicate user id={u.id} username={u.username} role={u.role}")
+                        db.session.delete(u)
+                db.session.commit()
+                all_matches = [keep]
+                logger.info(f"[L60] Kept user id={keep.id} username={keep.username} role={keep.role}")
+
+            existing = all_matches[0] if all_matches else None
+
+            if existing:
+                logger.info(f"[L60] System Operator already exists: {email}")
+                # Ensure role is correct in case account was created as regular user or admin
+                if existing.role not in ('system_operator', 'admin'):
+                    existing.role = 'system_operator'
+                    db.session.commit()
+                    logger.info(f"[L60] Updated role to system_operator for: {email}")
+                # Ensure scope exists
+                existing_scope = db.session.execute(
+                    select(OperatorScope).filter_by(operator_id=existing.id)
+                ).scalars().first()
+                if not existing_scope and existing.role == 'system_operator':
+                    scope = OperatorScope(
+                        operator_id=existing.id,
+                        scope_type=scope_type,
+                        scope_value=scope_value
+                    )
+                    db.session.add(scope)
+                    db.session.commit()
+                    logger.info(f"[L60] Created missing scope for operator {email}: {scope_type}={scope_value}")
+                continue
+
+            # Also check username collision
+            username_taken = db.session.execute(
+                select(User).filter_by(username=username)
+            ).scalars().first()
+            if username_taken:
+                logger.warning(f"[L60] Username '{username}' already taken, skipping OPERATOR_{i}")
+                continue
+
+            # Validate scope_type
+            if scope_type not in ('all', 'city', 'country', 'age_range', 'group'):
+                logger.warning(f"[L60] Invalid OPERATOR_{i}_SCOPE_TYPE '{scope_type}', defaulting to 'all'")
+                scope_type = 'all'
+
+            # Create the operator account
+            operator = User(
+                username=username,
+                email=email,
+                role='system_operator',
+                is_active=True
+            )
+            operator.set_password(password)
+            db.session.add(operator)
+            db.session.flush()
+
+            # Create profile
+            profile = Profile(user_id=operator.id)
+            db.session.add(profile)
+
+            # Create scope assignment
+            scope = OperatorScope(
+                operator_id=operator.id,
+                scope_type=scope_type,
+                scope_value=scope_value
+            )
+            db.session.add(scope)
+
+            # Create welcome alert
+            alert = Alert(
+                user_id=operator.id,
+                title='Welcome System Operator!',
+                content='Your operator dashboard is ready. Use the Dashboard tab to view platform statistics.',
+                alert_type='success'
+            )
+            db.session.add(alert)
+
+            db.session.commit()
+            created_count += 1
+            logger.info(f"[L60] System Operator created: {username} ({email}), scope: {scope_type}={scope_value}")
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"[L60] Error creating OPERATOR_{i} ({email}): {e}")
+
+    if created_count > 0:
+        logger.info(f"[L60] Created {created_count} new System Operator account(s)")
+    else:
+        logger.info("[L60] No new System Operator accounts to create")
+
+
 # =====================
 # DECORATORS
 # =====================
@@ -5360,6 +5702,22 @@ def admin_required(f):
         user = db.session.get(User, session['user_id'])
         if not user or user.role != 'admin':
             return jsonify({'error': 'Admin privileges required'}), 403
+
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+# L60: System Operator access decorator
+def operator_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        user = db.session.get(User, session['user_id'])
+        if not user or user.role not in ('system_operator', 'admin'):
+            return jsonify({'error': 'Operator privileges required'}), 403
 
         return f(*args, **kwargs)
 
@@ -5587,6 +5945,17 @@ def parameters_page():
     return render_template('parameters.html')
 
 
+# L60: Operator dashboard page route
+@app.route('/operator/dashboard')
+@login_required
+def operator_dashboard_page():
+    """System Operator dashboard — redirects non-operators to home"""
+    user = db.session.get(User, session['user_id'])
+    if not user or user.role not in ('system_operator', 'admin'):
+        return redirect('/')
+    return render_template('index.html')
+
+
 @app.route('/diary-redirect')
 def diary_redirect():
     """PJ40E: Smart redirect for daily reminder email links.
@@ -5727,16 +6096,17 @@ def register():
             return jsonify({'error': msg}), 400
 
         # Check if user exists - SQLAlchemy 2.0 style
+        # L60: Use .first() to handle edge case of duplicate emails
         existing_email = db.session.execute(
             select(User).filter_by(email=email)
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if existing_email:
             return jsonify({'error': 'Email already registered'}), 400
 
         existing_username = db.session.execute(
             select(User).filter(func.lower(User.username) == username.lower())
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if existing_username:
             return jsonify({'error': 'Username already taken'}), 400
@@ -5813,7 +6183,7 @@ def check_username_availability():
 
         existing = db.session.execute(
             select(User).filter(func.lower(User.username) == username.lower())
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         return jsonify({'available': existing is None}), 200
 
@@ -5839,14 +6209,15 @@ def login():
             return jsonify({'error': 'Invalid input length'}), 400
 
         # FD-3: Find user by email or username
+        # L60: Use .first() instead of scalar_one_or_none() to handle edge case of duplicate emails
         user = db.session.execute(
             select(User).filter_by(email=login_id)
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if not user:
             user = db.session.execute(
                 select(User).filter_by(username=login_id)
-            ).scalar_one_or_none()
+            ).scalars().first()
 
         if not user or not user.check_password(password):
             # CHANGE 7: Audit log failed login attempt (Ethics: Security)
@@ -6192,7 +6563,7 @@ def request_magic_link():
 
         user = db.session.execute(
             select(User).filter_by(email=email)
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if not user:
             import secrets
@@ -6202,7 +6573,7 @@ def request_magic_link():
             # Check if this username is taken
             existing = db.session.execute(
                 select(User).filter(func.lower(User.username) == email_username.lower())
-            ).scalar_one_or_none()
+            ).scalars().first()
 
             # If taken, add random suffix
             if existing:
@@ -7540,7 +7911,7 @@ def forgot_password():
 
         user = db.session.execute(
             select(User).filter_by(email=email)
-        ).scalar_one_or_none()
+        ).scalars().first()
 
         if not user:
             logger.info(f"Password reset requested for non-existent email: {email}")
@@ -15428,6 +15799,733 @@ def admin_job_queue_stats():
     except Exception as e:
         logger.error(f"Job queue stats error: {str(e)}")
         return jsonify({'error': 'Failed to get job queue stats'}), 500
+
+
+# =====================
+# L60: SYSTEM OPERATOR API
+# =====================
+
+@app.route('/api/admin/create-operator', methods=['POST'])
+@admin_required
+@require_csrf
+def create_operator():
+    """Admin creates a System Operator account with scope assignment"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+        scope_type = data.get('scope_type', 'all').strip()
+        scope_value = data.get('scope_value', '').strip()
+
+        if not username or not email or not password:
+            return jsonify({'error': 'Username, email, and password are required'}), 400
+        if len(username) < 3 or len(username) > 80:
+            return jsonify({'error': 'Username must be 3-80 characters'}), 400
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters'}), 400
+        if scope_type not in ('all', 'city', 'country', 'age_range', 'group'):
+            return jsonify({'error': 'Invalid scope type'}), 400
+
+        # Check duplicates
+        if db.session.execute(select(User).filter_by(email=email)).scalar_one_or_none():
+            return jsonify({'error': 'Email already registered'}), 409
+        if db.session.execute(select(User).filter_by(username=username)).scalar_one_or_none():
+            return jsonify({'error': 'Username already taken'}), 409
+
+        operator = User(
+            username=username,
+            email=email,
+            role='system_operator',
+            is_active=True
+        )
+        operator.set_password(password)
+        db.session.add(operator)
+        db.session.flush()
+
+        # Create profile
+        profile = Profile(user_id=operator.id)
+        db.session.add(profile)
+
+        # Create scope
+        scope = OperatorScope(
+            operator_id=operator.id,
+            scope_type=scope_type,
+            scope_value=scope_value
+        )
+        db.session.add(scope)
+
+        db.session.commit()
+        logger.info(f"[L60] System Operator created: {username} (scope: {scope_type}={scope_value})")
+
+        return jsonify({
+            'success': True,
+            'operator': operator.to_dict(),
+            'scope': scope.to_dict()
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Create operator error: {e}")
+        return jsonify({'error': 'Failed to create operator'}), 500
+
+
+def _build_operator_scope_filter(operator_user):
+    """L60: Build SQLAlchemy filter clauses from operator's scope(s).
+    Returns a list of filter conditions to apply to User queries."""
+    scopes = OperatorScope.query.filter_by(operator_id=operator_user.id).all()
+    if not scopes:
+        # No scope defined = see all (admin-like)
+        return []
+    
+    filters = []
+    for scope in scopes:
+        if scope.scope_type == 'all':
+            return []  # 'all' overrides everything
+        elif scope.scope_type == 'city':
+            filters.append(User.selected_city == scope.scope_value)
+        elif scope.scope_type == 'country':
+            # Match by country suffix (e.g. ", Israel")
+            filters.append(User.selected_city.ilike(f'%{scope.scope_value}'))
+        elif scope.scope_type == 'age_range':
+            # scope_value format: "1980-1995"
+            try:
+                parts = scope.scope_value.split('-')
+                year_start, year_end = int(parts[0]), int(parts[1])
+                filters.append(User.birth_year >= year_start)
+                filters.append(User.birth_year <= year_end)
+            except (ValueError, IndexError):
+                pass
+    return filters
+
+
+@app.route('/api/operator/stats')
+@operator_required
+def operator_stats():
+    """L60: Aggregate platform statistics for System Operators, scoped by assignment."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+
+        # Base user query (exclude admin/operator accounts from stats)
+        base_q = select(User).filter(User.role == 'user')
+        for f in scope_filters:
+            base_q = base_q.filter(f)
+
+        # Total registered users in scope
+        count_q = select(func.count(User.id)).filter(User.role == 'user')
+        for f in scope_filters:
+            count_q = count_q.filter(f)
+        total_users = db.session.execute(count_q).scalar() or 0
+
+        # Active users in scope (active = is_active True)
+        active_q = select(func.count(User.id)).filter(User.role == 'user', User.is_active == True)
+        for f in scope_filters:
+            active_q = active_q.filter(f)
+        active_users = db.session.execute(active_q).scalar() or 0
+
+        # New users in last 7 days
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        new_q = select(func.count(User.id)).filter(
+            User.role == 'user', User.created_at >= seven_days_ago
+        )
+        for f in scope_filters:
+            new_q = new_q.filter(f)
+        new_users_7d = db.session.execute(new_q).scalar() or 0
+
+        # New users in last 30 days
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        new30_q = select(func.count(User.id)).filter(
+            User.role == 'user', User.created_at >= thirty_days_ago
+        )
+        for f in scope_filters:
+            new30_q = new30_q.filter(f)
+        new_users_30d = db.session.execute(new30_q).scalar() or 0
+
+        # Check-in rate: users who logged at least 1 parameter in last 7 days / total users
+        checkin_subq = select(SavedParameters.user_id).filter(
+            SavedParameters.date >= seven_days_ago.strftime('%Y-%m-%d')
+        ).distinct().subquery()
+        if scope_filters:
+            checkin_q = select(func.count()).select_from(
+                select(User.id).filter(
+                    User.role == 'user',
+                    User.id.in_(select(checkin_subq.c.user_id))
+                ).filter(*scope_filters).subquery()
+            )
+        else:
+            checkin_q = select(func.count()).select_from(checkin_subq)
+        users_checked_in = db.session.execute(checkin_q).scalar() or 0
+        checkin_rate = round((users_checked_in / total_users * 100), 1) if total_users > 0 else 0
+
+        # Users logged in today
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_q = select(func.count(User.id)).filter(
+            User.role == 'user', User.last_login >= today_start
+        )
+        for f in scope_filters:
+            today_q = today_q.filter(f)
+        active_today = db.session.execute(today_q).scalar() or 0
+
+        return jsonify({
+            'total_users': total_users,
+            'active_users': active_users,
+            'new_users_7d': new_users_7d,
+            'new_users_30d': new_users_30d,
+            'checkin_rate_7d': checkin_rate,
+            'users_checked_in_7d': users_checked_in,
+            'active_today': active_today
+        })
+
+    except Exception as e:
+        logger.error(f"Operator stats error: {e}")
+        return jsonify({'error': 'Failed to get stats'}), 500
+
+
+@app.route('/api/operator/breakdown/city')
+@operator_required
+def operator_breakdown_city():
+    """L60: User count breakdown by city, scoped by operator assignment."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+
+        q = select(
+            User.selected_city, func.count(User.id).label('count')
+        ).filter(User.role == 'user').group_by(User.selected_city).order_by(desc('count'))
+        for f in scope_filters:
+            q = q.filter(f)
+
+        rows = db.session.execute(q).all()
+        breakdown = [{'city': row[0] or 'Unknown', 'count': row[1]} for row in rows]
+
+        return jsonify({'breakdown': breakdown})
+
+    except Exception as e:
+        logger.error(f"Operator city breakdown error: {e}")
+        return jsonify({'error': 'Failed to get breakdown'}), 500
+
+
+@app.route('/api/operator/breakdown/age')
+@operator_required
+def operator_breakdown_age():
+    """L60: User count breakdown by age bracket, scoped by operator assignment."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+        current_year = datetime.utcnow().year
+
+        # Define age brackets
+        brackets = [
+            ('18-24', current_year - 24, current_year - 18),
+            ('25-34', current_year - 34, current_year - 25),
+            ('35-44', current_year - 44, current_year - 35),
+            ('45-54', current_year - 54, current_year - 45),
+            ('55-64', current_year - 64, current_year - 55),
+            ('65+', 1900, current_year - 65),
+        ]
+
+        breakdown = []
+        for label, year_start, year_end in brackets:
+            q = select(func.count(User.id)).filter(
+                User.role == 'user',
+                User.birth_year >= year_start,
+                User.birth_year <= year_end
+            )
+            for f in scope_filters:
+                q = q.filter(f)
+            count = db.session.execute(q).scalar() or 0
+            breakdown.append({'bracket': label, 'count': count})
+
+        return jsonify({'breakdown': breakdown})
+
+    except Exception as e:
+        logger.error(f"Operator age breakdown error: {e}")
+        return jsonify({'error': 'Failed to get breakdown'}), 500
+
+
+@app.route('/api/operator/registrations')
+@operator_required
+def operator_registrations():
+    """L60: Daily registration counts for the last N days (default 30)."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+        days = min(int(request.args.get('days', 30)), 90)
+        start_date = datetime.utcnow() - timedelta(days=days)
+
+        # Use date truncation for grouping
+        is_postgres = 'postgresql' in str(db.engine.url)
+        if is_postgres:
+            date_expr = func.date_trunc('day', User.created_at)
+        else:
+            date_expr = func.date(User.created_at)
+
+        q = select(
+            date_expr.label('day'), func.count(User.id).label('count')
+        ).filter(
+            User.role == 'user', User.created_at >= start_date
+        ).group_by('day').order_by(text('day'))
+        for f in scope_filters:
+            q = q.filter(f)
+
+        rows = db.session.execute(q).all()
+        data = [{'date': str(row[0])[:10], 'count': row[1]} for row in rows]
+
+        return jsonify({'registrations': data})
+
+    except Exception as e:
+        logger.error(f"Operator registrations error: {e}")
+        return jsonify({'error': 'Failed to get registrations'}), 500
+
+
+@app.route('/api/operator/scope')
+@operator_required
+def operator_get_scope():
+    """L60: Return the current operator's scope assignment."""
+    try:
+        scopes = OperatorScope.query.filter_by(operator_id=session['user_id']).all()
+        return jsonify({'scopes': [s.to_dict() for s in scopes]})
+    except Exception as e:
+        logger.error(f"Operator scope error: {e}")
+        return jsonify({'error': 'Failed to get scope'}), 500
+
+
+# L80: Phase 2 — Enhanced dashboard endpoints with Chart.js support
+
+@app.route('/api/operator/checkins')
+@operator_required
+def operator_checkin_trend():
+    """L80: Daily check-in counts (parameter saves) for the last N days."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+        days = min(int(request.args.get('days', 30)), 90)
+        start_date = datetime.utcnow() - timedelta(days=days)
+
+        is_postgres = 'postgresql' in str(db.engine.url)
+        if is_postgres:
+            date_expr = func.date_trunc('day', SavedParameters.created_at)
+        else:
+            date_expr = func.date(SavedParameters.created_at)
+
+        # Count distinct users who checked in each day (not total parameter saves)
+        q = select(
+            date_expr.label('day'),
+            func.count(func.distinct(SavedParameters.user_id)).label('count')
+        ).filter(
+            SavedParameters.created_at >= start_date
+        )
+
+        # Apply scope filters via a subquery on User
+        if scope_filters:
+            scoped_user_ids = select(User.id).filter(User.role == 'user')
+            for f in scope_filters:
+                scoped_user_ids = scoped_user_ids.filter(f)
+            q = q.filter(SavedParameters.user_id.in_(scoped_user_ids))
+
+        q = q.group_by('day').order_by(text('day'))
+        rows = db.session.execute(q).all()
+        data = [{'date': str(row[0])[:10], 'count': row[1]} for row in rows]
+
+        return jsonify({'checkins': data})
+
+    except Exception as e:
+        logger.error(f"Operator checkin trend error: {e}")
+        return jsonify({'error': 'Failed to get checkin trend'}), 500
+
+
+@app.route('/api/operator/segments')
+@operator_required
+def operator_user_segments():
+    """L80: Filterable user segment table for the operator dashboard.
+    Query params: city, age_min, age_max, active_only, sort_by, page, per_page"""
+    try:
+        user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(user)
+
+        q = select(
+            User.id, User.username, User.selected_city, User.birth_year,
+            User.created_at, User.last_login, User.is_active
+        ).filter(User.role == 'user')
+
+        for f in scope_filters:
+            q = q.filter(f)
+
+        # Apply optional filters from query params
+        filter_city = request.args.get('city')
+        if filter_city:
+            q = q.filter(User.selected_city == filter_city)
+
+        current_year = datetime.utcnow().year
+        age_min = request.args.get('age_min', type=int)
+        age_max = request.args.get('age_max', type=int)
+        if age_min:
+            q = q.filter(User.birth_year <= current_year - age_min)
+        if age_max:
+            q = q.filter(User.birth_year >= current_year - age_max)
+
+        active_only = request.args.get('active_only')
+        if active_only == 'true':
+            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+            q = q.filter(User.last_login >= seven_days_ago)
+
+        # Sorting
+        sort_by = request.args.get('sort_by', 'created_at')
+        sort_map = {
+            'created_at': User.created_at.desc(),
+            'last_login': User.last_login.desc().nullslast() if 'postgresql' in str(db.engine.url) else User.last_login.desc(),
+            'username': User.username.asc(),
+            'city': User.selected_city.asc(),
+        }
+        q = q.order_by(sort_map.get(sort_by, User.created_at.desc()))
+
+        # Pagination
+        page = max(int(request.args.get('page', 1)), 1)
+        per_page = min(int(request.args.get('per_page', 25)), 100)
+        offset = (page - 1) * per_page
+
+        # Get total count
+        count_q = select(func.count()).select_from(q.subquery())
+        total = db.session.execute(count_q).scalar() or 0
+
+        # Get page of results
+        rows = db.session.execute(q.limit(per_page).offset(offset)).all()
+        users = []
+        for row in rows:
+            age = current_year - row[3] if row[3] else None
+            users.append({
+                'id': row[0],
+                'username': row[1],
+                'city': row[2] or 'Unknown',
+                'age': age,
+                'joined': str(row[4])[:10] if row[4] else None,
+                'last_active': str(row[5])[:10] if row[5] else 'Never',
+                'is_active': row[6]
+            })
+
+        return jsonify({
+            'users': users,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': (total + per_page - 1) // per_page
+        })
+
+    except Exception as e:
+        logger.error(f"Operator segments error: {e}")
+        return jsonify({'error': 'Failed to get segments'}), 500
+
+
+# =====================
+# L100: OPERATOR COMMUNICATIONS LAYER
+# =====================
+
+@app.route('/api/operator/broadcast', methods=['POST'])
+@operator_required
+def operator_send_broadcast():
+    """L100: Send a broadcast email to a filtered user segment via Resend batch API.
+    Falls back to individual SMTP sends if Resend API key is not configured.
+    Respects OperatorScope scoping — operator can only reach users within their scope."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body required'}), 400
+
+        subject = (data.get('subject') or '').strip()
+        body = (data.get('body') or '').strip()
+        if not subject or not body:
+            return jsonify({'error': 'Subject and body are required'}), 400
+
+        # Build recipient query with scope enforcement
+        scope_filters = _build_operator_scope_filter(user)
+        q = select(User.id, User.email, User.username, User.preferred_language).filter(
+            User.role == 'user', User.is_active == True
+        )
+        for f in scope_filters:
+            q = q.filter(f)
+
+        # Apply optional segment filters from request body
+        filter_city = data.get('filter_city', '').strip()
+        if filter_city:
+            q = q.filter(User.selected_city == filter_city)
+
+        current_year = datetime.utcnow().year
+        filter_age_min = data.get('filter_age_min')
+        filter_age_max = data.get('filter_age_max')
+        if filter_age_min:
+            q = q.filter(User.birth_year <= current_year - int(filter_age_min))
+        if filter_age_max:
+            q = q.filter(User.birth_year >= current_year - int(filter_age_max))
+
+        filter_active = data.get('filter_active_only', False)
+        if filter_active:
+            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+            q = q.filter(User.last_login >= seven_days_ago)
+
+        recipients = db.session.execute(q).all()
+        if not recipients:
+            return jsonify({'error': 'No recipients match the selected filters'}), 400
+
+        # Build broadcast record
+        broadcast = OperatorBroadcast(
+            operator_id=user.id,
+            subject=subject,
+            body=body,
+            filter_city=filter_city,
+            filter_age_min=int(filter_age_min) if filter_age_min else None,
+            filter_age_max=int(filter_age_max) if filter_age_max else None,
+            filter_active_only=bool(filter_active),
+            recipient_count=len(recipients),
+            status='sending'
+        )
+        db.session.add(broadcast)
+        db.session.commit()
+
+        # Attempt Resend batch API first, fall back to SMTP loop
+        resend_api_key = os.environ.get('RESEND_API_KEY', os.environ.get('SMTP_PASSWORD', ''))
+        from_email = app.config.get('MAIL_DEFAULT_SENDER', 'TheraSocial <onboarding@resend.dev>')
+        app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+
+        sent_count = 0
+        failed_count = 0
+
+        if resend_api_key and resend_api_key.startswith('re_'):
+            # Use Resend batch API (POST /emails/batch)
+            logger.info(f"[L100 BROADCAST] Sending via Resend batch API to {len(recipients)} recipients")
+            # Resend batch API accepts up to 100 emails per call
+            batch_size = 100
+            for i in range(0, len(recipients), batch_size):
+                batch = recipients[i:i + batch_size]
+                emails_payload = []
+                for r in batch:
+                    is_rtl = (r[3] or 'en') in ('he', 'ar')
+                    text_dir = 'rtl' if is_rtl else 'ltr'
+                    text_align = 'right' if is_rtl else 'left'
+                    html = f'''<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;direction:{text_dir};text-align:{text_align};background:#f5f5f5;margin:0;padding:20px;">
+<div style="max-width:600px;margin:0 auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;text-align:center;">
+<h1 style="color:white;margin:0;font-size:24px;">TheraSocial</h1></div>
+<div style="padding:40px 30px;">
+<h2 style="color:#667eea;margin-top:0;">{subject}</h2>
+<p style="color:#333;line-height:1.6;white-space:pre-wrap;">{body}</p>
+<div style="text-align:center;margin:30px 0;">
+<a href="{app_url}" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:25px;display:inline-block;font-weight:bold;">Open TheraSocial</a>
+</div></div>
+<div style="background:#f8f9fa;padding:20px 30px;border-top:1px solid #eee;">
+<p style="color:#999;font-size:12px;margin:0;">TheraSocial Team</p></div></div></body></html>'''
+                    emails_payload.append({
+                        'from': from_email,
+                        'to': [r[1]],
+                        'subject': subject,
+                        'html': html
+                    })
+
+                try:
+                    resp = http_requests.post(
+                        'https://api.resend.com/emails/batch',
+                        headers={
+                            'Authorization': f'Bearer {resend_api_key}',
+                            'Content-Type': 'application/json'
+                        },
+                        json=emails_payload,
+                        timeout=30
+                    )
+                    if resp.status_code in (200, 201):
+                        sent_count += len(batch)
+                        logger.info(f"[L100 BROADCAST] Batch {i // batch_size + 1}: {len(batch)} sent OK")
+                    else:
+                        failed_count += len(batch)
+                        logger.error(f"[L100 BROADCAST] Batch {i // batch_size + 1} failed: {resp.status_code} {resp.text[:200]}")
+                except Exception as batch_err:
+                    failed_count += len(batch)
+                    logger.error(f"[L100 BROADCAST] Batch {i // batch_size + 1} error: {batch_err}")
+
+        else:
+            # Fallback: individual SMTP sends (existing pattern)
+            logger.info(f"[L100 BROADCAST] No Resend API key, falling back to SMTP for {len(recipients)} recipients")
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.resend.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '465'))
+            smtp_user = os.environ.get('SMTP_USERNAME', 'resend')
+            smtp_pass = os.environ.get('SMTP_PASSWORD', '')
+
+            try:
+                with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                    server.login(smtp_user, smtp_pass)
+                    for r in recipients:
+                        try:
+                            is_rtl = (r[3] or 'en') in ('he', 'ar')
+                            text_dir = 'rtl' if is_rtl else 'ltr'
+                            text_align = 'right' if is_rtl else 'left'
+                            html = f'''<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;direction:{text_dir};text-align:{text_align};background:#f5f5f5;margin:0;padding:20px;">
+<div style="max-width:600px;margin:0 auto;background:white;border-radius:8px;overflow:hidden;">
+<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;text-align:center;">
+<h1 style="color:white;margin:0;">TheraSocial</h1></div>
+<div style="padding:40px 30px;">
+<h2 style="color:#667eea;">{subject}</h2>
+<p style="color:#333;line-height:1.6;white-space:pre-wrap;">{body}</p>
+</div></div></body></html>'''
+                            msg = MIMEMultipart('alternative')
+                            msg['Subject'] = subject
+                            msg['From'] = from_email
+                            msg['To'] = r[1]
+                            _add_deliverability_headers(msg)
+                            msg.attach(MIMEText(body, 'plain'))
+                            msg.attach(MIMEText(html, 'html'))
+                            server.sendmail(from_email, r[1], msg.as_string())
+                            sent_count += 1
+                        except Exception as send_err:
+                            failed_count += 1
+                            logger.error(f"[L100 BROADCAST] SMTP send to {r[1]} failed: {send_err}")
+            except Exception as smtp_err:
+                failed_count = len(recipients)
+                logger.error(f"[L100 BROADCAST] SMTP connection failed: {smtp_err}")
+
+        # Update broadcast status
+        broadcast.status = 'sent' if failed_count == 0 else ('partial' if sent_count > 0 else 'failed')
+        broadcast.recipient_count = sent_count
+        db.session.commit()
+
+        logger.info(f"[L100 BROADCAST] Complete: {sent_count} sent, {failed_count} failed")
+        return jsonify({
+            'message': f'Broadcast sent to {sent_count} recipients',
+            'sent': sent_count,
+            'failed': failed_count,
+            'broadcast_id': broadcast.id,
+            'status': broadcast.status
+        })
+
+    except Exception as e:
+        logger.error(f"[L100 BROADCAST] Error: {e}")
+        return jsonify({'error': 'Failed to send broadcast'}), 500
+
+
+@app.route('/api/operator/broadcasts')
+@operator_required
+def operator_list_broadcasts():
+    """L100: List sent broadcasts for the current operator, with pagination."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        page = max(int(request.args.get('page', 1)), 1)
+        per_page = min(int(request.args.get('per_page', 10)), 50)
+
+        q = OperatorBroadcast.query.filter_by(operator_id=user.id).order_by(
+            OperatorBroadcast.created_at.desc()
+        )
+        total = q.count()
+        broadcasts = q.offset((page - 1) * per_page).limit(per_page).all()
+
+        return jsonify({
+            'broadcasts': [b.to_dict() for b in broadcasts],
+            'total': total,
+            'page': page,
+            'pages': (total + per_page - 1) // per_page
+        })
+
+    except Exception as e:
+        logger.error(f"[L100] List broadcasts error: {e}")
+        return jsonify({'error': 'Failed to list broadcasts'}), 500
+
+
+@app.route('/api/operator/inbound-email', methods=['POST'])
+def operator_inbound_email():
+    """L100: Resend webhook endpoint for inbound emails.
+    Receives email.received events from Resend and stores them for operator review.
+    This endpoint is NOT behind operator_required — Resend POST webhooks are unauthenticated
+    but should be verified via webhook signature in production."""
+    try:
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({'error': 'No payload'}), 400
+
+        # Resend webhook payload structure (email.received event)
+        event_type = data.get('type', '')
+        event_data = data.get('data', data)  # Resend wraps in {type, data} or sends flat
+
+        # Extract email fields — Resend uses 'from', 'to', 'subject', 'text', 'html'
+        from_field = event_data.get('from', '')
+        from_email_addr = from_field if isinstance(from_field, str) else (from_field[0] if isinstance(from_field, list) else '')
+        from_name = ''
+        # Parse "Name <email>" format
+        if '<' in from_email_addr and '>' in from_email_addr:
+            from_name = from_email_addr[:from_email_addr.index('<')].strip().strip('"')
+            from_email_addr = from_email_addr[from_email_addr.index('<') + 1:from_email_addr.index('>')]
+
+        to_field = event_data.get('to', '')
+        to_email = to_field if isinstance(to_field, str) else (to_field[0] if isinstance(to_field, list) else '')
+
+        inbound = OperatorInboundEmail(
+            from_email=from_email_addr[:500],
+            from_name=from_name[:200],
+            to_email=(to_email if isinstance(to_email, str) else str(to_email))[:500],
+            subject=(event_data.get('subject', '') or '')[:500],
+            body_text=(event_data.get('text', '') or '')[:50000],
+            body_html=(event_data.get('html', '') or '')[:100000],
+        )
+        db.session.add(inbound)
+        db.session.commit()
+
+        logger.info(f"[L100 INBOUND] Stored inbound email from {from_email_addr}: {inbound.subject[:60]}")
+        return jsonify({'message': 'Email received', 'id': inbound.id}), 200
+
+    except Exception as e:
+        logger.error(f"[L100 INBOUND] Webhook error: {e}")
+        return jsonify({'error': 'Webhook processing failed'}), 500
+
+
+@app.route('/api/operator/inbox')
+@operator_required
+def operator_inbox():
+    """L100: List inbound emails for the operator inbox, with pagination and read filter."""
+    try:
+        page = max(int(request.args.get('page', 1)), 1)
+        per_page = min(int(request.args.get('per_page', 15)), 50)
+        unread_only = request.args.get('unread_only', 'false') == 'true'
+
+        q = OperatorInboundEmail.query
+        if unread_only:
+            q = q.filter_by(is_read=False)
+        q = q.order_by(OperatorInboundEmail.created_at.desc())
+
+        total = q.count()
+        unread_count = OperatorInboundEmail.query.filter_by(is_read=False).count()
+        emails = q.offset((page - 1) * per_page).limit(per_page).all()
+
+        return jsonify({
+            'emails': [e.to_dict() for e in emails],
+            'total': total,
+            'unread_count': unread_count,
+            'page': page,
+            'pages': (total + per_page - 1) // per_page
+        })
+
+    except Exception as e:
+        logger.error(f"[L100] Inbox error: {e}")
+        return jsonify({'error': 'Failed to load inbox'}), 500
+
+
+@app.route('/api/operator/inbox/<int:email_id>/read', methods=['PATCH'])
+@operator_required
+def operator_mark_email_read(email_id):
+    """L100: Mark an inbound email as read."""
+    try:
+        email_obj = db.session.get(OperatorInboundEmail, email_id)
+        if not email_obj:
+            return jsonify({'error': 'Email not found'}), 404
+
+        email_obj.is_read = True
+        db.session.commit()
+        return jsonify({'message': 'Marked as read', 'id': email_id})
+
+    except Exception as e:
+        logger.error(f"[L100] Mark read error: {e}")
+        return jsonify({'error': 'Failed to mark as read'}), 500
 
 
 # =====================

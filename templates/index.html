@@ -4803,6 +4803,7 @@
                     <span class="mobile-more-icon">⚙️</span>
                     <span class="mobile-more-label" data-i18n="menu.settings">Settings</span>
                 </li>
+                <!-- L60: Operator dashboard accessed via Settings, not mobile nav -->
                 <!-- 10Link: Triggers moved from mobile nav to other user's profile view -->
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('alerts')">
                     <span class="mobile-more-icon">🔔</span>
@@ -4850,6 +4851,7 @@
                         <span class="sidebar-icon">⚙️</span>
                         <span class="sidebar-label" data-i18n="menu.settings">Settings</span>
                     </li>
+                    <!-- L60: Operator dashboard accessed via Settings, not as separate sidebar tab -->
                     <!-- 10Link: Triggers moved from nav bar to other user's profile view -->
                     <!-- <li class="sidebar-item" id="triggersNavItem" ... removed --> 
                 </ul>
@@ -5395,6 +5397,11 @@
                                   data-i18n="settings.notification_btn" style="padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
                               Notification
                           </button>
+                          <!-- L60: System Dashboard sub-tab — only visible for system_operator and admin roles -->
+                          <button class="settings-sub-btn" id="settingsSubOperator" onclick="switchSettingsTab('operator')"
+                                  data-i18n="operator.dashboard_btn" style="display: none; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
+                              System Dashboard
+                          </button>
                       </div>
 
                       <!-- Right panel: content area -->
@@ -5702,6 +5709,231 @@
                               </div>
                           </div>
 
+                          <!-- L60/L80: System Dashboard sub-panel (only visible for operators/admins) -->
+                          <div id="settingsOperatorPanel" style="display: none;">
+                              <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="operator.title">System Dashboard</h3>
+
+                              <!-- Scope indicator -->
+                              <div id="operatorScopeInfo" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem;">
+                                  <span data-i18n="operator.scope_label">Your scope:</span> <strong id="operatorScopeText">All users</strong>
+                              </div>
+
+                              <!-- L80: Date range picker -->
+                              <div style="background: var(--light); border-radius: 12px; padding: 14px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                                  <span style="font-size: 0.85rem; font-weight: 600; color: var(--dark);" data-i18n="operator.date_range">Date Range:</span>
+                                  <select id="opDateRange" onchange="onOpDateRangeChange()" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.85rem;">
+                                      <option value="7">7 days</option>
+                                      <option value="30" selected>30 days</option>
+                                      <option value="60">60 days</option>
+                                      <option value="90">90 days</option>
+                                  </select>
+                              </div>
+
+                              <!-- Stats cards (unchanged from L60) -->
+                              <div id="operatorStatsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.total_users">Total Users</div>
+                                      <div id="opStatTotal" style="font-size: 1.5rem; font-weight: 700; color: #667eea;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.active_users">Active Users</div>
+                                      <div id="opStatActive" style="font-size: 1.5rem; font-weight: 700; color: #28a745;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.new_7d">New (7 days)</div>
+                                      <div id="opStatNew7" style="font-size: 1.5rem; font-weight: 700; color: #17a2b8;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.new_30d">New (30 days)</div>
+                                      <div id="opStatNew30" style="font-size: 1.5rem; font-weight: 700; color: #6f42c1;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.checkin_rate">Check-in Rate (7d)</div>
+                                      <div id="opStatCheckin" style="font-size: 1.5rem; font-weight: 700; color: #fd7e14;">—</div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
+                                      <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.active_today">Active Today</div>
+                                      <div id="opStatToday" style="font-size: 1.5rem; font-weight: 700; color: #20c997;">—</div>
+                                  </div>
+                              </div>
+
+                              <!-- L80: Charts section — Registration + Check-in trends -->
+                              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                                  <div style="background: var(--light); border-radius: 12px; padding: 16px;">
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.reg_trend">Registration Trend</h4>
+                                      <div style="position: relative; height: 200px;">
+                                          <canvas id="opChartRegistrations"></canvas>
+                                      </div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 16px;">
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.checkin_trend">Check-in Trend</h4>
+                                      <div style="position: relative; height: 200px;">
+                                          <canvas id="opChartCheckins"></canvas>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              <!-- L80: Charts section — City bar + Age bar -->
+                              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                                  <div style="background: var(--light); border-radius: 12px; padding: 16px;">
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.by_city">Users by City</h4>
+                                      <div style="position: relative; height: 200px;">
+                                          <canvas id="opChartCity"></canvas>
+                                      </div>
+                                  </div>
+                                  <div style="background: var(--light); border-radius: 12px; padding: 16px;">
+                                      <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.by_age">Users by Age</h4>
+                                      <div style="position: relative; height: 200px;">
+                                          <canvas id="opChartAge"></canvas>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              <!-- L80: Filterable user segments table -->
+                              <div style="background: var(--light); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                                  <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.user_segments">User Segments</h4>
+                                  <!-- Filters row -->
+                                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center;">
+                                      <select id="opFilterCity" onchange="loadOperatorSegments(1)" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.82rem;">
+                                          <option value="" data-i18n="operator.all_cities">All Cities</option>
+                                      </select>
+                                      <select id="opFilterAge" onchange="loadOperatorSegments(1)" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.82rem;">
+                                          <option value="" data-i18n="operator.all_ages">All Ages</option>
+                                          <option value="18-24">18-24</option>
+                                          <option value="25-34">25-34</option>
+                                          <option value="35-44">35-44</option>
+                                          <option value="45-54">45-54</option>
+                                          <option value="55-64">55-64</option>
+                                          <option value="65-120">65+</option>
+                                      </select>
+                                      <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;">
+                                          <input type="checkbox" id="opFilterActive" onchange="loadOperatorSegments(1)">
+                                          <span data-i18n="operator.active_only">Active only</span>
+                                      </label>
+                                      <select id="opSortBy" onchange="loadOperatorSegments(1)" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.82rem;">
+                                          <option value="created_at" data-i18n="operator.sort_newest">Newest first</option>
+                                          <option value="last_login" data-i18n="operator.sort_recent">Recently active</option>
+                                          <option value="username" data-i18n="operator.sort_name">By name</option>
+                                          <option value="city" data-i18n="operator.sort_city">By city</option>
+                                      </select>
+                                  </div>
+                                  <!-- Table -->
+                                  <div style="overflow-x: auto;">
+                                      <table id="opSegmentsTable" style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                                          <thead>
+                                              <tr style="border-bottom: 2px solid var(--border);">
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_username">Username</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_city">City</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_age">Age</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_joined">Joined</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_last_active">Last Active</th>
+                                              </tr>
+                                          </thead>
+                                          <tbody id="opSegmentsBody">
+                                              <tr><td colspan="5" style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</td></tr>
+                                          </tbody>
+                                      </table>
+                                  </div>
+                                  <!-- Pagination -->
+                                  <div id="opSegmentsPagination" style="display: flex; justify-content: center; gap: 8px; margin-top: 10px;"></div>
+                              </div>
+
+                              <!-- Refresh -->
+                              <div style="text-align: center;">
+                                  <button onclick="loadOperatorDashboard()" class="btn" style="padding: 8px 24px; border-radius: 8px; background: var(--primary); color: white; border: none; cursor: pointer;">
+                                      <span data-i18n="operator.refresh">Refresh Data</span>
+                                  </button>
+                              </div>
+
+                              <!-- L100: Broadcast Compose -->
+                              <div style="background: var(--light); border-radius: 12px; padding: 16px; margin-top: 20px;">
+                                  <h4 style="margin: 0 0 12px 0; font-size: 0.95rem;" data-i18n="operator.broadcast_title">📣 Send Broadcast</h4>
+                                  <input id="opBroadcastSubject" type="text" placeholder="Subject" data-i18n-placeholder="operator.broadcast_subject_ph"
+                                         style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.9rem; margin-bottom: 8px; box-sizing: border-box;">
+                                  <textarea id="opBroadcastBody" rows="4" placeholder="Message body..." data-i18n-placeholder="operator.broadcast_body_ph"
+                                            style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.9rem; margin-bottom: 8px; resize: vertical; box-sizing: border-box;"></textarea>
+                                  <!-- Broadcast filters -->
+                                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center;">
+                                      <select id="opBroadcastCity" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.82rem;">
+                                          <option value="" data-i18n="operator.all_cities">All Cities</option>
+                                      </select>
+                                      <select id="opBroadcastAge" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.82rem;">
+                                          <option value="" data-i18n="operator.all_ages">All Ages</option>
+                                          <option value="18-24">18-24</option>
+                                          <option value="25-34">25-34</option>
+                                          <option value="35-44">35-44</option>
+                                          <option value="45-54">45-54</option>
+                                          <option value="55-64">55-64</option>
+                                          <option value="65-120">65+</option>
+                                      </select>
+                                      <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;">
+                                          <input type="checkbox" id="opBroadcastActiveOnly">
+                                          <span data-i18n="operator.active_only">Active only</span>
+                                      </label>
+                                  </div>
+                                  <div style="display: flex; gap: 10px; align-items: center;">
+                                      <button onclick="sendOperatorBroadcast()" class="btn" style="padding: 8px 20px; border-radius: 8px; background: #28a745; color: white; border: none; cursor: pointer; font-weight: 600;">
+                                          <span data-i18n="operator.broadcast_send">Send Broadcast</span>
+                                      </button>
+                                      <span id="opBroadcastStatus" style="font-size: 0.82rem; color: #888;"></span>
+                                  </div>
+                              </div>
+
+                              <!-- L100: Broadcast History -->
+                              <div style="background: var(--light); border-radius: 12px; padding: 16px; margin-top: 16px;">
+                                  <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;" data-i18n="operator.broadcast_history">📋 Broadcast History</h4>
+                                  <div style="overflow-x: auto;">
+                                      <table id="opBroadcastTable" style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                                          <thead>
+                                              <tr style="border-bottom: 2px solid var(--border);">
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.broadcast_col_date">Date</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.broadcast_col_subject">Subject</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.broadcast_col_recipients">Recipients</th>
+                                                  <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.broadcast_col_status">Status</th>
+                                              </tr>
+                                          </thead>
+                                          <tbody id="opBroadcastHistoryBody">
+                                              <tr><td colspan="4" style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</td></tr>
+                                          </tbody>
+                                      </table>
+                                  </div>
+                                  <div id="opBroadcastPagination" style="display: flex; justify-content: center; gap: 8px; margin-top: 10px;"></div>
+                              </div>
+
+                              <!-- L100: Message Inbox -->
+                              <div style="background: var(--light); border-radius: 12px; padding: 16px; margin-top: 16px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                      <h4 style="margin: 0; font-size: 0.95rem;" data-i18n="operator.inbox_title">📥 Message Inbox</h4>
+                                      <div style="display: flex; gap: 8px; align-items: center;">
+                                          <span id="opInboxUnreadBadge" style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; display: none;">0</span>
+                                          <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;">
+                                              <input type="checkbox" id="opInboxUnreadOnly" onchange="loadOperatorInbox(1)">
+                                              <span data-i18n="operator.inbox_unread_only">Unread only</span>
+                                          </label>
+                                      </div>
+                                  </div>
+                                  <div id="opInboxList" style="max-height: 400px; overflow-y: auto;">
+                                      <div style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</div>
+                                  </div>
+                                  <div id="opInboxPagination" style="display: flex; justify-content: center; gap: 8px; margin-top: 10px;"></div>
+                              </div>
+
+                              <!-- L100: Inbox Email Detail Modal -->
+                              <div id="opInboxDetailModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+                                  <div style="background: white; border-radius: 16px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                          <h3 id="opInboxDetailSubject" style="color: var(--primary); margin: 0; font-size: 1.1rem;"></h3>
+                                          <button onclick="document.getElementById('opInboxDetailModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray);">✕</button>
+                                      </div>
+                                      <div style="font-size: 0.82rem; color: #888; margin-bottom: 12px;">
+                                          <span data-i18n="operator.inbox_from">From:</span> <strong id="opInboxDetailFrom"></strong>
+                                          <span style="margin-left: 12px;" id="opInboxDetailDate"></span>
+                                      </div>
+                                      <div id="opInboxDetailBody" style="background: var(--light); padding: 16px; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;"></div>
+                                  </div>
+                              </div>
+                          </div>
+
                       </div>
                   </div>
               </div>
@@ -5991,6 +6223,7 @@
                 </div>
               </div>
               </div>
+
 
 
            </main>
@@ -6428,7 +6661,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=T800q"></script>
+    <script src="/static/js/i18n.js?v=L100"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -9031,6 +9264,7 @@ function showView(viewName, resetContext) {
                 // V2: Load settings view
                 loadSettings();
                 break;
+            // L60: Operator dashboard is now a sub-tab of Settings, not a standalone view
         }
     }
 }
@@ -17584,6 +17818,445 @@ document.addEventListener('click', (e) => {
 });
 
 
+// --- L60: OPERATOR DASHBOARD FUNCTIONS ---
+// L80: Chart instances for cleanup
+let opChartRegInstance = null;
+let opChartCheckinInstance = null;
+let opChartCityInstance = null;
+let opChartAgeInstance = null;
+
+// L80: Helper to destroy a chart safely
+function _destroyOpChart(instance) {
+    if (instance) { try { instance.destroy(); } catch(e) {} }
+    return null;
+}
+
+// L80: Get selected date range days
+function _getOpDays() {
+    const sel = document.getElementById('opDateRange');
+    return sel ? parseInt(sel.value) || 30 : 30;
+}
+
+// L80: Called when date range dropdown changes
+function onOpDateRangeChange() {
+    loadOperatorDashboard();
+}
+window.onOpDateRangeChange = onOpDateRangeChange;
+
+async function loadOperatorDashboard() {
+    console.log('[L80] Loading operator dashboard...');
+    const days = _getOpDays();
+    try {
+        // Load scope info
+        const scopeRes = await fetch('/api/operator/scope', { credentials: 'include' });
+        if (scopeRes.ok) {
+            const scopeData = await scopeRes.json();
+            const scopeText = document.getElementById('operatorScopeText');
+            if (scopeText && scopeData.scopes && scopeData.scopes.length > 0) {
+                const s = scopeData.scopes[0];
+                if (s.scope_type === 'all') {
+                    scopeText.textContent = _t('operator.scope_all', 'All users');
+                } else {
+                    scopeText.textContent = s.scope_type + ': ' + s.scope_value;
+                }
+            }
+        }
+
+        // Load aggregate stats
+        const statsRes = await fetch('/api/operator/stats', { credentials: 'include' });
+        if (statsRes.ok) {
+            const stats = await statsRes.json();
+            document.getElementById('opStatTotal').textContent = stats.total_users;
+            document.getElementById('opStatActive').textContent = stats.active_users;
+            document.getElementById('opStatNew7').textContent = stats.new_users_7d;
+            document.getElementById('opStatNew30').textContent = stats.new_users_30d;
+            document.getElementById('opStatCheckin').textContent = stats.checkin_rate_7d + '%';
+            document.getElementById('opStatToday').textContent = stats.active_today;
+        }
+
+        // L80: Load registration trend as Chart.js line chart
+        const regRes = await fetch('/api/operator/registrations?days=' + days, { credentials: 'include' });
+        if (regRes.ok) {
+            const regData = await regRes.json();
+            opChartRegInstance = _destroyOpChart(opChartRegInstance);
+            const ctx = document.getElementById('opChartRegistrations');
+            if (ctx && regData.registrations && regData.registrations.length > 0) {
+                opChartRegInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: regData.registrations.map(r => r.date.slice(5)),
+                        datasets: [{
+                            label: _t('operator.registrations', 'Registrations'),
+                            data: regData.registrations.map(r => r.count),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102,126,234,0.15)',
+                            fill: true, tension: 0.3, pointRadius: 2
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
+            }
+        }
+
+        // L80: Load check-in trend as Chart.js line chart
+        const checkinRes = await fetch('/api/operator/checkins?days=' + days, { credentials: 'include' });
+        if (checkinRes.ok) {
+            const checkinData = await checkinRes.json();
+            opChartCheckinInstance = _destroyOpChart(opChartCheckinInstance);
+            const ctx2 = document.getElementById('opChartCheckins');
+            if (ctx2 && checkinData.checkins && checkinData.checkins.length > 0) {
+                opChartCheckinInstance = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: checkinData.checkins.map(r => r.date.slice(5)),
+                        datasets: [{
+                            label: _t('operator.checkins', 'Check-ins'),
+                            data: checkinData.checkins.map(r => r.count),
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40,167,69,0.15)',
+                            fill: true, tension: 0.3, pointRadius: 2
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
+            }
+        }
+
+        // L80: Load city breakdown as bar chart
+        const cityRes = await fetch('/api/operator/breakdown/city', { credentials: 'include' });
+        if (cityRes.ok) {
+            const cityData = await cityRes.json();
+            opChartCityInstance = _destroyOpChart(opChartCityInstance);
+            const ctx3 = document.getElementById('opChartCity');
+            if (ctx3 && cityData.breakdown && cityData.breakdown.length > 0) {
+                // Populate city filter dropdown
+                const cityFilter = document.getElementById('opFilterCity');
+                if (cityFilter && cityFilter.options.length <= 1) {
+                    cityData.breakdown.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.city;
+                        opt.textContent = item.city;
+                        cityFilter.appendChild(opt);
+                    });
+                }
+                opChartCityInstance = new Chart(ctx3, {
+                    type: 'bar',
+                    data: {
+                        labels: cityData.breakdown.map(b => b.city),
+                        datasets: [{
+                            data: cityData.breakdown.map(b => b.count),
+                            backgroundColor: ['#667eea','#764ba2','#17a2b8','#28a745','#fd7e14','#dc3545','#6f42c1','#20c997','#e83e8c','#ffc107']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
+            }
+        }
+
+        // L80: Load age breakdown as bar chart
+        const ageRes = await fetch('/api/operator/breakdown/age', { credentials: 'include' });
+        if (ageRes.ok) {
+            const ageData = await ageRes.json();
+            opChartAgeInstance = _destroyOpChart(opChartAgeInstance);
+            const ctx4 = document.getElementById('opChartAge');
+            if (ctx4 && ageData.breakdown && ageData.breakdown.length > 0) {
+                opChartAgeInstance = new Chart(ctx4, {
+                    type: 'bar',
+                    data: {
+                        labels: ageData.breakdown.map(b => b.bracket),
+                        datasets: [{
+                            data: ageData.breakdown.map(b => b.count),
+                            backgroundColor: ['#667eea','#764ba2','#17a2b8','#28a745','#fd7e14','#dc3545']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
+            }
+        }
+
+        // L80: Load user segments table
+        loadOperatorSegments(1);
+
+        // L100: Load broadcast history and inbox
+        await loadOperatorBroadcastHistory(1);
+        await loadOperatorInbox(1);
+
+        // L100: Populate broadcast city filter from city breakdown data
+        const broadcastCityFilter = document.getElementById('opBroadcastCity');
+        if (broadcastCityFilter && broadcastCityFilter.options.length <= 1) {
+            try {
+                const cityRes2 = await fetch('/api/operator/breakdown/city', { credentials: 'include' });
+                if (cityRes2.ok) {
+                    const cityData2 = await cityRes2.json();
+                    if (cityData2.breakdown) {
+                        cityData2.breakdown.forEach(item => {
+                            const opt = document.createElement('option');
+                            opt.value = item.city;
+                            opt.textContent = item.city;
+                            broadcastCityFilter.appendChild(opt);
+                        });
+                    }
+                }
+            } catch (e) { /* city filter population is optional */ }
+        }
+
+        // L80: Re-apply translations to operator panel after rendering
+        if (window.i18n && typeof window.i18n.applyLanguage === 'function') {
+            window.i18n.applyLanguage(window.i18n.getCurrentLanguage());
+        }
+
+    } catch (err) {
+        console.error('[L80] Operator dashboard error:', err);
+    }
+}
+
+// L80: Load filterable user segments table
+async function loadOperatorSegments(page) {
+    try {
+        const city = document.getElementById('opFilterCity')?.value || '';
+        const ageRange = document.getElementById('opFilterAge')?.value || '';
+        const activeOnly = document.getElementById('opFilterActive')?.checked ? 'true' : '';
+        const sortBy = document.getElementById('opSortBy')?.value || 'created_at';
+
+        let url = '/api/operator/segments?page=' + page + '&per_page=15&sort_by=' + sortBy;
+        if (city) url += '&city=' + encodeURIComponent(city);
+        if (ageRange) {
+            const parts = ageRange.split('-');
+            url += '&age_min=' + parts[0] + '&age_max=' + parts[1];
+        }
+        if (activeOnly) url += '&active_only=true';
+
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const tbody = document.getElementById('opSegmentsBody');
+        if (!tbody) return;
+
+        if (!data.users || data.users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #aaa;">' + _t('operator.no_data', 'No data available') + '</td></tr>';
+        } else {
+            tbody.innerHTML = data.users.map(u =>
+                '<tr style="border-bottom: 1px solid var(--border);">' +
+                '<td style="padding: 6px 8px;">' + escapeHtml(u.username) + '</td>' +
+                '<td style="padding: 6px 8px;">' + escapeHtml(u.city) + '</td>' +
+                '<td style="padding: 6px 8px;">' + (u.age || '—') + '</td>' +
+                '<td style="padding: 6px 8px;">' + (u.joined || '—') + '</td>' +
+                '<td style="padding: 6px 8px;">' + (u.last_active || '—') + '</td>' +
+                '</tr>'
+            ).join('');
+        }
+
+        // Render pagination
+        const pagDiv = document.getElementById('opSegmentsPagination');
+        if (pagDiv && data.pages > 1) {
+            let html = '';
+            for (let i = 1; i <= data.pages; i++) {
+                const active = i === data.page;
+                html += '<button onclick="loadOperatorSegments(' + i + ')" style="padding: 4px 10px; border-radius: 6px; border: 1px solid ' + (active ? 'var(--primary)' : 'var(--border)') + '; background: ' + (active ? 'var(--primary)' : 'white') + '; color: ' + (active ? 'white' : 'var(--dark)') + '; cursor: pointer; font-size: 0.8rem;">' + i + '</button>';
+            }
+            pagDiv.innerHTML = html;
+        } else if (pagDiv) {
+            pagDiv.innerHTML = '';
+        }
+    } catch (err) {
+        console.error('[L80] Segments load error:', err);
+    }
+}
+
+// Expose globally
+window.loadOperatorDashboard = loadOperatorDashboard;
+window.loadOperatorSegments = loadOperatorSegments;
+
+
+// --- L100: OPERATOR COMMUNICATIONS LAYER JS ---
+
+// L100: Send a broadcast email
+async function sendOperatorBroadcast() {
+    const subject = document.getElementById('opBroadcastSubject')?.value.trim();
+    const body = document.getElementById('opBroadcastBody')?.value.trim();
+    const statusEl = document.getElementById('opBroadcastStatus');
+
+    if (!subject || !body) {
+        if (statusEl) statusEl.textContent = _t('operator.broadcast_fill_fields', 'Please fill in subject and body');
+        return;
+    }
+
+    // Confirmation
+    if (!confirm(_t('operator.broadcast_confirm', 'Send this broadcast to the selected user segment?'))) return;
+
+    if (statusEl) statusEl.textContent = _t('operator.broadcast_sending', 'Sending...');
+
+    const payload = { subject, body };
+
+    const cityFilter = document.getElementById('opBroadcastCity')?.value;
+    if (cityFilter) payload.filter_city = cityFilter;
+
+    const ageFilter = document.getElementById('opBroadcastAge')?.value;
+    if (ageFilter) {
+        const parts = ageFilter.split('-');
+        payload.filter_age_min = parseInt(parts[0]);
+        payload.filter_age_max = parseInt(parts[1]);
+    }
+
+    if (document.getElementById('opBroadcastActiveOnly')?.checked) {
+        payload.filter_active_only = true;
+    }
+
+    try {
+        const res = await fetch('/api/operator/broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if (statusEl) statusEl.textContent = '✅ ' + (data.message || 'Sent');
+            document.getElementById('opBroadcastSubject').value = '';
+            document.getElementById('opBroadcastBody').value = '';
+            loadOperatorBroadcastHistory(1);
+        } else {
+            if (statusEl) statusEl.textContent = '❌ ' + (data.error || 'Failed');
+        }
+    } catch (err) {
+        console.error('[L100] Broadcast send error:', err);
+        if (statusEl) statusEl.textContent = '❌ Error sending broadcast';
+    }
+}
+window.sendOperatorBroadcast = sendOperatorBroadcast;
+
+// L100: Load broadcast history table
+async function loadOperatorBroadcastHistory(page) {
+    try {
+        const res = await fetch('/api/operator/broadcasts?page=' + (page || 1), { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const tbody = document.getElementById('opBroadcastHistoryBody');
+        if (!tbody) return;
+
+        if (!data.broadcasts || data.broadcasts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#aaa;">' + _t('operator.no_data', 'No data available') + '</td></tr>';
+        } else {
+            tbody.innerHTML = data.broadcasts.map(b => {
+                const statusColor = b.status === 'sent' ? '#28a745' : (b.status === 'partial' ? '#fd7e14' : '#dc3545');
+                return '<tr style="border-bottom:1px solid var(--border);">' +
+                    '<td style="padding:6px 8px;">' + (b.created_at ? b.created_at.slice(0, 10) : '—') + '</td>' +
+                    '<td style="padding:6px 8px;">' + escapeHtml(b.subject || '') + '</td>' +
+                    '<td style="padding:6px 8px;">' + (b.recipient_count || 0) + '</td>' +
+                    '<td style="padding:6px 8px;"><span style="color:' + statusColor + ';font-weight:600;">' + escapeHtml(b.status || '') + '</span></td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        // Pagination
+        const pagDiv = document.getElementById('opBroadcastPagination');
+        if (pagDiv && data.pages > 1) {
+            let html = '';
+            for (let i = 1; i <= data.pages; i++) {
+                const active = i === data.page;
+                html += '<button onclick="loadOperatorBroadcastHistory(' + i + ')" style="padding:4px 10px;border-radius:6px;border:1px solid ' + (active ? 'var(--primary)' : 'var(--border)') + ';background:' + (active ? 'var(--primary)' : 'white') + ';color:' + (active ? 'white' : 'var(--dark)') + ';cursor:pointer;font-size:0.8rem;">' + i + '</button>';
+            }
+            pagDiv.innerHTML = html;
+        } else if (pagDiv) {
+            pagDiv.innerHTML = '';
+        }
+    } catch (err) {
+        console.error('[L100] Broadcast history error:', err);
+    }
+}
+window.loadOperatorBroadcastHistory = loadOperatorBroadcastHistory;
+
+// L100: Load inbound email inbox
+async function loadOperatorInbox(page) {
+    try {
+        const unreadOnly = document.getElementById('opInboxUnreadOnly')?.checked ? 'true' : 'false';
+        const res = await fetch('/api/operator/inbox?page=' + (page || 1) + '&unread_only=' + unreadOnly, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update unread badge
+        const badge = document.getElementById('opInboxUnreadBadge');
+        if (badge) {
+            if (data.unread_count > 0) {
+                badge.textContent = data.unread_count;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        const listEl = document.getElementById('opInboxList');
+        if (!listEl) return;
+
+        if (!data.emails || data.emails.length === 0) {
+            listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;">' + _t('operator.inbox_empty', 'No messages') + '</div>';
+        } else {
+            listEl.innerHTML = data.emails.map(e => {
+                const readStyle = e.is_read ? 'opacity:0.7;' : 'font-weight:600;';
+                const readDot = e.is_read ? '' : '<span style="color:#dc3545;font-size:0.7rem;margin-right:6px;">●</span>';
+                return '<div onclick="openInboxEmail(' + e.id + ')" style="padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;' + readStyle + 'transition:background 0.15s;" onmouseover="this.style.background=\'rgba(102,126,234,0.06)\'" onmouseout="this.style.background=\'transparent\'">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                    '<div>' + readDot + '<span style="font-size:0.88rem;">' + escapeHtml(e.from_name || e.from_email) + '</span></div>' +
+                    '<span style="font-size:0.75rem;color:#aaa;">' + (e.created_at ? e.created_at.slice(0, 10) : '') + '</span>' +
+                    '</div>' +
+                    '<div style="font-size:0.82rem;color:#555;margin-top:2px;">' + escapeHtml(e.subject || '(no subject)') + '</div>' +
+                    '<div style="font-size:0.78rem;color:#aaa;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml((e.body_text || '').slice(0, 100)) + '</div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        // Pagination
+        const pagDiv = document.getElementById('opInboxPagination');
+        if (pagDiv && data.pages > 1) {
+            let html = '';
+            for (let i = 1; i <= data.pages; i++) {
+                const active = i === data.page;
+                html += '<button onclick="loadOperatorInbox(' + i + ')" style="padding:4px 10px;border-radius:6px;border:1px solid ' + (active ? 'var(--primary)' : 'var(--border)') + ';background:' + (active ? 'var(--primary)' : 'white') + ';color:' + (active ? 'white' : 'var(--dark)') + ';cursor:pointer;font-size:0.8rem;">' + i + '</button>';
+            }
+            pagDiv.innerHTML = html;
+        } else if (pagDiv) {
+            pagDiv.innerHTML = '';
+        }
+    } catch (err) {
+        console.error('[L100] Inbox load error:', err);
+    }
+}
+window.loadOperatorInbox = loadOperatorInbox;
+
+// L100: Open inbox email detail and mark as read
+async function openInboxEmail(emailId) {
+    try {
+        // Mark as read
+        await fetch('/api/operator/inbox/' + emailId + '/read', {
+            method: 'PATCH',
+            credentials: 'include'
+        });
+
+        // Find the email in current data (re-fetch inbox for latest)
+        const res = await fetch('/api/operator/inbox?per_page=50', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const email = (data.emails || []).find(e => e.id === emailId);
+        if (!email) return;
+
+        document.getElementById('opInboxDetailSubject').textContent = email.subject || '(no subject)';
+        document.getElementById('opInboxDetailFrom').textContent = (email.from_name ? email.from_name + ' <' + email.from_email + '>' : email.from_email);
+        document.getElementById('opInboxDetailDate').textContent = email.created_at ? email.created_at.slice(0, 16).replace('T', ' ') : '';
+        document.getElementById('opInboxDetailBody').textContent = email.body_text || '';
+
+        document.getElementById('opInboxDetailModal').style.display = 'flex';
+
+        // Refresh inbox list to update read status
+        loadOperatorInbox(1);
+    } catch (err) {
+        console.error('[L100] Open email error:', err);
+    }
+}
+window.openInboxEmail = openInboxEmail;
+
+
 // --- V3: SETTINGS VIEW (Full profile editing + account settings) ---
 async function loadSettings() {
     console.log('[Fix10C] Loading settings view...');
@@ -17643,6 +18316,12 @@ async function loadSettings() {
         const dmToggle = document.getElementById('settingsDarkModeToggle');
         if (dmToggle) dmToggle.checked = isDark;
 
+        // L60: Show System Dashboard sub-tab for operators and admins
+        const opBtn = document.getElementById('settingsSubOperator');
+        if (opBtn && currentUser && (currentUser.role === 'system_operator' || currentUser.role === 'admin')) {
+            opBtn.style.display = '';
+        }
+
     } catch (error) {
         console.error('[Fix10C] Error loading settings:', error);
     }
@@ -17653,14 +18332,17 @@ function switchSettingsTab(tab) {
     const profilePanel = document.getElementById('settingsProfilePanel');
     const accountPanel = document.getElementById('settingsAccountPanel');
     const notifPanel = document.getElementById('settingsNotificationPanel');
+    const operatorPanel = document.getElementById('settingsOperatorPanel');  // L60
     const profileBtn = document.getElementById('settingsSubProfile');
     const accountBtn = document.getElementById('settingsSubAccount');
     const notifBtn = document.getElementById('settingsSubNotification');
+    const operatorBtn = document.getElementById('settingsSubOperator');  // L60
     
     // Hide all panels
     profilePanel.style.display = 'none';
     accountPanel.style.display = 'none';
     notifPanel.style.display = 'none';
+    if (operatorPanel) operatorPanel.style.display = 'none';  // L60
     
     // Reset all buttons
     const inactiveStyle = { background: 'transparent', color: 'var(--dark)' };
@@ -17668,13 +18350,23 @@ function switchSettingsTab(tab) {
         btn.style.background = inactiveStyle.background;
         btn.style.color = inactiveStyle.color;
     });
+    if (operatorBtn) {  // L60
+        operatorBtn.style.background = inactiveStyle.background;
+        operatorBtn.style.color = inactiveStyle.color;
+    }
     
     // Activate selected tab
-    const activeBtn = tab === 'profile' ? profileBtn : tab === 'account' ? accountBtn : notifBtn;
-    const activePanel = tab === 'profile' ? profilePanel : tab === 'account' ? accountPanel : notifPanel;
-    activeBtn.style.background = 'var(--primary)';
-    activeBtn.style.color = 'white';
-    activePanel.style.display = '';
+    let activeBtn, activePanel;
+    if (tab === 'profile') { activeBtn = profileBtn; activePanel = profilePanel; }
+    else if (tab === 'account') { activeBtn = accountBtn; activePanel = accountPanel; }
+    else if (tab === 'operator') { activeBtn = operatorBtn; activePanel = operatorPanel; }  // L60
+    else { activeBtn = notifBtn; activePanel = notifPanel; }
+    
+    if (activeBtn) {
+        activeBtn.style.background = 'var(--primary)';
+        activeBtn.style.color = 'white';
+    }
+    if (activePanel) activePanel.style.display = '';
 
     // Sync dark mode toggle when switching to account tab
     if (tab === 'account') {
@@ -17683,6 +18375,11 @@ function switchSettingsTab(tab) {
         if (dmToggle) dmToggle.checked = isDark;
         // CLEAN: Load optional consent preferences
         loadSettingsConsentPreferences();
+    }
+
+    // L60: Load operator dashboard data when switching to operator tab
+    if (tab === 'operator') {
+        loadOperatorDashboard();
     }
 }
 
