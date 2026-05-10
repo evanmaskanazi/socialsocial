@@ -18296,8 +18296,8 @@ async function loadProfessionalVerification() {
     const container = document.getElementById('opProfessionalsList');
     if (!container) return;
 
-    // Only show for admin role
-    if (!currentUser || currentUser.role !== 'admin') {
+    // Only show for admin or system_operator role (L250: was admin-only, now matches operator_required)
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'system_operator')) {
         container.innerHTML = '';
         container.parentElement.style.display = 'none';
         return;
