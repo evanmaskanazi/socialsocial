@@ -7,6 +7,11 @@ Complete app.py for Social Social Platform - V4 10Link
 # - Added to User.to_dict() and ensure_professional_schema() migration
 # - Modified /api/auth/register: accepts optional account_type='professional' field;
 #   creates account with role='professional', professional_verified=False
+#   UNLESS email domain matches TRUSTED_PROFESSIONAL_DOMAINS env var (auto-verified)
+# - TRUSTED_PROFESSIONAL_DOMAINS env var: comma-separated list of email domains
+#   (e.g. "hadassah.org.il,clalit.org.il,mayo.edu"). Professionals registering with
+#   a matching domain get professional_verified=True automatically at signup.
+# - Added GET /api/admin/trusted-domains endpoint: returns current trusted domains list
 # - Added POST /api/admin/verify-professional endpoint: admin sets professional_verified
 # - Modified /api/admin/users to include professional_verified in response
 # - Modified /api/professional/my-professionals to include professional_verified
@@ -14,6 +19,8 @@ Complete app.py for Social Social Platform - V4 10Link
 # - Signup form: added "I am a health/wellness professional" toggle
 # - My Professionals list: shows "Unverified"/"Verified" badge per professional
 # - Professional dashboard: shows own verification status banner
+# - Admin operator dashboard: Professional Verification section with per-user
+#   Verify/Unverify buttons, "Verify All Pending" batch action, and trusted domains display
 # - i18n keys added for EN, HE, AR, RU (professional.* namespace additions)
 
 # L190: Professional Accounts — Frontend, admin tools, and account creation
@@ -958,6 +965,14 @@ app.config['DEBUG'] = not is_production
 # False = professionals see ONLY parameters logged on or after their approval date.
 # Per-relationship override: ProfessionalClient.see_historical column (NULL = use this default).
 L170_PROFESSIONAL_HISTORICAL_DEFAULT = True
+
+# L210: Trusted email domains for auto-verification of professional accounts.
+# Comma-separated list. Professionals registering with a matching email domain
+# get professional_verified=True automatically, no admin action needed.
+# Example: "hadassah.org.il,clalit.org.il,mayo.edu,sheba.health.gov.il"
+TRUSTED_PROFESSIONAL_DOMAINS = set(
+    d.strip().lower() for d in os.environ.get('TRUSTED_PROFESSIONAL_DOMAINS', '').split(',') if d.strip()
+)
 
 # Secret key configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -6553,9 +6568,14 @@ def register():
             preferred_language=data.get('preferred_language', 'en'),
             role=account_type  # L210: 'user' or 'professional'
         )
-        # L210: Professional accounts start unverified
+        # L210: Professional accounts start unverified unless email domain is trusted
         if account_type == 'professional':
-            user.professional_verified = False
+            email_domain = email.split('@')[1].lower() if '@' in email else ''
+            if email_domain in TRUSTED_PROFESSIONAL_DOMAINS:
+                user.professional_verified = True
+                logger.info(f"[L210] Auto-verified professional {username} (trusted domain: {email_domain})")
+            else:
+                user.professional_verified = False
         user.set_password(password)
         db.session.add(user)
         db.session.flush()
@@ -16350,6 +16370,17 @@ def admin_verify_professional():
         logger.error(f"[L210] Error verifying professional: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to update verification'}), 500
+
+
+# L210: Get current trusted professional domains
+@app.route('/api/admin/trusted-domains')
+@admin_required
+def admin_trusted_domains():
+    """L210: Return the current TRUSTED_PROFESSIONAL_DOMAINS list for admin visibility."""
+    return jsonify({
+        'domains': sorted(list(TRUSTED_PROFESSIONAL_DOMAINS)),
+        'source': 'TRUSTED_PROFESSIONAL_DOMAINS environment variable'
+    })
 
 
 @app.route('/api/admin/job-queue-stats')
