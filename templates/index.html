@@ -6038,6 +6038,17 @@
                                   <div id="opAlertsPager" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.82rem;"></div>
                               </div>
 
+                              <!-- L210: Professional Verification Management -->
+                              <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                      <h4 style="margin: 0; font-size: 0.95rem;" data-i18n="professional.admin_title">🩺 Professional Verification</h4>
+                                      <button onclick="verifyAllPending()" id="verifyAllBtn" style="display: none; padding: 6px 14px; background: #059669; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;" data-i18n="professional.verify_all">✓ Verify All Pending</button>
+                                  </div>
+                                  <div id="opProfessionalsList" style="display: flex; flex-direction: column; gap: 8px;">
+                                      <p style="color: var(--gray); text-align: center; padding: 12px; font-size: 0.85rem;">Loading...</p>
+                                  </div>
+                              </div>
+
                               <!-- L140: Phase 5 — System Health Section -->
                               <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;">
                                   <h4 style="margin: 0 0 12px 0; font-size: 0.95rem;" data-i18n="operator.health_title">📊 System Health</h4>
@@ -18187,6 +18198,9 @@ async function loadOperatorDashboard() {
         // L140: Load Phase 5 — System Health data
         await loadOperatorHealth();
 
+        // L210: Load professional verification management
+        await loadProfessionalVerification();
+
         // L100: Populate broadcast city filter from city breakdown data
         const broadcastCityFilter = document.getElementById('opBroadcastCity');
         if (broadcastCityFilter && broadcastCityFilter.options.length <= 1) {
@@ -18273,6 +18287,172 @@ async function loadOperatorSegments(page) {
 // Expose globally
 window.loadOperatorDashboard = loadOperatorDashboard;
 window.loadOperatorSegments = loadOperatorSegments;
+
+
+// --- L210: PROFESSIONAL VERIFICATION MANAGEMENT ---
+
+// L210: Load list of professional accounts for admin verification
+async function loadProfessionalVerification() {
+    const container = document.getElementById('opProfessionalsList');
+    if (!container) return;
+
+    // Only show for admin role
+    if (!currentUser || currentUser.role !== 'admin') {
+        container.innerHTML = '';
+        container.parentElement.style.display = 'none';
+        return;
+    }
+
+    try {
+        // Fetch users and trusted domains in parallel
+        const [usersRes, domainsRes] = await Promise.all([
+            fetch('/api/admin/users', { credentials: 'include' }),
+            fetch('/api/admin/trusted-domains', { credentials: 'include' })
+        ]);
+
+        let trustedDomains = [];
+        if (domainsRes.ok) {
+            const domData = await domainsRes.json();
+            trustedDomains = domData.domains || [];
+        }
+
+        if (!usersRes.ok) return;
+        const users = await usersRes.json();
+
+        // Filter to professional accounts only
+        const professionals = users.filter(u => u.role === 'professional');
+
+        let html = '';
+
+        // L210: Show trusted domains info box
+        if (trustedDomains.length > 0) {
+            html += '<div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; font-size: 0.82rem;">';
+            html += '<div style="font-weight: 600; color: #1e40af; margin-bottom: 4px;">🔒 ' + _t('professional.trusted_domains_title', 'Auto-verified domains') + '</div>';
+            html += '<div style="color: #1e40af;">' + _t('professional.trusted_domains_desc', 'Professionals registering with these email domains are verified automatically:') + '</div>';
+            html += '<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px;">';
+            for (const d of trustedDomains) {
+                html += '<span style="display: inline-block; padding: 2px 8px; background: #dbeafe; color: #1e40af; border-radius: 6px; font-size: 0.78rem; font-weight: 600;">@' + escapeHtml(d) + '</span>';
+            }
+            html += '</div>';
+            html += '<div style="color: #6b7280; font-size: 0.75rem; margin-top: 6px;">' + _t('professional.trusted_domains_env', 'Set via TRUSTED_PROFESSIONAL_DOMAINS environment variable in Render.') + '</div>';
+            html += '</div>';
+        } else {
+            html += '<div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; font-size: 0.82rem;">';
+            html += '<div style="color: #92400e;">💡 ' + _t('professional.no_trusted_domains', 'No trusted domains configured. Set TRUSTED_PROFESSIONAL_DOMAINS in Render to auto-verify professionals from known organizations (e.g. "hadassah.org.il,clalit.org.il").') + '</div>';
+            html += '</div>';
+        }
+
+        if (professionals.length === 0) {
+            html += '<p style="color: var(--gray); text-align: center; padding: 12px; font-size: 0.85rem;">' + _t('professional.admin_no_professionals', 'No professional accounts registered.') + '</p>';
+            container.innerHTML = html;
+            document.getElementById('verifyAllBtn').style.display = 'none';
+            return;
+        }
+
+        // Show Verify All button only if there are unverified professionals
+        const pendingCount = professionals.filter(u => !u.professional_verified).length;
+        const verifyAllBtn = document.getElementById('verifyAllBtn');
+        if (verifyAllBtn) {
+            verifyAllBtn.style.display = pendingCount > 0 ? '' : 'none';
+            if (pendingCount > 0) {
+                verifyAllBtn.textContent = '✓ ' + _t('professional.verify_all', 'Verify All Pending') + ' (' + pendingCount + ')';
+            }
+        }
+
+        // Sort: unverified first, then by created_at descending
+        professionals.sort((a, b) => {
+            if (a.professional_verified !== b.professional_verified) return a.professional_verified ? 1 : -1;
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+
+        // Build trusted domains set for email matching display
+        const trustedSet = new Set(trustedDomains.map(d => d.toLowerCase()));
+
+        for (const u of professionals) {
+            const initial = (u.username || '?')[0].toUpperCase();
+            const isVerified = u.professional_verified;
+            const badgeColor = isVerified ? '#059669' : '#d97706';
+            const badgeBg = isVerified ? '#d1fae5' : '#fef3c7';
+            const badgeText = isVerified ? '✓ ' + _t('professional.verified', 'Verified') : _t('professional.unverified', 'Unverified');
+            const joinDate = new Date(u.created_at).toLocaleDateString();
+
+            // Check if email matches trusted domain
+            const emailDomain = (u.email || '').split('@')[1] || '';
+            const isTrustedDomain = trustedSet.has(emailDomain.toLowerCase());
+
+            html += '<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light); border-radius: 10px;">';
+            html += '<div style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + initial + '</div>';
+            html += '<div style="flex: 1; min-width: 0;">';
+            html += '<div style="font-weight: 600; font-size: 0.9rem;">' + escapeHtml(u.username) + ' <span style="font-weight: 400; color: var(--gray); font-size: 0.8rem;">(' + escapeHtml(u.email) + ')</span></div>';
+            html += '<div style="font-size: 0.78rem; color: var(--gray); margin-top: 2px;">';
+            html += '<span style="display: inline-block; padding: 1px 7px; border-radius: 8px; background: ' + badgeBg + '; color: ' + badgeColor + '; font-weight: 600; font-size: 0.72rem;">' + badgeText + '</span>';
+            if (isTrustedDomain && isVerified) {
+                html += ' <span style="display: inline-block; padding: 1px 7px; border-radius: 8px; background: #dbeafe; color: #1e40af; font-weight: 600; font-size: 0.68rem;">' + _t('professional.auto_verified', 'auto') + '</span>';
+            }
+            html += ' &middot; ' + _t('professional.admin_joined', 'Joined') + ' ' + joinDate;
+            html += '</div></div>';
+
+            if (isVerified) {
+                html += '<button onclick="adminSetVerification(' + u.id + ', false)" style="padding: 5px 12px; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; cursor: pointer; font-size: 0.78rem; font-weight: 600; white-space: nowrap;">' + _t('professional.admin_unverify', 'Unverify') + '</button>';
+            } else {
+                html += '<button onclick="adminSetVerification(' + u.id + ', true)" style="padding: 5px 12px; background: #d1fae5; color: #059669; border: none; border-radius: 8px; cursor: pointer; font-size: 0.78rem; font-weight: 600; white-space: nowrap;">' + _t('professional.admin_verify', 'Verify') + '</button>';
+            }
+            html += '</div>';
+        }
+        container.innerHTML = html;
+    } catch (err) {
+        console.error('[L210] Error loading professional verification:', err);
+    }
+}
+
+// L210: Admin set verification status for a single professional
+async function adminSetVerification(userId, verified) {
+    try {
+        const res = await fetch('/api/admin/verify-professional', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ user_id: userId, verified: verified })
+        });
+        if (res.ok) {
+            await loadProfessionalVerification();
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Failed to update verification');
+        }
+    } catch (err) {
+        console.error('[L210] Error setting verification:', err);
+    }
+}
+
+// L210: Verify all pending professionals at once
+async function verifyAllPending() {
+    if (!confirm(_t('professional.verify_all_confirm', 'Verify all pending professional accounts?'))) return;
+    try {
+        const res = await fetch('/api/admin/users', { credentials: 'include' });
+        if (!res.ok) return;
+        const users = await res.json();
+        const pending = users.filter(u => u.role === 'professional' && !u.professional_verified);
+
+        let successCount = 0;
+        for (const u of pending) {
+            const verRes = await fetch('/api/admin/verify-professional', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ user_id: u.id, verified: true })
+            });
+            if (verRes.ok) successCount++;
+        }
+
+        if (successCount > 0) {
+            showNotification(successCount + ' ' + _t('professional.verified_count', 'professional(s) verified'), 'success');
+        }
+        await loadProfessionalVerification();
+    } catch (err) {
+        console.error('[L210] Error in batch verification:', err);
+    }
+}
 
 
 // --- L100: OPERATOR COMMUNICATIONS LAYER JS ---
