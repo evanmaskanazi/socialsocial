@@ -2,6 +2,15 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+# L290: Professional Verification — Fix Alert NOT NULL crash on verify
+# - BUG FIX: Clicking "Verify" or "Verify All Pending" returned HTTP 500.
+#   The admin_verify_professional endpoint created an Alert() without a title
+#   field, but the alerts table has a NOT NULL constraint on the title column.
+#   PostgreSQL rejected the INSERT with: "null value in column 'title' of
+#   relation 'alerts' violates not-null constraint". Added title field
+#   ('Professional Account Verified' / 'Professional Account Unverified')
+#   to the Alert constructor.
+
 # L270: Professional Verification — Fix /api/admin/users access for operators
 # - BUG FIX: Professional Verification section showed "Loading..." forever for
 #   system_operator accounts. The L250 fix correctly exposed the UI section and
@@ -16370,8 +16379,11 @@ def admin_verify_professional():
         logger.info(f"[L210] Admin set professional_verified={verified} for user {target_user.username} (id={target_user_id})")
 
         # Alert the professional about verification status change
+        # L290: Added title field — alerts table has NOT NULL on title column
+        alert_title = 'Professional Account Verified' if verified else 'Professional Account Unverified'
         alert = Alert(
             user_id=target_user_id,
+            title=alert_title,
             alert_type='professional_verified' if verified else 'professional_unverified',
             alert_category='follow',
             content=f'Your professional account has been {status_str} by an administrator.'
