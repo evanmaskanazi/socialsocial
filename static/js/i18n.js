@@ -1543,7 +1543,36 @@ const translations = {
         'btn.block': 'Block',
         'btn.unblock': 'Unblock',
 
-        'msg.error': 'An error occurred'
+        'msg.error': 'An error occurred',
+
+        // L170: Professional accounts
+        'professional.allow_access': 'Allow Professional Access',
+        'professional.allow_access_desc': 'Allow medical and mental health professionals to request access to your wellness data. You will always be asked to approve each request.',
+        'professional.my_professionals': 'My Professionals',
+        'professional.no_professionals': 'No professionals have requested access.',
+        'professional.request_pending': 'Pending',
+        'professional.request_active': 'Active',
+        'professional.request_revoked': 'Revoked',
+        'professional.approve': 'Approve',
+        'professional.reject': 'Reject',
+        'professional.revoke': 'Revoke Access',
+        'professional.revoke_confirm': 'Are you sure you want to revoke this professional\'s access to your data?',
+        'professional.approved_alert': 'Professional access approved',
+        'professional.rejected_alert': 'Professional access request rejected',
+        'professional.revoked_alert': 'Professional access revoked',
+        'professional.request_sent': 'Access request sent',
+        'professional.clients': 'My Clients',
+        'professional.request_client': 'Request Client Access',
+        'professional.no_clients': 'No clients yet.',
+        'professional.note_placeholder': 'Add a note for your client (optional)',
+        'professional.access_not_enabled': 'This user has not enabled professional access',
+        'professional.historical_access': 'Can view historical data',
+        'professional.signup_toggle': 'I am a health/wellness professional',
+        'professional.signup_note': 'Your account will be marked as unverified until an administrator confirms your credentials. Clients will see your verification status.',
+        'professional.verified': 'Verified',
+        'professional.unverified': 'Unverified',
+        'professional.verified_status': 'Your professional account is verified.',
+        'professional.unverified_status': 'Your account is pending verification. Clients will see an "Unverified" badge until an administrator confirms your credentials.'
     },
 
     he: {
@@ -3057,7 +3086,36 @@ const translations = {
         'btn.block': 'חסום',
         'btn.unblock': 'בטל חסימה',
 
-        'msg.error': 'אירעה שגיאה'
+        'msg.error': 'אירעה שגיאה',
+
+        // L170: Professional accounts
+        'professional.allow_access': 'אפשר גישה מקצועית',
+        'professional.allow_access_desc': 'אפשר לאנשי מקצוע בתחום הבריאות לבקש גישה לנתוני הבריאות שלך. תמיד תתבקש לאשר כל בקשה.',
+        'professional.my_professionals': 'המקצוענים שלי',
+        'professional.no_professionals': 'אף מקצוען לא ביקש גישה.',
+        'professional.request_pending': 'ממתין',
+        'professional.request_active': 'פעיל',
+        'professional.request_revoked': 'בוטל',
+        'professional.approve': 'אשר',
+        'professional.reject': 'דחה',
+        'professional.revoke': 'בטל גישה',
+        'professional.revoke_confirm': 'האם אתה בטוח שברצונך לבטל את גישת המקצוען לנתונים שלך?',
+        'professional.approved_alert': 'גישה מקצועית אושרה',
+        'professional.rejected_alert': 'בקשת גישה מקצועית נדחתה',
+        'professional.revoked_alert': 'גישה מקצועית בוטלה',
+        'professional.request_sent': 'בקשת גישה נשלחה',
+        'professional.clients': 'הלקוחות שלי',
+        'professional.request_client': 'בקש גישת לקוח',
+        'professional.no_clients': 'אין לקוחות עדיין.',
+        'professional.note_placeholder': 'הוסף הערה ללקוח (אופציונלי)',
+        'professional.access_not_enabled': 'משתמש זה לא הפעיל גישה מקצועית',
+        'professional.historical_access': 'יכול לצפות בנתונים היסטוריים',
+        'professional.signup_toggle': 'אני איש מקצוע בתחום הבריאות',
+        'professional.signup_note': 'החשבון שלך יסומן כלא מאומת עד שמנהל יאשר את הסמכתך. לקוחות יראו את סטטוס האימות שלך.',
+        'professional.verified': 'מאומת',
+        'professional.unverified': 'לא מאומת',
+        'professional.verified_status': 'החשבון המקצועי שלך מאומת.',
+        'professional.unverified_status': 'החשבון שלך ממתין לאימות. לקוחות יראו תגית "לא מאומת" עד שמנהל יאשר את הסמכתך.'
     },
 
     ar: {
@@ -4571,7 +4629,36 @@ const translations = {
         'btn.block': 'حظر',
         'btn.unblock': 'إلغاء الحظر',
 
-        'msg.error': 'حدث خطأ'
+        'msg.error': 'حدث خطأ',
+
+        // L170: Professional accounts
+        'professional.allow_access': 'السماح بالوصول المهني',
+        'professional.allow_access_desc': 'السماح لمتخصصي الصحة بطلب الوصول إلى بيانات صحتك. ستُطلب الموافقة على كل طلب دائمًا.',
+        'professional.my_professionals': 'المهنيون الخاصون بي',
+        'professional.no_professionals': 'لم يطلب أي مهني الوصول.',
+        'professional.request_pending': 'قيد الانتظار',
+        'professional.request_active': 'نشط',
+        'professional.request_revoked': 'ملغى',
+        'professional.approve': 'موافقة',
+        'professional.reject': 'رفض',
+        'professional.revoke': 'إلغاء الوصول',
+        'professional.revoke_confirm': 'هل أنت متأكد أنك تريد إلغاء وصول هذا المهني إلى بياناتك؟',
+        'professional.approved_alert': 'تمت الموافقة على الوصول المهني',
+        'professional.rejected_alert': 'تم رفض طلب الوصول المهني',
+        'professional.revoked_alert': 'تم إلغاء الوصول المهني',
+        'professional.request_sent': 'تم إرسال طلب الوصول',
+        'professional.clients': 'عملائي',
+        'professional.request_client': 'طلب وصول عميل',
+        'professional.no_clients': 'لا يوجد عملاء بعد.',
+        'professional.note_placeholder': 'أضف ملاحظة للعميل (اختياري)',
+        'professional.access_not_enabled': 'لم يقم هذا المستخدم بتفعيل الوصول المهني',
+        'professional.historical_access': 'يمكنه عرض البيانات التاريخية',
+        'professional.signup_toggle': 'أنا متخصص في الصحة والعافية',
+        'professional.signup_note': 'سيتم تمييز حسابك على أنه غير موثق حتى يؤكد المسؤول بيانات اعتمادك. سيرى العملاء حالة التوثيق الخاصة بك.',
+        'professional.verified': 'موثق',
+        'professional.unverified': 'غير موثق',
+        'professional.verified_status': 'حسابك المهني موثق.',
+        'professional.unverified_status': 'حسابك في انتظار التوثيق. سيرى العملاء شارة "غير موثق" حتى يؤكد المسؤول بيانات اعتمادك.'
     },
 
     ru: {
@@ -6085,7 +6172,36 @@ const translations = {
         'btn.block': 'Заблокировать',
         'btn.unblock': 'Разблокировать',
 
-        'msg.error': 'Произошла ошибка'
+        'msg.error': 'Произошла ошибка',
+
+        // L170: Professional accounts
+        'professional.allow_access': 'Разрешить профессиональный доступ',
+        'professional.allow_access_desc': 'Разрешить медицинским специалистам запрашивать доступ к вашим данным о здоровье. Вы всегда будете подтверждать каждый запрос.',
+        'professional.my_professionals': 'Мои специалисты',
+        'professional.no_professionals': 'Ни один специалист не запрашивал доступ.',
+        'professional.request_pending': 'Ожидание',
+        'professional.request_active': 'Активно',
+        'professional.request_revoked': 'Отозвано',
+        'professional.approve': 'Одобрить',
+        'professional.reject': 'Отклонить',
+        'professional.revoke': 'Отозвать доступ',
+        'professional.revoke_confirm': 'Вы уверены, что хотите отозвать доступ этого специалиста к вашим данным?',
+        'professional.approved_alert': 'Профессиональный доступ одобрен',
+        'professional.rejected_alert': 'Запрос профессионального доступа отклонён',
+        'professional.revoked_alert': 'Профессиональный доступ отозван',
+        'professional.request_sent': 'Запрос доступа отправлен',
+        'professional.clients': 'Мои клиенты',
+        'professional.request_client': 'Запросить доступ к клиенту',
+        'professional.no_clients': 'Пока нет клиентов.',
+        'professional.note_placeholder': 'Добавить примечание для клиента (необязательно)',
+        'professional.access_not_enabled': 'Этот пользователь не включил профессиональный доступ',
+        'professional.historical_access': 'Может просматривать исторические данные',
+        'professional.signup_toggle': 'Я специалист в области здоровья',
+        'professional.signup_note': 'Ваш аккаунт будет отмечен как неподтверждённый, пока администратор не подтвердит ваши полномочия. Клиенты увидят ваш статус верификации.',
+        'professional.verified': 'Подтверждён',
+        'professional.unverified': 'Не подтверждён',
+        'professional.verified_status': 'Ваш профессиональный аккаунт подтверждён.',
+        'professional.unverified_status': 'Ваш аккаунт ожидает подтверждения. Клиенты увидят отметку «Не подтверждён», пока администратор не подтвердит ваши полномочия.'
     }
 };
 
