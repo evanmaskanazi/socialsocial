@@ -2,6 +2,15 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+# L270: Professional Verification — Fix /api/admin/users access for operators
+# - BUG FIX: Professional Verification section showed "Loading..." forever for
+#   system_operator accounts. The L250 fix correctly exposed the UI section and
+#   changed the verify-professional and trusted-domains endpoints to @operator_required,
+#   but /api/admin/users (which loadProfessionalVerification() fetches to get the
+#   professional user list) was still @admin_required. The fetch returned 403,
+#   usersRes.ok was false, and the function returned early — leaving "Loading..."
+#   in the container. Changed /api/admin/users from @admin_required to @operator_required.
+
 # L250: Professional Verification — Fix operator access
 # - BUG FIX: Professional Verification section in System Dashboard was invisible
 #   to system_operator accounts because loadProfessionalVerification() only checked
@@ -16236,7 +16245,7 @@ def get_activity_dates():
 # =====================
 
 @app.route('/api/admin/users')
-@admin_required
+@operator_required  # L270: Was @admin_required — system_operator needs this for Professional Verification + user management
 def admin_get_users():
     """Get all users (admin only)"""
     try:
