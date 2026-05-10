@@ -1572,7 +1572,20 @@ const translations = {
         'professional.verified': 'Verified',
         'professional.unverified': 'Unverified',
         'professional.verified_status': 'Your professional account is verified.',
-        'professional.unverified_status': 'Your account is pending verification. Clients will see an "Unverified" badge until an administrator confirms your credentials.'
+        'professional.unverified_status': 'Your account is pending verification. Clients will see an "Unverified" badge until an administrator confirms your credentials.',
+        'professional.admin_title': '🩺 Professional Verification',
+        'professional.admin_no_professionals': 'No professional accounts registered.',
+        'professional.admin_verify': 'Verify',
+        'professional.admin_unverify': 'Unverify',
+        'professional.admin_joined': 'Joined',
+        'professional.verify_all': 'Verify All Pending',
+        'professional.verify_all_confirm': 'Verify all pending professional accounts?',
+        'professional.verified_count': 'professional(s) verified',
+        'professional.trusted_domains_title': 'Auto-verified domains',
+        'professional.trusted_domains_desc': 'Professionals registering with these email domains are verified automatically:',
+        'professional.trusted_domains_env': 'Set via TRUSTED_PROFESSIONAL_DOMAINS environment variable in Render.',
+        'professional.no_trusted_domains': 'No trusted domains configured. Set TRUSTED_PROFESSIONAL_DOMAINS in Render to auto-verify professionals from known organizations (e.g. "hadassah.org.il,clalit.org.il").',
+        'professional.auto_verified': 'auto'
     },
 
     he: {
@@ -3115,7 +3128,20 @@ const translations = {
         'professional.verified': 'מאומת',
         'professional.unverified': 'לא מאומת',
         'professional.verified_status': 'החשבון המקצועי שלך מאומת.',
-        'professional.unverified_status': 'החשבון שלך ממתין לאימות. לקוחות יראו תגית "לא מאומת" עד שמנהל יאשר את הסמכתך.'
+        'professional.unverified_status': 'החשבון שלך ממתין לאימות. לקוחות יראו תגית "לא מאומת" עד שמנהל יאשר את הסמכתך.',
+        'professional.admin_title': '🩺 אימות מקצוענים',
+        'professional.admin_no_professionals': 'אין חשבונות מקצועיים רשומים.',
+        'professional.admin_verify': 'אמת',
+        'professional.admin_unverify': 'בטל אימות',
+        'professional.admin_joined': 'הצטרף',
+        'professional.verify_all': 'אמת את כל הממתינים',
+        'professional.verify_all_confirm': 'לאמת את כל החשבונות המקצועיים הממתינים?',
+        'professional.verified_count': 'מקצוענים אומתו',
+        'professional.trusted_domains_title': 'דומיינים מאומתים אוטומטית',
+        'professional.trusted_domains_desc': 'מקצוענים הנרשמים עם דומיינים אלה מאומתים אוטומטית:',
+        'professional.trusted_domains_env': 'מוגדר באמצעות משתנה סביבה TRUSTED_PROFESSIONAL_DOMAINS ב-Render.',
+        'professional.no_trusted_domains': 'לא הוגדרו דומיינים מהימנים. הגדר TRUSTED_PROFESSIONAL_DOMAINS ב-Render לאימות אוטומטי של מקצוענים מארגונים מוכרים.',
+        'professional.auto_verified': 'אוטומטי'
     },
 
     ar: {
@@ -4658,7 +4684,20 @@ const translations = {
         'professional.verified': 'موثق',
         'professional.unverified': 'غير موثق',
         'professional.verified_status': 'حسابك المهني موثق.',
-        'professional.unverified_status': 'حسابك في انتظار التوثيق. سيرى العملاء شارة "غير موثق" حتى يؤكد المسؤول بيانات اعتمادك.'
+        'professional.unverified_status': 'حسابك في انتظار التوثيق. سيرى العملاء شارة "غير موثق" حتى يؤكد المسؤول بيانات اعتمادك.',
+        'professional.admin_title': '🩺 توثيق المهنيين',
+        'professional.admin_no_professionals': 'لا توجد حسابات مهنية مسجلة.',
+        'professional.admin_verify': 'توثيق',
+        'professional.admin_unverify': 'إلغاء التوثيق',
+        'professional.admin_joined': 'انضم',
+        'professional.verify_all': 'توثيق جميع المعلقين',
+        'professional.verify_all_confirm': 'توثيق جميع الحسابات المهنية المعلقة؟',
+        'professional.verified_count': 'مهنيين تم توثيقهم',
+        'professional.trusted_domains_title': 'نطاقات التوثيق التلقائي',
+        'professional.trusted_domains_desc': 'يتم توثيق المهنيين الذين يسجلون بهذه النطاقات تلقائيًا:',
+        'professional.trusted_domains_env': 'يتم تعيينه عبر متغير البيئة TRUSTED_PROFESSIONAL_DOMAINS في Render.',
+        'professional.no_trusted_domains': 'لا توجد نطاقات موثوقة محددة. قم بتعيين TRUSTED_PROFESSIONAL_DOMAINS في Render للتوثيق التلقائي للمهنيين من المنظمات المعروفة.',
+        'professional.auto_verified': 'تلقائي'
     },
 
     ru: {
@@ -6201,7 +6240,20 @@ const translations = {
         'professional.verified': 'Подтверждён',
         'professional.unverified': 'Не подтверждён',
         'professional.verified_status': 'Ваш профессиональный аккаунт подтверждён.',
-        'professional.unverified_status': 'Ваш аккаунт ожидает подтверждения. Клиенты увидят отметку «Не подтверждён», пока администратор не подтвердит ваши полномочия.'
+        'professional.unverified_status': 'Ваш аккаунт ожидает подтверждения. Клиенты увидят отметку «Не подтверждён», пока администратор не подтвердит ваши полномочия.',
+        'professional.admin_title': '🩺 Верификация специалистов',
+        'professional.admin_no_professionals': 'Нет зарегистрированных профессиональных аккаунтов.',
+        'professional.admin_verify': 'Подтвердить',
+        'professional.admin_unverify': 'Отменить подтверждение',
+        'professional.admin_joined': 'Присоединился',
+        'professional.verify_all': 'Подтвердить всех ожидающих',
+        'professional.verify_all_confirm': 'Подтвердить все ожидающие профессиональные аккаунты?',
+        'professional.verified_count': 'специалист(ов) подтверждено',
+        'professional.trusted_domains_title': 'Автоматически верифицируемые домены',
+        'professional.trusted_domains_desc': 'Специалисты, регистрирующиеся с этих доменов, верифицируются автоматически:',
+        'professional.trusted_domains_env': 'Настраивается через переменную окружения TRUSTED_PROFESSIONAL_DOMAINS в Render.',
+        'professional.no_trusted_domains': 'Доверенные домены не настроены. Установите TRUSTED_PROFESSIONAL_DOMAINS в Render для автоматической верификации специалистов из известных организаций.',
+        'professional.auto_verified': 'авто'
     }
 };
 
