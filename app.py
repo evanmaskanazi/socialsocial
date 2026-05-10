@@ -2,6 +2,16 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+# L250: Professional Verification — Fix operator access
+# - BUG FIX: Professional Verification section in System Dashboard was invisible
+#   to system_operator accounts because loadProfessionalVerification() only checked
+#   for role === 'admin'. System operators (the primary admin account type) were
+#   excluded. Fixed frontend check to allow both 'admin' and 'system_operator'.
+# - BUG FIX: Backend endpoints /api/admin/verify-professional and
+#   /api/admin/trusted-domains used @admin_required (role == 'admin' only).
+#   Changed to @operator_required (role in ('system_operator', 'admin')) so
+#   operators can actually call the endpoints the UI now exposes.
+
 # L210: Professional Accounts — Self-service registration with verification
 # - Added professional_verified column to User model (Boolean, default False)
 # - Added to User.to_dict() and ensure_professional_schema() migration
@@ -16323,11 +16333,12 @@ def admin_set_role():
         return jsonify({'error': 'Failed to set role'}), 500
 
 
-# L210: Admin endpoint to verify/unverify a professional account
+# L210: Admin/operator endpoint to verify/unverify a professional account
+# L250: Changed from @admin_required to @operator_required so system_operator can verify
 @app.route('/api/admin/verify-professional', methods=['POST'])
-@admin_required
+@operator_required
 def admin_verify_professional():
-    """L210: Set professional_verified flag on a user. Only admin can call this."""
+    """L210: Set professional_verified flag on a user. Admin or system_operator can call this."""
     try:
         data = request.get_json()
         target_user_id = data.get('user_id')
@@ -16373,10 +16384,11 @@ def admin_verify_professional():
 
 
 # L210: Get current trusted professional domains
+# L250: Changed from @admin_required to @operator_required so system_operator can view
 @app.route('/api/admin/trusted-domains')
-@admin_required
+@operator_required
 def admin_trusted_domains():
-    """L210: Return the current TRUSTED_PROFESSIONAL_DOMAINS list for admin visibility."""
+    """L210: Return the current TRUSTED_PROFESSIONAL_DOMAINS list for admin/operator visibility."""
     return jsonify({
         'domains': sorted(list(TRUSTED_PROFESSIONAL_DOMAINS)),
         'source': 'TRUSTED_PROFESSIONAL_DOMAINS environment variable'
