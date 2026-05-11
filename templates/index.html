@@ -4251,6 +4251,20 @@
                         <small id="usernameAvailabilityHint" style="display: none; margin-top: 4px; font-size: 12px;"></small>
                     </div>
 
+                    <!-- L210: Professional account type toggle -->
+                    <div class="form-group" style="background: #f0f7f4; padding: 14px 16px; border-radius: 12px; margin-bottom: 16px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
+                            <input type="checkbox" id="signupProfessionalToggle" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; font-size: 0.95rem;" data-i18n="professional.signup_toggle">I am a health/wellness professional</span>
+                        </label>
+                        <p id="signupProfessionalNote" style="display: none; color: #6B7280; font-size: 0.8rem; margin: 8px 0 0 28px;" data-i18n="professional.signup_note">Your account will be marked as unverified until an administrator confirms your credentials. Clients will see your verification status.</p>
+                    </div>
+                    <script>
+                        document.getElementById('signupProfessionalToggle').addEventListener('change', function() {
+                            document.getElementById('signupProfessionalNote').style.display = this.checked ? '' : 'none';
+                        });
+                    </script>
+
                     <button type="submit" class="btn btn-primary" data-i18n="btn.signup">Sign Up</button>
                 </form>
             </div>
@@ -5402,6 +5416,11 @@
                                   data-i18n="operator.dashboard_btn" style="display: none; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
                               System Dashboard
                           </button>
+                          <!-- L190: Professional Clients sub-tab — only visible for professional role -->
+                          <button class="settings-sub-btn" id="settingsSubProfessional" onclick="switchSettingsTab('professional')"
+                                  data-i18n="professional.clients" style="display: none; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; text-align: left; background: transparent; color: var(--dark); transition: all 0.2s;">
+                              My Clients
+                          </button>
                       </div>
 
                       <!-- Right panel: content area -->
@@ -5593,6 +5612,29 @@
                                           <input type="checkbox" id="settingsThirdPartySharing" onchange="updateOptionalConsent('third_party_sharing', this.checked)">
                                           <span data-i18n="consent.third_party">I agree to data sharing with service partners</span>
                                       </label>
+                                  </div>
+                              </div>
+
+                              <!-- L170: Professional Access Setting -->
+                              <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h3 style="color: var(--primary); margin-bottom: 10px;" data-i18n="professional.allow_access">Allow Professional Access</h3>
+                                  <p style="color: #6B7280; font-size: 0.85rem; margin-bottom: 18px;" data-i18n="professional.allow_access_desc">Allow medical and mental health professionals to request access to your wellness data. You will always be asked to approve each request.</p>
+                                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                                      <div>
+                                          <span style="font-weight: 600;" data-i18n="professional.allow_access">Allow Professional Access</span>
+                                      </div>
+                                      <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
+                                          <input type="checkbox" id="settingsProfessionalAccess" onchange="toggleProfessionalAccess(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                          <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
+                                      </label>
+                                  </div>
+                              </div>
+
+                              <!-- L190: My Professionals list (for regular users who have allow_professional_access on) -->
+                              <div class="settings-card" id="myProfessionalsCard" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px; display: none;">
+                                  <h3 style="color: var(--primary); margin-bottom: 10px;" data-i18n="professional.my_professionals">My Professionals</h3>
+                                  <div id="myProfessionalsList" style="display: flex; flex-direction: column; gap: 10px;">
+                                      <p style="color: var(--gray); text-align: center; padding: 10px;" data-i18n="professional.no_professionals">No professionals have requested access.</p>
                                   </div>
                               </div>
 
@@ -5996,6 +6038,17 @@
                                   <div id="opAlertsPager" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.82rem;"></div>
                               </div>
 
+                              <!-- L210: Professional Verification Management -->
+                              <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                      <h4 style="margin: 0; font-size: 0.95rem;" data-i18n="professional.admin_title">🩺 Professional Verification</h4>
+                                      <button onclick="verifyAllPending()" id="verifyAllBtn" style="display: none; padding: 6px 14px; background: #059669; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;" data-i18n="professional.verify_all">✓ Verify All Pending</button>
+                                  </div>
+                                  <div id="opProfessionalsList" style="display: flex; flex-direction: column; gap: 8px;">
+                                      <p style="color: var(--gray); text-align: center; padding: 12px; font-size: 0.85rem;">Loading...</p>
+                                  </div>
+                              </div>
+
                               <!-- L140: Phase 5 — System Health Section -->
                               <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;">
                                   <h4 style="margin: 0 0 12px 0; font-size: 0.95rem;" data-i18n="operator.health_title">📊 System Health</h4>
@@ -6056,6 +6109,37 @@
                                   </div>
                               </div>
 
+                          </div>
+
+                          <!-- L190: Professional Clients sub-panel (only visible for professional role) -->
+                          <div id="settingsProfessionalPanel" style="display: none;">
+                              <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;" data-i18n="professional.clients">My Clients</h3>
+
+                              <!-- L210: Verification status banner -->
+                              <div id="profVerificationBanner" style="padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem; display: none;"></div>
+
+                              <!-- Search and request section -->
+                              <div class="settings-card" style="background: var(--light); padding: 20px; border-radius: 16px; margin-bottom: 20px;">
+                                  <h4 style="color: var(--primary); margin-bottom: 12px;" data-i18n="professional.request_client">Request Client Access</h4>
+                                  <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                      <input type="text" id="profClientSearch" class="form-input" placeholder="Enter username or email" data-i18n-placeholder="follow.search_placeholder" style="flex: 1;">
+                                      <button class="btn btn-primary" onclick="searchForClient()" style="white-space: nowrap;" data-i18n="follow.search_users">Search</button>
+                                  </div>
+                                  <div id="profClientSearchResults" style="display: none; margin-top: 10px;"></div>
+                              </div>
+
+                              <!-- Status filter -->
+                              <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+                                  <button class="btn" onclick="loadProfessionalClients('')" id="profFilterAll" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px; background: var(--primary); color: white; border: none; cursor: pointer;">All</button>
+                                  <button class="btn" onclick="loadProfessionalClients('active')" id="profFilterActive" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px; background: var(--light); color: var(--dark); border: 1px solid var(--border); cursor: pointer;" data-i18n="professional.request_active">Active</button>
+                                  <button class="btn" onclick="loadProfessionalClients('pending')" id="profFilterPending" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px; background: var(--light); color: var(--dark); border: 1px solid var(--border); cursor: pointer;" data-i18n="professional.request_pending">Pending</button>
+                                  <button class="btn" onclick="loadProfessionalClients('revoked')" id="profFilterRevoked" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px; background: var(--light); color: var(--dark); border: 1px solid var(--border); cursor: pointer;" data-i18n="professional.request_revoked">Revoked</button>
+                              </div>
+
+                              <!-- Client list -->
+                              <div id="profClientList" style="display: flex; flex-direction: column; gap: 12px;">
+                                  <p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="professional.no_clients">No clients yet.</p>
+                              </div>
                           </div>
 
                       </div>
@@ -7724,7 +7808,8 @@ async function loadUserCity() {
                 password,
                 username,
                 preferred_language: window.i18n && window.i18n.getCurrentLanguage ?
-                    window.i18n.getCurrentLanguage() : 'en'
+                    window.i18n.getCurrentLanguage() : 'en',
+                account_type: document.getElementById('signupProfessionalToggle')?.checked ? 'professional' : 'user'  // L210
             };
             
             const response = await apiCall('/auth/register', 'POST', body);
@@ -18113,6 +18198,9 @@ async function loadOperatorDashboard() {
         // L140: Load Phase 5 — System Health data
         await loadOperatorHealth();
 
+        // L210: Load professional verification management
+        await loadProfessionalVerification();
+
         // L100: Populate broadcast city filter from city breakdown data
         const broadcastCityFilter = document.getElementById('opBroadcastCity');
         if (broadcastCityFilter && broadcastCityFilter.options.length <= 1) {
@@ -18199,6 +18287,172 @@ async function loadOperatorSegments(page) {
 // Expose globally
 window.loadOperatorDashboard = loadOperatorDashboard;
 window.loadOperatorSegments = loadOperatorSegments;
+
+
+// --- L210: PROFESSIONAL VERIFICATION MANAGEMENT ---
+
+// L210: Load list of professional accounts for admin verification
+async function loadProfessionalVerification() {
+    const container = document.getElementById('opProfessionalsList');
+    if (!container) return;
+
+    // Only show for admin or system_operator role (L250: was admin-only, now matches operator_required)
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'system_operator')) {
+        container.innerHTML = '';
+        container.parentElement.style.display = 'none';
+        return;
+    }
+
+    try {
+        // Fetch users and trusted domains in parallel
+        const [usersRes, domainsRes] = await Promise.all([
+            fetch('/api/admin/users', { credentials: 'include' }),
+            fetch('/api/admin/trusted-domains', { credentials: 'include' })
+        ]);
+
+        let trustedDomains = [];
+        if (domainsRes.ok) {
+            const domData = await domainsRes.json();
+            trustedDomains = domData.domains || [];
+        }
+
+        if (!usersRes.ok) return;
+        const users = await usersRes.json();
+
+        // Filter to professional accounts only
+        const professionals = users.filter(u => u.role === 'professional');
+
+        let html = '';
+
+        // L210: Show trusted domains info box
+        if (trustedDomains.length > 0) {
+            html += '<div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; font-size: 0.82rem;">';
+            html += '<div style="font-weight: 600; color: #1e40af; margin-bottom: 4px;">🔒 ' + _t('professional.trusted_domains_title', 'Auto-verified domains') + '</div>';
+            html += '<div style="color: #1e40af;">' + _t('professional.trusted_domains_desc', 'Professionals registering with these email domains are verified automatically:') + '</div>';
+            html += '<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px;">';
+            for (const d of trustedDomains) {
+                html += '<span style="display: inline-block; padding: 2px 8px; background: #dbeafe; color: #1e40af; border-radius: 6px; font-size: 0.78rem; font-weight: 600;">@' + escapeHtml(d) + '</span>';
+            }
+            html += '</div>';
+            html += '<div style="color: #6b7280; font-size: 0.75rem; margin-top: 6px;">' + _t('professional.trusted_domains_env', 'Set via TRUSTED_PROFESSIONAL_DOMAINS environment variable in Render.') + '</div>';
+            html += '</div>';
+        } else {
+            html += '<div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; font-size: 0.82rem;">';
+            html += '<div style="color: #92400e;">💡 ' + _t('professional.no_trusted_domains', 'No trusted domains configured. Set TRUSTED_PROFESSIONAL_DOMAINS in Render to auto-verify professionals from known organizations (e.g. "hadassah.org.il,clalit.org.il").') + '</div>';
+            html += '</div>';
+        }
+
+        if (professionals.length === 0) {
+            html += '<p style="color: var(--gray); text-align: center; padding: 12px; font-size: 0.85rem;">' + _t('professional.admin_no_professionals', 'No professional accounts registered.') + '</p>';
+            container.innerHTML = html;
+            document.getElementById('verifyAllBtn').style.display = 'none';
+            return;
+        }
+
+        // Show Verify All button only if there are unverified professionals
+        const pendingCount = professionals.filter(u => !u.professional_verified).length;
+        const verifyAllBtn = document.getElementById('verifyAllBtn');
+        if (verifyAllBtn) {
+            verifyAllBtn.style.display = pendingCount > 0 ? '' : 'none';
+            if (pendingCount > 0) {
+                verifyAllBtn.textContent = '✓ ' + _t('professional.verify_all', 'Verify All Pending') + ' (' + pendingCount + ')';
+            }
+        }
+
+        // Sort: unverified first, then by created_at descending
+        professionals.sort((a, b) => {
+            if (a.professional_verified !== b.professional_verified) return a.professional_verified ? 1 : -1;
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+
+        // Build trusted domains set for email matching display
+        const trustedSet = new Set(trustedDomains.map(d => d.toLowerCase()));
+
+        for (const u of professionals) {
+            const initial = (u.username || '?')[0].toUpperCase();
+            const isVerified = u.professional_verified;
+            const badgeColor = isVerified ? '#059669' : '#d97706';
+            const badgeBg = isVerified ? '#d1fae5' : '#fef3c7';
+            const badgeText = isVerified ? '✓ ' + _t('professional.verified', 'Verified') : _t('professional.unverified', 'Unverified');
+            const joinDate = new Date(u.created_at).toLocaleDateString();
+
+            // Check if email matches trusted domain
+            const emailDomain = (u.email || '').split('@')[1] || '';
+            const isTrustedDomain = trustedSet.has(emailDomain.toLowerCase());
+
+            html += '<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light); border-radius: 10px;">';
+            html += '<div style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + initial + '</div>';
+            html += '<div style="flex: 1; min-width: 0;">';
+            html += '<div style="font-weight: 600; font-size: 0.9rem;">' + escapeHtml(u.username) + ' <span style="font-weight: 400; color: var(--gray); font-size: 0.8rem;">(' + escapeHtml(u.email) + ')</span></div>';
+            html += '<div style="font-size: 0.78rem; color: var(--gray); margin-top: 2px;">';
+            html += '<span style="display: inline-block; padding: 1px 7px; border-radius: 8px; background: ' + badgeBg + '; color: ' + badgeColor + '; font-weight: 600; font-size: 0.72rem;">' + badgeText + '</span>';
+            if (isTrustedDomain && isVerified) {
+                html += ' <span style="display: inline-block; padding: 1px 7px; border-radius: 8px; background: #dbeafe; color: #1e40af; font-weight: 600; font-size: 0.68rem;">' + _t('professional.auto_verified', 'auto') + '</span>';
+            }
+            html += ' &middot; ' + _t('professional.admin_joined', 'Joined') + ' ' + joinDate;
+            html += '</div></div>';
+
+            if (isVerified) {
+                html += '<button onclick="adminSetVerification(' + u.id + ', false)" style="padding: 5px 12px; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; cursor: pointer; font-size: 0.78rem; font-weight: 600; white-space: nowrap;">' + _t('professional.admin_unverify', 'Unverify') + '</button>';
+            } else {
+                html += '<button onclick="adminSetVerification(' + u.id + ', true)" style="padding: 5px 12px; background: #d1fae5; color: #059669; border: none; border-radius: 8px; cursor: pointer; font-size: 0.78rem; font-weight: 600; white-space: nowrap;">' + _t('professional.admin_verify', 'Verify') + '</button>';
+            }
+            html += '</div>';
+        }
+        container.innerHTML = html;
+    } catch (err) {
+        console.error('[L210] Error loading professional verification:', err);
+    }
+}
+
+// L210: Admin set verification status for a single professional
+async function adminSetVerification(userId, verified) {
+    try {
+        const res = await fetch('/api/admin/verify-professional', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ user_id: userId, verified: verified })
+        });
+        if (res.ok) {
+            await loadProfessionalVerification();
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Failed to update verification');
+        }
+    } catch (err) {
+        console.error('[L210] Error setting verification:', err);
+    }
+}
+
+// L210: Verify all pending professionals at once
+async function verifyAllPending() {
+    if (!confirm(_t('professional.verify_all_confirm', 'Verify all pending professional accounts?'))) return;
+    try {
+        const res = await fetch('/api/admin/users', { credentials: 'include' });
+        if (!res.ok) return;
+        const users = await res.json();
+        const pending = users.filter(u => u.role === 'professional' && !u.professional_verified);
+
+        let successCount = 0;
+        for (const u of pending) {
+            const verRes = await fetch('/api/admin/verify-professional', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ user_id: u.id, verified: true })
+            });
+            if (verRes.ok) successCount++;
+        }
+
+        if (successCount > 0) {
+            showNotification(successCount + ' ' + _t('professional.verified_count', 'professional(s) verified'), 'success');
+        }
+        await loadProfessionalVerification();
+    } catch (err) {
+        console.error('[L210] Error in batch verification:', err);
+    }
+}
 
 
 // --- L100: OPERATOR COMMUNICATIONS LAYER JS ---
@@ -18660,6 +18914,21 @@ async function loadSettings() {
             opBtn.style.display = '';
         }
 
+        // L190: Show Professional Clients sub-tab for professional role
+        const profBtn = document.getElementById('settingsSubProfessional');
+        if (profBtn && currentUser && currentUser.role === 'professional') {
+            profBtn.style.display = '';
+        }
+
+        // L190: Show My Professionals section if user has allow_professional_access enabled
+        if (currentUser && currentUser.allow_professional_access) {
+            const myProfCard = document.getElementById('myProfessionalsCard');
+            if (myProfCard) {
+                myProfCard.style.display = '';
+                loadMyProfessionals();
+            }
+        }
+
     } catch (error) {
         console.error('[Fix10C] Error loading settings:', error);
     }
@@ -18671,16 +18940,19 @@ function switchSettingsTab(tab) {
     const accountPanel = document.getElementById('settingsAccountPanel');
     const notifPanel = document.getElementById('settingsNotificationPanel');
     const operatorPanel = document.getElementById('settingsOperatorPanel');  // L60
+    const professionalPanel = document.getElementById('settingsProfessionalPanel');  // L190
     const profileBtn = document.getElementById('settingsSubProfile');
     const accountBtn = document.getElementById('settingsSubAccount');
     const notifBtn = document.getElementById('settingsSubNotification');
     const operatorBtn = document.getElementById('settingsSubOperator');  // L60
+    const professionalBtn = document.getElementById('settingsSubProfessional');  // L190
     
     // Hide all panels
     profilePanel.style.display = 'none';
     accountPanel.style.display = 'none';
     notifPanel.style.display = 'none';
     if (operatorPanel) operatorPanel.style.display = 'none';  // L60
+    if (professionalPanel) professionalPanel.style.display = 'none';  // L190
     
     // Reset all buttons
     const inactiveStyle = { background: 'transparent', color: 'var(--dark)' };
@@ -18692,12 +18964,17 @@ function switchSettingsTab(tab) {
         operatorBtn.style.background = inactiveStyle.background;
         operatorBtn.style.color = inactiveStyle.color;
     }
+    if (professionalBtn) {  // L190
+        professionalBtn.style.background = inactiveStyle.background;
+        professionalBtn.style.color = inactiveStyle.color;
+    }
     
     // Activate selected tab
     let activeBtn, activePanel;
     if (tab === 'profile') { activeBtn = profileBtn; activePanel = profilePanel; }
     else if (tab === 'account') { activeBtn = accountBtn; activePanel = accountPanel; }
     else if (tab === 'operator') { activeBtn = operatorBtn; activePanel = operatorPanel; }  // L60
+    else if (tab === 'professional') { activeBtn = professionalBtn; activePanel = professionalPanel; }  // L190
     else { activeBtn = notifBtn; activePanel = notifPanel; }
     
     if (activeBtn) {
@@ -18718,6 +18995,25 @@ function switchSettingsTab(tab) {
     // L60: Load operator dashboard data when switching to operator tab
     if (tab === 'operator') {
         loadOperatorDashboard();
+    }
+
+    // L190: Load professional clients when switching to professional tab
+    if (tab === 'professional') {
+        loadProfessionalClients('');
+        // L210: Show verification status banner
+        const banner = document.getElementById('profVerificationBanner');
+        if (banner && currentUser) {
+            banner.style.display = '';
+            if (currentUser.professional_verified) {
+                banner.style.background = 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)';
+                banner.style.color = '#065f46';
+                banner.innerHTML = '✓ ' + _t('professional.verified_status', 'Your professional account is verified.');
+            } else {
+                banner.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+                banner.style.color = '#92400e';
+                banner.innerHTML = '⏳ ' + _t('professional.unverified_status', 'Your account is pending verification. Clients will see an "Unverified" badge until an administrator confirms your credentials.');
+            }
+        }
     }
 }
 
@@ -18747,8 +19043,280 @@ async function loadSettingsConsentPreferences() {
         if (thirdPartyEl && consents.third_party_sharing != null) {
             thirdPartyEl.checked = typeof consents.third_party_sharing === 'object' ? consents.third_party_sharing.granted : consents.third_party_sharing;
         }
+
+        // L170: Load professional access toggle
+        try {
+            const profResponse = await fetch('/api/user/allow-professional-access', { credentials: 'include' });
+            if (profResponse.ok) {
+                const profData = await profResponse.json();
+                const profToggle = document.getElementById('settingsProfessionalAccess');
+                if (profToggle) profToggle.checked = profData.allow_professional_access || false;
+            }
+        } catch (profErr) {
+            console.error('[L170] Error loading professional access setting:', profErr);
+        }
     } catch (error) {
         console.error('[CLEAN] Error loading consent preferences:', error);
+    }
+}
+
+// L170: Toggle professional access opt-in
+async function toggleProfessionalAccess(enabled) {
+    try {
+        const response = await fetch('/api/user/allow-professional-access', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ allow: enabled })
+        });
+        if (!response.ok) {
+            console.error('Failed to update professional access setting');
+            // Revert toggle on failure
+            document.getElementById('settingsProfessionalAccess').checked = !enabled;
+        } else {
+            // L190: Show/hide My Professionals section based on toggle
+            const myProfCard = document.getElementById('myProfessionalsCard');
+            if (myProfCard) {
+                myProfCard.style.display = enabled ? '' : 'none';
+                if (enabled) loadMyProfessionals();
+            }
+        }
+    } catch (err) {
+        console.error('Error toggling professional access:', err);
+        document.getElementById('settingsProfessionalAccess').checked = !enabled;
+    }
+}
+
+// L190: Load professional's client list
+async function loadProfessionalClients(statusFilter) {
+    try {
+        const url = statusFilter ? `/api/professional/clients?status=${statusFilter}` : '/api/professional/clients';
+        const response = await fetch(url, { credentials: 'include' });
+        if (!response.ok) return;
+        const data = await response.json();
+        const container = document.getElementById('profClientList');
+        if (!container) return;
+
+        // Update filter button styles
+        ['All', 'Active', 'Pending', 'Revoked'].forEach(f => {
+            const btnId = f === 'All' ? 'profFilterAll' : `profFilter${f}`;
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                const isActive = (f === 'All' && !statusFilter) || f.toLowerCase() === statusFilter;
+                btn.style.background = isActive ? 'var(--primary)' : 'var(--light)';
+                btn.style.color = isActive ? 'white' : 'var(--dark)';
+                btn.style.border = isActive ? 'none' : '1px solid var(--border)';
+            }
+        });
+
+        if (!data.clients || data.clients.length === 0) {
+            container.innerHTML = '<p style="color: var(--gray); text-align: center; padding: 20px;">' + _t('professional.no_clients', 'No clients yet.') + '</p>';
+            return;
+        }
+
+        let html = '';
+        for (const client of data.clients) {
+            const statusColors = { pending: '#f59e0b', active: '#10b981', revoked: '#ef4444' };
+            const statusColor = statusColors[client.status] || '#6b7280';
+            const statusLabel = _t('professional.request_' + client.status, client.status);
+            const initial = (client.client_username || '?')[0].toUpperCase();
+
+            html += '<div style="background: white; padding: 16px; border-radius: 12px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">';
+            html += '<div style="width: 42px; height: 42px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1.1rem; flex-shrink: 0;">' + initial + '</div>';
+            html += '<div style="flex: 1; min-width: 0;">';
+            html += '<div style="font-weight: 600; color: var(--dark);">' + escapeHtml(client.client_username) + '</div>';
+            html += '<div style="font-size: 0.8rem; color: var(--gray);">';
+            html += '<span style="display: inline-block; padding: 2px 8px; border-radius: 10px; background: ' + statusColor + '20; color: ' + statusColor + '; font-weight: 600; font-size: 0.75rem;">' + statusLabel + '</span>';
+            if (client.approved_at) html += ' &middot; ' + new Date(client.approved_at).toLocaleDateString();
+            html += '</div>';
+            if (client.notes) html += '<div style="font-size: 0.8rem; color: var(--gray); margin-top: 4px; font-style: italic;">' + escapeHtml(client.notes) + '</div>';
+            html += '</div>';
+            if (client.status === 'active') {
+                html += '<button onclick="revokeClient(' + client.id + ')" style="padding: 6px 12px; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">' + _t('professional.revoke', 'Revoke') + '</button>';
+            }
+            html += '</div>';
+        }
+        container.innerHTML = html;
+    } catch (err) {
+        console.error('[L190] Error loading clients:', err);
+    }
+}
+
+// L190: Search for a user to request as client
+async function searchForClient() {
+    const query = (document.getElementById('profClientSearch') || {}).value || '';
+    if (!query.trim() || query.trim().length < 1) return;
+    const resultsDiv = document.getElementById('profClientSearchResults');
+    if (!resultsDiv) return;
+
+    try {
+        const response = await fetch('/api/users/search?q=' + encodeURIComponent(query.trim()), { credentials: 'include' });
+        if (!response.ok) return;
+        const data = await response.json();
+        const users = data.users || [];
+
+        if (users.length === 0) {
+            resultsDiv.style.display = '';
+            resultsDiv.innerHTML = '<p style="color: var(--gray); padding: 8px;">' + _t('follow.no_results', 'No users found') + '</p>';
+            return;
+        }
+
+        let html = '';
+        for (const u of users) {
+            const initial = (u.username || '?')[0].toUpperCase();
+            html += '<div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: white; border-radius: 10px; margin-bottom: 6px;">';
+            html += '<div style="width: 36px; height: 36px; border-radius: 50%; background: var(--sage); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + initial + '</div>';
+            html += '<div style="flex: 1; min-width: 0;"><span style="font-weight: 600;">' + escapeHtml(u.username) + '</span></div>';
+            html += '<button onclick="requestClientAccess(' + u.id + ')" style="padding: 6px 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">' + _t('professional.request_client', 'Request') + '</button>';
+            html += '</div>';
+        }
+        resultsDiv.style.display = '';
+        resultsDiv.innerHTML = html;
+    } catch (err) {
+        console.error('[L190] Error searching users:', err);
+    }
+}
+
+// L190: Send client access request
+async function requestClientAccess(clientId) {
+    try {
+        const response = await fetch('/api/professional/request-client', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ client_id: clientId })
+        });
+        const data = await response.json();
+        if (response.ok) {
+            alert(_t('professional.request_sent', 'Access request sent'));
+            document.getElementById('profClientSearchResults').style.display = 'none';
+            document.getElementById('profClientSearch').value = '';
+            loadProfessionalClients('');
+        } else {
+            alert(data.error || 'Failed to send request');
+        }
+    } catch (err) {
+        console.error('[L190] Error requesting client:', err);
+    }
+}
+
+// L190: Revoke client access (called by professional)
+async function revokeClient(pcId) {
+    if (!confirm(_t('professional.revoke_confirm', 'Are you sure you want to revoke access?'))) return;
+    try {
+        const response = await fetch('/api/professional/client/' + pcId + '/revoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        if (response.ok) {
+            loadProfessionalClients('');
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to revoke');
+        }
+    } catch (err) {
+        console.error('[L190] Error revoking client:', err);
+    }
+}
+
+// L190: Load My Professionals list (for regular users)
+async function loadMyProfessionals() {
+    try {
+        const response = await fetch('/api/professional/my-professionals', { credentials: 'include' });
+        if (!response.ok) return;
+        const data = await response.json();
+        const container = document.getElementById('myProfessionalsList');
+        if (!container) return;
+
+        if (!data.professionals || data.professionals.length === 0) {
+            container.innerHTML = '<p style="color: var(--gray); text-align: center; padding: 10px;">' + _t('professional.no_professionals', 'No professionals have requested access.') + '</p>';
+            return;
+        }
+
+        let html = '';
+        for (const p of data.professionals) {
+            const statusColors = { pending: '#f59e0b', active: '#10b981', revoked: '#ef4444' };
+            const statusColor = statusColors[p.status] || '#6b7280';
+            const statusLabel = _t('professional.request_' + p.status, p.status);
+            const initial = (p.professional_username || '?')[0].toUpperCase();
+
+            html += '<div style="background: white; padding: 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">';
+            html += '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--sage); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1rem; flex-shrink: 0;">' + initial + '</div>';
+            html += '<div style="flex: 1; min-width: 0;">';
+            html += '<div style="font-weight: 600; color: var(--dark);">' + escapeHtml(p.professional_username) + (p.professional_verified ? ' <span style="display: inline-block; padding: 1px 6px; border-radius: 8px; background: #d1fae5; color: #059669; font-size: 0.7rem; font-weight: 600; vertical-align: middle;">✓ ' + _t('professional.verified', 'Verified') + '</span>' : ' <span style="display: inline-block; padding: 1px 6px; border-radius: 8px; background: #fef3c7; color: #d97706; font-size: 0.7rem; font-weight: 600; vertical-align: middle;">' + _t('professional.unverified', 'Unverified') + '</span>') + '</div>';
+            html += '<span style="display: inline-block; padding: 2px 8px; border-radius: 10px; background: ' + statusColor + '20; color: ' + statusColor + '; font-weight: 600; font-size: 0.75rem;">' + statusLabel + '</span>';
+            if (p.notes) html += '<div style="font-size: 0.8rem; color: var(--gray); margin-top: 4px; font-style: italic;">' + escapeHtml(p.notes) + '</div>';
+            html += '</div>';
+            html += '<div style="display: flex; gap: 6px; flex-shrink: 0;">';
+            if (p.status === 'pending') {
+                html += '<button onclick="approveProf(' + p.id + ')" style="padding: 6px 12px; background: #d1fae5; color: #059669; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">' + _t('professional.approve', 'Approve') + '</button>';
+                html += '<button onclick="rejectProf(' + p.id + ')" style="padding: 6px 12px; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">' + _t('professional.reject', 'Reject') + '</button>';
+            } else if (p.status === 'active') {
+                html += '<button onclick="revokeProf(' + p.id + ')" style="padding: 6px 12px; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">' + _t('professional.revoke', 'Revoke') + '</button>';
+            }
+            html += '</div></div>';
+        }
+        container.innerHTML = html;
+    } catch (err) {
+        console.error('[L190] Error loading my professionals:', err);
+    }
+}
+
+// L190: Approve professional access request
+async function approveProf(pcId) {
+    try {
+        const response = await fetch('/api/professional/client/' + pcId + '/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        if (response.ok) {
+            loadMyProfessionals();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to approve');
+        }
+    } catch (err) {
+        console.error('[L190] Error approving professional:', err);
+    }
+}
+
+// L190: Reject professional access request
+async function rejectProf(pcId) {
+    try {
+        const response = await fetch('/api/professional/client/' + pcId + '/reject', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        if (response.ok) {
+            loadMyProfessionals();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to reject');
+        }
+    } catch (err) {
+        console.error('[L190] Error rejecting professional:', err);
+    }
+}
+
+// L190: Revoke professional access (called by client)
+async function revokeProf(pcId) {
+    if (!confirm(_t('professional.revoke_confirm', 'Are you sure?'))) return;
+    try {
+        const response = await fetch('/api/professional/client/' + pcId + '/revoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        if (response.ok) {
+            loadMyProfessionals();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to revoke');
+        }
+    } catch (err) {
+        console.error('[L190] Error revoking professional:', err);
     }
 }
 

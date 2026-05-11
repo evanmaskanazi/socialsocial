@@ -12,6 +12,7 @@ import urllib.parse
 import json
 import http.cookiejar
 
+
 BASE_URL = "https://socialsocial-72gn.onrender.com"
 
 def make_request(url, method='GET', data=None, cookies=None):

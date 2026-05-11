@@ -2,6 +2,102 @@
 """
 Complete app.py for Social Social Platform - V4 10Link
 
+# L290: Professional Verification — Fix Alert NOT NULL crash on verify
+# - BUG FIX: Clicking "Verify" or "Verify All Pending" returned HTTP 500.
+#   The admin_verify_professional endpoint created an Alert() without a title
+#   field, but the alerts table has a NOT NULL constraint on the title column.
+#   PostgreSQL rejected the INSERT with: "null value in column 'title' of
+#   relation 'alerts' violates not-null constraint". Added title field
+#   ('Professional Account Verified' / 'Professional Account Unverified')
+#   to the Alert constructor.
+
+# L270: Professional Verification — Fix /api/admin/users access for operators
+# - BUG FIX: Professional Verification section showed "Loading..." forever for
+#   system_operator accounts. The L250 fix correctly exposed the UI section and
+#   changed the verify-professional and trusted-domains endpoints to @operator_required,
+#   but /api/admin/users (which loadProfessionalVerification() fetches to get the
+#   professional user list) was still @admin_required. The fetch returned 403,
+#   usersRes.ok was false, and the function returned early — leaving "Loading..."
+#   in the container. Changed /api/admin/users from @admin_required to @operator_required.
+
+# L250: Professional Verification — Fix operator access
+# - BUG FIX: Professional Verification section in System Dashboard was invisible
+#   to system_operator accounts because loadProfessionalVerification() only checked
+#   for role === 'admin'. System operators (the primary admin account type) were
+#   excluded. Fixed frontend check to allow both 'admin' and 'system_operator'.
+# - BUG FIX: Backend endpoints /api/admin/verify-professional and
+#   /api/admin/trusted-domains used @admin_required (role == 'admin' only).
+#   Changed to @operator_required (role in ('system_operator', 'admin')) so
+#   operators can actually call the endpoints the UI now exposes.
+
+# L210: Professional Accounts — Self-service registration with verification
+# - Added professional_verified column to User model (Boolean, default False)
+# - Added to User.to_dict() and ensure_professional_schema() migration
+# - Modified /api/auth/register: accepts optional account_type='professional' field;
+#   creates account with role='professional', professional_verified=False
+#   UNLESS email domain matches TRUSTED_PROFESSIONAL_DOMAINS env var (auto-verified)
+# - TRUSTED_PROFESSIONAL_DOMAINS env var: comma-separated list of email domains
+#   (e.g. "hadassah.org.il,clalit.org.il,mayo.edu"). Professionals registering with
+#   a matching domain get professional_verified=True automatically at signup.
+# - Added GET /api/admin/trusted-domains endpoint: returns current trusted domains list
+# - Added POST /api/admin/verify-professional endpoint: admin sets professional_verified
+# - Modified /api/admin/users to include professional_verified in response
+# - Modified /api/professional/my-professionals to include professional_verified
+# - Modified create_professionals() to set professional_verified=True (pre-verified)
+# - Signup form: added "I am a health/wellness professional" toggle
+# - My Professionals list: shows "Unverified"/"Verified" badge per professional
+# - Professional dashboard: shows own verification status banner
+# - Admin operator dashboard: Professional Verification section with per-user
+#   Verify/Unverify buttons, "Verify All Pending" batch action, and trusted domains display
+# - i18n keys added for EN, HE, AR, RU (professional.* namespace additions)
+
+# L190: Professional Accounts — Frontend, admin tools, and account creation
+# - Added /api/admin/set-role endpoint: admin can set any user's role to 'user' or 'professional'
+# - Added create_professionals() startup function: creates professional accounts from
+#   PROFESSIONAL_n_EMAIL / PROFESSIONAL_n_PASSWORD / PROFESSIONAL_n_USERNAME env vars (1-10)
+# - Registered create_professionals() in init_database() (both branches)
+# - Added professional dashboard sub-tab in Settings (visible only to role='professional')
+#   with client list, search-and-request UI, and status filtering
+# - Added "My Professionals" section in Settings Account tab for regular users
+#   with pending request approve/reject and active relationship revoke
+# - Added professional alert rendering for alert types: professional_request,
+#   professional_approved, professional_revoked
+# - Frontend loadProfessionalDashboard() and loadMyProfessionals() JS functions
+# - i18n keys added for EN, HE, AR, RU (professional.* namespace additions)
+
+# L170: Professional Accounts — Data model, migration, and request/approval API
+# - Added 'professional' role type alongside existing 'user', 'admin', 'system_operator'
+# - Added allow_professional_access column to User model (Boolean, default False)
+#   Users must opt in before any professional can send them a client request.
+# - Added ProfessionalClient model: junction table for professional-client relationships
+#   Fields: professional_id, client_id, status (pending/active/revoked),
+#   requested_at, approved_at, revoked_at, notes, see_historical (Boolean)
+# - Added ensure_professional_schema() migration function (safe column/table creation)
+# - Added professional_required decorator for professional-only endpoints
+# - Added _is_active_professional_for() helper for privacy bypass checks
+# - L170_PROFESSIONAL_HISTORICAL_DEFAULT = True — configurable line controlling whether
+#   professionals see historical parameters (True) or only post-approval data (False).
+#   Per-relationship override via ProfessionalClient.see_historical column.
+# - Modified SavedParameters.to_dict(): professional bypass returns all parameters
+#   (including private) when viewer is an active professional for the owner,
+#   with optional date filtering based on see_historical/approved_at.
+# - Modified get_user_parameters(): professional bypass before circle checks
+# - Modified get_hierarchical_parameters(): professional bypass before circle checks
+# - Modified get_user_parameters_for_triggers(): professional bypass for full visibility
+# - Modified get_user_parameters_by_date(): professional bypass for full visibility
+# - Modified get_user_progress(): professional bypass for full visibility
+# - Modified check_param_visibility(): accepts is_professional flag for bypass
+# - New endpoints:
+#   POST /api/professional/request-client — send client request (professional only)
+#   GET  /api/professional/clients — list professional's clients with status filter
+#   POST /api/professional/client/<id>/approve — client approves request
+#   POST /api/professional/client/<id>/reject — client rejects request
+#   POST /api/professional/client/<id>/revoke — either party revokes active relationship
+#   GET  /api/professional/my-professionals — client lists their professionals
+#   PUT  /api/user/allow-professional-access — toggle opt-in for professional requests
+#   GET  /api/user/allow-professional-access — get current opt-in status
+# - i18n keys added for EN, HE, AR, RU (professional.* namespace)
+
 # L140: Phase 4 — Account management & SaaS features
 # - Added /api/operator/inactive-accounts GET endpoint: lists users inactive beyond configurable threshold
 # - Added /api/operator/flag-user POST endpoint: operators can flag/deactivate inactive accounts
@@ -891,6 +987,20 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 # Environment detection - using modern Flask approach
 is_production = os.environ.get('FLASK_DEBUG', 'False').lower() == 'false'
 app.config['DEBUG'] = not is_production
+
+# L170: Professional account — historical parameter access default.
+# True  = professionals see ALL client parameters (including data logged before approval).
+# False = professionals see ONLY parameters logged on or after their approval date.
+# Per-relationship override: ProfessionalClient.see_historical column (NULL = use this default).
+L170_PROFESSIONAL_HISTORICAL_DEFAULT = True
+
+# L210: Trusted email domains for auto-verification of professional accounts.
+# Comma-separated list. Professionals registering with a matching email domain
+# get professional_verified=True automatically, no admin action needed.
+# Example: "hadassah.org.il,clalit.org.il,mayo.edu,sheba.health.gov.il"
+TRUSTED_PROFESSIONAL_DOMAINS = set(
+    d.strip().lower() for d in os.environ.get('TRUSTED_PROFESSIONAL_DOMAINS', '').split(',') if d.strip()
+)
 
 # Secret key configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -2956,6 +3066,115 @@ def ensure_user_consents_schema():
         # Don't raise - allow app to start even if this fails
 
 
+# L170: Ensure professional account schema exists
+def ensure_professional_schema():
+    """L170: Add allow_professional_access column to users and create professional_clients table."""
+    if hasattr(ensure_professional_schema, '_completed'):
+        return
+
+    try:
+        with app.app_context():
+            inspector = inspect(db.engine)
+            if 'users' not in inspector.get_table_names():
+                return
+
+            is_postgres = 'postgresql' in str(db.engine.url)
+
+            # 1. Add allow_professional_access column to users if missing
+            existing_columns = {col['name'] for col in inspector.get_columns('users')}
+            if 'allow_professional_access' not in existing_columns:
+                logger.info("[L170] Adding allow_professional_access column to users...")
+                with db.engine.connect() as connection:
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+                        connection.execute(text(
+                            "ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_professional_access BOOLEAN DEFAULT FALSE"
+                        ))
+                    else:
+                        connection.execute(text(
+                            "ALTER TABLE users ADD COLUMN allow_professional_access BOOLEAN DEFAULT FALSE"
+                        ))
+                    connection.commit()
+                    logger.info("[L170] ✓ Added allow_professional_access column")
+
+            # L210: Add professional_verified column to users if missing
+            existing_columns = {col['name'] for col in inspector.get_columns('users')}
+            if 'professional_verified' not in existing_columns:
+                logger.info("[L210] Adding professional_verified column to users...")
+                with db.engine.connect() as connection:
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+                        connection.execute(text(
+                            "ALTER TABLE users ADD COLUMN IF NOT EXISTS professional_verified BOOLEAN DEFAULT FALSE"
+                        ))
+                    else:
+                        connection.execute(text(
+                            "ALTER TABLE users ADD COLUMN professional_verified BOOLEAN DEFAULT FALSE"
+                        ))
+                    connection.commit()
+                    logger.info("[L210] ✓ Added professional_verified column")
+
+            # 2. Create professional_clients table if missing
+            if 'professional_clients' not in inspector.get_table_names():
+                logger.info("[L170] Creating professional_clients table...")
+                with db.engine.connect() as connection:
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+                        connection.execute(text("""
+                            CREATE TABLE professional_clients (
+                                id SERIAL PRIMARY KEY,
+                                professional_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                client_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                status VARCHAR(20) DEFAULT 'pending',
+                                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                approved_at TIMESTAMP,
+                                revoked_at TIMESTAMP,
+                                notes VARCHAR(500),
+                                see_historical BOOLEAN,
+                                CONSTRAINT unique_professional_client UNIQUE (professional_id, client_id)
+                            )
+                        """))
+                    else:
+                        connection.execute(text("""
+                            CREATE TABLE professional_clients (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                professional_id INTEGER NOT NULL,
+                                client_id INTEGER NOT NULL,
+                                status VARCHAR(20) DEFAULT 'pending',
+                                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                approved_at TIMESTAMP,
+                                revoked_at TIMESTAMP,
+                                notes VARCHAR(500),
+                                see_historical BOOLEAN,
+                                FOREIGN KEY(professional_id) REFERENCES users(id) ON DELETE CASCADE,
+                                FOREIGN KEY(client_id) REFERENCES users(id) ON DELETE CASCADE,
+                                CONSTRAINT unique_professional_client UNIQUE (professional_id, client_id)
+                            )
+                        """))
+                    connection.execute(text(
+                        "CREATE INDEX IF NOT EXISTS ix_professional_clients_professional_id ON professional_clients(professional_id)"
+                    ))
+                    connection.execute(text(
+                        "CREATE INDEX IF NOT EXISTS ix_professional_clients_client_id ON professional_clients(client_id)"
+                    ))
+                    connection.commit()
+                    logger.info("[L170] ✓ Created professional_clients table")
+
+        ensure_professional_schema._completed = True
+
+    except Exception as e:
+        logger.error(f"[L170] Error ensuring professional schema: {str(e)}")
+
+
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
     # Guard: Skip if already run in this process
@@ -3671,6 +3890,8 @@ class User(db.Model):
     # PL400: Privacy region for determining applicable privacy law
     privacy_region = db.Column(db.String(20), default='other')  # 'eu', 'israel', 'us', 'other'
     data_processing_restricted = db.Column(db.Boolean, default=False)  # GDPR Art. 18 restriction flag
+    allow_professional_access = db.Column(db.Boolean, default=False)  # L170: Opt-in for professional/therapist access
+    professional_verified = db.Column(db.Boolean, default=False)  # L210: Admin-verified professional credential
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
@@ -3766,7 +3987,9 @@ class User(db.Model):
             'circles_privacy': self.circles_privacy or 'private',
             'birth_year': self.birth_year or 1985,  # PJ6001: Birth year field
             'selected_city': self.selected_city or '',  # V3: Include city for settings page
-            'timezone': self.timezone or ''  # Fix10C: User timezone
+            'timezone': self.timezone or '',  # Fix10C: User timezone
+            'allow_professional_access': self.allow_professional_access or False,  # L170
+            'professional_verified': self.professional_verified or False  # L210
         }
 
 
@@ -4045,10 +4268,11 @@ class SavedParameters(db.Model):
 
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_date_uc'),)
 
-    def to_dict(self, viewer_id=None, privacy_level=None, _notes_privacy=None, viewer_circles=None):
+    def to_dict(self, viewer_id=None, privacy_level=None, _notes_privacy=None, viewer_circles=None, is_professional=False):
         """Convert parameter to dictionary with privacy filtering.
         _notes_privacy: optional pre-fetched value to avoid per-row SQL query (NP1-PERF).
         viewer_circles: T800q - optional set of circle types the viewer is in (for non-hierarchical checks).
+        is_professional: L170 - if True, bypass all privacy filtering (professional account access).
         """
         base_dict = {
             'id': self.id,
@@ -4059,6 +4283,24 @@ class SavedParameters(db.Model):
 
         # NP1-PERF: Use pre-fetched value if available, else fall back to single-row query
         notes_priv = _notes_privacy if _notes_privacy is not None else _get_notes_privacy(self.id)
+
+        # L170: Professional bypass — return all parameters including private ones
+        if is_professional:
+            base_dict.update({
+                'mood': self.mood,
+                'energy': self.energy,
+                'sleep_quality': self.sleep_quality,
+                'physical_activity': self.physical_activity,
+                'anxiety': self.anxiety,
+                'notes': self.notes,
+                'mood_privacy': self.mood_privacy,
+                'energy_privacy': self.energy_privacy,
+                'sleep_quality_privacy': self.sleep_quality_privacy,
+                'physical_activity_privacy': self.physical_activity_privacy,
+                'anxiety_privacy': self.anxiety_privacy,
+                'notes_privacy': notes_priv
+            })
+            return base_dict
 
         if viewer_id == self.user_id:
             base_dict.update({
@@ -4296,6 +4538,30 @@ class FollowRequest(db.Model):
     target = db.relationship('User', foreign_keys=[target_id], backref='received_follow_requests')
 
     __table_args__ = (db.UniqueConstraint('requester_id', 'target_id', name='unique_follow_request'),)
+
+
+# L170: Professional-Client relationship model
+class ProfessionalClient(db.Model):
+    __tablename__ = 'professional_clients'
+    id = db.Column(db.Integer, primary_key=True)
+    professional_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    status = db.Column(db.String(20), default='pending')  # pending, active, revoked
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow)
+    approved_at = db.Column(db.DateTime)
+    revoked_at = db.Column(db.DateTime)
+    notes = db.Column(db.String(500))  # Professional's note when requesting
+    # L170: Per-relationship historical access override.
+    # NULL = use L170_PROFESSIONAL_HISTORICAL_DEFAULT global setting.
+    # True = see all historical parameters. False = only post-approval.
+    see_historical = db.Column(db.Boolean, nullable=True, default=None)
+
+    professional = db.relationship('User', foreign_keys=[professional_id],
+                                   backref=db.backref('professional_clients', lazy='dynamic'))
+    client = db.relationship('User', foreign_keys=[client_id],
+                             backref=db.backref('client_of_professionals', lazy='dynamic'))
+
+    __table_args__ = (db.UniqueConstraint('professional_id', 'client_id', name='unique_professional_client'),)
 
 
 class NotificationSettings(db.Model):
@@ -4661,9 +4927,11 @@ def init_database():
                 ensure_privacy_schema()  # ← PL405: Privacy columns
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
+                ensure_professional_schema()  # ← L170: Professional account tables
                 logger.info("Database schema created successfully")
                 create_admin_user()
                 create_system_operators()  # L60: Create operator accounts from env vars
+                create_professionals()  # L190: Create professional accounts from env vars
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
@@ -4678,7 +4946,9 @@ def init_database():
                 ensure_privacy_schema()  # ← PL405: Privacy columns
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
+                ensure_professional_schema()  # ← L170: Professional account tables
                 create_system_operators()  # L60: Create operator accounts from env vars
+                create_professionals()  # L190: Create professional accounts from env vars
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
@@ -4743,7 +5013,9 @@ def init_database():
                 ensure_privacy_schema()  # ← PL405: Privacy columns
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
+                ensure_professional_schema()  # ← L170: Professional account tables
                 create_admin_user()
+                create_professionals()  # L190: Create professional accounts from env vars
                 create_test_users()
                 create_test_follows()
                 create_parameters_table()
@@ -5740,6 +6012,80 @@ def create_system_operators():
         logger.info("[L60] No new System Operator accounts to create")
 
 
+# L190: Create Professional accounts from environment variables
+def create_professionals():
+    """Create Professional accounts from PROFESSIONAL_n_EMAIL/PASSWORD/USERNAME env vars.
+    Follows the same pattern as create_system_operators()."""
+    created_count = 0
+    for i in range(1, 11):  # Support up to 10 professionals
+        email = os.environ.get(f'PROFESSIONAL_{i}_EMAIL', '').strip()
+        password = os.environ.get(f'PROFESSIONAL_{i}_PASSWORD', '').strip()
+        username = os.environ.get(f'PROFESSIONAL_{i}_USERNAME', '').strip()
+
+        if not email or not password:
+            continue
+
+        if not username:
+            username = f'professional_{i}'
+
+        try:
+            existing = db.session.execute(
+                select(User).filter_by(email=email)
+            ).scalars().first()
+
+            if existing:
+                logger.info(f"[L190] Professional account already exists: {email}")
+                # Ensure role is correct
+                if existing.role not in ('professional', 'admin'):
+                    existing.role = 'professional'
+                    db.session.commit()
+                    logger.info(f"[L190] Updated role to professional for: {email}")
+                continue
+
+            # Check username collision
+            username_taken = db.session.execute(
+                select(User).filter_by(username=username)
+            ).scalars().first()
+            if username_taken:
+                logger.warning(f"[L190] Username '{username}' already taken, skipping PROFESSIONAL_{i}")
+                continue
+
+            professional = User(
+                username=username,
+                email=email,
+                role='professional',
+                is_active=True,
+                professional_verified=True  # L210: Env-var accounts are pre-verified
+            )
+            professional.set_password(password)
+            db.session.add(professional)
+            db.session.flush()
+
+            profile = Profile(user_id=professional.id)
+            db.session.add(profile)
+
+            alert = Alert(
+                user_id=professional.id,
+                title='Welcome!',
+                content='Your professional account is ready. Use the Clients tab in Settings to manage your clients.',
+                alert_type='success'
+            )
+            db.session.add(alert)
+
+            db.session.commit()
+            created_count += 1
+            logger.info(f"[L190] Professional account created: {username} ({email})")
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"[L190] Error creating PROFESSIONAL_{i} ({email}): {e}")
+
+    if created_count > 0:
+        logger.info(f"[L190] Created {created_count} new Professional account(s)")
+    else:
+        logger.info("[L190] No new Professional accounts to create")
+
+
 # =====================
 # DECORATORS
 # =====================
@@ -5790,6 +6136,49 @@ def operator_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+# L170: Professional account access decorator
+def professional_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        user = db.session.get(User, session['user_id'])
+        if not user or user.role != 'professional':
+            return jsonify({'error': 'Professional account required'}), 403
+
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+# L170: Helper to check if viewer is an active professional for a given client user.
+# Returns the ProfessionalClient row if active, else None.
+def _is_active_professional_for(professional_user_id, client_user_id):
+    """Check if professional_user_id has an active professional relationship with client_user_id.
+    Returns the ProfessionalClient row if active, else None."""
+    if professional_user_id == client_user_id:
+        return None
+    return ProfessionalClient.query.filter_by(
+        professional_id=professional_user_id,
+        client_id=client_user_id,
+        status='active'
+    ).first()
+
+
+# L170: Helper to determine the earliest date a professional can see for a client.
+# Returns None if all historical data is visible.
+def _professional_visible_from_date(pc_row):
+    """Given a ProfessionalClient row, return the earliest date visible to the professional.
+    Returns None if all historical data is accessible (no date filter needed)."""
+    # Per-relationship override takes priority over global default
+    see_hist = pc_row.see_historical if pc_row.see_historical is not None else L170_PROFESSIONAL_HISTORICAL_DEFAULT
+    if see_hist:
+        return None  # No date restriction — see everything
+    # Only post-approval data
+    return pc_row.approved_at
 
 
 # =====================
@@ -6195,12 +6584,26 @@ def register():
         if existing_username:
             return jsonify({'error': 'Username already taken'}), 400
 
+        # L210: Determine account type (default 'user', or 'professional' for self-service signup)
+        account_type = data.get('account_type', 'user')
+        if account_type not in ('user', 'professional'):
+            account_type = 'user'
+
         # Create user
         user = User(
             username=username,
             email=email,
-            preferred_language=data.get('preferred_language', 'en')
+            preferred_language=data.get('preferred_language', 'en'),
+            role=account_type  # L210: 'user' or 'professional'
         )
+        # L210: Professional accounts start unverified unless email domain is trusted
+        if account_type == 'professional':
+            email_domain = email.split('@')[1].lower() if '@' in email else ''
+            if email_domain in TRUSTED_PROFESSIONAL_DOMAINS:
+                user.professional_verified = True
+                logger.info(f"[L210] Auto-verified professional {username} (trusted domain: {email_domain})")
+            else:
+                user.professional_verified = False
         user.set_password(password)
         db.session.add(user)
         db.session.flush()
@@ -8890,20 +9293,26 @@ def get_user_parameters(user_id):
     try:
         current_user_id = session.get('user_id')
 
-        # ST10T1: Check if target user has added current user to their connections
-        is_following = Follow.query.filter_by(
-            follower_id=user_id,
-            followed_id=current_user_id
-        ).first() is not None
+        # L170: Professional bypass — if viewer is an active professional for this user,
+        # skip connection/circle checks and grant full access.
+        pc_row = _is_active_professional_for(current_user_id, user_id) if current_user_id != user_id else None
+        is_professional_viewer = pc_row is not None
 
-        # PJ401: Also check if current user is in target user's circles
-        is_in_circle = Circle.query.filter_by(
-            user_id=user_id,
-            circle_user_id=current_user_id
-        ).first() is not None
+        if not is_professional_viewer:
+            # ST10T1: Check if target user has added current user to their connections
+            is_following = Follow.query.filter_by(
+                follower_id=user_id,
+                followed_id=current_user_id
+            ).first() is not None
 
-        if not is_following and not is_in_circle and user_id != current_user_id:
-            return jsonify({'error': 'Must be connected with this user to view parameters'}), 403
+            # PJ401: Also check if current user is in target user's circles
+            is_in_circle = Circle.query.filter_by(
+                user_id=user_id,
+                circle_user_id=current_user_id
+            ).first() is not None
+
+            if not is_following and not is_in_circle and user_id != current_user_id:
+                return jsonify({'error': 'Must be connected with this user to view parameters'}), 403
 
         # Get date range from query params (REQUIRED)
         start_date = request.args.get('start_date')
@@ -8980,12 +9389,33 @@ def get_user_parameters(user_id):
 
         parameters = result_proxy.fetchall()
 
+        # L170: Determine date cutoff for professional viewers
+        professional_from_date = None
+        if is_professional_viewer:
+            professional_from_date = _professional_visible_from_date(pc_row)
+
         # Build result array with privacy filtering
         result = []
         for row in parameters:
             param_dict = {
                 'date': row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0])
             }
+
+            # L170: Professional date filter — skip entries before approved_at when see_historical is False
+            if professional_from_date and param_dict['date'] < professional_from_date.strftime('%Y-%m-%d'):
+                continue
+
+            # L170: Professional bypass — return all params without privacy filtering
+            if is_professional_viewer:
+                param_dict['mood'] = row[1]
+                param_dict['energy'] = row[2]
+                param_dict['sleep_quality'] = row[3]
+                param_dict['physical_activity'] = row[4]
+                param_dict['anxiety'] = row[5]
+                notes_privacy = row[12] if _has_notes_priv else 'private'
+                param_dict['notes'] = row[6]
+                result.append(param_dict)
+                continue
 
             # Check privacy for each parameter
             # mood
@@ -10788,6 +11218,23 @@ def get_hierarchical_parameters(view_user_id):
             return jsonify({
                 'parameters': [p.to_dict(viewer_id=current_user_id, _notes_privacy=np_cache.get(p.id, 'private')) for p in params]
             })
+
+        # L170: Professional bypass — full access to all parameters
+        pc_row = _is_active_professional_for(current_user_id, view_user_id)
+        if pc_row:
+            professional_from_date = _professional_visible_from_date(pc_row)
+            params = SavedParameters.query.filter_by(user_id=view_user_id).all()
+            np_cache = _batch_get_notes_privacy([p.id for p in params])
+            visible_params = []
+            for param in params:
+                # L170: Apply date filter if see_historical is False
+                if professional_from_date:
+                    param_date = param.date if isinstance(param.date, str) else (param.date.strftime('%Y-%m-%d') if param.date else '')
+                    if param_date < professional_from_date.strftime('%Y-%m-%d'):
+                        continue
+                param_dict = param.to_dict(viewer_id=current_user_id, _notes_privacy=np_cache.get(param.id, 'private'), is_professional=True)
+                visible_params.append(param_dict)
+            return jsonify({'parameters': visible_params})
 
         # T31: Check what circle current user is in for the viewed user
         # T800q: Use ALL circle memberships for non-hierarchical visibility
@@ -13350,19 +13797,24 @@ def get_user_progress(user_id):
     try:
         current_user_id = session.get('user_id')
         
-        # ST10T1: Check if target user has added current user to their connections
-        is_following = Follow.query.filter_by(
-            follower_id=user_id,
-            followed_id=current_user_id
-        ).first() is not None
-        
-        is_in_circle = Circle.query.filter_by(
-            user_id=user_id,
-            circle_user_id=current_user_id
-        ).first() is not None
-        
-        if not is_following and not is_in_circle and user_id != current_user_id:
-            return jsonify({'error': 'Must be connected with this user'}), 403
+        # L170: Professional bypass
+        pc_row = _is_active_professional_for(current_user_id, user_id) if current_user_id != user_id else None
+        is_professional_viewer = pc_row is not None
+
+        if not is_professional_viewer:
+            # ST10T1: Check if target user has added current user to their connections
+            is_following = Follow.query.filter_by(
+                follower_id=user_id,
+                followed_id=current_user_id
+            ).first() is not None
+            
+            is_in_circle = Circle.query.filter_by(
+                user_id=user_id,
+                circle_user_id=current_user_id
+            ).first() is not None
+            
+            if not is_following and not is_in_circle and user_id != current_user_id:
+                return jsonify({'error': 'Must be connected with this user'}), 403
         
         days = request.args.get('days', 30, type=int)
         if days > 365:
@@ -13373,7 +13825,7 @@ def get_user_progress(user_id):
         # U5: Use ALL circle memberships for non-hierarchical multi-circle visibility
         viewer_circles = None
         circle_level = 'none'
-        if current_user_id != user_id:
+        if current_user_id != user_id and not is_professional_viewer:
             viewer_circles = _get_all_viewer_circle_types(user_id, current_user_id)
             if not viewer_circles:
                 circle_level = 'none'
@@ -13384,11 +13836,20 @@ def get_user_progress(user_id):
             viewer_circles = {'public', 'class_b', 'class_a'}
         
         # U5: Use check_param_visibility with viewer_circles for consistent non-hierarchical checks
+        # L170: Professional viewers always see everything
         def can_see(privacy_setting):
+            if is_professional_viewer:
+                return True
             return check_param_visibility(privacy_setting or 'public', circle_level, viewer_circles=viewer_circles)
         
         end_date = datetime.now().date()
         start_date = end_date - timedelta(days=days)
+
+        # L170: Professional date filter
+        if is_professional_viewer:
+            professional_from_date = _professional_visible_from_date(pc_row)
+            if professional_from_date and professional_from_date.date() > start_date:
+                start_date = professional_from_date.date()
         
         params_stmt = select(SavedParameters).filter(
             SavedParameters.user_id == user_id,
@@ -15793,7 +16254,7 @@ def get_activity_dates():
 # =====================
 
 @app.route('/api/admin/users')
-@admin_required
+@operator_required  # L270: Was @admin_required — system_operator needs this for Professional Verification + user management
 def admin_get_users():
     """Get all users (admin only)"""
     try:
@@ -15807,7 +16268,8 @@ def admin_get_users():
             'email': u.email,
             'role': u.role,
             'is_active': u.is_active,
-            'created_at': u.created_at.isoformat()
+            'created_at': u.created_at.isoformat(),
+            'professional_verified': getattr(u, 'professional_verified', False) or False  # L210
         } for u in users])
 
     except Exception as e:
@@ -15842,6 +16304,116 @@ def admin_stats():
     except Exception as e:
         logger.error(f"Admin stats error: {str(e)}")
         return jsonify({'error': 'Failed to get stats'}), 500
+
+
+# L190: Admin endpoint to change a user's role
+@app.route('/api/admin/set-role', methods=['POST'])
+@admin_required
+def admin_set_role():
+    """L190: Set a user's role. Only admin can call this. Allowed roles: 'user', 'professional'."""
+    try:
+        data = request.get_json()
+        target_user_id = data.get('user_id')
+        new_role = data.get('role')
+
+        if not target_user_id or not new_role:
+            return jsonify({'error': 'user_id and role are required'}), 400
+
+        # Only allow setting to user or professional via this endpoint
+        # (admin and system_operator are created through dedicated paths)
+        if new_role not in ('user', 'professional'):
+            return jsonify({'error': 'Role must be "user" or "professional"'}), 400
+
+        target_user = db.session.get(User, target_user_id)
+        if not target_user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Don't allow changing admin or system_operator roles via this endpoint
+        if target_user.role in ('admin', 'system_operator'):
+            return jsonify({'error': 'Cannot change admin or operator roles through this endpoint'}), 403
+
+        old_role = target_user.role
+        target_user.role = new_role
+        db.session.commit()
+
+        logger.info(f"[L190] Admin changed role for user {target_user.username} (id={target_user_id}): {old_role} -> {new_role}")
+        return jsonify({
+            'success': True,
+            'message': f'Role changed to {new_role}',
+            'user_id': target_user_id,
+            'old_role': old_role,
+            'new_role': new_role
+        })
+
+    except Exception as e:
+        logger.error(f"[L190] Error setting role: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to set role'}), 500
+
+
+# L210: Admin/operator endpoint to verify/unverify a professional account
+# L250: Changed from @admin_required to @operator_required so system_operator can verify
+@app.route('/api/admin/verify-professional', methods=['POST'])
+@operator_required
+def admin_verify_professional():
+    """L210: Set professional_verified flag on a user. Admin or system_operator can call this."""
+    try:
+        data = request.get_json()
+        target_user_id = data.get('user_id')
+        verified = data.get('verified')
+
+        if target_user_id is None or verified is None:
+            return jsonify({'error': 'user_id and verified are required'}), 400
+
+        target_user = db.session.get(User, target_user_id)
+        if not target_user:
+            return jsonify({'error': 'User not found'}), 404
+
+        if target_user.role != 'professional':
+            return jsonify({'error': 'User is not a professional account'}), 400
+
+        target_user.professional_verified = bool(verified)
+        db.session.commit()
+
+        status_str = 'verified' if verified else 'unverified'
+        logger.info(f"[L210] Admin set professional_verified={verified} for user {target_user.username} (id={target_user_id})")
+
+        # Alert the professional about verification status change
+        # L290: Added title field — alerts table has NOT NULL on title column
+        alert_title = 'Professional Account Verified' if verified else 'Professional Account Unverified'
+        alert = Alert(
+            user_id=target_user_id,
+            title=alert_title,
+            alert_type='professional_verified' if verified else 'professional_unverified',
+            alert_category='follow',
+            content=f'Your professional account has been {status_str} by an administrator.'
+        )
+        db.session.add(alert)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Professional account {status_str}',
+            'user_id': target_user_id,
+            'professional_verified': bool(verified)
+        })
+
+    except Exception as e:
+        logger.error(f"[L210] Error verifying professional: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update verification'}), 500
+
+
+# L210: Get current trusted professional domains
+# L250: Changed from @admin_required to @operator_required so system_operator can view
+@app.route('/api/admin/trusted-domains')
+@operator_required
+def admin_trusted_domains():
+    """L210: Return the current TRUSTED_PROFESSIONAL_DOMAINS list for admin/operator visibility."""
+    return jsonify({
+        'domains': sorted(list(TRUSTED_PROFESSIONAL_DOMAINS)),
+        'source': 'TRUSTED_PROFESSIONAL_DOMAINS environment variable'
+    })
 
 
 @app.route('/api/admin/job-queue-stats')
@@ -16898,6 +17470,326 @@ def operator_system_health():
 
 
 # =====================
+# L170: PROFESSIONAL ACCOUNT ENDPOINTS
+# =====================
+
+@app.route('/api/user/allow-professional-access', methods=['GET'])
+@login_required
+def get_allow_professional_access():
+    """L170: Get current user's opt-in status for professional access."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        # Handle column not yet migrated
+        allow = getattr(user, 'allow_professional_access', False) or False
+        return jsonify({'allow_professional_access': allow})
+    except Exception as e:
+        logger.error(f"[L170] Error getting professional access setting: {e}")
+        return jsonify({'error': 'Failed to get setting'}), 500
+
+
+@app.route('/api/user/allow-professional-access', methods=['PUT'])
+@login_required
+def set_allow_professional_access():
+    """L170: Toggle opt-in for professional access requests."""
+    try:
+        data = request.get_json()
+        if data is None or 'allow' not in data:
+            return jsonify({'error': 'Missing allow field'}), 400
+
+        user = db.session.get(User, session['user_id'])
+        user.allow_professional_access = bool(data['allow'])
+        db.session.commit()
+        return jsonify({'success': True, 'allow_professional_access': user.allow_professional_access})
+    except Exception as e:
+        logger.error(f"[L170] Error setting professional access: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update setting'}), 500
+
+
+@app.route('/api/professional/request-client', methods=['POST'])
+@login_required
+@professional_required
+def professional_request_client():
+    """L170: Professional sends a client access request. Client must have allow_professional_access=True."""
+    try:
+        data = request.get_json()
+        client_id = data.get('client_id')
+        notes = sanitize_input(data.get('notes', ''))[:500] if data.get('notes') else None
+
+        if not client_id:
+            return jsonify({'error': 'client_id is required'}), 400
+
+        professional_id = session['user_id']
+        if professional_id == client_id:
+            return jsonify({'error': 'Cannot add yourself as a client'}), 400
+
+        client = db.session.get(User, client_id)
+        if not client:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Check opt-in
+        allow = getattr(client, 'allow_professional_access', False) or False
+        if not allow:
+            return jsonify({'error': 'This user has not enabled professional access'}), 403
+
+        # Check if blocked
+        is_blocked = BlockedUser.query.filter_by(
+            blocker_id=client_id, blocked_id=professional_id
+        ).first() is not None
+        if is_blocked:
+            return jsonify({'error': 'Unable to connect with this user'}), 403
+
+        # Check existing relationship
+        existing = ProfessionalClient.query.filter_by(
+            professional_id=professional_id, client_id=client_id
+        ).first()
+
+        if existing:
+            if existing.status == 'pending':
+                return jsonify({'error': 'Request already pending'}), 400
+            elif existing.status == 'active':
+                return jsonify({'error': 'Already an active client'}), 400
+            elif existing.status == 'revoked':
+                # Re-request after revocation
+                existing.status = 'pending'
+                existing.requested_at = datetime.utcnow()
+                existing.approved_at = None
+                existing.revoked_at = None
+                existing.notes = notes
+                existing.see_historical = None
+                db.session.commit()
+
+                # Create alert for client
+                alert = Alert(
+                    user_id=client_id,
+                    alert_type='professional_request',
+                    alert_category='follow',
+                    source_user_id=professional_id,
+                    content=f'Professional {db.session.get(User, professional_id).username} has requested access to your wellness data'
+                )
+                db.session.add(alert)
+                db.session.commit()
+
+                return jsonify({'success': True, 'message': 'Client request re-sent', 'id': existing.id})
+        else:
+            pc = ProfessionalClient(
+                professional_id=professional_id,
+                client_id=client_id,
+                status='pending',
+                notes=notes
+            )
+            db.session.add(pc)
+            db.session.flush()
+
+            # Create alert for client
+            alert = Alert(
+                user_id=client_id,
+                alert_type='professional_request',
+                alert_category='follow',
+                source_user_id=professional_id,
+                content=f'Professional {db.session.get(User, professional_id).username} has requested access to your wellness data'
+            )
+            db.session.add(alert)
+            db.session.commit()
+
+            return jsonify({'success': True, 'message': 'Client request sent', 'id': pc.id}), 201
+
+    except Exception as e:
+        logger.error(f"[L170] Error requesting client: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to send request'}), 500
+
+
+@app.route('/api/professional/clients')
+@login_required
+@professional_required
+def professional_list_clients():
+    """L170: List professional's clients with optional status filter."""
+    try:
+        professional_id = session['user_id']
+        status_filter = request.args.get('status')  # pending, active, revoked, or None for all
+
+        query = ProfessionalClient.query.filter_by(professional_id=professional_id)
+        if status_filter and status_filter in ('pending', 'active', 'revoked'):
+            query = query.filter_by(status=status_filter)
+
+        clients = query.order_by(ProfessionalClient.requested_at.desc()).all()
+
+        result = []
+        for pc in clients:
+            client_user = db.session.get(User, pc.client_id)
+            result.append({
+                'id': pc.id,
+                'client_id': pc.client_id,
+                'client_username': client_user.username if client_user else 'Unknown',
+                'status': pc.status,
+                'requested_at': pc.requested_at.isoformat() if pc.requested_at else None,
+                'approved_at': pc.approved_at.isoformat() if pc.approved_at else None,
+                'revoked_at': pc.revoked_at.isoformat() if pc.revoked_at else None,
+                'notes': pc.notes,
+                'see_historical': pc.see_historical
+            })
+
+        return jsonify({'clients': result})
+
+    except Exception as e:
+        logger.error(f"[L170] Error listing clients: {e}")
+        return jsonify({'error': 'Failed to list clients'}), 500
+
+
+@app.route('/api/professional/client/<int:pc_id>/approve', methods=['POST'])
+@login_required
+def professional_client_approve(pc_id):
+    """L170: Client approves a pending professional access request."""
+    try:
+        current_user_id = session['user_id']
+
+        pc = db.session.get(ProfessionalClient, pc_id)
+        if not pc:
+            return jsonify({'error': 'Request not found'}), 404
+
+        # Only the client can approve
+        if pc.client_id != current_user_id:
+            return jsonify({'error': 'Not authorized'}), 403
+
+        if pc.status != 'pending':
+            return jsonify({'error': f'Request is not pending (current status: {pc.status})'}), 400
+
+        pc.status = 'active'
+        pc.approved_at = datetime.utcnow()
+        db.session.commit()
+
+        # Alert the professional
+        client_user = db.session.get(User, current_user_id)
+        alert = Alert(
+            user_id=pc.professional_id,
+            alert_type='professional_approved',
+            alert_category='follow',
+            source_user_id=current_user_id,
+            content=f'{client_user.username} has approved your professional access request'
+        )
+        db.session.add(alert)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Professional access approved'})
+
+    except Exception as e:
+        logger.error(f"[L170] Error approving professional request: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to approve request'}), 500
+
+
+@app.route('/api/professional/client/<int:pc_id>/reject', methods=['POST'])
+@login_required
+def professional_client_reject(pc_id):
+    """L170: Client rejects a pending professional access request."""
+    try:
+        current_user_id = session['user_id']
+
+        pc = db.session.get(ProfessionalClient, pc_id)
+        if not pc:
+            return jsonify({'error': 'Request not found'}), 404
+
+        # Only the client can reject
+        if pc.client_id != current_user_id:
+            return jsonify({'error': 'Not authorized'}), 403
+
+        if pc.status != 'pending':
+            return jsonify({'error': f'Request is not pending (current status: {pc.status})'}), 400
+
+        # Delete the request entirely on rejection (matches FollowRequest pattern)
+        db.session.delete(pc)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Professional access request rejected'})
+
+    except Exception as e:
+        logger.error(f"[L170] Error rejecting professional request: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to reject request'}), 500
+
+
+@app.route('/api/professional/client/<int:pc_id>/revoke', methods=['POST'])
+@login_required
+def professional_client_revoke(pc_id):
+    """L170: Either the client or the professional can revoke an active relationship."""
+    try:
+        current_user_id = session['user_id']
+
+        pc = db.session.get(ProfessionalClient, pc_id)
+        if not pc:
+            return jsonify({'error': 'Relationship not found'}), 404
+
+        # Either party can revoke
+        if pc.client_id != current_user_id and pc.professional_id != current_user_id:
+            return jsonify({'error': 'Not authorized'}), 403
+
+        if pc.status != 'active':
+            return jsonify({'error': f'Relationship is not active (current status: {pc.status})'}), 400
+
+        pc.status = 'revoked'
+        pc.revoked_at = datetime.utcnow()
+        db.session.commit()
+
+        # Alert the other party
+        other_id = pc.professional_id if current_user_id == pc.client_id else pc.client_id
+        revoker = db.session.get(User, current_user_id)
+        alert = Alert(
+            user_id=other_id,
+            alert_type='professional_revoked',
+            alert_category='follow',
+            source_user_id=current_user_id,
+            content=f'{revoker.username} has revoked the professional access relationship'
+        )
+        db.session.add(alert)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Professional access revoked'})
+
+    except Exception as e:
+        logger.error(f"[L170] Error revoking professional relationship: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to revoke'}), 500
+
+
+@app.route('/api/professional/my-professionals')
+@login_required
+def my_professionals():
+    """L170: Client lists professionals who have requested or have active access."""
+    try:
+        current_user_id = session['user_id']
+        status_filter = request.args.get('status')
+
+        query = ProfessionalClient.query.filter_by(client_id=current_user_id)
+        if status_filter and status_filter in ('pending', 'active', 'revoked'):
+            query = query.filter_by(status=status_filter)
+
+        relationships = query.order_by(ProfessionalClient.requested_at.desc()).all()
+
+        result = []
+        for pc in relationships:
+            prof_user = db.session.get(User, pc.professional_id)
+            result.append({
+                'id': pc.id,
+                'professional_id': pc.professional_id,
+                'professional_username': prof_user.username if prof_user else 'Unknown',
+                'professional_verified': (getattr(prof_user, 'professional_verified', False) or False) if prof_user else False,  # L210
+                'status': pc.status,
+                'requested_at': pc.requested_at.isoformat() if pc.requested_at else None,
+                'approved_at': pc.approved_at.isoformat() if pc.approved_at else None,
+                'revoked_at': pc.revoked_at.isoformat() if pc.revoked_at else None,
+                'notes': pc.notes,
+                'see_historical': pc.see_historical
+            })
+
+        return jsonify({'professionals': result})
+
+    except Exception as e:
+        logger.error(f"[L170] Error listing professionals: {e}")
+        return jsonify({'error': 'Failed to list professionals'}), 500
+
+
+# =====================
 # SAMPLE DATA ROUTE
 # =====================
 
@@ -17392,8 +18284,12 @@ def get_user_parameters_for_triggers(user_id):
     try:
         viewer_id = session.get('user_id')
 
-        # Check if following
-        if viewer_id != user_id:
+        # L170: Professional bypass — skip follow check, grant full access
+        pc_row = _is_active_professional_for(viewer_id, user_id) if viewer_id != user_id else None
+        is_professional_viewer = pc_row is not None
+
+        # Check if following (skip for professionals)
+        if viewer_id != user_id and not is_professional_viewer:
             follow = Follow.query.filter_by(
                 follower_id=viewer_id,
                 followed_id=user_id
@@ -17434,12 +18330,29 @@ def get_user_parameters_for_triggers(user_id):
             SavedParameters.date >= thirty_days_ago
         ).order_by(SavedParameters.date.desc()).all()
 
+        # L170: Determine date cutoff for professional viewers
+        professional_from_date = _professional_visible_from_date(pc_row) if is_professional_viewer else None
+
         result = {'parameters': []}
         for param in parameters:
+            # L170: Professional date filter
+            if professional_from_date:
+                param_date = param.date.isoformat() if hasattr(param.date, 'isoformat') else str(param.date)
+                if param_date < professional_from_date.strftime('%Y-%m-%d'):
+                    continue
+
             # Add each parameter as separate entry - V4 FIX: only if privacy allows
             for param_name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
                 value = getattr(param, param_name, None)
                 if value:
+                    # L170: Professional bypass — skip privacy check
+                    if is_professional_viewer:
+                        result['parameters'].append({
+                            'date': param.date.isoformat() if hasattr(param.date, 'isoformat') else str(param.date),
+                            'parameter_name': param_name,
+                            'value': value
+                        })
+                        continue
                     # V4 FIX: Check privacy before including this parameter
                     # VINTER FIX: Use 'public' as default for NULL privacy (matches get_hierarchical_parameters behavior)
                     # Previously defaulted to 'private' which blocked all Friends Daily Updates visibility
@@ -19735,14 +20648,24 @@ def get_user_parameters_by_date(user_id, date_str):
         if not target_user:
             return jsonify({'error': 'User not found'}), 404
 
-        if user_id != current_user_id and not current_user.is_following(target_user):
+        # L170: Professional bypass
+        pc_row = _is_active_professional_for(current_user_id, user_id) if user_id != current_user_id else None
+        is_professional_viewer = pc_row is not None
+
+        if user_id != current_user_id and not is_professional_viewer and not current_user.is_following(target_user):
             return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
+
+        # L170: Professional date filter
+        if is_professional_viewer:
+            professional_from_date = _professional_visible_from_date(pc_row)
+            if professional_from_date and date_str < professional_from_date.strftime('%Y-%m-%d'):
+                return jsonify({'success': False, 'message': 'No parameters for this date'})
 
         # T25: Determine circle level — must be explicitly in a circle to see parameters
         # U5: Use ALL circle memberships for non-hierarchical multi-circle visibility
         viewer_circles = None
         circle_level = 'none'
-        if user_id != current_user_id:
+        if user_id != current_user_id and not is_professional_viewer:
             viewer_circles = _get_all_viewer_circle_types(user_id, current_user_id)
             if not viewer_circles:
                 circle_level = 'none'
@@ -19758,6 +20681,22 @@ def get_user_parameters_by_date(user_id, date_str):
         ).first()
 
         if params:
+            # L170: Professional bypass — return all parameters
+            if is_professional_viewer:
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'parameters': {
+                            'mood': params.mood,
+                            'energy': params.energy,
+                            'sleep_quality': params.sleep_quality,
+                            'physical_activity': params.physical_activity,
+                            'anxiety': params.anxiety
+                        },
+                        'notes': params.notes or ''
+                    }
+                })
+
             return jsonify({
                 'success': True,
                 'data': {
