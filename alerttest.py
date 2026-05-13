@@ -2,6 +2,7 @@
 
 # python
 
+
 from app import app, db, Alert, User, Follow, Message
 import json
 

@@ -6121,9 +6121,9 @@
                               <!-- Search and request section -->
                               <div class="settings-card" style="background: var(--light); padding: 20px; border-radius: 16px; margin-bottom: 20px;">
                                   <h4 style="color: var(--primary); margin-bottom: 12px;" data-i18n="professional.request_client">Request Client Access</h4>
-                                  <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                                      <input type="text" id="profClientSearch" class="form-input" placeholder="Enter username or email" data-i18n-placeholder="follow.search_placeholder" style="flex: 1;">
-                                      <button class="btn btn-primary" onclick="searchForClient()" style="white-space: nowrap;" data-i18n="follow.search_users">Search</button>
+                                  <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
+                                      <input type="text" id="profClientSearch" class="form-input" placeholder="Enter username or email" data-i18n-placeholder="follow.search_placeholder" style="flex: 1 1 auto !important; width: auto !important; min-width: 120px;" oninput="searchForClientDebounced(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();searchForClient();}">
+                                      <button onclick="searchForClient()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.9rem; white-space: nowrap; flex-shrink: 0; width: auto !important;" data-i18n="professional.search_btn">Search</button>
                                   </div>
                                   <div id="profClientSearchResults" style="display: none; margin-top: 10px;"></div>
                               </div>
@@ -15439,6 +15439,11 @@ async function loadAlerts() {
                     }
                 }
 
+                // L450: For professional_request alerts, add a button to go to Settings > Account to approve/reject
+                if (alert.type === 'professional_request') {
+                    contentHtml += ' <a href="#" onclick="event.stopPropagation(); showView(\'settings\'); setTimeout(() => { switchSettingsTab(\'account\'); }, 150); return false;" style="display: inline-block; margin-top: 6px; padding: 4px 12px; background: #d1fae5; color: #059669; border-radius: 8px; font-size: 0.8rem; font-weight: 600; text-decoration: none;">' + _t('professional.review_request', 'Review Request') + '</a>';
+                }
+
                 return `
                     <div class="alert-item ${alert.type || 'info'}"
                          data-alert-id="${alert.id}"
@@ -19142,6 +19147,18 @@ async function loadProfessionalClients(statusFilter) {
 }
 
 // L190: Search for a user to request as client
+// L450: Debounced auto-search for professional client search (matches connections behavior)
+let _profClientSearchTimer = null;
+function searchForClientDebounced(value) {
+    clearTimeout(_profClientSearchTimer);
+    if (!value || value.trim().length < 1) {
+        const rd = document.getElementById('profClientSearchResults');
+        if (rd) { rd.style.display = 'none'; rd.innerHTML = ''; }
+        return;
+    }
+    _profClientSearchTimer = setTimeout(() => { searchForClient(); }, 300);
+}
+
 async function searchForClient() {
     const query = (document.getElementById('profClientSearch') || {}).value || '';
     if (!query.trim() || query.trim().length < 1) return;
