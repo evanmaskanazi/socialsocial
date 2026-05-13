@@ -17565,6 +17565,7 @@ def professional_request_client():
                     alert_type='professional_request',
                     alert_category='follow',
                     source_user_id=professional_id,
+                    title='Professional Access Request',
                     content=f'Professional {db.session.get(User, professional_id).username} has requested access to your wellness data'
                 )
                 db.session.add(alert)
@@ -17587,6 +17588,7 @@ def professional_request_client():
                 alert_type='professional_request',
                 alert_category='follow',
                 source_user_id=professional_id,
+                title='Professional Access Request',
                 content=f'Professional {db.session.get(User, professional_id).username} has requested access to your wellness data'
             )
             db.session.add(alert)
