@@ -17668,6 +17668,7 @@ def professional_client_approve(pc_id):
             alert_type='professional_approved',
             alert_category='follow',
             source_user_id=current_user_id,
+            title='Professional Access Approved',
             content=f'{client_user.username} has approved your professional access request'
         )
         db.session.add(alert)
@@ -17741,6 +17742,7 @@ def professional_client_revoke(pc_id):
             alert_type='professional_revoked',
             alert_category='follow',
             source_user_id=current_user_id,
+            title='Professional Access Revoked',
             content=f'{revoker.username} has revoked the professional access relationship'
         )
         db.session.add(alert)
