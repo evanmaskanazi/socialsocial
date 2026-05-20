@@ -5056,16 +5056,6 @@
                           <button id="aiRefreshBtn" onclick="loadAIWeeklySummary()" style="background: none; border: 1px solid var(--primary); color: var(--primary); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; margin-top: 10px; display: none;" data-i18n="ai.refresh">Refresh</button>
                       </div>
 
-                      <!-- K2: AI Reflection Prompt (on progress page) -->
-                      <div id="aiReflectionPromptBox" style="display: none; background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(118, 75, 162, 0.06) 100%); padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(102, 126, 234, 0.15);">
-                          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                              <span style="font-size: 1.1em;">💭</span>
-                              <h4 style="margin: 0; color: var(--primary); font-size: 0.95rem;" data-i18n="ai.reflection_title">Reflection Prompt</h4>
-                              <span style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.6rem; padding: 2px 7px; border-radius: 10px; font-weight: 600;">AI</span>
-                          </div>
-                          <p id="aiReflectionPromptText" style="color: var(--dark); line-height: 1.6; font-size: 0.93rem; font-style: italic; margin: 0;"></p>
-                      </div>
-
                       <!-- Daily Check-in Summary -->
                       <div id="dailyCheckinSummary" style="background: var(--white); padding: 22px; border-radius: 14px; border: 1px solid var(--border);">
                           <h4 style="margin-bottom: 15px; color: var(--dark);" data-i18n="progress.daily_checkin">Daily Check-in Summary</h4>
@@ -9109,9 +9099,6 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                         if (typeof loadAIWeeklySummary === 'function') {
                             loadAIWeeklySummary();
                         }
-                        if (typeof loadAIReflectionPrompt === 'function') {
-                            loadAIReflectionPrompt();
-                        }
                         break;
                     case 'following':
                         // Check if viewing another user
@@ -9505,10 +9492,6 @@ function showView(viewName, resetContext) {
                 // K2: Load AI weekly summary
                 if (typeof loadAIWeeklySummary === 'function') {
                     loadAIWeeklySummary();
-                }
-                // K2: Load AI reflection prompt
-                if (typeof loadAIReflectionPrompt === 'function') {
-                    loadAIReflectionPrompt();
                 }
                 break;
             case 'connections':
@@ -17037,30 +17020,6 @@ async function loadAIWeeklySummary() {
         };
         contentEl.textContent = errorTexts[lang] || errorTexts['en'];
         contentEl.style.color = 'var(--gray)';
-    }
-}
-
-async function loadAIReflectionPrompt() {
-    const box = document.getElementById('aiReflectionPromptBox');
-    const textEl = document.getElementById('aiReflectionPromptText');
-    if (!box || !textEl) return;
-
-    const lang = localStorage.getItem('selectedLanguage') || 'en';
-
-    try {
-        const response = await fetch(`/api/ai/reflection-prompt?lang=${lang}`, { credentials: 'include' });
-        if (!response.ok) throw new Error('API error');
-        const data = await response.json();
-
-        textEl.textContent = data.prompt;
-        box.style.display = 'block';
-        // Smooth reveal
-        box.style.opacity = '0';
-        box.style.transition = 'opacity 0.5s ease';
-        setTimeout(() => { box.style.opacity = '1'; }, 50);
-    } catch (e) {
-        console.error('[AI] Reflection prompt error:', e);
-        // Silently fail — the prompt is supplementary
     }
 }
 
