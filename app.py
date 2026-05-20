@@ -14366,9 +14366,13 @@ def ai_weekly_summary():
 @app.route('/api/ai/reflection-prompt')
 @login_required
 def ai_reflection_prompt():
-    """K2: AI-generated personalized daily reflection prompt based on the user's most recent check-in.
-    Designed to encourage self-reflection and journaling after completing a diary entry.
-    Falls back to static prompts if API key is not configured.
+    """K6: AI-generated personalized daily reflection prompt.
+    Improvements over K2-K5:
+    - Sends last 5 entries (not 3) for richer trend context
+    - Includes previous reflection responses (💭 entries from notes) so the AI can build on them
+    - Tracks all 5 parameter trends (not just mood)
+    - Uses varied question styles: gratitude, curiosity, action-oriented, connection, contrast
+    - System prompt explicitly requests variety and builds on prior reflections
     """
     try:
         user_id = session['user_id']
@@ -14376,10 +14380,10 @@ def ai_reflection_prompt():
         if user_language not in ['en', 'he', 'ar', 'ru']:
             user_language = 'en'
 
-        # Get last 3 entries for context
+        # Get last 5 entries for richer context
         params_stmt = select(SavedParameters).filter(
             SavedParameters.user_id == user_id
-        ).order_by(SavedParameters.date.desc()).limit(3)
+        ).order_by(SavedParameters.date.desc()).limit(5)
         params = db.session.execute(params_stmt).scalars().all()
 
         if not params:
@@ -14391,6 +14395,7 @@ def ai_reflection_prompt():
             }
             return jsonify({'prompt': fallback_prompts.get(user_language, fallback_prompts['en']), 'ai_generated': False})
 
+        # Build today's entry
         latest = params[0]
         entry = {}
         if getattr(latest, 'mood', None): entry['mood'] = int(latest.mood)
@@ -14402,39 +14407,89 @@ def ai_reflection_prompt():
                 entry['calmness'] = 5 - int(latest.anxiety)
             else:
                 entry['anxiety'] = int(latest.anxiety)
-        notes = getattr(latest, 'notes', None)
-        if notes:
-            entry['notes'] = notes[:100]
+        today_notes = getattr(latest, 'notes', None) or ''
+        if today_notes:
+            entry['notes'] = today_notes[:150]
 
-        # Trend context from previous entries
-        trend_note = ""
+        # K6: Extract previous reflection responses from notes (💭 marker)
+        previous_reflections = []
+        for p in params[1:]:  # Skip today, look at previous days
+            p_notes = getattr(p, 'notes', None) or ''
+            if '💭' in p_notes:
+                # Extract the reflection Q&A pairs
+                parts = p_notes.split('💭')
+                for part in parts[1:]:  # Skip text before first 💭
+                    reflection_text = part.strip()[:200]
+                    if reflection_text:
+                        p_date = p.date.strftime('%b %d') if hasattr(p.date, 'strftime') else str(p.date)
+                        previous_reflections.append(f"({p_date}): {reflection_text}")
+
+        # K6: Build multi-parameter trend context
+        trend_lines = []
+        param_names = [
+            ('mood', 'mood'), ('energy', 'energy'), ('sleep_quality', 'sleep'),
+            ('physical_activity', 'activity'), ('anxiety', 'calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'anxiety')
+        ]
         if len(params) >= 2:
-            prev_mood = getattr(params[1], 'mood', None)
-            curr_mood = getattr(params[0], 'mood', None)
-            if prev_mood and curr_mood:
-                if int(curr_mood) > int(prev_mood):
-                    trend_note = "The user's mood improved compared to their previous entry."
-                elif int(curr_mood) < int(prev_mood):
-                    trend_note = "The user's mood declined compared to their previous entry."
+            for attr, label in param_names:
+                curr = getattr(params[0], attr, None)
+                prev = getattr(params[1], attr, None)
+                if curr and prev:
+                    curr_v, prev_v = int(curr), int(prev)
+                    if attr == 'anxiety' and ANXIETY_DISPLAY_MODE == 'calm':
+                        curr_v, prev_v = 5 - curr_v, 5 - prev_v
+                    if curr_v > prev_v:
+                        trend_lines.append(f"{label} improved ({prev_v}→{curr_v})")
+                    elif curr_v < prev_v:
+                        trend_lines.append(f"{label} declined ({prev_v}→{curr_v})")
+
+        trend_summary = "Trends vs yesterday: " + "; ".join(trend_lines) if trend_lines else "No prior entry to compare."
+
+        # K6: Build context about previous reflections
+        reflection_context = ""
+        if previous_reflections:
+            reflection_context = "\n\nPrevious reflection responses from recent days:\n" + "\n".join(previous_reflections[:3])
+            reflection_context += "\n\nBuild on these previous reflections — reference what they wrote before, ask a follow-up, or explore a connected theme. Do NOT repeat a question they already answered."
+
+        # K6: Determine question style for variety based on day-of-week
+        import hashlib
+        day_hash = int(hashlib.md5(f"{user_id}-{latest.date}".encode()).hexdigest()[:8], 16)
+        styles = ['gratitude', 'curiosity', 'action', 'connection', 'contrast', 'meaning']
+        chosen_style = styles[day_hash % len(styles)]
 
         calmness_label = 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety'
         system_prompt = (
-            "You are a warm, supportive well-being companion for TheraSocial. "
-            "Based on a user's latest check-in data, generate ONE thoughtful reflection question. "
-            "The question should encourage self-awareness and gentle introspection. "
-            f"The data uses a 1-4 scale. The fifth parameter is {calmness_label}. "
-            "Keep the question to 1-2 sentences. Do NOT use clinical language. Do NOT diagnose. "
-            "Make it specific to what you see in the data — not generic. "
-            f"{_get_ai_language_instruction(user_language)}"
+            "You are a warm, perceptive well-being companion for TheraSocial. "
+            "Generate ONE thoughtful reflection question for a user who just completed their daily well-being check-in. "
+            "\n\nRules:"
+            "\n- The question must be specific to their data and notes — never generic."
+            "\n- Keep it to 1-2 sentences maximum."
+            "\n- Do NOT use clinical language, do NOT diagnose, do NOT give advice."
+            "\n- Do NOT start with 'I notice' or 'It seems like' — go straight to the question."
+            f"\n- Use a {chosen_style}-oriented style for this question:"
+            "\n  gratitude = what went well, what they appreciate"
+            "\n  curiosity = exploring why something happened, what surprised them"
+            "\n  action = one small concrete thing they could try tomorrow"
+            "\n  connection = people, relationships, support in their life"
+            "\n  contrast = comparing a good moment vs a hard moment today"
+            "\n  meaning = what matters to them, values, what gives purpose"
+            f"\n- The data uses a 1-4 scale where 1=lowest, 4=highest. The fifth parameter is {calmness_label}."
+            "\n- If previous reflection responses are provided, build on them — ask a follow-up or explore a thread they started."
+            f"\n\n{_get_ai_language_instruction(user_language)}"
         )
-        user_prompt = f"Latest check-in data: {json.dumps(entry)}\n{trend_note}\n\nGenerate one personalized reflection question."
+        user_prompt = (
+            f"Today's check-in: {json.dumps(entry)}\n"
+            f"{trend_summary}"
+            f"{reflection_context}\n\n"
+            f"Generate one {chosen_style}-oriented reflection question."
+        )
 
-        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=150)
+        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=200)
 
         if ai_text:
             return jsonify({'prompt': ai_text, 'ai_generated': True})
         else:
-            # Static fallback prompts based on data patterns
+            # Static fallback prompts
             static_prompts = {
                 'en': [
                     'What moment today brought you the most energy?',
