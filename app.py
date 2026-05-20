@@ -1,6 +1,25 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link
+Complete app.py for Social Social Platform - V4 10Link — K2
+
+# K2 Changes:
+# - FEATURE: Added /settings-redirect route for email "Manage Settings" links.
+#   Follows diary-redirect pattern: logged in → /#settings, not logged in → / (login).
+# - FEATURE: Added _get_manage_settings_html() helper generating translated link HTML.
+# - FEATURE: Added "Manage notification settings" link to ALL email footers:
+#   send_alert_notification_email, send_new_message_notification_email,
+#   send_daily_diary_reminder_email, send_consolidated_wellness_alert_email,
+#   send_notification_email. Translated in EN/HE/AR/RU.
+# - FEATURE: AI Weekly Summary — /api/ai/weekly-summary endpoint.
+#   Sends past 7 days of check-in data to Anthropic API (Claude Sonnet)
+#   and returns a warm, personalized natural language summary.
+#   Falls back to template insights when ANTHROPIC_API_KEY is not set.
+# - FEATURE: AI Reflection Prompt — /api/ai/reflection-prompt endpoint.
+#   Generates a personalized daily reflection question based on latest check-in.
+#   Falls back to curated static prompts when ANTHROPIC_API_KEY is not set.
+# - Added ANTHROPIC_API_KEY env var support and _call_anthropic_api() helper.
+# - Added _get_ai_language_instruction() for multilingual AI responses.
+# - Both AI endpoints are @login_required, use GET, and accept ?lang= parameter.
 
 # L290: Professional Verification — Fix Alert NOT NULL crash on verify
 # - BUG FIX: Clicking "Verify" or "Verify All Pending" returned HTTP 500.
@@ -916,6 +935,24 @@ def _html_to_plain_text(html):
     text = _re.sub(r'\s+', ' ', text).strip()
     return text
 
+
+def _get_manage_settings_html(user_language='en'):
+    """K2: Generate the 'Manage Settings' link HTML for email footers.
+    Links to /settings-redirect which handles login state.
+    Returns (link_html, plain_text) tuple for HTML and plain text email parts.
+    """
+    app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+    settings_link = f"{app_url}/settings-redirect"
+    manage_translations = {
+        'en': 'Manage notification settings',
+        'he': 'נהל הגדרות התראות',
+        'ar': 'إدارة إعدادات الإشعارات',
+        'ru': 'Управление настройками уведомлений'
+    }
+    label = manage_translations.get(user_language, manage_translations['en'])
+    link_html = f'<a href="{settings_link}" style="color: #667eea; text-decoration: underline; font-size: 12px;">{label}</a>'
+    return link_html
+
 import mimetypes
 import io
 import tempfile
@@ -1687,6 +1724,7 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
 
         subject = t['subject'].format(sender=sender_name)
 
@@ -1720,6 +1758,7 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
                     <p style="color: #999; font-size: 12px; margin: 0;">
                         {t['regards']},<br>{t['team']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 12px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -1986,6 +2025,7 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
 
         html_content = f"""
         <!DOCTYPE html>
@@ -2017,6 +2057,7 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
                     <p style="color: #999; font-size: 12px; margin: 0;">
                         {t['regards']},<br>{t['team']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 12px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -2126,6 +2167,7 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
 
         html_content = f"""
         <!DOCTYPE html>
@@ -2156,6 +2198,7 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
                     <p style="color: #999; font-size: 10px; margin-top: 15px; font-style: italic;">
                         {t['unsubscribe']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 8px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -2543,6 +2586,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
         
         # Build parameter list HTML
         param_items = []
@@ -2588,6 +2632,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                     <p style="color: #999; font-size: 12px; margin: 0;">
                         {t['regards']},<br>{t['team']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 12px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -2687,6 +2732,7 @@ def send_notification_email(user_email, notification_title, notification_content
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
 
         html_content = f"""
         <!DOCTYPE html>
@@ -2718,6 +2764,7 @@ def send_notification_email(user_email, notification_title, notification_content
                     <p style="color: #999; font-size: 12px; margin: 0;">
                         {t['regards']},<br>{t['team']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 12px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -6445,6 +6492,23 @@ def diary_redirect():
     
     # Not logged in or invalid session - redirect to login page
     logger.info("[DIARY REDIRECT] User not logged in, redirecting to login page")
+    return redirect('/')
+
+
+@app.route('/settings-redirect')
+def settings_redirect():
+    """K2: Smart redirect for email "Manage Settings" links.
+    - If user is logged in → redirect to /#settings (settings page)
+    - If user is not logged in → redirect to / (login page)
+    Follows the same pattern as diary-redirect (PJ40E).
+    """
+    if 'user_id' in session:
+        user = db.session.get(User, session['user_id'])
+        if user and user.is_active:
+            logger.info(f"[SETTINGS REDIRECT] User {session['user_id']} is logged in, redirecting to /#settings")
+            return redirect('/#settings')
+    
+    logger.info("[SETTINGS REDIRECT] User not logged in, redirecting to login page")
     return redirect('/')
 
 
@@ -14076,6 +14140,262 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
         insights.append(t['making_progress'])
     
     return " ".join(insights)
+
+
+# =====================
+# K2: AI WELLNESS FEATURES
+# =====================
+# Two AI-powered features using the Anthropic API:
+# 1. AI Weekly Summary — natural language analysis of the user's past 7 days
+# 2. AI Reflection Prompt — personalized daily prompt after check-in
+#
+# Both endpoints use the Anthropic API key from the ANTHROPIC_API_KEY env var.
+# If the key is not set, the endpoints return graceful fallback messages.
+# The API is called server-side to keep the key secure.
+# =====================
+
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+
+def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
+    """K2: Helper to call Anthropic API. Returns text response or None on failure."""
+    if not ANTHROPIC_API_KEY:
+        logger.warning("[AI] ANTHROPIC_API_KEY not configured")
+        return None
+    try:
+        resp = http_requests.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            },
+            json={
+                'model': 'claude-sonnet-4-20250514',
+                'max_tokens': max_tokens,
+                'system': system_prompt,
+                'messages': [{'role': 'user', 'content': user_prompt}]
+            },
+            timeout=30
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            for block in data.get('content', []):
+                if block.get('type') == 'text':
+                    return block['text']
+        else:
+            logger.error(f"[AI] Anthropic API returned {resp.status_code}: {resp.text[:200]}")
+        return None
+    except Exception as e:
+        logger.error(f"[AI] Anthropic API call failed: {e}")
+        return None
+
+
+def _get_ai_language_instruction(language):
+    """K2: Return language instruction for AI prompts."""
+    lang_map = {
+        'en': 'Respond in English.',
+        'he': 'Respond in Hebrew (עברית).',
+        'ar': 'Respond in Arabic (العربية).',
+        'ru': 'Respond in Russian (Русский).'
+    }
+    return lang_map.get(language, lang_map['en'])
+
+
+@app.route('/api/ai/weekly-summary')
+@login_required
+def ai_weekly_summary():
+    """K2: AI-generated natural language summary of the user's past 7 days of well-being data.
+    Returns a warm, personalized paragraph highlighting patterns, correlations, and encouragement.
+    Falls back to template-based insights if API key is not configured.
+    """
+    try:
+        user_id = session['user_id']
+        user_language = request.args.get('lang', 'en')
+        if user_language not in ['en', 'he', 'ar', 'ru']:
+            user_language = 'en'
+
+        seven_days_ago = datetime.now().date() - timedelta(days=7)
+        params_stmt = select(SavedParameters).filter(
+            SavedParameters.user_id == user_id,
+            SavedParameters.date >= seven_days_ago
+        ).order_by(SavedParameters.date)
+        params = db.session.execute(params_stmt).scalars().all()
+
+        if not params:
+            fallback_msgs = {
+                'en': 'Start tracking your daily well-being to receive an AI-powered weekly summary!',
+                'he': 'התחל/י לעקוב אחרי הבריאות שלך כדי לקבל סיכום שבועי מונע בינה מלאכותית!',
+                'ar': 'ابدأ بتتبع صحتك اليومية لتلقي ملخص أسبوعي مدعوم بالذكاء الاصطناعي!',
+                'ru': 'Начните отслеживать своё самочувствие, чтобы получать еженедельный AI-анализ!'
+            }
+            return jsonify({'summary': fallback_msgs.get(user_language, fallback_msgs['en']), 'ai_generated': False})
+
+        # Build data summary for the AI
+        days_data = []
+        for p in params:
+            day_str = p.date.strftime('%A %b %d') if hasattr(p.date, 'strftime') else str(p.date)
+            entry = {'date': day_str}
+            if getattr(p, 'mood', None): entry['mood'] = int(p.mood)
+            if getattr(p, 'energy', None): entry['energy'] = int(p.energy)
+            if getattr(p, 'sleep_quality', None): entry['sleep'] = int(p.sleep_quality)
+            if getattr(p, 'physical_activity', None): entry['activity'] = int(p.physical_activity)
+            if getattr(p, 'anxiety', None):
+                if ANXIETY_DISPLAY_MODE == 'calm':
+                    entry['calmness'] = 5 - int(p.anxiety)
+                else:
+                    entry['anxiety'] = int(p.anxiety)
+            notes = getattr(p, 'notes', None)
+            if notes:
+                entry['notes'] = notes[:100]
+            days_data.append(entry)
+
+        calmness_label = 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety'
+        system_prompt = (
+            "You are a warm, supportive well-being assistant for TheraSocial, a social wellness platform. "
+            "You analyze a user's daily well-being check-in data and produce a brief, encouraging weekly summary. "
+            "The data uses a 1-4 scale where 1=lowest and 4=highest for mood, energy, sleep quality, and physical activity. "
+            f"The fifth parameter is {calmness_label} (also 1-4, where {'4=most calm' if ANXIETY_DISPLAY_MODE == 'calm' else '4=most anxious'}). "
+            "Keep your response to 3-5 sentences. Be warm but not patronizing. Highlight specific patterns or correlations you notice. "
+            "Do NOT use clinical language. Do NOT diagnose or prescribe. "
+            f"{_get_ai_language_instruction(user_language)}"
+        )
+        user_prompt = f"Here is this user's well-being data for the past week:\n{json.dumps(days_data, indent=2)}\n\nPlease provide a brief, personalized weekly summary."
+
+        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=400)
+
+        if ai_text:
+            return jsonify({'summary': ai_text, 'ai_generated': True, 'days_count': len(params)})
+        else:
+            # Fallback to template insights
+            def safe_avg(vals):
+                valid = [v for v in vals if v is not None]
+                return sum(valid) / len(valid) if valid else None
+            moods = [getattr(p, 'mood', None) for p in params]
+            energies = [getattr(p, 'energy', None) for p in params]
+            sleeps = [getattr(p, 'sleep_quality', None) for p in params]
+            activities = [getattr(p, 'physical_activity', None) for p in params]
+            anxieties = [getattr(p, 'anxiety', None) for p in params]
+            moods = [int(v) for v in moods if v]
+            energies = [int(v) for v in energies if v]
+            sleeps = [int(v) for v in sleeps if v]
+            activities = [int(v) for v in activities if v]
+            anxieties = [int(v) for v in anxieties if v]
+            fallback = generate_progress_insights(
+                safe_avg(moods), safe_avg(energies), safe_avg(sleeps), safe_avg(activities),
+                len(params), safe_avg(anxieties), user_language
+            )
+            return jsonify({'summary': fallback, 'ai_generated': False, 'days_count': len(params)})
+
+    except Exception as e:
+        logger.error(f"[AI] Weekly summary error: {e}")
+        return jsonify({'summary': 'Unable to generate summary at this time.', 'ai_generated': False}), 500
+
+
+@app.route('/api/ai/reflection-prompt')
+@login_required
+def ai_reflection_prompt():
+    """K2: AI-generated personalized daily reflection prompt based on the user's most recent check-in.
+    Designed to encourage self-reflection and journaling after completing a diary entry.
+    Falls back to static prompts if API key is not configured.
+    """
+    try:
+        user_id = session['user_id']
+        user_language = request.args.get('lang', 'en')
+        if user_language not in ['en', 'he', 'ar', 'ru']:
+            user_language = 'en'
+
+        # Get last 3 entries for context
+        params_stmt = select(SavedParameters).filter(
+            SavedParameters.user_id == user_id
+        ).order_by(SavedParameters.date.desc()).limit(3)
+        params = db.session.execute(params_stmt).scalars().all()
+
+        if not params:
+            fallback_prompts = {
+                'en': 'What is one thing you are grateful for today?',
+                'he': 'מה דבר אחד שאת/ה אסיר/ת תודה עליו היום?',
+                'ar': 'ما هو الشيء الذي تشعر بالامتنان له اليوم؟',
+                'ru': 'За что вы благодарны сегодня?'
+            }
+            return jsonify({'prompt': fallback_prompts.get(user_language, fallback_prompts['en']), 'ai_generated': False})
+
+        latest = params[0]
+        entry = {}
+        if getattr(latest, 'mood', None): entry['mood'] = int(latest.mood)
+        if getattr(latest, 'energy', None): entry['energy'] = int(latest.energy)
+        if getattr(latest, 'sleep_quality', None): entry['sleep'] = int(latest.sleep_quality)
+        if getattr(latest, 'physical_activity', None): entry['activity'] = int(latest.physical_activity)
+        if getattr(latest, 'anxiety', None):
+            if ANXIETY_DISPLAY_MODE == 'calm':
+                entry['calmness'] = 5 - int(latest.anxiety)
+            else:
+                entry['anxiety'] = int(latest.anxiety)
+        notes = getattr(latest, 'notes', None)
+        if notes:
+            entry['notes'] = notes[:100]
+
+        # Trend context from previous entries
+        trend_note = ""
+        if len(params) >= 2:
+            prev_mood = getattr(params[1], 'mood', None)
+            curr_mood = getattr(params[0], 'mood', None)
+            if prev_mood and curr_mood:
+                if int(curr_mood) > int(prev_mood):
+                    trend_note = "The user's mood improved compared to their previous entry."
+                elif int(curr_mood) < int(prev_mood):
+                    trend_note = "The user's mood declined compared to their previous entry."
+
+        calmness_label = 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety'
+        system_prompt = (
+            "You are a warm, supportive well-being companion for TheraSocial. "
+            "Based on a user's latest check-in data, generate ONE thoughtful reflection question. "
+            "The question should encourage self-awareness and gentle introspection. "
+            f"The data uses a 1-4 scale. The fifth parameter is {calmness_label}. "
+            "Keep the question to 1-2 sentences. Do NOT use clinical language. Do NOT diagnose. "
+            "Make it specific to what you see in the data — not generic. "
+            f"{_get_ai_language_instruction(user_language)}"
+        )
+        user_prompt = f"Latest check-in data: {json.dumps(entry)}\n{trend_note}\n\nGenerate one personalized reflection question."
+
+        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=150)
+
+        if ai_text:
+            return jsonify({'prompt': ai_text, 'ai_generated': True})
+        else:
+            # Static fallback prompts based on data patterns
+            static_prompts = {
+                'en': [
+                    'What moment today brought you the most energy?',
+                    'How did your sleep affect your day?',
+                    'What is one small thing you could do differently tomorrow?',
+                    'Who made a positive impact on your day today?'
+                ],
+                'he': [
+                    'איזה רגע היום נתן לך הכי הרבה אנרגיה?',
+                    'איך השינה שלך השפיעה על היום?',
+                    'מה דבר קטן אחד שתוכל/י לעשות אחרת מחר?',
+                    'מי השפיע לטובה על היום שלך?'
+                ],
+                'ar': [
+                    'ما اللحظة التي منحتك أكبر قدر من الطاقة اليوم؟',
+                    'كيف أثر نومك على يومك؟',
+                    'ما الشيء الصغير الذي يمكنك فعله بشكل مختلف غداً؟',
+                    'من الذي أثر إيجابياً على يومك؟'
+                ],
+                'ru': [
+                    'Какой момент сегодня дал вам больше всего энергии?',
+                    'Как сон повлиял на ваш день?',
+                    'Что одно маленькое вы могли бы сделать по-другому завтра?',
+                    'Кто положительно повлиял на ваш день?'
+                ]
+            }
+            import random
+            prompts = static_prompts.get(user_language, static_prompts['en'])
+            return jsonify({'prompt': random.choice(prompts), 'ai_generated': False})
+
+    except Exception as e:
+        logger.error(f"[AI] Reflection prompt error: {e}")
+        return jsonify({'prompt': 'What is one thing you are grateful for today?', 'ai_generated': False}), 500
 
 
 # =====================
