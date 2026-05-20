@@ -14411,18 +14411,30 @@ def ai_reflection_prompt():
         if today_notes:
             entry['notes'] = today_notes[:150]
 
-        # K6: Extract previous reflection responses from notes (💭 marker)
+        # F8: Extract previous reflection Q&A pairs from notes (💭 = question, ✍️ = answer)
         previous_reflections = []
-        for p in params[1:]:  # Skip today, look at previous days
+        for p in params[1:]:  # Skip current entry, look at previous days
             p_notes = getattr(p, 'notes', None) or ''
             if '💭' in p_notes:
-                # Extract the reflection Q&A pairs
+                p_date = p.date.strftime('%b %d') if hasattr(p.date, 'strftime') else str(p.date)
                 parts = p_notes.split('💭')
                 for part in parts[1:]:  # Skip text before first 💭
-                    reflection_text = part.strip()[:200]
-                    if reflection_text:
-                        p_date = p.date.strftime('%b %d') if hasattr(p.date, 'strftime') else str(p.date)
-                        previous_reflections.append(f"({p_date}): {reflection_text}")
+                    lines = part.strip().split('\n')
+                    question = lines[0].strip()[:150] if lines else ''
+                    # Look for ✍️ answer marker, or fall back to second line
+                    answer = ''
+                    for line in lines[1:]:
+                        if line.strip().startswith('✍️'):
+                            answer = line.strip()[2:].strip()[:150]
+                            break
+                        elif line.strip() and not line.strip().startswith('──'):
+                            answer = line.strip()[:150]
+                            break
+                    if question:
+                        entry_text = f"Q: {question}"
+                        if answer:
+                            entry_text += f" → A: {answer}"
+                        previous_reflections.append(f"({p_date}) {entry_text}")
 
         # K6: Build multi-parameter trend context
         trend_lines = []
