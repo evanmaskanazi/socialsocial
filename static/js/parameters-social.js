@@ -780,7 +780,12 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 Find People to Connect With',
                 'invite.link_copied': 'Invite link copied to clipboard! 📋',
                 'invite.search_users': 'Search users to invite',
-                'follow.search_users': 'Search users to connect with'
+                'follow.search_users': 'Search users to connect with',
+                // K5: AI reflection prompt
+                'ai.reflection_title': 'Reflection Prompt',
+                'ai.reflection_placeholder': 'Write your reflection here...',
+                'ai.save_reflection': 'Save Reflection',
+                'ai.reflection_empty': 'Please write something before saving.'
             });
         }
 
@@ -848,7 +853,11 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 מצא אנשים לעקוב',
                 'invite.link_copied': 'קישור ההזמנה הועתק ללוח! 📋',
                 'invite.search_users': 'חפש משתמשים להזמנה',
-                'follow.search_users': 'חפש משתמשים להתחבר'
+                'follow.search_users': 'חפש משתמשים להתחבר',
+                'ai.reflection_title': 'שאלת רפלקציה',
+                'ai.reflection_placeholder': 'כתוב/י את הרפלקציה שלך כאן...',
+                'ai.save_reflection': 'שמור רפלקציה',
+                'ai.reflection_empty': 'אנא כתוב/י משהו לפני השמירה.'
             });
         }
 
@@ -916,7 +925,11 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 ابحث عن أشخاص للمتابعة',
                 'invite.link_copied': 'تم نسخ رابط الدعوة إلى الحافظة! 📋',
                 'invite.search_users': 'البحث عن مستخدمين للدعوة',
-                'follow.search_users': 'البحث عن مستخدمين للتواصل'
+                'follow.search_users': 'البحث عن مستخدمين للتواصل',
+                'ai.reflection_title': 'سؤال للتأمل',
+                'ai.reflection_placeholder': 'اكتب تأملك هنا...',
+                'ai.save_reflection': 'حفظ التأمل',
+                'ai.reflection_empty': 'يرجى كتابة شيء قبل الحفظ.'
             });
         }
 
@@ -984,7 +997,11 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 Найти людей для подписки',
                 'invite.link_copied': 'Ссылка-приглашение скопирована в буфер обмена! 📋',
                 'invite.search_users': 'Поиск пользователей для приглашения',
-                'follow.search_users': 'Поиск пользователей для подписки'
+                'follow.search_users': 'Поиск пользователей для подписки',
+                'ai.reflection_title': 'Вопрос для размышления',
+                'ai.reflection_placeholder': 'Напишите ваше размышление здесь...',
+                'ai.save_reflection': 'Сохранить размышление',
+                'ai.reflection_empty': 'Пожалуйста, напишите что-нибудь перед сохранением.'
             });
         }
 
@@ -2910,8 +2927,15 @@ async function saveParameters() {
              // Show invite CTA after successful save
             showInviteCTA();
 
-            // K3: Show AI reflection prompt after successful save
-            loadAIReflectionPrompt();
+            // K5: Show AI reflection prompt only when saving today's date
+            var todayStr = new Date().toISOString().split('T')[0];
+            if (dateStr === todayStr) {
+                loadAIReflectionPrompt();
+            } else {
+                // Hide reflection box for past dates
+                var rbox = document.getElementById('aiReflectionBox');
+                if (rbox) rbox.style.display = 'none';
+            }
 
             // Add this date to our tracking set
             datesWithData.add(dateStr)
@@ -3405,9 +3429,22 @@ async function loadAIReflectionPrompt() {
         textEl.textContent = data.prompt;
         if (badgeEl && data.ai_generated) badgeEl.style.display = 'inline';
 
-        // Clear any previous response text
+        // Clear any previous response text and set translated placeholder
         const responseEl = document.getElementById('aiReflectionResponse');
-        if (responseEl) responseEl.value = '';
+        if (responseEl) {
+            responseEl.value = '';
+            responseEl.readOnly = false;
+            responseEl.style.borderColor = 'rgba(102, 126, 234, 0.25)';
+            responseEl.style.background = 'rgba(255,255,255,0.7)';
+            responseEl.placeholder = pt('ai.reflection_placeholder') || 'Write your reflection here...';
+        }
+        // Set save button text from translations
+        var saveBtn = document.getElementById('aiReflectionSaveBtn');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = pt('ai.save_reflection') || 'Save Reflection';
+            saveBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }
 
         // Show with fade-in
         box.style.display = 'block';
