@@ -1,7 +1,23 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — K2
+Complete app.py for Social Social Platform - V4 10Link — K4
 
+# K4 Changes (from K3):
+# - FIX: Enhanced _call_anthropic_api() with detailed diagnostic logging:
+#   logs key prefix, response status, byte count, egress proxy x-deny-reason header,
+#   and distinguishes Timeout/ConnectionError/generic exceptions.
+#   This will reveal whether the preview deployment lacks the API key or the
+#   egress proxy is blocking the request.
+# - (Carries forward K3: /api/parameters/save-notes, reflection prompt in diary page,
+#   weekly summary on progress page, manage-settings email links)
+#
+# K3 Changes (from K2):
+# - MOVED: AI Reflection Prompt from Progress page to Diary page (/parameters).
+#   Now appears after successful diary save with a response textarea.
+# - ADDED: saveReflectionResponse() saves reflection to diary notes via /api/parameters/save-notes.
+# - ADDED: POST /api/parameters/save-notes endpoint for notes-only updates.
+# - REMOVED: Reflection prompt from indexK3.html (lives in parameters-socialK3.js now).
+#
 # K2 Changes:
 # - FEATURE: Added /settings-redirect route for email "Manage Settings" links.
 #   Follows diary-redirect pattern: logged in → /#settings, not logged in → / (login).
@@ -14196,10 +14212,13 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 
 def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
-    """K2: Helper to call Anthropic API. Returns text response or None on failure."""
+    """K4: Helper to call Anthropic API. Returns text response or None on failure.
+    Enhanced with detailed logging for diagnosing preview deployment issues."""
     if not ANTHROPIC_API_KEY:
-        logger.warning("[AI] ANTHROPIC_API_KEY not configured")
+        logger.warning("[AI] ANTHROPIC_API_KEY is empty or not set — returning fallback")
         return None
+    key_preview = ANTHROPIC_API_KEY[:15] + '...' if len(ANTHROPIC_API_KEY) > 15 else '(short key?)'
+    logger.info(f"[AI] Calling Anthropic API: max_tokens={max_tokens}, key_starts_with={key_preview}")
     try:
         resp = http_requests.post(
             'https://api.anthropic.com/v1/messages',
@@ -14216,16 +14235,30 @@ def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
             },
             timeout=30
         )
+        logger.info(f"[AI] Anthropic API responded: status={resp.status_code}, bytes={len(resp.content)}")
         if resp.status_code == 200:
             data = resp.json()
             for block in data.get('content', []):
                 if block.get('type') == 'text':
+                    logger.info(f"[AI] SUCCESS — received {len(block['text'])} chars of AI text")
                     return block['text']
+            logger.warning(f"[AI] 200 OK but no text block in response content")
         else:
-            logger.error(f"[AI] Anthropic API returned {resp.status_code}: {resp.text[:200]}")
+            # Log the deny reason header from egress proxy if present
+            deny_reason = resp.headers.get('x-deny-reason', '')
+            if deny_reason:
+                logger.error(f"[AI] Anthropic API BLOCKED by egress proxy: x-deny-reason={deny_reason}")
+            else:
+                logger.error(f"[AI] Anthropic API returned {resp.status_code}: {resp.text[:300]}")
+        return None
+    except http_requests.exceptions.Timeout:
+        logger.error("[AI] Anthropic API timed out after 30s")
+        return None
+    except http_requests.exceptions.ConnectionError as e:
+        logger.error(f"[AI] Anthropic API connection refused (egress proxy block?): {e}")
         return None
     except Exception as e:
-        logger.error(f"[AI] Anthropic API call failed: {e}")
+        logger.error(f"[AI] Anthropic API unexpected error: {type(e).__name__}: {e}")
         return None
 
 
