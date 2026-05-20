@@ -1205,6 +1205,9 @@ const translations = {
     'ai.loading_summary': 'Generating your personalized summary...',
     'ai.refresh': 'Refresh',
     'ai.reflection_title': 'Reflection Prompt',
+    'ai.reflection_placeholder': 'Write your reflection here...',
+    'ai.save_reflection': 'Save Reflection',
+    'ai.reflection_empty': 'Please write something before saving.',
 
     // PL400: Cookie Consent
     'cookies.title': 'Cookie Preferences',
@@ -2767,6 +2770,9 @@ const translations = {
     'ai.loading_summary': 'מייצר את הסיכום המותאם אישית שלך...',
     'ai.refresh': 'רענון',
     'ai.reflection_title': 'שאלת רפלקציה',
+    'ai.reflection_placeholder': 'כתוב/י את הרפלקציה שלך כאן...',
+    'ai.save_reflection': 'שמור רפלקציה',
+    'ai.reflection_empty': 'אנא כתוב/י משהו לפני השמירה.',
 
     // PL400: Cookie Consent (Hebrew)
     'cookies.title': 'העדפות עוגיות',
@@ -4329,6 +4335,9 @@ const translations = {
     'ai.loading_summary': 'جاري إنشاء ملخصك المخصص...',
     'ai.refresh': 'تحديث',
     'ai.reflection_title': 'سؤال للتأمل',
+    'ai.reflection_placeholder': 'اكتب تأملك هنا...',
+    'ai.save_reflection': 'حفظ التأمل',
+    'ai.reflection_empty': 'يرجى كتابة شيء قبل الحفظ.',
 
     // PL400: Cookie Consent (Arabic)
     'cookies.title': 'تفضيلات ملفات تعريف الارتباط',
@@ -5895,6 +5904,9 @@ const translations = {
     'ai.loading_summary': 'Создание вашего персонального анализа...',
     'ai.refresh': 'Обновить',
     'ai.reflection_title': 'Вопрос для размышления',
+    'ai.reflection_placeholder': 'Напишите ваше размышление здесь...',
+    'ai.save_reflection': 'Сохранить размышление',
+    'ai.reflection_empty': 'Пожалуйста, напишите что-нибудь перед сохранением.',
 
     // PL400: Cookie Consent (Russian)
     'cookies.title': 'Настройки файлов cookie',
