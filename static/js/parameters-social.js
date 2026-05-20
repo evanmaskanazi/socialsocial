@@ -2927,8 +2927,9 @@ async function saveParameters() {
              // Show invite CTA after successful save
             showInviteCTA();
 
-            // K5: Show AI reflection prompt only when saving today's date
-            var todayStr = new Date().toISOString().split('T')[0];
+            // K6: Show AI reflection prompt only when saving today's date
+            var todayStr = formatDate(new Date());
+            console.log('[AI] Save completed. dateStr=' + dateStr + ' todayStr=' + todayStr + ' match=' + (dateStr === todayStr));
             if (dateStr === todayStr) {
                 loadAIReflectionPrompt();
             } else {
@@ -3440,9 +3441,12 @@ async function loadAIReflectionPrompt() {
     }
 
     try {
+        console.log('[AI] Fetching reflection prompt for lang=' + lang);
         const response = await fetch('/api/ai/reflection-prompt?lang=' + lang, { credentials: 'include' });
-        if (!response.ok) throw new Error('API error');
+        console.log('[AI] Reflection API response status:', response.status);
+        if (!response.ok) throw new Error('API returned ' + response.status);
         const data = await response.json();
+        console.log('[AI] Reflection data:', JSON.stringify(data).substring(0, 200));
 
         textEl.textContent = data.prompt;
         if (badgeEl && data.ai_generated) badgeEl.style.display = 'inline';
@@ -3456,7 +3460,7 @@ async function loadAIReflectionPrompt() {
         // Scroll to the reflection prompt
         setTimeout(function() { box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
 
-        console.log('[AI] Reflection prompt loaded on diary page');
+        console.log('[AI] Reflection prompt loaded successfully');
     } catch (e) {
         console.error('[AI] Reflection prompt error:', e);
     }
