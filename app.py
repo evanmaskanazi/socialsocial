@@ -12139,6 +12139,45 @@ def save_parameters():
         return jsonify({'error': 'Failed to save parameters'}), 500
 
 
+# K3: Save/update notes for an existing diary entry (used by AI reflection prompt)
+@app.route('/api/parameters/save-notes', methods=['POST'])
+@login_required
+def save_notes():
+    """K3: Update just the notes field for a diary entry without touching other parameters.
+    Used by the AI reflection prompt to append reflection text to existing notes.
+    Accepts JSON: { "date": "2026-05-20", "notes": "updated notes text" }
+    """
+    try:
+        user_id = session['user_id']
+        data = request.get_json()
+        date_str = data.get('date')
+        notes = data.get('notes', '')
+
+        if not date_str:
+            return jsonify({'error': 'Date is required'}), 400
+
+        # Find existing entry
+        entry = db.session.execute(
+            select(SavedParameters).filter(
+                SavedParameters.user_id == user_id,
+                SavedParameters.date == date_str
+            )
+        ).scalar_one_or_none()
+
+        if not entry:
+            return jsonify({'error': 'No diary entry found for this date'}), 404
+
+        entry.notes = notes
+        db.session.commit()
+        logger.info(f"[K3] Updated notes for user {user_id} date {date_str} (reflection save)")
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[K3] Save notes error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # T30: Batch-update a single parameter's privacy across ALL existing diary entries
 # and store the chosen level as the user's default for future entries.
 @app.route('/api/parameters/set-default-privacy', methods=['POST'])
