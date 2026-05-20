@@ -1198,6 +1198,13 @@ const translations = {
     'email.diary_reminder': "Don't forget to log your well-being parameters for today!",
     'email.fill_diary': 'Fill Out Daily Diary',
     'email.unsubscribe_reminder': 'To stop receiving these reminders, turn off daily email reminders in your alert settings.',
+    'email.manage_settings': 'Manage notification settings',
+
+    // K2: AI Wellness Features
+    'ai.weekly_summary_title': 'AI Weekly Summary',
+    'ai.loading_summary': 'Generating your personalized summary...',
+    'ai.refresh': 'Refresh',
+    'ai.reflection_title': 'Reflection Prompt',
 
     // PL400: Cookie Consent
     'cookies.title': 'Cookie Preferences',
@@ -2753,6 +2760,13 @@ const translations = {
     'email.diary_reminder': 'אל תשכח למלא את פרמטרי הרווחה שלך להיום!',
     'email.fill_diary': 'מלא יומן יומי',
     'email.unsubscribe_reminder': 'כדי להפסיק לקבל תזכורות אלה, כבה את התזכורות היומיות בהגדרות ההתראות שלך.',
+    'email.manage_settings': 'נהל הגדרות התראות',
+
+    // K2: AI Wellness Features (Hebrew)
+    'ai.weekly_summary_title': 'סיכום שבועי AI',
+    'ai.loading_summary': 'מייצר את הסיכום המותאם אישית שלך...',
+    'ai.refresh': 'רענון',
+    'ai.reflection_title': 'שאלת רפלקציה',
 
     // PL400: Cookie Consent (Hebrew)
     'cookies.title': 'העדפות עוגיות',
@@ -4308,6 +4322,13 @@ const translations = {
     'email.diary_reminder': 'لا تنس تسجيل معلومات صحتك لهذا اليوم!',
     'email.fill_diary': 'ملء اليومية اليومية',
     'email.unsubscribe_reminder': 'لإيقاف تلقي هذه التذكيرات، قم بإيقاف تشغيل التذكيرات اليومية في إعدادات التنبيهات.',
+    'email.manage_settings': 'إدارة إعدادات الإشعارات',
+
+    // K2: AI Wellness Features (Arabic)
+    'ai.weekly_summary_title': 'ملخص أسبوعي بالذكاء الاصطناعي',
+    'ai.loading_summary': 'جاري إنشاء ملخصك المخصص...',
+    'ai.refresh': 'تحديث',
+    'ai.reflection_title': 'سؤال للتأمل',
 
     // PL400: Cookie Consent (Arabic)
     'cookies.title': 'تفضيلات ملفات تعريف الارتباط',
@@ -5867,6 +5888,13 @@ const translations = {
     'email.diary_reminder': 'Не забудьте записать ваши показатели благополучия за сегодня!',
     'email.fill_diary': 'Заполнить дневник',
     'email.unsubscribe_reminder': 'Чтобы перестать получать эти напоминания, отключите ежедневные напоминания в настройках уведомлений.',
+    'email.manage_settings': 'Управление настройками уведомлений',
+
+    // K2: AI Wellness Features (Russian)
+    'ai.weekly_summary_title': 'AI-анализ за неделю',
+    'ai.loading_summary': 'Создание вашего персонального анализа...',
+    'ai.refresh': 'Обновить',
+    'ai.reflection_title': 'Вопрос для размышления',
 
     // PL400: Cookie Consent (Russian)
     'cookies.title': 'Настройки файлов cookie',
