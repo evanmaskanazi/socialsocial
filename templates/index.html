@@ -5043,6 +5043,19 @@
                           </p>
                       </div>
 
+                      <!-- K2: AI Weekly Summary -->
+                      <div id="aiWeeklySummary" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%); padding: 22px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(102, 126, 234, 0.2);">
+                          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                              <span style="font-size: 1.2em;">✨</span>
+                              <h4 style="margin: 0; color: var(--primary);" data-i18n="ai.weekly_summary_title">AI Weekly Summary</h4>
+                              <span id="aiBadge" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; display: none;">AI</span>
+                          </div>
+                          <p id="aiWeeklySummaryContent" style="color: var(--dark); line-height: 1.7; font-size: 0.95rem;">
+                              <span data-i18n="ai.loading_summary" style="color: var(--gray);">Generating your personalized summary...</span>
+                          </p>
+                          <button id="aiRefreshBtn" onclick="loadAIWeeklySummary()" style="background: none; border: 1px solid var(--primary); color: var(--primary); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; margin-top: 10px; display: none;" data-i18n="ai.refresh">Refresh</button>
+                      </div>
+
                       <!-- Daily Check-in Summary -->
                       <div id="dailyCheckinSummary" style="background: var(--white); padding: 22px; border-radius: 14px; border: 1px solid var(--border);">
                           <h4 style="margin-bottom: 15px; color: var(--dark);" data-i18n="progress.daily_checkin">Daily Check-in Summary</h4>
@@ -5350,6 +5363,16 @@
                     <div style="text-align: center; margin-top: 20px; display: flex; gap: 15px; justify-content: center;">
                         <button class="btn btn-primary" onclick="saveParameters()" data-i18n="parameters.save">Save Parameters</button>
                         <button class="btn btn-secondary" onclick="loadParameters()" data-i18n="parameters.load">Load Parameters</button>
+                    </div>
+
+                    <!-- K2: AI Reflection Prompt (shown after save) -->
+                    <div id="aiReflectionPromptBox" style="display: none; background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(118, 75, 162, 0.06) 100%); padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid rgba(102, 126, 234, 0.15);">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <span style="font-size: 1.1em;">💭</span>
+                            <h4 style="margin: 0; color: var(--primary); font-size: 0.95rem;" data-i18n="ai.reflection_title">Reflection Prompt</h4>
+                            <span style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.6rem; padding: 2px 7px; border-radius: 10px; font-weight: 600;">AI</span>
+                        </div>
+                        <p id="aiReflectionPromptText" style="color: var(--dark); line-height: 1.6; font-size: 0.93rem; font-style: italic; margin: 0;"></p>
                     </div>
 
                     <h3 style="margin-top: 30px; margin-bottom: 15px;" data-i18n="parameters.insights">Insights</h3>
@@ -9464,6 +9487,10 @@ function showView(viewName, resetContext) {
                 if (typeof updateCityTime === 'function') {
                     updateCityTime();
                 }
+                // K2: Load AI weekly summary
+                if (typeof loadAIWeeklySummary === 'function') {
+                    loadAIWeeklySummary();
+                }
                 break;
             case 'connections':
                 // V2: Load unified connections view
@@ -12580,6 +12607,9 @@ function clearParameterDisplays() {
     try {
         await apiCall('/parameters/save', 'POST', parameters);
         showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ` for ${dateStr}`, 'success');
+
+        // K2: Show AI reflection prompt after successful save
+        loadAIReflectionPrompt();
 
         // Reload calendar to show saved dates
         if (typeof loadSavedDates === 'function') {
@@ -16948,6 +16978,74 @@ function updateCheckinSummary(data) {
     if (energyEl) energyEl.textContent = data.avgEnergy ? data.avgEnergy.toFixed(1) : '-';
     if (sleepEl) sleepEl.textContent = data.avgSleep ? data.avgSleep.toFixed(1) : '-';
     if (activityEl) activityEl.textContent = data.avgActivity ? data.avgActivity.toFixed(1) : '-';
+}
+
+// =====================
+// K2: AI WELLNESS FEATURES — Frontend
+// =====================
+
+async function loadAIWeeklySummary() {
+    const contentEl = document.getElementById('aiWeeklySummaryContent');
+    const badgeEl = document.getElementById('aiBadge');
+    const refreshBtn = document.getElementById('aiRefreshBtn');
+    if (!contentEl) return;
+
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+    const loadingTexts = {
+        'en': 'Generating your personalized summary...',
+        'he': 'מייצר את הסיכום המותאם אישית שלך...',
+        'ar': 'جاري إنشاء ملخصك المخصص...',
+        'ru': 'Создание вашего персонального анализа...'
+    };
+    contentEl.textContent = loadingTexts[lang] || loadingTexts['en'];
+    contentEl.style.color = 'var(--gray)';
+    if (badgeEl) badgeEl.style.display = 'none';
+    if (refreshBtn) refreshBtn.style.display = 'none';
+
+    try {
+        const response = await fetch(`/api/ai/weekly-summary?lang=${lang}`, { credentials: 'include' });
+        if (!response.ok) throw new Error('API error');
+        const data = await response.json();
+
+        contentEl.textContent = data.summary;
+        contentEl.style.color = 'var(--dark)';
+        if (badgeEl && data.ai_generated) badgeEl.style.display = 'inline';
+        if (refreshBtn) refreshBtn.style.display = 'inline-block';
+    } catch (e) {
+        console.error('[AI] Weekly summary error:', e);
+        const errorTexts = {
+            'en': 'Unable to load AI summary. Check back later.',
+            'he': 'לא ניתן לטעון סיכום AI. נסה שוב מאוחר יותר.',
+            'ar': 'تعذر تحميل ملخص الذكاء الاصطناعي. حاول لاحقاً.',
+            'ru': 'Не удалось загрузить AI-анализ. Попробуйте позже.'
+        };
+        contentEl.textContent = errorTexts[lang] || errorTexts['en'];
+        contentEl.style.color = 'var(--gray)';
+    }
+}
+
+async function loadAIReflectionPrompt() {
+    const box = document.getElementById('aiReflectionPromptBox');
+    const textEl = document.getElementById('aiReflectionPromptText');
+    if (!box || !textEl) return;
+
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+
+    try {
+        const response = await fetch(`/api/ai/reflection-prompt?lang=${lang}`, { credentials: 'include' });
+        if (!response.ok) throw new Error('API error');
+        const data = await response.json();
+
+        textEl.textContent = data.prompt;
+        box.style.display = 'block';
+        // Smooth reveal
+        box.style.opacity = '0';
+        box.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => { box.style.opacity = '1'; }, 50);
+    } catch (e) {
+        console.error('[AI] Reflection prompt error:', e);
+        // Silently fail — the prompt is supplementary
+    }
 }
 
 // ===== FIX #5: AUTO-REDIRECT TO DIARY ON LOGIN - FIXED TO RUN ONLY ONCE =====
