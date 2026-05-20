@@ -2927,16 +2927,9 @@ async function saveParameters() {
              // Show invite CTA after successful save
             showInviteCTA();
 
-            // K6: Show AI reflection prompt only when saving today's date
-            var todayStr = formatDate(new Date());
-            console.log('[AI] Save completed. dateStr=' + dateStr + ' todayStr=' + todayStr + ' match=' + (dateStr === todayStr));
-            if (dateStr === todayStr) {
-                loadAIReflectionPrompt();
-            } else {
-                // Hide reflection box for past dates
-                var rbox = document.getElementById('aiReflectionBox');
-                if (rbox) rbox.style.display = 'none';
-            }
+            // F8: Show AI reflection prompt after every save (any date)
+            console.log('[AI] Save completed for dateStr=' + dateStr + ', loading reflection prompt');
+            loadAIReflectionPrompt();
 
             // Add this date to our tracking set
             datesWithData.add(dateStr)
@@ -3478,13 +3471,12 @@ async function saveReflectionResponse() {
         return;
     }
 
-    // Save the reflection by appending it to today's notes via the existing save endpoint
+    // F8: Format reflection with clear structure — question and answer clearly separated
     const dateStr = formatDate(currentDate);
     const prompt = textEl.textContent;
-    const reflectionEntry = '\n\n💭 ' + prompt + '\n' + reflectionText;
+    const reflectionEntry = '\n\n── ✨ Reflection ──\n💭 ' + prompt + '\n✍️ ' + reflectionText + '\n───────────────';
 
     try {
-        // Disable button during save
         if (saveBtn) {
             saveBtn.disabled = true;
             saveBtn.textContent = '...';
@@ -3527,6 +3519,12 @@ async function saveReflectionResponse() {
             if (saveBtn) {
                 saveBtn.textContent = '✓';
                 saveBtn.style.background = '#10b981';
+            }
+
+            // F8: Update the notes textarea on the diary page to show the saved reflection
+            var notesInput = document.getElementById('notesInput');
+            if (notesInput) {
+                notesInput.value = updatedNotes;
             }
         } else {
             throw new Error('Save failed');
