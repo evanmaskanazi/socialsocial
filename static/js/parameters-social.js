@@ -1292,17 +1292,17 @@ function initializeParameters() {
                     -->
                 </div>
 
-                <!-- K3: AI Reflection Prompt (shown after save) -->
+                <!-- K6: AI Reflection Prompt (shown after save) — all text set by JS, no data-i18n -->
                 <div id="aiReflectionBox" style="display: none; margin-top: 20px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(118, 75, 162, 0.06) 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(102, 126, 234, 0.15);">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
                         <span style="font-size: 1.1em;">💭</span>
-                        <h4 style="margin: 0; color: #667eea; font-size: 0.95rem;" data-i18n="ai.reflection_title">Reflection Prompt</h4>
+                        <h4 id="aiReflectionTitle" style="margin: 0; color: #667eea; font-size: 0.95rem;">Reflection Prompt</h4>
                         <span id="aiReflectionBadge" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.6rem; padding: 2px 7px; border-radius: 10px; font-weight: 600; display: none;">AI</span>
                     </div>
                     <p id="aiReflectionPromptText" style="color: #333; line-height: 1.6; font-size: 0.95rem; font-style: italic; margin: 0 0 14px 0;"></p>
-                    <textarea id="aiReflectionResponse" rows="3" style="width: 100%; border: 1px solid rgba(102, 126, 234, 0.25); border-radius: 8px; padding: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; background: rgba(255,255,255,0.7); outline: none; transition: border-color 0.2s;" data-i18n-placeholder="ai.reflection_placeholder" placeholder="Write your reflection here..."></textarea>
+                    <textarea id="aiReflectionResponse" rows="3" style="width: 100%; border: 1px solid rgba(102, 126, 234, 0.25); border-radius: 8px; padding: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; background: rgba(255,255,255,0.7); outline: none; transition: border-color 0.2s;" placeholder="Write your reflection here..."></textarea>
                     <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-                        <button id="aiReflectionSaveBtn" onclick="saveReflectionResponse()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 20px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600;" data-i18n="ai.save_reflection">Save Reflection</button>
+                        <button id="aiReflectionSaveBtn" onclick="saveReflectionResponse()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 20px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600;">Save Reflection</button>
                     </div>
                 </div>
             </div>
@@ -3421,6 +3421,24 @@ async function loadAIReflectionPrompt() {
 
     const lang = localStorage.getItem('selectedLanguage') || 'en';
 
+    // K6: Set all UI text from translations BEFORE showing the box
+    var titleEl = document.getElementById('aiReflectionTitle');
+    if (titleEl) titleEl.textContent = pt('ai.reflection_title') || 'Reflection Prompt';
+    var responseEl = document.getElementById('aiReflectionResponse');
+    if (responseEl) {
+        responseEl.value = '';
+        responseEl.readOnly = false;
+        responseEl.style.borderColor = 'rgba(102, 126, 234, 0.25)';
+        responseEl.style.background = 'rgba(255,255,255,0.7)';
+        responseEl.placeholder = pt('ai.reflection_placeholder') || 'Write your reflection here...';
+    }
+    var saveBtn = document.getElementById('aiReflectionSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = pt('ai.save_reflection') || 'Save Reflection';
+        saveBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    }
+
     try {
         const response = await fetch('/api/ai/reflection-prompt?lang=' + lang, { credentials: 'include' });
         if (!response.ok) throw new Error('API error');
@@ -3428,23 +3446,6 @@ async function loadAIReflectionPrompt() {
 
         textEl.textContent = data.prompt;
         if (badgeEl && data.ai_generated) badgeEl.style.display = 'inline';
-
-        // Clear any previous response text and set translated placeholder
-        const responseEl = document.getElementById('aiReflectionResponse');
-        if (responseEl) {
-            responseEl.value = '';
-            responseEl.readOnly = false;
-            responseEl.style.borderColor = 'rgba(102, 126, 234, 0.25)';
-            responseEl.style.background = 'rgba(255,255,255,0.7)';
-            responseEl.placeholder = pt('ai.reflection_placeholder') || 'Write your reflection here...';
-        }
-        // Set save button text from translations
-        var saveBtn = document.getElementById('aiReflectionSaveBtn');
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = pt('ai.save_reflection') || 'Save Reflection';
-            saveBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        }
 
         // Show with fade-in
         box.style.display = 'block';
@@ -3458,7 +3459,6 @@ async function loadAIReflectionPrompt() {
         console.log('[AI] Reflection prompt loaded on diary page');
     } catch (e) {
         console.error('[AI] Reflection prompt error:', e);
-        // Silently fail — the prompt is supplementary
     }
 }
 
