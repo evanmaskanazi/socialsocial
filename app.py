@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — K4
+Complete app.py for Social Social Platform - V4 10Link — K11
+
+# K11 Changes (from K9):
+# TRIPLE EMAIL FIX:
+#   1. process_diary_reminders() cron endpoint now checks diary_reminder_last_sent
+#      before sending (was missing — scheduler had dedup but cron endpoint did not)
+#   2. process_diary_reminders() cron endpoint now marks diary_reminder_last_sent
+#      after successful send (same logic as background scheduler)
+#   3. Changing diary_reminder_time via PUT /api/notification-settings now resets
+#      diary_reminder_last_sent to NULL so the new time can fire today
 
 # K4 Changes (from K3):
 # - FIX: Enhanced _call_anthropic_api() with detailed diagnostic logging:
@@ -9933,7 +9942,15 @@ def notification_settings():
                 import re
                 if re.match(r'^([01]\d|2[0-3]):([0-5]\d)$', time_str):
                     settings.diary_reminder_time = time_str
-                    logger.info(f"[NOTIFICATION DEBUG] PUT - Setting diary_reminder_time to: {time_str}")
+                    # K11 FIX: Reset last_sent so the new time fires today if not yet passed
+                    try:
+                        db.session.execute(
+                            text("UPDATE notification_settings SET diary_reminder_last_sent = NULL WHERE user_id = :uid"),
+                            {'uid': user_id}
+                        )
+                    except Exception as reset_err:
+                        logger.warning(f"[NOTIFICATION DEBUG] Could not reset diary_reminder_last_sent: {reset_err}")
+                    logger.info(f"[NOTIFICATION DEBUG] PUT - Setting diary_reminder_time to: {time_str} (last_sent reset)")
                 else:
                     logger.warning(f"[NOTIFICATION DEBUG] PUT - Invalid time format: {time_str}")
             if 'diary_reminder_timezone' in data:
@@ -19274,6 +19291,20 @@ def process_diary_reminders():
                             logger.warning(f"[DAILY REMINDER CRON] User {settings.user_id} not found or no email")
                             continue
                         
+                        # K11 FIX: Dedup check - skip if already sent today (same logic as scheduler)
+                        today_date = datetime.utcnow().date()
+                        try:
+                            _ls_row = db.session.execute(
+                                text("SELECT diary_reminder_last_sent FROM notification_settings WHERE id = :sid"),
+                                {'sid': settings.id}
+                            ).first()
+                            last_sent = _ls_row[0] if _ls_row else None
+                        except Exception:
+                            last_sent = None
+                        if last_sent == today_date:
+                            logger.info(f"[DAILY REMINDER CRON] SKIP: Already sent reminder to {user.email} today ({today_date})")
+                            continue
+                        
                         logger.info(f"[DAILY REMINDER CRON] Sending reminder to user {user.id} ({user.email})")
                         
                         user_language = user.preferred_language or 'en'
@@ -19281,6 +19312,16 @@ def process_diary_reminders():
                         
                         if success:
                             emails_sent += 1
+                            # K11 FIX: Mark as sent today (same logic as scheduler)
+                            try:
+                                db.session.execute(
+                                    text("UPDATE notification_settings SET diary_reminder_last_sent = :td WHERE id = :sid"),
+                                    {'td': today_date, 'sid': settings.id}
+                                )
+                                db.session.commit()
+                            except Exception as mark_err:
+                                logger.warning(f"[DAILY REMINDER CRON] Could not mark reminder sent: {mark_err}")
+                                db.session.rollback()
                             logger.info(f"[DAILY REMINDER CRON] Successfully sent reminder to user {user.id}")
                         else:
                             emails_failed += 1
