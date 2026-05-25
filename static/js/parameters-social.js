@@ -780,7 +780,12 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 Find People to Connect With',
                 'invite.link_copied': 'Invite link copied to clipboard! 📋',
                 'invite.search_users': 'Search users to invite',
-                'follow.search_users': 'Search users to connect with'
+                'follow.search_users': 'Search users to connect with',
+                // K5: AI reflection prompt
+                'ai.reflection_title': 'Reflection Prompt',
+                'ai.reflection_placeholder': 'Write your reflection here...',
+                'ai.save_reflection': 'Save Reflection',
+                'ai.reflection_empty': 'Please write something before saving.'
             });
         }
 
@@ -848,7 +853,11 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 מצא אנשים לעקוב',
                 'invite.link_copied': 'קישור ההזמנה הועתק ללוח! 📋',
                 'invite.search_users': 'חפש משתמשים להזמנה',
-                'follow.search_users': 'חפש משתמשים להתחבר'
+                'follow.search_users': 'חפש משתמשים להתחבר',
+                'ai.reflection_title': 'שאלת רפלקציה',
+                'ai.reflection_placeholder': 'כתוב/י את הרפלקציה שלך כאן...',
+                'ai.save_reflection': 'שמור רפלקציה',
+                'ai.reflection_empty': 'אנא כתוב/י משהו לפני השמירה.'
             });
         }
 
@@ -916,7 +925,11 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 ابحث عن أشخاص للمتابعة',
                 'invite.link_copied': 'تم نسخ رابط الدعوة إلى الحافظة! 📋',
                 'invite.search_users': 'البحث عن مستخدمين للدعوة',
-                'follow.search_users': 'البحث عن مستخدمين للتواصل'
+                'follow.search_users': 'البحث عن مستخدمين للتواصل',
+                'ai.reflection_title': 'سؤال للتأمل',
+                'ai.reflection_placeholder': 'اكتب تأملك هنا...',
+                'ai.save_reflection': 'حفظ التأمل',
+                'ai.reflection_empty': 'يرجى كتابة شيء قبل الحفظ.'
             });
         }
 
@@ -984,7 +997,11 @@ const addParameterTranslations = () => {
                 'invite.find_people': '🔍 Найти людей для подписки',
                 'invite.link_copied': 'Ссылка-приглашение скопирована в буфер обмена! 📋',
                 'invite.search_users': 'Поиск пользователей для приглашения',
-                'follow.search_users': 'Поиск пользователей для подписки'
+                'follow.search_users': 'Поиск пользователей для подписки',
+                'ai.reflection_title': 'Вопрос для размышления',
+                'ai.reflection_placeholder': 'Напишите ваше размышление здесь...',
+                'ai.save_reflection': 'Сохранить размышление',
+                'ai.reflection_empty': 'Пожалуйста, напишите что-нибудь перед сохранением.'
             });
         }
 
@@ -1273,6 +1290,20 @@ function initializeParameters() {
                     <!-- HOME BTN: Commented out - diary nav handles return home
                     <button class="btn btn-menu" onclick="goToHome()" data-i18n="parameters.home">Home</button>
                     -->
+                </div>
+
+                <!-- K6: AI Reflection Prompt (shown after save) — all text set by JS, no data-i18n -->
+                <div id="aiReflectionBox" style="display: none; margin-top: 20px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(118, 75, 162, 0.06) 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(102, 126, 234, 0.15);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="font-size: 1.1em;">💭</span>
+                        <h4 id="aiReflectionTitle" style="margin: 0; color: #667eea; font-size: 0.95rem;">Reflection Prompt</h4>
+                        <span id="aiReflectionBadge" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.6rem; padding: 2px 7px; border-radius: 10px; font-weight: 600; display: none;">AI</span>
+                    </div>
+                    <p id="aiReflectionPromptText" style="color: #333; line-height: 1.6; font-size: 0.95rem; font-style: italic; margin: 0 0 14px 0;"></p>
+                    <textarea id="aiReflectionResponse" rows="3" style="width: 100%; border: 1px solid rgba(102, 126, 234, 0.25); border-radius: 8px; padding: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; background: rgba(255,255,255,0.7); outline: none; transition: border-color 0.2s;" placeholder="Write your reflection here..."></textarea>
+                    <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                        <button id="aiReflectionSaveBtn" onclick="saveReflectionResponse()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 20px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600;">Save Reflection</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2896,6 +2927,10 @@ async function saveParameters() {
              // Show invite CTA after successful save
             showInviteCTA();
 
+            // F8: Show AI reflection prompt after every save (any date)
+            console.log('[AI] Save completed for dateStr=' + dateStr + ', loading reflection prompt');
+            loadAIReflectionPrompt();
+
             // Add this date to our tracking set
             datesWithData.add(dateStr)
             localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
@@ -3364,6 +3399,145 @@ window.closeInviteCTA = closeInviteCTA;
 window.showInviteTab = showInviteTab;
 window.findPeopleToFollow = findPeopleToFollow;
 window.applyEmojisToPrivacySelectors = applyEmojisToPrivacySelectors;
+window.loadAIReflectionPrompt = loadAIReflectionPrompt;
+window.saveReflectionResponse = saveReflectionResponse;
+
+
+// =====================
+// K3: AI Reflection Prompt — Diary Page
+// =====================
+
+async function loadAIReflectionPrompt() {
+    const box = document.getElementById('aiReflectionBox');
+    const textEl = document.getElementById('aiReflectionPromptText');
+    const badgeEl = document.getElementById('aiReflectionBadge');
+    if (!box || !textEl) return;
+
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+
+    // K6: Set all UI text from translations BEFORE showing the box
+    var titleEl = document.getElementById('aiReflectionTitle');
+    if (titleEl) titleEl.textContent = pt('ai.reflection_title') || 'Reflection Prompt';
+    var responseEl = document.getElementById('aiReflectionResponse');
+    if (responseEl) {
+        responseEl.value = '';
+        responseEl.readOnly = false;
+        responseEl.style.borderColor = 'rgba(102, 126, 234, 0.25)';
+        responseEl.style.background = 'rgba(255,255,255,0.7)';
+        responseEl.placeholder = pt('ai.reflection_placeholder') || 'Write your reflection here...';
+    }
+    var saveBtn = document.getElementById('aiReflectionSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = pt('ai.save_reflection') || 'Save Reflection';
+        saveBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    }
+
+    try {
+        console.log('[AI] Fetching reflection prompt for lang=' + lang);
+        const response = await fetch('/api/ai/reflection-prompt?lang=' + lang, { credentials: 'include' });
+        console.log('[AI] Reflection API response status:', response.status);
+        if (!response.ok) throw new Error('API returned ' + response.status);
+        const data = await response.json();
+        console.log('[AI] Reflection data:', JSON.stringify(data).substring(0, 200));
+
+        textEl.textContent = data.prompt;
+        if (badgeEl && data.ai_generated) badgeEl.style.display = 'inline';
+
+        // Show with fade-in
+        box.style.display = 'block';
+        box.style.opacity = '0';
+        box.style.transition = 'opacity 0.5s ease';
+        setTimeout(function() { box.style.opacity = '1'; }, 50);
+
+        // Scroll to the reflection prompt
+        setTimeout(function() { box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
+
+        console.log('[AI] Reflection prompt loaded successfully');
+    } catch (e) {
+        console.error('[AI] Reflection prompt error:', e);
+    }
+}
+
+async function saveReflectionResponse() {
+    const textEl = document.getElementById('aiReflectionPromptText');
+    const responseEl = document.getElementById('aiReflectionResponse');
+    const saveBtn = document.getElementById('aiReflectionSaveBtn');
+    if (!responseEl || !textEl) return;
+
+    const reflectionText = responseEl.value.trim();
+    if (!reflectionText) {
+        window.showMessage(pt('ai.reflection_empty') || 'Please write something before saving.', 'info');
+        return;
+    }
+
+    // F8: Format reflection with clear structure — question and answer clearly separated
+    const dateStr = formatDate(currentDate);
+    const prompt = textEl.textContent;
+    const reflectionEntry = '\n\n── ✨ Reflection ──\n💭 ' + prompt + '\n✍️ ' + reflectionText + '\n───────────────';
+
+    try {
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = '...';
+        }
+
+        // Load current notes first
+        const loadResp = await fetch('/api/parameters?date=' + dateStr, { credentials: 'include' });
+        let currentNotes = '';
+        if (loadResp.ok) {
+            const loadData = await loadResp.json();
+            if (loadData.success && loadData.data && loadData.data.notes) {
+                currentNotes = loadData.data.notes;
+            }
+        }
+
+        // Append reflection to notes
+        const updatedNotes = currentNotes + reflectionEntry;
+
+        const response = await fetch('/api/parameters/save-notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ date: dateStr, notes: updatedNotes })
+        });
+
+        if (response.ok) {
+            const lang = localStorage.getItem('selectedLanguage') || 'en';
+            const savedMsgs = {
+                'en': 'Reflection saved! ✨',
+                'he': 'הרפלקציה נשמרה! ✨',
+                'ar': 'تم حفظ التأمل! ✨',
+                'ru': 'Размышление сохранено! ✨'
+            };
+            window.showMessage(savedMsgs[lang] || savedMsgs['en'], 'success', 3000, true);
+
+            // Visual confirmation — change textarea to read-only with success styling
+            responseEl.readOnly = true;
+            responseEl.style.borderColor = '#10b981';
+            responseEl.style.background = 'rgba(16, 185, 129, 0.05)';
+            if (saveBtn) {
+                saveBtn.textContent = '✓';
+                saveBtn.style.background = '#10b981';
+            }
+
+            // F8: Update the notes textarea on the diary page to show the saved reflection
+            var notesInput = document.getElementById('notesInput');
+            if (notesInput) {
+                notesInput.value = updatedNotes;
+            }
+        } else {
+            throw new Error('Save failed');
+        }
+    } catch (e) {
+        console.error('[AI] Reflection save error:', e);
+        window.showMessage(pt('error.saving') || 'Error saving reflection', 'error');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = pt('ai.save_reflection') || 'Save Reflection';
+        }
+    }
+}
 
 console.log('Parameters-social.js loaded - FIXED VERSION with calendar display and no auto-loading');
 // ===================

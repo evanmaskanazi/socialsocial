@@ -1,4 +1,24 @@
 <!DOCTYPE html>
+<!-- K11 CHANGES:
+  TRIPLE EMAIL FIX (backend):
+  1. Added diary_reminder_last_sent dedup check to /api/diary-reminder/process cron endpoint
+     (scheduler had it, cron endpoint did not — both paths could send same-day reminders)
+  2. Reset diary_reminder_last_sent to NULL when user changes diary_reminder_time
+     (changing time then changing back could cause stale dedup, allowing duplicate sends)
+  3. Added diary_reminder_last_sent marking in cron endpoint after successful send
+  UX IMPROVEMENTS (10 total):
+  1. Form inputs: focus ring shadow (0 0 0 3px) for professional depth
+  2. Secondary buttons: active/pressed state + disabled styling
+  3. Toast notifications: larger radius, stronger shadow, backdrop-filter blur
+  4. Main content card: subtle border for definition
+  5. Navbar: layered shadow + bottom border for cleaner separation
+  6. Sidebar active item: font-weight 600 for better contrast
+  7. Connection action buttons: hover lift + active press feedback
+  8. Auth card: refined shadow layers + subtle border
+  9. Mobile nav items: active press scale feedback on tap
+  10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
+  CACHE BUSTING: All JS references updated to ?v=K11
+-->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
      and shows green/red hint. Purely additive — no existing code modified. -->
@@ -299,7 +319,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=T21"></script>
+    <script src="/static/js/follow-requests.js?v=K11"></script>
 
 
     <style>
@@ -408,6 +428,12 @@
 
 .conn-action-btn.connect:hover {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
+}
+
+.conn-action-btn.connect:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.3);
 }
 
 .conn-action-btn.connect-note {
@@ -615,6 +641,24 @@
         /* U5: Smooth scroll */
         html { scroll-behavior: smooth; }
 
+        /* K11 UX: Better placeholder contrast */
+        ::placeholder { color: #9CA3AF; opacity: 1; }
+        ::-webkit-input-placeholder { color: #9CA3AF; }
+        ::-moz-placeholder { color: #9CA3AF; opacity: 1; }
+
+        /* K11 UX: Selection color matches brand */
+        ::selection { background: rgba(107, 139, 164, 0.25); color: var(--dark); }
+
+        /* K11 UX: Loading spinner utility */
+        .btn-loading { position: relative; color: transparent !important; pointer-events: none; }
+        .btn-loading::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 18px; height: 18px; margin: -9px 0 0 -9px;
+            border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+            border-radius: 50%; animation: btn-spin 0.6s linear infinite;
+        }
+        @keyframes btn-spin { to { transform: rotate(360deg); } }
+
         /* Fix10C: Removed @media (prefers-color-scheme: dark) auto CSS variable override
            Dark mode variables are now only applied via the manual .dark-mode class toggle */
 
@@ -677,10 +721,12 @@
         .navbar {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(12px);
-            box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(107, 139, 164, 0.08);
             position: sticky;
             top: 0;
             z-index: 1000;
+            border-bottom: 1px solid rgba(229, 229, 227, 0.5);
         }
 
         .nav-content {
@@ -737,7 +783,8 @@
             padding: 40px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.06);
+            border: 1px solid rgba(229, 229, 227, 0.4);
         }
 
         .auth-title {
@@ -770,6 +817,7 @@
         .form-input:focus {
             outline: none;
             border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(107, 139, 164, 0.15);
         }
 
         .btn {
@@ -808,6 +856,18 @@
 
         .btn-secondary:hover {
             background: var(--light);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(0);
+            background: var(--light-warm);
+        }
+
+        /* K11 UX: Disabled button state */
+        .btn:disabled, .btn[disabled] {
+            opacity: 0.55;
+            cursor: not-allowed;
+            pointer-events: none;
         }
 
         /* ================================================================== */
@@ -1491,6 +1551,7 @@
             background: var(--primary);
             color: var(--white);
             box-shadow: 0 4px 12px rgba(107, 139, 164, 0.25);
+            font-weight: 600;
         }
 
         /* Sidebar icons - matching mobile style */
@@ -1515,6 +1576,7 @@
             border-radius: 16px;
             padding: 30px;
             box-shadow: 0 2px 12px rgba(107, 139, 164, 0.1);
+            border: 1px solid var(--border);
         }
 
         /* Feed - Enhanced with Calendar - P305: Softer colors */
@@ -2231,6 +2293,11 @@
             color: white;
             background: linear-gradient(135deg, #5A7A93, #7B6BA0);
             box-shadow: 0 2px 10px rgba(90, 107, 160, 0.30);
+        }
+
+        .mobile-nav-item:active:not(.active) {
+            transform: scale(0.93);
+            background: rgba(107, 139, 164, 0.08);
         }
 
         .mobile-nav-item.active .mobile-nav-icon,
@@ -5043,6 +5110,19 @@
                           </p>
                       </div>
 
+                      <!-- K2: AI Weekly Summary -->
+                      <div id="aiWeeklySummary" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%); padding: 22px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(102, 126, 234, 0.2);">
+                          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                              <span style="font-size: 1.2em;">✨</span>
+                              <h4 style="margin: 0; color: var(--primary);" data-i18n="ai.weekly_summary_title">AI Weekly Summary</h4>
+                              <span id="aiBadge" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; display: none;">AI</span>
+                          </div>
+                          <p id="aiWeeklySummaryContent" style="color: var(--dark); line-height: 1.7; font-size: 0.95rem;">
+                              <span data-i18n="ai.loading_summary" style="color: var(--gray);">Generating your personalized summary...</span>
+                          </p>
+                          <button id="aiRefreshBtn" onclick="loadAIWeeklySummary()" style="background: none; border: 1px solid var(--primary); color: var(--primary); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; margin-top: 10px; display: none;" data-i18n="ai.refresh">Refresh</button>
+                      </div>
+
                       <!-- Daily Check-in Summary -->
                       <div id="dailyCheckinSummary" style="background: var(--white); padding: 22px; border-radius: 14px; border: 1px solid var(--border);">
                           <h4 style="margin-bottom: 15px; color: var(--dark);" data-i18n="progress.daily_checkin">Daily Check-in Summary</h4>
@@ -6869,7 +6949,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=L140"></script>
+    <script src="/static/js/i18n.js?v=K11"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7139,9 +7219,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=T800q"></script>
-   <script src="/static/js/circles-messages.js?v=T800q"></script>
-<script src="/static/js/feed-updates.js?v=3.20"></script>
+<script src="/static/js/parameters-social.js?v=K11"></script>
+   <script src="/static/js/circles-messages.js?v=K11"></script>
+<script src="/static/js/feed-updates.js?v=K11"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -7638,6 +7718,10 @@ async function loadUserCity() {
         }
 
         try {
+            // K11 UX: Show loading state on submit button
+            const submitBtn = document.getElementById('authSubmit');
+            if (submitBtn) submitBtn.classList.add('btn-loading');
+
             const response = await apiCall('/auth/login', 'POST', { email, password });
 
             if (response && response.success) {
@@ -7697,6 +7781,8 @@ async function loadUserCity() {
                     }
                 }, 3000);
             } else {
+                // K11 UX: Remove loading state
+                if (submitBtn) submitBtn.classList.remove('btn-loading');
                 // Show translated login error message
                 const lang = localStorage.getItem('selectedLanguage') || 'en';
                 const errorTexts = {
@@ -7713,6 +7799,9 @@ async function loadUserCity() {
                 setTimeout(() => { loginError.style.display = 'none'; }, 5000);
             }
         } catch (error) {
+            // K11 UX: Remove loading state
+            const submitBtn2 = document.getElementById('authSubmit');
+            if (submitBtn2) submitBtn2.classList.remove('btn-loading');
             const lang = localStorage.getItem('selectedLanguage') || 'en';
             const errorTexts = {
                 'en': 'You have entered an invalid username or password',
@@ -9075,6 +9164,18 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
                    case 'tracking':
     // Let showView handle the logic - don't duplicate here
     break;
+                    case 'progress':
+                        // K2: Load progress chart and AI summary from sidebar click
+                        if (typeof updateProgressChart === 'function') {
+                            updateProgressChart();
+                        }
+                        if (typeof updateCityTime === 'function') {
+                            updateCityTime();
+                        }
+                        if (typeof loadAIWeeklySummary === 'function') {
+                            loadAIWeeklySummary();
+                        }
+                        break;
                     case 'following':
                         // Check if viewing another user
                         if (viewingUserId !== null && viewingUserId !== currentUserId) {
@@ -9463,6 +9564,10 @@ function showView(viewName, resetContext) {
                 }
                 if (typeof updateCityTime === 'function') {
                     updateCityTime();
+                }
+                // K2: Load AI weekly summary
+                if (typeof loadAIWeeklySummary === 'function') {
+                    loadAIWeeklySummary();
                 }
                 break;
             case 'connections':
@@ -10457,15 +10562,17 @@ function showNotification(message, type = 'info') {
     notification.style.cssText = `
         background: ${style.bg};
         color: ${style.text};
-        padding: 12px 16px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 14px 18px;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.18);
         display: flex;
         align-items: center;
         gap: 10px;
         animation: slideIn 0.3s ease-out;
         font-size: 14px;
+        font-weight: 500;
         word-break: break-word;
+        backdrop-filter: blur(8px);
     `;
     
     // Add icon and message (escaped for security)
@@ -16948,6 +17055,50 @@ function updateCheckinSummary(data) {
     if (energyEl) energyEl.textContent = data.avgEnergy ? data.avgEnergy.toFixed(1) : '-';
     if (sleepEl) sleepEl.textContent = data.avgSleep ? data.avgSleep.toFixed(1) : '-';
     if (activityEl) activityEl.textContent = data.avgActivity ? data.avgActivity.toFixed(1) : '-';
+}
+
+// =====================
+// K2: AI WELLNESS FEATURES — Frontend
+// =====================
+
+async function loadAIWeeklySummary() {
+    const contentEl = document.getElementById('aiWeeklySummaryContent');
+    const badgeEl = document.getElementById('aiBadge');
+    const refreshBtn = document.getElementById('aiRefreshBtn');
+    if (!contentEl) return;
+
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+    const loadingTexts = {
+        'en': 'Generating your personalized summary...',
+        'he': 'מייצר את הסיכום המותאם אישית שלך...',
+        'ar': 'جاري إنشاء ملخصك المخصص...',
+        'ru': 'Создание вашего персонального анализа...'
+    };
+    contentEl.textContent = loadingTexts[lang] || loadingTexts['en'];
+    contentEl.style.color = 'var(--gray)';
+    if (badgeEl) badgeEl.style.display = 'none';
+    if (refreshBtn) refreshBtn.style.display = 'none';
+
+    try {
+        const response = await fetch(`/api/ai/weekly-summary?lang=${lang}`, { credentials: 'include' });
+        if (!response.ok) throw new Error('API error');
+        const data = await response.json();
+
+        contentEl.textContent = data.summary;
+        contentEl.style.color = 'var(--dark)';
+        if (badgeEl && data.ai_generated) badgeEl.style.display = 'inline';
+        if (refreshBtn) refreshBtn.style.display = 'inline-block';
+    } catch (e) {
+        console.error('[AI] Weekly summary error:', e);
+        const errorTexts = {
+            'en': 'Unable to load AI summary. Check back later.',
+            'he': 'לא ניתן לטעון סיכום AI. נסה שוב מאוחר יותר.',
+            'ar': 'تعذر تحميل ملخص الذكاء الاصطناعي. حاول لاحقاً.',
+            'ru': 'Не удалось загрузить AI-анализ. Попробуйте позже.'
+        };
+        contentEl.textContent = errorTexts[lang] || errorTexts['en'];
+        contentEl.style.color = 'var(--gray)';
+    }
 }
 
 // ===== FIX #5: AUTO-REDIRECT TO DIARY ON LOGIN - FIXED TO RUN ONLY ONCE =====

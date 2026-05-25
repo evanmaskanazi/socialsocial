@@ -1,6 +1,50 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link
+Complete app.py for Social Social Platform - V4 10Link — K11
+
+# K11 Changes (from K9):
+# TRIPLE EMAIL FIX:
+#   1. process_diary_reminders() cron endpoint now checks diary_reminder_last_sent
+#      before sending (was missing — scheduler had dedup but cron endpoint did not)
+#   2. process_diary_reminders() cron endpoint now marks diary_reminder_last_sent
+#      after successful send (same logic as background scheduler)
+#   3. Changing diary_reminder_time via PUT /api/notification-settings now resets
+#      diary_reminder_last_sent to NULL so the new time can fire today
+
+# K4 Changes (from K3):
+# - FIX: Enhanced _call_anthropic_api() with detailed diagnostic logging:
+#   logs key prefix, response status, byte count, egress proxy x-deny-reason header,
+#   and distinguishes Timeout/ConnectionError/generic exceptions.
+#   This will reveal whether the preview deployment lacks the API key or the
+#   egress proxy is blocking the request.
+# - (Carries forward K3: /api/parameters/save-notes, reflection prompt in diary page,
+#   weekly summary on progress page, manage-settings email links)
+#
+# K3 Changes (from K2):
+# - MOVED: AI Reflection Prompt from Progress page to Diary page (/parameters).
+#   Now appears after successful diary save with a response textarea.
+# - ADDED: saveReflectionResponse() saves reflection to diary notes via /api/parameters/save-notes.
+# - ADDED: POST /api/parameters/save-notes endpoint for notes-only updates.
+# - REMOVED: Reflection prompt from indexK3.html (lives in parameters-socialK3.js now).
+#
+# K2 Changes:
+# - FEATURE: Added /settings-redirect route for email "Manage Settings" links.
+#   Follows diary-redirect pattern: logged in → /#settings, not logged in → / (login).
+# - FEATURE: Added _get_manage_settings_html() helper generating translated link HTML.
+# - FEATURE: Added "Manage notification settings" link to ALL email footers:
+#   send_alert_notification_email, send_new_message_notification_email,
+#   send_daily_diary_reminder_email, send_consolidated_wellness_alert_email,
+#   send_notification_email. Translated in EN/HE/AR/RU.
+# - FEATURE: AI Weekly Summary — /api/ai/weekly-summary endpoint.
+#   Sends past 7 days of check-in data to Anthropic API (Claude Sonnet)
+#   and returns a warm, personalized natural language summary.
+#   Falls back to template insights when ANTHROPIC_API_KEY is not set.
+# - FEATURE: AI Reflection Prompt — /api/ai/reflection-prompt endpoint.
+#   Generates a personalized daily reflection question based on latest check-in.
+#   Falls back to curated static prompts when ANTHROPIC_API_KEY is not set.
+# - Added ANTHROPIC_API_KEY env var support and _call_anthropic_api() helper.
+# - Added _get_ai_language_instruction() for multilingual AI responses.
+# - Both AI endpoints are @login_required, use GET, and accept ?lang= parameter.
 
 # L290: Professional Verification — Fix Alert NOT NULL crash on verify
 # - BUG FIX: Clicking "Verify" or "Verify All Pending" returned HTTP 500.
@@ -916,6 +960,24 @@ def _html_to_plain_text(html):
     text = _re.sub(r'\s+', ' ', text).strip()
     return text
 
+
+def _get_manage_settings_html(user_language='en'):
+    """K2: Generate the 'Manage Settings' link HTML for email footers.
+    Links to /settings-redirect which handles login state.
+    Returns (link_html, plain_text) tuple for HTML and plain text email parts.
+    """
+    app_url = os.environ.get('APP_URL', 'https://therasocial.org')
+    settings_link = f"{app_url}/settings-redirect"
+    manage_translations = {
+        'en': 'Manage notification settings',
+        'he': 'נהל הגדרות התראות',
+        'ar': 'إدارة إعدادات الإشعارات',
+        'ru': 'Управление настройками уведомлений'
+    }
+    label = manage_translations.get(user_language, manage_translations['en'])
+    link_html = f'<a href="{settings_link}" style="color: #667eea; text-decoration: underline; font-size: 12px;">{label}</a>'
+    return link_html
+
 import mimetypes
 import io
 import tempfile
@@ -1687,6 +1749,7 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
 
         subject = t['subject'].format(sender=sender_name)
 
@@ -1720,6 +1783,7 @@ def send_new_message_notification_email(recipient_email, sender_name, message_pr
                     <p style="color: #999; font-size: 12px; margin: 0;">
                         {t['regards']},<br>{t['team']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 12px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -1986,6 +2050,7 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
 
         html_content = f"""
         <!DOCTYPE html>
@@ -2017,6 +2082,7 @@ def send_alert_notification_email(user_email, alert_title, alert_content, user_l
                     <p style="color: #999; font-size: 12px; margin: 0;">
                         {t['regards']},<br>{t['team']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 12px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -2126,6 +2192,7 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
 
         html_content = f"""
         <!DOCTYPE html>
@@ -2156,6 +2223,7 @@ def send_daily_diary_reminder_email(user_email, user_language='en'):
                     <p style="color: #999; font-size: 10px; margin-top: 15px; font-style: italic;">
                         {t['unsubscribe']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 8px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -2543,6 +2611,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
         
         # Build parameter list HTML
         param_items = []
@@ -2588,6 +2657,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                     <p style="color: #999; font-size: 12px; margin: 0;">
                         {t['regards']},<br>{t['team']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 12px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -2687,6 +2757,7 @@ def send_notification_email(user_email, notification_title, notification_content
         is_rtl = user_language in ['he', 'ar']
         text_dir = 'rtl' if is_rtl else 'ltr'
         text_align = 'right' if is_rtl else 'left'
+        manage_settings_link = _get_manage_settings_html(user_language)
 
         html_content = f"""
         <!DOCTYPE html>
@@ -2718,6 +2789,7 @@ def send_notification_email(user_email, notification_title, notification_content
                     <p style="color: #999; font-size: 12px; margin: 0;">
                         {t['regards']},<br>{t['team']}
                     </p>
+                    <p style="color: #999; font-size: 11px; margin-top: 12px;">{manage_settings_link}</p>
                 </div>
             </div>
         </body>
@@ -6448,6 +6520,23 @@ def diary_redirect():
     return redirect('/')
 
 
+@app.route('/settings-redirect')
+def settings_redirect():
+    """K2: Smart redirect for email "Manage Settings" links.
+    - If user is logged in → redirect to /#settings (settings page)
+    - If user is not logged in → redirect to / (login page)
+    Follows the same pattern as diary-redirect (PJ40E).
+    """
+    if 'user_id' in session:
+        user = db.session.get(User, session['user_id'])
+        if user and user.is_active:
+            logger.info(f"[SETTINGS REDIRECT] User {session['user_id']} is logged in, redirecting to /#settings")
+            return redirect('/#settings')
+    
+    logger.info("[SETTINGS REDIRECT] User not logged in, redirecting to login page")
+    return redirect('/')
+
+
 @app.route('/healthz')
 def healthz():
     """Ultra-lightweight health check for Render deployment.
@@ -9853,7 +9942,15 @@ def notification_settings():
                 import re
                 if re.match(r'^([01]\d|2[0-3]):([0-5]\d)$', time_str):
                     settings.diary_reminder_time = time_str
-                    logger.info(f"[NOTIFICATION DEBUG] PUT - Setting diary_reminder_time to: {time_str}")
+                    # K11 FIX: Reset last_sent so the new time fires today if not yet passed
+                    try:
+                        db.session.execute(
+                            text("UPDATE notification_settings SET diary_reminder_last_sent = NULL WHERE user_id = :uid"),
+                            {'uid': user_id}
+                        )
+                    except Exception as reset_err:
+                        logger.warning(f"[NOTIFICATION DEBUG] Could not reset diary_reminder_last_sent: {reset_err}")
+                    logger.info(f"[NOTIFICATION DEBUG] PUT - Setting diary_reminder_time to: {time_str} (last_sent reset)")
                 else:
                     logger.warning(f"[NOTIFICATION DEBUG] PUT - Invalid time format: {time_str}")
             if 'diary_reminder_timezone' in data:
@@ -12075,6 +12172,45 @@ def save_parameters():
         return jsonify({'error': 'Failed to save parameters'}), 500
 
 
+# K3: Save/update notes for an existing diary entry (used by AI reflection prompt)
+@app.route('/api/parameters/save-notes', methods=['POST'])
+@login_required
+def save_notes():
+    """K3: Update just the notes field for a diary entry without touching other parameters.
+    Used by the AI reflection prompt to append reflection text to existing notes.
+    Accepts JSON: { "date": "2026-05-20", "notes": "updated notes text" }
+    """
+    try:
+        user_id = session['user_id']
+        data = request.get_json()
+        date_str = data.get('date')
+        notes = data.get('notes', '')
+
+        if not date_str:
+            return jsonify({'error': 'Date is required'}), 400
+
+        # Find existing entry
+        entry = db.session.execute(
+            select(SavedParameters).filter(
+                SavedParameters.user_id == user_id,
+                SavedParameters.date == date_str
+            )
+        ).scalar_one_or_none()
+
+        if not entry:
+            return jsonify({'error': 'No diary entry found for this date'}), 404
+
+        entry.notes = notes
+        db.session.commit()
+        logger.info(f"[K3] Updated notes for user {user_id} date {date_str} (reflection save)")
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[K3] Save notes error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # T30: Batch-update a single parameter's privacy across ALL existing diary entries
 # and store the chosen level as the user's default for future entries.
 @app.route('/api/parameters/set-default-privacy', methods=['POST'])
@@ -14076,6 +14212,346 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
         insights.append(t['making_progress'])
     
     return " ".join(insights)
+
+
+# =====================
+# K2: AI WELLNESS FEATURES
+# =====================
+# Two AI-powered features using the Anthropic API:
+# 1. AI Weekly Summary — natural language analysis of the user's past 7 days
+# 2. AI Reflection Prompt — personalized daily prompt after check-in
+#
+# Both endpoints use the Anthropic API key from the ANTHROPIC_API_KEY env var.
+# If the key is not set, the endpoints return graceful fallback messages.
+# The API is called server-side to keep the key secure.
+# =====================
+
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+
+def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
+    """K4: Helper to call Anthropic API. Returns text response or None on failure.
+    Enhanced with detailed logging for diagnosing preview deployment issues."""
+    if not ANTHROPIC_API_KEY:
+        logger.warning("[AI] ANTHROPIC_API_KEY is empty or not set — returning fallback")
+        return None
+    key_preview = ANTHROPIC_API_KEY[:15] + '...' if len(ANTHROPIC_API_KEY) > 15 else '(short key?)'
+    logger.info(f"[AI] Calling Anthropic API: max_tokens={max_tokens}, key_starts_with={key_preview}")
+    try:
+        resp = http_requests.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            },
+            json={
+                'model': 'claude-haiku-4-5-20251001',
+                'max_tokens': max_tokens,
+                'system': system_prompt,
+                'messages': [{'role': 'user', 'content': user_prompt}]
+            },
+            timeout=30
+        )
+        logger.info(f"[AI] Anthropic API responded: status={resp.status_code}, bytes={len(resp.content)}")
+        if resp.status_code == 200:
+            data = resp.json()
+            for block in data.get('content', []):
+                if block.get('type') == 'text':
+                    logger.info(f"[AI] SUCCESS — received {len(block['text'])} chars of AI text")
+                    return block['text']
+            logger.warning(f"[AI] 200 OK but no text block in response content")
+        else:
+            # Log the deny reason header from egress proxy if present
+            deny_reason = resp.headers.get('x-deny-reason', '')
+            if deny_reason:
+                logger.error(f"[AI] Anthropic API BLOCKED by egress proxy: x-deny-reason={deny_reason}")
+            else:
+                logger.error(f"[AI] Anthropic API returned {resp.status_code}: {resp.text[:300]}")
+        return None
+    except http_requests.exceptions.Timeout:
+        logger.error("[AI] Anthropic API timed out after 30s")
+        return None
+    except http_requests.exceptions.ConnectionError as e:
+        logger.error(f"[AI] Anthropic API connection refused (egress proxy block?): {e}")
+        return None
+    except Exception as e:
+        logger.error(f"[AI] Anthropic API unexpected error: {type(e).__name__}: {e}")
+        return None
+
+
+def _get_ai_language_instruction(language):
+    """K2: Return language instruction for AI prompts."""
+    lang_map = {
+        'en': 'Respond in English.',
+        'he': 'Respond in Hebrew (עברית).',
+        'ar': 'Respond in Arabic (العربية).',
+        'ru': 'Respond in Russian (Русский).'
+    }
+    return lang_map.get(language, lang_map['en'])
+
+
+@app.route('/api/ai/weekly-summary')
+@login_required
+def ai_weekly_summary():
+    """K2: AI-generated natural language summary of the user's past 7 days of well-being data.
+    Returns a warm, personalized paragraph highlighting patterns, correlations, and encouragement.
+    Falls back to template-based insights if API key is not configured.
+    """
+    try:
+        user_id = session['user_id']
+        user_language = request.args.get('lang', 'en')
+        if user_language not in ['en', 'he', 'ar', 'ru']:
+            user_language = 'en'
+
+        seven_days_ago = datetime.now().date() - timedelta(days=7)
+        params_stmt = select(SavedParameters).filter(
+            SavedParameters.user_id == user_id,
+            SavedParameters.date >= seven_days_ago
+        ).order_by(SavedParameters.date)
+        params = db.session.execute(params_stmt).scalars().all()
+
+        if not params:
+            fallback_msgs = {
+                'en': 'Start tracking your daily well-being to receive an AI-powered weekly summary!',
+                'he': 'התחל/י לעקוב אחרי הבריאות שלך כדי לקבל סיכום שבועי מונע בינה מלאכותית!',
+                'ar': 'ابدأ بتتبع صحتك اليومية لتلقي ملخص أسبوعي مدعوم بالذكاء الاصطناعي!',
+                'ru': 'Начните отслеживать своё самочувствие, чтобы получать еженедельный AI-анализ!'
+            }
+            return jsonify({'summary': fallback_msgs.get(user_language, fallback_msgs['en']), 'ai_generated': False})
+
+        # Build data summary for the AI
+        days_data = []
+        for p in params:
+            day_str = p.date.strftime('%A %b %d') if hasattr(p.date, 'strftime') else str(p.date)
+            entry = {'date': day_str}
+            if getattr(p, 'mood', None): entry['mood'] = int(p.mood)
+            if getattr(p, 'energy', None): entry['energy'] = int(p.energy)
+            if getattr(p, 'sleep_quality', None): entry['sleep'] = int(p.sleep_quality)
+            if getattr(p, 'physical_activity', None): entry['activity'] = int(p.physical_activity)
+            if getattr(p, 'anxiety', None):
+                if ANXIETY_DISPLAY_MODE == 'calm':
+                    entry['calmness'] = 5 - int(p.anxiety)
+                else:
+                    entry['anxiety'] = int(p.anxiety)
+            notes = getattr(p, 'notes', None)
+            if notes:
+                entry['notes'] = notes[:100]
+            days_data.append(entry)
+
+        calmness_label = 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety'
+        system_prompt = (
+            "You are a warm, supportive well-being assistant for TheraSocial, a social wellness platform. "
+            "You analyze a user's daily well-being check-in data and produce a brief, encouraging weekly summary. "
+            "The data uses a 1-4 scale where 1=lowest and 4=highest for mood, energy, sleep quality, and physical activity. "
+            f"The fifth parameter is {calmness_label} (also 1-4, where {'4=most calm' if ANXIETY_DISPLAY_MODE == 'calm' else '4=most anxious'}). "
+            "Keep your response to 3-5 sentences. Be warm but not patronizing. Highlight specific patterns or correlations you notice. "
+            "Do NOT use clinical language. Do NOT diagnose or prescribe. "
+            f"{_get_ai_language_instruction(user_language)}"
+        )
+        user_prompt = f"Here is this user's well-being data for the past week:\n{json.dumps(days_data, indent=2)}\n\nPlease provide a brief, personalized weekly summary."
+
+        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=400)
+
+        if ai_text:
+            return jsonify({'summary': ai_text, 'ai_generated': True, 'days_count': len(params)})
+        else:
+            # Fallback to template insights
+            def safe_avg(vals):
+                valid = [v for v in vals if v is not None]
+                return sum(valid) / len(valid) if valid else None
+            moods = [getattr(p, 'mood', None) for p in params]
+            energies = [getattr(p, 'energy', None) for p in params]
+            sleeps = [getattr(p, 'sleep_quality', None) for p in params]
+            activities = [getattr(p, 'physical_activity', None) for p in params]
+            anxieties = [getattr(p, 'anxiety', None) for p in params]
+            moods = [int(v) for v in moods if v]
+            energies = [int(v) for v in energies if v]
+            sleeps = [int(v) for v in sleeps if v]
+            activities = [int(v) for v in activities if v]
+            anxieties = [int(v) for v in anxieties if v]
+            fallback = generate_progress_insights(
+                safe_avg(moods), safe_avg(energies), safe_avg(sleeps), safe_avg(activities),
+                len(params), safe_avg(anxieties), user_language
+            )
+            return jsonify({'summary': fallback, 'ai_generated': False, 'days_count': len(params)})
+
+    except Exception as e:
+        logger.error(f"[AI] Weekly summary error: {e}")
+        return jsonify({'summary': 'Unable to generate summary at this time.', 'ai_generated': False}), 500
+
+
+@app.route('/api/ai/reflection-prompt')
+@login_required
+def ai_reflection_prompt():
+    """K6: AI-generated personalized daily reflection prompt.
+    Improvements over K2-K5:
+    - Sends last 5 entries (not 3) for richer trend context
+    - Includes previous reflection responses (💭 entries from notes) so the AI can build on them
+    - Tracks all 5 parameter trends (not just mood)
+    - Uses varied question styles: gratitude, curiosity, action-oriented, connection, contrast
+    - System prompt explicitly requests variety and builds on prior reflections
+    """
+    try:
+        user_id = session['user_id']
+        user_language = request.args.get('lang', 'en')
+        if user_language not in ['en', 'he', 'ar', 'ru']:
+            user_language = 'en'
+
+        # Get last 5 entries for richer context
+        params_stmt = select(SavedParameters).filter(
+            SavedParameters.user_id == user_id
+        ).order_by(SavedParameters.date.desc()).limit(5)
+        params = db.session.execute(params_stmt).scalars().all()
+
+        if not params:
+            fallback_prompts = {
+                'en': 'What is one thing you are grateful for today?',
+                'he': 'מה דבר אחד שאת/ה אסיר/ת תודה עליו היום?',
+                'ar': 'ما هو الشيء الذي تشعر بالامتنان له اليوم؟',
+                'ru': 'За что вы благодарны сегодня?'
+            }
+            return jsonify({'prompt': fallback_prompts.get(user_language, fallback_prompts['en']), 'ai_generated': False})
+
+        # Build today's entry
+        latest = params[0]
+        entry = {}
+        if getattr(latest, 'mood', None): entry['mood'] = int(latest.mood)
+        if getattr(latest, 'energy', None): entry['energy'] = int(latest.energy)
+        if getattr(latest, 'sleep_quality', None): entry['sleep'] = int(latest.sleep_quality)
+        if getattr(latest, 'physical_activity', None): entry['activity'] = int(latest.physical_activity)
+        if getattr(latest, 'anxiety', None):
+            if ANXIETY_DISPLAY_MODE == 'calm':
+                entry['calmness'] = 5 - int(latest.anxiety)
+            else:
+                entry['anxiety'] = int(latest.anxiety)
+        today_notes = getattr(latest, 'notes', None) or ''
+        if today_notes:
+            entry['notes'] = today_notes[:150]
+
+        # F8: Extract previous reflection Q&A pairs from notes (💭 = question, ✍️ = answer)
+        previous_reflections = []
+        for p in params[1:]:  # Skip current entry, look at previous days
+            p_notes = getattr(p, 'notes', None) or ''
+            if '💭' in p_notes:
+                p_date = p.date.strftime('%b %d') if hasattr(p.date, 'strftime') else str(p.date)
+                parts = p_notes.split('💭')
+                for part in parts[1:]:  # Skip text before first 💭
+                    lines = part.strip().split('\n')
+                    question = lines[0].strip()[:150] if lines else ''
+                    # Look for ✍️ answer marker, or fall back to second line
+                    answer = ''
+                    for line in lines[1:]:
+                        if line.strip().startswith('✍️'):
+                            answer = line.strip()[2:].strip()[:150]
+                            break
+                        elif line.strip() and not line.strip().startswith('──'):
+                            answer = line.strip()[:150]
+                            break
+                    if question:
+                        entry_text = f"Q: {question}"
+                        if answer:
+                            entry_text += f" → A: {answer}"
+                        previous_reflections.append(f"({p_date}) {entry_text}")
+
+        # K6: Build multi-parameter trend context
+        trend_lines = []
+        param_names = [
+            ('mood', 'mood'), ('energy', 'energy'), ('sleep_quality', 'sleep'),
+            ('physical_activity', 'activity'), ('anxiety', 'calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'anxiety')
+        ]
+        if len(params) >= 2:
+            for attr, label in param_names:
+                curr = getattr(params[0], attr, None)
+                prev = getattr(params[1], attr, None)
+                if curr and prev:
+                    curr_v, prev_v = int(curr), int(prev)
+                    if attr == 'anxiety' and ANXIETY_DISPLAY_MODE == 'calm':
+                        curr_v, prev_v = 5 - curr_v, 5 - prev_v
+                    if curr_v > prev_v:
+                        trend_lines.append(f"{label} improved ({prev_v}→{curr_v})")
+                    elif curr_v < prev_v:
+                        trend_lines.append(f"{label} declined ({prev_v}→{curr_v})")
+
+        trend_summary = "Trends vs yesterday: " + "; ".join(trend_lines) if trend_lines else "No prior entry to compare."
+
+        # K6: Build context about previous reflections
+        reflection_context = ""
+        if previous_reflections:
+            reflection_context = "\n\nPrevious reflection responses from recent days:\n" + "\n".join(previous_reflections[:3])
+            reflection_context += "\n\nBuild on these previous reflections — reference what they wrote before, ask a follow-up, or explore a connected theme. Do NOT repeat a question they already answered."
+
+        # K6: Determine question style for variety based on day-of-week
+        import hashlib
+        day_hash = int(hashlib.md5(f"{user_id}-{latest.date}".encode()).hexdigest()[:8], 16)
+        styles = ['gratitude', 'curiosity', 'action', 'connection', 'contrast', 'meaning']
+        chosen_style = styles[day_hash % len(styles)]
+
+        calmness_label = 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety'
+        system_prompt = (
+            "You are a warm, perceptive well-being companion for TheraSocial. "
+            "Generate ONE thoughtful reflection question for a user who just completed their daily well-being check-in. "
+            "\n\nRules:"
+            "\n- The question must be specific to their data and notes — never generic."
+            "\n- Keep it to 1-2 sentences maximum."
+            "\n- Do NOT use clinical language, do NOT diagnose, do NOT give advice."
+            "\n- Do NOT start with 'I notice' or 'It seems like' — go straight to the question."
+            f"\n- Use a {chosen_style}-oriented style for this question:"
+            "\n  gratitude = what went well, what they appreciate"
+            "\n  curiosity = exploring why something happened, what surprised them"
+            "\n  action = one small concrete thing they could try tomorrow"
+            "\n  connection = people, relationships, support in their life"
+            "\n  contrast = comparing a good moment vs a hard moment today"
+            "\n  meaning = what matters to them, values, what gives purpose"
+            f"\n- The data uses a 1-4 scale where 1=lowest, 4=highest. The fifth parameter is {calmness_label}."
+            "\n- If previous reflection responses are provided, build on them — ask a follow-up or explore a thread they started."
+            f"\n\n{_get_ai_language_instruction(user_language)}"
+        )
+        user_prompt = (
+            f"Today's check-in: {json.dumps(entry)}\n"
+            f"{trend_summary}"
+            f"{reflection_context}\n\n"
+            f"Generate one {chosen_style}-oriented reflection question."
+        )
+
+        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=200)
+
+        if ai_text:
+            return jsonify({'prompt': ai_text, 'ai_generated': True})
+        else:
+            # Static fallback prompts
+            static_prompts = {
+                'en': [
+                    'What moment today brought you the most energy?',
+                    'How did your sleep affect your day?',
+                    'What is one small thing you could do differently tomorrow?',
+                    'Who made a positive impact on your day today?'
+                ],
+                'he': [
+                    'איזה רגע היום נתן לך הכי הרבה אנרגיה?',
+                    'איך השינה שלך השפיעה על היום?',
+                    'מה דבר קטן אחד שתוכל/י לעשות אחרת מחר?',
+                    'מי השפיע לטובה על היום שלך?'
+                ],
+                'ar': [
+                    'ما اللحظة التي منحتك أكبر قدر من الطاقة اليوم؟',
+                    'كيف أثر نومك على يومك؟',
+                    'ما الشيء الصغير الذي يمكنك فعله بشكل مختلف غداً؟',
+                    'من الذي أثر إيجابياً على يومك؟'
+                ],
+                'ru': [
+                    'Какой момент сегодня дал вам больше всего энергии?',
+                    'Как сон повлиял на ваш день?',
+                    'Что одно маленькое вы могли бы сделать по-другому завтра?',
+                    'Кто положительно повлиял на ваш день?'
+                ]
+            }
+            import random
+            prompts = static_prompts.get(user_language, static_prompts['en'])
+            return jsonify({'prompt': random.choice(prompts), 'ai_generated': False})
+
+    except Exception as e:
+        logger.error(f"[AI] Reflection prompt error: {e}")
+        return jsonify({'prompt': 'What is one thing you are grateful for today?', 'ai_generated': False}), 500
 
 
 # =====================
@@ -18815,6 +19291,20 @@ def process_diary_reminders():
                             logger.warning(f"[DAILY REMINDER CRON] User {settings.user_id} not found or no email")
                             continue
                         
+                        # K11 FIX: Dedup check - skip if already sent today (same logic as scheduler)
+                        today_date = datetime.utcnow().date()
+                        try:
+                            _ls_row = db.session.execute(
+                                text("SELECT diary_reminder_last_sent FROM notification_settings WHERE id = :sid"),
+                                {'sid': settings.id}
+                            ).first()
+                            last_sent = _ls_row[0] if _ls_row else None
+                        except Exception:
+                            last_sent = None
+                        if last_sent == today_date:
+                            logger.info(f"[DAILY REMINDER CRON] SKIP: Already sent reminder to {user.email} today ({today_date})")
+                            continue
+                        
                         logger.info(f"[DAILY REMINDER CRON] Sending reminder to user {user.id} ({user.email})")
                         
                         user_language = user.preferred_language or 'en'
@@ -18822,6 +19312,16 @@ def process_diary_reminders():
                         
                         if success:
                             emails_sent += 1
+                            # K11 FIX: Mark as sent today (same logic as scheduler)
+                            try:
+                                db.session.execute(
+                                    text("UPDATE notification_settings SET diary_reminder_last_sent = :td WHERE id = :sid"),
+                                    {'td': today_date, 'sid': settings.id}
+                                )
+                                db.session.commit()
+                            except Exception as mark_err:
+                                logger.warning(f"[DAILY REMINDER CRON] Could not mark reminder sent: {mark_err}")
+                                db.session.rollback()
                             logger.info(f"[DAILY REMINDER CRON] Successfully sent reminder to user {user.id}")
                         else:
                             emails_failed += 1
