@@ -1,4 +1,7 @@
 // Language detection and translation system with backend sync
+// Version I2 - Removed duplicate keys: auth.username_placeholder, auth.or, about.team_title, btn.signin,
+//   circles.visibility_label/public/private, circles.your_access_level, alerts.title/no_alerts (EN/HE/AR/RU)
+// Version I2 - Harmonized params.calm translations across HE/AR/RU to match index.html and parameters-social.js
 // Version Lang - Added ~150 missing translation keys across all 4 languages for triggers, circles, auth validation, notifications, invite pages, and parameters
 // Version V4 - Added params.sleep, params.exercise, params.stress translations for all 4 languages (referenced by Home "My Status Today" card)
 // Version PL410 LINK2 - Same as PL409 (no i18n changes for consent fix)
@@ -64,14 +67,11 @@ const translations = {
         'auth.confirm_password_placeholder': 'Re-enter your password',
         'auth.create': 'Create Account',
 'auth.username': 'Username',
-'auth.username_placeholder': 'Choose a username',
-
         'auth.username_placeholder': 'Choose a username',
         // New username and magic link translations
         'username.optional': '(optional)',
         'username.blank_for_email': 'Leave blank to use email prefix',
         'auth.magic_link': 'Send me a magic link to sign in',
-        'auth.or': 'OR',
         'consent.title': 'Welcome to TheraSocial',
         'consent.subtitle': 'Please review and accept our terms to continue',
         'consent.email_updates': 'I want to receive email updates about new features',
@@ -103,8 +103,6 @@ const translations = {
         'about.team_title': 'Our Team & Story',
         'notifications.city_time': '{city} Time',
 'notifications.select_city': 'Select a city',
-'auth.username_placeholder': 'Choose a username',
-'about.team_title': 'Our Team & Story',
 'about.team_intro': 'The primary team behind this is CEO Benny Brandstetter and CTO Evan Askanazi.',
 'about.story_para1': 'Thera Social was created for those who feel disconnected, struggling, or unseen. War veterans carrying invisible wounds, young adults navigating isolation, survivors of trauma and abuse, students overwhelmed by pressure—all deserve genuine connection and support, not just another feed of curated highlights.',
 'about.story_para2': 'Current social media platforms have failed us. They amplify comparison, enable harassment, and leave the vulnerable more isolated than before. We need something fundamentally different.',
@@ -112,7 +110,6 @@ const translations = {
 'about.find_team': 'You can find',
 'about.and': ' and ',
 'about.on_linkedin': ' on LinkedIn',
-'btn.signin': 'Sign In',
 
         // Onboarding/Tutorial
         'onboarding.welcome': 'Welcome to TheraSocial!',
@@ -281,11 +278,10 @@ const translations = {
 'circles.no_permission': 'You don\'t have permission to view this circle',
 'circles.title_public': 'General 🌍',
 
-'circles.your_access_level': 'Your Level of Access',
+'circles.your_access_level': 'Your access level',
 'circles.restricted_access': 'Restricted Access',
 'circles.circles_visibility': 'circles visibility',
 'circles.insufficient_access': 'You do not have permission to view these circles. The user would need to add you to a higher access level.',
-'circles.your_access_level': 'Your access level',
 'common.is_set_to': 'is set to',
         'circles.title': 'My Circles',
         'circles.subtitle': 'Organize your connections into meaningful groups',
@@ -301,13 +297,8 @@ const translations = {
         'circles.remove_confirm': 'Remove this user from the circle?',
         'circles.user_removed': 'User removed from circle',
         'circles.add_to': 'Add to circle...',
-        'circles.visibility_label': 'Circle Visibility',
-'circles.visibility_public': 'General 🌍',
 
-'circles.visibility_private': 'Private 🔒',
-'circles.no_permission': 'You don\'t have permission to view this circle',
-
-        // In the 'en' translations object:
+        // Circle privacy settings
 'circles.privacy_label': 'Circle Visibility',
 'circles.circles_private': 'Circles set to private',
 'circles.privacy_updated': 'Privacy setting updated',
@@ -336,8 +327,6 @@ const translations = {
 'messages.yesterday': 'Yesterday',
 'messages.unknown_time': 'Unknown time',
 
-'alerts.title': 'Alerts',
-'alerts.no_alerts': 'No new alerts',
 'alerts.new_message_from': 'New message from {username}',
 
         // Moods
@@ -1746,7 +1735,7 @@ const translations = {
     'params.sleep_quality': 'איכות שינה',
     'params.physical_activity': 'פעילות גופנית',
     'params.anxiety': 'חרדה',
-    'params.calm': 'רוגע',
+    'params.calm': 'שלווה',
     'params.calmness': 'שלווה',
     // V4: Missing params keys
     'params.sleep': 'שינה',
@@ -2133,7 +2122,6 @@ const translations = {
 'circles.title_class_a': 'משפחה 👨‍👩‍👧‍👦',
 'privacy.class_b': 'חברים קרובים',
 'privacy.class_a': 'משפחה',
-'auth.username_placeholder': 'בחר שם משתמש',
 'about.team_title': 'הצוות והסיפור שלנו',
 'about.team_intro': 'הצוות העיקרי מאחורי הפלטפורמה הוא המנכ"ל בני ברנדשטטר והמנהל הטכנולוגי אוון אסקנזי.',
 'about.story_para1': 'Thera Social נוצרה עבור אלה שמרגישים מנותקים, נאבקים או לא נראים. חיילים משוחררים הנושאים פצעים בלתי נראים, צעירים וצעירות המנווטים בבדידות, ניצולי טראומה והתעללות, סטודנטים מוכים ללחץ - כולם ראויים לקשר אמיתי ותמיכה, לא רק עוד פיד של תוכן מנוסח בקפידה.',
@@ -2142,7 +2130,6 @@ const translations = {
 'about.find_team': 'תוכלו למצוא את',
 'about.and': ' ואת ',
 'about.on_linkedin': ' בלינקדאין',
-'btn.signin': 'התחבר',
 'parameters.home': 'בית',
 'settings.language': ':שפה',
 'trigger_parameter_mood': 'מצב רוח',
@@ -2605,8 +2592,6 @@ const translations = {
 'messages.yesterday': 'אתמול',
 'messages.unknown_time': 'זמן לא ידוע',
 
-'alerts.title': 'התראות',
-'alerts.no_alerts': 'אין התראות חדשות',
 'alerts.new_message_from': 'הודעה חדשה מ-{username}',
 
         // Moods
@@ -3638,7 +3623,7 @@ const translations = {
     'params.sleep_quality': 'جودة النوم',
     'params.physical_activity': 'النشاط البدني',
     'params.anxiety': 'القلق',
-    'params.calm': 'الهدوء',
+    'params.calm': 'السكينة',
     'params.calmness': 'السكينة',
     // V4: Missing params keys
     'params.sleep': 'النوم',
@@ -4168,8 +4153,6 @@ const translations = {
 'messages.yesterday': 'أمس',
 'messages.unknown_time': 'وقت غير معروف',
 
-'alerts.title': 'التنبيهات',
-'alerts.no_alerts': 'لا توجد تنبيهات جديدة',
 'alerts.new_message_from': 'رسالة جديدة من {username}',
 
         // Moods
@@ -4888,7 +4871,7 @@ const translations = {
     'params.sleep_quality': 'качество сна',
     'params.physical_activity': 'физическая активность',
     'params.anxiety': 'тревожность',
-    'params.calm': 'спокойствие',
+    'params.calm': 'Умиротворение',
     'params.calmness': 'умиротворение',
     // V4: Missing params keys
     'params.sleep': 'Сон',
@@ -5737,8 +5720,6 @@ const translations = {
 'messages.yesterday': 'Вчера',
 'messages.unknown_time': 'Неизвестное время',
 
-'alerts.title': 'Уведомления',
-'alerts.no_alerts': 'Нет новых уведомлений',
 'alerts.new_message_from': 'Новое сообщение от {username}',
 
         // Moods
