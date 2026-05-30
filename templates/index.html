@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!-- I2 Changes (from I1):
+  - FIX: openParamQuickSet() now shows "Calmness" (not "Anxiety") when ANXIETY_DISPLAY_MODE is "calm"
+  - FIX: saveParamQuickSet() now inverts anxiety value in calm mode before saving (display 4→store 1)
+  - FIX: loadFriendsUpdates() now shows "Calmness" label when in calm mode
+-->
 <!-- K11 CHANGES:
   TRIPLE EMAIL FIX (backend):
   1. Added diary_reminder_last_sent dedup check to /api/diary-reminder/process cron endpoint
@@ -19853,7 +19858,7 @@ function openParamQuickSet(paramKey) {
         energy: _t('params.energy', 'Energy'),
         sleep_quality: _t('params.sleep', 'Sleep'),
         physical_activity: _t('params.exercise', 'Exercise'),
-        anxiety: _t('params.anxiety', 'Anxiety')
+        anxiety: window.ANXIETY_DISPLAY_MODE === 'calm' ? _t('params.calm', 'Calmness') : _t('params.anxiety', 'Anxiety')
     };
 
     const emojis = (paramKey === 'anxiety' && window.ANXIETY_DISPLAY_MODE !== 'calm')
@@ -19898,7 +19903,12 @@ async function saveParamQuickSet(paramKey, value) {
     try {
         const clientDate = new Date().toISOString().split('T')[0];
         const body = { date: clientDate };
-        body[paramKey] = value;
+        // I2: In calm mode, convert display calmness value back to storage anxiety value
+        if (paramKey === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm' && window.anxietyToStorage) {
+            body[paramKey] = window.anxietyToStorage(value);
+        } else {
+            body[paramKey] = value;
+        }
 
         const response = await fetch('/api/parameters', {
             method: 'POST',
@@ -20027,7 +20037,7 @@ async function loadFriendsUpdates() {
             energy: tt('params.energy', 'Energy'), 
             sleep_quality: tt('params.sleep', 'Sleep'), 
             physical_activity: tt('params.exercise', 'Exercise'), 
-            anxiety: tt('params.anxiety', 'Anxiety') 
+            anxiety: window.ANXIETY_DISPLAY_MODE === 'calm' ? tt('params.calm', 'Calmness') : tt('params.anxiety', 'Anxiety') 
         };
 
         listDiv.innerHTML = updates.map(u => {
