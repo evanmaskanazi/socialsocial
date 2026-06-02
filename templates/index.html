@@ -7830,6 +7830,7 @@ async function loadUserCity() {
                 if (followlogTarget) {
                     // Redirect to Following tab with this user at top
                     console.log('[FOLLOWLOG] Redirecting to Following tab for user:', followlogTarget);
+                    if (submitBtn) submitBtn.classList.remove('btn-loading');
                     showDashboard();
                     loadNotificationSettings();
                     // Small delay to ensure dashboard is ready, then switch to following view
@@ -7843,6 +7844,8 @@ async function loadUserCity() {
                 }
 
                 // FIX: Always go to home after login (diary redirect disabled)
+                // I7 FIX: Remove loading state before showing dashboard
+                if (submitBtn) submitBtn.classList.remove('btn-loading');
                 showDashboard();
                 // Load notification settings after login
                 console.log('[LOGIN DEBUG] Login successful, calling loadNotificationSettings');
@@ -8370,6 +8373,9 @@ async function loadUserCity() {
             document.getElementById('forgotPasswordContainer').style.display = 'none';
             document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('tutorialBtn').style.display = 'none';
+            // I7 FIX: Clear login button loading state (belt-and-suspenders with success-path fix)
+            const authBtn = document.getElementById('authSubmit');
+            if (authBtn) authBtn.classList.remove('btn-loading');
             // PJ6001: Show nav links when logged out
             document.querySelectorAll('.auth-only-hide').forEach(el => el.style.display = '');
         }
