@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — K11
+Complete app.py for Social Social Platform - V4 10Link — I7
+
+# I7 Changes (from K11/I5):
+# - FEATURE: Added GET /api/circles/user-placement/<target_user_id> endpoint.
+#   Returns which of the current user's circles contain the target user.
+#   Enables the profile-page permission-groups widget (requested by Benny)
+#   so users can view and manage circle assignments without navigating away.
 
 # K11 Changes (from K9):
 # TRIPLE EMAIL FIX:
@@ -10783,6 +10789,42 @@ def check_circle_membership(check_user_id):
     except Exception as e:
         logger.error(f"Check circle membership error: {str(e)}")
         return jsonify({'error': 'Failed to check membership'}), 500
+
+
+@app.route('/api/circles/user-placement/<int:target_user_id>', methods=['GET'])
+@login_required
+def get_user_circle_placement(target_user_id):
+    """Get which of the current user's circles contain the target user.
+    I7: Enables the profile-page permission-groups widget so users can
+    see and manage circle membership without navigating away."""
+    try:
+        current_user_id = session.get('user_id')
+
+        type_mapping = {
+            'general': 'public',
+            'close_friends': 'class_b',
+            'family': 'class_a',
+            'public': 'public',
+            'class_b': 'class_b',
+            'class_a': 'class_a'
+        }
+
+        stmt = select(Circle).filter(
+            Circle.user_id == current_user_id,
+            Circle.circle_user_id == target_user_id
+        )
+        circles = db.session.execute(stmt).scalars().all()
+
+        placements = []
+        for c in circles:
+            normalized = type_mapping.get(c.circle_type, c.circle_type)
+            placements.append(normalized)
+
+        return jsonify({'user_id': target_user_id, 'circles': placements})
+
+    except Exception as e:
+        logger.error(f"Get user circle placement error: {str(e)}")
+        return jsonify({'error': 'Failed to get circle placement'}), 500
 
 
 def get_my_circles():
