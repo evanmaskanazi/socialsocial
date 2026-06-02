@@ -1,4 +1,8 @@
 // Language detection and translation system with backend sync
+// Version I7 - Added permission group translations (circles.permission_groups, circles.permission_groups_desc,
+//   circles.not_in_any_circle, circles.change_circle, circles.move_to, circles.add_to_circle_label,
+//   circles.moved_to_circle, circles.removed_from_circles, circles.general_label, circles.close_friends_label,
+//   circles.family_label) in EN/HE/AR/RU for the profile-page permission groups widget
 // Version I2 - Removed duplicate keys: auth.username_placeholder, auth.or, about.team_title, btn.signin,
 //   circles.visibility_label/public/private, circles.your_access_level, alerts.title/no_alerts (EN/HE/AR/RU)
 // Version I2 - Harmonized params.calm translations across HE/AR/RU to match index.html and parameters-social.js
@@ -305,6 +309,19 @@ const translations = {
 'error.updating_privacy': 'Error updating privacy',
 'circles.remove': 'Remove',
 'circles.no_users': 'No users found',
+
+// I7: Permission groups section on profile
+'circles.permission_groups': 'Permission Groups',
+'circles.permission_groups_desc': 'Which of your circles this user belongs to',
+'circles.not_in_any_circle': 'Not in any of your circles',
+'circles.change_circle': 'Change',
+'circles.move_to': 'Move to',
+'circles.add_to_circle_label': 'Add to a circle',
+'circles.moved_to_circle': 'Moved to {circle} circle',
+'circles.removed_from_circles': 'Removed from all circles',
+'circles.general_label': 'General',
+'circles.close_friends_label': 'Close Friends',
+'circles.family_label': 'Family',
 
         // Messages page
          'messages.title': 'Messages',
@@ -2534,6 +2551,18 @@ const translations = {
         'circles.add_to': 'הוסף למעגל...',
 'circles.remove': 'הסר',
 'circles.no_users': 'לא נמצאו משתמשים',
+// I7: Permission groups section on profile
+'circles.permission_groups': 'קבוצות הרשאה',
+'circles.permission_groups_desc': 'לאילו מעגלים שלך המשתמש הזה שייך',
+'circles.not_in_any_circle': 'לא נמצא באף מעגל שלך',
+'circles.change_circle': 'שנה',
+'circles.move_to': 'העבר ל',
+'circles.add_to_circle_label': 'הוסף למעגל',
+'circles.moved_to_circle': 'הועבר למעגל {circle}',
+'circles.removed_from_circles': 'הוסר מכל המעגלים',
+'circles.general_label': 'כללי',
+'circles.close_friends_label': 'חברים קרובים',
+'circles.family_label': 'משפחה',
 // In the 'he' translations object:
 'circles.privacy_label': 'נראות מעגלים',
 'circles.circles_private': 'מעגלים מוגדרים כפרטיים',
@@ -4127,6 +4156,18 @@ const translations = {
 
 'circles.remove': 'إزالة',
 'circles.no_users': 'لم يتم العثور على مستخدمين',
+// I7: Permission groups section on profile
+'circles.permission_groups': 'مجموعات الأذونات',
+'circles.permission_groups_desc': 'الدوائر التي ينتمي إليها هذا المستخدم',
+'circles.not_in_any_circle': 'ليس في أي من دوائرك',
+'circles.change_circle': 'تغيير',
+'circles.move_to': 'نقل إلى',
+'circles.add_to_circle_label': 'أضف إلى دائرة',
+'circles.moved_to_circle': 'تم النقل إلى دائرة {circle}',
+'circles.removed_from_circles': 'تمت الإزالة من جميع الدوائر',
+'circles.general_label': 'عام',
+'circles.close_friends_label': 'أصدقاء مقربون',
+'circles.family_label': 'عائلة',
 // In the 'ar' translations object:
 'circles.privacy_label': 'رؤية الدوائر',
 'circles.circles_private': 'تم تعيين الدوائر كخاصة',
@@ -5694,6 +5735,18 @@ const translations = {
 'circles.your_access_level': 'Ваш уровень доступа',
 'circles.remove': 'Удалить',
 'circles.no_users': 'Пользователи не найдены',
+// I7: Permission groups section on profile
+'circles.permission_groups': 'Группы разрешений',
+'circles.permission_groups_desc': 'К каким из ваших кругов принадлежит этот пользователь',
+'circles.not_in_any_circle': 'Не входит ни в один из ваших кругов',
+'circles.change_circle': 'Изменить',
+'circles.move_to': 'Переместить в',
+'circles.add_to_circle_label': 'Добавить в круг',
+'circles.moved_to_circle': 'Перемещён в круг {circle}',
+'circles.removed_from_circles': 'Удалён из всех кругов',
+'circles.general_label': 'Общий',
+'circles.close_friends_label': 'Близкие друзья',
+'circles.family_label': 'Семья',
 // In the 'ru' translations object:
 'circles.privacy_label': 'Видимость кругов',
 'circles.circles_private': 'Круги установлены как приватные',

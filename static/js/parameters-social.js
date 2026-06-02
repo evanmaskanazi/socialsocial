@@ -1,3 +1,4 @@
+// Version I7 - Cache-buster version sync; no functional changes in this file
 // Version I2 - FIX: Hardcoded 'Anxiety' in applyPrivacyToAllDays paramLabels now uses Calmness in calm mode
 // Version I2 - FIX: Added missing tooltip.calm translations for Hebrew, Arabic, Russian
 // Version I2 - CLEANUP: Removed duplicate comment line
