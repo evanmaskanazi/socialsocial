@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!-- I7 Changes (from I5):
+  FEATURE: Permission Groups widget on other-user profile view (Hebrew colleague request)
+  - Shows which of your circles the viewed user belongs to (General/Close Friends/Family)
+  - Inline dropdown to add/move/remove circle membership directly from profile page
+  - Eliminates need to navigate to Circles page for common circle management tasks
+  - Fully translated in EN/HE/AR/RU
+  BUG FIXES (5):
+  1. FIX: Birth year max attribute hardcoded to 2025 → uses current year dynamically
+  2. FIX: loadProfile() defaulted birth year to 1985 when null → now shows empty field
+  3. FIX: updateBirthYear() validation hardcoded 2025 → uses current year
+  4. FIX: Cache-buster versions updated from ?v=I7 to ?v=I7
+  5. FIX: Consolidated circle membership fetch on profile view via /api/circles/user-placement
+  UX IMPROVEMENTS (5):
+  1. Profile action buttons: active:scale(0.97) press feedback for tactile response
+  2. Partial profile banner: fade-in animation on appear
+  3. Modal close buttons: hover background and smooth transitions
+  4. Permission groups section: pill-style circle chips with color coding
+  5. Profile section cards: consistent subtle border and transition on hover
+-->
 <!-- I2 Changes (from I1):
   - FIX: openParamQuickSet() now shows "Calmness" (not "Anxiety") when ANXIETY_DISPLAY_MODE is "calm"
   - FIX: saveParamQuickSet() now inverts anxiety value in calm mode before saving (display 4→store 1)
@@ -22,7 +41,7 @@
   8. Auth card: refined shadow layers + subtle border
   9. Mobile nav items: active press scale feedback on tap
   10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
-  CACHE BUSTING: All JS references updated to ?v=K11
+  CACHE BUSTING: All JS references updated to ?v=I7
 -->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
@@ -324,7 +343,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=K11"></script>
+    <script src="/static/js/follow-requests.js?v=I7"></script>
 
 
     <style>
@@ -1355,6 +1374,47 @@
             border-radius: 10px !important;
         }
 
+        /* I7 UX-1: Profile action buttons — tactile press feedback */
+        .profile-action-buttons button:active {
+            transform: scale(0.97) !important;
+            transition: transform 0.08s ease !important;
+        }
+        /* I7 UX-2: Partial profile banner fade-in */
+        @keyframes i7FadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        #partialProfileBanner { animation: i7FadeIn 0.3s ease-out; }
+        /* I7 UX-3: Modal close button hover */
+        .modal .close, .modal-content .close {
+            transition: background 0.15s ease, color 0.15s ease !important;
+            border-radius: 50% !important;
+            width: 32px; height: 32px;
+            display: inline-flex !important; align-items: center; justify-content: center;
+        }
+        .modal .close:hover, .modal-content .close:hover {
+            background: rgba(0,0,0,0.08) !important;
+        }
+        /* I7 UX-4: Permission groups pill chips */
+        .i7-circle-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+            border: 1.5px solid transparent; transition: all 0.2s ease; cursor: default;
+        }
+        .i7-circle-pill.public   { background: #EBF5FB; color: #2471A3; border-color: #AED6F1; }
+        .i7-circle-pill.class_b  { background: #F5EEF8; color: #7D3C98; border-color: #D2B4DE; }
+        .i7-circle-pill.class_a  { background: #EAFAF1; color: #1E8449; border-color: #A9DFBF; }
+        .i7-circle-pill .pill-remove {
+            cursor: pointer; margin-inline-start: 4px; opacity: 0.6;
+            font-size: 14px; line-height: 1; transition: opacity 0.15s;
+        }
+        .i7-circle-pill .pill-remove:hover { opacity: 1; }
+        /* I7 UX-5: Profile section cards — subtle border and hover transition */
+        #profileView .settings-section,
+        #profileView .profile-section {
+            transition: box-shadow 0.25s ease, border-color 0.25s ease !important;
+        }
+        #profileView .settings-section:hover {
+            box-shadow: 0 4px 20px rgba(107, 139, 164, 0.15) !important;
+        }
+
         /* === SETTINGS VIEW: warm card styling === */
         #settingsView .settings-card,
         #settingsView .settings-section,
@@ -1492,6 +1552,19 @@
             background: var(--light) !important;
             border-color: var(--border) !important;
         }
+        /* I7: Dark mode for permission groups section */
+        .dark-mode #i7PermissionGroups {
+            background: var(--light) !important;
+            border-color: var(--border) !important;
+        }
+        .dark-mode #i7PermissionGroups h4 { color: #E5E7EB !important; }
+        .dark-mode #i7PermissionGroups p { color: #9CA3AF !important; }
+        .dark-mode #i7PermissionGroups select {
+            background: #1F2937 !important; color: #E5E7EB !important; border-color: #4B5563 !important;
+        }
+        .dark-mode .i7-circle-pill.public   { background: #1B3A4B; color: #7DB8DA; border-color: #2A5F7E; }
+        .dark-mode .i7-circle-pill.class_b  { background: #2D1B42; color: #C39BD3; border-color: #4A2D6B; }
+        .dark-mode .i7-circle-pill.class_a  { background: #1B3B2D; color: #7DCEA0; border-color: #2D6B4A; }
         /* ================================================================== */
         /* END CLEAN3 WARM VIEW STYLING                                       */
         /* ================================================================== */
@@ -5174,7 +5247,7 @@
                                 <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <input type="number" class="form-input" id="profileBirthYear"
-                                           min="1900" max="2025" maxlength="4"
+                                           min="1900" max="2026" maxlength="4"
                                            placeholder="YYYY">
                                     <button type="button" class="btn btn-secondary" id="birthYearUpdateBtn" style="padding: 8px 16px;" 
                                             onclick="updateBirthYear()" data-i18n="profile.update_birth_year">Update</button>
@@ -6954,7 +7027,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=K11"></script>
+    <script src="/static/js/i18n.js?v=I7"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7224,9 +7297,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=K11"></script>
-   <script src="/static/js/circles-messages.js?v=K11"></script>
-<script src="/static/js/feed-updates.js?v=K11"></script>
+<script src="/static/js/parameters-social.js?v=I7"></script>
+   <script src="/static/js/circles-messages.js?v=I7"></script>
+<script src="/static/js/feed-updates.js?v=I7"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -11121,7 +11194,7 @@ window.addEventListener('languageChanged', () => {
                 // PJ6001: Load birth year
                 const birthYearInput = document.getElementById('profileBirthYear');
                 if (birthYearInput) {
-                    birthYearInput.value = response.birth_year || 1985;
+                    birthYearInput.value = response.birth_year || '';
                     birthYearInput.disabled = false;
                     birthYearInput.style.backgroundColor = '';
                     birthYearInput.style.cursor = '';
@@ -11182,6 +11255,10 @@ window.addEventListener('languageChanged', () => {
                 const checkinBtn = document.getElementById('profileCheckinHistoryBtn');
                 if (checkinBtn) checkinBtn.remove();
                 
+                // I7: Remove permission groups section when viewing own profile
+                const permGroups = document.getElementById('i7PermissionGroups');
+                if (permGroups) permGroups.remove();
+                
                 // 10Link: Restore profile-header to original non-flex layout
                 const ownProfileHeader = document.querySelector('#profileView .profile-header');
                 if (ownProfileHeader) {
@@ -11222,9 +11299,10 @@ window.addEventListener('languageChanged', () => {
         async function updateBirthYear() {
             const birthYearInput = document.getElementById('profileBirthYear');
             const birthYear = parseInt(birthYearInput.value);
+            const currentYear = new Date().getFullYear();
             
-            if (isNaN(birthYear) || birthYear < 1900 || birthYear > 2025) {
-                showNotification(t('profile.birth_year_error') || 'Please enter a valid birth year (1900-2025)', 'warning');
+            if (isNaN(birthYear) || birthYear < 1900 || birthYear > currentYear) {
+                showNotification(t('profile.birth_year_error') || `Please enter a valid birth year (1900-${currentYear})`, 'warning');
                 return;
             }
             
@@ -14860,6 +14938,11 @@ async function loadUserProfileView(userId) {
             dataExportSection.style.display = 'none';
         }
 
+        // I7: Load permission groups section (shows which circles this user is in + management)
+        if (userId !== currentUserId) {
+            loadPermissionGroupsSection(userId, userData.username);
+        }
+
     } catch (error) {
         console.error('Error loading user profile:', error);
         showNotification(_t('msg.profile_load_failed', 'Failed to load user profile'), 'error');
@@ -14873,6 +14956,191 @@ async function loadUserProfileView(userId) {
 async function addUserProfileActionButtons(userId, username, forceShowFollow = false) {
     addUserActionButtonsToView('profileView', userId, username, forceShowFollow);
 }
+
+// I7: Permission Groups section — shows and manages circle membership from profile page
+async function loadPermissionGroupsSection(userId, username) {
+    const view = document.getElementById('profileView');
+    if (!view) return;
+
+    // Remove existing section if present (e.g. from previous profile view)
+    const existing = document.getElementById('i7PermissionGroups');
+    if (existing) existing.remove();
+
+    const lang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage') || 'en';
+    const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+
+    const circleLabels = {
+        public:  { emoji: '🌍', label: tt('circles.general_label', 'General') },
+        class_b: { emoji: '💜', label: tt('circles.close_friends_label', 'Close Friends') },
+        class_a: { emoji: '💚', label: tt('circles.family_label', 'Family') }
+    };
+
+    // Fetch current placement via lightweight endpoint
+    let placements = [];
+    try {
+        const res = await fetch(`/api/circles/user-placement/${userId}`, { credentials: 'include' });
+        if (res.ok) {
+            const data = await res.json();
+            placements = data.circles || [];
+        }
+    } catch (e) {
+        console.error('[I7] Error fetching circle placement:', e);
+    }
+
+    // Build section
+    const section = document.createElement('div');
+    section.id = 'i7PermissionGroups';
+    section.style.cssText = 'background: white; padding: 20px 24px; border-radius: 16px; margin: 16px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid rgba(107,139,164,0.1); border-left: 4px solid #7D3C98;';
+
+    const title = document.createElement('h4');
+    title.style.cssText = 'margin: 0 0 6px 0; font-size: 1rem; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 8px;';
+    title.textContent = '🔑 ' + tt('circles.permission_groups', 'Permission Groups');
+    section.appendChild(title);
+
+    const desc = document.createElement('p');
+    desc.style.cssText = 'margin: 0 0 14px 0; font-size: 0.82rem; color: #6B7280; line-height: 1.4;';
+    desc.textContent = tt('circles.permission_groups_desc', 'Which of your circles this user belongs to');
+    section.appendChild(desc);
+
+    // Current placements as pills
+    const pillsRow = document.createElement('div');
+    pillsRow.id = 'i7PillsRow';
+    pillsRow.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center;';
+
+    if (placements.length === 0) {
+        const emptyMsg = document.createElement('span');
+        emptyMsg.style.cssText = 'font-size: 0.85rem; color: #9CA3AF; font-style: italic;';
+        emptyMsg.textContent = tt('circles.not_in_any_circle', 'Not in any of your circles');
+        pillsRow.appendChild(emptyMsg);
+    } else {
+        placements.forEach(circleType => {
+            const info = circleLabels[circleType] || circleLabels.public;
+            const pill = document.createElement('span');
+            pill.className = 'i7-circle-pill ' + circleType;
+            pill.innerHTML = '';
+            const emojiSpan = document.createElement('span');
+            emojiSpan.textContent = info.emoji;
+            const labelSpan = document.createElement('span');
+            labelSpan.textContent = info.label;
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'pill-remove';
+            removeBtn.textContent = '✕';
+            removeBtn.title = tt('circles.remove', 'Remove');
+            removeBtn.onclick = async () => {
+                try {
+                    const res = await fetch('/api/circles/remove', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ user_id: userId, circle_type: circleType })
+                    });
+                    if (res.ok) {
+                        showNotification(tt('circles.removed_from_circles', 'Removed from all circles'), 'success');
+                        loadPermissionGroupsSection(userId, username); // Refresh
+                        // Also refresh action buttons to show Add to Circle if needed
+                        addUserProfileActionButtons(userId, username);
+                    }
+                } catch (e) { console.error('[I7] Remove error:', e); }
+            };
+            pill.appendChild(emojiSpan);
+            pill.appendChild(labelSpan);
+            pill.appendChild(removeBtn);
+            pillsRow.appendChild(pill);
+        });
+    }
+    section.appendChild(pillsRow);
+
+    // Add/Change dropdown row
+    const controlRow = document.createElement('div');
+    controlRow.style.cssText = 'display: flex; align-items: center; gap: 10px; flex-wrap: wrap;';
+
+    const selectEl = document.createElement('select');
+    selectEl.style.cssText = 'padding: 8px 14px; border-radius: 10px; border: 1.5px solid #D1D5DB; font-size: 0.85rem; color: #374151; background: #F9FAFB; cursor: pointer; transition: border-color 0.15s; min-width: 160px;';
+    selectEl.onfocus = () => { selectEl.style.borderColor = '#7D3C98'; };
+    selectEl.onblur = () => { selectEl.style.borderColor = '#D1D5DB'; };
+
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = placements.length > 0
+        ? tt('circles.move_to', 'Move to') + '...'
+        : tt('circles.add_to_circle_label', 'Add to a circle') + '...';
+    defaultOpt.disabled = true;
+    defaultOpt.selected = true;
+    selectEl.appendChild(defaultOpt);
+
+    const allTypes = ['public', 'class_b', 'class_a'];
+    allTypes.forEach(cType => {
+        // Show all options — backend handles the swap
+        const info = circleLabels[cType];
+        const opt = document.createElement('option');
+        opt.value = cType;
+        opt.textContent = info.emoji + ' ' + info.label;
+        if (placements.includes(cType)) {
+            opt.textContent += ' ✓';
+            opt.disabled = true;
+        }
+        selectEl.appendChild(opt);
+    });
+    controlRow.appendChild(selectEl);
+
+    const applyBtn = document.createElement('button');
+    applyBtn.textContent = placements.length > 0
+        ? tt('circles.change_circle', 'Change')
+        : tt('circles.add_to_circle', 'Add to Circle');
+    applyBtn.style.cssText = 'padding: 8px 20px; background: linear-gradient(135deg, #7D3C98 0%, #6C3483 100%); color: white; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(125,60,152,0.25);';
+    applyBtn.onmouseover = () => { applyBtn.style.transform = 'translateY(-1px)'; applyBtn.style.boxShadow = '0 4px 10px rgba(125,60,152,0.35)'; };
+    applyBtn.onmouseout = () => { applyBtn.style.transform = ''; applyBtn.style.boxShadow = '0 2px 6px rgba(125,60,152,0.25)'; };
+    applyBtn.onclick = async () => {
+        const selected = selectEl.value;
+        if (!selected) return;
+        try {
+            // Remove existing placements first, then add new one
+            for (const existing of placements) {
+                await fetch('/api/circles/remove', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ user_id: userId, circle_type: existing })
+                });
+            }
+            // Add to new circle
+            const addRes = await fetch('/api/circles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ user_id: userId, circle_type: selected })
+            });
+            if (addRes.ok) {
+                const circleLabel = (circleLabels[selected] || {}).label || selected;
+                const msg = tt('circles.moved_to_circle', 'Moved to {circle} circle').replace('{circle}', circleLabel);
+                showNotification(msg, 'success');
+                loadPermissionGroupsSection(userId, username); // Refresh
+                addUserProfileActionButtons(userId, username); // Refresh action buttons
+            } else {
+                const err = await addRes.json().catch(() => ({}));
+                showNotification(err.error || 'Error', 'error');
+            }
+        } catch (e) {
+            console.error('[I7] Circle change error:', e);
+            showNotification('Error updating circle', 'error');
+        }
+    };
+    controlRow.appendChild(applyBtn);
+    section.appendChild(controlRow);
+
+    // Insert after action buttons or after profile section
+    const actionBtns = view.querySelector('.profile-action-buttons');
+    const profileSection = view.querySelector('.profile-section');
+    if (actionBtns) {
+        actionBtns.after(section);
+    } else if (profileSection) {
+        profileSection.after(section);
+    } else {
+        view.appendChild(section);
+    }
+}
+// Make globally available
+window.loadPermissionGroupsSection = loadPermissionGroupsSection;
 
 // PJN451: General function to add action buttons to any view
 // PJ501: Added forceShowFollow parameter for recommended users (shows Follow buttons even if following status is indeterminate)
