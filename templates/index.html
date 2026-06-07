@@ -7146,6 +7146,7 @@
                 'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
                 'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
                 'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
+                'alerts.no_checkin_content': "{username} hasn't checked in for {days} days — you may want to reach out",
                 'alerts.new_message_from': 'New message from {username}',
                 'alerts.started_following': '{username} accepted your connection request',
                 'alerts.accepted_request': '{username} accepted your connection request',
@@ -7164,6 +7165,7 @@
                 'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
                 'alerts.wellness_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
                 'alerts.wellness_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
+                'alerts.no_checkin_content': '{username} לא ביצע/ה צ׳ק-אין במשך {days} ימים — כדאי לבדוק איך הם',
                 'alerts.new_message_from': 'הודעה חדשה מ-{username}',
                 'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
                 'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
@@ -7182,6 +7184,7 @@
                 'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
                 'alerts.wellness_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
+                'alerts.no_checkin_content': '{username} لم يسجل/تسجل الدخول منذ {days} أيام — قد ترغب في التواصل معهم',
                 'alerts.new_message_from': 'رسالة جديدة من {username}',
                 'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
                 'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
@@ -7200,6 +7203,7 @@
                 'alerts.wellness_alert_for': 'Оповещение о здоровье {username}',
                 'alerts.wellness_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
+                'alerts.no_checkin_content': '{username} не отмечался/отмечалась {days} дней — возможно, стоит связаться',
                 'alerts.new_message_from': 'Новое сообщение от {username}',
                 'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
                 'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
@@ -7262,6 +7266,15 @@
                     .replace('{days}', days)
                     .replace('{dateRange}', dateRange);
             }
+            
+            // G3: Match no_checkin alert content pattern
+            const mNoCheckin = content.match(/^(.+?) hasn't checked in for (\d+) days/);
+            if (mNoCheckin) {
+                const username = mNoCheckin[1], days = mNoCheckin[2];
+                const template = tFn('alerts.no_checkin_content') || "{username} hasn't checked in for {days} days — you may want to reach out";
+                return template.replace('{username}', username).replace('{days}', days);
+            }
+            
             return content;
         };
         

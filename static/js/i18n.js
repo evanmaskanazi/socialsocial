@@ -595,6 +595,8 @@ const translations = {
 // PJ6003 - Well-Being Alert Translations
     'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
     'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
+    'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
+    'alerts.no_checkin_content': "{username} hasn't checked in for {days} days — you may want to reach out",
 
     // PJ6003 - Notification Translations (for alerts list rendering)
     'alerts.new_message_from': 'New message from {username}',
@@ -1728,6 +1730,8 @@ const translations = {
          // PJ6003 - Well-Being Alert Translations
     'alerts.wellness_alert_for': 'התראת רווחה עבור {username}',
     'alerts.wellness_content': "{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})",
+    'alerts.wellness_content_no_date': "{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים",
+    'alerts.no_checkin_content': "{username} לא ביצע/ה צ׳ק-אין במשך {days} ימים — כדאי לבדוק איך הם",
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'הודעה חדשה מ-{username}',
@@ -3628,6 +3632,8 @@ const translations = {
  // PJ6003 - Well-Being Alert Translations
     'alerts.wellness_alert_for': 'تنبيه رفاهية لـ {username}',
     'alerts.wellness_content': "كان {param} لـ {username} في مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})",
+    'alerts.wellness_content_no_date': "كان {param} لـ {username} في مستويات مقلقة لمدة {days} أيام متتالية",
+    'alerts.no_checkin_content': "{username} لم يسجل/تسجل الدخول منذ {days} أيام — قد ترغب في التواصل معهم",
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'رسالة جديدة من {username}',
@@ -4888,6 +4894,8 @@ const translations = {
  // PJ6003 - Well-Being Alert Translations
     'alerts.wellness_alert_for': 'Оповещение о благополучии для {username}',
     'alerts.wellness_content': "{param} пользователя {username} был на тревожном уровне в течение {days} дней подряд ({dateRange})",
+    'alerts.wellness_content_no_date': "{param} пользователя {username} был на тревожном уровне в течение {days} дней подряд",
+    'alerts.no_checkin_content': "{username} не отмечался/отмечалась {days} дней — возможно, стоит связаться",
 
     // PJ6003 - Notification Translations
     'alerts.new_message_from': 'Новое сообщение от {username}',
