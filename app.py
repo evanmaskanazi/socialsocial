@@ -8801,6 +8801,10 @@ def oauth_callback(provider):
 
         # Update last login
         user.last_login = datetime.utcnow()
+        # G3: Sync language preference for existing users on OAuth login
+        if not is_new_user and oauth_language and oauth_language != (user.preferred_language or 'en'):
+            user.preferred_language = oauth_language
+            logger.info(f"OAuth {provider}: Updated preferred_language to {oauth_language} for {user.username}")
         db.session.commit()
 
         # Create session (same as regular login)

@@ -16563,6 +16563,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (oauthSuccess) {
         // Clean URL and let normal session check proceed (user is now logged in)
         window.history.replaceState({}, document.title, window.location.pathname);
+        // G3: Restore pre-OAuth language so loadUserLanguage() trusts it
+        const oauthLang = localStorage.getItem('oauth_language');
+        if (oauthLang) {
+            localStorage.setItem('selectedLanguage', oauthLang);
+            localStorage.removeItem('oauth_language');
+            sessionStorage.setItem('justLoggedIn', 'true');
+            console.log('[OAUTH] Restored language:', oauthLang);
+        }
         console.log('[OAUTH] Login successful, proceeding to session check');
     }
     if (oauthError) {
