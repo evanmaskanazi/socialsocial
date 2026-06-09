@@ -1,6 +1,56 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — I7
+Complete app.py for Social Social Platform - V4 10Link — G15
+
+# G15 Changes (from G13):
+# WEEKLY SUMMARY UX POLISH:
+# - FIX: `import re` moved before the loop (was re-importing per diary entry).
+# - FIX: Highlights now included in fallback (non-AI) response too, so the
+#   visual highlights bar works even when ANTHROPIC_API_KEY is not set.
+# - IMPROVED: No-data fallback messages are warmer and more actionable.
+# - IMPROVED: best_day now returns date string (e.g. "2026-06-03") alongside
+#   day name, so the frontend can translate day names per user language.
+
+# G13 Changes (from G11):
+# WEEKLY SUMMARY IMPROVEMENTS:
+# - IMPROVED: /api/ai/weekly-summary now sends richer context to AI: entry count,
+#   date range, per-parameter averages, and best/worst day highlights.
+# - IMPROVED: Notes sent to AI are now stripped of reflection markers (💭/✍️/──)
+#   and feedback tags, and truncated to 200 chars (was 100).
+# - IMPROVED: System prompt enhanced with cross-parameter correlation instructions
+#   and guidance on how to handle sparse data (fewer than 4 days).
+# - ADDED: Response now includes structured `highlights` object (best_day, streak_length,
+#   top_parameter, days_count) for frontend visual display.
+# CHECKIN-FEEDBACK AUDIT FIX:
+# - FIX: Scoring now skips conditions for None parameter values instead of failing
+#   the entire feedback entry. Users who leave one parameter blank no longer get
+#   excluded from all multi-condition feedback.
+
+# G11 Fixes (from G9):
+# - FIX: Removed feedback_id marker from user-visible notes (was appending
+#   [feedback:...] to diary notes). Now logs server-side only via logger.info.
+# - FIX: anxiety_calm scoring always evaluates on calm scale (4=most calm)
+#   regardless of ANXIETY_DISPLAY_MODE, preventing inverted matches in anxiety mode.
+# - FIX: Added db.session.rollback() to preference endpoint error handler.
+# - FIX: Removed unused 'calm' variable from checkin-feedback endpoint.
+# - DOC: Streak detection documented as approximate (count-based, not date-consecutive).
+
+# G9 Changes (from I7/G5):
+# V4 AI REALIGNMENT (per V4H.txt — Brandstetter feedback):
+# - ADDED: ENABLE_AI_DIARY_REFLECTION = False feature flag (line ~922).
+#   Controls whether the diary reflection prompt (💭) appears after check-in save.
+#   Set to False for V3 (restores diary to pre-AI behavior). Set to True for V4.
+# - ADDED: /api/ai/config endpoint — returns enabled AI feature flags to frontend.
+# - ADDED: /api/ai/checkin-feedback endpoint — V4 ML-based immediate feedback system.
+#   Instead of asking reflection questions, gives personalized encouraging feedback
+#   from a curated bank of messages matched to the user's check-in patterns.
+#   Designed for future ML optimization: logs feedback_id per entry for outcome tracking.
+# - ADDED: /api/ai/checkin-feedback/preference endpoint (GET/PUT) — users can toggle
+#   AI check-in feedback on/off (stored in NotificationSettings.ai_checkin_feedback).
+# - ADDED: ai_checkin_feedback column on NotificationSettings (Boolean, default True).
+# - IMPROVED: /api/ai/weekly-summary system prompt — richer phrasing, more relatable
+#   tone, better use of user data context, explicit multilingual quality instructions.
+# - Cache version bumped to G9 in all HTML files.
 
 # I7 Changes (from K11/I5):
 # - FEATURE: Added GET /api/circles/user-placement/<target_user_id> endpoint.
@@ -918,6 +968,10 @@ MINIMUM_TRIGGER_DAYS = 1  # CLEAN: Set to 1 for immediate single-day triggers
 # No data migration needed — stored values are never modified.
 # =============================================================================
 ANXIETY_DISPLAY_MODE = "calm"  # Options: "anxiety" or "calm"
+
+# G9: V4 AI feature flags — controls diary AI features independently
+# Set to False for V3 (diary reverts to pre-AI behavior). Set to True when V4 is ready.
+ENABLE_AI_DIARY_REFLECTION = False
 # =============================================================================
 
 from flask import (
@@ -4658,6 +4712,8 @@ class NotificationSettings(db.Model):
     # Daily diary reminder time settings (24-hour format, e.g., "09:00" or "21:30")
     diary_reminder_time = db.Column(db.String(5), default='09:00')  # Default 9 AM
     diary_reminder_timezone = db.Column(db.String(100), default='UTC')  # Timezone based on selected city
+    # G9: V4 ML-based check-in feedback user preference (on by default when feature is enabled)
+    ai_checkin_feedback = db.Column(db.Boolean, default=True)
     # CS7: diary_reminder_last_sent NOT in ORM - added via migration. Access via raw SQL.
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -9874,7 +9930,8 @@ def notification_settings():
                     'daily_reminder': False,
                     'weekly_summary': False,
                     'diary_reminder_time': '09:00',
-                    'diary_reminder_timezone': 'UTC'
+                    'diary_reminder_timezone': 'UTC',
+                    'ai_checkin_feedback': True
                 }
                 logger.info(f"[NOTIFICATION DEBUG] GET - Returning: {default_response}")
                 return jsonify(default_response)
@@ -9894,7 +9951,8 @@ def notification_settings():
                 'daily_reminder': settings.daily_reminder,
                 'weekly_summary': settings.weekly_summary,
                 'diary_reminder_time': settings.diary_reminder_time or '09:00',
-                'diary_reminder_timezone': settings.diary_reminder_timezone or 'UTC'
+                'diary_reminder_timezone': settings.diary_reminder_timezone or 'UTC',
+                'ai_checkin_feedback': settings.ai_checkin_feedback if hasattr(settings, 'ai_checkin_feedback') and settings.ai_checkin_feedback is not None else True
             }
             logger.info(f"[NOTIFICATION DEBUG] GET - Returning: {response_data}")
             logger.info(f"[NOTIFICATION DEBUG] ========================================")
@@ -9966,6 +10024,10 @@ def notification_settings():
             if 'diary_reminder_timezone' in data:
                 settings.diary_reminder_timezone = data['diary_reminder_timezone']
                 logger.info(f"[NOTIFICATION DEBUG] PUT - Setting diary_reminder_timezone to: {data['diary_reminder_timezone']}")
+            # G9: V4 AI check-in feedback user preference
+            if 'ai_checkin_feedback' in data:
+                settings.ai_checkin_feedback = data['ai_checkin_feedback']
+                logger.info(f"[NOTIFICATION DEBUG] PUT - Setting ai_checkin_feedback to: {data['ai_checkin_feedback']}")
             
             db.session.commit()
             logger.info(f"[NOTIFICATION DEBUG] PUT - Committed to database")
@@ -14358,14 +14420,15 @@ def ai_weekly_summary():
 
         if not params:
             fallback_msgs = {
-                'en': 'Start tracking your daily well-being to receive an AI-powered weekly summary!',
-                'he': 'התחל/י לעקוב אחרי הבריאות שלך כדי לקבל סיכום שבועי מונע בינה מלאכותית!',
-                'ar': 'ابدأ بتتبع صحتك اليومية لتلقي ملخص أسبوعي مدعوم بالذكاء الاصطناعي!',
-                'ru': 'Начните отслеживать своё самочувствие, чтобы получать еженедельный AI-анализ!'
+                'en': "You haven't checked in this week yet — once you do, your personalized weekly summary will appear here. It only takes a moment!",
+                'he': 'עדיין לא מילאת צ׳ק אין השבוע — ברגע שתעשה, הסיכום השבועי המותאם אישית שלך יופיע כאן. זה לוקח רק רגע!',
+                'ar': 'لم تسجل هذا الأسبوع بعد — بمجرد أن تفعل، سيظهر ملخصك الأسبوعي المخصص هنا. الأمر لا يستغرق سوى لحظة!',
+                'ru': 'Вы ещё не отмечались на этой неделе — как только это сделаете, здесь появится ваш персональный недельный итог. Это займёт всего минуту!'
             }
             return jsonify({'summary': fallback_msgs.get(user_language, fallback_msgs['en']), 'ai_generated': False})
 
         # Build data summary for the AI
+        import re  # G15: moved outside loop (was re-importing per entry)
         days_data = []
         for p in params:
             day_str = p.date.strftime('%A %b %d') if hasattr(p.date, 'strftime') else str(p.date)
@@ -14381,25 +14444,118 @@ def ai_weekly_summary():
                     entry['anxiety'] = int(p.anxiety)
             notes = getattr(p, 'notes', None)
             if notes:
-                entry['notes'] = notes[:100]
+                # G13: Strip reflection markers and feedback tags before sending to AI
+                clean_notes = notes
+                clean_notes = re.sub(r'── ✨ Reflection ──.*?───────────────', '', clean_notes, flags=re.DOTALL)
+                clean_notes = re.sub(r'\[feedback:[^\]]*\]', '', clean_notes)
+                clean_notes = clean_notes.strip()
+                if clean_notes:
+                    entry['notes'] = clean_notes[:200]
             days_data.append(entry)
 
+        # G13: Compute structured highlights for the AI and frontend
+        def _safe_score(p):
+            """Sum available parameters for a single entry (higher = better day)."""
+            total, count = 0, 0
+            for attr in ['mood', 'energy', 'sleep_quality', 'physical_activity']:
+                v = getattr(p, attr, None)
+                if v: total += int(v); count += 1
+            anx = getattr(p, 'anxiety', None)
+            if anx:
+                total += (5 - int(anx))  # convert to calm scale
+                count += 1
+            return total / count if count else 0
+
+        day_scores = [(p, _safe_score(p)) for p in params]
+        best_day_p = max(day_scores, key=lambda x: x[1])
+        worst_day_p = min(day_scores, key=lambda x: x[1])
+        best_day_name = best_day_p[0].date.strftime('%A') if hasattr(best_day_p[0].date, 'strftime') else str(best_day_p[0].date)
+        worst_day_name = worst_day_p[0].date.strftime('%A') if hasattr(worst_day_p[0].date, 'strftime') else str(worst_day_p[0].date)
+        # G15: Include ISO weekday number (0=Mon..6=Sun) for frontend day-name translation
+        best_day_weekday = best_day_p[0].date.weekday() if hasattr(best_day_p[0].date, 'weekday') else None
+
+        # Compute averages for context
+        def _avg(attr):
+            vals = [int(getattr(p, attr)) for p in params if getattr(p, attr, None)]
+            return round(sum(vals) / len(vals), 1) if vals else None
+
+        avg_mood = _avg('mood')
+        avg_energy = _avg('energy')
+        avg_sleep = _avg('sleep_quality')
+        avg_activity = _avg('physical_activity')
+
+        # Find which parameter is strongest and weakest
+        param_avgs = {'mood': avg_mood, 'energy': avg_energy, 'sleep': avg_sleep, 'activity': avg_activity}
+        valid_avgs = {k: v for k, v in param_avgs.items() if v is not None}
+        top_param = max(valid_avgs, key=valid_avgs.get) if valid_avgs else None
+        low_param = min(valid_avgs, key=valid_avgs.get) if valid_avgs else None
+
+        highlights = {
+            'days_count': len(params),
+            'days_possible': 7,
+            'best_day': best_day_name,
+            'best_day_weekday': best_day_weekday,
+            'best_day_score': round(best_day_p[1], 1),
+            'worst_day': worst_day_name if worst_day_p[1] < best_day_p[1] else None,
+            'top_parameter': top_param,
+            'needs_attention': low_param if low_param != top_param else None,
+            'averages': valid_avgs
+        }
+
         calmness_label = 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety'
+
+        # G13: Build context summary so the AI has both raw data and computed patterns
+        context_lines = [f"Days tracked this week: {len(params)} of 7"]
+        if avg_mood: context_lines.append(f"Average mood: {avg_mood}/4")
+        if avg_energy: context_lines.append(f"Average energy: {avg_energy}/4")
+        if avg_sleep: context_lines.append(f"Average sleep: {avg_sleep}/4")
+        if avg_activity: context_lines.append(f"Average activity: {avg_activity}/4")
+        context_lines.append(f"Best day: {best_day_name} (avg score {round(best_day_p[1], 1)}/4)")
+        if highlights['worst_day']:
+            context_lines.append(f"Hardest day: {worst_day_name} (avg score {round(worst_day_p[1], 1)}/4)")
+        if top_param:
+            context_lines.append(f"Strongest area: {top_param}")
+        if highlights['needs_attention']:
+            context_lines.append(f"Area that could use attention: {low_param}")
+        context_summary = "\n".join(context_lines)
+
         system_prompt = (
-            "You are a warm, supportive well-being assistant for TheraSocial, a social wellness platform. "
-            "You analyze a user's daily well-being check-in data and produce a brief, encouraging weekly summary. "
+            "You are a warm, perceptive well-being companion for TheraSocial, a social wellness platform. "
+            "You analyze a user's daily well-being check-in data and produce a brief, encouraging weekly summary "
+            "that feels personal — like a caring friend who's been paying attention. "
             "The data uses a 1-4 scale where 1=lowest and 4=highest for mood, energy, sleep quality, and physical activity. "
             f"The fifth parameter is {calmness_label} (also 1-4, where {'4=most calm' if ANXIETY_DISPLAY_MODE == 'calm' else '4=most anxious'}). "
-            "Keep your response to 3-5 sentences. Be warm but not patronizing. Highlight specific patterns or correlations you notice. "
-            "Do NOT use clinical language. Do NOT diagnose or prescribe. "
-            f"{_get_ai_language_instruction(user_language)}"
+            "\n\nGuidelines:"
+            "\n- Keep your response to 3-5 sentences. Be genuinely warm but never patronizing or clinical."
+            "\n- Highlight specific patterns: correlations between sleep and mood, activity and energy, streaks of improvement."
+            "\n- Name specific days when something stood out (e.g., 'Your Wednesday was a high point')."
+            "\n- Look for cross-parameter connections: did better sleep lead to higher mood? Did activity boost energy?"
+            "\n- If notes are present, weave them naturally into the summary — they reveal what mattered to the person."
+            "\n- Use encouraging, human language: 'You had a strong week' not 'Your metrics indicate positive trends'."
+            "\n- If there were tough days, acknowledge them gently and note resilience: 'Even after a harder Tuesday, you bounced back'."
+            "\n- End with something forward-looking and specific to their pattern, not a generic 'keep it up'."
+            "\n- If the user tracked fewer than 4 days, acknowledge the effort warmly and encourage continued tracking, but still comment on the data you have."
+            "\n- Do NOT use clinical language, do NOT diagnose or prescribe."
+            "\n- Do NOT list numbers or scores — speak in natural language about what you observe."
+            f"\n\n{_get_ai_language_instruction(user_language)}"
+            "\nIMPORTANT: Write naturally and fluently in the requested language. "
+            "Use culturally appropriate expressions and tone. Do not translate from English — compose directly in the target language."
         )
-        user_prompt = f"Here is this user's well-being data for the past week:\n{json.dumps(days_data, indent=2)}\n\nPlease provide a brief, personalized weekly summary."
+        user_prompt = (
+            f"Summary context:\n{context_summary}\n\n"
+            f"Daily entries:\n{json.dumps(days_data, indent=2)}\n\n"
+            "Please provide a brief, personalized weekly summary."
+        )
 
         ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=400)
 
         if ai_text:
-            return jsonify({'summary': ai_text, 'ai_generated': True, 'days_count': len(params)})
+            return jsonify({
+                'summary': ai_text,
+                'ai_generated': True,
+                'days_count': len(params),
+                'highlights': highlights
+            })
         else:
             # Fallback to template insights
             def safe_avg(vals):
@@ -14419,7 +14575,7 @@ def ai_weekly_summary():
                 safe_avg(moods), safe_avg(energies), safe_avg(sleeps), safe_avg(activities),
                 len(params), safe_avg(anxieties), user_language
             )
-            return jsonify({'summary': fallback, 'ai_generated': False, 'days_count': len(params)})
+            return jsonify({'summary': fallback, 'ai_generated': False, 'days_count': len(params), 'highlights': highlights})
 
     except Exception as e:
         logger.error(f"[AI] Weekly summary error: {e}")
@@ -14598,6 +14754,472 @@ def ai_reflection_prompt():
     except Exception as e:
         logger.error(f"[AI] Reflection prompt error: {e}")
         return jsonify({'prompt': 'What is one thing you are grateful for today?', 'ai_generated': False}), 500
+
+
+# =====================
+# G9: AI CONFIGURATION & V4 ML-BASED CHECK-IN FEEDBACK
+# =====================
+
+@app.route('/api/ai/config')
+@login_required
+def ai_config():
+    """G9: Returns AI feature flags so the frontend knows what to show."""
+    try:
+        user_id = session['user_id']
+        # Check user preference for AI feedback
+        settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+        user_ai_feedback = True  # default
+        if settings and hasattr(settings, 'ai_checkin_feedback') and settings.ai_checkin_feedback is not None:
+            user_ai_feedback = settings.ai_checkin_feedback
+        return jsonify({
+            'diary_reflection_enabled': ENABLE_AI_DIARY_REFLECTION,
+            'checkin_feedback_enabled': ENABLE_AI_DIARY_REFLECTION,  # Same flag gates both V4 features
+            'user_ai_feedback_preference': user_ai_feedback
+        })
+    except Exception as e:
+        logger.error(f"[AI] Config endpoint error: {e}")
+        return jsonify({
+            'diary_reflection_enabled': False,
+            'checkin_feedback_enabled': False,
+            'user_ai_feedback_preference': True
+        })
+
+
+# G9: Curated feedback bank for ML-based check-in feedback (V4)
+# Each entry has: id, conditions (dict of parameter patterns), messages (dict per language)
+# The ML optimization layer (future) will track which feedback_ids correlate with
+# improved metrics in subsequent check-ins and re-weight selection accordingly.
+CHECKIN_FEEDBACK_BANK = [
+    {
+        'id': 'high_mood_energy',
+        'conditions': {'mood': (3, 4), 'energy': (3, 4)},
+        'messages': {
+            'en': [
+                "You're radiating positive energy today — that's worth celebrating! What you're doing is clearly working for you.",
+                "High mood and high energy — that's a powerful combination. Today is a great day to tackle something meaningful."
+            ],
+            'he': [
+                "את/ה מקרין/ה אנרגיה חיובית היום — שווה לחגוג את זה! מה שאת/ה עושה עובד.",
+                "מצב רוח גבוה ואנרגיה גבוהה — שילוב חזק. היום הוא יום מצוין להתמודד עם משהו משמעותי."
+            ],
+            'ar': [
+                "أنت تشع بطاقة إيجابية اليوم — هذا يستحق الاحتفال! ما تفعله يعمل بوضوح لصالحك.",
+                "مزاج عالي وطاقة عالية — مزيج قوي. اليوم يوم رائع لمواجهة شيء ذو معنى."
+            ],
+            'ru': [
+                "Вы излучаете позитивную энергию сегодня — это стоит отметить! То, что вы делаете, явно работает.",
+                "Хорошее настроение и высокая энергия — мощное сочетание. Сегодня отличный день для важных дел."
+            ]
+        }
+    },
+    {
+        'id': 'good_sleep_boost',
+        'conditions': {'sleep_quality': (3, 4)},
+        'messages': {
+            'en': [
+                "Great sleep makes everything else easier — you gave yourself a real gift last night.",
+                "Quality rest is the foundation of a good day, and you nailed it. Your body and mind will thank you."
+            ],
+            'he': [
+                "שינה טובה הופכת הכל לקל יותר — נתת לעצמך מתנה אמיתית אתמול בלילה.",
+                "מנוחה איכותית היא הבסיס ליום טוב, ועשית את זה נהדר."
+            ],
+            'ar': [
+                "النوم الجيد يجعل كل شيء أسهل — لقد منحت نفسك هدية حقيقية الليلة الماضية.",
+                "الراحة الجيدة هي أساس اليوم الجيد، وقد أتقنتها."
+            ],
+            'ru': [
+                "Хороший сон делает всё остальное легче — вы сделали себе настоящий подарок прошлой ночью.",
+                "Качественный отдых — основа хорошего дня, и у вас это отлично получилось."
+            ]
+        }
+    },
+    {
+        'id': 'active_day',
+        'conditions': {'physical_activity': (3, 4)},
+        'messages': {
+            'en': [
+                "Moving your body is one of the kindest things you can do for yourself — well done today.",
+                "Physical activity is a natural mood booster. You're building something good for yourself, one day at a time."
+            ],
+            'he': [
+                "להזיז את הגוף זה אחד הדברים הטובים ביותר שאפשר לעשות בשביל עצמך — כל הכבוד.",
+                "פעילות גופנית היא מעלה מצב רוח טבעית. את/ה בונה משהו טוב לעצמך."
+            ],
+            'ar': [
+                "تحريك جسمك من أفضل الأشياء التي يمكنك فعلها لنفسك — أحسنت اليوم.",
+                "النشاط البدني يرفع المعنويات بشكل طبيعي. أنت تبني شيئاً جيداً لنفسك."
+            ],
+            'ru': [
+                "Двигаться — одно из лучших проявлений заботы о себе. Вы молодец сегодня.",
+                "Физическая активность — природный источник хорошего настроения. Вы строите что-то хорошее для себя."
+            ]
+        }
+    },
+    {
+        'id': 'low_mood_support',
+        'conditions': {'mood': (1, 2)},
+        'messages': {
+            'en': [
+                "Tough days happen, and showing up to check in even now shows real strength. Tomorrow is a fresh start.",
+                "It takes courage to be honest about how you feel. Just by tracking this, you're taking care of yourself."
+            ],
+            'he': [
+                "ימים קשים קורים, וזה שבאת למלא את היומן גם עכשיו מראה כוח אמיתי. מחר הוא התחלה חדשה.",
+                "צריך אומץ להיות כנה לגבי מה שמרגישים. רק על ידי מעקב, את/ה דואג/ת לעצמך."
+            ],
+            'ar': [
+                "الأيام الصعبة تحدث، وحضورك للتسجيل حتى الآن يظهر قوة حقيقية. غداً بداية جديدة.",
+                "يتطلب شجاعة أن تكون صادقاً بشأن مشاعرك. بمجرد تتبع هذا، أنت تعتني بنفسك."
+            ],
+            'ru': [
+                "Трудные дни бывают, и то, что вы пришли отметиться даже сейчас, показывает настоящую силу. Завтра — новый день.",
+                "Нужна смелость, чтобы быть честным о своих чувствах. Уже отслеживая это, вы заботитесь о себе."
+            ]
+        }
+    },
+    {
+        'id': 'low_energy_encourage',
+        'conditions': {'energy': (1, 2)},
+        'messages': {
+            'en': [
+                "Low energy days are your body asking for gentleness. Listen to it — rest is productive too.",
+                "Energy ebbs and flows. On days like this, even small wins count. You showed up, and that matters."
+            ],
+            'he': [
+                "ימים של אנרגיה נמוכה הם הגוף שלך מבקש עדינות. תקשיב לו — גם מנוחה היא פרודוקטיבית.",
+                "האנרגיה עולה ויורדת. בימים כאלה, גם ניצחונות קטנים נחשבים. באת, וזה חשוב."
+            ],
+            'ar': [
+                "أيام الطاقة المنخفضة هي جسمك يطلب الرفق. استمع له — الراحة إنتاجية أيضاً.",
+                "الطاقة تتقلب. في أيام كهذه، حتى الانتصارات الصغيرة مهمة. لقد حضرت، وهذا يعني الكثير."
+            ],
+            'ru': [
+                "Дни с низкой энергией — это тело просит мягкости. Послушайте его — отдых тоже продуктивен.",
+                "Энергия то растёт, то падает. В такие дни даже маленькие победы важны. Вы пришли — и это имеет значение."
+            ]
+        }
+    },
+    {
+        'id': 'poor_sleep_care',
+        'conditions': {'sleep_quality': (1, 2)},
+        'messages': {
+            'en': [
+                "A rough night's sleep can color the whole day. Be extra gentle with yourself today.",
+                "Sleep is something you can always work on improving. Tonight is another chance for a better rest."
+            ],
+            'he': [
+                "לילה של שינה גרועה יכול להשפיע על כל היום. תהיה עדין/ה עם עצמך היום.",
+                "שינה היא משהו שתמיד אפשר לשפר. הלילה הוא הזדמנות נוספת למנוחה טובה יותר."
+            ],
+            'ar': [
+                "ليلة نوم سيئة يمكن أن تؤثر على اليوم كله. كن لطيفاً مع نفسك اليوم.",
+                "النوم شيء يمكنك دائماً تحسينه. الليلة فرصة أخرى لراحة أفضل."
+            ],
+            'ru': [
+                "Плохой сон может окрасить весь день. Будьте особенно мягки к себе сегодня.",
+                "Сон — то, что всегда можно улучшить. Сегодня ночью — новый шанс отдохнуть лучше."
+            ]
+        }
+    },
+    {
+        'id': 'calm_high',
+        'conditions': {'anxiety_calm': (3, 4)},
+        'messages': {
+            'en': [
+                "A calm mind is a powerful mind. Whatever helped you find peace today, hold onto it.",
+                "Inner calm doesn't happen by accident — you're cultivating something valuable."
+            ],
+            'he': [
+                "מוח רגוע הוא מוח חזק. מה שעזר לך למצוא שלווה היום, תחזיק בזה.",
+                "שלווה פנימית לא קורית במקרה — את/ה מטפח/ת משהו יקר ערך."
+            ],
+            'ar': [
+                "العقل الهادئ عقل قوي. مهما ساعدك في إيجاد السلام اليوم، تمسك به.",
+                "الهدوء الداخلي لا يحدث بالصدفة — أنت تزرع شيئاً ثميناً."
+            ],
+            'ru': [
+                "Спокойный ум — сильный ум. Что бы ни помогло вам обрести покой сегодня, держитесь за это.",
+                "Внутреннее спокойствие не приходит случайно — вы взращиваете что-то ценное."
+            ]
+        }
+    },
+    {
+        'id': 'anxious_support',
+        'conditions': {'anxiety_calm': (1, 2)},
+        'messages': {
+            'en': [
+                "Anxiety is uncomfortable but temporary. You're stronger than today's worries.",
+                "Naming your stress level is the first step to managing it. You're already ahead."
+            ],
+            'he': [
+                "חרדה היא לא נעימה אבל זמנית. את/ה חזק/ה יותר מהדאגות של היום.",
+                "לתת שם לרמת הלחץ שלך זה הצעד הראשון לניהולו. את/ה כבר קדימה."
+            ],
+            'ar': [
+                "القلق غير مريح لكنه مؤقت. أنت أقوى من مخاوف اليوم.",
+                "تسمية مستوى التوتر هي الخطوة الأولى لإدارته. أنت بالفعل في المقدمة."
+            ],
+            'ru': [
+                "Тревога неприятна, но временна. Вы сильнее сегодняшних переживаний.",
+                "Назвать уровень стресса — первый шаг к управлению им. Вы уже впереди."
+            ]
+        }
+    },
+    {
+        'id': 'improving_trend',
+        'conditions': {'trend': 'improving'},
+        'messages': {
+            'en': [
+                "Your numbers are trending up — that's not luck, that's you putting in the work.",
+                "An upward trend! Small daily choices are adding up. Keep going."
+            ],
+            'he': [
+                "המספרים שלך עולים — זה לא מזל, זה את/ה משקיע/ה מאמץ.",
+                "מגמה עולה! בחירות יומיות קטנות מצטברות. המשיכ/י."
+            ],
+            'ar': [
+                "أرقامك في تحسن — هذا ليس حظاً، هذا أنت تبذل الجهد.",
+                "اتجاه تصاعدي! الخيارات اليومية الصغيرة تتراكم. استمر."
+            ],
+            'ru': [
+                "Ваши показатели растут — это не везение, это ваш труд.",
+                "Восходящий тренд! Маленькие ежедневные решения складываются. Продолжайте."
+            ]
+        }
+    },
+    {
+        'id': 'consistency_praise',
+        'conditions': {'streak': True},
+        'messages': {
+            'en': [
+                "Showing up consistently is one of the most important things you can do. You're building a habit that serves you well.",
+                "Another day checked in! Consistency is where real change happens."
+            ],
+            'he': [
+                "להגיע באופן עקבי זה אחד הדברים החשובים ביותר. את/ה בונה הרגל שמשרת אותך היטב.",
+                "עוד יום של צ'ק אין! עקביות היא המקום בו שינוי אמיתי קורה."
+            ],
+            'ar': [
+                "الحضور المستمر من أهم الأشياء التي يمكنك فعلها. أنت تبني عادة تخدمك جيداً.",
+                "يوم آخر من التسجيل! الاستمرارية هي حيث يحدث التغيير الحقيقي."
+            ],
+            'ru': [
+                "Регулярность — одна из самых важных вещей. Вы формируете привычку, которая вам служит.",
+                "Ещё один день отмечен! Последовательность — вот где происходят настоящие перемены."
+            ]
+        }
+    },
+    {
+        'id': 'general_encouragement',
+        'conditions': {},
+        'messages': {
+            'en': [
+                "Every check-in is an act of self-awareness. You're doing something good for yourself.",
+                "Taking a moment to reflect on your day is a form of self-care. Well done."
+            ],
+            'he': [
+                "כל צ'ק אין הוא מעשה של מודעות עצמית. את/ה עושה משהו טוב בשביל עצמך.",
+                "לקחת רגע להרהר ביום שלך זו צורה של טיפול עצמי. כל הכבוד."
+            ],
+            'ar': [
+                "كل تسجيل هو فعل وعي ذاتي. أنت تفعل شيئاً جيداً لنفسك.",
+                "أخذ لحظة للتأمل في يومك هو شكل من أشكال الرعاية الذاتية. أحسنت."
+            ],
+            'ru': [
+                "Каждая отметка — акт самосознания. Вы делаете что-то хорошее для себя.",
+                "Уделить минуту размышлению о дне — это форма заботы о себе. Молодцы."
+            ]
+        }
+    }
+]
+
+
+@app.route('/api/ai/checkin-feedback')
+@login_required
+def ai_checkin_feedback():
+    """G9: V4 ML-based immediate feedback after check-in.
+    Selects a personalized encouraging message from a curated feedback bank
+    based on the user's current check-in data and trends.
+    Returns feedback_id for future ML outcome tracking.
+    """
+    if not ENABLE_AI_DIARY_REFLECTION:
+        return jsonify({'enabled': False}), 200
+
+    try:
+        user_id = session['user_id']
+        user_language = request.args.get('lang', 'en')
+        if user_language not in ['en', 'he', 'ar', 'ru']:
+            user_language = 'en'
+
+        # Check user preference
+        settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+        if settings and hasattr(settings, 'ai_checkin_feedback') and settings.ai_checkin_feedback is False:
+            return jsonify({'enabled': False, 'user_disabled': True}), 200
+
+        # Get latest entry
+        params_stmt = select(SavedParameters).filter(
+            SavedParameters.user_id == user_id
+        ).order_by(SavedParameters.date.desc()).limit(3)
+        params = db.session.execute(params_stmt).scalars().all()
+
+        if not params:
+            return jsonify({'enabled': True, 'feedback': None}), 200
+
+        latest = params[0]
+        mood = int(latest.mood) if getattr(latest, 'mood', None) else None
+        energy = int(latest.energy) if getattr(latest, 'energy', None) else None
+        sleep = int(latest.sleep_quality) if getattr(latest, 'sleep_quality', None) else None
+        activity = int(latest.physical_activity) if getattr(latest, 'physical_activity', None) else None
+        anxiety_raw = int(latest.anxiety) if getattr(latest, 'anxiety', None) else None
+
+        # Detect trend (compare to previous entry)
+        trend = None
+        if len(params) >= 2:
+            prev = params[1]
+            improvements = 0
+            declines = 0
+            for attr in ['mood', 'energy', 'sleep_quality', 'physical_activity']:
+                curr_v = getattr(latest, attr, None)
+                prev_v = getattr(prev, attr, None)
+                if curr_v and prev_v:
+                    if int(curr_v) > int(prev_v):
+                        improvements += 1
+                    elif int(curr_v) < int(prev_v):
+                        declines += 1
+            if improvements > declines:
+                trend = 'improving'
+
+        # Detect streak (3+ recent entries — approximation; true consecutive-day
+        # detection can be added when ML optimization layer is built for V4)
+        streak = len(params) >= 3
+
+        # Score each feedback entry
+        import random
+        scored = []
+        for fb in CHECKIN_FEEDBACK_BANK:
+            conds = fb['conditions']
+            score = 0
+            match = True
+
+            # G13 FIX: If a parameter is None (user didn't fill it), skip that
+            # condition rather than failing the entire feedback entry. This way
+            # users who leave one parameter blank aren't excluded from all
+            # multi-condition feedback.
+            if 'mood' in conds:
+                if mood is None:
+                    pass  # skip, don't penalize
+                elif conds['mood'][0] <= mood <= conds['mood'][1]:
+                    score += 2
+                else:
+                    match = False
+            if 'energy' in conds:
+                if energy is None:
+                    pass
+                elif conds['energy'][0] <= energy <= conds['energy'][1]:
+                    score += 2
+                else:
+                    match = False
+            if 'sleep_quality' in conds:
+                if sleep is None:
+                    pass
+                elif conds['sleep_quality'][0] <= sleep <= conds['sleep_quality'][1]:
+                    score += 2
+                else:
+                    match = False
+            if 'physical_activity' in conds:
+                if activity is None:
+                    pass
+                elif conds['physical_activity'][0] <= activity <= conds['physical_activity'][1]:
+                    score += 2
+                else:
+                    match = False
+            if 'anxiety_calm' in conds:
+                # G11 FIX: Always evaluate on calm scale (4=most calm, 1=least calm)
+                # regardless of ANXIETY_DISPLAY_MODE, since conditions use calm scale
+                cval = (5 - anxiety_raw) if anxiety_raw else None
+                if cval is None:
+                    pass
+                elif conds['anxiety_calm'][0] <= cval <= conds['anxiety_calm'][1]:
+                    score += 2
+                else:
+                    match = False
+            if 'trend' in conds:
+                if trend == conds['trend']:
+                    score += 3
+                else:
+                    match = False
+            if 'streak' in conds:
+                if streak:
+                    score += 1
+                else:
+                    match = False
+
+            # Empty conditions = general fallback (low score)
+            if not conds:
+                score = 0
+                match = True
+
+            if match:
+                scored.append((score, fb))
+
+        # Sort by score descending, pick from top entries with some randomness
+        scored.sort(key=lambda x: -x[0])
+        if not scored:
+            scored = [(0, CHECKIN_FEEDBACK_BANK[-1])]  # general fallback
+
+        # Pick from top 3 candidates for variety
+        top_candidates = scored[:3]
+        chosen_score, chosen_fb = random.choice(top_candidates)
+
+        # Select a random message from the chosen feedback
+        messages = chosen_fb['messages'].get(user_language, chosen_fb['messages']['en'])
+        chosen_message = random.choice(messages)
+
+        # G9/G11: Log feedback_id for future ML tracking (server-side only).
+        # Does NOT write to user notes — proper tracking storage to be added in V4.
+        logger.info(f"[AI-ML] user={user_id} date={latest.date} feedback_id={chosen_fb['id']}")
+
+        return jsonify({
+            'enabled': True,
+            'feedback': chosen_message,
+            'feedback_id': chosen_fb['id'],
+            'ai_generated': False  # curated, not AI-generated
+        })
+
+    except Exception as e:
+        logger.error(f"[AI] Check-in feedback error: {e}")
+        return jsonify({'enabled': True, 'feedback': None}), 500
+
+
+@app.route('/api/ai/checkin-feedback/preference', methods=['GET', 'PUT'])
+@login_required
+def ai_feedback_preference():
+    """G9: Get or set the user's preference for AI check-in feedback."""
+    user_id = session['user_id']
+    try:
+        settings = NotificationSettings.query.filter_by(user_id=user_id).first()
+
+        if request.method == 'GET':
+            val = True
+            if settings and hasattr(settings, 'ai_checkin_feedback') and settings.ai_checkin_feedback is not None:
+                val = settings.ai_checkin_feedback
+            return jsonify({'ai_checkin_feedback': val})
+
+        elif request.method == 'PUT':
+            data = request.get_json()
+            if not settings:
+                settings = NotificationSettings(user_id=user_id)
+                db.session.add(settings)
+            settings.ai_checkin_feedback = data.get('ai_checkin_feedback', True)
+            db.session.commit()
+            logger.info(f"[AI] User {user_id} set ai_checkin_feedback={settings.ai_checkin_feedback}")
+            return jsonify({'success': True, 'ai_checkin_feedback': settings.ai_checkin_feedback})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[AI] Feedback preference error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 # =====================

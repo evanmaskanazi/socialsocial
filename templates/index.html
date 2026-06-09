@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!-- G15 Changes (from G13):
+  Weekly summary UX polish: day names translated per language, highlights bar
+  shows needs_attention with 🌱 "Room to grow" framing, fade-in animation on
+  highlights bar, stale content cleared on Refresh, no-data message improved.
+  Cache version bumped to G15.
+-->
+<!-- G13 Changes (from G11):
+  AI Weekly Summary enhanced: highlights bar (best day, strongest parameter),
+  days count display, loading pulse animation, fade-in summary, richer AI prompt.
+  Cache version bumped to G13.
+-->
+<!-- G11 Changes (from G9):
+  Cache version bumped to G11. Backend fixes for notes pollution, anxiety scoring, rollback.
+-->
+<!-- G9 Changes (from I7/G5):
+  V4 AI REALIGNMENT: Cache version bumped to G9.
+  Weekly summary prompt improved for relatability and multilingual quality.
+  No structural changes to index.html — all diary AI changes in parameters-social.js.
+-->
 <!-- I7 Changes (from I5):
   FEATURE: Permission Groups widget on other-user profile view (Hebrew colleague request)
   - Shows which of your circles the viewed user belongs to (General/Close Friends/Family)
@@ -343,7 +362,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=I7"></script>
+    <script src="/static/js/follow-requests.js?v=G15"></script>
 
 
     <style>
@@ -5188,12 +5207,19 @@
                           </p>
                       </div>
 
-                      <!-- K2: AI Weekly Summary -->
+                      <!-- K2/G13: AI Weekly Summary — Enhanced with highlights -->
                       <div id="aiWeeklySummary" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%); padding: 22px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(102, 126, 234, 0.2);">
                           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
                               <span style="font-size: 1.2em;">✨</span>
                               <h4 style="margin: 0; color: var(--primary);" data-i18n="ai.weekly_summary_title">AI Weekly Summary</h4>
                               <span id="aiBadge" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; display: none;">AI</span>
+                              <span id="aiDaysCount" style="color: var(--gray); font-size: 0.75rem; margin-left: auto; display: none;"></span>
+                          </div>
+                          <!-- G13: Highlights bar — shows best day and key pattern at a glance -->
+                          <div id="aiHighlights" style="display: none; margin-bottom: 14px; padding: 10px 14px; background: rgba(255,255,255,0.6); border-radius: 8px; font-size: 0.85rem; color: var(--dark);">
+                              <span id="aiHighlightBestDay" style="margin-right: 16px;"></span>
+                              <span id="aiHighlightStrength" style="color: var(--primary); margin-right: 16px;"></span>
+                              <span id="aiHighlightAttention" style="color: var(--gray);"></span>
                           </div>
                           <p id="aiWeeklySummaryContent" style="color: var(--dark); line-height: 1.7; font-size: 0.95rem;">
                               <span data-i18n="ai.loading_summary" style="color: var(--gray);">Generating your personalized summary...</span>
@@ -7027,7 +7053,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=I7"></script>
+    <script src="/static/js/i18n.js?v=G15"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7310,9 +7336,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=I7"></script>
-   <script src="/static/js/circles-messages.js?v=I7"></script>
-<script src="/static/js/feed-updates.js?v=I7"></script>
+<script src="/static/js/parameters-social.js?v=G15"></script>
+   <script src="/static/js/circles-messages.js?v=G15"></script>
+<script src="/static/js/feed-updates.js?v=G15"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -17365,6 +17391,8 @@ async function loadAIWeeklySummary() {
     const contentEl = document.getElementById('aiWeeklySummaryContent');
     const badgeEl = document.getElementById('aiBadge');
     const refreshBtn = document.getElementById('aiRefreshBtn');
+    const daysCountEl = document.getElementById('aiDaysCount');
+    const highlightsEl = document.getElementById('aiHighlights');
     if (!contentEl) return;
 
     const lang = localStorage.getItem('selectedLanguage') || 'en';
@@ -17374,20 +17402,131 @@ async function loadAIWeeklySummary() {
         'ar': 'جاري إنشاء ملخصك المخصص...',
         'ru': 'Создание вашего персонального анализа...'
     };
-    contentEl.textContent = loadingTexts[lang] || loadingTexts['en'];
-    contentEl.style.color = 'var(--gray)';
+    contentEl.innerHTML = '<span style="color: var(--gray); animation: aiPulse 1.5s ease-in-out infinite;">' + (loadingTexts[lang] || loadingTexts['en']) + '</span>';
     if (badgeEl) badgeEl.style.display = 'none';
     if (refreshBtn) refreshBtn.style.display = 'none';
+    if (daysCountEl) daysCountEl.style.display = 'none';
+    // G15: Clear and hide highlights on refresh to avoid stale content flashing
+    if (highlightsEl) {
+        highlightsEl.style.display = 'none';
+        highlightsEl.style.opacity = '0';
+        var bestDayEl = document.getElementById('aiHighlightBestDay');
+        var strengthEl = document.getElementById('aiHighlightStrength');
+        var attentionEl = document.getElementById('aiHighlightAttention');
+        if (bestDayEl) bestDayEl.textContent = '';
+        if (strengthEl) strengthEl.textContent = '';
+        if (attentionEl) attentionEl.textContent = '';
+    }
+
+    // G13: Add pulse animation style if not already present
+    if (!document.getElementById('aiPulseStyle')) {
+        var style = document.createElement('style');
+        style.id = 'aiPulseStyle';
+        style.textContent = '@keyframes aiPulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }';
+        document.head.appendChild(style);
+    }
+
+    // G15: Day name translation map (weekday index 0=Monday..6=Sunday)
+    var dayNames = {
+        'en': ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+        'he': ['יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','שבת','יום ראשון'],
+        'ar': ['الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'],
+        'ru': ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
+    };
 
     try {
-        const response = await fetch(`/api/ai/weekly-summary?lang=${lang}`, { credentials: 'include' });
+        const response = await fetch('/api/ai/weekly-summary?lang=' + lang, { credentials: 'include' });
         if (!response.ok) throw new Error('API error');
         const data = await response.json();
 
+        // G13: Fade-in the summary text
+        contentEl.style.opacity = '0';
+        contentEl.style.transition = 'opacity 0.5s ease';
         contentEl.textContent = data.summary;
         contentEl.style.color = 'var(--dark)';
+        setTimeout(function() { contentEl.style.opacity = '1'; }, 50);
+
         if (badgeEl && data.ai_generated) badgeEl.style.display = 'inline';
         if (refreshBtn) refreshBtn.style.display = 'inline-block';
+
+        // G13: Show days count
+        if (daysCountEl && data.days_count) {
+            var daysLabels = {
+                'en': data.days_count + ' of 7 days',
+                'he': data.days_count + ' מתוך 7 ימים',
+                'ar': data.days_count + ' من 7 أيام',
+                'ru': data.days_count + ' из 7 дней'
+            };
+            daysCountEl.textContent = daysLabels[lang] || daysLabels['en'];
+            daysCountEl.style.display = 'inline';
+        }
+
+        // G13/G15: Show highlights bar if available
+        if (highlightsEl && data.highlights) {
+            var h = data.highlights;
+            var bestDaySpan = document.getElementById('aiHighlightBestDay');
+            var strengthSpan = document.getElementById('aiHighlightStrength');
+            var attentionSpan = document.getElementById('aiHighlightAttention');
+            var hasContent = false;
+
+            if (bestDaySpan && h.best_day) {
+                // G15: Translate day name using weekday index if available, fall back to server name
+                var translatedDay = h.best_day;
+                if (h.best_day_weekday !== null && h.best_day_weekday !== undefined) {
+                    var langDays = dayNames[lang] || dayNames['en'];
+                    translatedDay = langDays[h.best_day_weekday] || h.best_day;
+                }
+                var bestDayLabels = {
+                    'en': '⭐ Best day: ' + translatedDay,
+                    'he': '⭐ היום הטוב ביותר: ' + translatedDay,
+                    'ar': '⭐ أفضل يوم: ' + translatedDay,
+                    'ru': '⭐ Лучший день: ' + translatedDay
+                };
+                bestDaySpan.textContent = bestDayLabels[lang] || bestDayLabels['en'];
+                hasContent = true;
+            }
+
+            // G15: Parameter name translations (shared between strength and attention)
+            var paramNames = {
+                'en': { 'mood': 'Mood', 'energy': 'Energy', 'sleep': 'Sleep', 'activity': 'Activity' },
+                'he': { 'mood': 'מצב רוח', 'energy': 'אנרגיה', 'sleep': 'שינה', 'activity': 'פעילות' },
+                'ar': { 'mood': 'المزاج', 'energy': 'الطاقة', 'sleep': 'النوم', 'activity': 'النشاط' },
+                'ru': { 'mood': 'Настроение', 'energy': 'Энергия', 'sleep': 'Сон', 'activity': 'Активность' }
+            };
+            var names = paramNames[lang] || paramNames['en'];
+
+            if (strengthSpan && h.top_parameter) {
+                var strengthLabels = {
+                    'en': '💪 Strongest: ' + (names[h.top_parameter] || h.top_parameter),
+                    'he': '💪 הכי חזק: ' + (names[h.top_parameter] || h.top_parameter),
+                    'ar': '💪 الأقوى: ' + (names[h.top_parameter] || h.top_parameter),
+                    'ru': '💪 Сильнейшее: ' + (names[h.top_parameter] || h.top_parameter)
+                };
+                strengthSpan.textContent = strengthLabels[lang] || strengthLabels['en'];
+                hasContent = true;
+            }
+
+            // G15: Show needs_attention with gentle framing
+            if (attentionSpan && h.needs_attention) {
+                var attentionLabels = {
+                    'en': '🌱 Room to grow: ' + (names[h.needs_attention] || h.needs_attention),
+                    'he': '🌱 מקום לצמוח: ' + (names[h.needs_attention] || h.needs_attention),
+                    'ar': '🌱 مجال للنمو: ' + (names[h.needs_attention] || h.needs_attention),
+                    'ru': '🌱 Есть куда расти: ' + (names[h.needs_attention] || h.needs_attention)
+                };
+                attentionSpan.textContent = attentionLabels[lang] || attentionLabels['en'];
+                hasContent = true;
+            }
+
+            // G15: Fade in highlights bar
+            if (hasContent) {
+                highlightsEl.style.display = 'flex';
+                highlightsEl.style.flexWrap = 'wrap';
+                highlightsEl.style.gap = '4px 16px';
+                highlightsEl.style.transition = 'opacity 0.4s ease';
+                setTimeout(function() { highlightsEl.style.opacity = '1'; }, 100);
+            }
+        }
     } catch (e) {
         console.error('[AI] Weekly summary error:', e);
         const errorTexts = {
@@ -17398,6 +17537,7 @@ async function loadAIWeeklySummary() {
         };
         contentEl.textContent = errorTexts[lang] || errorTexts['en'];
         contentEl.style.color = 'var(--gray)';
+        contentEl.style.opacity = '1';
     }
 }
 

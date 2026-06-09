@@ -1,4 +1,9 @@
 // Language detection and translation system with backend sync
+// Version G15 - Cache-buster sync; no i18n changes from G13
+// Version G13 - Cache-buster sync; no i18n changes from G11
+// Version G11 - Cache-buster sync; no i18n changes from G9
+// Version G9 - Added AI check-in feedback translations (ai.feedback_title, ai.feedback_dismiss,
+//   ai.feedback_turn_off, ai.feedback_settings) in EN/HE/AR/RU for V4 ML feedback system
 // Version I7 - Added permission group translations (circles.permission_groups, circles.permission_groups_desc,
 //   circles.not_in_any_circle, circles.change_circle, circles.move_to, circles.add_to_circle_label,
 //   circles.moved_to_circle, circles.removed_from_circles, circles.general_label, circles.close_friends_label,
@@ -1216,6 +1221,11 @@ const translations = {
     'ai.reflection_placeholder': 'Write your reflection here...',
     'ai.save_reflection': 'Save Reflection',
     'ai.reflection_empty': 'Please write something before saving.',
+    // G9: ML-based check-in feedback
+    'ai.feedback_title': 'Personal Insight',
+    'ai.feedback_dismiss': 'Dismiss',
+    'ai.feedback_turn_off': 'Turn off insights',
+    'ai.feedback_settings': 'AI insights after check-in',
 
     // PL400: Cookie Consent
     'cookies.title': 'Cookie Preferences',
@@ -2791,6 +2801,11 @@ const translations = {
     'ai.reflection_placeholder': 'כתוב/י את הרפלקציה שלך כאן...',
     'ai.save_reflection': 'שמור רפלקציה',
     'ai.reflection_empty': 'אנא כתוב/י משהו לפני השמירה.',
+    // G9: ML-based check-in feedback (Hebrew)
+    'ai.feedback_title': 'תובנה אישית',
+    'ai.feedback_dismiss': 'סגור',
+    'ai.feedback_turn_off': 'כבה תובנות',
+    'ai.feedback_settings': 'תובנות AI אחרי צ׳ק אין',
 
     // PL400: Cookie Consent (Hebrew)
     'cookies.title': 'העדפות עוגיות',
@@ -4368,6 +4383,11 @@ const translations = {
     'ai.reflection_placeholder': 'اكتب تأملك هنا...',
     'ai.save_reflection': 'حفظ التأمل',
     'ai.reflection_empty': 'يرجى كتابة شيء قبل الحفظ.',
+    // G9: ML-based check-in feedback (Arabic)
+    'ai.feedback_title': 'رؤية شخصية',
+    'ai.feedback_dismiss': 'إغلاق',
+    'ai.feedback_turn_off': 'إيقاف الرؤى',
+    'ai.feedback_settings': 'رؤى الذكاء الاصطناعي بعد التسجيل',
 
     // PL400: Cookie Consent (Arabic)
     'cookies.title': 'تفضيلات ملفات تعريف الارتباط',
@@ -5949,6 +5969,11 @@ const translations = {
     'ai.reflection_placeholder': 'Напишите ваше размышление здесь...',
     'ai.save_reflection': 'Сохранить размышление',
     'ai.reflection_empty': 'Пожалуйста, напишите что-нибудь перед сохранением.',
+    // G9: ML-based check-in feedback (Russian)
+    'ai.feedback_title': 'Личный инсайт',
+    'ai.feedback_dismiss': 'Закрыть',
+    'ai.feedback_turn_off': 'Отключить инсайты',
+    'ai.feedback_settings': 'AI-инсайты после отметки',
 
     // PL400: Cookie Consent (Russian)
     'cookies.title': 'Настройки файлов cookie',
