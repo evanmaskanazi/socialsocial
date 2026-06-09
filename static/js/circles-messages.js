@@ -1,5 +1,6 @@
 // Circles and Messages Management System with i18n support
-// I7: Cache-buster version sync; no functional changes in this file
+// G15: Cache-buster version sync; no functional changes in this file
+// G13: Cache-buster version sync; no functional changes in this file
 
 // Complete Fixed Version Lang with null safety and proper error handling
 

@@ -1,3 +1,17 @@
+// Version G15 - Cache-buster sync; no functional changes in this file from G13
+// Version G13 - Fixes from G11 audit:
+//   - loadPostSaveAI: config cached in sessionStorage (avoids fetch on every V3 save)
+//   - Session cache invalidated when user toggles feedback off
+// Version G11 - Fixes from G9 audit:
+//   - loadCheckinFeedback: DOM setup moved after successful fetch (avoids phantom element changes)
+//   - Button text updates on repeated calls (handles language change mid-session)
+//   - Auto-dismiss extended from 15s to 20s for multilingual readability
+// Version G9 - V4 AI REALIGNMENT (per V4H.txt):
+//   - Diary reflection prompt now gated by server config (ENABLE_AI_DIARY_REFLECTION)
+//   - loadAIReflectionPrompt() replaced by loadPostSaveAI() dispatcher
+//   - Added loadCheckinFeedback() for V4 ML-based immediate feedback (curated messages)
+//   - Feedback auto-dismisses after 15s, user can dismiss or turn off permanently
+//   - New i18n keys: ai.feedback_title, ai.feedback_dismiss, ai.feedback_turn_off (EN/HE/AR/RU)
 // Version I7 - Cache-buster version sync; no functional changes in this file
 // Version I2 - FIX: Hardcoded 'Anxiety' in applyPrivacyToAllDays paramLabels now uses Calmness in calm mode
 // Version I2 - FIX: Added missing tooltip.calm translations for Hebrew, Arabic, Russian
@@ -788,7 +802,11 @@ const addParameterTranslations = () => {
                 'ai.reflection_title': 'Reflection Prompt',
                 'ai.reflection_placeholder': 'Write your reflection here...',
                 'ai.save_reflection': 'Save Reflection',
-                'ai.reflection_empty': 'Please write something before saving.'
+                'ai.reflection_empty': 'Please write something before saving.',
+                // G9: ML-based check-in feedback
+                'ai.feedback_title': 'Personal Insight',
+                'ai.feedback_dismiss': 'Dismiss',
+                'ai.feedback_turn_off': 'Turn off insights'
             });
         }
 
@@ -861,7 +879,11 @@ const addParameterTranslations = () => {
                 'ai.reflection_title': 'שאלת רפלקציה',
                 'ai.reflection_placeholder': 'כתוב/י את הרפלקציה שלך כאן...',
                 'ai.save_reflection': 'שמור רפלקציה',
-                'ai.reflection_empty': 'אנא כתוב/י משהו לפני השמירה.'
+                'ai.reflection_empty': 'אנא כתוב/י משהו לפני השמירה.',
+                // G9: ML-based check-in feedback
+                'ai.feedback_title': 'תובנה אישית',
+                'ai.feedback_dismiss': 'סגור',
+                'ai.feedback_turn_off': 'כבה תובנות'
             });
         }
 
@@ -934,7 +956,11 @@ const addParameterTranslations = () => {
                 'ai.reflection_title': 'سؤال للتأمل',
                 'ai.reflection_placeholder': 'اكتب تأملك هنا...',
                 'ai.save_reflection': 'حفظ التأمل',
-                'ai.reflection_empty': 'يرجى كتابة شيء قبل الحفظ.'
+                'ai.reflection_empty': 'يرجى كتابة شيء قبل الحفظ.',
+                // G9: ML-based check-in feedback
+                'ai.feedback_title': 'رؤية شخصية',
+                'ai.feedback_dismiss': 'إغلاق',
+                'ai.feedback_turn_off': 'إيقاف الرؤى'
             });
         }
 
@@ -1007,7 +1033,11 @@ const addParameterTranslations = () => {
                 'ai.reflection_title': 'Вопрос для размышления',
                 'ai.reflection_placeholder': 'Напишите ваше размышление здесь...',
                 'ai.save_reflection': 'Сохранить размышление',
-                'ai.reflection_empty': 'Пожалуйста, напишите что-нибудь перед сохранением.'
+                'ai.reflection_empty': 'Пожалуйста, напишите что-нибудь перед сохранением.',
+                // G9: ML-based check-in feedback
+                'ai.feedback_title': 'Личный инсайт',
+                'ai.feedback_dismiss': 'Закрыть',
+                'ai.feedback_turn_off': 'Отключить инсайты'
             });
         }
 
@@ -2933,9 +2963,9 @@ async function saveParameters() {
              // Show invite CTA after successful save
             showInviteCTA();
 
-            // F8: Show AI reflection prompt after every save (any date)
-            console.log('[AI] Save completed for dateStr=' + dateStr + ', loading reflection prompt');
-            loadAIReflectionPrompt();
+            // G9: Check AI config before showing diary AI features
+            console.log('[AI] Save completed for dateStr=' + dateStr + ', checking AI config');
+            loadPostSaveAI();
 
             // Add this date to our tracking set
             datesWithData.add(dateStr)
@@ -3546,6 +3576,157 @@ async function saveReflectionResponse() {
 }
 
 console.log('Parameters-social.js loaded - FIXED VERSION with calendar display and no auto-loading');
+
+// =====================
+// G9: Post-Save AI — Config-aware dispatcher
+// Checks server config to decide: V3 (no diary AI) vs V4 (ML feedback or reflection)
+// =====================
+
+async function loadPostSaveAI() {
+    try {
+        // G13: Cache config for the session to avoid a network call on every save.
+        // In V3, diary_reflection_enabled is always false, so this saves a round-trip.
+        var cachedConfig = sessionStorage.getItem('ai_config');
+        var config;
+        if (cachedConfig) {
+            config = JSON.parse(cachedConfig);
+        } else {
+            const configResp = await fetch('/api/ai/config', { credentials: 'include' });
+            if (!configResp.ok) {
+                console.log('[AI] Config fetch failed, skipping diary AI');
+                return;
+            }
+            config = await configResp.json();
+            sessionStorage.setItem('ai_config', JSON.stringify(config));
+        }
+        console.log('[AI] Config:', JSON.stringify(config));
+
+        // V3: ENABLE_AI_DIARY_REFLECTION = False — no diary AI at all
+        if (!config.diary_reflection_enabled) {
+            console.log('[AI] Diary reflection disabled (V3 mode), skipping');
+            return;
+        }
+
+        // V4: Check if user has opted out
+        if (!config.user_ai_feedback_preference) {
+            console.log('[AI] User has disabled AI feedback');
+            return;
+        }
+
+        // V4: Show ML-based check-in feedback (not reflection question)
+        if (config.checkin_feedback_enabled) {
+            loadCheckinFeedback();
+        }
+    } catch (e) {
+        console.error('[AI] Post-save AI check error:', e);
+    }
+}
+
+async function loadCheckinFeedback() {
+    const box = document.getElementById('aiReflectionBox');
+    const textEl = document.getElementById('aiReflectionPromptText');
+    const badgeEl = document.getElementById('aiReflectionBadge');
+    if (!box || !textEl) return;
+
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+
+    try {
+        console.log('[AI] Fetching check-in feedback for lang=' + lang);
+        var response = await fetch('/api/ai/checkin-feedback?lang=' + lang, { credentials: 'include' });
+        if (!response.ok) throw new Error('API returned ' + response.status);
+        var data = await response.json();
+        console.log('[AI] Feedback data:', JSON.stringify(data).substring(0, 200));
+
+        if (!data.enabled || !data.feedback) {
+            console.log('[AI] Feedback not available');
+            return;
+        }
+
+        // G11: Only modify DOM after confirming we have feedback to show
+        var titleEl = document.getElementById('aiReflectionTitle');
+        if (titleEl) titleEl.textContent = pt('ai.feedback_title') || 'Personal Insight';
+        // Hide the response textarea and save button — feedback doesn't require user action
+        var responseEl = document.getElementById('aiReflectionResponse');
+        if (responseEl) responseEl.style.display = 'none';
+        var saveBtn = document.getElementById('aiReflectionSaveBtn');
+        if (saveBtn) saveBtn.style.display = 'none';
+
+        // G9: Add dismiss and toggle buttons if not already present
+        var feedbackActions = document.getElementById('aiFeedbackActions');
+        if (!feedbackActions) {
+            feedbackActions = document.createElement('div');
+            feedbackActions.id = 'aiFeedbackActions';
+            feedbackActions.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 12px;';
+            var dismissBtn = document.createElement('button');
+            dismissBtn.id = 'aiFeedbackDismissBtn';
+            dismissBtn.textContent = pt('ai.feedback_dismiss') || 'Dismiss';
+            dismissBtn.style.cssText = 'background: none; border: 1px solid rgba(102, 126, 234, 0.3); color: #667eea; padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; cursor: pointer;';
+            dismissBtn.onclick = function() {
+                box.style.opacity = '0';
+                setTimeout(function() { box.style.display = 'none'; }, 500);
+            };
+            var toggleBtn = document.createElement('button');
+            toggleBtn.id = 'aiFeedbackToggle';
+            toggleBtn.textContent = pt('ai.feedback_turn_off') || 'Turn off insights';
+            toggleBtn.style.cssText = 'background: none; border: none; color: var(--gray, #999); padding: 4px 8px; font-size: 0.75rem; cursor: pointer; text-decoration: underline;';
+            toggleBtn.onclick = async function() {
+                try {
+                    await fetch('/api/ai/checkin-feedback/preference', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ ai_checkin_feedback: false })
+                    });
+                    // G13: Invalidate cached config so next save respects the new preference
+                    sessionStorage.removeItem('ai_config');
+                    box.style.opacity = '0';
+                    setTimeout(function() { box.style.display = 'none'; }, 500);
+                    var offMsg = { 'en': 'Insights turned off. You can re-enable in Settings.', 'he': 'תובנות כובו. ניתן להפעיל מחדש בהגדרות.', 'ar': 'تم إيقاف الرؤى. يمكنك إعادة تفعيلها في الإعدادات.', 'ru': 'Инсайты отключены. Вы можете включить их в Настройках.' };
+                    window.showMessage(offMsg[lang] || offMsg['en'], 'info', 4000, true);
+                } catch (err) {
+                    console.error('[AI] Toggle feedback error:', err);
+                }
+            };
+            feedbackActions.appendChild(dismissBtn);
+            feedbackActions.appendChild(toggleBtn);
+            box.appendChild(feedbackActions);
+        } else {
+            // G11: Update button text on subsequent calls (handles language change mid-session)
+            var existingDismiss = document.getElementById('aiFeedbackDismissBtn');
+            if (existingDismiss) existingDismiss.textContent = pt('ai.feedback_dismiss') || 'Dismiss';
+            var existingToggle = document.getElementById('aiFeedbackToggle');
+            if (existingToggle) existingToggle.textContent = pt('ai.feedback_turn_off') || 'Turn off insights';
+        }
+
+        textEl.textContent = data.feedback;
+        textEl.style.fontStyle = 'normal';
+        if (badgeEl) badgeEl.style.display = 'none'; // Not AI-generated, curated
+
+        // Show with fade-in
+        box.style.display = 'block';
+        box.style.opacity = '0';
+        box.style.transition = 'opacity 0.5s ease';
+        setTimeout(function() { box.style.opacity = '1'; }, 50);
+
+        // Gentle scroll
+        setTimeout(function() { box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
+
+        // G9/G11: Auto-dismiss after 20 seconds for non-intrusive experience
+        setTimeout(function() {
+            if (box.style.display !== 'none') {
+                box.style.opacity = '0';
+                setTimeout(function() { box.style.display = 'none'; }, 500);
+            }
+        }, 20000);
+
+        console.log('[AI] Check-in feedback displayed: ' + data.feedback_id);
+    } catch (e) {
+        console.error('[AI] Check-in feedback error:', e);
+    }
+}
+
+window.loadPostSaveAI = loadPostSaveAI;
+window.loadCheckinFeedback = loadCheckinFeedback;
 // ===================
 // PARAMETER TRIGGERS MANAGEMENT SYSTEM
 // ===================
