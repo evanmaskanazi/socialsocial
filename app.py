@@ -6633,6 +6633,13 @@ def support_contact():
         subject = sanitize_input(subject)
         message = sanitize_input(message)
         
+        # Look up registered user by submitted email (indexed column — fast at any scale)
+        registered_user = User.query.filter_by(email=email).first()
+        if registered_user:
+            sender_identity = f"{registered_user.username} (ID: {registered_user.id})"
+        else:
+            sender_identity = "Not registered"
+        
         # Log the support request (audit trail)
         log_audit('support_contact', 'support_request', None, {
             'name': name[:50],  # Truncate for log
@@ -6653,7 +6660,7 @@ def support_contact():
             email_subject = f"[TheraSocial Support] {subject}"
             text_content = (
                 f"Support request from: {name} ({email})\n"
-                f"User ID: {user_id or 'Not logged in'}\n"
+                f"Account: {sender_identity}\n"
                 f"Subject: {subject}\n\n"
                 f"Message:\n{message}\n"
             )
@@ -6662,7 +6669,7 @@ def support_contact():
                 <h2 style="color: #667eea;">TheraSocial Support Request</h2>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                     <tr><td style="padding: 8px; font-weight: bold; color: #555;">From:</td><td style="padding: 8px;">{name} ({email})</td></tr>
-                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">User ID:</td><td style="padding: 8px;">{user_id or 'Not logged in'}</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">Account:</td><td style="padding: 8px;">{sender_identity}</td></tr>
                     <tr><td style="padding: 8px; font-weight: bold; color: #555;">Subject:</td><td style="padding: 8px;">{subject}</td></tr>
                 </table>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
