@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<!-- G35 Changes (from G25):
+  V3H Objective Groups implementation:
+  - "My Groups" section in Settings Profile panel (self-managed join/leave)
+  - Group management section in operator dashboard (create groups, invite users)
+  - Operator dashboard visible to professionals with OperatorScope (dept operators)
+  - Group scope display resolves group names in operator scope indicator
+  - Dark mode support for all new sections
+  - Cache-busters updated to G35
+-->
 <!-- G15 Changes (from G13):
   Weekly summary UX polish: day names translated per language, highlights bar
   shows needs_attention with 🌱 "Room to grow" framing, fade-in animation on
@@ -362,7 +371,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=G15"></script>
+    <script src="/static/js/follow-requests.js?v=G35"></script>
 
 
     <style>
@@ -1584,6 +1593,30 @@
         .dark-mode .i7-circle-pill.public   { background: #1B3A4B; color: #7DB8DA; border-color: #2A5F7E; }
         .dark-mode .i7-circle-pill.class_b  { background: #2D1B42; color: #C39BD3; border-color: #4A2D6B; }
         .dark-mode .i7-circle-pill.class_a  { background: #1B3B2D; color: #7DCEA0; border-color: #2D6B4A; }
+
+        /* G27: Dark mode for objective groups section */
+        .dark-mode #g27MyGroupsSection {
+            background: var(--light) !important;
+            border-color: var(--border) !important;
+        }
+        .dark-mode #g27MyGroupsSection h4 { color: #E5E7EB !important; }
+        .dark-mode #g27MyGroupsSection p { color: #9CA3AF !important; }
+        .dark-mode #g27MyGroupsSection select {
+            background: #1F2937 !important; color: #E5E7EB !important; border-color: #4B5563 !important;
+        }
+        .dark-mode #g27OpGroupSection input,
+        .dark-mode #g27OpGroupSection select {
+            background: #1F2937 !important; color: #E5E7EB !important; border-color: #4B5563 !important;
+        }
+        .dark-mode #g27MyGroupsPills span[style*="E0E7FF"],
+        .dark-mode .g27-group-pill {
+            background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%) !important;
+            color: #A5B4FC !important;
+        }
+        .dark-mode #g27OpGroupList span[style*="E0E7FF"] {
+            background: #1E1B4B !important;
+            color: #A5B4FC !important;
+        }
         /* ================================================================== */
         /* END CLEAN3 WARM VIEW STYLING                                       */
         /* ================================================================== */
@@ -5750,6 +5783,25 @@
                                   <div style="text-align: center; margin-top: 30px;">
                                       <button class="btn btn-primary" onclick="saveProfileSettings()" data-i18n="profile.save">Save Profile</button>
                                   </div>
+
+                                  <!-- G27: My Groups section — self-managed objective group membership -->
+                                  <div id="g27MyGroupsSection" style="margin-top: 30px; background: var(--light); padding: 20px 24px; border-radius: 16px; border-left: 4px solid #6B8BA4;">
+                                      <h4 style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 8px;">
+                                          🏷️ <span data-i18n="objective_group.my_groups">My Groups</span>
+                                      </h4>
+                                      <p style="margin: 0 0 14px 0; font-size: 0.82rem; color: var(--gray); line-height: 1.4;" data-i18n="objective_group.my_groups_desc">
+                                          Groups you belong to. Your anonymous wellness data contributes to group statistics.
+                                      </p>
+                                      <div id="g27MyGroupsPills" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; min-height: 32px;">
+                                          <span style="font-size: 0.85rem; color: var(--gray); font-style: italic;" data-i18n="objective_group.loading">Loading groups...</span>
+                                      </div>
+                                      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                          <select id="g27JoinGroupSelect" style="padding: 8px 14px; border-radius: 10px; border: 1.5px solid #D1D5DB; font-size: 0.85rem; color: var(--dark); background: var(--bg); cursor: pointer; min-width: 180px;">
+                                              <option value="" disabled selected data-i18n="objective_group.join_group">Join a group...</option>
+                                          </select>
+                                          <button onclick="g27JoinSelectedGroup()" style="padding: 8px 20px; background: linear-gradient(135deg, #6B8BA4 0%, #5A7A93 100%); color: white; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer;" data-i18n="objective_group.join_btn">Join</button>
+                                      </div>
+                                  </div>
                               </div>
                           </div>
 
@@ -6290,6 +6342,46 @@
                                               <tr><td colspan="3" style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</td></tr>
                                           </tbody>
                                       </table>
+                                  </div>
+                              </div>
+
+                              <!-- G27: Objective Groups Management -->
+                              <div id="g27OpGroupSection" style="margin-top: 20px;">
+                                  <h4 style="color: var(--primary); margin-bottom: 12px; font-size: 1.1rem;">
+                                      🏷️ <span data-i18n="objective_group.manage_groups">Manage Objective Groups</span>
+                                  </h4>
+
+                                  <!-- Create new group (operators/admins only) -->
+                                  <div style="background: var(--light); padding: 16px 20px; border-radius: 12px; margin-bottom: 16px;">
+                                      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                          <input type="text" id="g27NewGroupName" placeholder="Group name" data-i18n-placeholder="objective_group.name_placeholder"
+                                                 style="flex: 1; min-width: 160px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 0.85rem;">
+                                          <input type="text" id="g27NewGroupDesc" placeholder="Description (optional)" data-i18n-placeholder="objective_group.desc_placeholder"
+                                                 style="flex: 2; min-width: 200px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 0.85rem;">
+                                          <button onclick="g27CreateGroup()" style="padding: 8px 20px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer;"
+                                                  data-i18n="objective_group.create_btn">Create Group</button>
+                                      </div>
+                                  </div>
+
+                                  <!-- Existing groups list -->
+                                  <div id="g27OpGroupList" style="display: flex; flex-direction: column; gap: 8px;">
+                                      <span style="color: var(--gray); font-style: italic;" data-i18n="objective_group.loading">Loading groups...</span>
+                                  </div>
+
+                                  <!-- G27: Invite user to group -->
+                                  <div style="background: var(--light); padding: 16px 20px; border-radius: 12px; margin-top: 16px;">
+                                      <h5 style="margin: 0 0 10px 0; font-size: 0.95rem; font-weight: 600; color: var(--dark);">
+                                          📧 <span data-i18n="objective_group.invite_user">Invite User to Group</span>
+                                      </h5>
+                                      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                          <input type="email" id="g27InviteEmail" placeholder="user@example.com"
+                                                 style="flex: 1; min-width: 200px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 0.85rem;">
+                                          <select id="g27InviteGroupSelect" style="padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 0.85rem; min-width: 160px;">
+                                              <option value="" disabled selected data-i18n="objective_group.select_group">Select group...</option>
+                                          </select>
+                                          <button onclick="g27InviteUser()" style="padding: 8px 20px; background: #059669; color: white; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer;"
+                                                  data-i18n="objective_group.invite_btn">Invite</button>
+                                      </div>
                                   </div>
                               </div>
 
@@ -7053,7 +7145,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=G15"></script>
+    <script src="/static/js/i18n.js?v=G35"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7336,9 +7428,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=G15"></script>
-   <script src="/static/js/circles-messages.js?v=G15"></script>
-<script src="/static/js/feed-updates.js?v=G15"></script>
+<script src="/static/js/parameters-social.js?v=G35"></script>
+   <script src="/static/js/circles-messages.js?v=G35"></script>
+<script src="/static/js/feed-updates.js?v=G35"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -18658,11 +18750,37 @@ async function loadOperatorDashboard() {
             const scopeData = await scopeRes.json();
             const scopeText = document.getElementById('operatorScopeText');
             if (scopeText && scopeData.scopes && scopeData.scopes.length > 0) {
-                const s = scopeData.scopes[0];
-                if (s.scope_type === 'all') {
+                const scopes = scopeData.scopes;
+                const hasAll = scopes.some(s => s.scope_type === 'all');
+                if (hasAll) {
                     scopeText.textContent = _t('operator.scope_all', 'All users');
                 } else {
-                    scopeText.textContent = s.scope_type + ': ' + s.scope_value;
+                    // G33: Collect all group scope IDs and resolve names
+                    const groupScopeIds = scopes.filter(s => s.scope_type === 'group').map(s => s.scope_value);
+                    const otherScopes = scopes.filter(s => s.scope_type !== 'group');
+
+                    let parts = otherScopes.map(s => s.scope_type + ': ' + s.scope_value);
+
+                    if (groupScopeIds.length > 0) {
+                        try {
+                            const gRes = await fetch('/api/objective-groups', { credentials: 'include' });
+                            if (gRes.ok) {
+                                const gData = await gRes.json();
+                                const allGroups = gData.groups || [];
+                                const names = groupScopeIds.map(gid => {
+                                    const grp = allGroups.find(g => String(g.id) === String(gid));
+                                    return grp ? grp.name : gid;
+                                });
+                                parts.push(_t('objective_group.group_label', 'Group') + ': ' + names.join(', '));
+                            } else {
+                                parts.push(_t('objective_group.group_label', 'Group') + ': ' + groupScopeIds.join(', '));
+                            }
+                        } catch (e) {
+                            parts.push(_t('objective_group.group_label', 'Group') + ': ' + groupScopeIds.join(', '));
+                        }
+                    }
+
+                    scopeText.textContent = parts.join(' · ');
                 }
             }
         }
@@ -19510,6 +19628,21 @@ async function loadSettings() {
             opBtn.style.display = '';
         }
 
+        // G27: Also show System Dashboard for professionals with operator scope (dept operators)
+        if (opBtn && currentUser && currentUser.role === 'professional') {
+            try {
+                const scopeCheck = await fetch('/api/operator/scope', { credentials: 'include' });
+                if (scopeCheck.ok) {
+                    const scopeData = await scopeCheck.json();
+                    if (scopeData.scopes && scopeData.scopes.length > 0) {
+                        opBtn.style.display = '';
+                        opBtn.textContent = _t('objective_group.group_dashboard', 'Group Dashboard');
+                        opBtn.setAttribute('data-i18n', 'objective_group.group_dashboard');
+                    }
+                }
+            } catch (e) { /* not a scoped professional, ignore */ }
+        }
+
         // L190: Show Professional Clients sub-tab for professional role
         const profBtn = document.getElementById('settingsSubProfessional');
         if (profBtn && currentUser && currentUser.role === 'professional') {
@@ -19524,6 +19657,9 @@ async function loadSettings() {
                 loadMyProfessionals();
             }
         }
+
+        // G27: Load My Groups section
+        g27LoadMyGroups();
 
     } catch (error) {
         console.error('[Fix10C] Error loading settings:', error);
@@ -19591,6 +19727,7 @@ function switchSettingsTab(tab) {
     // L60: Load operator dashboard data when switching to operator tab
     if (tab === 'operator') {
         loadOperatorDashboard();
+        g27LoadOpGroups();  // G27: Load group management section
     }
 
     // L190: Load professional clients when switching to professional tab
@@ -20806,6 +20943,281 @@ window.messageFromConnectionInfo = messageFromConnectionInfo;
 window.viewProfileFromConnectionInfo = viewProfileFromConnectionInfo;
 window.removeConnectionFromInfo = removeConnectionFromInfo;
 window.loadSettings = loadSettings;
+
+// =====================
+// G27: Objective Groups — Profile Group Management
+// =====================
+
+async function g27LoadMyGroups() {
+    const pillsContainer = document.getElementById('g27MyGroupsPills');
+    const selectEl = document.getElementById('g27JoinGroupSelect');
+    if (!pillsContainer || !selectEl) return;
+
+    try {
+        // Fetch all groups and user's memberships in one call
+        const res = await fetch('/api/objective-groups', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const groups = data.groups || [];
+
+        const myGroups = groups.filter(g => g.is_member);
+        const availableGroups = groups.filter(g => !g.is_member);
+
+        // Render pills for current memberships
+        pillsContainer.innerHTML = '';
+        if (myGroups.length === 0) {
+            const emptyMsg = document.createElement('span');
+            emptyMsg.style.cssText = 'font-size: 0.85rem; color: var(--gray); font-style: italic;';
+            emptyMsg.textContent = _t('objective_group.no_groups', 'Not in any groups yet');
+            pillsContainer.appendChild(emptyMsg);
+        } else {
+            myGroups.forEach(g => {
+                const pill = document.createElement('span');
+                pill.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%); color: #3730A3; border-radius: 20px; font-size: 0.85rem; font-weight: 500;';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = '🏷️ ' + g.name;
+                pill.appendChild(nameSpan);
+
+                const countSpan = document.createElement('span');
+                countSpan.style.cssText = 'font-size: 0.75rem; color: #6366F1; opacity: 0.7;';
+                countSpan.textContent = '(' + g.member_count + ')';
+                pill.appendChild(countSpan);
+
+                const removeBtn = document.createElement('span');
+                removeBtn.style.cssText = 'cursor: pointer; font-size: 0.75rem; opacity: 0.6; margin-left: 4px;';
+                removeBtn.textContent = '✕';
+                removeBtn.title = _t('objective_group.leave', 'Leave group');
+                removeBtn.onclick = async () => {
+                    if (!confirm(_t('objective_group.leave_confirm', 'Leave this group?'))) return;
+                    const csrfToken = await getCsrfToken() || '';
+                    const leaveRes = await fetch('/api/objective-groups/leave', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        credentials: 'include',
+                        body: JSON.stringify({ group_id: g.id })
+                    });
+                    if (leaveRes.ok) {
+                        showNotification(_t('objective_group.left', 'Left group: ') + g.name, 'success');
+                        g27LoadMyGroups();
+                    }
+                };
+                pill.appendChild(removeBtn);
+                pillsContainer.appendChild(pill);
+            });
+        }
+
+        // Populate join dropdown with available groups
+        selectEl.innerHTML = '';
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.disabled = true;
+        defaultOpt.selected = true;
+        defaultOpt.textContent = _t('objective_group.join_group', 'Join a group...');
+        selectEl.appendChild(defaultOpt);
+
+        if (availableGroups.length === 0) {
+            const noOpt = document.createElement('option');
+            noOpt.value = '';
+            noOpt.disabled = true;
+            noOpt.textContent = _t('objective_group.no_available', 'No available groups');
+            selectEl.appendChild(noOpt);
+        } else {
+            availableGroups.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.name + ' (' + g.member_count + ' ' + _t('objective_group.members', 'members') + ')';
+                selectEl.appendChild(opt);
+            });
+        }
+
+    } catch (e) {
+        console.error('[G27] Error loading groups:', e);
+        pillsContainer.innerHTML = '';
+        const errSpan = document.createElement('span');
+        errSpan.style.cssText = 'color: var(--gray); font-style: italic;';
+        errSpan.textContent = _t('objective_group.load_error', 'Error loading groups');
+        pillsContainer.appendChild(errSpan);
+    }
+}
+
+async function g27JoinSelectedGroup() {
+    const selectEl = document.getElementById('g27JoinGroupSelect');
+    if (!selectEl || !selectEl.value) return;
+
+    const groupId = parseInt(selectEl.value);
+    const csrfToken = await getCsrfToken() || '';
+
+    try {
+        const res = await fetch('/api/objective-groups/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            credentials: 'include',
+            body: JSON.stringify({ group_id: groupId })
+        });
+
+        if (res.ok) {
+            showNotification(_t('objective_group.joined', 'Joined group successfully!'), 'success');
+            g27LoadMyGroups();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            showNotification(err.error || 'Error joining group', 'error');
+        }
+    } catch (e) {
+        console.error('[G27] Error joining group:', e);
+        showNotification('Error joining group', 'error');
+    }
+}
+
+window.g27LoadMyGroups = g27LoadMyGroups;
+window.g27JoinSelectedGroup = g27JoinSelectedGroup;
+
+// G27: Operator dashboard — group management functions
+
+async function g27LoadOpGroups() {
+    const listEl = document.getElementById('g27OpGroupList');
+    const inviteSelect = document.getElementById('g27InviteGroupSelect');
+    if (!listEl) return;
+
+    try {
+        const res = await fetch('/api/objective-groups', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const groups = data.groups || [];
+
+        listEl.innerHTML = '';
+
+        if (groups.length === 0) {
+            const emptySpan = document.createElement('span');
+            emptySpan.style.cssText = 'color: var(--gray); font-style: italic;';
+            emptySpan.textContent = _t('objective_group.no_groups_yet', 'No groups created yet. Create one above.');
+            listEl.appendChild(emptySpan);
+        } else {
+            groups.forEach(g => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--light); border-radius: 10px; border-left: 3px solid #6B8BA4;';
+                
+                const info = document.createElement('div');
+                const nameEl = document.createElement('strong');
+                nameEl.style.cssText = 'color: var(--dark);';
+                nameEl.textContent = g.name;
+                info.appendChild(nameEl);
+                if (g.description) {
+                    const descEl = document.createElement('span');
+                    descEl.style.cssText = 'color: var(--gray); font-size: 0.82rem; margin-left: 8px;';
+                    descEl.textContent = '— ' + g.description;
+                    info.appendChild(descEl);
+                }
+                row.appendChild(info);
+
+                const badge = document.createElement('span');
+                badge.style.cssText = 'background: #E0E7FF; color: #3730A3; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;';
+                badge.textContent = g.member_count + ' ' + _t('objective_group.members', 'members');
+                row.appendChild(badge);
+
+                listEl.appendChild(row);
+            });
+        }
+
+        // Populate invite dropdown
+        if (inviteSelect) {
+            inviteSelect.innerHTML = '';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.disabled = true;
+            defaultOpt.selected = true;
+            defaultOpt.textContent = _t('objective_group.select_group', 'Select group...');
+            inviteSelect.appendChild(defaultOpt);
+
+            groups.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.name;
+                inviteSelect.appendChild(opt);
+            });
+        }
+
+    } catch (e) {
+        console.error('[G27] Error loading op groups:', e);
+    }
+}
+
+async function g27CreateGroup() {
+    const nameInput = document.getElementById('g27NewGroupName');
+    const descInput = document.getElementById('g27NewGroupDesc');
+    if (!nameInput || !nameInput.value.trim()) {
+        showNotification(_t('objective_group.name_required', 'Group name is required'), 'warning');
+        return;
+    }
+
+    const csrfToken = await getCsrfToken() || '';
+    try {
+        const res = await fetch('/api/objective-groups/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            credentials: 'include',
+            body: JSON.stringify({
+                name: nameInput.value.trim(),
+                description: (descInput && descInput.value.trim()) || ''
+            })
+        });
+
+        if (res.ok) {
+            showNotification(_t('objective_group.created', 'Group created!'), 'success');
+            nameInput.value = '';
+            if (descInput) descInput.value = '';
+            g27LoadOpGroups();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            showNotification(err.error || 'Error creating group', 'error');
+        }
+    } catch (e) {
+        console.error('[G27] Error creating group:', e);
+        showNotification('Error creating group', 'error');
+    }
+}
+
+async function g27InviteUser() {
+    const emailInput = document.getElementById('g27InviteEmail');
+    const groupSelect = document.getElementById('g27InviteGroupSelect');
+    if (!emailInput || !emailInput.value.trim() || !groupSelect || !groupSelect.value) {
+        showNotification(_t('objective_group.invite_fill', 'Please enter an email and select a group'), 'warning');
+        return;
+    }
+
+    const csrfToken = await getCsrfToken() || '';
+    try {
+        const res = await fetch('/api/operator/invite-group-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            credentials: 'include',
+            body: JSON.stringify({
+                email: emailInput.value.trim(),
+                group_id: parseInt(groupSelect.value)
+            })
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+            let msg = _t('objective_group.invited', 'User invited successfully!');
+            if (result.temp_password) {
+                msg += ' ' + _t('objective_group.temp_password', 'Temporary password:') + ' ' + result.temp_password;
+            }
+            showNotification(msg, 'success');
+            emailInput.value = '';
+            g27LoadOpGroups();
+        } else {
+            showNotification(result.error || 'Error inviting user', 'error');
+        }
+    } catch (e) {
+        console.error('[G27] Error inviting user:', e);
+        showNotification('Error inviting user', 'error');
+    }
+}
+
+window.g27LoadOpGroups = g27LoadOpGroups;
+window.g27CreateGroup = g27CreateGroup;
+window.g27InviteUser = g27InviteUser;
 window.saveProfileSettings = saveProfileSettings;
 window.syncSettingsToggles = syncSettingsToggles;
 window.changePasswordFromSettings = changePasswordFromSettings;
