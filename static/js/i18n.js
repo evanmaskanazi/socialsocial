@@ -1,4 +1,6 @@
 // Language detection and translation system with backend sync
+// Version G35 - Added objective_group.* translations (my_groups, join, leave, manage, invite,
+//   create, etc.) in EN/HE/AR/RU for the V3H Objective Groups feature
 // Version G15 - Cache-buster sync; no i18n changes from G13
 // Version G13 - Cache-buster sync; no i18n changes from G11
 // Version G11 - Cache-buster sync; no i18n changes from G9
@@ -1617,7 +1619,37 @@ const translations = {
         'professional.trusted_domains_desc': 'Professionals registering with these email domains are verified automatically:',
         'professional.trusted_domains_env': 'Set via TRUSTED_PROFESSIONAL_DOMAINS environment variable in Render.',
         'professional.no_trusted_domains': 'No trusted domains configured. Set TRUSTED_PROFESSIONAL_DOMAINS in Render to auto-verify professionals from known organizations (e.g. "hadassah.org.il,clalit.org.il").',
-        'professional.auto_verified': 'auto'
+        'professional.auto_verified': 'auto',
+
+        // G27: Objective Groups
+        'objective_group.my_groups': 'My Groups',
+        'objective_group.my_groups_desc': 'Groups you belong to. Your anonymous wellness data contributes to group statistics.',
+        'objective_group.no_groups': 'Not in any groups yet',
+        'objective_group.join_group': 'Join a group...',
+        'objective_group.join_btn': 'Join',
+        'objective_group.leave': 'Leave group',
+        'objective_group.leave_confirm': 'Leave this group?',
+        'objective_group.left': 'Left group: ',
+        'objective_group.joined': 'Joined group successfully!',
+        'objective_group.members': 'members',
+        'objective_group.no_available': 'No available groups',
+        'objective_group.loading': 'Loading groups...',
+        'objective_group.manage_groups': 'Manage Objective Groups',
+        'objective_group.name_placeholder': 'Group name',
+        'objective_group.desc_placeholder': 'Description (optional)',
+        'objective_group.create_btn': 'Create Group',
+        'objective_group.created': 'Group created!',
+        'objective_group.name_required': 'Group name is required',
+        'objective_group.no_groups_yet': 'No groups created yet. Create one above.',
+        'objective_group.invite_user': 'Invite User to Group',
+        'objective_group.select_group': 'Select group...',
+        'objective_group.invite_btn': 'Invite',
+        'objective_group.invite_fill': 'Please enter an email and select a group',
+        'objective_group.invited': 'User invited successfully!',
+        'objective_group.temp_password': 'Temporary password:',
+        'objective_group.group_label': 'Group',
+        'objective_group.group_dashboard': 'Group Dashboard',
+        'objective_group.load_error': 'Error loading groups'
     },
 
     he: {
@@ -3201,7 +3233,37 @@ const translations = {
         'professional.trusted_domains_desc': 'מקצוענים הנרשמים עם דומיינים אלה מאומתים אוטומטית:',
         'professional.trusted_domains_env': 'מוגדר באמצעות משתנה סביבה TRUSTED_PROFESSIONAL_DOMAINS ב-Render.',
         'professional.no_trusted_domains': 'לא הוגדרו דומיינים מהימנים. הגדר TRUSTED_PROFESSIONAL_DOMAINS ב-Render לאימות אוטומטי של מקצוענים מארגונים מוכרים.',
-        'professional.auto_verified': 'אוטומטי'
+        'professional.auto_verified': 'אוטומטי',
+
+        // G27: Objective Groups
+        'objective_group.my_groups': 'הקבוצות שלי',
+        'objective_group.my_groups_desc': 'קבוצות שאתה שייך אליהן. נתוני הבריאות האנונימיים שלך תורמים לסטטיסטיקות הקבוצה.',
+        'objective_group.no_groups': 'עדיין לא בקבוצות',
+        'objective_group.join_group': 'הצטרף לקבוצה...',
+        'objective_group.join_btn': 'הצטרף',
+        'objective_group.leave': 'עזוב קבוצה',
+        'objective_group.leave_confirm': 'לעזוב את הקבוצה הזו?',
+        'objective_group.left': 'עזבת את הקבוצה: ',
+        'objective_group.joined': 'הצטרפת לקבוצה בהצלחה!',
+        'objective_group.members': 'חברים',
+        'objective_group.no_available': 'אין קבוצות זמינות',
+        'objective_group.loading': 'טוען קבוצות...',
+        'objective_group.manage_groups': 'ניהול קבוצות יעד',
+        'objective_group.name_placeholder': 'שם הקבוצה',
+        'objective_group.desc_placeholder': 'תיאור (אופציונלי)',
+        'objective_group.create_btn': 'צור קבוצה',
+        'objective_group.created': 'הקבוצה נוצרה!',
+        'objective_group.name_required': 'שם הקבוצה נדרש',
+        'objective_group.no_groups_yet': 'עדיין לא נוצרו קבוצות. צור אחת למעלה.',
+        'objective_group.invite_user': 'הזמן משתמש לקבוצה',
+        'objective_group.select_group': 'בחר קבוצה...',
+        'objective_group.invite_btn': 'הזמן',
+        'objective_group.invite_fill': 'נא להזין מייל ולבחור קבוצה',
+        'objective_group.invited': 'המשתמש הוזמן בהצלחה!',
+        'objective_group.temp_password': 'סיסמה זמנית:',
+        'objective_group.group_label': 'קבוצה',
+        'objective_group.group_dashboard': 'לוח בקרה קבוצתי',
+        'objective_group.load_error': 'שגיאה בטעינת קבוצות'
     },
 
     ar: {
@@ -4787,7 +4849,37 @@ const translations = {
         'professional.trusted_domains_desc': 'يتم توثيق المهنيين الذين يسجلون بهذه النطاقات تلقائيًا:',
         'professional.trusted_domains_env': 'يتم تعيينه عبر متغير البيئة TRUSTED_PROFESSIONAL_DOMAINS في Render.',
         'professional.no_trusted_domains': 'لا توجد نطاقات موثوقة محددة. قم بتعيين TRUSTED_PROFESSIONAL_DOMAINS في Render للتوثيق التلقائي للمهنيين من المنظمات المعروفة.',
-        'professional.auto_verified': 'تلقائي'
+        'professional.auto_verified': 'تلقائي',
+
+        // G27: Objective Groups
+        'objective_group.my_groups': 'مجموعاتي',
+        'objective_group.my_groups_desc': 'المجموعات التي تنتمي إليها. تساهم بيانات صحتك المجهولة في إحصائيات المجموعة.',
+        'objective_group.no_groups': 'لست في أي مجموعات بعد',
+        'objective_group.join_group': 'انضم إلى مجموعة...',
+        'objective_group.join_btn': 'انضم',
+        'objective_group.leave': 'مغادرة المجموعة',
+        'objective_group.leave_confirm': 'مغادرة هذه المجموعة؟',
+        'objective_group.left': 'غادرت المجموعة: ',
+        'objective_group.joined': 'انضممت إلى المجموعة بنجاح!',
+        'objective_group.members': 'أعضاء',
+        'objective_group.no_available': 'لا توجد مجموعات متاحة',
+        'objective_group.loading': 'جارٍ تحميل المجموعات...',
+        'objective_group.manage_groups': 'إدارة مجموعات الأهداف',
+        'objective_group.name_placeholder': 'اسم المجموعة',
+        'objective_group.desc_placeholder': 'الوصف (اختياري)',
+        'objective_group.create_btn': 'إنشاء مجموعة',
+        'objective_group.created': 'تم إنشاء المجموعة!',
+        'objective_group.name_required': 'اسم المجموعة مطلوب',
+        'objective_group.no_groups_yet': 'لم يتم إنشاء مجموعات بعد. أنشئ واحدة أعلاه.',
+        'objective_group.invite_user': 'دعوة مستخدم إلى المجموعة',
+        'objective_group.select_group': 'اختر مجموعة...',
+        'objective_group.invite_btn': 'دعوة',
+        'objective_group.invite_fill': 'يرجى إدخال البريد الإلكتروني واختيار مجموعة',
+        'objective_group.invited': 'تمت دعوة المستخدم بنجاح!',
+        'objective_group.temp_password': 'كلمة مرور مؤقتة:',
+        'objective_group.group_label': 'مجموعة',
+        'objective_group.group_dashboard': 'لوحة المجموعة',
+        'objective_group.load_error': 'خطأ في تحميل المجموعات'
     },
 
     ru: {
@@ -6373,7 +6465,37 @@ const translations = {
         'professional.trusted_domains_desc': 'Специалисты, регистрирующиеся с этих доменов, верифицируются автоматически:',
         'professional.trusted_domains_env': 'Настраивается через переменную окружения TRUSTED_PROFESSIONAL_DOMAINS в Render.',
         'professional.no_trusted_domains': 'Доверенные домены не настроены. Установите TRUSTED_PROFESSIONAL_DOMAINS в Render для автоматической верификации специалистов из известных организаций.',
-        'professional.auto_verified': 'авто'
+        'professional.auto_verified': 'авто',
+
+        // G27: Objective Groups
+        'objective_group.my_groups': 'Мои группы',
+        'objective_group.my_groups_desc': 'Группы, к которым вы принадлежите. Ваши анонимные данные о здоровье вносят вклад в статистику группы.',
+        'objective_group.no_groups': 'Пока нет групп',
+        'objective_group.join_group': 'Вступить в группу...',
+        'objective_group.join_btn': 'Вступить',
+        'objective_group.leave': 'Покинуть группу',
+        'objective_group.leave_confirm': 'Покинуть эту группу?',
+        'objective_group.left': 'Вы покинули группу: ',
+        'objective_group.joined': 'Вы вступили в группу!',
+        'objective_group.members': 'участников',
+        'objective_group.no_available': 'Нет доступных групп',
+        'objective_group.loading': 'Загрузка групп...',
+        'objective_group.manage_groups': 'Управление целевыми группами',
+        'objective_group.name_placeholder': 'Название группы',
+        'objective_group.desc_placeholder': 'Описание (необязательно)',
+        'objective_group.create_btn': 'Создать группу',
+        'objective_group.created': 'Группа создана!',
+        'objective_group.name_required': 'Требуется название группы',
+        'objective_group.no_groups_yet': 'Группы ещё не созданы. Создайте первую выше.',
+        'objective_group.invite_user': 'Пригласить пользователя в группу',
+        'objective_group.select_group': 'Выберите группу...',
+        'objective_group.invite_btn': 'Пригласить',
+        'objective_group.invite_fill': 'Введите email и выберите группу',
+        'objective_group.invited': 'Пользователь приглашён!',
+        'objective_group.temp_password': 'Временный пароль:',
+        'objective_group.group_label': 'Группа',
+        'objective_group.group_dashboard': 'Панель группы',
+        'objective_group.load_error': 'Ошибка загрузки групп'
     }
 };
 
