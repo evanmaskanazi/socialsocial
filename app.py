@@ -1,6 +1,47 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — G15
+Complete app.py for Social Social Platform - V4 10Link — G35
+
+# G27 Changes (from G25) — Objective Groups (V3H):
+# Implements hierarchical organizational account structure per V3H spec.
+# Maps onto existing roles: admin=bureaucrat, system_operator=org_manager,
+# professional=dept_operator, user=regular_user. Behavioral differences
+# are driven by OperatorScope group membership, not new role strings.
+#
+# MODELS:
+# - Added ObjectiveGroup model: id, name, description, created_by, created_at
+# - Added ObjectiveGroupMembership model: user_id, group_id, joined_at
+#   (junction table for user ↔ group, self-managed by users from profile)
+# - Registered ensure_objective_group_schema() migration in init_database()
+#
+# SCOPE FILTER:
+# - Implemented 'group' case in _build_operator_scope_filter():
+#   filters users by ObjectiveGroupMembership join on scope_value=group_id
+#
+# ENDPOINTS (Objective Group management):
+# - GET  /api/objective-groups — list all groups (operators see all, users see joinable)
+# - GET  /api/objective-groups/my-groups — current user's group memberships
+# - POST /api/objective-groups/join — user joins a group by group_id
+# - POST /api/objective-groups/leave — user leaves a group by group_id
+# - POST /api/objective-groups/create — operator/admin creates a new group
+#
+# ENDPOINTS (Account provisioning):
+# - POST /api/admin/create-org-manager — admin creates system_operator scoped to groups
+# - POST /api/operator/create-dept-operator — org manager creates professional scoped to group
+# - POST /api/operator/invite-group-user — dept operator invites user via email, pre-assigned to group
+#
+# ACCESS WIDENING:
+# - Professionals with OperatorScope records can access operator stats endpoints
+#   (operator_required decorator widened to check for OperatorScope on professionals)
+# - This makes dept operators see aggregate group stats without a role change
+#
+# FRONTEND (indexG27.html):
+# - Added "My Groups" section in Settings Profile panel for self-managed group membership
+# - Operator dashboard visible to professionals with OperatorScope (dept operators)
+# - Group management section in operator dashboard for creating/viewing groups
+#
+# i18n (i18nG27.js):
+# - Added objective_group.* translation keys in EN, HE, AR, RU
 
 # G15 Changes (from G13):
 # WEEKLY SUMMARY UX POLISH:
@@ -3307,6 +3348,87 @@ def ensure_professional_schema():
         logger.error(f"[L170] Error ensuring professional schema: {str(e)}")
 
 
+def ensure_objective_group_schema():
+    """G27: Create objective_groups and objective_group_memberships tables if missing."""
+    if hasattr(ensure_objective_group_schema, '_completed'):
+        return
+
+    try:
+        with app.app_context():
+            inspector = inspect(db.engine)
+            existing_tables = inspector.get_table_names()
+
+            if 'users' not in existing_tables:
+                return  # Users table must exist first (FK dependency)
+
+            is_postgres = 'postgresql' in str(db.engine.url)
+
+            with db.engine.connect() as connection:
+                if 'objective_groups' not in existing_tables:
+                    logger.info("[G27] Creating objective_groups table...")
+                    if is_postgres:
+                        connection.execute(text("""
+                            CREATE TABLE objective_groups (
+                                id SERIAL PRIMARY KEY,
+                                name VARCHAR(200) NOT NULL,
+                                description VARCHAR(500) DEFAULT '',
+                                created_by INTEGER NOT NULL REFERENCES users(id),
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """))
+                    else:
+                        connection.execute(text("""
+                            CREATE TABLE objective_groups (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                name VARCHAR(200) NOT NULL,
+                                description VARCHAR(500) DEFAULT '',
+                                created_by INTEGER NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(created_by) REFERENCES users(id)
+                            )
+                        """))
+                    connection.commit()
+                    logger.info("[G27] ✓ Created objective_groups table")
+
+                if 'objective_group_memberships' not in existing_tables:
+                    logger.info("[G27] Creating objective_group_memberships table...")
+                    if is_postgres:
+                        connection.execute(text("""
+                            CREATE TABLE objective_group_memberships (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL REFERENCES users(id),
+                                group_id INTEGER NOT NULL REFERENCES objective_groups(id),
+                                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                CONSTRAINT _user_group_uc UNIQUE (user_id, group_id)
+                            )
+                        """))
+                    else:
+                        connection.execute(text("""
+                            CREATE TABLE objective_group_memberships (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL,
+                                group_id INTEGER NOT NULL,
+                                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY(user_id) REFERENCES users(id),
+                                FOREIGN KEY(group_id) REFERENCES objective_groups(id),
+                                CONSTRAINT _user_group_uc UNIQUE (user_id, group_id)
+                            )
+                        """))
+                    connection.execute(text(
+                        "CREATE INDEX IF NOT EXISTS ix_ogm_user_id ON objective_group_memberships(user_id)"
+                    ))
+                    connection.execute(text(
+                        "CREATE INDEX IF NOT EXISTS ix_ogm_group_id ON objective_group_memberships(group_id)"
+                    ))
+                    connection.commit()
+                    logger.info("[G27] ✓ Created objective_group_memberships table")
+
+        ensure_objective_group_schema._completed = True
+
+    except Exception as e:
+        logger.error(f"[G27] Error ensuring objective group schema: {str(e)}")
+
+
 def ensure_saved_parameters_schema():
     """Ensure saved_parameters table has all required columns - runs on startup"""
     # Guard: Skip if already run in this process
@@ -4788,6 +4910,50 @@ class OperatorScope(db.Model):
         }
 
 
+# G27: Objective Group — organizational group that users can self-join/leave (V3H "hashtag" concept)
+class ObjectiveGroup(db.Model):
+    __tablename__ = 'objective_groups'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.String(500), default='')
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    creator = db.relationship('User', backref=db.backref('created_groups', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'created_by': self.created_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+# G27: User ↔ ObjectiveGroup junction — self-managed membership from user profile
+class ObjectiveGroupMembership(db.Model):
+    __tablename__ = 'objective_group_memberships'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('objective_groups.id'), nullable=False, index=True)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('group_memberships', lazy='dynamic'))
+    group = db.relationship('ObjectiveGroup', backref=db.backref('members', lazy='dynamic'))
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'group_id', name='_user_group_uc'),)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'group_id': self.group_id,
+            'group_name': self.group.name if self.group else '',
+            'joined_at': self.joined_at.isoformat() if self.joined_at else None
+        }
+
+
 # L100: Operator broadcast message — stores messages sent by operators to user segments
 class OperatorBroadcast(db.Model):
     __tablename__ = 'operator_broadcasts'
@@ -5062,6 +5228,7 @@ def init_database():
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 ensure_professional_schema()  # ← L170: Professional account tables
+                ensure_objective_group_schema()  # ← G27: Objective group tables
                 logger.info("Database schema created successfully")
                 create_admin_user()
                 create_system_operators()  # L60: Create operator accounts from env vars
@@ -5081,6 +5248,7 @@ def init_database():
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 ensure_professional_schema()  # ← L170: Professional account tables
+                ensure_objective_group_schema()  # ← G27: Objective group tables
                 create_system_operators()  # L60: Create operator accounts from env vars
                 create_professionals()  # L190: Create professional accounts from env vars
                 create_test_users()
@@ -5148,6 +5316,7 @@ def init_database():
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 ensure_professional_schema()  # ← L170: Professional account tables
+                ensure_objective_group_schema()  # ← G27: Objective group tables
                 create_admin_user()
                 create_professionals()  # L190: Create professional accounts from env vars
                 create_test_users()
@@ -6264,10 +6433,21 @@ def operator_required(f):
             return jsonify({'error': 'Authentication required'}), 401
 
         user = db.session.get(User, session['user_id'])
-        if not user or user.role not in ('system_operator', 'admin'):
-            return jsonify({'error': 'Operator privileges required'}), 403
+        if not user:
+            return jsonify({'error': 'User not found'}), 401
 
-        return f(*args, **kwargs)
+        # G27: Allow system_operator, admin, AND professionals with OperatorScope (dept operators)
+        if user.role in ('system_operator', 'admin'):
+            return f(*args, **kwargs)
+
+        if user.role == 'professional':
+            has_scope = db.session.execute(
+                select(OperatorScope).filter_by(operator_id=user.id)
+            ).scalars().first()
+            if has_scope:
+                return f(*args, **kwargs)
+
+        return jsonify({'error': 'Operator privileges required'}), 403
 
     return decorated_function
 
@@ -17602,6 +17782,464 @@ def admin_job_queue_stats():
 
 
 # =====================
+# G27: OBJECTIVE GROUPS API
+# =====================
+
+@app.route('/api/objective-groups', methods=['GET'])
+@login_required
+def list_objective_groups():
+    """G27: List all objective groups. All authenticated users can see available groups."""
+    try:
+        groups = ObjectiveGroup.query.order_by(ObjectiveGroup.name).all()
+        user_id = session['user_id']
+
+        # Fetch this user's memberships for the joined flag
+        memberships = {m.group_id for m in ObjectiveGroupMembership.query.filter_by(user_id=user_id).all()}
+
+        # G33: Single aggregate query for member counts (avoids N+1)
+        count_rows = db.session.execute(
+            select(ObjectiveGroupMembership.group_id, func.count(ObjectiveGroupMembership.id))
+            .group_by(ObjectiveGroupMembership.group_id)
+        ).all()
+        count_map = {gid: cnt for gid, cnt in count_rows}
+
+        result = []
+        for g in groups:
+            gd = g.to_dict()
+            gd['member_count'] = count_map.get(g.id, 0)
+            gd['is_member'] = g.id in memberships
+            result.append(gd)
+
+        return jsonify({'groups': result})
+
+    except Exception as e:
+        logger.error(f"[G27] Error listing groups: {str(e)}")
+        return jsonify({'error': 'Failed to list groups'}), 500
+
+
+@app.route('/api/objective-groups/my-groups', methods=['GET'])
+@login_required
+def my_objective_groups():
+    """G27: List current user's group memberships."""
+    try:
+        memberships = ObjectiveGroupMembership.query.filter_by(user_id=session['user_id']).all()
+        return jsonify({'groups': [m.to_dict() for m in memberships]})
+    except Exception as e:
+        logger.error(f"[G27] Error fetching my groups: {str(e)}")
+        return jsonify({'error': 'Failed to fetch groups'}), 500
+
+
+@app.route('/api/objective-groups/join', methods=['POST'])
+@login_required
+@require_csrf
+def join_objective_group():
+    """G27: User self-joins an objective group."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        group_id = data.get('group_id')
+        if not group_id:
+            return jsonify({'error': 'group_id required'}), 400
+        try:
+            group_id = int(group_id)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid group_id'}), 400
+
+        group = db.session.get(ObjectiveGroup, group_id)
+        if not group:
+            return jsonify({'error': 'Group not found'}), 404
+
+        # Check if already a member
+        existing = ObjectiveGroupMembership.query.filter_by(
+            user_id=session['user_id'], group_id=group_id
+        ).first()
+        if existing:
+            return jsonify({'error': 'Already a member of this group'}), 400
+
+        membership = ObjectiveGroupMembership(
+            user_id=session['user_id'],
+            group_id=group_id
+        )
+        db.session.add(membership)
+        db.session.commit()
+
+        logger.info(f"[G27] User {session['user_id']} joined group {group_id} ({group.name})")
+        return jsonify({'success': True, 'membership': membership.to_dict()})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[G27] Error joining group: {str(e)}")
+        return jsonify({'error': 'Failed to join group'}), 500
+
+
+@app.route('/api/objective-groups/leave', methods=['POST'])
+@login_required
+@require_csrf
+def leave_objective_group():
+    """G27: User self-removes from an objective group."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        group_id = data.get('group_id')
+        if not group_id:
+            return jsonify({'error': 'group_id required'}), 400
+        try:
+            group_id = int(group_id)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid group_id'}), 400
+
+        membership = ObjectiveGroupMembership.query.filter_by(
+            user_id=session['user_id'], group_id=group_id
+        ).first()
+        if not membership:
+            return jsonify({'error': 'Not a member of this group'}), 400
+
+        db.session.delete(membership)
+        db.session.commit()
+
+        logger.info(f"[G27] User {session['user_id']} left group {group_id}")
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[G27] Error leaving group: {str(e)}")
+        return jsonify({'error': 'Failed to leave group'}), 500
+
+
+@app.route('/api/objective-groups/create', methods=['POST'])
+@operator_required
+@require_csrf
+def create_objective_group():
+    """G27: Operator/admin creates a new objective group."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        name = sanitize_input(data.get('name', '').strip())[:200]
+        description = sanitize_input(data.get('description', '').strip())[:500]
+
+        if not name:
+            return jsonify({'error': 'Group name required'}), 400
+
+        # Check for duplicate name
+        existing = ObjectiveGroup.query.filter(func.lower(ObjectiveGroup.name) == name.lower()).first()
+        if existing:
+            return jsonify({'error': 'A group with this name already exists'}), 400
+
+        group = ObjectiveGroup(
+            name=name,
+            description=description,
+            created_by=session['user_id']
+        )
+        db.session.add(group)
+        db.session.commit()
+
+        logger.info(f"[G27] Group created: '{name}' by user {session['user_id']}")
+        return jsonify({'success': True, 'group': group.to_dict()})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[G27] Error creating group: {str(e)}")
+        return jsonify({'error': 'Failed to create group'}), 500
+
+
+# G27: Account provisioning — admin creates org manager (system_operator scoped to groups)
+@app.route('/api/admin/create-org-manager', methods=['POST'])
+@admin_required
+@require_csrf
+def create_org_manager():
+    """G27: Admin creates an Organization Manager account (system_operator scoped to one or more groups)."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        email = sanitize_input(data.get('email', '').strip().lower())
+        username = sanitize_input(data.get('username', '').strip())[:80]
+        password = data.get('password', '')
+        group_ids = data.get('group_ids', [])  # List of group IDs this manager oversees
+
+        if not email or not password:
+            return jsonify({'error': 'Email and password required'}), 400
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters'}), 400
+        if not username:
+            username = sanitize_input(email.split('@')[0])[:80]
+
+        # Check existing
+        if db.session.execute(select(User).filter_by(email=email)).scalars().first():
+            return jsonify({'error': 'Email already registered'}), 400
+        if db.session.execute(select(User).filter_by(username=username)).scalars().first():
+            return jsonify({'error': 'Username already taken'}), 400
+
+        # Create system_operator account
+        org_manager = User(
+            username=username,
+            email=email,
+            role='system_operator',
+            is_active=True
+        )
+        org_manager.set_password(password)
+        db.session.add(org_manager)
+        db.session.flush()
+
+        # Create profile
+        profile = Profile(user_id=org_manager.id)
+        db.session.add(profile)
+
+        # Create scope records for each group
+        for gid in group_ids:
+            group = db.session.get(ObjectiveGroup, gid)
+            if group:
+                scope = OperatorScope(
+                    operator_id=org_manager.id,
+                    scope_type='group',
+                    scope_value=str(gid)
+                )
+                db.session.add(scope)
+
+        # If no groups specified, default to 'all' scope
+        if not group_ids:
+            scope = OperatorScope(
+                operator_id=org_manager.id,
+                scope_type='all',
+                scope_value=''
+            )
+            db.session.add(scope)
+
+        db.session.commit()
+        logger.info(f"[G27] Org manager created: {email} with groups {group_ids}")
+        return jsonify({'success': True, 'user': org_manager.to_dict()})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[G27] Error creating org manager: {str(e)}")
+        return jsonify({'error': 'Failed to create organization manager'}), 500
+
+
+# G27: Org manager creates dept operator (professional with group scope)
+@app.route('/api/operator/create-dept-operator', methods=['POST'])
+@operator_required
+@require_csrf
+def create_dept_operator():
+    """G27: Organization manager creates a Department Operator (professional with group scope).
+    Dept operators can both view group aggregate stats AND manage individual client relationships."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        email = sanitize_input(data.get('email', '').strip().lower())
+        username = sanitize_input(data.get('username', '').strip())[:80]
+        password = data.get('password', '')
+        group_id = data.get('group_id')  # Single group this operator manages
+
+        if not email or not password or not group_id:
+            return jsonify({'error': 'Email, password, and group_id required'}), 400
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters'}), 400
+        try:
+            group_id = int(group_id)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid group_id'}), 400
+
+        group = db.session.get(ObjectiveGroup, group_id)
+        if not group:
+            return jsonify({'error': 'Group not found'}), 404
+
+        if not username:
+            username = sanitize_input(email.split('@')[0])[:80]
+
+        # Verify the creating operator has scope over this group
+        creator = db.session.get(User, session['user_id'])
+        if creator.role not in ('admin',):
+            creator_scopes = OperatorScope.query.filter_by(operator_id=creator.id).all()
+            has_access = any(
+                s.scope_type == 'all' or
+                (s.scope_type == 'group' and s.scope_value == str(group_id))
+                for s in creator_scopes
+            )
+            if not has_access:
+                return jsonify({'error': 'You do not have scope over this group'}), 403
+
+        # Check existing
+        if db.session.execute(select(User).filter_by(email=email)).scalars().first():
+            return jsonify({'error': 'Email already registered'}), 400
+        if db.session.execute(select(User).filter_by(username=username)).scalars().first():
+            return jsonify({'error': 'Username already taken'}), 400
+
+        # Create professional account (acts as dept operator with scope)
+        dept_op = User(
+            username=username,
+            email=email,
+            role='professional',
+            is_active=True,
+            professional_verified=True  # Pre-verified by org manager
+        )
+        dept_op.set_password(password)
+        db.session.add(dept_op)
+        db.session.flush()
+
+        # Create profile
+        profile = Profile(user_id=dept_op.id)
+        db.session.add(profile)
+
+        # Create scope assignment for group
+        scope = OperatorScope(
+            operator_id=dept_op.id,
+            scope_type='group',
+            scope_value=str(group_id)
+        )
+        db.session.add(scope)
+
+        db.session.commit()
+        logger.info(f"[G27] Dept operator created: {email} for group {group_id} ({group.name})")
+        return jsonify({'success': True, 'user': dept_op.to_dict()})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[G27] Error creating dept operator: {str(e)}")
+        return jsonify({'error': 'Failed to create department operator'}), 500
+
+
+# G27: Dept operator invites user via email, pre-assigned to group
+@app.route('/api/operator/invite-group-user', methods=['POST'])
+@operator_required
+@require_csrf
+def invite_group_user():
+    """G27: Dept operator invites a regular user via email, pre-assigning them to a group.
+    Creates the account and sends an invite email with a temporary password."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        email = sanitize_input(data.get('email', '').strip().lower())
+        username = sanitize_input(data.get('username', '').strip())[:80]
+        group_id = data.get('group_id')
+
+        if not email or not group_id:
+            return jsonify({'error': 'Email and group_id required'}), 400
+        try:
+            group_id = int(group_id)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid group_id'}), 400
+
+        group = db.session.get(ObjectiveGroup, group_id)
+        if not group:
+            return jsonify({'error': 'Group not found'}), 404
+
+        if not username:
+            username = sanitize_input(email.split('@')[0])[:80]
+
+        # Verify scope
+        creator = db.session.get(User, session['user_id'])
+        if creator.role not in ('admin',):
+            creator_scopes = OperatorScope.query.filter_by(operator_id=creator.id).all()
+            has_access = any(
+                s.scope_type == 'all' or
+                (s.scope_type == 'group' and s.scope_value == str(group_id))
+                for s in creator_scopes
+            )
+            if not has_access:
+                return jsonify({'error': 'You do not have scope over this group'}), 403
+
+        # Check if email already registered
+        existing_user = db.session.execute(select(User).filter_by(email=email)).scalars().first()
+        if existing_user:
+            # User exists — just add them to the group if not already a member
+            existing_membership = ObjectiveGroupMembership.query.filter_by(
+                user_id=existing_user.id, group_id=group_id
+            ).first()
+            if existing_membership:
+                return jsonify({'error': 'User is already a member of this group'}), 400
+            membership = ObjectiveGroupMembership(user_id=existing_user.id, group_id=group_id)
+            db.session.add(membership)
+            db.session.commit()
+            logger.info(f"[G27] Existing user {email} added to group {group_id}")
+            return jsonify({'success': True, 'message': 'Existing user added to group', 'user_id': existing_user.id})
+
+        # Generate temporary password
+        temp_password = secrets.token_urlsafe(12)
+
+        # Ensure unique username
+        base_username = username
+        suffix = 1
+        while db.session.execute(select(User).filter_by(username=username)).scalars().first():
+            username = f"{base_username}_{suffix}"
+            suffix += 1
+
+        # Create user account
+        new_user = User(
+            username=username,
+            email=email,
+            role='user',
+            is_active=True
+        )
+        new_user.set_password(temp_password)
+        db.session.add(new_user)
+        db.session.flush()
+
+        # Create profile
+        profile = Profile(user_id=new_user.id)
+        db.session.add(profile)
+
+        # Assign to group
+        membership = ObjectiveGroupMembership(user_id=new_user.id, group_id=group_id)
+        db.session.add(membership)
+
+        # Create welcome alert
+        alert = Alert(
+            user_id=new_user.id,
+            title='alerts.welcome_title',
+            content='alerts.welcome_message',
+            alert_type='success'
+        )
+        db.session.add(alert)
+
+        db.session.commit()
+
+        # Send invite email via Resend (if configured)
+        resend_key = os.environ.get('RESEND_API_KEY', '')
+        if resend_key:
+            try:
+                import resend as resend_module
+                resend_module.api_key = resend_key
+                base_url = os.environ.get('BASE_URL', 'https://therasocial.org')
+                from_email = os.environ.get('RESEND_FROM_EMAIL', 'noreply@therasocial.org')
+                resend_module.Emails.send({
+                    'from': from_email,
+                    'to': [email],
+                    'subject': f'You have been invited to join {group.name} on TheraSocial',
+                    'html': f'''
+                        <h2>Welcome to TheraSocial</h2>
+                        <p>You have been invited to join the group <strong>{group.name}</strong>.</p>
+                        <p>Your temporary login credentials:</p>
+                        <p><strong>Email:</strong> {email}<br>
+                        <strong>Password:</strong> {temp_password}</p>
+                        <p>Please log in at <a href="{base_url}">{base_url}</a> and change your password.</p>
+                    '''
+                })
+                logger.info(f"[G27] Invite email sent to {email}")
+            except Exception as mail_err:
+                logger.warning(f"[G27] Failed to send invite email to {email}: {str(mail_err)}")
+        else:
+            logger.info(f"[G27] No RESEND_API_KEY — invite email not sent for {email}")
+
+        return jsonify({
+            'success': True,
+            'user_id': new_user.id,
+            'username': username,
+            'temp_password': temp_password,  # Return so operator can share manually if email fails
+            'message': 'User created and added to group'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[G27] Error inviting group user: {str(e)}")
+        return jsonify({'error': 'Failed to invite user'}), 500
+
+
+# =====================
 # L60: SYSTEM OPERATOR API
 # =====================
 
@@ -17675,13 +18313,16 @@ def create_operator():
 
 def _build_operator_scope_filter(operator_user):
     """L60: Build SQLAlchemy filter clauses from operator's scope(s).
-    Returns a list of filter conditions to apply to User queries."""
+    Returns a list of filter conditions to apply to User queries.
+    G27: Added 'group' scope_type — filters by ObjectiveGroupMembership."""
     scopes = OperatorScope.query.filter_by(operator_id=operator_user.id).all()
     if not scopes:
         # No scope defined = see all (admin-like)
         return []
     
     filters = []
+    # G27: Collect all group IDs across scopes first, then build one filter (OR across groups)
+    group_ids = []
     for scope in scopes:
         if scope.scope_type == 'all':
             return []  # 'all' overrides everything
@@ -17699,6 +18340,19 @@ def _build_operator_scope_filter(operator_user):
                 filters.append(User.birth_year <= year_end)
             except (ValueError, IndexError):
                 pass
+        elif scope.scope_type == 'group':
+            try:
+                group_ids.append(int(scope.scope_value))
+            except (ValueError, TypeError):
+                pass
+
+    # G27: Build a single IN filter for all group scopes (user in ANY of the groups)
+    if group_ids:
+        member_subq = select(ObjectiveGroupMembership.user_id).filter(
+            ObjectiveGroupMembership.group_id.in_(group_ids)
+        ).distinct().scalar_subquery()
+        filters.append(User.id.in_(member_subq))
+
     return filters
 
 
