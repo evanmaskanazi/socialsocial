@@ -6644,8 +6644,9 @@ def support_contact():
         
         logger.info(f"Support contact from {email}: {subject[:50]}")
         
-        # Send email to support address
+        # Send email to support address (+ co-founder copy)
         SUPPORT_EMAIL = 'notifications@therasocialconnect.com'
+        SUPPORT_RECIPIENTS = [SUPPORT_EMAIL, 'bennybrandst@gmail.com']
         try:
             from_email = app.config.get('MAIL_DEFAULT_SENDER', os.environ.get('FROM_EMAIL', 'TheraSocial <onboarding@resend.dev>'))
             
@@ -6674,7 +6675,7 @@ def support_contact():
             msg = MIMEMultipart('alternative')
             msg['Subject'] = email_subject
             msg['From'] = from_email
-            msg['To'] = SUPPORT_EMAIL
+            msg['To'] = ', '.join(SUPPORT_RECIPIENTS)
             _add_deliverability_headers(msg)
             msg['Reply-To'] = email  # So replies go to the user
             msg.attach(MIMEText(text_content, 'plain'))
@@ -6687,9 +6688,9 @@ def support_contact():
             
             with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
                 server.login(smtp_user, smtp_pass)
-                server.sendmail(msg['From'], SUPPORT_EMAIL, msg.as_string())
+                server.sendmail(msg['From'], SUPPORT_RECIPIENTS, msg.as_string())
             
-            logger.info(f"[SMTP SUPPORT] Support email sent to {SUPPORT_EMAIL} from {email}")
+            logger.info(f"[SMTP SUPPORT] Support email sent to {SUPPORT_RECIPIENTS} from {email}")
             
         except Exception as e:
             logger.error(f"[SMTP SUPPORT] Failed to send support email: {e}")
