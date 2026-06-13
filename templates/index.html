@@ -11046,8 +11046,16 @@ async function updateNotificationSetting(settingName, value) {
         // Show success feedback
         const lang = localStorage.getItem('selectedLanguage') || 'en';
         
-        // Check if emails were sent (when enabling email_on_alert)
-        if (settingName === 'email_on_alert' && value && result.emails_sent > 0) {
+        // Check if emails were queued (when enabling email_on_alert)
+        if (settingName === 'email_on_alert' && value && result.emails_queued) {
+            const queuedMessages = {
+                'en': 'Email alerts enabled. Existing alerts will be emailed to you shortly.',
+                'he': 'התראות אימייל הופעלו. התראות קיימות יישלחו למייל שלך בקרוב.',
+                'ar': 'تم تفعيل تنبيهات البريد. سيتم إرسال التنبيهات الحالية قريبًا.',
+                'ru': 'Уведомления по email включены. Существующие уведомления будут отправлены вскоре.'
+            };
+            showNotification(queuedMessages[lang] || queuedMessages['en'], 'success');
+        } else if (settingName === 'email_on_alert' && value && result.emails_sent > 0) {
             const emailsSentMessages = {
                 'en': `Setting enabled! ${result.emails_sent} existing alerts sent to your email.`,
                 'he': `ההגדרה הופעלה! ${result.emails_sent} התראות קיימות נשלחו למייל שלך.`,
