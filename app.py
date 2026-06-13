@@ -11,6 +11,10 @@ Complete app.py for Social Social Platform - V4 10Link — G60
 # 3. FIX: Added db.session.rollback() in check_duplicate_alert and check_duplicate_alert_broad
 #    error handlers to prevent poisoned session from cascading.
 # 4. FIX: Added db.session.rollback() in notification_settings GET error handler.
+# 5. FIX: Moved batch alert email sending (on email_on_alert enable) from synchronous
+#    to background job queue. Was causing request timeout on Render (30s) when many
+#    unread alerts existed, making the frontend show "failed to update" even though
+#    the setting had already committed to DB.
 
 # G27 Changes (from G25) — Objective Groups (V3H):
 # Implements hierarchical organizational account structure per V3H spec.
@@ -10249,62 +10253,36 @@ def notification_settings():
             logger.info(f"[NOTIFICATION DEBUG]   diary_reminder_timezone is now: {settings.diary_reminder_timezone}")
             logger.info(f"[NOTIFICATION DEBUG] ========================================")
             
-            # If email_on_alert was just turned ON, send all existing unread alerts as emails
+            # If email_on_alert was just turned ON, queue batch email as background job
             # PJ6011: EXCLUDE trigger alerts - they use consolidated batch emails only
-            emails_sent = 0
+            # G60: Moved from synchronous to background job to prevent request timeout
+            emails_queued = False
             if 'email_on_alert' in data and data['email_on_alert'] and not was_email_on_alert_enabled:
                 if user and user.email:
                     try:
-                        # Get all unread alerts for this user, EXCLUDING trigger alerts
-                        # Trigger alerts use consolidated batch emails (send_consolidated_wellness_alert_email)
-                        unread_alerts = Alert.query.filter(
-                            Alert.user_id == user_id,
-                            Alert.is_read == False,
-                            Alert.alert_category != 'trigger'  # PJ6011: Skip trigger alerts
-                        ).order_by(Alert.created_at.desc()).limit(50).all()
-                        logger.info(f"[PJ6011] Sending individual emails for {len(unread_alerts)} non-trigger alerts")
-                        
-                        user_language = user.preferred_language or 'en'
-                        
-                        for alert in unread_alerts:
-                            try:
-                                # Parse alert title (may be JSON with translation key)
-                                alert_title = alert.title
-                                try:
-                                    title_data = json.loads(alert.title)
-                                    if isinstance(title_data, dict) and 'key' in title_data:
-                                        # It's a translation key, use a generic title
-                                        alert_title = title_data.get('params', {}).get('username', 'Alert')
-                                        if 'new_message' in title_data.get('key', ''):
-                                            alert_title = f"New message from {alert_title}"
-                                        elif 'started_following' in title_data.get('key', ''):
-                                            alert_title = f"{alert_title} accepted your connection request"
-                                        elif 'invitation' in title_data.get('key', '').lower():
-                                            alert_title = "New invitation"
-                                except:
-                                    pass  # Not JSON, use as-is
-                                
-                                send_alert_notification_email(
-                                    user.email,
-                                    alert_title,
-                                    alert.content or '',
-                                    user_language
-                                )
-                                emails_sent += 1
-                            except Exception as email_err:
-                                logger.error(f"Error sending alert email: {str(email_err)}")
-                                continue
-                        
-                        logger.info(f"Sent {emails_sent} alert emails to user {user_id}")
-                    except Exception as batch_err:
-                        logger.error(f"Error sending batch alert emails: {str(batch_err)}")
+                        job = BackgroundJob(
+                            job_type='send_batch_alert_emails',
+                            payload={'user_id': user_id},
+                            priority=2  # Higher priority than triggers
+                        )
+                        db.session.add(job)
+                        db.session.commit()
+                        emails_queued = True
+                        logger.info(f"[G60] Queued batch alert email job for user {user_id}")
+                    except Exception as job_err:
+                        logger.error(f"[G60] Failed to queue alert emails: {job_err}")
+                        try:
+                            db.session.rollback()
+                        except Exception:
+                            pass
             
             return jsonify({
                 'success': True,
                 'email_on_alert': settings.email_on_alert or False,
                 'email_daily_diary_reminder': settings.email_daily_diary_reminder or False,
                 'email_on_new_message': settings.email_on_new_message if settings.email_on_new_message is not None else True,
-                'emails_sent': emails_sent
+                'emails_sent': 0,
+                'emails_queued': emails_queued
             })
         except Exception as e:
             logger.error(f"Update notification settings error: {str(e)}")
@@ -12674,6 +12652,45 @@ def process_background_jobs(batch_size=10):
                     email_data = job.payload
                     # send_email_from_job(email_data)
                     logger.info(f"[JOB QUEUE] Email job type - placeholder for future implementation")
+                
+                elif job.job_type == 'send_batch_alert_emails':
+                    # G60: Send existing unread alerts as emails when email_on_alert is turned ON
+                    _user_id = job.payload.get('user_id')
+                    if _user_id:
+                        _user = db.session.get(User, _user_id)
+                        if _user and _user.email:
+                            _unread = Alert.query.filter(
+                                Alert.user_id == _user_id,
+                                Alert.is_read == False,
+                                Alert.alert_category != 'trigger'
+                            ).order_by(Alert.created_at.desc()).limit(50).all()
+                            _lang = _user.preferred_language or 'en'
+                            _sent = 0
+                            for _alert in _unread:
+                                try:
+                                    _title = _alert.title
+                                    try:
+                                        _td = json.loads(_alert.title)
+                                        if isinstance(_td, dict) and 'key' in _td:
+                                            _title = _td.get('params', {}).get('username', 'Alert')
+                                            if 'new_message' in _td.get('key', ''):
+                                                _title = f"New message from {_title}"
+                                            elif 'started_following' in _td.get('key', ''):
+                                                _title = f"{_title} accepted your connection request"
+                                            elif 'invitation' in _td.get('key', '').lower():
+                                                _title = "New invitation"
+                                    except Exception:
+                                        pass
+                                    send_alert_notification_email(_user.email, _title, _alert.content or '', _lang)
+                                    _sent += 1
+                                except Exception as _email_err:
+                                    logger.error(f"[JOB QUEUE] Alert email error: {_email_err}")
+                                    continue
+                            logger.info(f"[JOB QUEUE] Sent {_sent} batch alert emails for user {_user_id}")
+                        else:
+                            logger.warning(f"[JOB QUEUE] User {_user_id} not found or no email")
+                    else:
+                        raise ValueError(f"Invalid payload for send_batch_alert_emails: {job.payload}")
                 
                 else:
                     logger.warning(f"[JOB QUEUE] Unknown job type: {job.job_type}")
