@@ -1,6 +1,16 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — G35
+Complete app.py for Social Social Platform - V4 10Link — G60
+
+# G60 Changes (from G25):
+# 1. FIX: Added ai_checkin_feedback to ensure_notification_settings_schema() required_columns.
+#    ROOT CAUSE of notification settings 500 errors: column defined in SQLAlchemy model but
+#    never migrated to database, causing every NotificationSettings query to fail.
+# 2. FIX: Added db.session.rollback() in trigger scheduler pattern error handler to prevent
+#    InFailedSqlTransaction cascade across all subsequent patterns.
+# 3. FIX: Added db.session.rollback() in check_duplicate_alert and check_duplicate_alert_broad
+#    error handlers to prevent poisoned session from cascading.
+# 4. FIX: Added db.session.rollback() in notification_settings GET error handler.
 
 # G27 Changes (from G25) — Objective Groups (V3H):
 # Implements hierarchical organizational account structure per V3H spec.
@@ -2433,6 +2443,10 @@ def check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
         return existing
     except Exception as e:
         logger.warning(f"[DUPLICATE CHECK] Error checking duplicate: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         return None
 
 
@@ -2471,6 +2485,10 @@ def check_duplicate_alert_broad(watcher_id, watched_username, parameter):
         return existing
     except Exception as e:
         logger.warning(f"[DUPLICATE CHECK] Error checking broad duplicate: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         return None
 
 
@@ -3036,7 +3054,8 @@ def ensure_notification_settings_schema():
                 'email_on_alert': 'BOOLEAN DEFAULT FALSE',
                 'email_on_notification': 'BOOLEAN DEFAULT TRUE',  # PJ6001: Email for notifications
                 'email_daily_diary_reminder': 'BOOLEAN DEFAULT FALSE',
-                'email_on_new_message': 'BOOLEAN DEFAULT TRUE'
+                'email_on_new_message': 'BOOLEAN DEFAULT TRUE',
+                'ai_checkin_feedback': 'BOOLEAN DEFAULT TRUE'  # G60: V4 AI check-in feedback preference
             }
 
             # Add missing columns
@@ -10148,6 +10167,10 @@ def notification_settings():
         except Exception as e:
             logger.error(f"[NOTIFICATION DEBUG] GET ERROR: {str(e)}")
             logger.error(f"[NOTIFICATION DEBUG] Traceback: {traceback.format_exc()}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             return jsonify({'error': 'Failed to get settings'}), 500
     
     elif request.method == 'PUT':
@@ -21412,6 +21435,10 @@ def run_background_trigger_check_for_watcher(watcher_id):
                     
             except Exception as pattern_err:
                 logger.error(f"[TRIGGER SCHEDULER] Error processing pattern: {pattern_err}")
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
                 continue
         
         # Commit alerts
