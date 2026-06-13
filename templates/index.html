@@ -1,4 +1,15 @@
 <!DOCTYPE html>
+<!-- G60 Changes (from G25/G35):
+  Notification Settings Stability Fixes:
+  5. FIX: Toggle revert logic now handles all 3 settings across all toggle sets
+     (settings panel, sidebar, mobile) instead of only 2 of 3
+  6. FIX: Graceful fallback defaults when GET /api/notification-settings returns 500
+     (toggles show sensible defaults instead of misleading blank state)
+  7. FIX: Cache busting updated from G35 to G60
+  8. FIX: email_on_notification default handling uses !== false (correct true default)
+  9. FIX: Sidebar toggles now sync to settings panel toggles on change
+  10. FIX: Mobile toggles now sync to settings panel toggles on change
+-->
 <!-- G35 Changes (from G25):
   V3H Objective Groups implementation:
   - "My Groups" section in Settings Profile panel (self-managed join/leave)
@@ -69,7 +80,7 @@
   8. Auth card: refined shadow layers + subtle border
   9. Mobile nav items: active press scale feedback on tap
   10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
-  CACHE BUSTING: All JS references updated to ?v=I7
+  CACHE BUSTING: All JS references updated to ?v=G60
 -->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
@@ -371,7 +382,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=G35"></script>
+    <script src="/static/js/follow-requests.js?v=G60"></script>
 
 
     <style>
@@ -6625,7 +6636,7 @@
             <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                 <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
                 <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
-                    <input type="checkbox" id="mobileEmailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked); document.getElementById('emailOnAlertToggle').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
+                    <input type="checkbox" id="mobileEmailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked); document.getElementById('emailOnAlertToggle').checked = this.checked; if(document.getElementById('settingsEmailOnAlert')) document.getElementById('settingsEmailOnAlert').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
                     <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
                 </label>
                 <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
@@ -6638,7 +6649,7 @@
             <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                 <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
                 <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
-                    <input type="checkbox" id="mobileEmailOnNotificationToggle" onchange="updateNotificationSetting('email_on_notification', this.checked); if(document.getElementById('emailOnNotificationToggle')) document.getElementById('emailOnNotificationToggle').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
+                    <input type="checkbox" id="mobileEmailOnNotificationToggle" onchange="updateNotificationSetting('email_on_notification', this.checked); if(document.getElementById('emailOnNotificationToggle')) document.getElementById('emailOnNotificationToggle').checked = this.checked; if(document.getElementById('settingsEmailOnNotification')) document.getElementById('settingsEmailOnNotification').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
                     <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
                 </label>
                 <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
@@ -6651,7 +6662,7 @@
             <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                 <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
                 <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
-                    <input type="checkbox" id="mobileDailyDiaryReminderToggle" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked); document.getElementById('dailyDiaryReminderToggle').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
+                    <input type="checkbox" id="mobileDailyDiaryReminderToggle" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked); document.getElementById('dailyDiaryReminderToggle').checked = this.checked; if(document.getElementById('settingsDiaryReminder')) document.getElementById('settingsDiaryReminder').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
                     <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
                 </label>
                 <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
@@ -6724,7 +6735,7 @@
                         <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                             <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
                             <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
-                                <input type="checkbox" id="emailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <input type="checkbox" id="emailOnAlertToggle" onchange="updateNotificationSetting('email_on_alert', this.checked); if(document.getElementById('settingsEmailOnAlert')) document.getElementById('settingsEmailOnAlert').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
                                 <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
                             </label>
                             <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
@@ -6737,7 +6748,7 @@
                         <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                             <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
                             <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
-                                <input type="checkbox" id="emailOnNotificationToggle" onchange="updateNotificationSetting('email_on_notification', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <input type="checkbox" id="emailOnNotificationToggle" onchange="updateNotificationSetting('email_on_notification', this.checked); if(document.getElementById('settingsEmailOnNotification')) document.getElementById('settingsEmailOnNotification').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
                                 <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
                             </label>
                             <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
@@ -6750,7 +6761,7 @@
                         <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
                             <span class="toggle-off-label" style="font-size: 11px; color: #999;">OFF</span>
                             <label class="toggle-switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
-                                <input type="checkbox" id="dailyDiaryReminderToggle" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <input type="checkbox" id="dailyDiaryReminderToggle" onchange="updateNotificationSetting('email_daily_diary_reminder', this.checked); if(document.getElementById('settingsDiaryReminder')) document.getElementById('settingsDiaryReminder').checked = this.checked;" style="opacity: 0; width: 0; height: 0;">
                                 <span class="toggle-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; transition: .3s; border-radius: 24px;"></span>
                             </label>
                             <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
@@ -7145,7 +7156,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=G35"></script>
+    <script src="/static/js/i18n.js?v=G60"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7428,9 +7439,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=G35"></script>
-   <script src="/static/js/circles-messages.js?v=G35"></script>
-<script src="/static/js/feed-updates.js?v=G35"></script>
+<script src="/static/js/parameters-social.js?v=G60"></script>
+   <script src="/static/js/circles-messages.js?v=G60"></script>
+<script src="/static/js/feed-updates.js?v=G60"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -10873,6 +10884,25 @@ async function loadNotificationSettings() {
         
         if (!response.ok) {
             console.error('[NOTIFICATION DEBUG] FAILED to load notification settings - status:', response.status);
+            // G60: Apply sensible defaults so toggles aren't misleadingly blank
+            const fallbackSettings = {
+                email_on_alert: false,
+                email_on_notification: true,
+                email_daily_diary_reminder: false
+            };
+            const fbAlert = document.getElementById('emailOnAlertToggle');
+            const fbNotif = document.getElementById('emailOnNotificationToggle');
+            const fbDiary = document.getElementById('dailyDiaryReminderToggle');
+            if (fbAlert) fbAlert.checked = fallbackSettings.email_on_alert;
+            if (fbNotif) fbNotif.checked = fallbackSettings.email_on_notification;
+            if (fbDiary) fbDiary.checked = fallbackSettings.email_daily_diary_reminder;
+            // Also set settings panel toggles
+            const sfbAlert = document.getElementById('settingsEmailOnAlert');
+            const sfbNotif = document.getElementById('settingsEmailOnNotification');
+            const sfbDiary = document.getElementById('settingsDiaryReminder');
+            if (sfbAlert) sfbAlert.checked = fallbackSettings.email_on_alert;
+            if (sfbNotif) sfbNotif.checked = fallbackSettings.email_on_notification;
+            if (sfbDiary) sfbDiary.checked = fallbackSettings.email_daily_diary_reminder;
             return;
         }
         
@@ -11064,12 +11094,17 @@ async function updateNotificationSetting(settingName, value) {
         console.error('[NOTIFICATION DEBUG] ERROR updating notification setting:', error);
         console.error('[NOTIFICATION DEBUG] Error stack:', error.stack);
         
-        // Revert the toggle on error
-        const toggle = document.getElementById(settingName === 'email_on_alert' ? 'emailOnAlertToggle' : 'dailyDiaryReminderToggle');
-        if (toggle) {
-            console.log('[NOTIFICATION DEBUG] Reverting toggle from', toggle.checked, 'to', !value);
-            toggle.checked = !value;
-        }
+        // G60: Revert ALL matching toggles on error (settings panel + sidebar + mobile)
+        const toggleMap = {
+            'email_on_alert': ['settingsEmailOnAlert', 'emailOnAlertToggle', 'mobileEmailOnAlertToggle'],
+            'email_on_notification': ['settingsEmailOnNotification', 'emailOnNotificationToggle', 'mobileEmailOnNotificationToggle'],
+            'email_daily_diary_reminder': ['settingsDiaryReminder', 'dailyDiaryReminderToggle', 'mobileDailyDiaryReminderToggle']
+        };
+        const toggleIds = toggleMap[settingName] || [];
+        toggleIds.forEach(id => {
+            const t = document.getElementById(id);
+            if (t) t.checked = !value;
+        });
         
         showNotification(_t('msg.setting_failed', 'Failed to update setting'), 'error');
     }
@@ -19605,7 +19640,7 @@ async function loadSettings() {
             const notifToggle = document.getElementById('settingsEmailOnNotification');
             const diaryToggle = document.getElementById('settingsDiaryReminder');
             if (alertToggle) alertToggle.checked = notif.email_on_alert || false;
-            if (notifToggle) notifToggle.checked = notif.email_on_notification || false;
+            if (notifToggle) notifToggle.checked = notif.email_on_notification !== false;
             if (diaryToggle) {
                 diaryToggle.checked = notif.email_daily_diary_reminder || false;
                 toggleSettingsReminderTime(diaryToggle.checked);
