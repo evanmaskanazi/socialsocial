@@ -1,6 +1,23 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — C25
+Complete app.py for Social Social Platform - V4 10Link — C30
+
+# C30 Changes (from C25):
+# BELONGING INTEGRATION — AI WEEKLY SUMMARY + PROGRESS INSIGHTS:
+# 1. generate_progress_insights(): Added avg_belonging parameter with positive/low
+#    insight translations in EN/HE/AR/RU. Belonging uses the standard scale
+#    (higher = better) matching mood/energy/sleep/activity.
+# 2. AI Weekly Summary (/api/ai/weekly-summary):
+#    a. days_data loop: social_belonging now included in per-day entries sent to AI
+#    b. _safe_score(): social_belonging contributes to the best/worst day calculation
+#    c. Averages: avg_belonging computed and added to param_avgs for top/low detection
+#    d. context_lines: "Average belonging" line added to AI context summary
+#    e. System prompt: updated to describe 6 parameters (was 5), names belonging
+#    f. Fallback path: belonging data collected and passed to generate_progress_insights
+# 3. AI Reflection Prompt (/api/ai/reflection-prompt): social_belonging added to
+#    entry data so the AI can reference it when generating reflection questions.
+# 4. Self-progress endpoint: avg_belonging now passed to generate_progress_insights().
+# 5. Cache version bumped to C30 in all HTML files.
 
 # C25 Changes (from C20):
 # C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
@@ -14376,7 +14393,7 @@ def get_progress():
             user_language = 'en'
         
         # Generate insights including anxiety with user's language
-        insights = generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, len(params), avg_anxiety, user_language)
+        insights = generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, len(params), avg_anxiety, user_language, avg_belonging)
         
         return jsonify({
             'dates': dates,
@@ -14579,7 +14596,7 @@ def get_user_progress(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, total_entries, avg_anxiety=None, language='en'):
+def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, total_entries, avg_anxiety=None, language='en', avg_belonging=None):
     """Generate personalized insights based on averages. Diary values are 1-4, chart Y-axis is 1-5."""
     
     # PJ6003: Insight translations
@@ -14598,6 +14615,8 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
             'activity_low': 'Consider increasing your physical activity for better well-being.',
             'anxiety_high': 'Anxiety levels appear elevated. Consider relaxation techniques or speaking with a professional.',
             'anxiety_good': 'Good anxiety management!',
+            'belonging_strong': 'Your sense of social connection has been strong this period!',
+            'belonging_low': 'Your sense of belonging has been lower recently. Consider reaching out to someone you trust.',
             'making_progress': "You're making progress! Continue tracking for more detailed insights."
         },
         'he': {
@@ -14614,6 +14633,8 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
             'activity_low': 'שקול/י להגביר את הפעילות הגופנית שלך לרווחה טובה יותר.',
             'anxiety_high': 'רמות החרדה נראות מוגברות. שקול/י טכניקות הרגעה או שיחה עם מומחה.',
             'anxiety_good': 'ניהול חרדה טוב!',
+            'belonging_strong': 'תחושת החיבור החברתי שלך הייתה חזקה בתקופה זו!',
+            'belonging_low': 'תחושת השייכות שלך הייתה נמוכה לאחרונה. שקול/י לפנות למישהו שאת/ה סומך/ת עליו.',
             'making_progress': 'את/ה מתקדם/ת! המשך/י לעקוב לתובנות מפורטות יותר.'
         },
         'ar': {
@@ -14630,6 +14651,8 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
             'activity_low': 'فكر في زيادة نشاطك البدني لرفاهية أفضل.',
             'anxiety_high': 'يبدو أن مستويات القلق مرتفعة. فكر في تقنيات الاسترخاء أو التحدث مع متخصص.',
             'anxiety_good': 'إدارة قلق جيدة!',
+            'belonging_strong': 'إحساسك بالارتباط الاجتماعي كان قويًا في هذه الفترة!',
+            'belonging_low': 'إحساسك بالانتماء كان أقل مؤخرًا. فكر في التواصل مع شخص تثق به.',
             'making_progress': 'أنت تحرز تقدمًا! استمر في التتبع للحصول على رؤى أكثر تفصيلاً.'
         },
         'ru': {
@@ -14646,6 +14669,8 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
             'activity_low': 'Подумайте об увеличении физической активности для лучшего самочувствия.',
             'anxiety_high': 'Уровень тревожности повышен. Подумайте о техниках релаксации или консультации специалиста.',
             'anxiety_good': 'Хорошее управление тревожностью!',
+            'belonging_strong': 'Ваше чувство социальной связи было сильным в этот период!',
+            'belonging_low': 'Ваше чувство принадлежности было ниже в последнее время. Подумайте о том, чтобы связаться с кем-то, кому доверяете.',
             'making_progress': 'Вы делаете успехи! Продолжайте отслеживать для более детальных советов.'
         }
     }
@@ -14692,6 +14717,13 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
             insights.append(t['anxiety_high'])
         elif avg_anxiety <= 2:
             insights.append(t['anxiety_good'])
+    
+    # C30: Belonging insights (higher = better, like mood)
+    if avg_belonging is not None:
+        if avg_belonging >= 3:
+            insights.append(t['belonging_strong'])
+        elif avg_belonging <= 2:
+            insights.append(t['belonging_low'])
     
     if not insights:
         insights.append(t['making_progress'])
@@ -14819,6 +14851,7 @@ def ai_weekly_summary():
                     entry['calmness'] = 5 - int(p.anxiety)
                 else:
                     entry['anxiety'] = int(p.anxiety)
+            if getattr(p, 'social_belonging', None): entry['belonging'] = int(p.social_belonging)  # C30
             notes = getattr(p, 'notes', None)
             if notes:
                 # G13: Strip reflection markers and feedback tags before sending to AI
@@ -14834,7 +14867,7 @@ def ai_weekly_summary():
         def _safe_score(p):
             """Sum available parameters for a single entry (higher = better day)."""
             total, count = 0, 0
-            for attr in ['mood', 'energy', 'sleep_quality', 'physical_activity']:
+            for attr in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'social_belonging']:
                 v = getattr(p, attr, None)
                 if v: total += int(v); count += 1
             anx = getattr(p, 'anxiety', None)
@@ -14860,9 +14893,10 @@ def ai_weekly_summary():
         avg_energy = _avg('energy')
         avg_sleep = _avg('sleep_quality')
         avg_activity = _avg('physical_activity')
+        avg_belonging = _avg('social_belonging')  # C30
 
         # Find which parameter is strongest and weakest
-        param_avgs = {'mood': avg_mood, 'energy': avg_energy, 'sleep': avg_sleep, 'activity': avg_activity}
+        param_avgs = {'mood': avg_mood, 'energy': avg_energy, 'sleep': avg_sleep, 'activity': avg_activity, 'belonging': avg_belonging}
         valid_avgs = {k: v for k, v in param_avgs.items() if v is not None}
         top_param = max(valid_avgs, key=valid_avgs.get) if valid_avgs else None
         low_param = min(valid_avgs, key=valid_avgs.get) if valid_avgs else None
@@ -14887,6 +14921,7 @@ def ai_weekly_summary():
         if avg_energy: context_lines.append(f"Average energy: {avg_energy}/4")
         if avg_sleep: context_lines.append(f"Average sleep: {avg_sleep}/4")
         if avg_activity: context_lines.append(f"Average activity: {avg_activity}/4")
+        if avg_belonging: context_lines.append(f"Average belonging: {avg_belonging}/4")  # C30
         context_lines.append(f"Best day: {best_day_name} (avg score {round(best_day_p[1], 1)}/4)")
         if highlights['worst_day']:
             context_lines.append(f"Hardest day: {worst_day_name} (avg score {round(worst_day_p[1], 1)}/4)")
@@ -14900,8 +14935,8 @@ def ai_weekly_summary():
             "You are a warm, perceptive well-being companion for TheraSocial, a social wellness platform. "
             "You analyze a user's daily well-being check-in data and produce a brief, encouraging weekly summary "
             "that feels personal — like a caring friend who's been paying attention. "
-            "The data uses a 1-4 scale where 1=lowest and 4=highest for mood, energy, sleep quality, and physical activity. "
-            f"The fifth parameter is {calmness_label} (also 1-4, where {'4=most calm' if ANXIETY_DISPLAY_MODE == 'calm' else '4=most anxious'}). "
+            "The data uses a 1-4 scale where 1=lowest and 4=highest for mood, energy, sleep quality, physical activity, and social belonging (sense of connection). "
+            f"The sixth parameter is {calmness_label} (also 1-4, where {'4=most calm' if ANXIETY_DISPLAY_MODE == 'calm' else '4=most anxious'}). "
             "\n\nGuidelines:"
             "\n- Keep your response to 3-5 sentences. Be genuinely warm but never patronizing or clinical."
             "\n- Highlight specific patterns: correlations between sleep and mood, activity and energy, streaks of improvement."
@@ -14943,14 +14978,16 @@ def ai_weekly_summary():
             sleeps = [getattr(p, 'sleep_quality', None) for p in params]
             activities = [getattr(p, 'physical_activity', None) for p in params]
             anxieties = [getattr(p, 'anxiety', None) for p in params]
+            belongings = [getattr(p, 'social_belonging', None) for p in params]  # C30
             moods = [int(v) for v in moods if v]
             energies = [int(v) for v in energies if v]
             sleeps = [int(v) for v in sleeps if v]
             activities = [int(v) for v in activities if v]
             anxieties = [int(v) for v in anxieties if v]
+            belongings = [int(v) for v in belongings if v]  # C30
             fallback = generate_progress_insights(
                 safe_avg(moods), safe_avg(energies), safe_avg(sleeps), safe_avg(activities),
-                len(params), safe_avg(anxieties), user_language
+                len(params), safe_avg(anxieties), user_language, safe_avg(belongings)
             )
             return jsonify({'summary': fallback, 'ai_generated': False, 'days_count': len(params), 'highlights': highlights})
 
@@ -15003,6 +15040,7 @@ def ai_reflection_prompt():
                 entry['calmness'] = 5 - int(latest.anxiety)
             else:
                 entry['anxiety'] = int(latest.anxiety)
+        if getattr(latest, 'social_belonging', None): entry['belonging'] = int(latest.social_belonging)  # C30
         today_notes = getattr(latest, 'notes', None) or ''
         if today_notes:
             entry['notes'] = today_notes[:150]
