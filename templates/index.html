@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- C30: Cache version bumped to C30. Backend-only AI changes.
+<!-- C30: Cache version bumped to C30. Check-in history popup averages now include anxiety + belonging.
 <!-- C25 Changes (from C20):
   C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
   1. FIX: Progress page now shows avg anxiety and avg belonging (were in API but not displayed)
@@ -17997,6 +17997,8 @@ async function showUserCheckinHistory(userId, username) {
                         ${data.avgEnergy ? ' · ' + t.energy + ': ' + data.avgEnergy : ''}
                         ${data.avgSleep ? ' · ' + t.sleep + ': ' + data.avgSleep : ''}
                         ${data.avgActivity ? ' · ' + t.activity + ': ' + data.avgActivity : ''}
+                        ${data.avgAnxiety ? ' · ' + t.anxiety + ': ' + data.avgAnxiety : ''}
+                        ${data.avgBelonging ? ' · ' + t.belonging + ': ' + data.avgBelonging : ''}
                     </div>
                 </div>`;
             listContainer.innerHTML = summaryHTML + listHTML;
