@@ -1,6 +1,100 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — G60
+Complete app.py for Social Social Platform - V4 10Link — C25
+
+# C25 Changes (from C20):
+# C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
+# 1. FIX: Three p.date.strftime() calls in progress endpoints lacked hasattr
+#    guard. SavedParameters.date is db.Column(db.String(10)); calling .strftime()
+#    on a string crashes with AttributeError if the driver returns a str instead
+#    of a date object. Added hasattr(..., 'strftime') guard to match safe pattern
+#    used in 7 other locations across the file.
+# 2. FIX: Stale comment "always include all 5 params" updated to 6 (social_belonging).
+# 3. FIX: Duplicate comment "Find or create parameter entry" consolidated.
+# 4. Cache version bumped to C25 in all HTML files.
+
+# C20 Changes (from C15):
+# C15 AUDIT — DEBUG & GLITCH REMOVAL:
+# 1. FIX: param_snapshot 'date' field called .isoformat() on a String column
+#    (db.Column(db.String(10))). Python str has no .isoformat() method; this
+#    would crash on every save after commit. Changed to str(params.date) which
+#    is a no-op on strings but safe if the column type ever changes.
+# 2. FIX: GDPR data_categories transparency list (privacy dashboard endpoint)
+#    was missing 'social belonging' — added to match actual stored data.
+# 3. FIX: Normalized social_belonging access in save_parameters response to
+#    use direct attribute access matching the other 5 params (column exists
+#    in ORM model since C15 migration).
+# 4. Cache version bumped to C20 in all HTML files.
+
+# C15 Changes (from C13):
+# BENNY FEEDBACK ROUND — 4 ITEMS:
+# 1. FIX: Privacy reset on quick checkin from home page. When save_parameters()
+#    creates a NEW SavedParameters row (no existing entry for today), privacy
+#    columns defaulted to 'private' (the ORM default). Now carries forward
+#    privacy settings from the user's most recent entry, so quick check-in
+#    from the home page preserves the user's established privacy preferences.
+# 2. ADDED: social_belonging parameter — new column on SavedParameters for
+#    "satisfaction with social belonging" (שייכות). Includes social_belonging_privacy.
+#    Added to save_parameters(), get_parameters(), today-status, user/summary,
+#    to_dict(), set-default-privacy, and param_snapshot. Adds 6th parameter
+#    to diary and home page grid (mobile symmetry: 2×3 or 3×2).
+# 3. MIGRATION: ensure_saved_parameters_schema() extended to add social_belonging
+#    and social_belonging_privacy columns if missing.
+# 4. Cache version bumped to C15 in all HTML files.
+
+# C13 Changes (from C9):
+# OBJECTIVE GROUPS — ROUND 3 HARDENING:
+# 1. REFACTOR: Extracted _verify_operator_group_scope(user, group_id) helper.
+#    Replaces 5 identical scope-check blocks across list_group_members,
+#    delete_objective_group, remove_group_member, create_dept_operator,
+#    invite_group_user. Single source of truth reduces bug surface.
+# 2. FIX: create_org_manager() — tracks actual scope creation count. If group_ids
+#    were provided but no valid scopes created (all IDs invalid/nonexistent),
+#    falls back to 'all' scope with a warning log instead of leaving the org
+#    manager with zero scopes (unreachable dashboard).
+# 3. FIX: create_dept_operator() — now auto-adds the dept operator as a group member.
+#    Per V3H the dept operator is the org's direct support figure; without membership
+#    they were invisible in group member lists and stats.
+# 4. FIX: invite_group_user() — group.name in invite email HTML now escaped via
+#    markupsafe to prevent XSS injection through crafted group names.
+# 5. FIX: create_objective_group() — auto-scope now also skips for admin role
+#    (was only checking for 'all' scope; admins may have no OperatorScope records).
+# 6. Cache version bumped to C13 in all HTML files.
+
+# C9 Changes (from C7):
+# OBJECTIVE GROUPS — ROUND 2 DEBUG, DEMO-READINESS:
+# 1. FIX: list_group_members() — replaced N+1 per-member db.session.get() loop with a
+#    single joined query (ObjectiveGroupMembership JOIN User). O(1) instead of O(N).
+# 2. FIX: delete_objective_group() — captured group.name BEFORE db.session.delete()+commit().
+#    After commit the ORM-detached group object would raise DetachedInstanceError on .name.
+# 3. FIX: create_org_manager() — each item in group_ids is now validated as int.
+#    Previously, a non-integer element (e.g. "abc") would silently pass through
+#    db.session.get(ObjectiveGroup, "abc") returning None, skipping scope creation
+#    with no error feedback.
+# 4. FIX: create_objective_group() — creating operator now auto-receives an OperatorScope
+#    record for the new group (scope_type='group'). Previously, a dept operator who
+#    created a group couldn't manage it unless admin manually added scope.
+# 5. ADDED: POST /api/objective-groups/<group_id>/remove-member — operator removes a user
+#    from a group. Scope-checked. Returns updated member count.
+# 6. Cache version bumped to C9 in all HTML files.
+
+# C7 Changes (from G60/C5):
+# OBJECTIVE GROUPS — DEBUG, GLITCH REMOVAL, DEMO HARDENING:
+# 1. FIX: _build_operator_scope_filter() — if all scopes are 'group' type but no
+#    scope_value parses to a valid int, the filter list was empty → operator saw ALL
+#    users. Now returns an impossible filter (User.id == -1) for empty group_ids when
+#    at least one 'group' scope was declared. Prevents scope bypass on bad data.
+# 2. FIX: my_objective_groups() — added db.session.rollback() in error handler for
+#    consistency with other read endpoints.
+# 3. FIX: create_org_manager() — group_ids now validated as a list; non-list input
+#    returns 400 instead of causing a runtime TypeError on iteration.
+# 4. ADDED: GET /api/objective-groups/<group_id>/members — returns members of a group.
+#    @operator_required + scope check. Essential for demo (operators see their people).
+# 5. ADDED: DELETE /api/objective-groups/<group_id> — operator/admin deletes a group.
+#    Cascades membership deletion. For demo cleanup and management.
+# 6. FIX: invite_group_user() — existing-user branch now returns the user_id consistently
+#    with the new-user branch response shape (added 'username' field).
+# 7. Cache version bumped to C7 in all HTML files.
 
 # G60 Changes (from G25):
 # 1. FIX: Added ai_checkin_feedback to ensure_notification_settings_schema() required_columns.
@@ -3478,6 +3572,7 @@ def ensure_saved_parameters_schema():
                 'sleep_quality': 'INTEGER',
                 'physical_activity': 'INTEGER',
                 'anxiety': 'INTEGER',
+                'social_belonging': 'INTEGER',  # C15: Social belonging satisfaction
                 'updated_at': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
             }
 
@@ -3487,7 +3582,8 @@ def ensure_saved_parameters_schema():
                 'energy_privacy': 'VARCHAR(20) DEFAULT \'private\'',
                 'sleep_quality_privacy': 'VARCHAR(20) DEFAULT \'private\'',
                 'physical_activity_privacy': 'VARCHAR(20) DEFAULT \'private\'',
-                'anxiety_privacy': 'VARCHAR(20) DEFAULT \'private\''
+                'anxiety_privacy': 'VARCHAR(20) DEFAULT \'private\'',
+                'social_belonging_privacy': 'VARCHAR(20) DEFAULT \'private\''  # C15
             }
 
             # Combine all required columns
@@ -3649,7 +3745,8 @@ def auto_migrate_database():
                     columns = [col['name'] for col in inspector.get_columns(params_table)]
 
                     privacy_columns = ['mood_privacy', 'energy_privacy', 'sleep_quality_privacy',
-                                       'physical_activity_privacy', 'anxiety_privacy']
+                                       'physical_activity_privacy', 'anxiety_privacy',
+                                       'social_belonging_privacy']
 
                     for col in privacy_columns:
                         if col not in columns:
@@ -4537,6 +4634,8 @@ class SavedParameters(db.Model):
     sleep_quality_privacy = db.Column(db.String(20), default='private')
     physical_activity_privacy = db.Column(db.String(20), default='private')
     anxiety_privacy = db.Column(db.String(20), default='private')
+    social_belonging = db.Column(db.Integer)  # C15: Social belonging satisfaction
+    social_belonging_privacy = db.Column(db.String(20), default='private')  # C15
     notes = db.Column(db.Text)
     # NP1: notes_privacy NOT in ORM - prevents UndefinedColumn. Access via getattr().
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -4569,12 +4668,14 @@ class SavedParameters(db.Model):
                 'sleep_quality': self.sleep_quality,
                 'physical_activity': self.physical_activity,
                 'anxiety': self.anxiety,
+                'social_belonging': getattr(self, 'social_belonging', None),  # C15
                 'notes': self.notes,
                 'mood_privacy': self.mood_privacy,
                 'energy_privacy': self.energy_privacy,
                 'sleep_quality_privacy': self.sleep_quality_privacy,
                 'physical_activity_privacy': self.physical_activity_privacy,
                 'anxiety_privacy': self.anxiety_privacy,
+                'social_belonging_privacy': getattr(self, 'social_belonging_privacy', None) or 'private',  # C15
                 'notes_privacy': notes_priv
             })
             return base_dict
@@ -4586,16 +4687,18 @@ class SavedParameters(db.Model):
                 'sleep_quality': self.sleep_quality,
                 'physical_activity': self.physical_activity,
                 'anxiety': self.anxiety,
+                'social_belonging': getattr(self, 'social_belonging', None),  # C15
                 'mood_privacy': self.mood_privacy,
                 'energy_privacy': self.energy_privacy,
                 'sleep_quality_privacy': self.sleep_quality_privacy,
                 'physical_activity_privacy': self.physical_activity_privacy,
                 'anxiety_privacy': self.anxiety_privacy,
+                'social_belonging_privacy': getattr(self, 'social_belonging_privacy', None) or 'private',  # C15
                 'notes': self.notes,
                 'notes_privacy': notes_priv  # NP1: raw SQL read (or pre-fetched)
             })
         else:
-            for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
+            for param in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging']:
                 param_privacy = getattr(self, f"{param}_privacy", 'public')
                 # T800q: Non-hierarchical circle visibility
                 # public → visible to ANY circle member (public, class_b, class_a)
@@ -8372,7 +8475,7 @@ def get_data_processing_info():
                 'name': 'Well-Being Tracking',
                 'purpose': 'To provide well-being diary and tracking features',
                 'legal_basis': 'Contract performance and consent',
-                'data_categories': ['mood', 'energy', 'sleep quality', 'physical activity', 'anxiety', 'notes'],
+                'data_categories': ['mood', 'energy', 'sleep quality', 'physical activity', 'anxiety', 'social belonging', 'notes'],
                 'retention': DATA_RETENTION_PERIODS['wellness_data']['period'],
                 'recipients': ['You', 'Users you grant access to via circles'],
                 'cross_border': False
@@ -12256,7 +12359,8 @@ def get_parameters():
                         'energy': int(params.energy) if params.energy else 0,
                         'sleep_quality': int(params.sleep_quality) if params.sleep_quality else 0,
                         'physical_activity': int(params.physical_activity) if params.physical_activity else 0,
-                        'anxiety': int(params.anxiety) if params.anxiety else 0
+                        'anxiety': int(params.anxiety) if params.anxiety else 0,
+                        'social_belonging': int(params.social_belonging) if params.social_belonging else 0
                     },
                     # ADD ALL PRIVACY SETTINGS HERE
                     'mood_privacy': params.mood_privacy or 'private',
@@ -12264,6 +12368,7 @@ def get_parameters():
                     'sleep_quality_privacy': params.sleep_quality_privacy or 'private',
                     'physical_activity_privacy': params.physical_activity_privacy or 'private',
                     'anxiety_privacy': params.anxiety_privacy or 'private',
+                    'social_belonging_privacy': params.social_belonging_privacy or 'private',
                     'notes': params.notes or '',
                     'notes_privacy': _get_notes_privacy(params.id)  # NP1
                 }
@@ -12277,7 +12382,8 @@ def get_parameters():
                         'energy': 0,
                         'sleep_quality': 0,
                         'physical_activity': 0,
-                        'anxiety': 0
+                        'anxiety': 0,
+                        'social_belonging': 0
                     },
                     # ADD DEFAULT PRIVACY SETTINGS
                     'mood_privacy': 'private',
@@ -12285,6 +12391,7 @@ def get_parameters():
                     'sleep_quality_privacy': 'private',
                     'physical_activity_privacy': 'private',
                     'anxiety_privacy': 'private',
+                    'social_belonging_privacy': 'private',
                     'notes': '',
                     'notes_privacy': 'private'  # NP1
                 }
@@ -12330,7 +12437,6 @@ def save_parameters():
             return jsonify({'error': 'Invalid date format'}), 400
 
         # Find or create parameter entry
-        # Find or create parameter entry
         params = SavedParameters.query.filter_by(
             user_id=user_id,
             date=date_str
@@ -12341,9 +12447,24 @@ def save_parameters():
                 user_id=user_id,
                 date=date_str
             )
+            # C15 FIX: Carry forward privacy settings from most recent entry
+            # so quick check-in from home page doesn't reset privacy to 'private'
+            try:
+                recent = SavedParameters.query.filter_by(user_id=user_id)\
+                    .order_by(SavedParameters.date.desc()).first()
+                if recent:
+                    for _pf in ['mood_privacy', 'energy_privacy', 'sleep_quality_privacy',
+                                'physical_activity_privacy', 'anxiety_privacy',
+                                'social_belonging_privacy']:
+                        _pv = getattr(recent, _pf, None)
+                        if _pv:
+                            setattr(params, _pf, _pv)
+                    logger.info(f"[C15] Carried forward privacy from {recent.date} for new entry {date_str}")
+            except Exception as pf_err:
+                logger.warning(f"[C15] Could not carry forward privacy: {pf_err}")
 
         # Update values - ENSURE INTEGER CONVERSION
-        for field in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
+        for field in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging']:
             if field in data:
                 value = data[field]
                 if value is not None:
@@ -12393,7 +12514,7 @@ def save_parameters():
                     pass
         
         # PJ809: Log parameter values before trigger check
-        logger.info(f"[SAVE PARAMS] Saved: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}")
+        logger.info(f"[SAVE PARAMS] Saved: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}, belonging={getattr(params, 'social_belonging', None)}")
         
         # PJ6006: Run trigger processing in background thread to avoid blocking response
         # This prevents the 5+ second delay when multiple alert emails need to be sent
@@ -12407,13 +12528,15 @@ def save_parameters():
             'sleep_quality': params.sleep_quality,
             'physical_activity': params.physical_activity,
             'anxiety': params.anxiety,
+            'social_belonging': getattr(params, 'social_belonging', None),  # C15
             'mood_privacy': getattr(params, 'mood_privacy', 'private'),
             'energy_privacy': getattr(params, 'energy_privacy', 'private'),
             'sleep_quality_privacy': getattr(params, 'sleep_quality_privacy', 'private'),
             'physical_activity_privacy': getattr(params, 'physical_activity_privacy', 'private'),
             'anxiety_privacy': getattr(params, 'anxiety_privacy', 'private'),
+            'social_belonging_privacy': getattr(params, 'social_belonging_privacy', 'private'),  # C15
             'notes_privacy': _get_notes_privacy(params.id),  # NP1
-            'date': params.date.isoformat() if params.date else None,  # PJ6016: Must be string for JSON
+            'date': str(params.date) if params.date else None,  # C20 FIX: date is String(10), no .isoformat()
             'notes': params.notes
         }
         
@@ -12456,7 +12579,8 @@ def save_parameters():
                     'energy': int(params.energy) if params.energy else 0,
                     'sleep_quality': int(params.sleep_quality) if params.sleep_quality else 0,
                     'physical_activity': int(params.physical_activity) if params.physical_activity else 0,
-                    'anxiety': int(params.anxiety) if params.anxiety else 0
+                    'anxiety': int(params.anxiety) if params.anxiety else 0,
+                    'social_belonging': int(params.social_belonging) if params.social_belonging else 0
                 },
                 'notes': params.notes or '',
                 'notes_privacy': _get_notes_privacy(params.id)  # NP1
@@ -12526,7 +12650,7 @@ def set_default_privacy():
         param = data.get('parameter')
         privacy = data.get('privacy')
 
-        valid_params = ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'notes']
+        valid_params = ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging', 'notes']
         valid_privacy = ['public', 'class_a', 'class_b', 'private']
 
         if param not in valid_params:
@@ -13898,7 +14022,7 @@ def get_today_status():
             return jsonify({
                 'has_entry_today': False,
                 'has_complete_entry_today': False,
-                'missing_fields': ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'],
+                'missing_fields': ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging'],
                 'date': today_str
             })
         
@@ -13924,6 +14048,10 @@ def get_today_status():
         anxiety_val = getattr(entry, 'anxiety', None)
         if not anxiety_val or anxiety_val == 0:
             missing_fields.append('anxiety')
+        
+        belonging_val = getattr(entry, 'social_belonging', None)  # C15
+        if not belonging_val or belonging_val == 0:
+            missing_fields.append('social_belonging')
         
         has_complete = len(missing_fields) == 0
         
@@ -13961,7 +14089,8 @@ def get_user_summary():
                 'energy': getattr(latest_entry, 'energy', None),
                 'sleep_quality': getattr(latest_entry, 'sleep_quality', None),
                 'physical_activity': getattr(latest_entry, 'physical_activity', None),
-                'anxiety': getattr(latest_entry, 'anxiety', None)
+                'anxiety': getattr(latest_entry, 'anxiety', None),
+                'social_belonging': getattr(latest_entry, 'social_belonging', None)
             }
         
         # Calculate diary streak
@@ -13997,7 +14126,7 @@ def get_user_summary():
         completed_today = False
         if today_entry:
             missing = []
-            for field in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
+            for field in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging']:
                 val = getattr(today_entry, field, None)
                 if not val or val == 0:
                     missing.append(field)
@@ -14101,6 +14230,10 @@ def should_redirect_to_diary():
         if not anxiety_val or anxiety_val == 0:
             missing_fields.append('anxiety')
         
+        belonging_val = getattr(entry, 'social_belonging', None)  # C15
+        if not belonging_val or belonging_val == 0:
+            missing_fields.append('social_belonging')
+        
         has_complete = len(missing_fields) == 0
         
         logger.info(f"Diary check for user {user_id}: complete={has_complete}, missing={missing_fields}")
@@ -14165,6 +14298,7 @@ def get_progress():
         sleep_data = []
         activity_data = []
         anxiety_data = []  # FIX #2: Added anxiety
+        belonging_data = []  # C15
         
         def safe_int(val):
             """Convert value to int, handling strings and None. Diary values are 1-4."""
@@ -14187,7 +14321,7 @@ def get_progress():
                 return None
         
         for p in params:
-            dates.append(p.date.strftime('%m/%d'))
+            dates.append(p.date.strftime('%m/%d') if hasattr(p.date, 'strftime') else str(p.date))
             
             # Get mood value (try different column names)
             mood_val = getattr(p, 'mood', None) or getattr(p, 'mood_rating', None)
@@ -14208,6 +14342,10 @@ def get_progress():
             # FIX #2: Get anxiety value
             anxiety_val = getattr(p, 'anxiety', None) or getattr(p, 'anxiety_level', None)
             anxiety_data.append(safe_int(anxiety_val))
+
+            # C15: Get belonging value
+            belonging_val = getattr(p, 'social_belonging', None)
+            belonging_data.append(safe_int(belonging_val))
         
         # Calculate averages
         def calc_avg(data):
@@ -14219,6 +14357,7 @@ def get_progress():
         avg_sleep = calc_avg(sleep_data)
         avg_activity = calc_avg(activity_data)
         avg_anxiety = calc_avg(anxiety_data)  # FIX #2: Added anxiety average
+        avg_belonging = calc_avg(belonging_data)  # C15
         
         # PJ6009: Get language from query parameter first, then fall back to user preference
         user_language = request.args.get('lang', None)
@@ -14246,12 +14385,14 @@ def get_progress():
             'sleep': sleep_data,
             'activity': activity_data,
             'anxiety': anxiety_data,  # FIX #2: Added anxiety data
+            'belonging': belonging_data,  # C15
             'totalCheckins': len(params),
             'avgMood': avg_mood,
             'avgEnergy': avg_energy,
             'avgSleep': avg_sleep,
             'avgActivity': avg_activity,
             'avgAnxiety': avg_anxiety,  # FIX #2: Added anxiety average
+            'avgBelonging': avg_belonging,  # C15
             'insights': insights
         })
         
@@ -14336,6 +14477,7 @@ def get_user_progress(user_id):
         sleep_data = []
         activity_data = []
         anxiety_data = []
+        belonging_data = []  # C15
         checkin_list = []
         
         def safe_int(val):
@@ -14356,7 +14498,7 @@ def get_user_progress(user_id):
                 return None
         
         for p in params:
-            date_str = p.date.strftime('%m/%d')
+            date_str = p.date.strftime('%m/%d') if hasattr(p.date, 'strftime') else str(p.date)
             dates.append(date_str)
             
             # Apply privacy per parameter
@@ -14365,24 +14507,27 @@ def get_user_progress(user_id):
             sleep_privacy = getattr(p, 'sleep_quality_privacy', 'public') or 'public'
             activity_privacy = getattr(p, 'physical_activity_privacy', 'public') or 'public'
             anxiety_privacy = getattr(p, 'anxiety_privacy', 'public') or 'public'
+            belonging_privacy = getattr(p, 'social_belonging_privacy', 'public') or 'public'  # C15
             
             mood_val = safe_int(getattr(p, 'mood', None)) if can_see(mood_privacy) else None
             energy_val = safe_int(getattr(p, 'energy', None)) if can_see(energy_privacy) else None
             sleep_val = safe_int(getattr(p, 'sleep_quality', None)) if can_see(sleep_privacy) else None
             activity_val = safe_int(getattr(p, 'physical_activity', None)) if can_see(activity_privacy) else None
             anxiety_val = safe_int(getattr(p, 'anxiety', None)) if can_see(anxiety_privacy) else None
+            belonging_val = safe_int(getattr(p, 'social_belonging', None)) if can_see(belonging_privacy) else None  # C15
             
             mood_data.append(mood_val)
             energy_data.append(energy_val)
             sleep_data.append(sleep_val)
             activity_data.append(activity_val)
             anxiety_data.append(anxiety_val)
+            belonging_data.append(belonging_val)  # C15
             
-            # T45: Build checkin list entry — always include all 5 params.
+            # T45: Build checkin list entry — always include all 6 params.
             # Shows actual value if accessible, 'N/A' if privacy-blocked, omits if no data recorded.
             # This matches the trigger/parameters modal which shows "Private" for blocked params.
             checkin_entry = {
-                'date': p.date.strftime('%Y-%m-%d'),
+                'date': p.date.strftime('%Y-%m-%d') if hasattr(p.date, 'strftime') else str(p.date),
                 'date_display': date_str
             }
             raw_mood = safe_int(getattr(p, 'mood', None))
@@ -14390,6 +14535,7 @@ def get_user_progress(user_id):
             raw_sleep = safe_int(getattr(p, 'sleep_quality', None))
             raw_activity = safe_int(getattr(p, 'physical_activity', None))
             raw_anxiety = safe_int(getattr(p, 'anxiety', None))
+            raw_belonging = safe_int(getattr(p, 'social_belonging', None))  # C15
 
             for key, raw_val, visible_val, privacy in [
                 ('mood', raw_mood, mood_val, mood_privacy),
@@ -14397,6 +14543,7 @@ def get_user_progress(user_id):
                 ('sleep', raw_sleep, sleep_val, sleep_privacy),
                 ('activity', raw_activity, activity_val, activity_privacy),
                 ('anxiety', raw_anxiety, anxiety_val, anxiety_privacy),
+                ('belonging', raw_belonging, belonging_val, belonging_privacy),
             ]:
                 if can_see(privacy):
                     if visible_val is not None:
@@ -14417,12 +14564,14 @@ def get_user_progress(user_id):
             'sleep': sleep_data,
             'activity': activity_data,
             'anxiety': anxiety_data,
+            'belonging': belonging_data,  # C15
             'totalCheckins': len(params),
             'avgMood': calc_avg(mood_data),
             'avgEnergy': calc_avg(energy_data),
             'avgSleep': calc_avg(sleep_data),
             'avgActivity': calc_avg(activity_data),
             'avgAnxiety': calc_avg(anxiety_data),
+            'avgBelonging': calc_avg(belonging_data),  # C15
             'checkins': checkin_list
         })
     except Exception as e:
@@ -17833,6 +17982,20 @@ def admin_job_queue_stats():
 # G27: OBJECTIVE GROUPS API
 # =====================
 
+# C13: Extracted scope verification helper — single source of truth for 5+ endpoints
+def _verify_operator_group_scope(user, group_id):
+    """C13: Check if an operator has scope over a specific group.
+    Returns True if access granted, False if denied.
+    Admins always pass. Operators need 'all' scope or matching 'group' scope."""
+    if user.role in ('admin',):
+        return True
+    user_scopes = OperatorScope.query.filter_by(operator_id=user.id).all()
+    return any(
+        s.scope_type == 'all' or
+        (s.scope_type == 'group' and s.scope_value == str(group_id))
+        for s in user_scopes
+    )
+
 @app.route('/api/objective-groups', methods=['GET'])
 @login_required
 def list_objective_groups():
@@ -17873,6 +18036,7 @@ def my_objective_groups():
         memberships = ObjectiveGroupMembership.query.filter_by(user_id=session['user_id']).all()
         return jsonify({'groups': [m.to_dict() for m in memberships]})
     except Exception as e:
+        db.session.rollback()  # C7: defensive rollback on read failure
         logger.error(f"[G27] Error fetching my groups: {str(e)}")
         return jsonify({'error': 'Failed to fetch groups'}), 500
 
@@ -17982,6 +18146,23 @@ def create_objective_group():
             created_by=session['user_id']
         )
         db.session.add(group)
+        db.session.flush()  # C9: flush to get group.id for scope assignment
+
+        # C9: Auto-assign scope so the creator can manage the new group.
+        # C13: Skip for admin role (they bypass scope via role check) AND for 'all' scope.
+        creator = db.session.get(User, session['user_id'])
+        if creator.role not in ('admin',):
+            has_all_scope = db.session.execute(
+                select(OperatorScope).filter_by(operator_id=creator.id, scope_type='all')
+            ).scalars().first()
+            if not has_all_scope:
+                auto_scope = OperatorScope(
+                    operator_id=creator.id,
+                    scope_type='group',
+                    scope_value=str(group.id)
+                )
+                db.session.add(auto_scope)
+
         db.session.commit()
 
         logger.info(f"[G27] Group created: '{name}' by user {session['user_id']}")
@@ -17991,6 +18172,131 @@ def create_objective_group():
         db.session.rollback()
         logger.error(f"[G27] Error creating group: {str(e)}")
         return jsonify({'error': 'Failed to create group'}), 500
+
+
+# C7: View group members — operator sees who is in a specific group (demo-critical)
+@app.route('/api/objective-groups/<int:group_id>/members', methods=['GET'])
+@operator_required
+def list_group_members(group_id):
+    """C7: List members of an objective group. Operator-only, scoped."""
+    try:
+        group = db.session.get(ObjectiveGroup, group_id)
+        if not group:
+            return jsonify({'error': 'Group not found'}), 404
+
+        # Verify the requesting operator has scope over this group
+        user = db.session.get(User, session['user_id'])
+        if not _verify_operator_group_scope(user, group_id):  # C13: use helper
+            return jsonify({'error': 'You do not have scope over this group'}), 403
+
+        # C9: Single joined query instead of N+1 per-member get()
+        rows = db.session.execute(
+            select(
+                User.id, User.username, User.email, User.role,
+                ObjectiveGroupMembership.joined_at
+            ).join(
+                ObjectiveGroupMembership, User.id == ObjectiveGroupMembership.user_id
+            ).filter(
+                ObjectiveGroupMembership.group_id == group_id
+            ).order_by(User.username)
+        ).all()
+
+        members = [{
+            'user_id': r[0],
+            'username': r[1],
+            'email': r[2],
+            'role': r[3],
+            'joined_at': r[4].isoformat() if r[4] else None
+        } for r in rows]
+
+        return jsonify({'group': group.to_dict(), 'members': members})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[C7] Error listing group members: {str(e)}")
+        return jsonify({'error': 'Failed to list group members'}), 500
+
+
+# C7: Delete a group — operator/admin can remove a group and all memberships
+@app.route('/api/objective-groups/<int:group_id>', methods=['DELETE'])
+@operator_required
+@require_csrf
+def delete_objective_group(group_id):
+    """C7: Delete an objective group and cascade-remove all memberships."""
+    try:
+        group = db.session.get(ObjectiveGroup, group_id)
+        if not group:
+            return jsonify({'error': 'Group not found'}), 404
+
+        # Verify scope
+        user = db.session.get(User, session['user_id'])
+        if not _verify_operator_group_scope(user, group_id):  # C13: use helper
+            return jsonify({'error': 'You do not have scope over this group'}), 403
+
+        # C9: Capture name before delete — ORM detaches object after commit
+        group_name = group.name
+
+        # Remove all memberships first
+        ObjectiveGroupMembership.query.filter_by(group_id=group_id).delete()
+        # Remove any operator scopes referencing this group
+        OperatorScope.query.filter_by(scope_type='group', scope_value=str(group_id)).delete()
+        # Delete the group
+        db.session.delete(group)
+        db.session.commit()
+
+        logger.info(f"[C7] Group {group_id} ({group_name}) deleted by user {session['user_id']}")
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[C7] Error deleting group: {str(e)}")
+        return jsonify({'error': 'Failed to delete group'}), 500
+
+
+# C9: Operator removes a user from a group
+@app.route('/api/objective-groups/<int:group_id>/remove-member', methods=['POST'])
+@operator_required
+@require_csrf
+def remove_group_member(group_id):
+    """C9: Operator removes a user from a group. Scope-checked."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data'}), 400
+        user_id = data.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        try:
+            user_id = int(user_id)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid user_id'}), 400
+
+        group = db.session.get(ObjectiveGroup, group_id)
+        if not group:
+            return jsonify({'error': 'Group not found'}), 404
+
+        # Verify scope
+        operator = db.session.get(User, session['user_id'])
+        if not _verify_operator_group_scope(operator, group_id):  # C13: use helper
+            return jsonify({'error': 'You do not have scope over this group'}), 403
+
+        membership = ObjectiveGroupMembership.query.filter_by(
+            user_id=user_id, group_id=group_id
+        ).first()
+        if not membership:
+            return jsonify({'error': 'User is not a member of this group'}), 400
+
+        db.session.delete(membership)
+        db.session.commit()
+
+        remaining = ObjectiveGroupMembership.query.filter_by(group_id=group_id).count()
+        logger.info(f"[C9] User {user_id} removed from group {group_id} by operator {session['user_id']}")
+        return jsonify({'success': True, 'member_count': remaining})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[C9] Error removing group member: {str(e)}")
+        return jsonify({'error': 'Failed to remove member'}), 500
 
 
 # G27: Account provisioning — admin creates org manager (system_operator scoped to groups)
@@ -18007,6 +18313,8 @@ def create_org_manager():
         username = sanitize_input(data.get('username', '').strip())[:80]
         password = data.get('password', '')
         group_ids = data.get('group_ids', [])  # List of group IDs this manager oversees
+        if not isinstance(group_ids, list):  # C7: validate type to prevent runtime TypeError
+            return jsonify({'error': 'group_ids must be a list'}), 400
 
         if not email or not password:
             return jsonify({'error': 'Email and password required'}), 400
@@ -18037,7 +18345,12 @@ def create_org_manager():
         db.session.add(profile)
 
         # Create scope records for each group
+        scopes_created = 0  # C13: track actual creations
         for gid in group_ids:
+            try:
+                gid = int(gid)  # C9: validate each item is a valid int
+            except (ValueError, TypeError):
+                continue  # skip invalid entries
             group = db.session.get(ObjectiveGroup, gid)
             if group:
                 scope = OperatorScope(
@@ -18046,9 +18359,13 @@ def create_org_manager():
                     scope_value=str(gid)
                 )
                 db.session.add(scope)
+                scopes_created += 1
 
-        # If no groups specified, default to 'all' scope
-        if not group_ids:
+        # C13: Fall back to 'all' scope if no scopes were actually created.
+        # Covers: empty group_ids list, all IDs invalid, all IDs nonexistent.
+        if scopes_created == 0:
+            if group_ids:
+                logger.warning(f"[C13] Org manager {email}: group_ids {group_ids} yielded 0 valid scopes — falling back to 'all'")
             scope = OperatorScope(
                 operator_id=org_manager.id,
                 scope_type='all',
@@ -18100,15 +18417,8 @@ def create_dept_operator():
 
         # Verify the creating operator has scope over this group
         creator = db.session.get(User, session['user_id'])
-        if creator.role not in ('admin',):
-            creator_scopes = OperatorScope.query.filter_by(operator_id=creator.id).all()
-            has_access = any(
-                s.scope_type == 'all' or
-                (s.scope_type == 'group' and s.scope_value == str(group_id))
-                for s in creator_scopes
-            )
-            if not has_access:
-                return jsonify({'error': 'You do not have scope over this group'}), 403
+        if not _verify_operator_group_scope(creator, group_id):  # C13: use helper
+            return jsonify({'error': 'You do not have scope over this group'}), 403
 
         # Check existing
         if db.session.execute(select(User).filter_by(email=email)).scalars().first():
@@ -18139,6 +18449,10 @@ def create_dept_operator():
             scope_value=str(group_id)
         )
         db.session.add(scope)
+
+        # C13: Auto-add dept operator as group member (V3H: direct support figure for org)
+        dept_membership = ObjectiveGroupMembership(user_id=dept_op.id, group_id=group_id)
+        db.session.add(dept_membership)
 
         db.session.commit()
         logger.info(f"[G27] Dept operator created: {email} for group {group_id} ({group.name})")
@@ -18181,15 +18495,8 @@ def invite_group_user():
 
         # Verify scope
         creator = db.session.get(User, session['user_id'])
-        if creator.role not in ('admin',):
-            creator_scopes = OperatorScope.query.filter_by(operator_id=creator.id).all()
-            has_access = any(
-                s.scope_type == 'all' or
-                (s.scope_type == 'group' and s.scope_value == str(group_id))
-                for s in creator_scopes
-            )
-            if not has_access:
-                return jsonify({'error': 'You do not have scope over this group'}), 403
+        if not _verify_operator_group_scope(creator, group_id):  # C13: use helper
+            return jsonify({'error': 'You do not have scope over this group'}), 403
 
         # Check if email already registered
         existing_user = db.session.execute(select(User).filter_by(email=email)).scalars().first()
@@ -18204,7 +18511,7 @@ def invite_group_user():
             db.session.add(membership)
             db.session.commit()
             logger.info(f"[G27] Existing user {email} added to group {group_id}")
-            return jsonify({'success': True, 'message': 'Existing user added to group', 'user_id': existing_user.id})
+            return jsonify({'success': True, 'message': 'Existing user added to group', 'user_id': existing_user.id, 'username': existing_user.username})
 
         # Generate temporary password
         temp_password = secrets.token_urlsafe(12)
@@ -18251,16 +18558,18 @@ def invite_group_user():
         if resend_key:
             try:
                 import resend as resend_module
+                from markupsafe import escape as html_escape  # C13: prevent XSS in email
                 resend_module.api_key = resend_key
                 base_url = os.environ.get('BASE_URL', 'https://therasocial.org')
                 from_email = os.environ.get('RESEND_FROM_EMAIL', 'noreply@therasocial.org')
+                safe_group_name = str(html_escape(group.name))  # C13: escape
                 resend_module.Emails.send({
                     'from': from_email,
                     'to': [email],
                     'subject': f'You have been invited to join {group.name} on TheraSocial',
                     'html': f'''
                         <h2>Welcome to TheraSocial</h2>
-                        <p>You have been invited to join the group <strong>{group.name}</strong>.</p>
+                        <p>You have been invited to join the group <strong>{safe_group_name}</strong>.</p>
                         <p>Your temporary login credentials:</p>
                         <p><strong>Email:</strong> {email}<br>
                         <strong>Password:</strong> {temp_password}</p>
@@ -18400,6 +18709,10 @@ def _build_operator_scope_filter(operator_user):
             ObjectiveGroupMembership.group_id.in_(group_ids)
         ).distinct().scalar_subquery()
         filters.append(User.id.in_(member_subq))
+    elif any(s.scope_type == 'group' for s in scopes):
+        # C7 FIX: 'group' scopes were declared but no valid IDs parsed.
+        # Without this guard, filters would be empty → operator sees ALL users.
+        filters.append(User.id == -1)  # Impossible condition = see nobody
 
     return filters
 
@@ -20016,11 +20329,12 @@ def get_friends_updates():
                 'mood': 'mood_privacy', 'energy': 'energy_privacy',
                 'sleep_quality': 'sleep_quality_privacy',
                 'physical_activity': 'physical_activity_privacy',
-                'anxiety': 'anxiety_privacy'
+                'anxiety': 'anxiety_privacy',
+                'social_belonging': 'social_belonging_privacy'
             }
             
             visible_params = []
-            for param_name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
+            for param_name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging']:
                 value = getattr(latest_params, param_name, None)
                 if value:
                     param_privacy = getattr(latest_params, privacy_map[param_name], 'public') or 'public'
@@ -20169,7 +20483,8 @@ def get_user_parameters_for_triggers(user_id):
             'energy': 'energy_privacy',
             'sleep_quality': 'sleep_quality_privacy',
             'physical_activity': 'physical_activity_privacy',
-            'anxiety': 'anxiety_privacy'
+            'anxiety': 'anxiety_privacy',
+            'social_belonging': 'social_belonging_privacy'
         }
 
         # Get last 30 days
@@ -20192,7 +20507,7 @@ def get_user_parameters_for_triggers(user_id):
                     continue
 
             # Add each parameter as separate entry - V4 FIX: only if privacy allows
-            for param_name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety']:
+            for param_name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging']:
                 value = getattr(param, param_name, None)
                 if value:
                     # L170: Professional bypass — skip privacy check
