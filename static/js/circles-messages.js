@@ -1,4 +1,11 @@
 // Circles and Messages Management System with i18n support
+// C25: Cache-buster sync to C25; no functional changes in this file
+// C20: Cache-buster sync to C20; no functional changes in this file
+// C15: Added message draft saving — drafts auto-save to localStorage per recipient,
+//   restore when conversation is reopened, clear on successful send.
+// C13: Cache-buster version sync to C13; no functional changes in this file
+// C9: Cache-buster version sync to C9; no functional changes in this file
+// C7: Cache-buster version sync to C7; no functional changes in this file
 // G15: Cache-buster version sync; no functional changes in this file
 // G13: Cache-buster version sync; no functional changes in this file
 
@@ -1891,6 +1898,14 @@ function selectConversation(recipientId, recipientName) {
     if (inputEl) inputEl.disabled = false;
     if (sendBtn) sendBtn.disabled = false;
 
+    // C15: Restore draft for this recipient
+    if (inputEl) {
+        try {
+            const draft = localStorage.getItem('msg_draft_' + recipientId);
+            inputEl.value = draft || '';
+        } catch (e) { /* localStorage unavailable */ }
+    }
+
     // Display messages
     displayConversationMessages(recipientId);
 
@@ -1975,6 +1990,11 @@ async function sendMessage() {
         }
 
         input.value = '';
+
+        // C15: Clear draft after successful send
+        if (currentRecipient && currentRecipient.id) {
+            try { localStorage.removeItem('msg_draft_' + currentRecipient.id); } catch (e) {}
+        }
 
         // Reload messages
         await loadMessages();
@@ -2128,6 +2148,19 @@ if (window.i18n && window.i18n.applyLanguage) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
+            }
+        });
+        // C15: Auto-save draft on typing
+        messageInput.addEventListener('input', () => {
+            if (currentRecipient && currentRecipient.id) {
+                try {
+                    const val = messageInput.value;
+                    if (val) {
+                        localStorage.setItem('msg_draft_' + currentRecipient.id, val);
+                    } else {
+                        localStorage.removeItem('msg_draft_' + currentRecipient.id);
+                    }
+                } catch (e) { /* localStorage unavailable */ }
             }
         });
     }

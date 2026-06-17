@@ -1,3 +1,10 @@
+// Version C25 - Cache-buster sync to C25; no functional changes in this file
+// Version C20 - Cache-buster sync to C20; no functional changes in this file
+// Version C15 - Added social_belonging parameter to PARAMETER_CATEGORIES and all parameter lists.
+//   Privacy carry-forward for quick-checkin is now backend-side (appC15.py).
+// Version C13 - Cache-buster sync to C13; no functional changes in this file
+// Version C9 - Cache-buster sync to C9; no functional changes in this file
+// Version C7 - Cache-buster sync to C7; no functional changes in this file
 // Version G15 - Cache-buster sync; no functional changes in this file from G13
 // Version G13 - Fixes from G11 audit:
 //   - loadPostSaveAI: config cached in sessionStorage (avoids fetch on every V3 save)
@@ -202,7 +209,7 @@ function saveParameterState(date) {
     const state = {};
 
     // Save all parameter values AND privacy settings
-    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging'].forEach(param => {
         // Find selected rating button
         const selected = document.querySelector(`.rating-button.selected[data-category="${param}"]`);
         if (selected) {
@@ -236,7 +243,7 @@ function saveParameterState(date) {
 
 // Add function to restore state
 function restoreParameterState(state) {
-    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging'].forEach(param => {
         if (state[param]) {
             const button = document.querySelector(`.rating-button[data-category="${param}"][data-value="${state[param]}"]`);
             if (button) {
@@ -325,7 +332,7 @@ async function applyPrivacyToAllDays(categoryId) {
     const privacy = (window.selectedPrivacy && window.selectedPrivacy[categoryId]) || 'private';
     const privacyLabels = { 'private': 'Private', 'class_a': 'Family', 'class_b': 'Close Friends', 'public': 'General' };
     const label = privacyLabels[privacy] || privacy;
-    const paramLabels = { 'mood': 'Mood', 'energy': 'Energy', 'sleep_quality': 'Sleep Quality', 'physical_activity': 'Physical Activity', 'anxiety': (window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calmness' : 'Anxiety'), 'notes': 'Notes' };
+    const paramLabels = { 'mood': 'Mood', 'energy': 'Energy', 'sleep_quality': 'Sleep Quality', 'physical_activity': 'Physical Activity', 'anxiety': (window.ANXIETY_DISPLAY_MODE === 'calm' ? 'Calmness' : 'Anxiety'), 'social_belonging': 'Belonging', 'notes': 'Notes' };
     const paramLabel = paramLabels[categoryId] || categoryId;
 
     const confirmMsg = pt('parameters.confirm_apply_all_days') ||
@@ -387,7 +394,7 @@ async function loadMostRecentPrivacySettings() {
         if (!recentResult.success || !recentResult.data) return;
         
         // Apply privacy settings from the most recent entry
-        ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+        ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging'].forEach(param => {
             const privacyKey = `${param}_privacy`;
             const privacyValue = recentResult.data[privacyKey] || 'private';
             
@@ -698,6 +705,15 @@ const PARAMETER_CATEGORIES = [
         max: 4,
         endEmojis: ['😊', '😔'],  // EM1: REVERSED — low(1)=calm/best, high(4)=overwhelming/worst — matches home page anxietyEmojis
         reversedScale: true
+    },
+    {
+        id: 'social_belonging',
+        emoji: '🤝',
+        nameKey: 'parameters.social_belonging',
+        descriptionKey: 'parameters.social_belonging_desc',
+        min: 1,
+        max: 4,
+        endEmojis: ['😞', '🫂']  // C15: low=disconnected, high=strongly connected
     }
 ];
 
@@ -1167,7 +1183,7 @@ function initializeParameters() {
 
     // Set default privacy to public for all parameters (matches backend default)
     // These will be overwritten when we auto-load today's saved data
-    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'notes'].forEach(param => {
+    ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging', 'notes'].forEach(param => {
         if (!window.selectedPrivacy[param]) {
             window.selectedPrivacy[param] = 'private';
         }
@@ -1377,7 +1393,7 @@ function initializeParameters() {
                     
                     if (hasRealData) {
                         // Load privacy settings from today's saved data
-                        ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+                        ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging'].forEach(param => {
                             const privacyKey = `${param}_privacy`;
                             const privacyValue = result.data[privacyKey] || 'private';
                             
@@ -2937,11 +2953,13 @@ async function saveParameters() {
         physical_activity: selectedRatings.physical_activity || null,
         // T8: Convert anxiety from display value back to storage value
         anxiety: window.anxietyToStorage ? window.anxietyToStorage(selectedRatings.anxiety) : (selectedRatings.anxiety || null),
+        social_belonging: selectedRatings.social_belonging || null,
         mood_privacy: window.selectedPrivacy.mood || 'private',
         energy_privacy: window.selectedPrivacy.energy || 'private',
         sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
         physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
         anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
+        social_belonging_privacy: window.selectedPrivacy.social_belonging || 'private',
         notes_privacy: window.selectedPrivacy.notes || 'private',  // NP1
         notes: notes
     };
@@ -3054,7 +3072,7 @@ async function loadParameters(showMsg = true) {
             // filled day's privacy settings instead of resetting everything to 'private'.
             if (hasRealData) {
                 // Load privacy settings for each parameter
-                ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety'].forEach(param => {
+                ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging'].forEach(param => {
                     const privacyKey = `${param}_privacy`;
                     // Check both direct property and nested in data - FIXED to load from correct location
                     const privacyValue = result.data[privacyKey] || result.data[param + '_privacy'] || 'private';

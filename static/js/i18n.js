@@ -1,4 +1,15 @@
 // Language detection and translation system with backend sync
+// Version C25 - Added progress.avg_anxiety + progress.avg_belonging keys in EN/HE/AR/RU.
+// Version C20 - Removed duplicate parameters.social_belonging keys in English block.
+// Version C15 - Added social_belonging parameter translations (parameters.social_belonging,
+//   parameters.social_belonging_desc, tooltip.social_belonging, params.belonging) in EN/HE/AR/RU.
+//   Added notification settings description keys (settings.email_on_notification_desc,
+//   settings.email_on_alert_desc, settings.daily_diary_reminder_desc) in EN/HE/AR/RU.
+// Version C13 - Added objective_group.invalid_email key in EN/HE/AR/RU
+// Version C9 - Added objective_group.create_dept_op, .remove_member, .your_scope,
+//   .dept_op_created, .member_removed, .remove_member_confirm keys in EN/HE/AR/RU
+// Version C7 - Added objective_group.view_members, .no_members, .delete_group,
+//   .delete_confirm, .deleted keys in EN/HE/AR/RU for operator group management
 // Version G35 - Added objective_group.* translations (my_groups, join, leave, manage, invite,
 //   create, etc.) in EN/HE/AR/RU for the V3H Objective Groups feature
 // Version G15 - Cache-buster sync; no i18n changes from G13
@@ -633,6 +644,11 @@ const translations = {
     'params.exercise': 'Exercise',
     'params.stress': 'Anxiety',
     'params.stress_calm': 'Calmness',
+    'params.belonging': 'Belonging',  // C15
+    // C15: Notification setting descriptions
+    'settings.email_on_notification_desc': 'Receive an email when someone sends you a new message or connection request.',
+    'settings.email_on_alert_desc': 'Receive an email when a wellness trigger fires for a connection you are watching.',
+    'settings.daily_diary_reminder_desc': 'Get a daily email reminder to fill in your diary at the time you choose below.',
 
     // About page
     'about.title': 'About TheraSocial',
@@ -691,6 +707,7 @@ const translations = {
         'tooltip.physical_activity': 'This scale captures your overall physical activity - considering both how long and how intensely you moved today.\n1 = Minimal - Rest day, very light movement, or brief activity (under 15 min)\n2 = Light - Short activity (15-30 min) at easy pace, OR longer gentle movement (Examples: short walk, stretching, light household tasks)\n3 = Moderate - 30-60 min of moderate activity OR shorter vigorous activity (Examples: brisk walk, active errands, standard workout)\n4 = Substantial - Extended activity (60+ min), high-intensity workout, OR multiple activity sessions\n\nRemember: This tracks your movement patterns, not your worth. Rest is essential. The goal is awareness and gradual progress, not perfection.',
         'tooltip.anxiety': 'Anxiety is a normal human emotion that everyone experiences. This scale tracks how much anxiety interferes with your daily life, not whether you feel anxious at all.\n1 = Manageable - Feeling calm or any anxiety present doesn\'t interfere with activities\n2 = Noticeable - Some anxiety, but still able to do what you need to do\n3 = Challenging - Anxiety is making some activities difficult\n4 = Overwhelming - Anxiety is significantly interfering with daily functioning\n\nRemember: The goal isn\'t to eliminate all anxiety, but to keep it at levels where you can still engage with your life.',
         'tooltip.calm': 'This scale tracks your overall sense of calm and emotional ease.\n1 = Overwhelmed - Significant distress interfering with daily functioning\n2 = Uneasy - Noticeable tension making some activities difficult\n3 = Settled - Generally at ease, minor tension doesn\'t interfere\n4 = Serene - Feeling calm and emotionally balanced\n\nRemember: The goal isn\'t perfection, but maintaining levels where you can engage with your life.',
+        'tooltip.social_belonging': 'This tracks how connected and accepted you feel in your social world today.\n1 = Isolated - Feeling alone, disconnected, or excluded\n2 = Somewhat disconnected - Limited meaningful interaction, some loneliness\n3 = Moderately connected - Some satisfying social contact, generally included\n4 = Strongly connected - Feeling part of a community, accepted and valued\n\nRemember: Social needs vary from person to person. This isn\'t about quantity of interactions, but your sense of meaningful connection.',
 
         // Parameters page
         'parameters.title': 'Diary',
@@ -732,6 +749,8 @@ const translations = {
 'progress.avg_energy': 'Average energy level:',
 'progress.avg_sleep': 'Average sleep quality:',
 'progress.avg_activity': 'Average activity level:',
+'progress.avg_anxiety': 'Average anxiety level:',
+'progress.avg_belonging': 'Average belonging:',
         'parameters.no_saved': 'No saved diary for this date',
         'parameters.cleared': 'Diary cleared',
         'parameters.today_label': 'Today',
@@ -866,6 +885,8 @@ const translations = {
     'parameters.calmness': 'Calmness',
     'parameters.calm_desc': 'Level of calmness experienced',
     'parameters.calmness_desc': 'Level of calmness experienced',
+    'parameters.social_belonging': 'Belonging',
+    'parameters.social_belonging_desc': 'Satisfaction with social connection',
     'parameters.notes': 'Notes',
     'parameters.notes_placeholder': 'Additional thoughts for today...',
     'parameters.save': 'Save Diary',
@@ -1649,7 +1670,23 @@ const translations = {
         'objective_group.temp_password': 'Temporary password:',
         'objective_group.group_label': 'Group',
         'objective_group.group_dashboard': 'Group Dashboard',
-        'objective_group.load_error': 'Error loading groups'
+        'objective_group.load_error': 'Error loading groups',
+        'objective_group.view_members': 'View members',
+        'objective_group.no_members': 'No members yet',
+        'objective_group.delete_group': 'Delete group',
+        'objective_group.delete_confirm': 'Delete this group? All memberships will be removed.',
+        'objective_group.deleted': 'Group deleted',
+        'objective_group.your_scope': 'Your scope',
+        'objective_group.create_dept_op': 'Create Department Operator',
+        'objective_group.create_dept_op_btn': 'Create',
+        'objective_group.dept_op_created': 'Department operator created!',
+        'objective_group.dept_op_email_required': 'Email is required',
+        'objective_group.dept_op_password_short': 'Password must be at least 8 characters',
+        'objective_group.dept_op_group_required': 'Please select a group',
+        'objective_group.remove_member': 'Remove from group',
+        'objective_group.remove_member_confirm': 'Remove this user from the group?',
+        'objective_group.member_removed': 'Member removed',
+        'objective_group.invalid_email': 'Please enter a valid email address'
     },
 
     he: {
@@ -1805,6 +1842,10 @@ const translations = {
     'params.exercise': 'פעילות גופנית',
     'params.stress': 'חרדה',
     'params.stress_calm': 'רוגע',
+    'params.belonging': 'שייכות',  // C15
+    'settings.email_on_notification_desc': 'קבל מייל כשמישהו שולח לך הודעה חדשה או בקשת חיבור.',
+    'settings.email_on_alert_desc': 'קבל מייל כשטריגר בריאות מופעל עבור חיבור שאתה עוקב אחריו.',
+    'settings.daily_diary_reminder_desc': 'קבל תזכורת יומית במייל למלא את היומן בשעה שתבחר למטה.',
 
         'block.block_user': 'חסום',
     'block.unblock_user': 'בטל חסימה',
@@ -1830,6 +1871,7 @@ const translations = {
         'tooltip.physical_activity': 'סולם זה מתעד את הפעילות הגופנית הכוללת שלך - בהתחשב גם בכמה זמן וגם באיזו אינטנסיביות זזת היום.\n1 = מינימלי - יום מנוחה, תנועה קלה מאוד, או פעילות קצרה (פחות מ-15 דקות)\n2 = קל - פעילות קצרה (15-30 דקות) בקצב נוח, או תנועה עדינה ארוכה יותר (דוגמאות: הליכה קצרה, מתיחות, עבודות בית קלות)\n3 = בינוני - 30-60 דקות של פעילות מתונה או פעילות אינטנסיבית קצרה יותר (דוגמאות: הליכה מהירה, סידורים פעילים, אימון סטנדרטי)\n4 = משמעותי - פעילות ממושכת (60+ דקות), אימון בעצימות גבוהה, או מספר סשנים של פעילות\n\nזכור: זה עוקב אחר דפוסי התנועה שלך, לא הערך שלך. מנוחה חיונית. המטרה היא מודעות והתקדמות הדרגתית, לא שלמות.',
         'tooltip.anxiety': 'חרדה היא רגש אנושי נורמלי שכולם חווים. סולם זה עוקב אחר כמה החרדה מפריעה לחיי היומיום שלך, לא האם אתה מרגיש חרדה בכלל.\n1 = ניתן לניהול - מרגיש רגוע או כל חרדה קיימת לא מפריעה לפעילויות\n2 = מורגש - קצת חרדה, אבל עדיין מסוגל לעשות מה שצריך\n3 = מאתגר - החרדה מקשה על חלק מהפעילויות\n4 = מציף - החרדה מפריעה משמעותית לתפקוד היומיומי\n\nזכור: המטרה היא לא לחסל את כל החרדה, אלא לשמור אותה ברמות שבהן אתה עדיין יכול להיות מעורב בחייך.',
         'tooltip.calm': 'סולם זה עוקב אחר תחושת הרוגע והשלווה הרגשית שלך.\n1 = מוצף - מצוקה משמעותית המפריעה לתפקוד היומיומי\n2 = לא נוח - מתח מורגש המקשה על חלק מהפעילויות\n3 = מיושב - בדרך כלל רגוע, מתח קל לא מפריע\n4 = שליו - מרגיש רגוע ומאוזן רגשית\n\nזכור: המטרה היא לא שלמות, אלא לשמור על רמות שבהן אתה יכול להיות מעורב בחייך.',
+        'tooltip.social_belonging': 'סולם זה עוקב אחר תחושת החיבור והשייכות החברתית שלך היום.\n1 = מבודד - מרגיש לבד, מנותק או מודר\n2 = מנותק במקצת - אינטראקציה משמעותית מוגבלת, תחושת בדידות\n3 = מחובר באופן סביר - מגע חברתי מספק, מרגיש חלק מקבוצה\n4 = מחובר מאוד - מרגיש שייך לקהילה, מקובל ומוערך\n\nזכור: הצרכים החברתיים שונים מאדם לאדם. לא מדובר בכמות האינטראקציות, אלא בתחושת החיבור המשמעותי.',
 
             'parameters.select_date': 'בחר תאריך',
     'parameters.mood': 'מצב רוח',
@@ -1847,6 +1889,8 @@ const translations = {
     'parameters.calm': 'שלווה',
     'parameters.calmness': 'שלווה',
     'parameters.calm_desc': 'רמת השלווה שחוויתי',
+    'parameters.social_belonging': 'שייכות',
+    'parameters.social_belonging_desc': 'שביעות רצון מחיבור חברתי',
     'parameters.notes': 'הערות',
     'parameters.notes_placeholder': 'מחשבות נוספות להיום...',
  'reports.title': 'הפקת דוח',
@@ -2175,6 +2219,8 @@ const translations = {
 'progress.avg_energy': 'ממוצע אנרגיה:',
 'progress.avg_sleep': 'ממוצע איכות שינה:',
 'progress.avg_activity': 'ממוצע פעילות:',
+'progress.avg_anxiety': 'ממוצע חרדה:',
+'progress.avg_belonging': 'ממוצע שייכות:',
 
 // Circle labels (simplified)
 'circles.class_b': 'חברים קרובים',
@@ -3263,7 +3309,23 @@ const translations = {
         'objective_group.temp_password': 'סיסמה זמנית:',
         'objective_group.group_label': 'קבוצה',
         'objective_group.group_dashboard': 'לוח בקרה קבוצתי',
-        'objective_group.load_error': 'שגיאה בטעינת קבוצות'
+        'objective_group.load_error': 'שגיאה בטעינת קבוצות',
+        'objective_group.view_members': 'הצג חברים',
+        'objective_group.no_members': 'אין חברים עדיין',
+        'objective_group.delete_group': 'מחק קבוצה',
+        'objective_group.delete_confirm': 'למחוק את הקבוצה? כל החברויות יוסרו.',
+        'objective_group.deleted': 'הקבוצה נמחקה',
+        'objective_group.your_scope': 'בתחום שלך',
+        'objective_group.create_dept_op': 'צור מפעיל מחלקה',
+        'objective_group.create_dept_op_btn': 'צור',
+        'objective_group.dept_op_created': 'מפעיל מחלקה נוצר!',
+        'objective_group.dept_op_email_required': 'נדרש מייל',
+        'objective_group.dept_op_password_short': 'הסיסמה חייבת להכיל לפחות 8 תווים',
+        'objective_group.dept_op_group_required': 'נא לבחור קבוצה',
+        'objective_group.remove_member': 'הסר מהקבוצה',
+        'objective_group.remove_member_confirm': 'להסיר את המשתמש מהקבוצה?',
+        'objective_group.member_removed': 'החבר הוסר',
+        'objective_group.invalid_email': 'נא להזין כתובת מייל תקינה'
     },
 
     ar: {
@@ -3345,6 +3407,7 @@ const translations = {
         'tooltip.physical_activity': 'يلتقط هذا المقياس نشاطك البدني الإجمالي - مع الأخذ في الاعتبار المدة والشدة.\n1 = الحد الأدنى - يوم راحة، حركة خفيفة جداً، أو نشاط قصير (أقل من 15 دقيقة)\n2 = خفيف - نشاط قصير (15-30 دقيقة) بوتيرة سهلة، أو حركة لطيفة أطول (أمثلة: مشي قصير، تمدد، أعمال منزلية خفيفة)\n3 = معتدل - 30-60 دقيقة من النشاط المعتدل أو نشاط مكثف أقصر (أمثلة: مشي سريع، مهام نشطة، تمرين عادي)\n4 = كبير - نشاط ممتد (60+ دقيقة)، تمرين عالي الكثافة، أو جلسات نشاط متعددة\n\nتذكر: هذا يتتبع أنماط حركتك، وليس قيمتك. الراحة ضرورية. الهدف هو الوعي والتقدم التدريجي، وليس الكمال.',
         'tooltip.anxiety': 'القلق هو عاطفة إنسانية طبيعية يمر بها الجميع. يتتبع هذا المقياس مدى تأثير القلق على حياتك اليومية، وليس ما إذا كنت تشعر بالقلق أصلاً.\n1 = يمكن التحكم فيه - أشعر بالهدوء أو أي قلق موجود لا يتداخل مع الأنشطة\n2 = ملحوظ - بعض القلق، لكن لا أزال قادراً على فعل ما أحتاج إليه\n3 = صعب - القلق يجعل بعض الأنشطة صعبة\n4 = طاغٍ - القلق يتداخل بشكل كبير مع الأداء اليومي\n\nتذكر: الهدف ليس القضاء على كل القلق، بل الحفاظ عليه في مستويات يمكنك فيها الاستمرار في التفاعل مع حياتك.',
         'tooltip.calm': 'يتتبع هذا المقياس إحساسك العام بالهدوء والراحة النفسية.\n1 = مرهق - ضغط كبير يتدخل في الأداء اليومي\n2 = غير مرتاح - توتر ملحوظ يجعل بعض الأنشطة صعبة\n3 = مستقر - مرتاح بشكل عام، التوتر الخفيف لا يتدخل\n4 = هادئ - أشعر بالهدوء والتوازن النفسي\n\nتذكر: الهدف ليس الكمال، بل الحفاظ على مستويات يمكنك فيها التفاعل مع حياتك.',
+        'tooltip.social_belonging': 'يتتبع هذا المقياس مدى شعورك بالارتباط والانتماء الاجتماعي اليوم.\n1 = معزول - أشعر بالوحدة أو الانفصال أو الاستبعاد\n2 = منفصل نوعاً ما - تفاعل محدود ذو معنى، بعض الوحدة\n3 = مرتبط بشكل معقول - بعض التواصل الاجتماعي المُرضي\n4 = مرتبط بقوة - أشعر بالانتماء للمجتمع والقبول والتقدير\n\nتذكر: الاحتياجات الاجتماعية تختلف من شخص لآخر. لا يتعلق الأمر بكمية التفاعلات، بل بإحساسك بالارتباط المعنوي.',
 
            'parameters.select_date': 'اختر التاريخ',
     'parameters.mood': 'المزاج',
@@ -3362,6 +3425,8 @@ const translations = {
     'parameters.calm': 'السكينة',
     'parameters.calmness': 'السكينة',
     'parameters.calm_desc': 'مستوى السكينة المُجرب',
+    'parameters.social_belonging': 'الانتماء',
+    'parameters.social_belonging_desc': 'الرضا عن الارتباط الاجتماعي',
     'parameters.notes': 'ملاحظات',
     'parameters.notes_placeholder': 'أفكار إضافية لليوم...',
     'auth.create_account': 'إنشاء حساب',
@@ -3742,6 +3807,10 @@ const translations = {
     'params.exercise': 'التمارين',
     'params.stress': 'القلق',
     'params.stress_calm': 'الهدوء',
+    'params.belonging': 'الانتماء',  // C15
+    'settings.email_on_notification_desc': 'تلقي بريد إلكتروني عندما يرسل لك شخص رسالة جديدة أو طلب اتصال.',
+    'settings.email_on_alert_desc': 'تلقي بريد إلكتروني عند تفعيل تنبيه صحي لاتصال تراقبه.',
+    'settings.daily_diary_reminder_desc': 'احصل على تذكير يومي بالبريد الإلكتروني لملء يومياتك في الوقت الذي تختاره أدناه.',
 'invite.copy': 'نسخ الرابط',
 'invite.email': 'البريد الإلكتروني',
 'invite.sms': 'رسالة نصية',
@@ -3795,6 +3864,8 @@ const translations = {
 'progress.avg_energy': 'متوسط الطاقة:',
 'progress.avg_sleep': 'متوسط جودة النوم:',
 'progress.avg_activity': 'متوسط النشاط:',
+'progress.avg_anxiety': 'متوسط القلق:',
+'progress.avg_belonging': 'متوسط الانتماء:',
 
 // Circle labels (simplified)
 'circles.class_b': 'الأصدقاء المقربون',
@@ -4879,7 +4950,23 @@ const translations = {
         'objective_group.temp_password': 'كلمة مرور مؤقتة:',
         'objective_group.group_label': 'مجموعة',
         'objective_group.group_dashboard': 'لوحة المجموعة',
-        'objective_group.load_error': 'خطأ في تحميل المجموعات'
+        'objective_group.load_error': 'خطأ في تحميل المجموعات',
+        'objective_group.view_members': 'عرض الأعضاء',
+        'objective_group.no_members': 'لا يوجد أعضاء بعد',
+        'objective_group.delete_group': 'حذف المجموعة',
+        'objective_group.delete_confirm': 'حذف هذه المجموعة؟ ستتم إزالة جميع العضويات.',
+        'objective_group.deleted': 'تم حذف المجموعة',
+        'objective_group.your_scope': 'نطاقك',
+        'objective_group.create_dept_op': 'إنشاء مشغل قسم',
+        'objective_group.create_dept_op_btn': 'إنشاء',
+        'objective_group.dept_op_created': 'تم إنشاء مشغل القسم!',
+        'objective_group.dept_op_email_required': 'البريد الإلكتروني مطلوب',
+        'objective_group.dept_op_password_short': 'يجب أن تكون كلمة المرور 8 أحرف على الأقل',
+        'objective_group.dept_op_group_required': 'يرجى اختيار مجموعة',
+        'objective_group.remove_member': 'إزالة من المجموعة',
+        'objective_group.remove_member_confirm': 'إزالة هذا المستخدم من المجموعة؟',
+        'objective_group.member_removed': 'تمت إزالة العضو',
+        'objective_group.invalid_email': 'يرجى إدخال عنوان بريد إلكتروني صالح'
     },
 
     ru: {
@@ -4962,6 +5049,7 @@ const translations = {
         'tooltip.physical_activity': 'Эта шкала отражает вашу общую физическую активность - учитывая как продолжительность, так и интенсивность движения сегодня.\n1 = Минимально - День отдыха, очень лёгкое движение или короткая активность (менее 15 мин)\n2 = Лёгкая - Короткая активность (15-30 мин) в лёгком темпе ИЛИ более длительное мягкое движение (Примеры: короткая прогулка, растяжка, лёгкая домашняя работа)\n3 = Умеренная - 30-60 мин умеренной активности ИЛИ более короткая интенсивная активность (Примеры: быстрая прогулка, активные дела, стандартная тренировка)\n4 = Значительная - Продолжительная активность (60+ мин), высокоинтенсивная тренировка ИЛИ несколько сессий активности\n\nПомните: Это отслеживает ваши паттерны движения, а не вашу ценность. Отдых необходим. Цель - осознанность и постепенный прогресс, а не совершенство.',
         'tooltip.anxiety': 'Тревога - это нормальная человеческая эмоция, которую испытывает каждый. Эта шкала отслеживает, насколько тревога мешает вашей повседневной жизни, а не то, чувствуете ли вы тревогу вообще.\n1 = Управляемая - Чувствую спокойствие или любая присутствующая тревога не мешает деятельности\n2 = Заметная - Некоторая тревога, но всё ещё могу делать то, что нужно\n3 = Сложная - Тревога затрудняет некоторые виды деятельности\n4 = Подавляющая - Тревога значительно мешает повседневному функционированию\n\nПомните: Цель не в том, чтобы устранить всю тревогу, а в том, чтобы поддерживать её на уровнях, при которых вы всё ещё можете участвовать в своей жизни.',
         'tooltip.calm': 'Эта шкала отслеживает ваше общее чувство спокойствия и эмоционального комфорта.\n1 = Подавлен - Значительный стресс мешает повседневному функционированию\n2 = Неспокоен - Заметное напряжение затрудняет некоторые виды деятельности\n3 = Уравновешен - В целом спокоен, небольшое напряжение не мешает\n4 = Безмятежен - Чувствую спокойствие и эмоциональный баланс\n\nПомните: Цель не в совершенстве, а в поддержании уровней, при которых вы можете участвовать в своей жизни.',
+        'tooltip.social_belonging': 'Эта шкала отслеживает, насколько вы чувствуете себя связанным и принятым в вашем социальном мире сегодня.\n1 = Изолирован - Чувствую себя одиноким, отключённым или исключённым\n2 = Несколько отключён - Ограниченное значимое взаимодействие, некоторое одиночество\n3 = Умеренно связан - Некоторый удовлетворяющий социальный контакт, чувствую себя частью группы\n4 = Сильно связан - Чувствую принадлежность к сообществу, принятие и ценность\n\nПомните: Социальные потребности различаются у каждого человека. Речь идёт не о количестве взаимодействий, а о вашем ощущении значимой связи.',
 
          'parameters.select_date': 'Выберите дату',
     'parameters.mood': 'Настроение',
@@ -4979,6 +5067,8 @@ const translations = {
     'parameters.calm': 'Умиротворение',
     'parameters.calmness': 'Умиротворение',
     'parameters.calm_desc': 'Уровень испытанного умиротворения',
+    'parameters.social_belonging': 'Принадлежность',
+    'parameters.social_belonging_desc': 'Удовлетворённость социальной связью',
     'parameters.notes': 'Заметки',
     'parameters.notes_placeholder': 'Дополнительные мысли на сегодня...',
 
@@ -5039,6 +5129,10 @@ const translations = {
     'params.exercise': 'Упражнения',
     'params.stress': 'Тревожность',
     'params.stress_calm': 'Спокойствие',
+    'params.belonging': 'Принадлежность',  // C15
+    'settings.email_on_notification_desc': 'Получать письмо, когда кто-то отправляет вам новое сообщение или запрос на подключение.',
+    'settings.email_on_alert_desc': 'Получать письмо, когда срабатывает триггер здоровья для контакта, за которым вы наблюдаете.',
+    'settings.daily_diary_reminder_desc': 'Получать ежедневное напоминание по email заполнить дневник в выбранное вами время.',
     'support.quick_help': 'Быстрая помощь',
     'support.faq_link': 'Часто задаваемые вопросы',
     'support.help_center': 'Центр помощи',
@@ -5120,6 +5214,8 @@ const translations = {
 'progress.avg_energy': 'Средний уровень энергии:',
 'progress.avg_sleep': 'Среднее качество сна:',
 'progress.avg_activity': 'Средний уровень активности:',
+'progress.avg_anxiety': 'Средний уровень тревожности:',
+'progress.avg_belonging': 'Средняя принадлежность:',
 'menu.more': 'Меню',
 'menu.social': 'Социальное',
   'profile.birth_year': 'Год рождения',
@@ -6495,7 +6591,23 @@ const translations = {
         'objective_group.temp_password': 'Временный пароль:',
         'objective_group.group_label': 'Группа',
         'objective_group.group_dashboard': 'Панель группы',
-        'objective_group.load_error': 'Ошибка загрузки групп'
+        'objective_group.load_error': 'Ошибка загрузки групп',
+        'objective_group.view_members': 'Показать участников',
+        'objective_group.no_members': 'Пока нет участников',
+        'objective_group.delete_group': 'Удалить группу',
+        'objective_group.delete_confirm': 'Удалить эту группу? Все участники будут отсоединены.',
+        'objective_group.deleted': 'Группа удалена',
+        'objective_group.your_scope': 'Ваша зона',
+        'objective_group.create_dept_op': 'Создать оператора отдела',
+        'objective_group.create_dept_op_btn': 'Создать',
+        'objective_group.dept_op_created': 'Оператор отдела создан!',
+        'objective_group.dept_op_email_required': 'Требуется email',
+        'objective_group.dept_op_password_short': 'Пароль должен быть не менее 8 символов',
+        'objective_group.dept_op_group_required': 'Выберите группу',
+        'objective_group.remove_member': 'Удалить из группы',
+        'objective_group.remove_member_confirm': 'Удалить этого пользователя из группы?',
+        'objective_group.member_removed': 'Участник удалён',
+        'objective_group.invalid_email': 'Введите корректный адрес электронной почты'
     }
 };
 
