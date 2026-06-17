@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version C30 - Cache-buster sync to C30; backend-only AI changes.
 // Version C25 - Added progress.avg_anxiety + progress.avg_belonging keys in EN/HE/AR/RU.
 // Version C20 - Removed duplicate parameters.social_belonging keys in English block.
 // Version C15 - Added social_belonging parameter translations (parameters.social_belonging,
