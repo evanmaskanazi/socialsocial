@@ -1,4 +1,59 @@
 <!DOCTYPE html>
+<!-- C32: Cache version bumped to C32. In-app alert tone fix.
+<!-- C31: Cache version bumped to C31. Alert email tone fix (backend-only).
+<!-- C30: Cache version bumped to C30. Check-in history popup averages now include anxiety + belonging.
+<!-- C25 Changes (from C20):
+  C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
+  1. FIX: Progress page now shows avg anxiety and avg belonging (were in API but not displayed)
+  2. FIX: updateCheckinSummary JS populates avgAnxiety + avgBelonging elements
+  3. CACHE BUSTING: All JS references updated to ?v=C32
+-->
+<!-- C20 Changes (from C15):
+  C15 AUDIT — DEBUG & GLITCH REMOVAL:
+  1. FIX: Notification descriptions added to ALL 3 toggle sets (C15 only added to 1 of 3).
+     Mobile drawer + notificationSettingsPanel now match settingsNotificationPanel.
+  2. CACHE BUSTING: All JS references updated to ?v=C32
+-->
+<!-- C15 Changes (from C13):
+  BENNY FEEDBACK ROUND:
+  1. ADDED: Social Belonging parameter tile (6th) to home summary grid — 2×3 mobile symmetry
+  2. ADDED: social_belonging to paramMap, openParamQuickSet, all inline name maps, check-in history
+  3. FIX: Notification settings now have descriptive helper text under each toggle
+  4. CACHE BUSTING: All JS references updated to ?v=C32
+-->
+<!-- C13 Changes (from C9):
+  OBJECTIVE GROUPS — ROUND 3 HARDENING:
+  1. FIX: Dept operator form (c9DeptOpSection) now hidden for professional role —
+     only system_operator and admin see it (prevents confusing 403 on submit)
+  2. FIX: Delete button on group rows now only shown for groups in operator's scope
+  3. FIX: Remove-member no longer reloads entire group list (was collapsing open panel);
+     instead removes the row inline and updates badge count directly
+  4. FIX: c9CreateDeptOp now refreshes group member list after creation
+  5. FIX: Basic email format validation added to invite and dept-op forms client-side
+  6. FIX: Result areas (invite/dept-op) cleared when switching to operator tab
+  7. Cache-busters updated to C13
+-->
+<!-- C9 Changes (from C7):
+  OBJECTIVE GROUPS — ROUND 2 DEBUG, DEMO-READINESS:
+  1. ADDED: "Create Department Operator" form in operator dashboard — org managers
+     can create dept operators from UI (was API-only, critical for demo flow)
+  2. ADDED: Remove member (✕) button in expanded member list — operators can manage membership
+  3. FIX: Temp password on invite now shown in persistent inline result box (was 5s toast)
+  4. ADDED: Scope indicator badge on operator group rows — "Your scope" vs unmarked
+  5. FIX: Group operations now also refresh My Groups section in Profile tab
+  6. ADDED: Dark mode support for new dept operator form and result areas
+  7. Cache-busters updated to C9
+-->
+<!-- C7 Changes (from G60/C5):
+  OBJECTIVE GROUPS — DEBUG, GLITCH REMOVAL, DEMO HARDENING:
+  1. FIX: Cache busting updated from G60 to C7 across all JS references
+  2. ADDED: Operator group list now shows expandable member list per group
+  3. ADDED: Delete group button in operator dashboard (with confirmation)
+  4. ADDED: Group member count badge uses live count from members endpoint
+  5. FIX: Invite dropdown preserves selection after group list refresh
+  6. i18n: Added objective_group.view_members, .no_members, .delete_group,
+     .delete_confirm, .deleted, .member_role_* keys in EN/HE/AR/RU
+-->
 <!-- G60 Changes (from G25/G35):
   Notification Settings Stability Fixes:
   5. FIX: Toggle revert logic now handles all 3 settings across all toggle sets
@@ -80,7 +135,7 @@
   8. Auth card: refined shadow layers + subtle border
   9. Mobile nav items: active press scale feedback on tap
   10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
-  CACHE BUSTING: All JS references updated to ?v=G60
+  CACHE BUSTING: All JS references updated to ?v=C32
 -->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
@@ -382,7 +437,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=G60"></script>
+    <script src="/static/js/follow-requests.js?v=C32"></script>
 
 
     <style>
@@ -1627,6 +1682,21 @@
         .dark-mode #g27OpGroupList span[style*="E0E7FF"] {
             background: #1E1B4B !important;
             color: #A5B4FC !important;
+        }
+        /* C7: Dark mode for expandable member panels */
+        .dark-mode div[id^="g27Members_"] {
+            background: var(--light) !important;
+            border-color: #4B5563 !important;
+        }
+        .dark-mode div[id^="g27Members_"] span {
+            color: #D1D5DB !important;
+        }
+        /* C9: Dark mode for dept operator form and result areas */
+        .dark-mode #c9DeptOpSection input {
+            background: #1F2937 !important; color: #E5E7EB !important; border-color: #4B5563 !important;
+        }
+        .dark-mode #c9InviteResult, .dark-mode #c9DeptOpResult {
+            background: #1E3A2F !important; color: #A7F3D0 !important; border-color: #065F46 !important;
         }
         /* ================================================================== */
         /* END CLEAN3 WARM VIEW STYLING                                       */
@@ -5122,6 +5192,10 @@
                               <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.anxiety">Anxiety</div>
                               <div id="summaryStress" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
                           </div>
+                          <div class="param-mini" style="background: var(--white); padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;" onclick="openParamQuickSet('social_belonging')" title="Tap to set">
+                              <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.belonging">Belonging</div>
+                              <div id="summaryBelonging" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
+                          </div>
                       </div>
                   </div>
 
@@ -5280,6 +5354,8 @@
                               <p><span data-i18n="progress.avg_energy">Average energy level:</span> <strong id="avgEnergy">-</strong></p>
                               <p><span data-i18n="progress.avg_sleep">Average sleep quality:</span> <strong id="avgSleep">-</strong></p>
                               <p><span data-i18n="progress.avg_activity">Average activity level:</span> <strong id="avgActivity">-</strong></p>
+                              <p><span data-i18n="progress.avg_anxiety">Average anxiety level:</span> <strong id="avgAnxiety">-</strong></p>
+                              <p><span data-i18n="progress.avg_belonging">Average belonging:</span> <strong id="avgBelonging">-</strong></p>
                           </div>
                       </div>
                       
@@ -5956,6 +6032,7 @@
                                           <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
                                       </label>
                                   </div>
+                                  <div style="font-size: 0.8rem; color: var(--gray); margin-top: 6px;" data-i18n="settings.email_on_notification_desc">Receive an email when someone sends you a new message or connection request.</div>
                               </div>
 
                               <!-- New Alerts toggle -->
@@ -5967,6 +6044,7 @@
                                           <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
                                       </label>
                                   </div>
+                                  <div style="font-size: 0.8rem; color: var(--gray); margin-top: 6px;" data-i18n="settings.email_on_alert_desc">Receive an email when a wellness trigger fires for a connection you are watching.</div>
                               </div>
 
                               <!-- Diary Daily Reminder toggle -->
@@ -5978,6 +6056,7 @@
                                           <span class="settings-toggle-slider" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 26px; transition: .3s; cursor: pointer;"></span>
                                       </label>
                                   </div>
+                                  <div style="font-size: 0.8rem; color: var(--gray); margin-top: 6px;" data-i18n="settings.daily_diary_reminder_desc">Get a daily email reminder to fill in your diary at the time you choose below.</div>
                                   <!-- Reminder Time (shown when diary reminder is on) -->
                                   <div id="settingsReminderTimeContainer" style="display: none; margin-top: 12px; padding: 12px; background: rgba(107, 139, 164, 0.1); border-radius: 10px;">
                                       <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -6393,6 +6472,30 @@
                                           <button onclick="g27InviteUser()" style="padding: 8px 20px; background: #059669; color: white; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer;"
                                                   data-i18n="objective_group.invite_btn">Invite</button>
                                       </div>
+                                      <!-- C9: Persistent invite result area (temp password, etc.) -->
+                                      <div id="c9InviteResult" style="display: none; margin-top: 10px; padding: 10px 14px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 10px; font-size: 0.84rem; color: #065F46;"></div>
+                                  </div>
+
+                                  <!-- C9: Create Department Operator — org managers/admins create dept operators -->
+                                  <div id="c9DeptOpSection" style="background: var(--light); padding: 16px 20px; border-radius: 12px; margin-top: 16px;">
+                                      <h5 style="margin: 0 0 10px 0; font-size: 0.95rem; font-weight: 600; color: var(--dark);">
+                                          👤 <span data-i18n="objective_group.create_dept_op">Create Department Operator</span>
+                                      </h5>
+                                      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                          <input type="email" id="c9DeptOpEmail" placeholder="operator@example.com"
+                                                 style="flex: 1; min-width: 180px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 0.85rem;">
+                                          <input type="text" id="c9DeptOpUsername" data-i18n-placeholder="auth.username_placeholder"
+                                                 placeholder="Username (optional)"
+                                                 style="flex: 1; min-width: 140px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 0.85rem;">
+                                          <input type="password" id="c9DeptOpPassword" placeholder="Password (min 8)"
+                                                 style="width: 140px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 0.85rem;">
+                                          <select id="c9DeptOpGroupSelect" style="padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 0.85rem; min-width: 160px;">
+                                              <option value="" disabled selected data-i18n="objective_group.select_group">Select group...</option>
+                                          </select>
+                                          <button onclick="c9CreateDeptOp()" style="padding: 8px 20px; background: #7C3AED; color: white; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer;"
+                                                  data-i18n="objective_group.create_dept_op_btn">Create</button>
+                                      </div>
+                                      <div id="c9DeptOpResult" style="display: none; margin-top: 10px; padding: 10px 14px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 10px; font-size: 0.84rem; color: #065F46;"></div>
                                   </div>
                               </div>
 
@@ -6642,8 +6745,7 @@
                 <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
             </div>
         </div>
-        
-        <!-- PJ6001: Email on Notification Toggle (Messages, Followers, Invites) -->
+        <div style="font-size: 0.75rem; color: var(--gray); margin: -4px 0 8px 0; padding: 0 2px;" data-i18n="settings.email_on_alert_desc">Receive an email when a wellness trigger fires for a connection you are watching.</div>
         <div class="toggle-row">
             <label style="font-size: 13px; color: var(--dark);" data-i18n="notifications.email_on_notification">Email me on new notifications</label>
             <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
@@ -6655,6 +6757,7 @@
                 <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
             </div>
         </div>
+        <div style="font-size: 0.75rem; color: var(--gray); margin: -4px 0 8px 0; padding: 0 2px;" data-i18n="settings.email_on_notification_desc">Receive an email when someone sends you a new message or connection request.</div>
         
         <!-- Daily Diary Reminder Toggle -->
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -6668,6 +6771,7 @@
                 <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
             </div>
         </div>
+        <div style="font-size: 0.75rem; color: var(--gray); margin: -4px 0 8px 0; padding: 0 2px;" data-i18n="settings.daily_diary_reminder_desc">Get a daily email reminder to fill in your diary at the time you choose below.</div>
         
         <!-- Diary Reminder Time Input -->
         <div id="mobileDiaryReminderTimeContainer" style="display: none; margin-top: 10px; padding: 10px; background: var(--input-bg, #f5f5f5); border-radius: 8px;">
@@ -6741,6 +6845,7 @@
                             <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
                         </div>
                     </div>
+                    <div style="font-size: 0.7rem; color: var(--gray); margin: -2px 0 8px 0;" data-i18n="settings.email_on_alert_desc">Receive an email when a wellness trigger fires for a connection you are watching.</div>
                     
                     <!-- PJ6001: Email on Notification Toggle (Messages, Followers, Invites) -->
                     <div class="toggle-row">
@@ -6754,6 +6859,7 @@
                             <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
                         </div>
                     </div>
+                    <div style="font-size: 0.7rem; color: var(--gray); margin: -2px 0 8px 0;" data-i18n="settings.email_on_notification_desc">Receive an email when someone sends you a new message or connection request.</div>
                     
                     <!-- Daily Diary Reminder Toggle -->
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -6767,6 +6873,7 @@
                             <span class="toggle-on-label" style="font-size: 11px; color: #999;">ON</span>
                         </div>
                     </div>
+                    <div style="font-size: 0.7rem; color: var(--gray); margin: -2px 0 8px 0;" data-i18n="settings.daily_diary_reminder_desc">Get a daily email reminder to fill in your diary at the time you choose below.</div>
                     
                     <!-- Diary Reminder Time Input -->
                     <div id="diaryReminderTimeContainer" style="display: none; margin-top: 10px; padding: 10px; background: var(--input-bg, #f5f5f5); border-radius: 8px;">
@@ -7156,7 +7263,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=G60"></script>
+    <script src="/static/js/i18n.js?v=C32"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7170,7 +7277,10 @@
                 'settings.invitation_desc': 'Invite friends to join TheraSocial and build your support network.',
                 'settings.invite_btn': 'Go to Invitations',
                 'profile.timezone': 'Timezone',
-                'settings.notification_settings': 'Email Notification Options'
+                'settings.notification_settings': 'Email Notification Options',
+                'settings.email_on_notification_desc': 'Receive an email when someone sends you a new message or connection request.',
+                'settings.email_on_alert_desc': 'Receive an email when a wellness trigger fires for a connection you are watching.',
+                'settings.daily_diary_reminder_desc': 'Get a daily email reminder to fill in your diary at the time you choose below.'
             },
             he: {
                 'menu.settings': 'הגדרות',
@@ -7181,7 +7291,10 @@
                 'settings.invitation_desc': 'הזמן חברים להצטרף ל-TheraSocial ולבנות את רשת התמיכה שלך.',
                 'settings.invite_btn': 'עבור להזמנות',
                 'profile.timezone': 'אזור זמן',
-                'settings.notification_settings': 'אפשרויות התראה במייל'
+                'settings.notification_settings': 'אפשרויות התראה במייל',
+                'settings.email_on_notification_desc': 'קבל מייל כשמישהו שולח לך הודעה חדשה או בקשת חיבור.',
+                'settings.email_on_alert_desc': 'קבל מייל כשטריגר בריאות מופעל עבור חיבור שאתה עוקב אחריו.',
+                'settings.daily_diary_reminder_desc': 'קבל תזכורת יומית במייל למלא את היומן בשעה שתבחר למטה.'
             },
             ar: {
                 'menu.settings': 'الإعدادات',
@@ -7192,7 +7305,10 @@
                 'settings.invitation_desc': 'ادعُ الأصدقاء للانضمام إلى TheraSocial وبناء شبكة الدعم الخاصة بك.',
                 'settings.invite_btn': 'انتقل إلى الدعوات',
                 'profile.timezone': 'المنطقة الزمنية',
-                'settings.notification_settings': 'خيارات الإشعار عبر البريد'
+                'settings.notification_settings': 'خيارات الإشعار عبر البريد',
+                'settings.email_on_notification_desc': 'تلقي بريد إلكتروني عندما يرسل لك شخص رسالة جديدة أو طلب اتصال.',
+                'settings.email_on_alert_desc': 'تلقي بريد إلكتروني عند تفعيل تنبيه صحي لاتصال تراقبه.',
+                'settings.daily_diary_reminder_desc': 'احصل على تذكير يومي بالبريد الإلكتروني لملء يومياتك في الوقت الذي تختاره أدناه.'
             },
             ru: {
                 'menu.settings': 'Настройки',
@@ -7203,7 +7319,10 @@
                 'settings.invitation_desc': 'Пригласите друзей присоединиться к TheraSocial и создайте свою сеть поддержки.',
                 'settings.invite_btn': 'Перейти к приглашениям',
                 'profile.timezone': 'Часовой пояс',
-                'settings.notification_settings': 'Настройки уведомлений по email'
+                'settings.notification_settings': 'Настройки уведомлений по email',
+                'settings.email_on_notification_desc': 'Получать письмо, когда кто-то отправляет вам новое сообщение или запрос на подключение.',
+                'settings.email_on_alert_desc': 'Получать письмо, когда срабатывает триггер здоровья для контакта, за которым вы наблюдаете.',
+                'settings.daily_diary_reminder_desc': 'Получать ежедневное напоминание по email заполнить дневник в выбранное вами время.'
             }
         };
         // Extend i18n when ready
@@ -7439,9 +7558,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=G60"></script>
-   <script src="/static/js/circles-messages.js?v=G60"></script>
-<script src="/static/js/feed-updates.js?v=G60"></script>
+<script src="/static/js/parameters-social.js?v=C32"></script>
+   <script src="/static/js/circles-messages.js?v=C32"></script>
+<script src="/static/js/feed-updates.js?v=C32"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -17403,10 +17522,10 @@ function renderProgressChart(data) {
     // T8: Calm mode label variants
     const isCalm = window.ANXIETY_DISPLAY_MODE === 'calm';
     const chartLabels = {
-        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm ? 'Calmness' : 'Anxiety' },
-        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm ? 'רוגע' : 'חרדה' },
-        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm ? 'الهدوء' : 'القلق' },
-        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm ? 'Спокойствие' : 'Тревога' }
+        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm ? 'Calmness' : 'Anxiety', belonging: 'Belonging' },
+        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm ? 'רוגע' : 'חרדה', belonging: 'שייכות' },
+        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm ? 'الهدوء' : 'القلق', belonging: 'الانتماء' },
+        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm ? 'Спокойствие' : 'Тревога', belonging: 'Принадлежность' }
     };
     const labels_t = chartLabels[lang] || chartLabels['en'];
     
@@ -17454,6 +17573,15 @@ function renderProgressChart(data) {
             data: anxietyChartData,
             borderColor: '#FC8181',
             backgroundColor: 'rgba(252, 129, 129, 0.1)',
+            tension: 0.3,
+            fill: false
+        },
+        // C15: Added Belonging as 6th parameter
+        {
+            label: labels_t.belonging || 'Belonging',
+            data: data.belonging || [],
+            borderColor: '#38B2AC',
+            backgroundColor: 'rgba(56, 178, 172, 0.1)',
             tension: 0.3,
             fill: false
         }
@@ -17510,12 +17638,16 @@ function updateCheckinSummary(data) {
     const energyEl = document.getElementById('avgEnergy');
     const sleepEl = document.getElementById('avgSleep');
     const activityEl = document.getElementById('avgActivity');
+    const anxietyEl = document.getElementById('avgAnxiety');  // C25
+    const belongingEl = document.getElementById('avgBelonging');  // C25
     
     if (totalEl) totalEl.textContent = data.totalCheckins || 0;
     if (moodEl) moodEl.textContent = data.avgMood ? data.avgMood.toFixed(1) : '-';
     if (energyEl) energyEl.textContent = data.avgEnergy ? data.avgEnergy.toFixed(1) : '-';
     if (sleepEl) sleepEl.textContent = data.avgSleep ? data.avgSleep.toFixed(1) : '-';
     if (activityEl) activityEl.textContent = data.avgActivity ? data.avgActivity.toFixed(1) : '-';
+    if (anxietyEl) anxietyEl.textContent = data.avgAnxiety ? data.avgAnxiety.toFixed(1) : '-';
+    if (belongingEl) belongingEl.textContent = data.avgBelonging ? data.avgBelonging.toFixed(1) : '-';
 }
 
 // =====================
@@ -17623,10 +17755,10 @@ async function loadAIWeeklySummary() {
 
             // G15: Parameter name translations (shared between strength and attention)
             var paramNames = {
-                'en': { 'mood': 'Mood', 'energy': 'Energy', 'sleep': 'Sleep', 'activity': 'Activity' },
-                'he': { 'mood': 'מצב רוח', 'energy': 'אנרגיה', 'sleep': 'שינה', 'activity': 'פעילות' },
-                'ar': { 'mood': 'المزاج', 'energy': 'الطاقة', 'sleep': 'النوم', 'activity': 'النشاط' },
-                'ru': { 'mood': 'Настроение', 'energy': 'Энергия', 'sleep': 'Сон', 'activity': 'Активность' }
+                'en': { 'mood': 'Mood', 'energy': 'Energy', 'sleep': 'Sleep', 'activity': 'Activity', 'belonging': 'Belonging' },
+                'he': { 'mood': 'מצב רוח', 'energy': 'אנרגיה', 'sleep': 'שינה', 'activity': 'פעילות', 'belonging': 'שייכות' },
+                'ar': { 'mood': 'المزاج', 'energy': 'الطاقة', 'sleep': 'النوم', 'activity': 'النشاط', 'belonging': 'الانتماء' },
+                'ru': { 'mood': 'Настроение', 'energy': 'Энергия', 'sleep': 'Сон', 'activity': 'Активность', 'belonging': 'Принадлежность' }
             };
             var names = paramNames[lang] || paramNames['en'];
 
@@ -17762,10 +17894,10 @@ async function showUserCheckinHistory(userId, username) {
     // T8: Calm mode label variants for user history chart
     const isCalm2 = window.ANXIETY_DISPLAY_MODE === 'calm';
     const chartLabels = {
-        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm2 ? 'Calmness' : 'Anxiety', title: "'s Check-in History", close: 'Close', loading: 'Loading...', noData: 'No check-in data available for this user.', last30: 'Last 30 days', date: 'Date' },
-        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm2 ? 'רוגע' : 'חרדה', title: " - היסטוריית צ'ק-אין", close: 'סגור', loading: 'טוען...', noData: 'אין נתוני צ\'ק-אין עבור משתמש זה.', last30: '30 הימים האחרונים', date: 'תאריך' },
-        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm2 ? 'الهدوء' : 'القلق', title: ' - سجل التسجيل', close: 'إغلاق', loading: 'جاري التحميل...', noData: 'لا توجد بيانات تسجيل لهذا المستخدم.', last30: 'آخر 30 يوم', date: 'التاريخ' },
-        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm2 ? 'Спокойствие' : 'Тревога', title: ' - история отметок', close: 'Закрыть', loading: 'Загрузка...', noData: 'Нет данных для этого пользователя.', last30: 'Последние 30 дней', date: 'Дата' }
+        'en': { mood: 'Mood', energy: 'Energy', sleep: 'Sleep', activity: 'Activity', anxiety: isCalm2 ? 'Calmness' : 'Anxiety', belonging: 'Belonging', title: "'s Check-in History", close: 'Close', loading: 'Loading...', noData: 'No check-in data available for this user.', last30: 'Last 30 days', date: 'Date' },
+        'he': { mood: 'מצב רוח', energy: 'אנרגיה', sleep: 'שינה', activity: 'פעילות', anxiety: isCalm2 ? 'רוגע' : 'חרדה', belonging: 'שייכות', title: " - היסטוריית צ'ק-אין", close: 'סגור', loading: 'טוען...', noData: 'אין נתוני צ\'ק-אין עבור משתמש זה.', last30: '30 הימים האחרונים', date: 'תאריך' },
+        'ar': { mood: 'المزاج', energy: 'الطاقة', sleep: 'النوم', activity: 'النشاط', anxiety: isCalm2 ? 'الهدوء' : 'القلق', belonging: 'الانتماء', title: ' - سجل التسجيل', close: 'إغلاق', loading: 'جاري التحميل...', noData: 'لا توجد بيانات تسجيل لهذا المستخدم.', last30: 'آخر 30 يوم', date: 'التاريخ' },
+        'ru': { mood: 'Настроение', energy: 'Энергия', sleep: 'Сон', activity: 'Активность', anxiety: isCalm2 ? 'Спокойствие' : 'Тревога', belonging: 'Принадлежность', title: ' - история отметок', close: 'Закрыть', loading: 'Загрузка...', noData: 'Нет данных для этого пользователя.', last30: 'Последние 30 дней', date: 'Дата' }
     };
     const t = chartLabels[lang] || chartLabels['en'];
     
@@ -17816,7 +17948,8 @@ async function showUserCheckinHistory(userId, username) {
                         { label: t.energy, data: data.energy || [], borderColor: '#48BB78', tension: 0.3, fill: false, pointRadius: 3 },
                         { label: t.sleep, data: data.sleep || [], borderColor: '#9F7AEA', tension: 0.3, fill: false, pointRadius: 3 },
                         { label: t.activity, data: data.activity || [], borderColor: '#F6AD55', tension: 0.3, fill: false, pointRadius: 3 },
-                        { label: t.anxiety, data: (data.anxiety || []).map(v => (v != null && isCalm2) ? (5 - v) : v), borderColor: '#FC8181', tension: 0.3, fill: false, pointRadius: 3 }
+                        { label: t.anxiety, data: (data.anxiety || []).map(v => (v != null && isCalm2) ? (5 - v) : v), borderColor: '#FC8181', tension: 0.3, fill: false, pointRadius: 3 },
+                        { label: t.belonging, data: data.belonging || [], borderColor: '#38B2AC', tension: 0.3, fill: false, pointRadius: 3 }
                     ].filter(ds => ds.data.some(v => v !== null && v !== undefined))
                 },
                 options: {
@@ -17847,7 +17980,7 @@ async function showUserCheckinHistory(userId, username) {
                     if (val !== undefined) return `${label}: ${val}`;
                     return null;
                 };
-                [fmtParam(ci.mood, t.mood), fmtParam(ci.energy, t.energy), fmtParam(ci.sleep, t.sleep), fmtParam(ci.activity, t.activity), fmtParam(ci.anxiety, t.anxiety)].forEach(p => { if (p) params.push(p); });
+                [fmtParam(ci.mood, t.mood), fmtParam(ci.energy, t.energy), fmtParam(ci.sleep, t.sleep), fmtParam(ci.activity, t.activity), fmtParam(ci.anxiety, t.anxiety), fmtParam(ci.belonging, t.belonging)].forEach(p => { if (p) params.push(p); });
                 
                 listHTML += `
                     <div style="background: var(--light, #f5f6fa); padding: 12px 16px; border-radius: 10px; border-left: 3px solid var(--primary, #667eea);">
@@ -17866,6 +17999,8 @@ async function showUserCheckinHistory(userId, username) {
                         ${data.avgEnergy ? ' · ' + t.energy + ': ' + data.avgEnergy : ''}
                         ${data.avgSleep ? ' · ' + t.sleep + ': ' + data.avgSleep : ''}
                         ${data.avgActivity ? ' · ' + t.activity + ': ' + data.avgActivity : ''}
+                        ${data.avgAnxiety ? ' · ' + t.anxiety + ': ' + data.avgAnxiety : ''}
+                        ${data.avgBelonging ? ' · ' + t.belonging + ': ' + data.avgBelonging : ''}
                     </div>
                 </div>`;
             listContainer.innerHTML = summaryHTML + listHTML;
@@ -19771,6 +19906,16 @@ function switchSettingsTab(tab) {
     if (tab === 'operator') {
         loadOperatorDashboard();
         g27LoadOpGroups();  // G27: Load group management section
+        // C13: Hide dept operator form for professional role (they can't create dept ops)
+        const deptOpSection = document.getElementById('c9DeptOpSection');
+        if (deptOpSection) {
+            deptOpSection.style.display = (currentUser && (currentUser.role === 'system_operator' || currentUser.role === 'admin')) ? '' : 'none';
+        }
+        // C13: Clear stale result areas from previous interactions
+        const invResult = document.getElementById('c9InviteResult');
+        const deptResult = document.getElementById('c9DeptOpResult');
+        if (invResult) invResult.style.display = 'none';
+        if (deptResult) deptResult.style.display = 'none';
     }
 
     // L190: Load professional clients when switching to professional tab
@@ -20362,7 +20507,7 @@ async function loadHomeSummary() {
 
         // Update param mini displays
         const params = data.latest_params || {};
-        const paramMap = { 'summaryMood': 'mood', 'summaryEnergy': 'energy', 'summarySleep': 'sleep_quality', 'summaryExercise': 'physical_activity', 'summaryStress': 'anxiety' };
+        const paramMap = { 'summaryMood': 'mood', 'summaryEnergy': 'energy', 'summarySleep': 'sleep_quality', 'summaryExercise': 'physical_activity', 'summaryStress': 'anxiety', 'summaryBelonging': 'social_belonging' };
         const emojis = { 4: '😊', 3: '🙂', 2: '😐', 1: '😔' };
         // Anxiety scale is reversed: 1=calm(best), 4=overwhelming(worst)
         const anxietyEmojis = { 1: '😊', 2: '🙂', 3: '😐', 4: '😔' };
@@ -20473,7 +20618,8 @@ function openParamQuickSet(paramKey) {
         energy: _t('params.energy', 'Energy'),
         sleep_quality: _t('params.sleep', 'Sleep'),
         physical_activity: _t('params.exercise', 'Exercise'),
-        anxiety: window.ANXIETY_DISPLAY_MODE === 'calm' ? _t('params.calm', 'Calmness') : _t('params.anxiety', 'Anxiety')
+        anxiety: window.ANXIETY_DISPLAY_MODE === 'calm' ? _t('params.calm', 'Calmness') : _t('params.anxiety', 'Anxiety'),
+        social_belonging: _t('params.belonging', 'Belonging')
     };
 
     const emojis = (paramKey === 'anxiety' && window.ANXIETY_DISPLAY_MODE !== 'calm')
@@ -21120,13 +21266,30 @@ window.g27JoinSelectedGroup = g27JoinSelectedGroup;
 async function g27LoadOpGroups() {
     const listEl = document.getElementById('g27OpGroupList');
     const inviteSelect = document.getElementById('g27InviteGroupSelect');
+    const deptOpSelect = document.getElementById('c9DeptOpGroupSelect');  // C9
     if (!listEl) return;
 
     try {
-        const res = await fetch('/api/objective-groups', { credentials: 'include' });
+        // C9: Fetch groups and operator scopes in parallel
+        const [res, scopeRes] = await Promise.all([
+            fetch('/api/objective-groups', { credentials: 'include' }),
+            fetch('/api/operator/scope', { credentials: 'include' }).catch(() => null)
+        ]);
         if (!res.ok) return;
         const data = await res.json();
         const groups = data.groups || [];
+
+        // C9: Build set of group IDs this operator has scope over
+        let myScopeGroupIds = new Set();
+        let hasAllScope = false;
+        if (scopeRes && scopeRes.ok) {
+            const scopeData = await scopeRes.json();
+            const scopes = scopeData.scopes || [];
+            hasAllScope = scopes.some(s => s.scope_type === 'all');
+            if (!hasAllScope) {
+                scopes.filter(s => s.scope_type === 'group').forEach(s => myScopeGroupIds.add(String(s.scope_value)));
+            }
+        }
 
         listEl.innerHTML = '';
 
@@ -21137,14 +21300,26 @@ async function g27LoadOpGroups() {
             listEl.appendChild(emptySpan);
         } else {
             groups.forEach(g => {
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'margin-bottom: 6px;';
+
                 const row = document.createElement('div');
                 row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--light); border-radius: 10px; border-left: 3px solid #6B8BA4;';
                 
                 const info = document.createElement('div');
+                info.style.cssText = 'flex: 1; min-width: 0;';
                 const nameEl = document.createElement('strong');
                 nameEl.style.cssText = 'color: var(--dark);';
                 nameEl.textContent = g.name;
                 info.appendChild(nameEl);
+                // C9: Scope indicator
+                const isMyScope = hasAllScope || myScopeGroupIds.has(String(g.id));
+                if (isMyScope) {
+                    const scopeBadge = document.createElement('span');
+                    scopeBadge.style.cssText = 'display: inline-block; margin-left: 8px; padding: 2px 8px; background: #DBEAFE; color: #1E40AF; border-radius: 8px; font-size: 0.72rem; font-weight: 600; vertical-align: middle;';
+                    scopeBadge.textContent = _t('objective_group.your_scope', 'Your scope');
+                    info.appendChild(scopeBadge);
+                }
                 if (g.description) {
                     const descEl = document.createElement('span');
                     descEl.style.cssText = 'color: var(--gray); font-size: 0.82rem; margin-left: 8px;';
@@ -21153,17 +21328,129 @@ async function g27LoadOpGroups() {
                 }
                 row.appendChild(info);
 
-                const badge = document.createElement('span');
-                badge.style.cssText = 'background: #E0E7FF; color: #3730A3; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;';
-                badge.textContent = g.member_count + ' ' + _t('objective_group.members', 'members');
-                row.appendChild(badge);
+                // C7: Action buttons container
+                const actions = document.createElement('div');
+                actions.style.cssText = 'display: flex; align-items: center; gap: 8px; flex-shrink: 0;';
 
-                listEl.appendChild(row);
+                const badge = document.createElement('span');
+                badge.style.cssText = 'background: #E0E7FF; color: #3730A3; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer;';
+                badge.textContent = g.member_count + ' ' + _t('objective_group.members', 'members');
+                badge.title = _t('objective_group.view_members', 'View members');
+                actions.appendChild(badge);
+
+                // C7: Delete button — C13: only show if operator has scope
+                if (isMyScope) {
+                    const delBtn = document.createElement('span');
+                    delBtn.style.cssText = 'cursor: pointer; color: #C17C74; font-size: 0.85rem; opacity: 0.7; padding: 2px 6px;';
+                    delBtn.textContent = '🗑';
+                    delBtn.title = _t('objective_group.delete_group', 'Delete group');
+                delBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (!confirm(_t('objective_group.delete_confirm', 'Delete this group? All memberships will be removed.'))) return;
+                    const csrfToken = await getCsrfToken() || '';
+                    try {
+                        const delRes = await fetch('/api/objective-groups/' + g.id, {
+                            method: 'DELETE',
+                            headers: { 'X-CSRF-Token': csrfToken },
+                            credentials: 'include'
+                        });
+                        if (delRes.ok) {
+                            showNotification(_t('objective_group.deleted', 'Group deleted'), 'success');
+                            g27LoadOpGroups();
+                            if (typeof g27LoadMyGroups === 'function') g27LoadMyGroups();  // C9
+                        } else {
+                            const err = await delRes.json().catch(() => ({}));
+                            showNotification(err.error || 'Error deleting group', 'error');
+                        }
+                    } catch (err) { showNotification('Error deleting group', 'error'); }
+                };
+                actions.appendChild(delBtn);
+                }  // C13: end isMyScope for delete button
+                row.appendChild(actions);
+
+                wrapper.appendChild(row);
+
+                // C7: Expandable member list container (hidden by default)
+                const memberPanel = document.createElement('div');
+                memberPanel.style.cssText = 'display: none; padding: 8px 16px 12px 24px; background: var(--bg); border-radius: 0 0 10px 10px; border-left: 3px solid #E0E7FF;';
+                memberPanel.id = 'g27Members_' + g.id;
+                wrapper.appendChild(memberPanel);
+
+                // C7: Click badge to toggle member list
+                badge.onclick = async () => {
+                    if (memberPanel.style.display !== 'none') {
+                        memberPanel.style.display = 'none';
+                        return;
+                    }
+                    memberPanel.innerHTML = '<span style="color: var(--gray); font-size: 0.82rem;">' + _t('objective_group.loading', 'Loading...') + '</span>';
+                    memberPanel.style.display = '';
+                    try {
+                        const mRes = await fetch('/api/objective-groups/' + g.id + '/members', { credentials: 'include' });
+                        if (!mRes.ok) { memberPanel.innerHTML = '<span style="color: var(--gray); font-size: 0.82rem;">—</span>'; return; }
+                        const mData = await mRes.json();
+                        const members = mData.members || [];
+                        memberPanel.innerHTML = '';
+                        if (members.length === 0) {
+                            memberPanel.innerHTML = '<span style="color: var(--gray); font-size: 0.82rem; font-style: italic;">' + _t('objective_group.no_members', 'No members yet') + '</span>';
+                        } else {
+                            members.forEach(m => {
+                                const mRow = document.createElement('div');
+                                mRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 0.84rem; border-bottom: 1px solid var(--border);';
+                                const mName = document.createElement('span');
+                                mName.style.cssText = 'color: var(--dark); font-weight: 500;';
+                                mName.textContent = m.username;
+                                mRow.appendChild(mName);
+                                const mRight = document.createElement('div');
+                                mRight.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+                                const mMeta = document.createElement('span');
+                                mMeta.style.cssText = 'color: var(--gray); font-size: 0.78rem;';
+                                mMeta.textContent = m.role + (m.joined_at ? ' · ' + new Date(m.joined_at).toLocaleDateString() : '');
+                                mRight.appendChild(mMeta);
+                                // C9: Remove member button
+                                if (isMyScope) {
+                                    const rmBtn = document.createElement('span');
+                                    rmBtn.style.cssText = 'cursor: pointer; color: #C17C74; font-size: 0.78rem; opacity: 0.7;';
+                                    rmBtn.textContent = '✕';
+                                    rmBtn.title = _t('objective_group.remove_member', 'Remove from group');
+                                    rmBtn.onclick = async (e) => {
+                                        e.stopPropagation();
+                                        if (!confirm(_t('objective_group.remove_member_confirm', 'Remove this user from the group?'))) return;
+                                        const csrfToken = await getCsrfToken() || '';
+                                        const rmRes = await fetch('/api/objective-groups/' + g.id + '/remove-member', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                                            credentials: 'include',
+                                            body: JSON.stringify({ user_id: m.user_id })
+                                        });
+                                        if (rmRes.ok) {
+                                            mRow.remove();
+                                            // C13: Update badge count inline instead of full reload
+                                            const rmData = await rmRes.json().catch(() => ({}));
+                                            if (rmData.member_count !== undefined) {
+                                                badge.textContent = rmData.member_count + ' ' + _t('objective_group.members', 'members');
+                                            }
+                                            showNotification(_t('objective_group.member_removed', 'Member removed'), 'success');
+                                            if (typeof g27LoadMyGroups === 'function') g27LoadMyGroups();
+                                        } else {
+                                            showNotification('Error removing member', 'error');
+                                        }
+                                    };
+                                    mRight.appendChild(rmBtn);
+                                }
+                                mRow.appendChild(mRight);
+                                memberPanel.appendChild(mRow);
+                            });
+                        }
+                    } catch (err) { memberPanel.innerHTML = '<span style="color: var(--gray);">Error</span>'; }
+                };
+
+                listEl.appendChild(wrapper);
             });
         }
 
-        // Populate invite dropdown
+        // Populate invite dropdown (C7: preserve previous selection)
         if (inviteSelect) {
+            const prevVal = inviteSelect.value;  // C7: remember selection
             inviteSelect.innerHTML = '';
             const defaultOpt = document.createElement('option');
             defaultOpt.value = '';
@@ -21176,7 +21463,27 @@ async function g27LoadOpGroups() {
                 const opt = document.createElement('option');
                 opt.value = g.id;
                 opt.textContent = g.name;
+                if (String(g.id) === String(prevVal)) opt.selected = true;  // C7: restore
                 inviteSelect.appendChild(opt);
+            });
+        }
+
+        // C9: Populate dept operator group dropdown
+        if (deptOpSelect) {
+            const prevDeptVal = deptOpSelect.value;
+            deptOpSelect.innerHTML = '';
+            const defOpt = document.createElement('option');
+            defOpt.value = '';
+            defOpt.disabled = true;
+            defOpt.selected = true;
+            defOpt.textContent = _t('objective_group.select_group', 'Select group...');
+            deptOpSelect.appendChild(defOpt);
+            groups.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.name;
+                if (String(g.id) === String(prevDeptVal)) opt.selected = true;
+                deptOpSelect.appendChild(opt);
             });
         }
 
@@ -21210,6 +21517,7 @@ async function g27CreateGroup() {
             nameInput.value = '';
             if (descInput) descInput.value = '';
             g27LoadOpGroups();
+            if (typeof g27LoadMyGroups === 'function') g27LoadMyGroups();  // C9: refresh profile groups
         } else {
             const err = await res.json().catch(() => ({}));
             showNotification(err.error || 'Error creating group', 'error');
@@ -21220,13 +21528,26 @@ async function g27CreateGroup() {
     }
 }
 
+// C13: Basic email format validation helper
+function _isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 async function g27InviteUser() {
     const emailInput = document.getElementById('g27InviteEmail');
     const groupSelect = document.getElementById('g27InviteGroupSelect');
+    const resultArea = document.getElementById('c9InviteResult');  // C9
     if (!emailInput || !emailInput.value.trim() || !groupSelect || !groupSelect.value) {
         showNotification(_t('objective_group.invite_fill', 'Please enter an email and select a group'), 'warning');
         return;
     }
+    // C13: Client-side email format check
+    if (!_isValidEmail(emailInput.value.trim())) {
+        showNotification(_t('objective_group.invalid_email', 'Please enter a valid email address'), 'warning');
+        return;
+    }
+
+    if (resultArea) resultArea.style.display = 'none';  // C9: clear previous result
 
     const csrfToken = await getCsrfToken() || '';
     try {
@@ -21242,13 +21563,26 @@ async function g27InviteUser() {
 
         const result = await res.json();
         if (res.ok) {
-            let msg = _t('objective_group.invited', 'User invited successfully!');
-            if (result.temp_password) {
-                msg += ' ' + _t('objective_group.temp_password', 'Temporary password:') + ' ' + result.temp_password;
+            // C9: Show temp password in persistent result area instead of toast
+            if (result.temp_password && resultArea) {
+                resultArea.innerHTML = '';
+                const strong = document.createElement('strong');
+                strong.textContent = _t('objective_group.invited', 'User invited!') + ' ';
+                resultArea.appendChild(strong);
+                const pwSpan = document.createElement('span');
+                pwSpan.textContent = _t('objective_group.temp_password', 'Temporary password:') + ' ';
+                resultArea.appendChild(pwSpan);
+                const code = document.createElement('code');
+                code.style.cssText = 'background: #D1FAE5; padding: 2px 8px; border-radius: 4px; font-weight: 600; user-select: all;';
+                code.textContent = result.temp_password;
+                resultArea.appendChild(code);
+                resultArea.style.display = '';
+            } else {
+                showNotification(result.message || _t('objective_group.invited', 'User invited successfully!'), 'success');
             }
-            showNotification(msg, 'success');
             emailInput.value = '';
             g27LoadOpGroups();
+            if (typeof g27LoadMyGroups === 'function') g27LoadMyGroups();  // C9: refresh profile groups
         } else {
             showNotification(result.error || 'Error inviting user', 'error');
         }
@@ -21261,6 +21595,76 @@ async function g27InviteUser() {
 window.g27LoadOpGroups = g27LoadOpGroups;
 window.g27CreateGroup = g27CreateGroup;
 window.g27InviteUser = g27InviteUser;
+
+// C9: Create Department Operator — frontend for /api/operator/create-dept-operator
+async function c9CreateDeptOp() {
+    const emailInput = document.getElementById('c9DeptOpEmail');
+    const usernameInput = document.getElementById('c9DeptOpUsername');
+    const passwordInput = document.getElementById('c9DeptOpPassword');
+    const groupSelect = document.getElementById('c9DeptOpGroupSelect');
+    const resultArea = document.getElementById('c9DeptOpResult');
+
+    if (!emailInput || !emailInput.value.trim()) {
+        showNotification(_t('objective_group.dept_op_email_required', 'Email is required'), 'warning');
+        return;
+    }
+    // C13: Client-side email format check
+    if (!_isValidEmail(emailInput.value.trim())) {
+        showNotification(_t('objective_group.invalid_email', 'Please enter a valid email address'), 'warning');
+        return;
+    }
+    if (!passwordInput || !passwordInput.value || passwordInput.value.length < 8) {
+        showNotification(_t('objective_group.dept_op_password_short', 'Password must be at least 8 characters'), 'warning');
+        return;
+    }
+    if (!groupSelect || !groupSelect.value) {
+        showNotification(_t('objective_group.dept_op_group_required', 'Please select a group'), 'warning');
+        return;
+    }
+
+    if (resultArea) resultArea.style.display = 'none';
+
+    const csrfToken = await getCsrfToken() || '';
+    try {
+        const res = await fetch('/api/operator/create-dept-operator', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            credentials: 'include',
+            body: JSON.stringify({
+                email: emailInput.value.trim(),
+                username: (usernameInput && usernameInput.value.trim()) || '',
+                password: passwordInput.value,
+                group_id: parseInt(groupSelect.value)
+            })
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+            if (resultArea) {
+                resultArea.innerHTML = '';
+                const strong = document.createElement('strong');
+                strong.textContent = _t('objective_group.dept_op_created', 'Department operator created!') + ' ';
+                resultArea.appendChild(strong);
+                const details = document.createElement('span');
+                details.textContent = (result.user && result.user.username ? result.user.username : emailInput.value.trim());
+                resultArea.appendChild(details);
+                resultArea.style.display = '';
+            }
+            showNotification(_t('objective_group.dept_op_created', 'Department operator created!'), 'success');
+            emailInput.value = '';
+            if (usernameInput) usernameInput.value = '';
+            passwordInput.value = '';
+            g27LoadOpGroups();  // C13: refresh group list to show new member
+        } else {
+            showNotification(result.error || 'Error creating department operator', 'error');
+        }
+    } catch (e) {
+        console.error('[C9] Error creating dept operator:', e);
+        showNotification('Error creating department operator', 'error');
+    }
+}
+
+window.c9CreateDeptOp = c9CreateDeptOp;
 window.saveProfileSettings = saveProfileSettings;
 window.syncSettingsToggles = syncSettingsToggles;
 window.changePasswordFromSettings = changePasswordFromSettings;
