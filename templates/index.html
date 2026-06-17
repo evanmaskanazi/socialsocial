@@ -1,22 +1,23 @@
 <!DOCTYPE html>
+<!-- C30: Cache version bumped to C30. Backend-only AI changes.
 <!-- C25 Changes (from C20):
   C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
   1. FIX: Progress page now shows avg anxiety and avg belonging (were in API but not displayed)
   2. FIX: updateCheckinSummary JS populates avgAnxiety + avgBelonging elements
-  3. CACHE BUSTING: All JS references updated to ?v=C25
+  3. CACHE BUSTING: All JS references updated to ?v=C30
 -->
 <!-- C20 Changes (from C15):
   C15 AUDIT — DEBUG & GLITCH REMOVAL:
   1. FIX: Notification descriptions added to ALL 3 toggle sets (C15 only added to 1 of 3).
      Mobile drawer + notificationSettingsPanel now match settingsNotificationPanel.
-  2. CACHE BUSTING: All JS references updated to ?v=C25
+  2. CACHE BUSTING: All JS references updated to ?v=C30
 -->
 <!-- C15 Changes (from C13):
   BENNY FEEDBACK ROUND:
   1. ADDED: Social Belonging parameter tile (6th) to home summary grid — 2×3 mobile symmetry
   2. ADDED: social_belonging to paramMap, openParamQuickSet, all inline name maps, check-in history
   3. FIX: Notification settings now have descriptive helper text under each toggle
-  4. CACHE BUSTING: All JS references updated to ?v=C25
+  4. CACHE BUSTING: All JS references updated to ?v=C30
 -->
 <!-- C13 Changes (from C9):
   OBJECTIVE GROUPS — ROUND 3 HARDENING:
@@ -132,7 +133,7 @@
   8. Auth card: refined shadow layers + subtle border
   9. Mobile nav items: active press scale feedback on tap
   10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
-  CACHE BUSTING: All JS references updated to ?v=C25
+  CACHE BUSTING: All JS references updated to ?v=C30
 -->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
@@ -434,7 +435,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=C25"></script>
+    <script src="/static/js/follow-requests.js?v=C30"></script>
 
 
     <style>
@@ -7260,7 +7261,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=C25"></script>
+    <script src="/static/js/i18n.js?v=C30"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7555,9 +7556,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=C25"></script>
-   <script src="/static/js/circles-messages.js?v=C25"></script>
-<script src="/static/js/feed-updates.js?v=C25"></script>
+<script src="/static/js/parameters-social.js?v=C30"></script>
+   <script src="/static/js/circles-messages.js?v=C30"></script>
+<script src="/static/js/feed-updates.js?v=C30"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
