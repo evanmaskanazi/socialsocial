@@ -1,4 +1,5 @@
 // Language detection and translation system with backend sync
+// Version C31 - Cache-buster sync to C31; no functional changes in this file
 // Version C30 - Cache-buster sync to C30; backend-only AI changes.
 // Version C25 - Added progress.avg_anxiety + progress.avg_belonging keys in EN/HE/AR/RU.
 // Version C20 - Removed duplicate parameters.social_belonging keys in English block.
