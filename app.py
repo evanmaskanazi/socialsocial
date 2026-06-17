@@ -1,6 +1,28 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — C30
+Complete app.py for Social Social Platform - V4 10Link — C32
+
+# C32 Changes (from C31):
+# IN-APP ALERT TONE — matches C31 email tone fix:
+# Replaced "has been at concerning levels for" with "has been at low levels for"
+# across all 12 trigger alert content strings. Affects new alerts only; existing
+# alerts in the database retain their original text.
+# Cache version bumped to C32 in all HTML files.
+
+# C31 Changes (from C30):
+# CONSOLIDATED ALERT EMAIL — TONE & UX (Benny feedback):
+# 1. Removed alarming language from all 4 language variants:
+#    - intro: "concerning well-being patterns" → neutral "update about recent check-ins"
+#    - param_line: "concerning levels" → factual "low levels"
+# 2. Added 'why_received' explanation line in all 4 languages so the recipient
+#    understands they are seeing this because they set up a trigger.
+# 3. Softened recommendation: "Consider reaching out" → "It may be worth reaching out"
+#    (Hebrew: "שקול ליצור קשר" → "אולי כדאי ליצור קשר")
+# 4. Added 'send_message' link label + direct link to TheraSocial messages
+#    (/#messages) in the email body so the recipient can act immediately.
+# 5. HTML template updated: why_received text before the alert box,
+#    send-message link after the recommendation.
+# 6. Cache version bumped to C31 in all HTML files.
 
 # C30 Changes (from C25):
 # BELONGING INTEGRATION — AI WEEKLY SUMMARY + PROGRESS INSIGHTS:
@@ -2767,12 +2789,14 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         # Build the consolidated content
         translations = {
             'en': {
-                'subject': f'TheraSocial - Well-Being Alert for {watched_username}',
+                'subject': f'TheraSocial - Check-in Update for {watched_username}',
                 'hello': 'Hello',
-                'intro': f"We noticed some concerning well-being patterns for {watched_username}:",
-                'param_line': '{param} has been at concerning levels for {days} consecutive days ({date_range})',
-                'no_checkin_line': "hasn't checked in for {days} days — you may want to reach out",
-                'recommendation': 'Consider reaching out to check in on them.',
+                'why_received': f'You are receiving this because you set up a trigger alert for {watched_username}.',
+                'intro': f"Here is an update about {watched_username}'s recent activity:",
+                'param_line': '{param} has been at low levels for {days} consecutive days ({date_range})',
+                'no_checkin_line': "hasn't checked in for {days} days — it may be worth checking how they are",
+                'recommendation': 'It may be worth reaching out to check on them.',
+                'send_message': 'Send a message',
                 'view_details': 'View Details',
                 'regards': 'Best regards',
                 'team': 'TheraSocial Team',
@@ -2780,17 +2804,18 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Energy',
                 'sleep_quality': 'Sleep quality',
                 'physical_activity': 'Physical activity',
-                # T11: Use Calmness when ANXIETY_DISPLAY_MODE is calm
                 'anxiety': 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety',
                 'no_checkin': 'No check-in'
             },
             'he': {
-                'subject': f'TheraSocial - התראת בריאות עבור {watched_username}',
+                'subject': f'TheraSocial - עדכון צ׳ק-אין עבור {watched_username}',
                 'hello': 'שלום',
-                'intro': f"שמנו לב לדפוסי בריאות מדאיגים עבור {watched_username}:",
-                'param_line': '{param} היה ברמות מדאיגות במשך {days} ימים רצופים ({date_range})',
+                'why_received': f'את/ה מקבל/ת הודעה זו כי הגדרת התראת טריגר עבור {watched_username}.',
+                'intro': f"הנה עדכון על הפעילות האחרונה של {watched_username}:",
+                'param_line': '{param} היה ברמות נמוכות במשך {days} ימים רצופים ({date_range})',
                 'no_checkin_line': 'לא ביצע/ה צ׳ק-אין במשך {days} ימים — כדאי לבדוק איך הם',
-                'recommendation': 'שקול/י ליצור קשר כדי לבדוק את מצבם.',
+                'recommendation': 'אולי כדאי ליצור קשר כדי לבדוק את מצבם.',
+                'send_message': 'שלח/י הודעה',
                 'view_details': 'צפה בפרטים',
                 'regards': 'בברכה',
                 'team': 'צוות TheraSocial',
@@ -2798,17 +2823,18 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'אנרגיה',
                 'sleep_quality': 'איכות שינה',
                 'physical_activity': 'פעילות גופנית',
-                # T11: Use שלווה when ANXIETY_DISPLAY_MODE is calm
                 'anxiety': 'שלווה' if ANXIETY_DISPLAY_MODE == 'calm' else 'חרדה',
                 'no_checkin': "אין צ'ק-אין"
             },
             'ar': {
-                'subject': f'TheraSocial - تنبيه صحي لـ {watched_username}',
+                'subject': f'TheraSocial - تحديث تسجيل الدخول لـ {watched_username}',
                 'hello': 'مرحباً',
-                'intro': f"لاحظنا بعض أنماط الصحة المقلقة لـ {watched_username}:",
-                'param_line': '{param} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({date_range})',
-                'no_checkin_line': 'لم يسجل/تسجل الدخول منذ {days} أيام — قد ترغب في التواصل معهم',
-                'recommendation': 'فكر في التواصل للاطمئنان عليهم.',
+                'why_received': f'تتلقى هذا الإشعار لأنك أعددت تنبيه مراقبة لـ {watched_username}.',
+                'intro': f"إليك تحديث عن النشاط الأخير لـ {watched_username}:",
+                'param_line': '{param} كان عند مستويات منخفضة لمدة {days} أيام متتالية ({date_range})',
+                'no_checkin_line': 'لم يسجل/تسجل الدخول منذ {days} أيام — قد يكون من المفيد التواصل معهم',
+                'recommendation': 'قد يكون من المفيد التواصل للاطمئنان عليهم.',
+                'send_message': 'إرسال رسالة',
                 'view_details': 'عرض التفاصيل',
                 'regards': 'مع أطيب التحيات',
                 'team': 'فريق TheraSocial',
@@ -2816,17 +2842,18 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'الطاقة',
                 'sleep_quality': 'جودة النوم',
                 'physical_activity': 'النشاط البدني',
-                # T11: Use السكينة when ANXIETY_DISPLAY_MODE is calm
                 'anxiety': 'السكينة' if ANXIETY_DISPLAY_MODE == 'calm' else 'القلق',
                 'no_checkin': 'لا يوجد تسجيل'
             },
             'ru': {
-                'subject': f'TheraSocial - Оповещение о здоровье {watched_username}',
+                'subject': f'TheraSocial - Обновление отметок {watched_username}',
                 'hello': 'Здравствуйте',
-                'intro': f"Мы заметили тревожные показатели здоровья у {watched_username}:",
-                'param_line': '{param} был на тревожном уровне {days} дней подряд ({date_range})',
-                'no_checkin_line': 'не отмечался/отмечалась {days} дней — возможно, стоит связаться',
-                'recommendation': 'Рассмотрите возможность связаться с ними.',
+                'why_received': f'Вы получили это уведомление, потому что настроили триггер оповещения для {watched_username}.',
+                'intro': f"Вот обновление о недавней активности {watched_username}:",
+                'param_line': '{param} был на низком уровне {days} дней подряд ({date_range})',
+                'no_checkin_line': 'не отмечался/отмечалась {days} дней — возможно, стоит проверить как дела',
+                'recommendation': 'Возможно, стоит связаться и узнать, как дела.',
+                'send_message': 'Отправить сообщение',
                 'view_details': 'Подробнее',
                 'regards': 'С уважением',
                 'team': 'Команда TheraSocial',
@@ -2834,7 +2861,6 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'energy': 'Энергия',
                 'sleep_quality': 'Качество сна',
                 'physical_activity': 'Физическая активность',
-                # T11: Use Спокойствие when ANXIETY_DISPLAY_MODE is calm
                 'anxiety': 'Спокойствие' if ANXIETY_DISPLAY_MODE == 'calm' else 'Тревожность',
                 'no_checkin': 'Нет отметки'
             }
@@ -2874,13 +2900,17 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 </div>
                 <div style="padding: 40px 30px;">
                     <p style="color: #666; line-height: 1.6;">{t['hello']},</p>
+                    <p style="color: #999; font-size: 13px; line-height: 1.5; margin-bottom: 4px;">{t['why_received']}</p>
                     <p style="color: #666; line-height: 1.6;">{t['intro']}</p>
                     <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
                         <ul style="color: #856404; margin: 0; padding-left: 20px;">
                             {params_html}
                         </ul>
                     </div>
-                    <p style="color: #666; line-height: 1.6;">{t['recommendation']}</p>
+                    <p style="color: #666; line-height: 1.6;">
+                        {t['recommendation']}
+                        <a href="{app_url}/#messages" style="color: #667eea; text-decoration: underline; font-weight: 600;">{t['send_message']}</a>
+                    </p>
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="{app_url}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
                             {t['view_details']}
@@ -13094,7 +13124,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                 
                                 if not existing:
-                                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                    content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
                                     logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
@@ -13144,7 +13174,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                     
                                     if not existing:
-                                        content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                        content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
                                         logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                         alert = create_alert_no_email(
                                             user_id=watcher_id,
@@ -13184,7 +13214,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                 
                                 if not existing:
-                                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                    content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
                                     logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
@@ -13223,7 +13253,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                         existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                         
                         if not existing:
-                            content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                            content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
                             logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
                             alert = create_alert_no_email(
                                 user_id=watcher_id,
@@ -13457,7 +13487,7 @@ def process_parameter_triggers(user_id, params):
                                 existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                 
                                 if not existing:
-                                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                    content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
                                     alert = create_alert_with_email(
                                         user_id=watcher_id,
                                         title=f"Well-Being Alert for {watched_user.username}",
@@ -13503,7 +13533,7 @@ def process_parameter_triggers(user_id, params):
                                     existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                     
                                     if not existing:
-                                        content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                        content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
                                         alert = create_alert_with_email(
                                             user_id=watcher_id,
                                             title=f"Well-Being Alert for {watched_user.username}",
@@ -13537,7 +13567,7 @@ def process_parameter_triggers(user_id, params):
                                 existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                                 
                                 if not existing:
-                                    content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                                    content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
                                     alert = create_alert_with_email(
                                         user_id=watcher_id,
                                         title=f"Well-Being Alert for {watched_user.username}",
@@ -13571,7 +13601,7 @@ def process_parameter_triggers(user_id, params):
                         existing = check_duplicate_alert(watcher_id, watched_user.username, param_name, date_pattern)
                         
                         if not existing:
-                            content = f"{watched_user.username}'s {param_name} has been at concerning levels for {len(streak_dates)} consecutive days {date_pattern}"
+                            content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
                             alert = create_alert_with_email(
                                 user_id=watcher_id,
                                 title=f"Well-Being Alert for {watched_user.username}",
@@ -21759,13 +21789,13 @@ def run_background_trigger_check_for_watcher(watcher_id):
                         start_str = start_date.strftime('%b %d')
                         end_str = end_date.strftime('%b %d')
                         if len(alert_data['dates']) == 1:
-                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str})"
+                            content = f"{watched_username}'s {parameter} has been at low levels for {consecutive_days} consecutive days ({start_str})"
                         else:
-                            content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
+                            content = f"{watched_username}'s {parameter} has been at low levels for {consecutive_days} consecutive days ({start_str} - {end_str})"
                     except:
-                        content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
+                        content = f"{watched_username}'s {parameter} has been at low levels for {consecutive_days} consecutive days"
                 else:
-                    content = f"{watched_username}'s {parameter} has been at concerning levels for {consecutive_days} consecutive days"
+                    content = f"{watched_username}'s {parameter} has been at low levels for {consecutive_days} consecutive days"
                 
                 # Create alert with email notification
                 alert = create_alert_with_email(
