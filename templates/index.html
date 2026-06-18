@@ -20497,8 +20497,11 @@ async function changePasswordFromSettings() {
 // Diary page uses local date; home-page quick-set must match.
 function _localDateStr() {
     const d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const s = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    console.log('[B7] _localDateStr=' + s + '  (UTC would be ' + d.toISOString().split('T')[0] + ')');
+    return s;
 }
+window._localDateStr = _localDateStr;  // expose globally for debugging
 
 async function loadHomeSummary() {
     try {
@@ -20521,6 +20524,7 @@ async function loadHomeSummary() {
 
         // Update param mini displays
         const params = data.latest_params || {};
+        console.log('[B7] loadHomeSummary: latest_params=', JSON.stringify(params), 'completed_today=', data.completed_today);
         const paramMap = { 'summaryMood': 'mood', 'summaryEnergy': 'energy', 'summarySleep': 'sleep_quality', 'summaryExercise': 'physical_activity', 'summaryStress': 'anxiety', 'summaryBelonging': 'social_belonging' };
         const emojis = { 4: '😊', 3: '🙂', 2: '😐', 1: '😔' };
         // Anxiety scale is reversed: 1=calm(best), 4=overwhelming(worst)
