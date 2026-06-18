@@ -1,4 +1,5 @@
 // Circles and Messages Management System with i18n support
+// B7: Cache-buster sync to B7; no functional changes in this file
 // C30: Cache-buster sync to C30; no functional changes in this file
 // C25: Cache-buster sync to C25; no functional changes in this file
 // C20: Cache-buster sync to C20; no functional changes in this file

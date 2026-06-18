@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!-- B7: FIX 1: UTC→local date in saveParamQuickSet/quickCheckin/loadHomeSummary.
+     Quick-set from home page used .toISOString() (UTC) while diary uses local date;
+     in Israel (UTC+3) this caused date mismatch between midnight–3AM, making
+     quick-set data invisible to the diary page. Now uses _localDateStr() everywhere.
+     FIX 2: Cache versions bumped to B7 for all JS includes.
 <!-- C32: Cache version bumped to C32. In-app alert tone fix.
 <!-- C31: Cache version bumped to C31. Alert email tone fix (backend-only).
 <!-- C30: Cache version bumped to C30. Check-in history popup averages now include anxiety + belonging.
@@ -7263,7 +7268,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=C32"></script>
+    <script src="/static/js/i18n.js?v=B7"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -20486,9 +20491,21 @@ async function changePasswordFromSettings() {
 
 
 // --- V2: HOME VIEW ENHANCEMENTS ---
+
+// B7 FIX: Local-date helper. toISOString() returns UTC which diverges from
+// local date after midnight in UTC+ timezones (e.g. Israel UTC+3, midnight–3AM).
+// Diary page uses local date; home-page quick-set must match.
+function _localDateStr() {
+    const d = new Date();
+    const s = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    console.log('[B7] _localDateStr=' + s + '  (UTC would be ' + d.toISOString().split('T')[0] + ')');
+    return s;
+}
+window._localDateStr = _localDateStr;  // expose globally for debugging
+
 async function loadHomeSummary() {
     try {
-        const clientDate = new Date().toISOString().split('T')[0];
+        const clientDate = _localDateStr();
         const response = await fetch(`/api/user/summary?client_date=${clientDate}`, { credentials: 'include' });
         if (!response.ok) return;
 
@@ -20507,6 +20524,7 @@ async function loadHomeSummary() {
 
         // Update param mini displays
         const params = data.latest_params || {};
+        console.log('[B7] loadHomeSummary: latest_params=', JSON.stringify(params), 'completed_today=', data.completed_today);
         const paramMap = { 'summaryMood': 'mood', 'summaryEnergy': 'energy', 'summarySleep': 'sleep_quality', 'summaryExercise': 'physical_activity', 'summaryStress': 'anxiety', 'summaryBelonging': 'social_belonging' };
         const emojis = { 4: '😊', 3: '🙂', 2: '😐', 1: '😔' };
         // Anxiety scale is reversed: 1=calm(best), 4=overwhelming(worst)
@@ -20578,7 +20596,7 @@ function generateTodayRecommendations(summaryData) {
 // V2: Quick mood check-in
 async function quickCheckin(moodValue) {
     try {
-        const clientDate = new Date().toISOString().split('T')[0];
+        const clientDate = _localDateStr();
         const response = await fetch('/api/parameters', {
             method: 'POST',
             credentials: 'include',
@@ -20662,7 +20680,7 @@ function openParamQuickSet(paramKey) {
 
 async function saveParamQuickSet(paramKey, value) {
     try {
-        const clientDate = new Date().toISOString().split('T')[0];
+        const clientDate = _localDateStr();
         const body = { date: clientDate };
         // I2: In calm mode, convert display calmness value back to storage anxiety value
         if (paramKey === 'anxiety' && window.ANXIETY_DISPLAY_MODE === 'calm' && window.anxietyToStorage) {

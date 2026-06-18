@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — C32
+Complete app.py for Social Social Platform - V4 10Link — B7
+
+# B7 Changes (from C32/B5):
+# FIX 1: Privacy carry-forward hardening — added logging of actual carried-forward
+#   values to aid debugging of the recurring privacy-reset report. No logic change;
+#   the C15 carry-forward is mechanically correct but the frontend was the true
+#   cause (see parameters-social.js B7 notes).
+# FIX 2: No backend date changes needed — the UTC→local date mismatch that caused
+#   "diary doesn't update from home quick-set" was purely frontend (index.html B7).
+# Cache version bumped to B7 in all HTML files.
 
 # C32 Changes (from C31):
 # IN-APP ALERT TONE — matches C31 email tone fix:
@@ -12500,13 +12509,17 @@ def save_parameters():
                 recent = SavedParameters.query.filter_by(user_id=user_id)\
                     .order_by(SavedParameters.date.desc()).first()
                 if recent:
+                    _carried = {}
                     for _pf in ['mood_privacy', 'energy_privacy', 'sleep_quality_privacy',
                                 'physical_activity_privacy', 'anxiety_privacy',
                                 'social_belonging_privacy']:
                         _pv = getattr(recent, _pf, None)
                         if _pv:
                             setattr(params, _pf, _pv)
-                    logger.info(f"[C15] Carried forward privacy from {recent.date} for new entry {date_str}")
+                            _carried[_pf] = _pv
+                    logger.info(f"[C15/B7] Carried forward privacy from {recent.date} for new entry {date_str}: {_carried}")
+                else:
+                    logger.info(f"[C15/B7] No previous entry found for user {user_id} — using ORM defaults")
             except Exception as pf_err:
                 logger.warning(f"[C15] Could not carry forward privacy: {pf_err}")
 
@@ -12532,6 +12545,10 @@ def save_parameters():
 
         if 'notes' in data:
             params.notes = data['notes']
+
+        # B7: Log whether privacy fields were included (helps diagnose reset reports)
+        _has_privacy_in_request = any(f'{p}_privacy' in data for p in ['mood','energy','sleep_quality','physical_activity','anxiety','social_belonging'])
+        logger.info(f"[SAVE PARAMS/B7] privacy_in_request={_has_privacy_in_request}, notes_privacy_in_request={'notes_privacy' in data}")
 
         # NP1: Save notes_privacy via raw SQL (column not in ORM)
         # Always attempt the save - don't rely on startup flag which may be stale
