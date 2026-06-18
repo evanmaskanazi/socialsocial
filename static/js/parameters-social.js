@@ -1,3 +1,4 @@
+// Version B30 - Cache-buster sync to B30; no functional changes in this file.
 // Version B20 - FIX: Updated fallback alert strings from "concerning levels" to
 //   "low levels" (alerts.mood_low, alerts.energy_low) to match C32 backend tone change.
 // Version B7 - FIX: Privacy reset on quick-checkin from home page.
