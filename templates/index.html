@@ -1,4 +1,17 @@
 <!DOCTYPE html>
+<!-- B20: ALERT TRANSLATION FIX + CACHE-BUST SYNC
+  1. BUG FIX: _translateWellnessContent regex updated from "concerning" to match
+     both "concerning" (old DB alerts) and "low" (new C32+ alerts). This was the
+     root cause of alerts displaying raw English on Hebrew/Arabic/Russian UIs —
+     the C32 backend changed "concerning levels" → "low levels" but the frontend
+     regex was never updated to match.
+  2. BUG FIX: Fallback template strings updated from "concerning" to "low levels".
+  3. BUG FIX: Added social_belonging to paramKeyMap in _translateWellnessContent
+     so the 6th parameter translates correctly in alert content.
+  4. CACHE-BUST: i18n.js version bumped from B7 → B20 (was stale, causing browsers
+     to serve old cached i18n with missing/outdated translations).
+  5. CACHE-BUST: All JS references updated to ?v=B20.
+-->
 <!-- B7: FIX 1: UTC→local date in saveParamQuickSet/quickCheckin/loadHomeSummary.
      Quick-set from home page used .toISOString() (UTC) while diary uses local date;
      in Israel (UTC+3) this caused date mismatch between midnight–3AM, making
@@ -11,20 +24,20 @@
   C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
   1. FIX: Progress page now shows avg anxiety and avg belonging (were in API but not displayed)
   2. FIX: updateCheckinSummary JS populates avgAnxiety + avgBelonging elements
-  3. CACHE BUSTING: All JS references updated to ?v=C32
+  3. CACHE BUSTING: All JS references updated to ?v=B20
 -->
 <!-- C20 Changes (from C15):
   C15 AUDIT — DEBUG & GLITCH REMOVAL:
   1. FIX: Notification descriptions added to ALL 3 toggle sets (C15 only added to 1 of 3).
      Mobile drawer + notificationSettingsPanel now match settingsNotificationPanel.
-  2. CACHE BUSTING: All JS references updated to ?v=C32
+  2. CACHE BUSTING: All JS references updated to ?v=B20
 -->
 <!-- C15 Changes (from C13):
   BENNY FEEDBACK ROUND:
   1. ADDED: Social Belonging parameter tile (6th) to home summary grid — 2×3 mobile symmetry
   2. ADDED: social_belonging to paramMap, openParamQuickSet, all inline name maps, check-in history
   3. FIX: Notification settings now have descriptive helper text under each toggle
-  4. CACHE BUSTING: All JS references updated to ?v=C32
+  4. CACHE BUSTING: All JS references updated to ?v=B20
 -->
 <!-- C13 Changes (from C9):
   OBJECTIVE GROUPS — ROUND 3 HARDENING:
@@ -140,7 +153,7 @@
   8. Auth card: refined shadow layers + subtle border
   9. Mobile nav items: active press scale feedback on tap
   10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
-  CACHE BUSTING: All JS references updated to ?v=C32
+  CACHE BUSTING: All JS references updated to ?v=B20
 -->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
@@ -442,7 +455,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=C32"></script>
+    <script src="/static/js/follow-requests.js?v=B20"></script>
 
 
     <style>
@@ -7268,7 +7281,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B7"></script>
+    <script src="/static/js/i18n.js?v=B20"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7397,8 +7410,8 @@
         const alertTranslations = {
             en: {
                 'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
-                'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
-                'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
+                'alerts.wellness_content': "{username}'s {param} has been at low levels for {days} consecutive days ({dateRange})",
+                'alerts.wellness_content_no_date': "{username}'s {param} has been at low levels for {days} consecutive days",
                 'alerts.no_checkin_content': "{username} hasn't checked in for {days} days — you may want to reach out",
                 'alerts.new_message_from': 'New message from {username}',
                 'alerts.started_following': '{username} accepted your connection request',
@@ -7497,12 +7510,13 @@
                 'energy': 'params.energy',
                 'sleep_quality': 'params.sleep',
                 'physical_activity': 'params.exercise',
+                'social_belonging': 'params.belonging',
                 // T8: Map to calm label when in calm mode
                 'anxiety': window.ANXIETY_DISPLAY_MODE === 'calm' ? 'params.calm' : 'params.anxiety'
             };
             
-            const m = content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days \((.+)\)$/);
-            const mNoDate = !m ? content.match(/^(.+?)'s (\w+) has been at concerning levels for (\d+) consecutive days?$/) : null;
+            const m = content.match(/^(.+?)'s (\w+) has been at (?:concerning|low) levels for (\d+) consecutive days \((.+)\)$/);
+            const mNoDate = !m ? content.match(/^(.+?)'s (\w+) has been at (?:concerning|low) levels for (\d+) consecutive days?$/) : null;
             
             if (m || mNoDate) {
                 const match = m || mNoDate;
@@ -7510,8 +7524,8 @@
                 const translatedParam = tFn(paramKeyMap[param] || 'params.' + param) || param;
                 const templateKey = dateRange ? 'alerts.wellness_content' : 'alerts.wellness_content_no_date';
                 const fallback = dateRange 
-                    ? "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})"
-                    : "{username}'s {param} has been at concerning levels for {days} consecutive days";
+                    ? "{username}'s {param} has been at low levels for {days} consecutive days ({dateRange})"
+                    : "{username}'s {param} has been at low levels for {days} consecutive days";
                 const template = tFn(templateKey) || fallback;
                 return template
                     .replace('{username}', username)
@@ -7563,9 +7577,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=C32"></script>
-   <script src="/static/js/circles-messages.js?v=C32"></script>
-<script src="/static/js/feed-updates.js?v=C32"></script>
+<script src="/static/js/parameters-social.js?v=B20"></script>
+   <script src="/static/js/circles-messages.js?v=B20"></script>
+<script src="/static/js/feed-updates.js?v=B20"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
