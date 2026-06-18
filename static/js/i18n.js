@@ -1,4 +1,10 @@
 // Language detection and translation system with backend sync
+// Version B30 - STATUS LABEL: "My Status Today" → "Your Last Status Update Was"
+//   Updated home.my_status translations in all 4 languages:
+//   - EN: "My Status Today" → "Your Last Status Update Was"
+//   - HE: "הסטטוס שלי היום" → "עדכון הסטטוס האחרון שלך היה"
+//   - AR: "حالتي اليوم" → "آخر تحديث لحالتك كان"
+//   - RU: "Мой статус сегодня" → "Ваше последнее обновление статуса"
 // Version B20 - TONE SYNC: Updated alert content translations to match C32 backend
 //   tone change ("concerning levels" → "low levels") across all 4 languages:
 //   - EN: alerts.wellness_content, wellness_content_no_date, parameter_alert
@@ -549,7 +555,7 @@ const translations = {
 'settings.daily_diary_reminder': 'Daily diary reminder',
 'settings.change_password': 'Change Password',
 'settings.update_password': 'Update Password',
-'home.my_status': 'My Status Today',
+'home.my_status': 'Your Last Status Update Was',
 'home.update_diary': 'Update Diary',
 'home.quick_checkin_desc': 'How are you feeling right now? Tap to log your mood quickly.',
 'home.recommendations_today': '💡 Recommendations for Today',
@@ -2053,7 +2059,7 @@ const translations = {
 'settings.notification_settings': 'הגדרות התראות',
 'settings.change_password': 'שנה סיסמה',
 'settings.update_password': 'עדכן סיסמה',
-'home.my_status': 'הסטטוס שלי היום',
+'home.my_status': 'עדכון הסטטוס האחרון שלך היה',
 'home.update_diary': 'עדכן יומן',
 'home.recommendations_today': '💡 המלצות להיום',
 'home.friends_updates': 'עדכונים יומיים של חברים',
@@ -3617,7 +3623,7 @@ const translations = {
 'msg.no_recommendations_now': 'لا توجد توصيات متاحة حاليًا.',
 'msg.check_ins_count': 'تسجيلات حضور',
 'home.quick_checkin_desc': 'كيف تشعر الآن؟ انقر لتسجيل مزاجك بسرعة.',
-'home.my_status': 'حالتي اليوم',
+'home.my_status': 'آخر تحديث لحالتك كان',
 'home.update_diary': 'تحديث اليوميات',
 'home.recommendations_today': '💡 توصيات اليوم',
 'home.friends_updates': 'تحديثات الأصدقاء اليومية',
@@ -5451,7 +5457,7 @@ const translations = {
 'msg.no_recommendations_now': 'Рекомендации пока недоступны.',
 'msg.check_ins_count': 'регистрации',
 'home.quick_checkin_desc': 'Как вы себя чувствуете сейчас? Нажмите, чтобы быстро отметить настроение.',
-'home.my_status': 'Мой статус сегодня',
+'home.my_status': 'Ваше последнее обновление статуса',
 'home.update_diary': 'Обновить дневник',
 'home.recommendations_today': '💡 Рекомендации на сегодня',
 'home.friends_updates': 'Ежедневные обновления друзей',

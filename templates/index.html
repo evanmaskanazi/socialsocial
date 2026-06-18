@@ -1,4 +1,22 @@
 <!DOCTYPE html>
+<!-- B30: COOKIE BANNER REDESIGN + STATUS LABEL + 10 MOBILE UX IMPROVEMENTS
+  1. COOKIE BANNER: Redesigned from dark (#374151) to light warm (#FDFCFA) background,
+     softer shadow, pill-shaped buttons, reduced padding — significantly friendlier UX.
+     Mobile: full-width stacked buttons + safe-area-inset for notched phones.
+  2. STATUS LABEL: "My Status Today" → "Your Last Status Update Was" (EN/HE/AR/RU).
+  3. MOBILE UX (10 improvements):
+     M1: Larger touch targets for param-mini status cards (padding 12→16px, min-height 72px)
+     M2: Status card header stacks vertically on ≤480px screens
+     M3: Quick-set popup emoji buttons enlarged (52→60px) on mobile
+     M4: Safe-area-inset padding on mobile nav for notched phones
+     M5: Notification toast repositioned below mobile nav (top: 70px)
+     M6: Quick check-in emoji buttons enlarged (min 64×56px)
+     M7: touch-action: manipulation on all interactive elements (removes 300ms delay)
+     M8: Param label font bumped from 0.75rem to 0.82rem on mobile
+     M9: Cookie banner buttons full-width stacked on mobile
+     M10: overscroll-behavior: contain on scrollable containers
+  4. CACHE-BUST: All JS references updated from B20 → B30.
+-->
 <!-- B20: ALERT TRANSLATION FIX + CACHE-BUST SYNC
   1. BUG FIX: _translateWellnessContent regex updated from "concerning" to match
      both "concerning" (old DB alerts) and "low" (new C32+ alerts). This was the
@@ -10,7 +28,7 @@
      so the 6th parameter translates correctly in alert content.
   4. CACHE-BUST: i18n.js version bumped from B7 → B20 (was stale, causing browsers
      to serve old cached i18n with missing/outdated translations).
-  5. CACHE-BUST: All JS references updated to ?v=B20.
+  5. CACHE-BUST: All JS references updated to ?v=B30.
 -->
 <!-- B7: FIX 1: UTC→local date in saveParamQuickSet/quickCheckin/loadHomeSummary.
      Quick-set from home page used .toISOString() (UTC) while diary uses local date;
@@ -24,20 +42,20 @@
   C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
   1. FIX: Progress page now shows avg anxiety and avg belonging (were in API but not displayed)
   2. FIX: updateCheckinSummary JS populates avgAnxiety + avgBelonging elements
-  3. CACHE BUSTING: All JS references updated to ?v=B20
+  3. CACHE BUSTING: All JS references updated to ?v=B30
 -->
 <!-- C20 Changes (from C15):
   C15 AUDIT — DEBUG & GLITCH REMOVAL:
   1. FIX: Notification descriptions added to ALL 3 toggle sets (C15 only added to 1 of 3).
      Mobile drawer + notificationSettingsPanel now match settingsNotificationPanel.
-  2. CACHE BUSTING: All JS references updated to ?v=B20
+  2. CACHE BUSTING: All JS references updated to ?v=B30
 -->
 <!-- C15 Changes (from C13):
   BENNY FEEDBACK ROUND:
   1. ADDED: Social Belonging parameter tile (6th) to home summary grid — 2×3 mobile symmetry
   2. ADDED: social_belonging to paramMap, openParamQuickSet, all inline name maps, check-in history
   3. FIX: Notification settings now have descriptive helper text under each toggle
-  4. CACHE BUSTING: All JS references updated to ?v=B20
+  4. CACHE BUSTING: All JS references updated to ?v=B30
 -->
 <!-- C13 Changes (from C9):
   OBJECTIVE GROUPS — ROUND 3 HARDENING:
@@ -153,7 +171,7 @@
   8. Auth card: refined shadow layers + subtle border
   9. Mobile nav items: active press scale feedback on tap
   10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
-  CACHE BUSTING: All JS references updated to ?v=B20
+  CACHE BUSTING: All JS references updated to ?v=B30
 -->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
@@ -455,7 +473,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=B20"></script>
+    <script src="/static/js/follow-requests.js?v=B30"></script>
 
 
     <style>
@@ -4245,51 +4263,60 @@
 
     <!-- PL400: Cookie Consent Banner Styles -->
     <style>
+        /* B30: Cookie banner redesigned — light, warm, non-intimidating */
         .cookie-consent-banner {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: var(--gray-dark, #374151);
-            color: white;
-            padding: 20px;
+            background: #FDFCFA;
+            color: var(--dark, #3D4852);
+            padding: 16px 20px;
             z-index: 9999;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 -2px 12px rgba(107, 139, 164, 0.12);
+            border-top: 1px solid rgba(107, 139, 164, 0.10);
         }
         .cookie-consent-content {
-            max-width: 1200px;
+            max-width: 960px;
             margin: 0 auto;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 20px;
+            gap: 16px;
         }
         .cookie-consent-text {
             flex: 2;
-            min-width: 300px;
+            min-width: 250px;
         }
         .cookie-consent-text h4 {
-            margin: 0 0 8px 0;
-            font-size: 18px;
+            margin: 0 0 4px 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary-dark, #5A7A93);
         }
         .cookie-consent-text p {
             margin: 0;
-            font-size: 14px;
-            opacity: 0.9;
+            font-size: 13px;
+            color: var(--gray, #6B7280);
+            line-height: 1.4;
         }
         .cookie-consent-options {
             flex: 1;
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 12px;
             min-width: 200px;
         }
         .cookie-option {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
+            color: var(--dark, #3D4852);
+        }
+        .cookie-option input[type="checkbox"] {
+            accent-color: var(--primary, #6B8BA4);
         }
         .cookie-option input[disabled] {
             cursor: not-allowed;
@@ -4297,24 +4324,46 @@
         .cookie-consent-buttons {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
         .cookie-consent-buttons .btn {
-            padding: 10px 20px;
-            font-size: 14px;
+            padding: 8px 18px;
+            font-size: 13px;
             white-space: nowrap;
+            border-radius: 20px;
+        }
+        .cookie-consent-buttons .btn-secondary {
+            background: var(--light, #F4F1EC);
+            color: var(--dark, #3D4852);
+            border: 1px solid var(--border, #E5E5E3);
+        }
+        .cookie-consent-buttons .btn-primary {
+            background: linear-gradient(135deg, var(--sage, #A8C5AB), var(--primary, #6B8BA4));
+            color: white;
+            border: none;
         }
         @media (max-width: 768px) {
+            .cookie-consent-banner {
+                padding: 14px 16px;
+                /* B30-M: safe area for notched phones */
+                padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+            }
             .cookie-consent-content {
                 flex-direction: column;
                 text-align: center;
+                gap: 12px;
             }
             .cookie-consent-options {
                 justify-content: center;
             }
             .cookie-consent-buttons {
-                justify-content: center;
+                /* B30-M9: Full-width stacked buttons on mobile */
+                flex-direction: column;
                 width: 100%;
+            }
+            .cookie-consent-buttons .btn {
+                width: 100%;
+                padding: 12px 18px;
             }
         }
         [dir="rtl"] .cookie-consent-content {
@@ -4322,6 +4371,93 @@
         }
         [dir="rtl"] .cookie-option {
             flex-direction: row-reverse;
+        }
+    </style>
+
+    <!-- B30: 10 Mobile UX Improvements -->
+    <style>
+        /* B30-M1: Larger touch targets for param-mini status cards on mobile */
+        @media (max-width: 768px) {
+            .param-mini {
+                padding: 16px 12px !important;
+                min-height: 72px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+
+        /* B30-M2: Stack status card header vertically on narrow screens */
+        @media (max-width: 480px) {
+            #summaryStatusCard > div:first-child {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 8px !important;
+            }
+            [dir="rtl"] #summaryStatusCard > div:first-child {
+                align-items: flex-end !important;
+            }
+        }
+
+        /* B30-M3: Larger quick-set popup emoji buttons on mobile */
+        @media (max-width: 768px) {
+            #paramQuickSetPopup button {
+                width: 60px !important;
+                height: 60px !important;
+                font-size: 1.8rem !important;
+            }
+        }
+
+        /* B30-M4: Safe-area-inset padding for notched phones on mobile nav */
+        @media (max-width: 768px) {
+            .mobile-nav {
+                padding-top: max(8px, env(safe-area-inset-top, 8px));
+            }
+            /* Ensure main content accounts for safe areas */
+            .main-content {
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+            }
+        }
+
+        /* B30-M5: Better mobile notification toast positioning — avoid overlap with nav */
+        @media (max-width: 768px) {
+            .toast-notification,
+            [class*="notification-toast"],
+            [id*="notification"] {
+                top: 70px !important;
+                bottom: auto !important;
+            }
+        }
+
+        /* B30-M6: Larger quick check-in emoji buttons on mobile */
+        @media (max-width: 768px) {
+            #quickCheckinCard button {
+                min-width: 64px !important;
+                min-height: 56px !important;
+                font-size: 1.7rem !important;
+            }
+        }
+
+        /* B30-M7: Remove 300ms tap delay on all interactive elements */
+        a, button, input, select, textarea, label, [onclick], .mobile-nav-item, .param-mini, .conversation-item {
+            touch-action: manipulation;
+        }
+
+        /* B30-M8: Improve mobile param label readability */
+        @media (max-width: 768px) {
+            .param-mini > div:first-child {
+                font-size: 0.82rem !important;
+            }
+        }
+
+        /* B30-M10: Prevent pull-to-refresh from interfering with scrollable areas */
+        .messages-list,
+        .conversations-list,
+        #friendsUpdatesList,
+        #connectionStatusList,
+        .view {
+            overscroll-behavior: contain;
         }
     </style>
 
@@ -5183,7 +5319,7 @@
                   <!-- V2: My Summary Status Card -->
                   <div id="summaryStatusCard" style="background: linear-gradient(135deg, var(--peach-light) 0%, var(--sage-light) 100%); padding: 20px; border-radius: 14px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(107, 139, 164, 0.12);">
                       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
-                          <h3 style="color: var(--primary-dark); font-size: 1.2rem; margin: 0;" data-i18n="home.my_status">My Status Today</h3>
+                          <h3 style="color: var(--primary-dark); font-size: 1.2rem; margin: 0;" data-i18n="home.my_status">Your Last Status Update Was</h3>
                           <div style="display: flex; gap: 8px; align-items: center;">
                               <span id="streakBadge" style="background: var(--coral); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">🔥 0 day streak</span>
                               <button class="btn btn-primary" style="padding: 8px 20px; font-size: 0.9rem; border-radius: 20px;" onclick="handleParametersClick(event)" data-i18n="home.update_diary">Update Diary</button>
@@ -7281,7 +7417,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B20"></script>
+    <script src="/static/js/i18n.js?v=B30"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7577,9 +7713,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B20"></script>
-   <script src="/static/js/circles-messages.js?v=B20"></script>
-<script src="/static/js/feed-updates.js?v=B20"></script>
+<script src="/static/js/parameters-social.js?v=B30"></script>
+   <script src="/static/js/circles-messages.js?v=B30"></script>
+<script src="/static/js/feed-updates.js?v=B30"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
