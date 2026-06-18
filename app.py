@@ -1,6 +1,16 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — B7
+Complete app.py for Social Social Platform - V4 10Link — B20
+
+# B20 Changes (from B7/B15):
+# BUG FIX 1: Added social_belonging to _param_keywords in get_alerts() privacy
+#   filter (trigger_alert_visible). Without this, social_belonging trigger alerts
+#   bypassed the privacy check and always showed even when the param was private.
+# BUG FIX 2: Added social_belonging translations to consolidated wellness alert
+#   email translations in all 4 languages (en/he/ar/ru). Without this, any
+#   social_belonging trigger email would display the raw key "social_belonging"
+#   instead of the human-readable "Belonging"/"שייכות"/"الانتماء"/"Принадлежность".
+# Cache version bumped to B20 in all HTML files.
 
 # B7 Changes (from C32/B5):
 # FIX 1: Privacy carry-forward hardening — added logging of actual carried-forward
@@ -2814,6 +2824,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'sleep_quality': 'Sleep quality',
                 'physical_activity': 'Physical activity',
                 'anxiety': 'Calmness' if ANXIETY_DISPLAY_MODE == 'calm' else 'Anxiety',
+                'social_belonging': 'Belonging',
                 'no_checkin': 'No check-in'
             },
             'he': {
@@ -2833,6 +2844,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'sleep_quality': 'איכות שינה',
                 'physical_activity': 'פעילות גופנית',
                 'anxiety': 'שלווה' if ANXIETY_DISPLAY_MODE == 'calm' else 'חרדה',
+                'social_belonging': 'שייכות',
                 'no_checkin': "אין צ'ק-אין"
             },
             'ar': {
@@ -2852,6 +2864,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'sleep_quality': 'جودة النوم',
                 'physical_activity': 'النشاط البدني',
                 'anxiety': 'السكينة' if ANXIETY_DISPLAY_MODE == 'calm' else 'القلق',
+                'social_belonging': 'الانتماء',
                 'no_checkin': 'لا يوجد تسجيل'
             },
             'ru': {
@@ -2871,6 +2884,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'sleep_quality': 'Качество сна',
                 'physical_activity': 'Физическая активность',
                 'anxiety': 'Спокойствие' if ANXIETY_DISPLAY_MODE == 'calm' else 'Тревожность',
+                'social_belonging': 'Принадлежность',
                 'no_checkin': 'Нет отметки'
             }
         }
@@ -10185,7 +10199,9 @@ def get_alerts():
             'sleep quality': 'sleep_quality_privacy',
             'physical activity': 'physical_activity_privacy',
             'exercise': 'physical_activity_privacy',
-            'energy': 'energy_privacy'
+            'energy': 'energy_privacy',
+            'social_belonging': 'social_belonging_privacy',
+            'belonging': 'social_belonging_privacy'
         }
 
         def trigger_alert_visible(alert):

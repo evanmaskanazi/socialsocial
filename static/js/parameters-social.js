@@ -1,3 +1,5 @@
+// Version B20 - FIX: Updated fallback alert strings from "concerning levels" to
+//   "low levels" (alerts.mood_low, alerts.energy_low) to match C32 backend tone change.
 // Version B7 - FIX: Privacy reset on quick-checkin from home page.
 //   ROOT CAUSE: saveParameters() always sent privacy fields with
 //   window.selectedPrivacy.mood || 'private'. If auto-load hadn't completed
@@ -809,8 +811,8 @@ const addParameterTranslations = () => {
                 'following.view_full_profile': 'View Full Profile',
                 'following.circles': 'Circles',
                 'alerts.wellness_alert': 'Wellness Alert for',
-                'alerts.mood_low': '\'s mood has been at concerning levels',
-                'alerts.energy_low': '\'s energy has been at concerning levels',
+                'alerts.mood_low': '\'s mood has been at low levels',
+                'alerts.energy_low': '\'s energy has been at low levels',
                 // Tooltip help texts
                 'tooltip.mood': 'How good or bad have you felt today?\n\n1 = Bad - Feeling down, sad, or low\n2 = Below average - Not your best, but managing\n3 = Okay - Reasonably stable or neutral\n4 = Good - Feeling positive, content, or upbeat\n\nRemember: Mood fluctuates naturally day to day. You\'re tracking patterns over time to understand yourself better, not judging individual days. Even difficult days provide valuable information.',
                 'tooltip.energy': 'This tracks your physical stamina and mental sharpness throughout the day.\n\n1 = Depleted - Exhausted, struggling to focus or complete basic tasks\n2 = Low - Tired and running on reserves, everything feels effortful\n3 = Moderate - Decent energy to get things done, can focus reasonably well, some fatigue by day\'s end\n4 = High - Energized and alert, easy to focus and accomplish tasks, feeling capable\n\nRemember: Low energy isn\'t laziness - it\'s information. Many factors affect energy (sleep, stress, nutrition, health). Tracking patterns helps you identify what supports or drains you.',
