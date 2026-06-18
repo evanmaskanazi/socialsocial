@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — B20
+Complete app.py for Social Social Platform - V4 10Link — B30
+
+# B30 Changes (from B25/B20):
+# No backend logic changes. Cache version bumped to B30 in all HTML files.
+# Frontend-only changes: cookie banner redesign, status label update, 10 mobile UX fixes.
 
 # B20 Changes (from B7/B15):
 # BUG FIX 1: Added social_belonging to _param_keywords in get_alerts() privacy
