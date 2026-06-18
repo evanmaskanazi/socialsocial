@@ -1,3 +1,12 @@
+// Version B7 - FIX: Privacy reset on quick-checkin from home page.
+//   ROOT CAUSE: saveParameters() always sent privacy fields with
+//   window.selectedPrivacy.mood || 'private'. If auto-load hadn't completed
+//   (network delay, error, race), the initialization defaults ('private')
+//   were sent, overwriting backend carry-forward values.
+//   FIX: Added _privacyLoadedFromServer flag. saveParameters() only includes
+//   privacy fields when the flag is true (set by auto-load or loadParameters).
+//   T40 dropdown-change auto-apply remains as the primary privacy save path.
+//   Cache version bumped to B7.
 // Version C31 - Cache-buster sync to C31; no functional changes in this file
 // Version C30 - Cache-buster sync to C30; no functional changes in this file
 // Version C25 - Cache-buster sync to C25; no functional changes in this file
@@ -204,6 +213,7 @@ let currentDate = new Date();
 let selectedRatings = {};
 let datesWithData = new Set(JSON.parse(localStorage.getItem('savedParameterDates') || '[]'));
 window.selectedPrivacy = {};
+window._privacyLoadedFromServer = false;  // B7: flag to prevent privacy reset on save
 let savedParameterState = {};
 
 // Add function to save parameter state
@@ -416,6 +426,7 @@ async function loadMostRecentPrivacySettings() {
         if (recentNotesSel) recentNotesSel.value = recentNotesPrivacy;
 
         console.log('Privacy settings loaded from recent entry:', window.selectedPrivacy);
+        window._privacyLoadedFromServer = true;  // B7
     } catch (error) {
         console.log('Could not load recent privacy settings:', error);
     }
@@ -1412,7 +1423,7 @@ function initializeParameters() {
                         window.selectedPrivacy.notes = autoNotesPrivacy;
                         const autoNotesSel = document.getElementById('notesPrivacySelect');
                         if (autoNotesSel) autoNotesSel.value = autoNotesPrivacy;
-                        
+                        window._privacyLoadedFromServer = true;  // B7
                         // Also load ratings if they exist
                         if (result.data.parameters) {
                             Object.keys(result.data.parameters).forEach(categoryId => {
@@ -2956,15 +2967,22 @@ async function saveParameters() {
         // T8: Convert anxiety from display value back to storage value
         anxiety: window.anxietyToStorage ? window.anxietyToStorage(selectedRatings.anxiety) : (selectedRatings.anxiety || null),
         social_belonging: selectedRatings.social_belonging || null,
-        mood_privacy: window.selectedPrivacy.mood || 'private',
-        energy_privacy: window.selectedPrivacy.energy || 'private',
-        sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
-        physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
-        anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
-        social_belonging_privacy: window.selectedPrivacy.social_belonging || 'private',
-        notes_privacy: window.selectedPrivacy.notes || 'private',  // NP1
         notes: notes
     };
+
+    // B7 FIX: Only send privacy fields if they were loaded from the server.
+    // Without this guard, if auto-load hasn't completed (network delay / error),
+    // the initialization defaults ('private') overwrite backend carry-forward values.
+    // T40 dropdown-change auto-apply is the primary privacy save path regardless.
+    if (window._privacyLoadedFromServer) {
+        data.mood_privacy = window.selectedPrivacy.mood || 'private';
+        data.energy_privacy = window.selectedPrivacy.energy || 'private';
+        data.sleep_quality_privacy = window.selectedPrivacy.sleep_quality || 'private';
+        data.physical_activity_privacy = window.selectedPrivacy.physical_activity || 'private';
+        data.anxiety_privacy = window.selectedPrivacy.anxiety || 'private';
+        data.social_belonging_privacy = window.selectedPrivacy.social_belonging || 'private';
+        data.notes_privacy = window.selectedPrivacy.notes || 'private';  // NP1
+    }
 
     try {
         const response = await fetch('/api/parameters', {
@@ -3092,6 +3110,7 @@ async function loadParameters(showMsg = true) {
                 window.selectedPrivacy.notes = notesPrivacyValue;
                 const notesPrivacySel = document.getElementById('notesPrivacySelect');
                 if (notesPrivacySel) notesPrivacySel.value = notesPrivacyValue;
+                window._privacyLoadedFromServer = true;  // B7
             }
             // else: OPT-PRIVACY: Keep current window.selectedPrivacy and dropdown values unchanged
 
@@ -4350,4 +4369,4 @@ window.viewUserParameters = viewUserParameters;
 window.closeUserParametersModal = closeUserParametersModal;
 window.checkParameterAlerts = checkParameterAlerts;
 
-console.log('[V2] Parameters-social.js v1902-I2 loaded - Calmness label fix, tooltip.calm translations added');
+console.log('[V2] Parameters-social.js vB7 loaded - Privacy reset fix, cache-buster B7');
