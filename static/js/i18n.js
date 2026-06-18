@@ -1,4 +1,11 @@
 // Language detection and translation system with backend sync
+// Version B20 - TONE SYNC: Updated alert content translations to match C32 backend
+//   tone change ("concerning levels" → "low levels") across all 4 languages:
+//   - EN: alerts.wellness_content, wellness_content_no_date, parameter_alert
+//   - HE: "רמות מדאיגות" → "רמות נמוכות"
+//   - AR: "مستويات مقلقة" → "مستويات منخفضة"
+//   - RU: "тревожном уровне" → "низком уровне"
+//   Also fixed grammar: "diary are concerning" → "diary is concerning" (trigger_get_notified).
 // Version B7 - Cache-buster sync to B7; no functional changes in this file
 // Version C31 - Cache-buster sync to C31; no functional changes in this file
 // Version C30 - Cache-buster sync to C30; backend-only AI changes.
@@ -615,8 +622,8 @@ const translations = {
 'invite.legacy_alert_content': 'Someone has invited you to connect',
 // PJ6003 - Well-Being Alert Translations
     'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
-    'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",
-    'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",
+    'alerts.wellness_content': "{username}'s {param} has been at low levels for {days} consecutive days ({dateRange})",
+    'alerts.wellness_content_no_date': "{username}'s {param} has been at low levels for {days} consecutive days",
     'alerts.no_checkin_content': "{username} hasn't checked in for {days} days — you may want to reach out",
 
     // PJ6003 - Notification Translations (for alerts list rendering)
@@ -789,7 +796,7 @@ const translations = {
 'trigger_condition_greater_than': 'greater than',
 'trigger_days_format': '{count} days',
 'trigger_set_alert': 'Set Alert Triggers',
-'trigger_get_notified': 'Get notified when {username}\'s well-being diary are concerning',
+'trigger_get_notified': 'Get notified when {username}\'s well-being diary is concerning',
 'trigger_add': 'Add Trigger',
 'trigger_remove': 'Remove',
 'trigger_no_triggers': 'No triggers set for this user',
@@ -1099,7 +1106,7 @@ const translations = {
         'parameters.loaded': 'Diary loaded for',
         'parameters.no_saved': 'No saved diary for this date',
         'parameters.cleared': 'Diary cleared',
-        'trigger_get_notified': "Get notified when {username}'s well-being diary are concerning",
+        'trigger_get_notified': "Get notified when {username}'s well-being diary is concerning",
 
         // Following search - FIX #6
         'following.search_placeholder': 'Search users to connect with...',
@@ -1125,7 +1132,7 @@ const translations = {
     // Alert types (for translation in alert list)
     'alerts.wellness_alert': 'Well-Being Alert',
     'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
-    'alerts.parameter_alert': '{parameter} has been at concerning levels',
+    'alerts.parameter_alert': '{parameter} has been at low levels',
     'alerts.consecutive_days': 'for {days} consecutive days',
     'alerts.date_range': '({start} - {end})',
 
@@ -1782,7 +1789,7 @@ const translations = {
     // Alert types
     'alerts.wellness_alert': 'התראת רווחה',
     'alerts.wellness_alert_for': 'התראת רווחה עבור {username}',
-    'alerts.parameter_alert': '{parameter} היה ברמות מדאיגות',
+    'alerts.parameter_alert': '{parameter} היה ברמות נמוכות',
     'alerts.consecutive_days': 'במשך {days} ימים רצופים',
     'alerts.date_range': '({start} - {end})',
 
@@ -1811,8 +1818,8 @@ const translations = {
         'invite.alert_content': '{username} הזמין/ה אותך לעקוב אחריו/ה',
          // PJ6003 - Well-Being Alert Translations
     'alerts.wellness_alert_for': 'התראת רווחה עבור {username}',
-    'alerts.wellness_content': "{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})",
-    'alerts.wellness_content_no_date': "{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים",
+    'alerts.wellness_content': "{param} של {username} היה ברמות נמוכות במשך {days} ימים רצופים ({dateRange})",
+    'alerts.wellness_content_no_date': "{param} של {username} היה ברמות נמוכות במשך {days} ימים רצופים",
     'alerts.no_checkin_content': "{username} לא ביצע/ה צ׳ק-אין במשך {days} ימים — כדאי לבדוק איך הם",
 
     // PJ6003 - Notification Translations
@@ -3646,7 +3653,7 @@ const translations = {
     // Alert types
     'alerts.wellness_alert': 'تنبيه رفاهية',
     'alerts.wellness_alert_for': 'تنبيه رفاهية لـ {username}',
-    'alerts.parameter_alert': 'كان {parameter} في مستويات مقلقة',
+    'alerts.parameter_alert': 'كان {parameter} في مستويات منخفضة',
     'alerts.consecutive_days': 'لمدة {days} أيام متتالية',
     'alerts.date_range': '({start} - {end})',
 
@@ -3776,8 +3783,8 @@ const translations = {
 'invite.alert_content': 'دعاك {username} لمتابعته',
  // PJ6003 - Well-Being Alert Translations
     'alerts.wellness_alert_for': 'تنبيه رفاهية لـ {username}',
-    'alerts.wellness_content': "كان {param} لـ {username} في مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})",
-    'alerts.wellness_content_no_date': "كان {param} لـ {username} في مستويات مقلقة لمدة {days} أيام متتالية",
+    'alerts.wellness_content': "كان {param} لـ {username} في مستويات منخفضة لمدة {days} أيام متتالية ({dateRange})",
+    'alerts.wellness_content_no_date': "كان {param} لـ {username} في مستويات منخفضة لمدة {days} أيام متتالية",
     'alerts.no_checkin_content': "{username} لم يسجل/تسجل الدخول منذ {days} أيام — قد ترغب في التواصل معهم",
 
     // PJ6003 - Notification Translations
@@ -5098,8 +5105,8 @@ const translations = {
     'invite.alert_content': '{username} пригласил(а) вас подключиться',
  // PJ6003 - Well-Being Alert Translations
     'alerts.wellness_alert_for': 'Оповещение о благополучии для {username}',
-    'alerts.wellness_content': "{param} пользователя {username} был на тревожном уровне в течение {days} дней подряд ({dateRange})",
-    'alerts.wellness_content_no_date': "{param} пользователя {username} был на тревожном уровне в течение {days} дней подряд",
+    'alerts.wellness_content': "{param} пользователя {username} был на низком уровне в течение {days} дней подряд ({dateRange})",
+    'alerts.wellness_content_no_date': "{param} пользователя {username} был на низком уровне в течение {days} дней подряд",
     'alerts.no_checkin_content': "{username} не отмечался/отмечалась {days} дней — возможно, стоит связаться",
 
     // PJ6003 - Notification Translations
@@ -5240,7 +5247,7 @@ const translations = {
     // Alert types
     'alerts.wellness_alert': 'Оповещение о благополучии',
     'alerts.wellness_alert_for': 'Оповещение о благополучии для {username}',
-    'alerts.parameter_alert': '{parameter} был на тревожном уровне',
+    'alerts.parameter_alert': '{parameter} был на низком уровне',
     'alerts.consecutive_days': 'в течение {days} дней подряд',
     'alerts.date_range': '({start} - {end})',
 
