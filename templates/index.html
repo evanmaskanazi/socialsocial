@@ -28,7 +28,7 @@
      so the 6th parameter translates correctly in alert content.
   4. CACHE-BUST: i18n.js version bumped from B7 → B20 (was stale, causing browsers
      to serve old cached i18n with missing/outdated translations).
-  5. CACHE-BUST: All JS references updated to ?v=B30.
+  5. CACHE-BUST: All JS references updated to ?v=B60.
 -->
 <!-- B7: FIX 1: UTC→local date in saveParamQuickSet/quickCheckin/loadHomeSummary.
      Quick-set from home page used .toISOString() (UTC) while diary uses local date;
@@ -42,20 +42,20 @@
   C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
   1. FIX: Progress page now shows avg anxiety and avg belonging (were in API but not displayed)
   2. FIX: updateCheckinSummary JS populates avgAnxiety + avgBelonging elements
-  3. CACHE BUSTING: All JS references updated to ?v=B30
+  3. CACHE BUSTING: All JS references updated to ?v=B60
 -->
 <!-- C20 Changes (from C15):
   C15 AUDIT — DEBUG & GLITCH REMOVAL:
   1. FIX: Notification descriptions added to ALL 3 toggle sets (C15 only added to 1 of 3).
      Mobile drawer + notificationSettingsPanel now match settingsNotificationPanel.
-  2. CACHE BUSTING: All JS references updated to ?v=B30
+  2. CACHE BUSTING: All JS references updated to ?v=B60
 -->
 <!-- C15 Changes (from C13):
   BENNY FEEDBACK ROUND:
   1. ADDED: Social Belonging parameter tile (6th) to home summary grid — 2×3 mobile symmetry
   2. ADDED: social_belonging to paramMap, openParamQuickSet, all inline name maps, check-in history
   3. FIX: Notification settings now have descriptive helper text under each toggle
-  4. CACHE BUSTING: All JS references updated to ?v=B30
+  4. CACHE BUSTING: All JS references updated to ?v=B60
 -->
 <!-- C13 Changes (from C9):
   OBJECTIVE GROUPS — ROUND 3 HARDENING:
@@ -171,7 +171,7 @@
   8. Auth card: refined shadow layers + subtle border
   9. Mobile nav items: active press scale feedback on tap
   10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
-  CACHE BUSTING: All JS references updated to ?v=B30
+  CACHE BUSTING: All JS references updated to ?v=B60
 -->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
@@ -473,7 +473,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=B30"></script>
+    <script src="/static/js/follow-requests.js?v=B60"></script>
 
 
     <style>
@@ -1733,6 +1733,26 @@
         }
         .dark-mode #c9InviteResult, .dark-mode #c9DeptOpResult {
             background: #1E3A2F !important; color: #A7F3D0 !important; border-color: #065F46 !important;
+        }
+        /* B50: Responsive grid for advanced group options */
+        @media (max-width: 600px) {
+            .b50-group-grid { grid-template-columns: 1fr !important; }
+        }
+        /* B50→B55: Dark mode for group classification badges — explicit overrides for readability */
+        .dark-mode .b50-badge {
+            background: #374151 !important;
+            color: #E5E7EB !important;
+            border: 1px solid #4B5563;
+        }
+        .dark-mode #b45AdvancedGroupOpts {
+            background: #1F2937 !important; border-color: #4B5563 !important;
+        }
+        .dark-mode #b45AdvancedGroupOpts label {
+            color: #9CA3AF !important;
+        }
+        .dark-mode #b45AdvancedGroupOpts input,
+        .dark-mode #b45AdvancedGroupOpts select {
+            background: #111827 !important; color: #E5E7EB !important; border-color: #4B5563 !important;
         }
         /* ================================================================== */
         /* END CLEAN3 WARM VIEW STYLING                                       */
@@ -6595,7 +6615,7 @@
                                       🏷️ <span data-i18n="objective_group.manage_groups">Manage Objective Groups</span>
                                   </h4>
 
-                                  <!-- Create new group (operators/admins only) -->
+                                  <!-- Create new group (operators/admins only) — B45: expanded with classification -->
                                   <div style="background: var(--light); padding: 16px 20px; border-radius: 12px; margin-bottom: 16px;">
                                       <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                                           <input type="text" id="g27NewGroupName" placeholder="Group name" data-i18n-placeholder="objective_group.name_placeholder"
@@ -6604,6 +6624,105 @@
                                                  style="flex: 2; min-width: 200px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 0.85rem;">
                                           <button onclick="g27CreateGroup()" style="padding: 8px 20px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer;"
                                                   data-i18n="objective_group.create_btn">Create Group</button>
+                                      </div>
+                                      <!-- B45: Collapsible advanced classification options -->
+                                      <div style="margin-top: 10px;">
+                                          <a href="#" onclick="event.preventDefault(); var p=document.getElementById('b45AdvancedGroupOpts'); p.style.display=p.style.display==='none'?'block':'none'; this.querySelector('.b45Arrow').textContent=p.style.display==='none'?'▸':'▾';"
+                                             style="font-size: 0.82rem; color: var(--primary); text-decoration: none; font-weight: 600;">
+                                              <span class="b45Arrow">▸</span> <span data-i18n="objective_group.advanced_options">Advanced options</span>
+                                          </a>
+                                          <div id="b45AdvancedGroupOpts" style="display: none; margin-top: 10px; padding: 12px 16px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border);">
+                                              <div class="b50-group-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                                  <!-- Group Type -->
+                                                  <div>
+                                                      <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.type_label">Group Type</label>
+                                                      <select id="b45GroupType" onchange="var ci=document.getElementById('b50CustomTypeRow'); if(ci) ci.style.display=this.value==='custom'?'block':'none';"
+                                                              style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; background: var(--light);">
+                                                          <option value="" data-i18n="objective_group.type_none">— None —</option>
+                                                          <option value="department" data-i18n="objective_group.type_department">Department</option>
+                                                          <option value="cohort" data-i18n="objective_group.type_cohort">Cohort</option>
+                                                          <option value="wellness_program" data-i18n="objective_group.type_wellness">Wellness Program</option>
+                                                          <option value="school_class" data-i18n="objective_group.type_school">School Class</option>
+                                                          <option value="therapy_group" data-i18n="objective_group.type_therapy">Therapy Group</option>
+                                                          <option value="custom" data-i18n="objective_group.type_custom">Custom</option>
+                                                      </select>
+                                                      <!-- B50: Custom type label (shown only when type=custom) -->
+                                                      <div id="b50CustomTypeRow" style="display: none; margin-top: 6px;">
+                                                          <input type="text" id="b50CustomTypeLabel" maxlength="100"
+                                                                 placeholder="Specify custom type..." data-i18n-placeholder="objective_group.custom_type_placeholder"
+                                                                 style="width: 100%; padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.82rem; box-sizing: border-box;">
+                                                      </div>
+                                                  </div>
+                                                  <!-- Industry Vertical -->
+                                                  <div>
+                                                      <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.industry_label">Industry</label>
+                                                      <select id="b45Industry" style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; background: var(--light);">
+                                                          <option value="" data-i18n="objective_group.industry_none">— None —</option>
+                                                          <option value="healthcare" data-i18n="objective_group.industry_healthcare">Healthcare</option>
+                                                          <option value="education" data-i18n="objective_group.industry_education">Education</option>
+                                                          <option value="corporate" data-i18n="objective_group.industry_corporate">Corporate</option>
+                                                          <option value="nonprofit" data-i18n="objective_group.industry_nonprofit">Nonprofit</option>
+                                                          <option value="government" data-i18n="objective_group.industry_government">Government</option>
+                                                          <option value="other" data-i18n="objective_group.industry_other">Other</option>
+                                                      </select>
+                                                  </div>
+                                                  <!-- Geography -->
+                                                  <div>
+                                                      <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.geography_label">Geography / Region</label>
+                                                      <input type="text" id="b45Geography" placeholder="e.g. Jerusalem, Israel" data-i18n-placeholder="objective_group.geography_placeholder"
+                                                             style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; box-sizing: border-box;">
+                                                  </div>
+                                                  <!-- Timezone -->
+                                                  <div>
+                                                      <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.timezone_label">Timezone</label>
+                                                      <input type="text" id="b45Timezone" placeholder="e.g. Asia/Jerusalem" data-i18n-placeholder="objective_group.timezone_placeholder"
+                                                             style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; box-sizing: border-box;">
+                                                  </div>
+                                                  <!-- Membership Rule -->
+                                                  <div>
+                                                      <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.membership_rule_label">Membership</label>
+                                                      <select id="b45MembershipRule" style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; background: var(--light);">
+                                                          <option value="open" data-i18n="objective_group.rule_open">Open (anyone can join)</option>
+                                                          <option value="invite_only" data-i18n="objective_group.rule_invite">Invite only</option>
+                                                          <option value="approval_required" data-i18n="objective_group.rule_approval">Approval required</option>
+                                                      </select>
+                                                  </div>
+                                                  <!-- Group Privacy -->
+                                                  <div>
+                                                      <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.privacy_label">Visibility</label>
+                                                      <select id="b45GroupPrivacy" style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; background: var(--light);">
+                                                          <option value="visible" data-i18n="objective_group.privacy_visible">Visible to all users</option>
+                                                          <option value="private" data-i18n="objective_group.privacy_private">Private (listed, details hidden)</option>
+                                                          <option value="hidden" data-i18n="objective_group.privacy_hidden">Hidden (invite only)</option>
+                                                      </select>
+                                                  </div>
+                                                  <!-- Max Capacity -->
+                                                  <div>
+                                                      <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.capacity_label">Max Capacity</label>
+                                                      <input type="number" id="b45MaxCapacity" min="1" placeholder="Unlimited" data-i18n-placeholder="objective_group.capacity_placeholder"
+                                                             style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; box-sizing: border-box;">
+                                                  </div>
+                                                  <!-- Parent Group -->
+                                                  <div>
+                                                      <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.parent_label">Parent Group</label>
+                                                      <select id="b45ParentGroup" style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; background: var(--light);">
+                                                          <option value="" data-i18n="objective_group.parent_none">— None (top-level) —</option>
+                                                      </select>
+                                                  </div>
+                                              </div>
+                                              <!-- Wellness Parameters (multi-select) -->
+                                              <div style="margin-top: 4px;">
+                                                  <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 5px;" data-i18n="objective_group.params_label">Wellness Parameters (leave unchecked for all)</label>
+                                                  <div id="b45ParamChecks" style="display: flex; flex-wrap: wrap; gap: 6px 16px;">
+                                                      <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;"><input type="checkbox" value="mood" class="b45ParamCb"> <span data-i18n="parameters.mood">Mood</span></label>
+                                                      <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;"><input type="checkbox" value="energy" class="b45ParamCb"> <span data-i18n="parameters.energy">Energy</span></label>
+                                                      <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;"><input type="checkbox" value="sleep_quality" class="b45ParamCb"> <span data-i18n="parameters.sleep">Sleep</span></label>
+                                                      <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;"><input type="checkbox" value="physical_activity" class="b45ParamCb"> <span data-i18n="parameters.physical_activity">Physical Activity</span></label>
+                                                      <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;"><input type="checkbox" value="anxiety" class="b45ParamCb"> <span data-i18n="parameters.anxiety">Anxiety</span></label>
+                                                      <label style="font-size: 0.82rem; display: flex; align-items: center; gap: 4px;"><input type="checkbox" value="social_belonging" class="b45ParamCb"> <span data-i18n="parameters.social_belonging">Social Belonging</span></label>
+                                                  </div>
+                                              </div>
+                                          </div>
                                       </div>
                                   </div>
 
@@ -7417,7 +7536,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B30"></script>
+    <script src="/static/js/i18n.js?v=B60"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7713,9 +7832,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B30"></script>
-   <script src="/static/js/circles-messages.js?v=B30"></script>
-<script src="/static/js/feed-updates.js?v=B30"></script>
+<script src="/static/js/parameters-social.js?v=B60"></script>
+   <script src="/static/js/circles-messages.js?v=B60"></script>
+<script src="/static/js/feed-updates.js?v=B60"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -21336,6 +21455,17 @@ async function g27LoadMyGroups() {
                 nameSpan.textContent = '🏷️ ' + g.name;
                 pill.appendChild(nameSpan);
 
+                // B45→B50: Show group type mini-badge if set (handles custom labels)
+                if (g.group_type) {
+                    const typeBadge = document.createElement('span');
+                    typeBadge.style.cssText = 'font-size: 0.7rem; background: #FEF3C7; color: #92400E; padding: 1px 6px; border-radius: 6px; font-weight: 600;';
+                    typeBadge.className = 'b50-badge';
+                    typeBadge.textContent = g.group_type === 'custom' && g.custom_type_label
+                        ? g.custom_type_label
+                        : _t('objective_group.type_' + g.group_type, g.group_type);
+                    pill.appendChild(typeBadge);
+                }
+
                 const countSpan = document.createElement('span');
                 countSpan.style.cssText = 'font-size: 0.75rem; color: #6366F1; opacity: 0.7;';
                 countSpan.textContent = '(' + g.member_count + ')';
@@ -21373,17 +21503,31 @@ async function g27LoadMyGroups() {
         defaultOpt.textContent = _t('objective_group.join_group', 'Join a group...');
         selectEl.appendChild(defaultOpt);
 
-        if (availableGroups.length === 0) {
+        // B45: Filter out invite_only/approval_required groups from self-join dropdown
+        const joinableGroups = availableGroups.filter(g => !g.membership_rule || g.membership_rule === 'open');
+
+        if (joinableGroups.length === 0) {
             const noOpt = document.createElement('option');
             noOpt.value = '';
             noOpt.disabled = true;
             noOpt.textContent = _t('objective_group.no_available', 'No available groups');
             selectEl.appendChild(noOpt);
         } else {
-            availableGroups.forEach(g => {
+            joinableGroups.forEach(g => {
                 const opt = document.createElement('option');
                 opt.value = g.id;
-                opt.textContent = g.name + ' (' + g.member_count + ' ' + _t('objective_group.members', 'members') + ')';
+                // B50: Include type in dropdown label (handles custom labels)
+                let label = g.name;
+                if (g.group_type) {
+                    const tLabel = g.group_type === 'custom' && g.custom_type_label
+                        ? g.custom_type_label
+                        : _t('objective_group.type_' + g.group_type, g.group_type);
+                    label += ' [' + tLabel + ']';
+                }
+                label += ' (' + g.member_count + ' ' + _t('objective_group.members', 'members');
+                if (g.max_capacity) label += '/' + g.max_capacity;
+                label += ')';
+                opt.textContent = label;
                 selectEl.appendChild(opt);
             });
         }
@@ -21488,6 +21632,19 @@ async function g27LoadOpGroups() {
                     scopeBadge.textContent = _t('objective_group.your_scope', 'Your scope');
                     info.appendChild(scopeBadge);
                 }
+                // B45→B50: Classification badges with dark mode class
+                const _b45Badge = (text, bg, fg) => { const s = document.createElement('span'); s.className = 'b50-badge'; s.style.cssText = 'display:inline-block;margin-left:6px;padding:2px 7px;background:'+bg+';color:'+fg+';border-radius:7px;font-size:0.7rem;font-weight:600;vertical-align:middle;'; s.textContent = text; return s; };
+                if (g.group_type) {
+                    const typeLabel = g.group_type === 'custom' && g.custom_type_label
+                        ? g.custom_type_label
+                        : _t('objective_group.type_'+g.group_type, g.group_type);
+                    info.appendChild(_b45Badge(typeLabel, '#FEF3C7', '#92400E'));
+                }
+                if (g.industry_vertical) info.appendChild(_b45Badge(_t('objective_group.industry_'+g.industry_vertical, g.industry_vertical), '#E0E7FF', '#3730A3'));
+                if (g.membership_rule && g.membership_rule !== 'open') info.appendChild(_b45Badge(_t('objective_group.rule_'+g.membership_rule, g.membership_rule), '#FCE7F3', '#9D174D'));
+                if (g.group_privacy && g.group_privacy !== 'visible') info.appendChild(_b45Badge(g.group_privacy === 'hidden' ? '👁‍🗨 ' + _t('objective_group.privacy_hidden','Hidden') : '🔒 ' + _t('objective_group.privacy_private','Private'), '#FEE2E2', '#991B1B'));
+                if (g.geography) info.appendChild(_b45Badge('📍 ' + g.geography, '#ECFDF5', '#065F46'));
+                if (g.max_capacity) info.appendChild(_b45Badge('⚡ ' + (g.member_count || 0) + '/' + g.max_capacity, '#F3E8FF', '#6B21A8'));
                 if (g.description) {
                     const descEl = document.createElement('span');
                     descEl.style.cssText = 'color: var(--gray); font-size: 0.82rem; margin-left: 8px;';
@@ -21636,6 +21793,24 @@ async function g27LoadOpGroups() {
             });
         }
 
+        // B45: Populate parent group dropdown for create form
+        const parentSelect = document.getElementById('b45ParentGroup');
+        if (parentSelect) {
+            const prevParent = parentSelect.value;
+            parentSelect.innerHTML = '';
+            const noneOpt = document.createElement('option');
+            noneOpt.value = '';
+            noneOpt.textContent = _t('objective_group.parent_none', '— None (top-level) —');
+            parentSelect.appendChild(noneOpt);
+            groups.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.name;
+                if (String(g.id) === String(prevParent)) opt.selected = true;
+                parentSelect.appendChild(opt);
+            });
+        }
+
         // C9: Populate dept operator group dropdown
         if (deptOpSelect) {
             const prevDeptVal = deptOpSelect.value;
@@ -21668,22 +21843,65 @@ async function g27CreateGroup() {
         return;
     }
 
+    // B50: Always collect classification fields (user may have filled them then collapsed panel)
+    const payload = {
+        name: nameInput.value.trim(),
+        description: (descInput && descInput.value.trim()) || ''
+    };
+    const _v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const gt = _v('b45GroupType');
+    if (gt) {
+        payload.group_type = gt;
+        // B50: Send custom type label when type is custom
+        if (gt === 'custom') {
+            const customLabel = _v('b50CustomTypeLabel');
+            if (customLabel) payload.custom_type_label = customLabel;
+        }
+    }
+    const iv = _v('b45Industry');
+    if (iv) payload.industry_vertical = iv;
+    const geo = _v('b45Geography');
+    if (geo) payload.geography = geo;
+    const tz = _v('b45Timezone');
+    if (tz) payload.timezone = tz;
+    const mr = _v('b45MembershipRule');
+    if (mr && mr !== 'open') payload.membership_rule = mr;
+    const gp = _v('b45GroupPrivacy');
+    if (gp && gp !== 'visible') payload.group_privacy = gp;
+    const capVal = _v('b45MaxCapacity');
+    if (capVal && parseInt(capVal) > 0) payload.max_capacity = parseInt(capVal);
+    const parentVal = _v('b45ParentGroup');
+    if (parentVal) payload.parent_group_id = parseInt(parentVal);
+    // Wellness parameter checkboxes
+    const checked = Array.from(document.querySelectorAll('.b45ParamCb:checked')).map(cb => cb.value);
+    if (checked.length > 0) payload.wellness_parameters = JSON.stringify(checked);
+
     const csrfToken = await getCsrfToken() || '';
     try {
         const res = await fetch('/api/objective-groups/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
             credentials: 'include',
-            body: JSON.stringify({
-                name: nameInput.value.trim(),
-                description: (descInput && descInput.value.trim()) || ''
-            })
+            body: JSON.stringify(payload)
         });
 
         if (res.ok) {
             showNotification(_t('objective_group.created', 'Group created!'), 'success');
             nameInput.value = '';
             if (descInput) descInput.value = '';
+            // B50: Reset all advanced fields and collapse panel
+            const advPanel = document.getElementById('b45AdvancedGroupOpts');
+            if (advPanel) {
+                advPanel.style.display = 'none';
+                // Reset arrow if visible
+                const arrow = document.querySelector('.b45Arrow');
+                if (arrow) arrow.textContent = '▸';
+                ['b45GroupType','b45Industry','b45MembershipRule','b45GroupPrivacy','b45ParentGroup'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
+                ['b45Geography','b45Timezone','b45MaxCapacity','b50CustomTypeLabel'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                const customRow = document.getElementById('b50CustomTypeRow');
+                if (customRow) customRow.style.display = 'none';
+                document.querySelectorAll('.b45ParamCb').forEach(cb => cb.checked = false);
+            }
             g27LoadOpGroups();
             if (typeof g27LoadMyGroups === 'function') g27LoadMyGroups();  // C9: refresh profile groups
         } else {

@@ -3564,7 +3564,16 @@ def ensure_objective_group_schema():
                                 name VARCHAR(200) NOT NULL,
                                 description VARCHAR(500) DEFAULT '',
                                 created_by INTEGER NOT NULL REFERENCES users(id),
-                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                group_type VARCHAR(150) DEFAULT '',
+                                geography VARCHAR(200) DEFAULT '',
+                                timezone VARCHAR(80) DEFAULT '',
+                                industry_vertical VARCHAR(100) DEFAULT '',
+                                wellness_parameters TEXT DEFAULT '',
+                                max_capacity INTEGER,
+                                membership_rule VARCHAR(30) DEFAULT 'open',
+                                group_privacy VARCHAR(30) DEFAULT 'visible',
+                                parent_group_id INTEGER REFERENCES objective_groups(id)
                             )
                         """))
                     else:
@@ -3575,7 +3584,17 @@ def ensure_objective_group_schema():
                                 description VARCHAR(500) DEFAULT '',
                                 created_by INTEGER NOT NULL,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                FOREIGN KEY(created_by) REFERENCES users(id)
+                                group_type VARCHAR(150) DEFAULT '',
+                                geography VARCHAR(200) DEFAULT '',
+                                timezone VARCHAR(80) DEFAULT '',
+                                industry_vertical VARCHAR(100) DEFAULT '',
+                                wellness_parameters TEXT DEFAULT '',
+                                max_capacity INTEGER,
+                                membership_rule VARCHAR(30) DEFAULT 'open',
+                                group_privacy VARCHAR(30) DEFAULT 'visible',
+                                parent_group_id INTEGER,
+                                FOREIGN KEY(created_by) REFERENCES users(id),
+                                FOREIGN KEY(parent_group_id) REFERENCES objective_groups(id)
                             )
                         """))
                     connection.commit()
@@ -3613,6 +3632,48 @@ def ensure_objective_group_schema():
                     ))
                     connection.commit()
                     logger.info("[G27] ✓ Created objective_group_memberships table")
+
+                # B45→B50: Add group classification columns to pre-existing tables
+                # (fresh installs already have these from CREATE TABLE above)
+                if 'objective_groups' in existing_tables:
+                    og_cols = {col['name'] for col in inspector.get_columns('objective_groups')}
+                    b45_columns = {
+                        'group_type': "VARCHAR(150) DEFAULT ''",
+                        'geography': "VARCHAR(200) DEFAULT ''",
+                        'timezone': "VARCHAR(80) DEFAULT ''",
+                        'industry_vertical': "VARCHAR(100) DEFAULT ''",
+                        'wellness_parameters': "TEXT DEFAULT ''",
+                        'max_capacity': "INTEGER",
+                        'membership_rule': "VARCHAR(30) DEFAULT 'open'",
+                        'group_privacy': "VARCHAR(30) DEFAULT 'visible'",
+                        'parent_group_id': "INTEGER REFERENCES objective_groups(id)" if is_postgres else "INTEGER",
+                    }
+                    added_any = False
+                    for col_name, col_type in b45_columns.items():
+                        if col_name not in og_cols:
+                            connection.execute(text(
+                                f"ALTER TABLE objective_groups ADD COLUMN {col_name} {col_type}"
+                            ))
+                            logger.info(f"[B45] ✓ Added column objective_groups.{col_name}")
+                            added_any = True
+                    if added_any:
+                        connection.commit()
+                    # B55: Widen group_type from VARCHAR(50) to VARCHAR(150) for custom:label storage
+                    # (SQLite ignores VARCHAR lengths; Postgres enforces them)
+                    if is_postgres and 'group_type' in og_cols:
+                        try:
+                            connection.execute(text(
+                                "ALTER TABLE objective_groups ALTER COLUMN group_type TYPE VARCHAR(150)"
+                            ))
+                            connection.commit()
+                            logger.info("[B55] ✓ Widened objective_groups.group_type to VARCHAR(150)")
+                        except Exception as widen_err:
+                            # B60: Log instead of silently swallowing — typically a no-op on already-widened columns
+                            logger.debug(f"[B55] group_type widening skipped (likely already VARCHAR(150)): {widen_err}")
+                            try:
+                                connection.rollback()
+                            except Exception:
+                                pass  # Connection may already be clean
 
         ensure_objective_group_schema._completed = True
 
@@ -5118,16 +5179,43 @@ class ObjectiveGroup(db.Model):
     description = db.Column(db.String(500), default='')
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # B45: Group classification fields — all nullable/defaulted for backward compat
+    group_type = db.Column(db.String(150), default='')        # B55: widened from 50 for custom:label storage
+    geography = db.Column(db.String(200), default='')        # free-text location/region
+    timezone = db.Column(db.String(80), default='')          # IANA timezone e.g. Asia/Jerusalem
+    industry_vertical = db.Column(db.String(100), default='')  # e.g. healthcare, education, corporate, nonprofit
+    wellness_parameters = db.Column(db.Text, default='')     # JSON list of parameter keys, empty = all 6
+    max_capacity = db.Column(db.Integer, nullable=True)      # null = unlimited
+    membership_rule = db.Column(db.String(30), default='open')  # open, invite_only, approval_required
+    group_privacy = db.Column(db.String(30), default='visible')  # visible, private, hidden
+    parent_group_id = db.Column(db.Integer, db.ForeignKey('objective_groups.id'), nullable=True)  # group hierarchy
 
     creator = db.relationship('User', backref=db.backref('created_groups', lazy='dynamic'))
+    parent_group = db.relationship('ObjectiveGroup', remote_side=[id], backref=db.backref('sub_groups', lazy='dynamic'))
 
     def to_dict(self):
+        # B50: Split custom:label format into separate fields for frontend
+        gt = self.group_type or ''
+        custom_label = ''
+        if gt.startswith('custom:'):
+            custom_label = gt[7:]
+            gt = 'custom'
         return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
             'created_by': self.created_by,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'group_type': gt,
+            'custom_type_label': custom_label,
+            'geography': self.geography or '',
+            'timezone': self.timezone or '',
+            'industry_vertical': self.industry_vertical or '',
+            'wellness_parameters': self.wellness_parameters or '',
+            'max_capacity': self.max_capacity,
+            'membership_rule': self.membership_rule or 'open',
+            'group_privacy': self.group_privacy or 'visible',
+            'parent_group_id': self.parent_group_id
         }
 
 
@@ -18109,8 +18197,15 @@ def list_objective_groups():
         groups = ObjectiveGroup.query.order_by(ObjectiveGroup.name).all()
         user_id = session['user_id']
 
+        # B45: Filter hidden groups for non-operator users (operators/admins see all)
+        user_obj = db.session.get(User, user_id)
+        is_op = user_obj and user_obj.role in ('operator', 'org_manager', 'admin')
+        user_member_ids = {m.group_id for m in ObjectiveGroupMembership.query.filter_by(user_id=user_id).all()}
+        if not is_op:
+            groups = [g for g in groups if (g.group_privacy or 'visible') != 'hidden' or g.id in user_member_ids]
+
         # Fetch this user's memberships for the joined flag
-        memberships = {m.group_id for m in ObjectiveGroupMembership.query.filter_by(user_id=user_id).all()}
+        memberships = user_member_ids
 
         # G33: Single aggregate query for member counts (avoids N+1)
         count_rows = db.session.execute(
@@ -18166,6 +18261,17 @@ def join_objective_group():
         group = db.session.get(ObjectiveGroup, group_id)
         if not group:
             return jsonify({'error': 'Group not found'}), 404
+
+        # B45→B60: Enforce membership rule — invite_only/approval_required blocks self-join
+        # (group.membership_rule may be None on pre-migration rows → treated as 'open')
+        if (group.membership_rule or 'open') in ('invite_only', 'approval_required'):
+            return jsonify({'error': 'This group does not allow self-join. Contact an operator for an invite.'}), 403
+
+        # B45→B60: Enforce max capacity (None = unlimited)
+        if group.max_capacity and group.max_capacity > 0:
+            current_count = ObjectiveGroupMembership.query.filter_by(group_id=group_id).count()
+            if current_count >= group.max_capacity:
+                return jsonify({'error': 'This group has reached its capacity limit'}), 400
 
         # Check if already a member
         existing = ObjectiveGroupMembership.query.filter_by(
@@ -18245,10 +18351,72 @@ def create_objective_group():
         if existing:
             return jsonify({'error': 'A group with this name already exists'}), 400
 
+        # B45→B50: Parse optional classification fields with proper validation
+        valid_types = ('', 'department', 'cohort', 'wellness_program', 'school_class', 'therapy_group', 'custom')
+        group_type = data.get('group_type', '').strip()[:150]  # B55: aligned with VARCHAR(150)
+        if group_type not in valid_types:
+            group_type = 'custom'
+        # B50: If custom type, accept a custom label; otherwise sanitize the predefined value
+        if group_type == 'custom':
+            custom_type_label = sanitize_input(data.get('custom_type_label', '').strip())[:100]
+            if custom_type_label:
+                group_type = ('custom:' + custom_type_label)[:150]  # B55: defensive truncation to match VARCHAR(150)
+        geography = sanitize_input(data.get('geography', '').strip())[:200]
+        timezone_val = sanitize_input(data.get('timezone', '').strip())[:80]
+        valid_industries = ('', 'healthcare', 'education', 'corporate', 'nonprofit', 'government', 'other')
+        industry_vertical = data.get('industry_vertical', '').strip()[:100]
+        if industry_vertical not in valid_industries:
+            industry_vertical = 'other'
+        # B50→B55: Validate wellness_parameters as JSON array of known param keys (skip sanitize_input)
+        wellness_parameters = ''
+        wp_raw = data.get('wellness_parameters', '')
+        if wp_raw:
+            try:
+                wp_list = json.loads(wp_raw) if isinstance(wp_raw, str) else wp_raw
+                allowed_params = {'mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging'}
+                if isinstance(wp_list, list):
+                    wp_list = [p for p in wp_list if p in allowed_params]
+                    if wp_list:
+                        wellness_parameters = json.dumps(wp_list)
+            except (ValueError, TypeError):
+                pass  # Invalid JSON — treat as empty (all parameters)
+        max_capacity_raw = data.get('max_capacity')
+        max_capacity = int(max_capacity_raw) if max_capacity_raw and str(max_capacity_raw).isdigit() and int(max_capacity_raw) > 0 else None
+        membership_rule = data.get('membership_rule', 'open')
+        if membership_rule not in ('open', 'invite_only', 'approval_required'):
+            membership_rule = 'open'
+        group_privacy = data.get('group_privacy', 'visible')
+        if group_privacy not in ('visible', 'private', 'hidden'):
+            group_privacy = 'visible'
+        parent_group_id_raw = data.get('parent_group_id')
+        parent_group_id = int(parent_group_id_raw) if parent_group_id_raw and str(parent_group_id_raw).isdigit() else None
+        # Validate parent exists if specified and prevent circular references
+        if parent_group_id:
+            parent = db.session.get(ObjectiveGroup, parent_group_id)
+            if not parent:
+                return jsonify({'error': 'Parent group not found'}), 400
+            # B55: Prevent circular reference — walk up the chain
+            seen = {parent_group_id}
+            check = parent
+            while check and check.parent_group_id:
+                if check.parent_group_id in seen:
+                    return jsonify({'error': 'Circular parent group reference detected'}), 400
+                seen.add(check.parent_group_id)
+                check = db.session.get(ObjectiveGroup, check.parent_group_id)
+
         group = ObjectiveGroup(
             name=name,
             description=description,
-            created_by=session['user_id']
+            created_by=session['user_id'],
+            group_type=group_type,
+            geography=geography,
+            timezone=timezone_val,
+            industry_vertical=industry_vertical,
+            wellness_parameters=wellness_parameters,
+            max_capacity=max_capacity,
+            membership_rule=membership_rule,
+            group_privacy=group_privacy,
+            parent_group_id=parent_group_id
         )
         db.session.add(group)
         db.session.flush()  # C9: flush to get group.id for scope assignment
@@ -18341,6 +18509,12 @@ def delete_objective_group(group_id):
         # C9: Capture name before delete — ORM detaches object after commit
         group_name = group.name
 
+        # B60: Clear parent_group_id on child groups before deleting
+        # (prevents Postgres FK violation and SQLite orphaned references)
+        child_groups = ObjectiveGroup.query.filter_by(parent_group_id=group_id).all()
+        for child in child_groups:
+            child.parent_group_id = None
+
         # Remove all memberships first
         ObjectiveGroupMembership.query.filter_by(group_id=group_id).delete()
         # Remove any operator scopes referencing this group
@@ -18349,6 +18523,8 @@ def delete_objective_group(group_id):
         db.session.delete(group)
         db.session.commit()
 
+        if child_groups:
+            logger.info(f"[B60] Cleared parent_group_id on {len(child_groups)} child group(s) of group {group_id}")
         logger.info(f"[C7] Group {group_id} ({group_name}) deleted by user {session['user_id']}")
         return jsonify({'success': True})
 
@@ -18595,6 +18771,13 @@ def invite_group_user():
         if not group:
             return jsonify({'error': 'Group not found'}), 404
 
+        # B45→B60: Soft capacity check for operator invites (warn in response, don't block)
+        b45_capacity_note = ''
+        if group.max_capacity and group.max_capacity > 0:
+            current_count = ObjectiveGroupMembership.query.filter_by(group_id=group_id).count()
+            if current_count >= group.max_capacity:
+                b45_capacity_note = f' (note: group is at capacity {current_count}/{group.max_capacity})'
+
         if not username:
             username = sanitize_input(email.split('@')[0])[:80]
 
@@ -18616,7 +18799,7 @@ def invite_group_user():
             db.session.add(membership)
             db.session.commit()
             logger.info(f"[G27] Existing user {email} added to group {group_id}")
-            return jsonify({'success': True, 'message': 'Existing user added to group', 'user_id': existing_user.id, 'username': existing_user.username})
+            return jsonify({'success': True, 'message': 'Existing user added to group' + b45_capacity_note, 'user_id': existing_user.id, 'username': existing_user.username})
 
         # Generate temporary password
         temp_password = secrets.token_urlsafe(12)
@@ -18692,7 +18875,7 @@ def invite_group_user():
             'user_id': new_user.id,
             'username': username,
             'temp_password': temp_password,  # Return so operator can share manually if email fails
-            'message': 'User created and added to group'
+            'message': 'User created and added to group' + b45_capacity_note
         })
 
     except Exception as e:
