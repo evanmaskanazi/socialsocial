@@ -1,6 +1,16 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — B30
+Complete app.py for Social Social Platform - V4 10Link — B75
+
+# B75 Changes (from B65, review-hardened):
+# BUG FIX 1: Support email HTML template — user inputs now HTML-escaped via html.escape()
+#   to prevent HTML injection through crafted name/subject/message fields.
+#   B75: import html moved to top-level (was inside function, inconsistent with Bug 5).
+# BUG FIX 5: `import re` and `import html` moved to top-level module imports.
+# BUG FIX 6: /api/parameters/save-notes — added missing @require_csrf decorator.
+# BUG FIX 7: /api/user/delete-account — added missing @require_csrf decorator.
+# BUG FIX 8: /api/user/change-password — added missing @require_csrf decorator.
+# Cache version bumped to B70 in all HTML files.
 
 # B30 Changes (from B25/B20):
 # No backend logic changes. Cache version bumped to B30 in all HTML files.
@@ -1106,6 +1116,8 @@ import os
 import sys
 import traceback
 import json
+import re  # B70 BUG FIX 5: top-level import (was imported inside 6+ functions)
+import html as _html_mod  # B70 BUG FIX 1: for HTML-escaping user inputs in email templates
 import uuid
 import redis
 import logging
@@ -6901,8 +6913,7 @@ def support_contact():
             return jsonify({'error': 'Email is required'}), 400
         if len(email) > 120:
             return jsonify({'error': 'Email must be less than 120 characters'}), 400
-        # Basic email validation
-        import re
+        # Basic email validation (B70 BUG FIX 5: use top-level re import)
         if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
             return jsonify({'error': 'Invalid email format'}), 400
         
@@ -6920,6 +6931,14 @@ def support_contact():
         name = sanitize_input(name)
         subject = sanitize_input(subject)
         message = sanitize_input(message)
+        
+        # B70 BUG FIX 1: HTML-escape user inputs before embedding in email HTML template
+        # sanitize_input strips dangerous chars but does not HTML-encode &, <, >.
+        # Without this, a crafted name/subject/message could inject HTML into the email.
+        name_html = _html_mod.escape(name)
+        email_html = _html_mod.escape(email)
+        subject_html = _html_mod.escape(subject)
+        message_html = _html_mod.escape(message)
         
         # Look up registered user by submitted email (indexed column — fast at any scale)
         registered_user = User.query.filter_by(email=email).first()
@@ -6952,18 +6971,19 @@ def support_contact():
                 f"Subject: {subject}\n\n"
                 f"Message:\n{message}\n"
             )
+            # B70 BUG FIX 1: Use HTML-escaped variables in email template
             html_content = f"""
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #667eea;">TheraSocial Support Request</h2>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">From:</td><td style="padding: 8px;">{name} ({email})</td></tr>
-                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">Account:</td><td style="padding: 8px;">{sender_identity}</td></tr>
-                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">Subject:</td><td style="padding: 8px;">{subject}</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">From:</td><td style="padding: 8px;">{name_html} ({email_html})</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">Account:</td><td style="padding: 8px;">{_html_mod.escape(sender_identity)}</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold; color: #555;">Subject:</td><td style="padding: 8px;">{subject_html}</td></tr>
                 </table>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
-                    <p style="margin: 0; white-space: pre-wrap;">{message}</p>
+                    <p style="margin: 0; white-space: pre-wrap;">{message_html}</p>
                 </div>
-                <p style="color: #888; font-size: 12px; margin-top: 20px;">Reply directly to this email to respond to {email}</p>
+                <p style="color: #888; font-size: 12px; margin-top: 20px;">Reply directly to this email to respond to {email_html}</p>
             </div>
             """
             
@@ -7623,6 +7643,7 @@ def update_user_city():
 
 @app.route('/api/user/change-password', methods=['POST'])
 @login_required
+@require_csrf  # B70 BUG FIX 8: was missing CSRF on password change endpoint
 def change_password():
     """Change user password"""
     try:
@@ -7936,6 +7957,7 @@ def save_consent():
 
 @app.route('/api/user/delete-account', methods=['POST'])
 @login_required
+@require_csrf  # B70 BUG FIX 7: was missing CSRF on account deletion endpoint
 def delete_account():
     """FD-1: Request account deletion - sends confirmation email with token"""
     try:
@@ -12768,6 +12790,7 @@ def save_parameters():
 # K3: Save/update notes for an existing diary entry (used by AI reflection prompt)
 @app.route('/api/parameters/save-notes', methods=['POST'])
 @login_required
+@require_csrf  # B70 BUG FIX 6: was missing CSRF protection on data-modifying POST
 def save_notes():
     """K3: Update just the notes field for a diary entry without touching other parameters.
     Used by the AI reflection prompt to append reflection text to existing notes.

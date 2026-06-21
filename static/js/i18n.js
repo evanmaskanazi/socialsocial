@@ -437,6 +437,7 @@ const translations = {
     'support.subject': 'Subject',
     'support.message': 'Message',
     'support.send': 'Send Message',
+    'support.sent_success': 'Your message has been received. We will respond within 24 hours.',
     'feed.select_city': 'Select City',
 'menu.following': 'Connections',
 'menu.followers': 'Connections',
@@ -2384,7 +2385,7 @@ const translations = {
     'support.subject': 'נושא',
     'support.message': 'הודעה',
     'support.send': 'שלח הודעה',
-    'invite.cta_title': 'עבודה מצוינת במעקב אחר הרווחה שלך!',
+    'support.sent_success': 'ההודעה שלך התקבלה. נשיב תוך 24 שעות.',
 'invite.cta_subtitle': 'שתף את המסע שלך עם אחרים:',
 'invite.copy_link': 'העתק את קישור ההזמנה שלך',
 'invite.find_people': '🔍 מצא אנשים לעקוב',
@@ -4232,6 +4233,7 @@ const translations = {
     'support.subject': 'الموضوع',
     'support.message': 'الرسالة',
     'support.send': 'إرسال الرسالة',
+    'support.sent_success': 'تم استلام رسالتك. سنرد خلال 24 ساعة.',
 
     // About page
     'about.title': 'حول TheraSocial',
@@ -5429,7 +5431,7 @@ const translations = {
     'support.subject': 'Тема',
     'support.message': 'Сообщение',
     'support.send': 'Отправить сообщение',
-    'feed.select_city': 'Выберите город',
+    'support.sent_success': 'Ваше сообщение получено. Мы ответим в течение 24 часов.',
 'menu.following': 'Подключения',
 'menu.followers': 'Контакты',
 'menu.connections': 'Контакты',

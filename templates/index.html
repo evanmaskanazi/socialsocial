@@ -1,4 +1,24 @@
 <!DOCTYPE html>
+<!-- B75: SUPPORT BUTTON IN-APP + 10 BUG FIXES (review-hardened)
+  FEATURE: Support button now visible when logged in (navbar + mobile More menu).
+    Placed between language selector and Tutorial for discoverability.
+    Works identically to login-page Support — opens same support page with form prefill.
+  BUG FIX 1: (app.py) Support email HTML template — user inputs now HTML-escaped to prevent injection.
+    B75 review: import html moved to top-level (was inside function, inconsistent with Bug 5 rationale).
+  BUG FIX 2: initializeHomeView() setInterval for city time guarded against duplicate intervals.
+  BUG FIX 3: showDashboard() setInterval for city time guarded against duplicate intervals.
+  BUG FIX 4: Support form validation & success messages now use i18n (were hardcoded English).
+    B75 review: error handler also converted to _t(), guarded against undefined error.message.
+  BUG FIX 5: (app.py) `import re` moved to top-level (was re-imported inside 6+ functions).
+  BUG FIX 6: (app.py) /api/parameters/save-notes missing @require_csrf.
+  BUG FIX 7: (app.py) /api/user/delete-account missing @require_csrf.
+  BUG FIX 8: (app.py) /api/user/change-password missing @require_csrf.
+  BUG FIX 9: Alert poll interval (30s) now checks currentUser — was firing 401 API calls after logout.
+  BUG FIX 10: View switching now hides supportPage/aboutPage (outside #dashboard div).
+    B75 review: fix expanded from sidebar handler only → also covers showView() function.
+    Also restores dashboard display when navigating back from Support via logo click.
+  CACHE-BUST: All JS references updated from B60 → B70.
+-->
 <!-- B30: COOKIE BANNER REDESIGN + STATUS LABEL + 10 MOBILE UX IMPROVEMENTS
   1. COOKIE BANNER: Redesigned from dark (#374151) to light warm (#FDFCFA) background,
      softer shadow, pill-shaped buttons, reduced padding — significantly friendlier UX.
@@ -28,7 +48,7 @@
      so the 6th parameter translates correctly in alert content.
   4. CACHE-BUST: i18n.js version bumped from B7 → B20 (was stale, causing browsers
      to serve old cached i18n with missing/outdated translations).
-  5. CACHE-BUST: All JS references updated to ?v=B60.
+  5. CACHE-BUST: All JS references updated to ?v=B70.
 -->
 <!-- B7: FIX 1: UTC→local date in saveParamQuickSet/quickCheckin/loadHomeSummary.
      Quick-set from home page used .toISOString() (UTC) while diary uses local date;
@@ -42,20 +62,20 @@
   C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
   1. FIX: Progress page now shows avg anxiety and avg belonging (were in API but not displayed)
   2. FIX: updateCheckinSummary JS populates avgAnxiety + avgBelonging elements
-  3. CACHE BUSTING: All JS references updated to ?v=B60
+  3. CACHE BUSTING: All JS references updated to ?v=B70
 -->
 <!-- C20 Changes (from C15):
   C15 AUDIT — DEBUG & GLITCH REMOVAL:
   1. FIX: Notification descriptions added to ALL 3 toggle sets (C15 only added to 1 of 3).
      Mobile drawer + notificationSettingsPanel now match settingsNotificationPanel.
-  2. CACHE BUSTING: All JS references updated to ?v=B60
+  2. CACHE BUSTING: All JS references updated to ?v=B70
 -->
 <!-- C15 Changes (from C13):
   BENNY FEEDBACK ROUND:
   1. ADDED: Social Belonging parameter tile (6th) to home summary grid — 2×3 mobile symmetry
   2. ADDED: social_belonging to paramMap, openParamQuickSet, all inline name maps, check-in history
   3. FIX: Notification settings now have descriptive helper text under each toggle
-  4. CACHE BUSTING: All JS references updated to ?v=B60
+  4. CACHE BUSTING: All JS references updated to ?v=B70
 -->
 <!-- C13 Changes (from C9):
   OBJECTIVE GROUPS — ROUND 3 HARDENING:
@@ -171,7 +191,7 @@
   8. Auth card: refined shadow layers + subtle border
   9. Mobile nav items: active press scale feedback on tap
   10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
-  CACHE BUSTING: All JS references updated to ?v=B60
+  CACHE BUSTING: All JS references updated to ?v=B70
 -->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
@@ -473,7 +493,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=B60"></script>
+    <script src="/static/js/follow-requests.js?v=B70"></script>
 
 
     <style>
@@ -4552,9 +4572,8 @@
         <div class="nav-content">
             <div class="logo" style="cursor: pointer; display: flex; align-items: center; gap: 8px;" onclick="showView('home')"><img src="/static/images/LogoNew.jfif" alt="TheraSocial" style="height: 36px; width: 36px; border-radius: 8px; object-fit: contain;"> <span data-i18n="nav.logo">TheraSocial</span></div>
             <div class="nav-menu">
-                <!-- PJ6004: About and Support shown when logged out, language selector at end -->
+                <!-- PJ6004: About shown when logged out only; Support always visible -->
                 <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
-                <a href="#" class="nav-link auth-only-hide" id="navSupport" data-i18n="nav.support">Support</a>
                 <div class="lang-selector-wrap" style="display: flex; align-items: center; gap: 2px; position: relative;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                     <span id="langCodeLabel" class="lang-code-label" style="display: none; font-weight: 700; font-size: 12px; color: var(--primary); pointer-events: none;">EN</span>
@@ -4580,6 +4599,13 @@
                         <option value="ru">Русский</option>
                     </select>
                 </div>
+                <!-- B70: Support button — always visible (logged-in and logged-out) -->
+                <button class="btn btn-primary" id="navSupportBtn" style="width: auto; margin-left: 6px; margin-right: 6px; padding: 8px 14px; font-size: 0.9rem; border-radius: 10px; background: var(--sage, #7BA798); border-color: var(--sage, #7BA798);" onclick="document.getElementById('navSupportBtn').dispatchEvent(new CustomEvent('supportClick'))">
+                    <span style="display: flex; align-items: center; gap: 5px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span data-i18n="nav.support">Support</span>
+                    </span>
+                </button>
                 <button class="btn btn-primary" id="tutorialBtn" style="display: none; width: auto; margin-left: 6px; margin-right: 6px; padding: 8px 14px; font-size: 0.9rem; border-radius: 10px;" onclick="startTutorial()">
                     <span style="display: flex; align-items: center; gap: 5px;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -5275,6 +5301,12 @@
                     <span class="mobile-more-icon">🔔</span>
                     <span class="mobile-more-label" data-i18n="alerts.title">Alerts</span>
                     <span class="mobile-more-badge" id="mobileMoreAlertsBadge" style="display: none;"></span>
+                </li>
+                <li class="mobile-more-menu-divider"></li>
+                <!-- B70: Support in mobile menu for logged-in users -->
+                <li class="mobile-more-menu-item" onclick="closeMobileMoreMenu(); document.getElementById('navSupportBtn').dispatchEvent(new CustomEvent('supportClick'));">
+                    <span class="mobile-more-icon">💬</span>
+                    <span class="mobile-more-label" data-i18n="nav.support">Support</span>
                 </li>
             </ul>
         </div>
@@ -7536,7 +7568,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B60"></script>
+    <script src="/static/js/i18n.js?v=B70"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7832,9 +7864,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B60"></script>
-   <script src="/static/js/circles-messages.js?v=B60"></script>
-<script src="/static/js/feed-updates.js?v=B60"></script>
+<script src="/static/js/parameters-social.js?v=B70"></script>
+   <script src="/static/js/circles-messages.js?v=B70"></script>
+<script src="/static/js/feed-updates.js?v=B70"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -8215,8 +8247,8 @@ async function loadUserCity() {
             document.getElementById('aboutPage').classList.remove('hidden');
         });
 
-        document.getElementById('navSupport').addEventListener('click', (e) => {
-            e.preventDefault();
+        // B70: Support button click — works both logged-in and logged-out
+        document.getElementById('navSupportBtn').addEventListener('supportClick', (e) => {
             hideAllViews();
             document.getElementById('supportPage').classList.remove('hidden');
             prefillSupportForm();
@@ -9241,14 +9273,15 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
     loadUserCity();
 
     // FIXED: Only call updateCityTime if selector exists
+    // B70 BUG FIX 3: Guard against duplicate setInterval on repeated showDashboard calls
     setTimeout(() => {
         const citySelector = document.getElementById('citySelector');
         const homeCitySelector = document.getElementById('homeCitySelector');
         if (citySelector || homeCitySelector) {
             updateCityTime();
-            // Start time update interval only if we have a selector
-            // T255: Restored to 1s - display shows seconds so interval must match
-            setInterval(updateCityTime, 1000);
+            if (!window._dashCityIntervalId) {
+                window._dashCityIntervalId = setInterval(updateCityTime, 1000);
+            }
         }
     }, 100);
 
@@ -9664,6 +9697,14 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
             v.style.display = 'none';
         });
 
+        // B70 BUG FIX 10: Also hide supportPage/aboutPage (outside #dashboard div)
+        // Without this, navigating to Support then clicking a sidebar tab leaves
+        // supportPage visible beneath the dashboard view
+        var _sp = document.getElementById('supportPage');
+        var _ap = document.getElementById('aboutPage');
+        if (_sp) _sp.classList.add('hidden');
+        if (_ap) _ap.classList.add('hidden');
+
       const view = item.dataset.view;
 
         // 10Link: Reset viewingUserId for ALL nav items - top bar always goes to user's own content
@@ -10033,6 +10074,16 @@ function showView(viewName, resetContext) {
         v.classList.add('hidden');
         v.style.display = 'none';
     });
+
+    // B70 BUG FIX 10: Hide supportPage/aboutPage and ensure dashboard is visible.
+    // Without this, clicking logo while on Support page does nothing visible —
+    // supportPage stays shown and dashboard stays hidden (display:none from hideAllViews).
+    var _sp10 = document.getElementById('supportPage');
+    var _ap10 = document.getElementById('aboutPage');
+    if (_sp10) _sp10.classList.add('hidden');
+    if (_ap10) _ap10.classList.add('hidden');
+    var _dash10 = document.getElementById('dashboard');
+    if (_dash10 && _dash10.style.display === 'none') _dash10.style.display = 'block';
     
     // Now show ONLY the target view
     const selectedView = document.getElementById(`${viewName}View`);
@@ -16642,10 +16693,12 @@ async function clearAllAlerts(type) {
 }
 window.clearAllAlerts = clearAllAlerts;
 
-// ========== AUTO-REFRESH ALERTS (KEEP THIS - NO CHANGES) ==========
+// ========== AUTO-REFRESH ALERTS ==========
 // Poll for new alerts every 30 seconds when page is visible
+// B70 BUG FIX 9: Added currentUser guard — without it, the poll fires API calls
+// even after logout, generating console 401 errors every 30 seconds
 let alertPollInterval = setInterval(async () => {
-    if (document.visibilityState === 'visible' && typeof loadAlerts === 'function') {
+    if (document.visibilityState === 'visible' && currentUser && typeof loadAlerts === 'function') {
         try {
             await loadAlerts();
         } catch (error) {
@@ -16766,7 +16819,7 @@ async function checkAndLoadTriggerAlerts() {
             const message = document.getElementById('supportMessage').value.trim();
 
             if (!name || !email || !subject || !message) {
-                showNotification('Please fill in all fields.', 'warning');
+                showNotification(_t('msg.fill_all_fields', 'Please fill in all fields.'), 'warning');
                 return;
             }
 
@@ -16778,10 +16831,10 @@ async function checkAndLoadTriggerAlerts() {
                     message: message
                 });
 
-                showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.sent') : 'Message sent') + ' successfully!', 'success');
+                showNotification(_t('support.sent_success', 'Your message has been received. We will respond within 24 hours.'), 'success');
                 document.getElementById('supportForm').reset();
             } catch (error) {
-                showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
+                showNotification(_t('msg.error', 'Error') + ': ' + (error.message || _t('msg.try_again', 'Please try again')), 'error');
             }
         });
 
@@ -16789,14 +16842,21 @@ async function checkAndLoadTriggerAlerts() {
 
 
 // Home View Functions
+        // B70 BUG FIX 2: Guard against duplicate setInterval on repeated initializeHomeView calls
+        let _homeCityIntervalId = null;
         function initializeHomeView() {
             // Initialize city selector
             const citySelector = document.getElementById('homeCitySelector');
             if (citySelector && currentUser) {
                 citySelector.value = currentUser.selected_city || 'Jerusalem, Israel';
-                citySelector.addEventListener('change', updateUserCity);
+                if (!citySelector.hasAttribute('data-city-init')) {
+                    citySelector.addEventListener('change', updateUserCity);
+                    citySelector.setAttribute('data-city-init', 'true');
+                }
                 updateHomeCityTime();
-                setInterval(updateHomeCityTime, 1000);
+                if (!_homeCityIntervalId) {
+                    _homeCityIntervalId = setInterval(updateHomeCityTime, 1000);
+                }
             }
         }
 
