@@ -1,4 +1,17 @@
 // Language detection and translation system with backend sync
+// Version B125 - No i18n changes. Cache-bust sync only.
+// Version B120 - AUDIT: No i18n changes. Cache-bust sync only.
+// Version B115 - UI IMPLEMENTATION of B105-prepped i18n keys:
+//   - btn.back changed from "Back to Home" to "Back to Last Page" in all 4 languages
+//   All desktop popup, human invitation, and contact button keys were already added in B105.
+// Version B110 - B105 AUDIT: Added rate_limit.wait_hours/minutes/seconds keys in all 4
+//   languages for humanized 429 feedback (was showing "86400 seconds" for daily limits).
+// Version B105 - BOT PROTECTION PREP + CACHE-BUST SYNC
+//   Added preparatory i18n keys in all 4 languages (EN/HE/AR/RU):
+//   - auth.humans_only, auth.human_invitation: "robots not invited" messaging
+//   - mobile.desktop_popup_title/message/dismiss: desktop-to-mobile popup
+//   - nav.contact: contact button label
+//   No functional changes — keys are registered for future B-series UI work.
 // Version B45 - Added group classification keys: advanced_options, type_*, industry_*,
 //   geography_*, timezone_*, membership_rule_*, privacy_*, capacity_*, parent_*, params_*,
 //   capacity_full, no_self_join in EN/HE/AR/RU for B45 group differentiation feature
@@ -64,6 +77,7 @@ const translations = {
         'nav.home': 'Home',
         'nav.about': 'About',
         'nav.support': 'Support',
+        'nav.contact': 'Contact Us',
         'nav.logout': 'Logout',
         'nav.tutorial': 'Tutorial',
         'logout': 'Logout',
@@ -105,6 +119,15 @@ const translations = {
         'auth.or': 'OR',
         'auth.login_error': 'Invalid email or password',
         'auth.signup_success': 'Account created successfully!',
+        // B105: Preparatory keys for future desktop popup and bot guard
+        'auth.humans_only': 'Robots are not invited 🤖🚫',
+        'auth.human_invitation': 'Join a science-based human system built to empower health, happiness, satisfaction, and human synergy.',
+        'mobile.desktop_popup_title': 'Better on Mobile',
+        'mobile.desktop_popup_message': 'Our system was designed around a mobile experience. For the best experience, open TheraSocial on your phone.',
+        'mobile.desktop_popup_dismiss': 'Continue on Desktop',
+        'rate_limit.wait_hours': 'Too many requests. Please try again in {hours} hour(s).',
+        'rate_limit.wait_minutes': 'Too many requests. Please try again in {minutes} minute(s).',
+        'rate_limit.wait_seconds': 'Too many requests. Please wait {seconds} seconds.',
         'auth.name': 'Full Name',
         'auth.name_placeholder': 'Enter your full name',
         'auth.confirm_password': 'Confirm Password',
@@ -701,7 +724,7 @@ const translations = {
     'about.value4_title': 'Accessibility',
     'about.value4_desc': 'Making mental health tools available to everyone, everywhere',
     'btn.getstarted': 'Get Started',
-    'btn.back': 'Back to Home',
+    'btn.back': 'Back to Last Page',
     'circles.title': 'My Circles',
             'circles.search_placeholder': 'Search users to add to circles...',
             'circles.public': 'General 🌍',
@@ -1761,6 +1784,7 @@ const translations = {
         'nav.home': 'בית',
         'nav.about': 'אודות',
         'nav.support': 'תמיכה',
+        'nav.contact': 'צור קשר',
         'nav.logout': 'התנתקות',
         'nav.tutorial': 'מדריך',
         'logout': 'התנתקות',
@@ -2439,7 +2463,7 @@ const translations = {
     'about.value4_title': 'נגישות',
     'about.value4_desc': 'הפיכת כלי רווחה לזמינים לכולם, בכל מקום',
     'btn.getstarted': 'התחל',
-    'btn.back': 'חזרה לדף הבית',
+    'btn.back': 'חזרה לעמוד הקודם',
     'menu.home': 'בית',
 
 'home.title': 'בית',
@@ -2575,6 +2599,15 @@ const translations = {
         'auth.or': 'או',
         'auth.login_error': 'אימייל או סיסמה שגויים',
         'auth.signup_success': 'החשבון נוצר בהצלחה!',
+        // B105: Preparatory keys for future desktop popup and bot guard
+        'auth.humans_only': 'רובוטים לא מוזמנים 🤖🚫',
+        'auth.human_invitation': 'הצטרפו למערכת אנושית מבוססת מדע, הבנויה להעצים ולחזק בריאות, אושר, סיפוק וסינרגיה אנושית.',
+        'mobile.desktop_popup_title': 'יותר נוח מהמובייל',
+        'mobile.desktop_popup_message': 'המערכת שלנו עוצבה סביב חוויית משתמש בנייד. לחוויה הטובה ביותר, פתחו את TheraSocial מהטלפון.',
+        'mobile.desktop_popup_dismiss': 'המשך מהמחשב',
+        'rate_limit.wait_hours': 'יותר מדי בקשות. אנא נסה שוב בעוד {hours} שעה/ות.',
+        'rate_limit.wait_minutes': 'יותר מדי בקשות. אנא נסה שוב בעוד {minutes} דקה/ות.',
+        'rate_limit.wait_seconds': 'יותר מדי בקשות. אנא המתן {seconds} שניות.',
         'auth.name': 'שם מלא',
         'auth.name_placeholder': 'הזן את שמך המלא',
         'auth.confirm_password': 'אימות סיסמה',
@@ -3443,6 +3476,7 @@ const translations = {
         'nav.home': 'الرئيسية',
         'nav.about': 'حول',
         'nav.support': 'الدعم',
+        'nav.contact': 'اتصل بنا',
         'nav.logout': 'تسجيل الخروج',
         'nav.tutorial': 'البرنامج التعليمي',
         'logout': 'تسجيل الخروج',
@@ -4263,7 +4297,7 @@ const translations = {
     'about.value4_title': 'إمكانية الوصول',
     'about.value4_desc': 'جعل أدوات الصحة النفسية متاحة للجميع في كل مكان',
     'btn.getstarted': 'ابدأ',
-    'btn.back': 'العودة إلى الصفحة الرئيسية',
+    'btn.back': 'العودة إلى الصفحة السابقة',
 
 
         // Authentication
@@ -4283,6 +4317,15 @@ const translations = {
         'auth.or': 'أو',
         'auth.login_error': 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
         'auth.signup_success': 'تم إنشاء الحساب بنجاح!',
+        // B105: Preparatory keys for future desktop popup and bot guard
+        'auth.humans_only': 'الروبوتات غير مدعوة 🤖🚫',
+        'auth.human_invitation': 'انضم إلى نظام إنساني قائم على العلم، مصمم لتعزيز الصحة والسعادة والرضا والتآزر البشري.',
+        'mobile.desktop_popup_title': 'أفضل على الهاتف',
+        'mobile.desktop_popup_message': 'تم تصميم نظامنا حول تجربة الهاتف المحمول. للحصول على أفضل تجربة، افتح TheraSocial من هاتفك.',
+        'mobile.desktop_popup_dismiss': 'المتابعة من الكمبيوتر',
+        'rate_limit.wait_hours': 'طلبات كثيرة جداً. يرجى المحاولة مرة أخرى خلال {hours} ساعة/ساعات.',
+        'rate_limit.wait_minutes': 'طلبات كثيرة جداً. يرجى المحاولة مرة أخرى خلال {minutes} دقيقة/دقائق.',
+        'rate_limit.wait_seconds': 'طلبات كثيرة جداً. يرجى الانتظار {seconds} ثوانٍ.',
         'auth.name': 'الاسم الكامل',
         'auth.name_placeholder': 'أدخل اسمك الكامل',
         'auth.confirm_password': 'تأكيد كلمة المرور',
@@ -5129,6 +5172,7 @@ const translations = {
         'nav.home': 'Главная',
         'nav.about': 'О нас',
         'nav.support': 'Поддержка',
+        'nav.contact': 'Свяжитесь с нами',
         'nav.logout': 'Выход',
         'nav.tutorial': 'Руководство',
         'logout': 'Выход',
@@ -5930,7 +5974,7 @@ const translations = {
     'about.value4_title': 'Доступность',
     'about.value4_desc': 'Делаем инструменты благополучия доступными для всех и везде',
     'btn.getstarted': 'Начать',
-    'btn.back': 'Вернуться на главную',
+    'btn.back': 'Вернуться на предыдущую страницу',
 
         // Authentication
         'auth.welcome': 'Добро пожаловать в TheraSocial',
@@ -5949,6 +5993,15 @@ const translations = {
         'auth.or': 'ИЛИ',
         'auth.login_error': 'Неверный email или пароль',
         'auth.signup_success': 'Аккаунт успешно создан!',
+        // B105: Preparatory keys for future desktop popup and bot guard
+        'auth.humans_only': 'Роботы не приглашены 🤖🚫',
+        'auth.human_invitation': 'Присоединяйтесь к научно обоснованной системе, созданной для укрепления здоровья, счастья, удовлетворённости и человеческой синергии.',
+        'mobile.desktop_popup_title': 'Лучше на мобильном',
+        'mobile.desktop_popup_message': 'Наша система разработана для мобильного использования. Для лучшего опыта откройте TheraSocial на телефоне.',
+        'mobile.desktop_popup_dismiss': 'Продолжить на компьютере',
+        'rate_limit.wait_hours': 'Слишком много запросов. Пожалуйста, повторите через {hours} час(ов).',
+        'rate_limit.wait_minutes': 'Слишком много запросов. Пожалуйста, повторите через {minutes} минут(у).',
+        'rate_limit.wait_seconds': 'Слишком много запросов. Пожалуйста, подождите {seconds} секунд.',
         'auth.name': 'Полное имя',
         'auth.name_placeholder': 'Введите ваше полное имя',
         'auth.confirm_password': 'Подтвердите пароль',
