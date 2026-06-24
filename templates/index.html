@@ -1,4 +1,62 @@
 <!DOCTYPE html>
+<!-- B125: MINOR FIXES from B120 audit
+  FIX 1: Dark mode — added --sage-light/#2A3F35 and --peach-light/#3D3230 overrides to
+    .dark-mode block. Previously unset, causing invitation card, summary card, tab borders,
+    and quick-checkin buttons to show light colors on dark background.
+  FIX 2: Popup z-index bumped from 10000 to 10001 — prevents notification toasts from
+    rendering at the same layer as the desktop popup overlay.
+  FIX 3: goBack() simplified — removed showView call entirely. hideAllViews only toggles
+    top-level containers (auth/dashboard/about/support), so inner dashboard views, sidebar
+    active state, and viewingUserId are naturally preserved. Re-showing the dashboard
+    container is sufficient. This also removes _activeViewBeforeSupport and
+    _viewingUserBeforeSupport as unnecessary state.
+  FIX 4: Popup retry loop capped at 20 iterations (10s) — prevents unbounded setTimeout
+    chain if splash screen removal fails for any reason.
+  CACHE-BUST: All JS references synced to ?v=B125.
+-->
+<!-- B120: AUDIT ROUND — fixes regressions and dormant bugs from B115
+  FIX 1: Desktop popup RACE CONDITION — popup IIFE ran at line ~4700 but i18n.js loads
+    at line ~7693. Non-English users saw English-only popup text. Fixed: popup now deferred
+    to window.load event + splash-gone check, guaranteeing i18n is initialized.
+  FIX 2: Desktop popup PERSISTENCE — sessionStorage caused popup to reappear every new
+    browser session. Changed to localStorage (versioned key: desktopPopupSeen_v1).
+  FIX 3: Desktop popup DISMISS UX — added click-outside-to-dismiss (overlay onclick with
+    stopPropagation on card) and Escape key listener.
+  FIX 4: Contact Us mobile scroll TIMING — 300ms timeout was fragile on slow devices.
+    Increased to 500ms + requestAnimationFrame for layout-safe scroll.
+  FIX 5: Removed redundant setLanguage() call from popup (was re-translating entire page).
+  CACHE-BUST: All JS references synced to ?v=B125.
+-->
+<!-- B115: DESKTOP POPUP + LOGIN INVITATION + CONTACT BUTTON + BACK BUTTON FIX
+  FEATURE 1: Desktop popup — detects non-mobile viewport on page load, shows a
+    one-per-session overlay recommending mobile usage. Uses sessionStorage to avoid repeat.
+  FEATURE 2: Login screen invitation — adds science-based human system invitation text
+    and semi-humorous "robots not invited" message below the auth title.
+  FEATURE 3: Contact Us button — prominent button on logged-out screen (scrolls to
+    support form), plus entry in mobile More menu for logged-in users.
+  BUG FIX: Support page "Back to Home" button changed to "Back to Last Page" with
+    goBack() function (uses history.back or falls back to goHome).
+  CACHE-BUST: All JS references synced to ?v=B125.
+-->
+<!-- B110: B105 AUDIT — 4 BUG FIXES
+  BUG FIX 1: Honeypot CSS changed from position:absolute+left:-9999px (causes mobile
+    horizontal scroll) to clip:rect(0,0,0,0) — layout-neutral, zero-overflow hiding.
+  BUG FIX 2: Support form submit now checks apiCall return — was showing false success
+    notification even when apiCall returned null (429 rate limit or 401). Fixed.
+  BUG FIX 3: Removed _ts/_submit_ts timing data from API payload — server-side timing
+    check removed in appB110.py (client-provided timestamps are forgeable). Client-side
+    timing check retained (catches JS-executing bots without network hit).
+  BUG FIX 4: apiCall 429 handler humanized — was showing "Please wait 86400 seconds"
+    for daily rate limits. Now shows hours/minutes/seconds appropriately, with i18n.
+  CACHE-BUST: All JS references synced to ?v=B125.
+-->
+<!-- B105: BOT PROTECTION PREP + CACHE-BUST SYNC
+  PREP 1: Support form honeypot field (hidden from humans, filled by bots → silent reject).
+  PREP 2: Support form timing check (submissions < 3s after load → bot signature).
+  PREP 3: i18n keys added for future desktop-mobile popup and "robots not invited" messaging.
+  CACHE-BUST FIX: All JS references synced to ?v=B125.
+    circles.html and parameters.html were stuck at ?v=B60 — fixed in their B105 files.
+-->
 <!-- B75: SUPPORT BUTTON IN-APP + 10 BUG FIXES (review-hardened)
   FEATURE: Support button now visible when logged in (navbar + mobile More menu).
     Placed between language selector and Tutorial for discoverability.
@@ -48,7 +106,7 @@
      so the 6th parameter translates correctly in alert content.
   4. CACHE-BUST: i18n.js version bumped from B7 → B20 (was stale, causing browsers
      to serve old cached i18n with missing/outdated translations).
-  5. CACHE-BUST: All JS references updated to ?v=B70.
+  5. CACHE-BUST: All JS references updated to ?v=B125.
 -->
 <!-- B7: FIX 1: UTC→local date in saveParamQuickSet/quickCheckin/loadHomeSummary.
      Quick-set from home page used .toISOString() (UTC) while diary uses local date;
@@ -62,20 +120,20 @@
   C20 AUDIT — ROUND 2 DEBUG & GLITCH REMOVAL:
   1. FIX: Progress page now shows avg anxiety and avg belonging (were in API but not displayed)
   2. FIX: updateCheckinSummary JS populates avgAnxiety + avgBelonging elements
-  3. CACHE BUSTING: All JS references updated to ?v=B70
+  3. CACHE BUSTING: All JS references updated to ?v=B125
 -->
 <!-- C20 Changes (from C15):
   C15 AUDIT — DEBUG & GLITCH REMOVAL:
   1. FIX: Notification descriptions added to ALL 3 toggle sets (C15 only added to 1 of 3).
      Mobile drawer + notificationSettingsPanel now match settingsNotificationPanel.
-  2. CACHE BUSTING: All JS references updated to ?v=B70
+  2. CACHE BUSTING: All JS references updated to ?v=B125
 -->
 <!-- C15 Changes (from C13):
   BENNY FEEDBACK ROUND:
   1. ADDED: Social Belonging parameter tile (6th) to home summary grid — 2×3 mobile symmetry
   2. ADDED: social_belonging to paramMap, openParamQuickSet, all inline name maps, check-in history
   3. FIX: Notification settings now have descriptive helper text under each toggle
-  4. CACHE BUSTING: All JS references updated to ?v=B70
+  4. CACHE BUSTING: All JS references updated to ?v=B125
 -->
 <!-- C13 Changes (from C9):
   OBJECTIVE GROUPS — ROUND 3 HARDENING:
@@ -191,7 +249,7 @@
   8. Auth card: refined shadow layers + subtle border
   9. Mobile nav items: active press scale feedback on tap
   10. Global: placeholder color, selection color, btn-loading spinner utility (used on login)
-  CACHE BUSTING: All JS references updated to ?v=B70
+  CACHE BUSTING: All JS references updated to ?v=B125
 -->
 <!-- T7: Added live username availability check during signup and consent modal.
      Debounced input on signupUsernameInput and consentUsername calls /api/auth/check-username
@@ -493,7 +551,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=B70"></script>
+    <script src="/static/js/follow-requests.js?v=B125"></script>
 
 
     <style>
@@ -853,6 +911,10 @@
             --light-warm: #374151;
             --white: #1F2937;
             --border: #4A5568;
+            /* B125: sage-light/peach-light were missing — invitation card, summary card,
+               tab borders, and quick-checkin buttons showed light colors on dark background */
+            --sage-light: #2A3F35;
+            --peach-light: #3D3230;
         }
 
         /* MOB-FIX: iOS Safari height normalization */
@@ -2463,6 +2525,38 @@
         /* Reduced spacing for h2 view headings */
         .view > h2 {
             margin-bottom: 14px;
+        }
+
+        /* B115: Desktop Popup Overlay */
+        /* B125: z-index 10001 (above notification container at 10000) */
+        .desktop-popup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 10001;
+            display: flex; align-items: center; justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .desktop-popup-card {
+            background: var(--white, #fff); border-radius: 20px; padding: 36px 32px;
+            max-width: 420px; width: 90%; text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .desktop-popup-card h3 { color: var(--primary, #5B7B9A); margin: 12px 0 10px; font-size: 1.25rem; }
+        .desktop-popup-card p { color: var(--gray, #6B7280); margin-bottom: 20px; line-height: 1.5; }
+        .desktop-popup-card button {
+            padding: 12px 28px; border-radius: 12px; border: none;
+            background: var(--primary, #5B7B9A); color: white; font-size: 1rem;
+            cursor: pointer; font-weight: 600;
+        }
+
+        /* B115: Login Invitation Styling */
+        .auth-invitation {
+            text-align: center; margin-bottom: 18px; padding: 14px 16px;
+            background: linear-gradient(135deg, var(--sage-light, #e8f0ec) 0%, var(--peach-light, #f5ebe0) 100%);
+            border-radius: 14px;
+        }
+        .auth-invitation p { color: var(--primary-dark, #3d5a73); font-size: 0.92rem; line-height: 1.5; margin: 0 0 6px; }
+        .auth-invitation .robots-warning {
+            color: var(--coral, #E8837C); font-size: 0.85rem; font-weight: 600; margin: 0;
         }
 
         /* About and Support Pages */
@@ -4622,6 +4716,53 @@
         </div>
     </nav>
 
+    <!-- B115: Desktop Popup — shown once per device on non-mobile viewports -->
+    <!-- B120 AUDIT: Fixed race condition (popup script ran before i18n.js loaded at line ~7693).
+         Now deferred to window.load + splash-gone check. localStorage replaces sessionStorage
+         so returning desktop users aren't nagged every session. Added overlay click + Escape dismiss. -->
+    <div id="desktopPopup" class="desktop-popup-overlay" style="display:none" onclick="dismissDesktopPopup()">
+        <div class="desktop-popup-card" onclick="event.stopPropagation()">
+            <div style="font-size: 2.5rem; margin-bottom: 4px;">📱</div>
+            <h3 data-i18n="mobile.desktop_popup_title">Better on Mobile</h3>
+            <p data-i18n="mobile.desktop_popup_message">Our system was designed around a mobile experience. For the best experience, open TheraSocial on your phone.</p>
+            <button onclick="dismissDesktopPopup()" data-i18n="mobile.desktop_popup_dismiss">Continue on Desktop</button>
+        </div>
+    </div>
+    <script>
+    // B115/B120: Desktop popup — deferred until i18n + splash are ready
+    // B125: Added _popupRetries cap (max 20 = 10s) to prevent unbounded retry loop
+    var _popupRetries = 0;
+    function dismissDesktopPopup() {
+        var el = document.getElementById('desktopPopup');
+        if (el) el.style.display = 'none';
+        try { localStorage.setItem('desktopPopupSeen_v1', '1'); } catch(e) {}
+    }
+    function _tryShowDesktopPopup() {
+        // Guard: mobile viewport or already dismissed
+        if (window.innerWidth <= 768) return;
+        try { if (localStorage.getItem('desktopPopupSeen_v1')) return; } catch(e) {}
+        // Guard: splash still showing — retry up to 20 times (10s)
+        if (document.getElementById('appload-splash')) {
+            if (++_popupRetries > 20) return;
+            setTimeout(_tryShowDesktopPopup, 500);
+            return;
+        }
+        var popup = document.getElementById('desktopPopup');
+        if (popup) popup.style.display = 'flex';
+    }
+    // Trigger after all scripts (including i18n.js) have loaded and executed
+    window.addEventListener('load', function() {
+        setTimeout(_tryShowDesktopPopup, 600);
+    });
+    // Escape key dismiss
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            var popup = document.getElementById('desktopPopup');
+            if (popup && popup.style.display === 'flex') dismissDesktopPopup();
+        }
+    });
+    </script>
+
     <!-- Auth Container -->
     <div id="authContainer" class="auth-container" style="display:none">
         <div class="auth-card fade-in">
@@ -4630,6 +4771,12 @@
                 <span data-i18n="auth.invalid_credentials">You have entered an invalid username or password</span>
             </div>
             <h2 class="auth-title" id="authTitle" data-i18n="auth.welcome">Welcome to TheraSocial</h2>
+            
+            <!-- B115: Science-based invitation + robots warning -->
+            <div class="auth-invitation">
+                <p data-i18n="auth.human_invitation">Join a science-based human system built to empower health, happiness, satisfaction, and human synergy.</p>
+                <p class="robots-warning" data-i18n="auth.humans_only">Robots are not invited 🤖🚫</p>
+            </div>
             
             <!-- SOCIAL LOGIN BUTTONS - ACCT ADDITION -->
             <div id="socialLoginSection" class="social-login-section">
@@ -4752,6 +4899,15 @@
             </p>
             <p style="text-align: center; margin-top: 15px;">
                 <a href="#" id="forgotPasswordLink" style="color: var(--primary); font-size: 17px;" data-i18n="auth.forgot_password" onclick="showForgotPassword(); return false;">Forgot Your Password?</a>
+            </p>
+            <!-- B115: Contact Us button — prominent in logged-out state -->
+            <p style="text-align: center; margin-top: 18px;">
+                <button type="button" class="btn btn-secondary" style="width: 100%; padding: 12px; border-radius: 12px; font-size: 0.95rem;" onclick="document.getElementById('navSupportBtn').dispatchEvent(new CustomEvent('supportClick'))">
+                    <span style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <span data-i18n="nav.contact">Contact Us</span>
+                    </span>
+                </button>
             </p>
         </div>
     </div>
@@ -5211,6 +5367,13 @@
             <div style="background: var(--light); padding: 25px; border-radius: 15px;">
                 <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="support.contact_title">Send Us a Message</h3>
                 <form id="supportForm">
+                    <!-- B105/B110: Honeypot field — hidden from humans, bots auto-fill it.
+                         B110: Uses clip-rect hiding instead of left:-9999px to prevent mobile horizontal overflow. -->
+                    <div style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;" aria-hidden="true" tabindex="-1">
+                        <input type="text" name="website" id="supportHoneypot" autocomplete="off" tabindex="-1">
+                    </div>
+                    <!-- B105: Timing field — set by JS on page load, checked on submit -->
+                    <input type="hidden" id="supportFormLoadedAt" value="">
                     <div class="form-group" id="supportNameGroup">
                         <label class="form-label" data-i18n="support.name">Name</label>
                         <input type="text" class="form-input" id="supportName" required minlength="2" maxlength="100">
@@ -5232,7 +5395,7 @@
             </div>
 
             <div style="text-align: center; margin-top: 30px;">
-                <button class="btn btn-secondary" onclick="goHome()" data-i18n="btn.back">Back to Home</button>
+                <button class="btn btn-secondary" onclick="goBack()" data-i18n="btn.back">Back to Last Page</button>
             </div>
         </div>
     </div>
@@ -5307,6 +5470,12 @@
                 <li class="mobile-more-menu-item" onclick="closeMobileMoreMenu(); document.getElementById('navSupportBtn').dispatchEvent(new CustomEvent('supportClick'));">
                     <span class="mobile-more-icon">💬</span>
                     <span class="mobile-more-label" data-i18n="nav.support">Support</span>
+                </li>
+                <!-- B115/B120: Contact Us in mobile menu — scrolls to contact form.
+                     B120: Increased scroll delay to 500ms for slow devices; requestAnimationFrame fallback. -->
+                <li class="mobile-more-menu-item" onclick="closeMobileMoreMenu(); document.getElementById('navSupportBtn').dispatchEvent(new CustomEvent('supportClick')); setTimeout(function(){ requestAnimationFrame(function(){ var cf=document.getElementById('supportForm'); if(cf) cf.scrollIntoView({behavior:'smooth',block:'start'}); }); }, 500);">
+                    <span class="mobile-more-icon">✉️</span>
+                    <span class="mobile-more-label" data-i18n="nav.contact">Contact Us</span>
                 </li>
             </ul>
         </div>
@@ -7568,7 +7737,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B70"></script>
+    <script src="/static/js/i18n.js?v=B125"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7864,9 +8033,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B70"></script>
-   <script src="/static/js/circles-messages.js?v=B70"></script>
-<script src="/static/js/feed-updates.js?v=B70"></script>
+<script src="/static/js/parameters-social.js?v=B125"></script>
+   <script src="/static/js/circles-messages.js?v=B125"></script>
+<script src="/static/js/feed-updates.js?v=B125"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -8177,8 +8346,19 @@ async function loadUserCity() {
 
                 // CHANGE 3: Handle rate limiting with user feedback
                 if (response.status === 429) {
-                    const retryAfter = response.headers.get('Retry-After') || 60;
-                    showNotification(`Too many requests. Please wait ${retryAfter} seconds and try again.`, 'warning');
+                    const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+                    // B110: Humanize wait time — don't show "86400 seconds"
+                    let waitMsg;
+                    if (retryAfter >= 3600) {
+                        const hours = Math.ceil(retryAfter / 3600);
+                        waitMsg = _t('rate_limit.wait_hours', 'Too many requests. Please try again in {hours} hour(s).').replace('{hours}', hours);
+                    } else if (retryAfter >= 60) {
+                        const mins = Math.ceil(retryAfter / 60);
+                        waitMsg = _t('rate_limit.wait_minutes', 'Too many requests. Please try again in {minutes} minute(s).').replace('{minutes}', mins);
+                    } else {
+                        waitMsg = _t('rate_limit.wait_seconds', 'Too many requests. Please wait {seconds} seconds.').replace('{seconds}', retryAfter);
+                    }
+                    showNotification(waitMsg, 'warning');
                     return null;
                 }
 
@@ -8248,7 +8428,17 @@ async function loadUserCity() {
         });
 
         // B70: Support button click — works both logged-in and logged-out
+        // B115/B125: Stores which top-level container was visible so goBack() can restore it.
+        //   No need to capture active inner view or viewingUserId — hideAllViews only hides
+        //   top-level containers, so inner dashboard state is naturally preserved.
         document.getElementById('navSupportBtn').addEventListener('supportClick', (e) => {
+            if (document.getElementById('dashboard').style.display !== 'none' && document.getElementById('dashboard').style.display !== '') {
+                window._viewBeforeSupport = 'dashboard';
+            } else if (!document.getElementById('aboutPage').classList.contains('hidden')) {
+                window._viewBeforeSupport = 'about';
+            } else {
+                window._viewBeforeSupport = null;
+            }
             hideAllViews();
             document.getElementById('supportPage').classList.remove('hidden');
             prefillSupportForm();
@@ -8262,6 +8452,26 @@ async function loadUserCity() {
                 document.getElementById('dashboard').style.display = 'block';
             } else {
                 document.getElementById('authContainer').style.display = 'flex';
+            }
+        }
+
+        // B115: Navigate back to last page — uses stored view or falls back to goHome
+        // B125: hideAllViews only toggles top-level containers — inner dashboard views,
+        //   sidebar active state, and viewingUserId are all naturally preserved. So we
+        //   just re-show the dashboard container without calling showView (which would
+        //   re-render, re-fetch data, and reset viewingUserId).
+        function goBack() {
+            if (window._viewBeforeSupport) {
+                hideAllViews();
+                if (window._viewBeforeSupport === 'dashboard') {
+                    document.getElementById('dashboard').style.display = 'block';
+                } else if (window._viewBeforeSupport === 'about') {
+                    document.getElementById('aboutPage').classList.remove('hidden');
+                } else {
+                    goHome();
+                }
+            } else {
+                goHome();
             }
         }
 
@@ -16800,6 +17010,9 @@ async function checkAndLoadTriggerAlerts() {
         function prefillSupportForm() {
             const nameField = document.getElementById('supportName');
             const emailField = document.getElementById('supportEmail');
+            // B105: Set timing field for bot detection
+            const loadedAtField = document.getElementById('supportFormLoadedAt');
+            if (loadedAtField) loadedAtField.value = String(Date.now());
             if (currentUser) {
                 if (currentUser.username && nameField) {
                     nameField.value = currentUser.username;
@@ -16813,6 +17026,23 @@ async function checkAndLoadTriggerAlerts() {
         document.getElementById('supportForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // B105: Bot protection — honeypot check
+            const hp = document.getElementById('supportHoneypot');
+            if (hp && hp.value) {
+                // Bot filled the hidden field — silently pretend success
+                showNotification(_t('support.sent_success', 'Your message has been received. We will respond within 24 hours.'), 'success');
+                document.getElementById('supportForm').reset();
+                return;
+            }
+
+            // B105: Bot protection — timing check (< 3s = likely bot)
+            const loadedAt = parseInt(document.getElementById('supportFormLoadedAt').value || '0', 10);
+            if (loadedAt && (Date.now() - loadedAt) < 3000) {
+                showNotification(_t('support.sent_success', 'Your message has been received. We will respond within 24 hours.'), 'success');
+                document.getElementById('supportForm').reset();
+                return;
+            }
+
             const name = document.getElementById('supportName').value.trim();
             const email = document.getElementById('supportEmail').value.trim();
             const subject = document.getElementById('supportSubject').value.trim();
@@ -16824,12 +17054,18 @@ async function checkAndLoadTriggerAlerts() {
             }
 
             try {
-                await apiCall('/support/contact', 'POST', {
+                // B105: Include honeypot field for server-side bot detection
+                const hpVal = document.getElementById('supportHoneypot') ? document.getElementById('supportHoneypot').value : '';
+                const result = await apiCall('/support/contact', 'POST', {
                     name: name,
                     email: email,
                     subject: subject,
-                    message: message
+                    message: message,
+                    _hp: hpVal
                 });
+
+                // B110: apiCall returns null on 429 (rate limit) or 401 — don't show false success
+                if (result === null) return;
 
                 showNotification(_t('support.sent_success', 'Your message has been received. We will respond within 24 hours.'), 'success');
                 document.getElementById('supportForm').reset();

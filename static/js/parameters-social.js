@@ -1,3 +1,5 @@
+// Version B110 - Cache-buster sync to B110; no functional changes in this file.
+// Version B105 - Cache-buster sync to B105; no functional changes in this file.
 // Version B30 - Cache-buster sync to B30; no functional changes in this file.
 // Version B20 - FIX: Updated fallback alert strings from "concerning levels" to
 //   "low levels" (alerts.mood_low, alerts.energy_low) to match C32 backend tone change.

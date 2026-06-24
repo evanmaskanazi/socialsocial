@@ -1,6 +1,57 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — B75
+Complete app.py for Social Social Platform - V4 10Link — B125
+
+# B125 Changes (from B120, minor fixes):
+# No backend changes. All B125 work is in index.html:
+#   FIX 1: Dark mode --sage-light/--peach-light overrides (was missing from .dark-mode block)
+#   FIX 2: Popup z-index bumped 10000 → 10001 (above notification container)
+#   FIX 3: goBack() simplified — skips showView, just re-shows dashboard container
+#   FIX 4: Popup retry loop capped at 20 iterations (10 seconds)
+# Cache version bumped to B125 in all HTML files.
+
+# B120 Changes (from B115, audit round):
+# No backend changes. All B120 work is in index.html:
+#   FIX 1: Desktop popup race condition — deferred to window.load + splash check
+#   FIX 2: Desktop popup persistence — localStorage replaces sessionStorage
+#   FIX 3: Desktop popup dismiss UX — overlay click + Escape key
+#   FIX 4: Contact Us mobile scroll timing — 500ms + requestAnimationFrame
+#   FIX 5: Removed redundant setLanguage() call from popup script
+# Cache version bumped to B120 in all HTML files.
+
+# B115 Changes (from B110, frontend-only):
+# No backend changes. All B115 work is in index.html, i18n.js, parameters.html,
+# circles.html:
+#   FEATURE 1: Desktop popup (non-mobile viewport detection, once per session)
+#   FEATURE 2: Login screen invitation text + "robots not invited" warning
+#   FEATURE 3: Contact Us button (logged-out: prominent on login page;
+#              logged-in: mobile More menu entry)
+#   BUG FIX: Support page "Back to Home" → "Back to Last Page" with goBack()
+# Cache version bumped to B115 in all HTML files.
+
+# B110 Changes (from B105, audit-hardened):
+# BUG FIX 1: rate_limit_endpoint now uses _get_client_ip() (reads X-Forwarded-For)
+#   instead of request.remote_addr. Behind Render's reverse proxy, remote_addr is the
+#   load balancer IP — all anonymous users shared one rate-limit key. At B105's 25/day
+#   window this became a real usability issue (25 total support messages globally/day).
+# BUG FIX 2: Removed server-side timing check from support_contact. The _ts/_submit_ts
+#   fields were client-provided timestamps — any bot bypassing JS can forge them.
+#   Client-side timing check retained (catches JS-executing bots). Server-side honeypot
+#   retained (catches direct-POST bots). Dead code removed.
+# BUG FIX 3: Honeypot bot log now uses _get_client_ip() for consistent proxy-aware logging.
+# Cache version bumped to B110 in all HTML files.
+
+# B105 Changes (from B90/B75):
+# BOT PROTECTION PREP — support_contact endpoint hardened for future public exposure:
+#   1. Rate limit changed from 5/hour to 25/day per IP (matches Benny spec for
+#      daily IP-based form submission cap).
+#   2. Server-side honeypot check: if '_hp' field present and non-empty, silent 200
+#      (bots fill hidden fields; returning success prevents retry loops).
+#   3. Server-side timing check: if '_ts' field present and form submitted < 3s
+#      after page load, silent 200 (bots submit instantly).
+# CACHE-BUST FIX: circles.html and parameters.html were stuck at ?v=B60.
+#   All three HTML files now synced to ?v=B105.
+# No other backend logic changes.
 
 # B75 Changes (from B65, review-hardened):
 # BUG FIX 1: Support email HTML template — user inputs now HTML-escaped via html.escape()
@@ -1680,16 +1731,28 @@ def check_rate_limit(user_id, max_requests=100, window=60, endpoint=None):
         return True, len(rate_limit_store[key]), 0
 
 
+# B110: Extract real client IP behind reverse proxy (Render, nginx, etc.)
+# X-Forwarded-For format: "client, proxy1, proxy2" — first entry is the real client.
+# Falls back to request.remote_addr if header is absent (direct connection).
+def _get_client_ip():
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        # First IP in the chain is the original client
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr
+
+
 def rate_limit_endpoint(max_requests=100, window=60, endpoint_name=None):
     """
     CHANGE 4: Enhanced rate limiting decorator with endpoint awareness and retry headers
     Usage: @rate_limit_endpoint(max_requests=60, window=60, endpoint_name='login')
+    B110: Uses _get_client_ip() for correct IP behind reverse proxy (Render/nginx).
     """
 
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            user_id = session.get('user_id') or request.remote_addr
+            user_id = session.get('user_id') or _get_client_ip()
             ep_name = endpoint_name or f.__name__
             allowed, count, retry_after = check_rate_limit(user_id, max_requests, window, ep_name)
             if not allowed:
@@ -6873,17 +6936,30 @@ def support_page():
 
 # FIX 5: Support contact API endpoint with CSRF validation
 @app.route('/api/support/contact', methods=['POST'])
-@rate_limit_endpoint(max_requests=5, window=3600, endpoint_name='support_contact')  # 5 per hour
+@rate_limit_endpoint(max_requests=25, window=86400, endpoint_name='support_contact')  # B105: 25 per day per IP
 @require_csrf
 def support_contact():
     """
     Handle support contact form submissions.
     Validates input, stores message, and sends email to support address.
+    B105: Added honeypot bot protection.
+    B110: Removed server-side timing check (client-provided timestamps are forgeable).
+          Client-side timing check remains for JS-executing bots.
+          Honeypot log now uses _get_client_ip() for correct IP behind proxy.
     """
     try:
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Invalid request data'}), 400
+        
+        # B105: Honeypot check — bots fill hidden fields, humans don't
+        if data.get('_hp'):
+            # Silent success to prevent bot retry loops
+            logger.info(f"[BOT] Honeypot triggered from {_get_client_ip()}")
+            return jsonify({
+                'success': True,
+                'message': 'Your message has been received. We will respond within 24 hours.'
+            })
         
         # Get user ID if logged in
         user_id = session.get('user_id')
