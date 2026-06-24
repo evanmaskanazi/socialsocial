@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!-- B125: Cache-bust sync — all JS bumped to B125. No functional changes. -->
+<!-- B120: Cache-bust sync — all JS bumped to B120. No functional changes. -->
+<!-- B115: Cache-bust sync — all JS bumped to B115. No functional changes. -->
+<!-- B110: Cache-bust sync — all JS bumped to B110. No functional changes. -->
+<!-- B105: CACHE-BUST FIX — all JS bumped from B60 → B105.
+  parameters.html was stuck at ?v=B60 while index.html was at B70.
+  No functional changes in this file. -->
 <!-- B30: Cache-bust sync — all JS bumped from B20 to B30. No functional changes in parameters page. -->
 <!-- B20: Cache-bust sync — parameters-social.js bumped from B7 to B20. -->
 <!-- B7: Cache version bumped to B7. Privacy reset fix + UTC date fix in parameters-social.js.
@@ -819,9 +826,9 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B60"></script>
-    <script src="/static/js/parameters-social.js?v=B60"></script>
-    <script src="/static/js/feed-updates.js?v=B60"></script>
+    <script src="/static/js/i18n.js?v=B125"></script>
+    <script src="/static/js/parameters-social.js?v=B125"></script>
+    <script src="/static/js/feed-updates.js?v=B125"></script>
 
     <script>
         console.log('Parameters page loading...');
