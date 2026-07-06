@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- B130 (A6): Cache-bust sync — all JS bumped B125→B130 so the updated i18n.js (invite
+  well-being wording fixes: AR صحتك→رفاهيتك, RU duplicate-word fix) is refetched. No changes
+  to index.html markup or logic other than the ?v= bump. -->
 <!-- B125: MINOR FIXES from B120 audit
   FIX 1: Dark mode — added --sage-light/#2A3F35 and --peach-light/#3D3230 overrides to
     .dark-mode block. Previously unset, causing invitation card, summary card, tab borders,
@@ -551,7 +554,7 @@
    <script src="/static/js/utilities.js"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js"></script>
-    <script src="/static/js/follow-requests.js?v=B125"></script>
+    <script src="/static/js/follow-requests.js?v=B130"></script>
 
 
     <style>
@@ -7737,7 +7740,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B125"></script>
+    <script src="/static/js/i18n.js?v=B130"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8033,9 +8036,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B125"></script>
-   <script src="/static/js/circles-messages.js?v=B125"></script>
-<script src="/static/js/feed-updates.js?v=B125"></script>
+<script src="/static/js/parameters-social.js?v=B130"></script>
+   <script src="/static/js/circles-messages.js?v=B130"></script>
+<script src="/static/js/feed-updates.js?v=B130"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';

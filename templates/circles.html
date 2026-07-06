@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- TheraSocial Circles Version B130 (A6) -->
+<!-- B130 (A6): Cache-bust sync — all JS bumped B125→B130. Added viewport-fit=cover + additive A6-MOBILE CSS block (mobile-UX polish only). No functional/JS changes. -->
 <!-- TheraSocial Circles Version B125 -->
 <!-- B125: Cache-bust sync — all JS bumped to B125. No functional changes. -->
 <!-- TheraSocial Circles Version B120 -->
@@ -36,7 +38,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Circles - TheraSocial</title>
     <style>
         body {
@@ -70,6 +72,39 @@
         [dir="rtl"] .circle-selector {
             flex-direction: row-reverse;
         }
+
+        /* ================================================================== */
+        /* A6-MOBILE: Additive mobile-UX enhancements — no functional changes. */
+        /* Presentation-only; supports the viewport-fit=cover meta added above. */
+        /* ================================================================== */
+        /* (1) Stop iOS from auto-inflating text sizes in landscape. */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        /* (2) Remove grey tap-flash + (3) kill the 300ms tap delay on controls. */
+        a, button, [onclick], [role="button"], input, select, textarea {
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+        }
+        /* (4) Prevent accidental text-selection on buttons (message text stays
+              selectable so users can still copy from conversations). */
+        button, [role="button"] { -webkit-user-select: none; user-select: none; }
+        @media (max-width: 768px) {
+            /* (5) Momentum scrolling + (6) no scroll-chaining / pull-to-refresh. */
+            html, body {
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+            }
+            /* (7) Prevent iOS "zoom on focus": form fields must be >= 16px. */
+            input, select, textarea { font-size: 16px; }
+            /* (8) Landscape notch: keep content out of the side safe-areas
+                  (needed now that viewport-fit=cover is enabled). */
+            body {
+                padding-left: calc(20px + env(safe-area-inset-left, 0px));
+                padding-right: calc(20px + env(safe-area-inset-right, 0px));
+            }
+            /* (9) Keep toast notifications clear of the notch / status bar. */
+            #toastContainer { top: calc(20px + env(safe-area-inset-top, 0px)) !important; }
+        }
+        /* ===================== END A6-MOBILE ============================== */
     </style>
 </head>
 <body>
@@ -78,9 +113,9 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B125"></script>
-    <script src="/static/js/circles-messages.js?v=B125"></script>
-    <script src="/static/js/feed-updates.js?v=B125"></script>
+    <script src="/static/js/i18n.js?v=B130"></script>
+    <script src="/static/js/circles-messages.js?v=B130"></script>
+    <script src="/static/js/feed-updates.js?v=B130"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
