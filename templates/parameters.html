@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- B130 (A6): Cache-bust sync — all JS bumped B125→B130. Added viewport-fit=cover + additive A6-MOBILE CSS block (mobile-UX polish only). No functional/JS changes. -->
 <!-- B125: Cache-bust sync — all JS bumped to B125. No functional changes. -->
 <!-- B120: Cache-bust sync — all JS bumped to B120. No functional changes. -->
 <!-- B115: Cache-bust sync — all JS bumped to B115. No functional changes. -->
@@ -29,7 +30,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Diary - TheraSocial</title>
     <!-- FIX: Security meta tags -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -511,6 +512,56 @@
             .diary-mobile-more-menu { display: none !important; }
             .diary-mobile-header { display: none !important; }
         }
+
+        /* ================================================================== */
+        /* A6-MOBILE: Additive mobile-UX enhancements — no functional changes. */
+        /* Presentation-only; supports the viewport-fit=cover meta added above. */
+        /* ================================================================== */
+        /* (1) Stop iOS from auto-inflating text sizes in landscape. */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        /* (2) Remove the grey tap-flash + (3) kill the 300ms tap delay on
+              interactive elements for snappier, native-feeling taps. */
+        a, button, .btn, [onclick], [role="button"],
+        .diary-mobile-nav-item, .diary-more-item, .diary-header-btn {
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+        }
+        /* (4) Prevent accidental text-selection when tapping nav / buttons. */
+        .diary-nav, .diary-nav-link, .btn, button,
+        .diary-mobile-header, .diary-mobile-nav, .diary-mobile-nav-item,
+        .diary-more-item, .diary-header-btn {
+            -webkit-user-select: none; user-select: none;
+        }
+        @media (max-width: 768px) {
+            /* (5) Momentum scrolling + (6) no scroll-chaining / accidental
+                  pull-to-refresh while scrolling the diary. */
+            html, body {
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+            }
+            /* (7) Prevent iOS "zoom on focus": form fields must be >= 16px. */
+            input, select, textarea, input[type="text"], input[type="number"] {
+                font-size: 16px;
+            }
+            /* (8) Honour the notch / status-bar safe area on the sticky top bars
+                  (needed now that viewport-fit=cover is enabled). */
+            .diary-mobile-header {
+                padding-top: calc(8px + env(safe-area-inset-top, 0px));
+            }
+            .diary-mobile-nav {
+                top: calc(46px + env(safe-area-inset-top, 0px));
+            }
+            /* (9) Comfortable tap targets (Apple HIG >= 44px) on smaller controls. */
+            .diary-header-btn, .btn,
+            .action-buttons button, .action-buttons .btn {
+                min-height: 44px;
+            }
+            /* (10) Keep the slide-down "More" sheet clear of the home indicator. */
+            .diary-mobile-more-sheet {
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+            }
+        }
+        /* ===================== END A6-MOBILE ============================== */
     </style>
 </head>
 <body>
@@ -826,9 +877,9 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B125"></script>
-    <script src="/static/js/parameters-social.js?v=B125"></script>
-    <script src="/static/js/feed-updates.js?v=B125"></script>
+    <script src="/static/js/i18n.js?v=B130"></script>
+    <script src="/static/js/parameters-social.js?v=B130"></script>
+    <script src="/static/js/feed-updates.js?v=B130"></script>
 
     <script>
         console.log('Parameters page loading...');
