@@ -22800,8 +22800,10 @@ def public_invite_page(username):
 
         translations = {
             'en': {
-                'title': f"Join {safe_username}'s Wellness Journey",
+                'kicker': "You're invited 👋",
+                'title': f"Join {safe_username}'s Well-Being Journey",
                 'subtitle': 'See their progress on TheraSocial',
+                'reassurance': "Free to join · Takes just a moment · You're always in control of what you share.",
                 'followers': 'Connections',
                 'following': 'Connected',
                 'description': f'{safe_username} is tracking their well-being journey and wants to share it with you.',
@@ -22812,11 +22814,13 @@ def public_invite_page(username):
                 'request_pending': 'Request Pending'
             },
             'he': {
-                'title': f'הצטרף/י למסע הבריאות של {safe_username}',
+                'kicker': 'קיבלת הזמנה 👋',
+                'title': f'הצטרף/י למסע הרווחה של {safe_username}',
                 'subtitle': 'צפה בהתקדמות שלו/ה ב-TheraSocial',
+                'reassurance': 'ההצטרפות חינמית · לוקח רק רגע · תמיד בשליטתך מה לשתף.',
                 'followers': 'חיבורים',
                 'following': 'מחובר/ת',
-                'description': f'{safe_username} עוקב/ת אחרי מסע הבריאות שלו/ה ורוצה לשתף אותך.',
+                'description': f'{safe_username} עוקב/ת אחרי מסע הרווחה שלו/ה ורוצה לשתף אותך.',
                 'join_text': 'הצטרף/י ל-TheraSocial כדי לצפות בהתקדמות שלו/ה ולתמוך ביעדי הבריאות, הרווחה והשגשוג שלו/ה.',
                 'follow_btn': f'התחבר/י עם {safe_username}',
                 'dashboard_btn': 'עבור ללוח הבקרה',
@@ -22824,11 +22828,13 @@ def public_invite_page(username):
                 'request_pending': 'בקשה ממתינה'
             },
             'ar': {
-                'title': f'انضم إلى رحلة {safe_username} الصحية',
+                'kicker': 'لقد تمت دعوتك 👋',
+                'title': f'انضم إلى رحلة {safe_username} نحو الرفاهية',
                 'subtitle': 'تابع تقدمهم على TheraSocial',
+                'reassurance': 'الانضمام مجاني · يستغرق لحظة · أنت دائمًا تتحكم فيما تشاركه.',
                 'followers': 'الاتصالات',
                 'following': 'متصل',
-                'description': f'{safe_username} يتتبع رحلته الصحية ويريد مشاركتها معك.',
+                'description': f'{safe_username} يتتبع رحلة رفاهيته ويريد مشاركتها معك.',
                 'join_text': 'انضم إلى TheraSocial لمشاهدة تقدمهم ودعم أهدافهم في الصحة والرفاهية والازدهار.',
                 'follow_btn': f'تواصل مع {safe_username}',
                 'dashboard_btn': 'اذهب إلى لوحة التحكم',
@@ -22836,11 +22842,13 @@ def public_invite_page(username):
                 'request_pending': 'طلب قيد الانتظار'
             },
             'ru': {
-                'title': f'Присоединяйтесь к пути здоровья {safe_username}',
+                'kicker': 'Вас пригласили 👋',
+                'title': f'Присоединяйтесь к пути благополучия {safe_username}',
                 'subtitle': 'Смотрите их прогресс на TheraSocial',
+                'reassurance': 'Присоединение бесплатно · Займёт пару секунд · Вы всегда контролируете, чем делиться.',
                 'followers': 'Контакты',
                 'following': 'Подключён',
-                'description': f'{safe_username} отслеживает свой путь к здоровью и хочет поделиться им с вами.',
+                'description': f'{safe_username} отслеживает свой путь к благополучию и хочет поделиться им с вами.',
                 'join_text': 'Присоединяйтесь к TheraSocial, чтобы видеть их прогресс и поддерживать их цели в области здоровья, благополучия и процветания.',
                 'follow_btn': f'Связаться с {safe_username}',
                 'dashboard_btn': 'Перейти к панели',
@@ -22933,6 +22941,24 @@ def public_invite_page(username):
                     color: #666;
                     margin-bottom: 25px;
                 }}
+                /* A6: warm "You're invited" kicker + comforting reassurance line */
+                .kicker {{
+                    display: inline-block;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #764ba2;
+                    background: rgba(118, 75, 162, 0.08);
+                    padding: 6px 14px;
+                    border-radius: 999px;
+                    margin-bottom: 14px;
+                    letter-spacing: 0.01em;
+                }}
+                .reassurance {{
+                    margin-top: 18px;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    color: #9a9aa5;
+                }}
                 .stats {{
                     display: flex;
                     justify-content: center;
@@ -23024,6 +23050,15 @@ def public_invite_page(username):
                         font-size: 14px;
                         margin-bottom: 18px;
                     }}
+                    .kicker {{
+                        font-size: 12px;
+                        padding: 5px 12px;
+                        margin-bottom: 12px;
+                    }}
+                    .reassurance {{
+                        font-size: 12px;
+                        margin-top: 14px;
+                    }}
                     .description {{
                         font-size: 14px;
                         line-height: 1.5;
@@ -23071,6 +23106,7 @@ def public_invite_page(username):
             </div>
             <div class="card">
                 <div class="avatar">{username[0].upper()}</div>
+                <div class="kicker">{t['kicker']}</div>
                 <h1>{t['title']}</h1>
                 <p class="subtitle">{t['subtitle']}</p>
                 <!-- Stats box commented out per design update
@@ -23093,6 +23129,7 @@ def public_invite_page(username):
                     {button_html}
                     {dashboard_btn}
                 </div>
+                <p class="reassurance">{t['reassurance']}</p>
             </div>
             <script>
                 function changeLanguage(lang) {{
