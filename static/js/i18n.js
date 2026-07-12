@@ -1,3 +1,4 @@
+// Version B135 (A8): cache-bust sync only (referenced as ?v=B135). No functional changes in this file.
 // Language detection and translation system with backend sync
 // Version B125 - No i18n changes. Cache-bust sync only.
 // Version B120 - AUDIT: No i18n changes. Cache-bust sync only.
