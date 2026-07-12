@@ -1,3 +1,4 @@
+// Version B135 (A8): cache-bust sync only (referenced as ?v=B135). No functional changes in this file.
 // Circles and Messages Management System with i18n support
 // B110: Cache-buster sync to B110; no functional changes in this file.
 // B105: Cache-buster sync to B105; no functional changes in this file.

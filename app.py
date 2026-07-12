@@ -1,6 +1,49 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — B125
+Complete app.py for Social Social Platform - V4 10Link — B135 (A8)
+
+# B135 / A8 Changes (from B130 / A7) — SINGLE backend fix, additive & non-invasive:
+#   EMAIL/HOME-PAGE CONSISTENCY (trigger alerts):
+#   ROOT CAUSE: The home page renders the accumulated union of stored trigger Alert
+#     rows, created by TWO producers (the on-save job process_parameter_triggers_async
+#     AND the 5-minute background scheduler run_background_trigger_check_for_watcher).
+#     The consolidated email, however, was built during a single on-save run and ONLY
+#     from streaks that did NOT already have a stored row (the `if not existing:` gate).
+#     The scheduler had usually already stored the full/longest streak, so the email
+#     was left with a narrow, newer fragment — giving different day-counts/date-ranges
+#     than the home page (e.g. home: 7 days Jun 30–Jul 06; email: 3 days Jul 04–06).
+#     The streak MATH, thresholds, and 30-day window are identical everywhere; this is
+#     purely which streaks were CHOSEN for the email. Genuine bug, not a design choice.
+#   FIX (Option A — email mirrors home page): added build_triggered_params_from_alerts()
+#     which reads the watcher's CURRENT unread trigger Alert rows for the watched user
+#     and parses their frozen content. The on-save email now sends THAT list, so the
+#     email always lists exactly what the home page shows. The "only email when a new
+#     alert appeared this run" gate is preserved (no new email spam). Falls back to the
+#     prior per-run list if the read returns nothing. No other backend behavior changed.
+# Cache version bumped to B135 in all HTML files (A8).
+#
+# B135 / A8 — ROUND-2 AUDIT FIXES (additive, minimal):
+#   A) [helper hardening] build_triggered_params_from_alerts: the date-range in stored
+#      alert content is OPTIONAL (scheduler can emit single-day "(Jul 04)" or, in its
+#      date-parse fallback, no parentheses). Regex made tolerant of all three shapes;
+#      query capped at 50 rows; email loop hardened with .get() so a malformed dict can't
+#      KeyError; send_consolidated_wellness_alert_email omits the empty "()" when a param
+#      has no date range.
+#   B) [no_checkin crash — HIGH] SavedParameters.date is a String column. Three sites
+#      (check_parameter_triggers + both no_checkin blocks in the background scheduler)
+#      computed `today - latest_entry.date` = date - str, raising TypeError and silently
+#      disabling no_checkin alerts/emails for any user who had EVER checked in (only the
+#      never-checked-in 999 branch worked). Now coerce the stored 'YYYY-MM-DD' string to a
+#      date first. Bounded feature restoration (dedup + 24h window = one alert/user/day).
+#   C) [privacy leak — MED] get_alerts T42 privacy table was missing the underscore key
+#      'physical_activity'; the space form never matched the real content, so a
+#      physical_activity trigger alert kept showing after the watched user made that
+#      parameter private. Added the missing key (all sibling tables already had it).
+#   NOT auto-fixed (flagged for owner decision): the STANDARD-parameter streak date
+#   arithmetic in check_parameter_triggers / run_background_trigger_check_for_watcher has
+#   the same string-date issue, but fixing it reactivates dormant bulk alerting on those
+#   redundant paths (the on-save path already creates those alerts). Left unchanged to
+#   respect minimalism; recommend a separate, monitored change if desired.
 
 # B125 Changes (from B120, minor fixes):
 # No backend changes. All B125 work is in index.html:
@@ -2978,12 +3021,21 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
         # Build parameter list HTML
         param_items = []
         for p in triggered_params:
+            # A8 audit: use .get so an unexpected/legacy param dict can't KeyError here.
+            p_name = p.get('param_name', '')
+            p_days = p.get('days', '')
+            p_range = (p.get('date_range') or '').strip()
             # T32: Use distinct message for no_checkin alerts
-            if p['param_name'] == 'no_checkin':
-                line = t.get('no_checkin_line', "hasn't checked in for {days} days — you may want to reach out").replace('{days}', str(p['days']))
+            if p_name == 'no_checkin':
+                line = t.get('no_checkin_line', "hasn't checked in for {days} days — you may want to reach out").replace('{days}', str(p_days))
             else:
-                param_display = t.get(p['param_name'], p['param_name'])
-                line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p['days'])).replace('{date_range}', p['date_range'])
+                param_display = t.get(p_name, p_name)
+                if p_range:
+                    line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p_days)).replace('{date_range}', p_range)
+                else:
+                    # A8 audit: rare scheduler fallback content has no date range — omit the
+                    # empty "()" instead of rendering "... for N consecutive days ()".
+                    line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p_days)).replace('({date_range})', '').replace('{date_range}', '').rstrip()
             param_items.append(f'<li style="margin-bottom: 8px;">{line}</li>')
         
         params_html = '\n'.join(param_items)
@@ -10387,6 +10439,7 @@ def get_alerts():
             'anxiety': 'anxiety_privacy',
             'sleep': 'sleep_quality_privacy',
             'sleep quality': 'sleep_quality_privacy',
+            'physical_activity': 'physical_activity_privacy',  # A8 audit fix: real alert content uses the underscore form ("...'s physical_activity has been..."); the space form below never matched it, leaking a now-private physical_activity trigger alert. All sibling privacy tables already include this key.
             'physical activity': 'physical_activity_privacy',
             'exercise': 'physical_activity_privacy',
             'energy': 'energy_privacy',
@@ -13166,6 +13219,74 @@ def get_job_queue_stats():
         return {'error': str(e)}
 
 
+def build_triggered_params_from_alerts(watcher_id, watched_user_id, watched_username):
+    """
+    A8: Build the consolidated-email parameter list from the watcher's CURRENT
+    unread trigger alerts about this watched user, so the email mirrors EXACTLY
+    what the home page shows.
+
+    Root cause this fixes: the home page renders the accumulated union of stored
+    trigger Alert rows (created by both the on-save job AND the 5-minute background
+    scheduler), but the on-save email was previously built only from streaks that
+    did NOT already have a stored row (the `if not existing:` gate). Because the
+    scheduler had usually already stored the full/longest streak, the email was left
+    with only a narrow, newer fragment — so email day-counts/date-ranges disagreed
+    with the home page. Reading the same stored rows here guarantees consistency.
+
+    Additive helper — parses the frozen English `content` of each unread trigger
+    Alert (same text the home page translates for display) into the
+    {param_name, days, date_range} dicts that send_consolidated_wellness_alert_email
+    expects. Returns [] on any error so callers can fall back to prior behavior.
+    """
+    import re as _re
+    params = []
+    seen = set()
+    try:
+        rows = Alert.query.filter(
+            Alert.user_id == watcher_id,
+            Alert.alert_type == 'trigger',
+            Alert.is_read == False,  # noqa: E712 - SQLAlchemy needs == comparison
+            Alert.source_user_id == watched_user_id
+        ).order_by(Alert.created_at.desc()).limit(50).all()  # A8 audit: cap to avoid pathologically long emails
+    except Exception as e:
+        logger.warning(f"[A8 EMAIL MIRROR] Could not load alerts for watcher {watcher_id}: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return []
+
+    for a in rows:
+        content = a.content or ''
+        # no_checkin format: "{user} hasn't checked in for N days — ..."
+        m_nc = _re.search(r"hasn't checked in for (\d+)\s*day", content)
+        if m_nc:
+            key = ('no_checkin', m_nc.group(1))
+            if key in seen:
+                continue
+            seen.add(key)
+            params.append({'param_name': 'no_checkin', 'days': int(m_nc.group(1)), 'date_range': ''})
+            continue
+        # standard streak format: "{user}'s {param} has been at low/concerning levels
+        # for N consecutive days (Start - End)". A8 audit: the parenthesised date range
+        # is OPTIONAL — the 5-minute scheduler can emit content with a single-day range
+        # "(Jul 04)" or, in its date-parse fallback branches, no parentheses at all
+        # (app.py ~22203/22207/22209). The `(?:...)?` group matches all three shapes so
+        # those rows still appear in the email (mirroring the home page), not just the
+        # "(start - end)" ones.
+        m = _re.search(r"'s\s+([A-Za-z_]+)\s+has been at .*?for\s+(\d+)\s+consecutive days?(?:\s*\(([^)]+)\))?", content)
+        if m:
+            pname = m.group(1)
+            drange = (m.group(3) or '').strip()
+            key = (pname, drange)
+            if key in seen:
+                continue
+            seen.add(key)
+            params.append({'param_name': pname, 'days': int(m.group(2)), 'date_range': drange})
+
+    return params
+
+
 def process_parameter_triggers_async(user_id, param_snapshot):
     """
     PJ6007: Async trigger processing with CONSOLIDATED emails.
@@ -13506,13 +13627,22 @@ def process_parameter_triggers_async(user_id, param_snapshot):
         # PJ6007: Send ONE consolidated email per watcher (instead of many individual emails)
         emails_sent = 0
         for watcher_id, triggered_params in watcher_triggered_params.items():
-            if triggered_params:  # Only send if there are triggered params
+            if triggered_params:  # Only send if this run detected genuine news (>=1 new alert)
                 watcher = User.query.get(watcher_id)
                 user_language = watcher.preferred_language if watcher else 'en'
-                
-                logger.info(f"[TRIGGER PROCESS ASYNC] Sending consolidated email to watcher {watcher_id} with {len(triggered_params)} params")
-                
-                if send_consolidated_wellness_alert_email(watcher_id, watched_user.username, triggered_params, user_language):
+
+                # A8: mirror the home page. Instead of emailing only the newly-created
+                # fragments (which under-reported vs the home page), email the watcher's
+                # CURRENT unread trigger alerts for this user, so the email lists exactly
+                # what they see on their home page. Falls back to the per-run list if the
+                # stored-alert read returns nothing.
+                email_params = build_triggered_params_from_alerts(
+                    watcher_id, watched_user.id, watched_user.username
+                ) or triggered_params
+
+                logger.info(f"[TRIGGER PROCESS ASYNC] Sending consolidated email to watcher {watcher_id} with {len(email_params)} params (mirrors home page)")
+
+                if send_consolidated_wellness_alert_email(watcher_id, watched_user.username, email_params, user_language):
                     emails_sent += 1
         
         logger.info(f"[TRIGGER PROCESS ASYNC] PJ6008 Completed:")
@@ -17170,7 +17300,16 @@ def check_parameter_triggers():
                 ).scalars().first()
 
                 if latest_entry and latest_entry.date:
-                    days_since = (today - latest_entry.date).days
+                    # A8 audit fix: SavedParameters.date is a String column ('YYYY-MM-DD'); subtracting
+                    # it from a date object raised TypeError, silently killing no_checkin alerts for any
+                    # user who had ever checked in. Coerce the stored string to a date before subtracting.
+                    _le_date = latest_entry.date
+                    if isinstance(_le_date, str):
+                        try:
+                            _le_date = datetime.strptime(_le_date[:10], '%Y-%m-%d').date()
+                        except Exception:
+                            _le_date = None
+                    days_since = (today - _le_date).days if _le_date else 999
                 else:
                     days_since = 999
 
@@ -21766,7 +21905,16 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 ).scalars().first()
 
                 if latest_entry and latest_entry.date:
-                    days_since = (today - latest_entry.date).days
+                    # A8 audit fix: SavedParameters.date is a String column ('YYYY-MM-DD'); subtracting
+                    # it from a date object raised TypeError, silently killing no_checkin alerts for any
+                    # user who had ever checked in. Coerce the stored string to a date before subtracting.
+                    _le_date = latest_entry.date
+                    if isinstance(_le_date, str):
+                        try:
+                            _le_date = datetime.strptime(_le_date[:10], '%Y-%m-%d').date()
+                        except Exception:
+                            _le_date = None
+                    days_since = (today - _le_date).days if _le_date else 999
                 else:
                     days_since = 999
 
@@ -21902,7 +22050,16 @@ def run_background_trigger_check_for_watcher(watcher_id):
                     ).scalars().first()
 
                     if latest_entry and latest_entry.date:
-                        days_since = (today - latest_entry.date).days
+                        # A8 audit fix: SavedParameters.date is a String column ('YYYY-MM-DD'); subtracting
+                        # it from a date object raised TypeError, silently killing no_checkin alerts for any
+                        # user who had ever checked in. Coerce the stored string to a date before subtracting.
+                        _le_date = latest_entry.date
+                        if isinstance(_le_date, str):
+                            try:
+                                _le_date = datetime.strptime(_le_date[:10], '%Y-%m-%d').date()
+                            except Exception:
+                                _le_date = None
+                        days_since = (today - _le_date).days if _le_date else 999
                     else:
                         days_since = 999
 

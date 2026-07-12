@@ -1,3 +1,6 @@
+// Version B135 (A8): (referenced as ?v=B135). A8 audit fix — guarded the top-level
+// JSON.parse of 'savedParameterDates' so a corrupted value can't abort the whole script
+// on load. No other logic changed.
 // Version B110 - Cache-buster sync to B110; no functional changes in this file.
 // Version B105 - Cache-buster sync to B105; no functional changes in this file.
 // Version B30 - Cache-buster sync to B30; no functional changes in this file.
@@ -216,7 +219,18 @@ const pt = (key) => window.i18n ? window.i18n.translate(key) : key;
 // State management
 let currentDate = new Date();
 let selectedRatings = {};
-let datesWithData = new Set(JSON.parse(localStorage.getItem('savedParameterDates') || '[]'));
+// A8 audit fix: this top-level JSON.parse was the only unguarded one in the file. A
+// corrupted 'savedParameterDates' value (truncated/partial write, quota eviction, cross-tab
+// race, manual tampering) would throw here during script init and abort the ENTIRE
+// parameters-social.js load — breaking the whole diary page, not just the calendar dots.
+let datesWithData;
+try {
+    datesWithData = new Set(JSON.parse(localStorage.getItem('savedParameterDates') || '[]'));
+} catch (e) {
+    console.warn('[A8] savedParameterDates was corrupted; resetting.', e);
+    datesWithData = new Set();
+    try { localStorage.removeItem('savedParameterDates'); } catch (_) {}
+}
 window.selectedPrivacy = {};
 window._privacyLoadedFromServer = false;  // B7: flag to prevent privacy reset on save
 let savedParameterState = {};
