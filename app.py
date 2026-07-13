@@ -13153,7 +13153,15 @@ def process_background_jobs(batch_size=10):
                     _user_id = job.payload.get('user_id')
                     if _user_id:
                         _user = db.session.get(User, _user_id)
-                        if _user and _user.email:
+                        # A8+ (off = zero guarantee): this job is only ENQUEUED when the toggle is
+                        # switched ON, but it runs asynchronously. If the user turned email_on_alert
+                        # back OFF before it executed, honor the CURRENT setting and send nothing —
+                        # so the whole batch job (including the pre-existing non-trigger loop below)
+                        # can never email while the setting is off.
+                        _ns = NotificationSettings.query.filter_by(user_id=_user_id).first()
+                        if not _ns or not _ns.email_on_alert:
+                            logger.info(f"[JOB QUEUE] Batch alert emails skipped — email_on_alert is OFF for user {_user_id}")
+                        elif _user and _user.email:
                             _unread = Alert.query.filter(
                                 Alert.user_id == _user_id,
                                 Alert.is_read == False,
