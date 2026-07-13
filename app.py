@@ -1,6 +1,53 @@
 #!/usr/bin/env python
 """
-Complete app.py for Social Social Platform - V4 10Link — B135 (A8)
+Complete app.py for Social Social Platform - V4 10Link — B140 (A8+)
+
+# B140 / A8+ Changes (from B135 / A8) — EMAIL RELIABILITY BACKSTOP (backend only; HTML/JS
+#   files are unchanged and stay at ?v=B135):
+#   PROBLEM: Alerts were appearing on the home page with no matching email. Root cause: the
+#     ONLY code path that reliably created standard-parameter alerts was the on-save job;
+#     the 5-minute background scheduler AND the login-poll path both did date arithmetic on
+#     SavedParameters.date (a String column) — `str - str` → TypeError — so they crashed out
+#     before creating or emailing anything. And even the scheduler's email step only sent
+#     "no_checkin" alerts, never the standard wellbeing ones.
+#   FIX (2 parts):
+#     1) Added _a8_to_date() and used it to coerce the stored 'YYYY-MM-DD' strings to real
+#        date objects in the 5-minute scheduler's streak detection (new- and old-schema), so
+#        it stops crashing and actually detects/creates alerts.
+#     2) The scheduler now sends a consolidated email for EVERY new alert it creates (any
+#        parameter, not just no_checkin), built to MIRROR the watcher's home page. The
+#        existing duplicate-detection means it never recreates/re-emails alerts the on-save
+#        path already handled, so each alert is emailed exactly once. The scheduler runs every
+#        5 minutes independent of saves/job-queue, so it is a reliable backstop.
+#   NOTE: ALL email paths still respect the account's NotificationSettings.email_on_alert
+#     toggle — if that is OFF, no path will send. The login-poll path (check_parameter_triggers)
+#     is left crashing-but-harmless on purpose (it does not email by design; the scheduler +
+#     on-save now cover creation and email). The dead sync process_parameter_triggers() is
+#     untouched.
+#
+# B140 / A8+ — EMAIL-GATING AUDIT (why "toggle ON but zero emails"):
+#   The email_on_alert guard itself is correct (off => zero emails, verified across all
+#   senders — the only trigger-email path is send_consolidated_wellness_alert_email, which
+#   checks the toggle). Two real issues were found and fixed:
+#   FINDING 1 (HIGH — the actual cause): when a user turns email_on_alert ON, the catch-up
+#     job (send_batch_alert_emails) deliberately EXCLUDED category 'trigger' (it emails the
+#     per-alert format, not the consolidated one), and the consolidated path only ever fires
+#     for BRAND-NEW alerts. So wellness alerts already on the home page when the toggle is
+#     enabled (default is OFF) were never emailed by any path. FIX: the catch-up job now also
+#     sends one consolidated, home-page-mirroring email per watched user with existing unread
+#     trigger alerts. Runs only on enable (bounded, no spam). => a user can toggle OFF then ON
+#     to receive the backlog of alerts currently sitting un-emailed on their home page.
+#   FINDING 2 (MED — leak direction): the PUT stored data['email_on_alert'] uncoerced. A
+#     non-browser client sending the STRING "false" would be stored truthy (a non-empty string
+#     is truthy), so `not email_on_alert` => False => an email would send with the toggle OFF.
+#     FIX: added _a8_to_bool() and coerce the email_* toggles on write. (The shipped web UI
+#     always sends real booleans, so this only hardens non-browser/API clients.)
+#   Also noted (NOT changed, low/dormant): register() does not pre-create a NotificationSettings
+#     row (missing row => GET shows OFF, consistent, no bug); a dormant frontend syncSettingsToggles()
+#     has no live caller. Left alone per minimalism.
+
+# --- prior header ---
+# Complete app.py for Social Social Platform - V4 10Link — B135 (A8)
 
 # B135 / A8 Changes (from B130 / A7) — SINGLE backend fix, additive & non-invasive:
 #   EMAIL/HOME-PAGE CONSISTENCY (trigger alerts):
@@ -10620,15 +10667,15 @@ def notification_settings():
             # Update settings based on provided data
             if 'email_on_alert' in data:
                 logger.info(f"[NOTIFICATION DEBUG] PUT - Setting email_on_alert to: {data['email_on_alert']}")
-                settings.email_on_alert = data['email_on_alert']
+                settings.email_on_alert = _a8_to_bool(data['email_on_alert'])  # A8+ Finding 2: coerce so a string "false" can't leak an email
             if 'email_on_notification' in data:  # PJ6001: Handle email_on_notification
                 logger.info(f"[NOTIFICATION DEBUG] PUT - Setting email_on_notification to: {data['email_on_notification']}")
-                settings.email_on_notification = data['email_on_notification']
+                settings.email_on_notification = _a8_to_bool(data['email_on_notification'])
             if 'email_daily_diary_reminder' in data:
                 logger.info(f"[NOTIFICATION DEBUG] PUT - Setting email_daily_diary_reminder to: {data['email_daily_diary_reminder']}")
-                settings.email_daily_diary_reminder = data['email_daily_diary_reminder']
+                settings.email_daily_diary_reminder = _a8_to_bool(data['email_daily_diary_reminder'])
             if 'email_on_new_message' in data:
-                settings.email_on_new_message = data['email_on_new_message']
+                settings.email_on_new_message = _a8_to_bool(data['email_on_new_message'])
             if 'follow_requests' in data:
                 settings.follow_requests = data['follow_requests']
             if 'parameter_triggers' in data:
@@ -13135,6 +13182,39 @@ def process_background_jobs(batch_size=10):
                                     logger.error(f"[JOB QUEUE] Alert email error: {_email_err}")
                                     continue
                             logger.info(f"[JOB QUEUE] Sent {_sent} batch alert emails for user {_user_id}")
+
+                            # B140/A8+ (email-gating audit, Finding 1): the loop above EXCLUDES
+                            # category 'trigger' (13139) because trigger/wellness alerts use the
+                            # consolidated email format, not the per-alert one. But the consolidated
+                            # path only ever fires for BRAND-NEW alerts — so wellness alerts that were
+                            # already on the home page when the user flips email_on_alert ON were never
+                            # emailed by ANY path. This catch-up closes that gap: when the toggle is
+                            # enabled, send ONE consolidated, home-page-mirroring email per watched user
+                            # who has existing unread trigger alerts. Runs only on enable → bounded, no spam.
+                            try:
+                                _src_rows = db.session.query(Alert.source_user_id).filter(
+                                    Alert.user_id == _user_id,
+                                    Alert.is_read == False,  # noqa: E712
+                                    Alert.alert_type == 'trigger',
+                                    Alert.source_user_id.isnot(None)
+                                ).distinct().all()
+                                _trig_emails = 0
+                                for _row in _src_rows:
+                                    _src_id = _row[0]
+                                    _src_user = db.session.get(User, _src_id)
+                                    if not _src_user:
+                                        continue
+                                    _params = build_triggered_params_from_alerts(_user_id, _src_id, _src_user.username)
+                                    if _params and send_consolidated_wellness_alert_email(_user_id, _src_user.username, _params, _lang):
+                                        _trig_emails += 1
+                                if _trig_emails:
+                                    logger.info(f"[JOB QUEUE] B140/A8+: sent {_trig_emails} consolidated trigger catch-up emails for user {_user_id}")
+                            except Exception as _trig_err:
+                                logger.error(f"[JOB QUEUE] B140/A8+ trigger catch-up error: {_trig_err}")
+                                try:
+                                    db.session.rollback()
+                                except Exception:
+                                    pass
                         else:
                             logger.warning(f"[JOB QUEUE] User {_user_id} not found or no email")
                     else:
@@ -13217,6 +13297,45 @@ def get_job_queue_stats():
     except Exception as e:
         logger.error(f"[JOB QUEUE] Error getting stats: {str(e)}")
         return {'error': str(e)}
+
+
+def _a8_to_bool(v):
+    """B140/A8+ (email-gating audit, Finding 2): coerce a notification-toggle value to a
+    real bool before storing it in a Boolean column. The web UI already sends JS booleans,
+    but a non-browser client (mobile/API) sending the STRING "false"/"0" would otherwise be
+    stored verbatim; because a non-empty string is truthy, `not settings.email_on_alert`
+    would then be False and an email would send even though the user set the toggle OFF.
+    bool("false") is True, so we must parse strings explicitly."""
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return v != 0
+    if isinstance(v, str):
+        return v.strip().lower() in ('true', '1', 'on', 'yes', 'y', 't')
+    return bool(v)
+
+
+def _a8_to_date(v):
+    """B140/A8+: Coerce a stored SavedParameters.date value (String column 'YYYY-MM-DD',
+    or an already-parsed date/datetime) to a datetime.date, or None if unparseable.
+
+    Fixes the string-date arithmetic bug that made the 5-minute background scheduler and
+    the login-poll path raise TypeError on EVERY streak (str - str), so those paths silently
+    created no standard-parameter alerts. Coercing to real date objects lets their streak
+    detection run — which is what makes the scheduler able to act as a reliable email backstop.
+    """
+    if v is None:
+        return None
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    if isinstance(v, str):
+        try:
+            return datetime.strptime(v[:10], '%Y-%m-%d').date()
+        except Exception:
+            return None
+    return None
 
 
 def build_triggered_params_from_alerts(watcher_id, watched_user_id, watched_username):
@@ -21970,12 +22089,17 @@ def run_background_trigger_check_for_watcher(watcher_id):
                         if not can_see_parameter(param_privacy, watcher_circle):
                             continue
                         if param_value is not None and condition_func(param_value):
-                            valid_entries.append({'date': param.date, 'value': param_value})
-                    
+                            # B140/A8+: coerce the String date to a real date object so the
+                            # streak subtraction below no longer raises TypeError (str - str),
+                            # which had silently disabled this whole background code path.
+                            _pd = _a8_to_date(param.date)
+                            if _pd is not None:
+                                valid_entries.append({'date': _pd, 'value': param_value})
+
                     if len(valid_entries) >= consecutive_days:
                         valid_entries.sort(key=lambda x: x['date'])
                         current_streak = []
-                        
+
                         for entry in valid_entries:
                             if not current_streak:
                                 current_streak = [entry]
@@ -22140,15 +22264,20 @@ def run_background_trigger_check_for_watcher(watcher_id):
                         continue
 
                     if condition_func(param_value):
+                        # B140/A8+: coerce the String date to a real date object so the
+                        # streak subtraction / isoformat below no longer raise on str values.
+                        _pd = _a8_to_date(param.date)
+                        if _pd is None:
+                            continue
                         if last_date is None:
-                            streak_dates = [param.date]
+                            streak_dates = [_pd]
                             streak_values = [param_value]
-                            last_date = param.date
-                        elif (param.date - last_date).days == 1:
-                            streak_dates.append(param.date)
+                            last_date = _pd
+                        elif (_pd - last_date).days == 1:
+                            streak_dates.append(_pd)
                             streak_values.append(param_value)
-                            last_date = param.date
-                        elif (param.date - last_date).days == 0:
+                            last_date = _pd
+                        elif (_pd - last_date).days == 0:
                             continue
                         else:
                             if len(streak_dates) >= consecutive_days:
@@ -22166,9 +22295,9 @@ def run_background_trigger_check_for_watcher(watcher_id):
                                         'values': streak_values[:],
                                         'condition_text': condition_text
                                     })
-                            streak_dates = [param.date]
+                            streak_dates = [_pd]
                             streak_values = [param_value]
-                            last_date = param.date
+                            last_date = _pd
                     else:
                         if len(streak_dates) >= consecutive_days:
                             start_date = streak_dates[0]
@@ -22452,29 +22581,45 @@ def run_trigger_scheduler():
                                 else:
                                     logger.info(f"[TRIGGER SCHEDULER] PI502: Not daily reminder hour (current={current_hour}, reminder={DAILY_REMINDER_HOUR_UTC})")
                         else:
-                            # T32: In new_alerts_only mode, the job queue sends emails when users save data.
-                            # But no_checkin alerts fire precisely because the user ISN'T saving data,
-                            # so the job queue path never runs for them. Send emails for no_checkin here.
-                            no_checkin_emails = 0
+                            # B140/A8+: EMAIL BACKSTOP so every alert on the home page is also
+                            # emailed once. Previously this branch emailed ONLY no_checkin alerts
+                            # and assumed the on-save job would email everything else — but that
+                            # path can miss alerts (job-queue delay/failure, streaks that complete
+                            # without a fresh save, or the previously-crashing background paths).
+                            # The 5-minute scheduler now emails EVERY newly-created alert it made
+                            # this run (any parameter, incl. no_checkin), and builds the message to
+                            # MIRROR the watcher's home page via build_triggered_params_from_alerts.
+                            # Duplicate detection already stopped this run from recreating alerts the
+                            # on-save path made, so anything here is genuinely new → each alert is
+                            # emailed exactly once. No doubles, no spam.
+                            backstop_emails = 0
                             for watcher_id, triggered_by_user in all_watcher_triggered_params.items():
                                 watcher = db.session.get(User, watcher_id)
                                 if not watcher:
                                     continue
                                 user_language = watcher.preferred_language or 'en'
-                                
+
                                 for watched_username, triggered_params in triggered_by_user.items():
-                                    # Filter to only no_checkin params
-                                    no_checkin_params = [p for p in triggered_params if p['param_name'] == 'no_checkin']
-                                    if no_checkin_params:
-                                        logger.info(f"[TRIGGER SCHEDULER] T32: Sending no_checkin email to {watcher.username} for {watched_username}")
-                                        if send_consolidated_wellness_alert_email(watcher_id, watched_username, no_checkin_params, user_language):
-                                            no_checkin_emails += 1
-                                            emails_sent += 1
-                            
-                            if no_checkin_emails > 0:
-                                logger.info(f"[TRIGGER SCHEDULER] T32: Sent {no_checkin_emails} no_checkin emails in new_alerts_only mode")
+                                    if not triggered_params:
+                                        continue  # only email when THIS run created >=1 new alert
+                                    # Mirror the home page: email the watcher's CURRENT unread
+                                    # trigger alerts for this watched user (fall back to the per-run
+                                    # list if the lookup/read yields nothing).
+                                    wu = User.query.filter_by(username=watched_username).first()
+                                    email_params = triggered_params
+                                    if wu:
+                                        email_params = build_triggered_params_from_alerts(
+                                            watcher_id, wu.id, watched_username
+                                        ) or triggered_params
+                                    logger.info(f"[TRIGGER SCHEDULER] B140/A8+: backstop email to {watcher.username} for {watched_username} ({len(email_params)} params, mirrors home page)")
+                                    if send_consolidated_wellness_alert_email(watcher_id, watched_username, email_params, user_language):
+                                        backstop_emails += 1
+                                        emails_sent += 1
+
+                            if backstop_emails > 0:
+                                logger.info(f"[TRIGGER SCHEDULER] B140/A8+: sent {backstop_emails} backstop emails (every new home-page alert emailed once)")
                             else:
-                                logger.info(f"[TRIGGER SCHEDULER] PI502: Mode is new_alerts_only - no no_checkin alerts to email (other emails via job queue)")
+                                logger.info(f"[TRIGGER SCHEDULER] B140/A8+: new_alerts_only — no new alerts this cycle, nothing to email")
                         
                         logger.info(f"[TRIGGER SCHEDULER] Completed: total_created={total_created}, total_skipped={total_skipped}, emails={emails_sent}")
                         logger.info(f"[TRIGGER SCHEDULER] ========================================")
