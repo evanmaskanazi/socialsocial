@@ -4279,6 +4279,26 @@ def auto_migrate_database():
                 except Exception:
                     app.config['NOTES_PRIVACY_AVAILABLE'] = False
 
+                # B150 (A12 metrics): add opened_at to daily_gift_log for open-rate tracking.
+                # New deployments get it from the model via create_all(); this covers instances
+                # where daily_gift_log was already created (B140/B145) without the column.
+                try:
+                    if 'daily_gift_log' in inspector.get_table_names():
+                        _gift_cols = [col['name'] for col in inspector.get_columns('daily_gift_log')]
+                        if 'opened_at' not in _gift_cols:
+                            logger.info("Adding opened_at column to daily_gift_log table...")
+                            conn.execute(text("ALTER TABLE daily_gift_log ADD COLUMN opened_at TIMESTAMP"))
+                            conn.commit()
+                            logger.info("✓ Added opened_at column to daily_gift_log")
+                        else:
+                            logger.info("✓ opened_at column already exists in daily_gift_log")
+                except Exception as gift_col_err:
+                    logger.warning(f"opened_at migration skipped/failed (non-fatal): {gift_col_err}")
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+
                 # Add follow_note column to follows table
                 if 'follows' in inspector.get_table_names():
                     columns = [col['name'] for col in inspector.get_columns('follows')]
@@ -5130,7 +5150,10 @@ class DailyGiftLog(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     date = db.Column(db.String(10), index=True)   # local YYYY-MM-DD the report was completed
     gift_id = db.Column(db.String(40))            # which curated item was revealed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)   # when the gift was SHOWN (revealed)
+    # B150 (A12 metrics): set when the user actually TAPS the box — powers open-rate
+    # (created_at = shown, opened_at = opened). NULL means shown-but-not-opened.
+    opened_at = db.Column(db.DateTime)
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_gift_date_uc'),)
 
 
@@ -14853,6 +14876,200 @@ def get_daily_gift():
     except Exception as e:
         logger.error(f"[GIFT] daily gift error: {str(e)}")
         return _gift_json({'eligible': False, 'error': 'gift_unavailable'})
+
+
+# ============================================================================
+# B150 (A12 metrics): open-rate tracking + operator "did this move retention?"
+# endpoint. Both additive and read-mostly; no existing behaviour changed.
+# ============================================================================
+# Optional hard launch date ('YYYY-MM-DD'); None → auto-derive from the earliest
+# recorded reveal, so the before/after split needs no manual bookkeeping.
+GIFT_LAUNCH_DATE = None
+
+
+def _week_start(d):
+    """Monday of the ISO week containing date d (a datetime.date)."""
+    return d - timedelta(days=d.weekday())
+
+
+@app.route('/api/gift/opened', methods=['POST'])
+@login_required
+def mark_gift_opened():
+    """B150: record that the user actually TAPPED today's gift box (open-rate).
+    Idempotent — stamps opened_at once. The reveal row (created_at) already exists
+    from GET /api/gift/daily, so open_rate = opens ÷ reveals. No CSRF token needed
+    (this route is not decorated with @require_csrf, matching the reveal endpoint)."""
+    try:
+        user_id = session['user_id']
+        data = request.get_json(silent=True) or {}
+        date_str = data.get('date') or request.args.get('date') or datetime.now().date().isoformat()
+        try:
+            _d = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return _gift_json({'ok': False})
+        if abs((_d - datetime.now().date()).days) > 1:
+            return _gift_json({'ok': False})
+
+        row = db.session.execute(
+            select(DailyGiftLog).filter(
+                DailyGiftLog.user_id == user_id,
+                DailyGiftLog.date == date_str
+            )
+        ).scalar_one_or_none()
+
+        if row is None:
+            # Defensive: an open without a prior reveal row (shouldn't happen) — create it.
+            row = DailyGiftLog(user_id=user_id, date=date_str, gift_id=_gift_for(user_id, date_str)['id'])
+            db.session.add(row)
+        if getattr(row, 'opened_at', None) is None:
+            row.opened_at = datetime.utcnow()
+        db.session.commit()
+        return _gift_json({'ok': True})
+    except Exception as e:
+        logger.warning(f"[GIFT] mark opened failed: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return _gift_json({'ok': False})
+
+
+@app.route('/api/operator/gift-metrics')
+@operator_required
+def gift_metrics():
+    """B150: report-completion-rate before/after the gift launch, plus gift reveal/open
+    rates — so "did this move retention?" has a factual answer instead of an impression.
+
+    completion_rate = distinct users with a COMPLETE report that week
+                      ÷ distinct weekly-ACTIVE users that week.
+    weekly-active   = distinct users with any diary entry OR any Activity that week
+                      (a superset of completers, so the rate is always ≤ 1).
+    open_rate       = gift opens ÷ gift reveals that week.
+
+    Query param: weeks (lookback window, default 26, clamped 1..104).
+    """
+    try:
+        try:
+            weeks = int(request.args.get('weeks', 26))
+        except (ValueError, TypeError):
+            weeks = 26
+        weeks = max(1, min(weeks, 104))
+
+        today = datetime.now().date()
+        window_start = _week_start(today) - timedelta(weeks=weeks - 1)
+        window_start_str = window_start.isoformat()
+
+        completions = {}   # week -> count of complete reports
+        completers = {}    # week -> set(user_id) with >=1 complete report
+        active = {}        # week -> set(user_id) active (any diary entry or activity)
+        reveals = {}       # week -> count of gift reveals
+        opens = {}         # week -> count of gift opens
+
+        def _wk(d):
+            return _week_start(d).isoformat()
+
+        # 1) Diary entries → completions, distinct completers, and (any entry) active.
+        sp_rows = db.session.execute(
+            select(SavedParameters).filter(SavedParameters.date >= window_start_str)
+        ).scalars().all()
+        for r in sp_rows:
+            try:
+                d = datetime.strptime(r.date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                continue
+            wk = _wk(d)
+            active.setdefault(wk, set()).add(r.user_id)   # any diary entry counts as active
+            if _gift_is_report_complete(r):
+                completions[wk] = completions.get(wk, 0) + 1
+                completers.setdefault(wk, set()).add(r.user_id)
+
+        # 2) Activity rows → weekly-active (union with diary users above).
+        try:
+            act_rows = db.session.execute(
+                select(Activity.user_id, Activity.activity_date).filter(Activity.activity_date >= window_start)
+            ).all()
+            for uid, adate in act_rows:
+                if adate:
+                    active.setdefault(_wk(adate), set()).add(uid)
+        except Exception as act_err:
+            logger.warning(f"[GIFT METRICS] activity denominator unavailable: {act_err}")
+
+        # 3) Gift reveals / opens.
+        gift_rows = db.session.execute(
+            select(DailyGiftLog).filter(DailyGiftLog.date >= window_start_str)
+        ).scalars().all()
+        for g in gift_rows:
+            try:
+                d = datetime.strptime(g.date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                continue
+            wk = _wk(d)
+            reveals[wk] = reveals.get(wk, 0) + 1
+            if getattr(g, 'opened_at', None) is not None:
+                opens[wk] = opens.get(wk, 0) + 1
+
+        # Launch date: explicit constant, else earliest recorded reveal, else None.
+        launch = GIFT_LAUNCH_DATE
+        if not launch and gift_rows:
+            try:
+                launch = min(g.date for g in gift_rows if g.date)
+            except ValueError:
+                launch = None
+
+        # One row per week across the window (chronological, gaps zero-filled).
+        week_list = []
+        wcur = window_start
+        while wcur <= today:
+            wk = wcur.isoformat()
+            act_n = len(active.get(wk, ()))
+            comp_users = len(completers.get(wk, ()))
+            rev_n = reveals.get(wk, 0)
+            opn_n = opens.get(wk, 0)
+            week_list.append({
+                'week_start': wk,
+                'completions': completions.get(wk, 0),
+                'distinct_completers': comp_users,
+                'weekly_active': act_n,
+                'completion_rate': round(comp_users / act_n, 4) if act_n else None,
+                'gift_reveals': rev_n,
+                'gift_opens': opn_n,
+                'open_rate': round(opn_n / rev_n, 4) if rev_n else None,
+            })
+            wcur = wcur + timedelta(weeks=1)
+
+        # Before/after summary around the launch week.
+        def _avg(vals):
+            vals = [v for v in vals if v is not None]
+            return round(sum(vals) / len(vals), 4) if vals else None
+
+        summary = {'launch_date': launch}
+        if launch:
+            try:
+                launch_wk = _week_start(datetime.strptime(launch, '%Y-%m-%d').date()).isoformat()
+            except (ValueError, TypeError):
+                launch_wk = None
+            if launch_wk:
+                before = [w for w in week_list if w['week_start'] < launch_wk]
+                after = [w for w in week_list if w['week_start'] >= launch_wk]
+                b_rate = _avg([w['completion_rate'] for w in before])
+                a_rate = _avg([w['completion_rate'] for w in after])
+                summary.update({
+                    'before': {'weeks': len(before), 'avg_completion_rate': b_rate},
+                    'after': {'weeks': len(after), 'avg_completion_rate': a_rate,
+                              'avg_open_rate': _avg([w['open_rate'] for w in after])},
+                    'delta_completion_rate': (round(a_rate - b_rate, 4)
+                                              if (a_rate is not None and b_rate is not None) else None),
+                })
+
+        return _gift_json({
+            'window_weeks': weeks,
+            'generated_for': today.isoformat(),
+            'summary': summary,
+            'weeks': week_list,
+        })
+    except Exception as e:
+        logger.error(f"[GIFT METRICS] error: {e}")
+        return _gift_json({'error': 'metrics_unavailable'}, 500)
 
 
 # V2: User summary endpoint for home screen dashboard card
