@@ -4279,6 +4279,26 @@ def auto_migrate_database():
                 except Exception:
                     app.config['NOTES_PRIVACY_AVAILABLE'] = False
 
+                # B150 (A12 metrics): add opened_at to daily_gift_log for open-rate tracking.
+                # New deployments get it from the model via create_all(); this covers instances
+                # where daily_gift_log was already created (B140/B145) without the column.
+                try:
+                    if 'daily_gift_log' in inspector.get_table_names():
+                        _gift_cols = [col['name'] for col in inspector.get_columns('daily_gift_log')]
+                        if 'opened_at' not in _gift_cols:
+                            logger.info("Adding opened_at column to daily_gift_log table...")
+                            conn.execute(text("ALTER TABLE daily_gift_log ADD COLUMN opened_at TIMESTAMP"))
+                            conn.commit()
+                            logger.info("✓ Added opened_at column to daily_gift_log")
+                        else:
+                            logger.info("✓ opened_at column already exists in daily_gift_log")
+                except Exception as gift_col_err:
+                    logger.warning(f"opened_at migration skipped/failed (non-fatal): {gift_col_err}")
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+
                 # Add follow_note column to follows table
                 if 'follows' in inspector.get_table_names():
                     columns = [col['name'] for col in inspector.get_columns('follows')]
@@ -5112,6 +5132,29 @@ def _get_all_viewer_circle_types(owner_user_id, member_user_id):
         'class_a': 'class_a', 'family': 'class_a'
     }
     return {type_mapping.get(c.circle_type, c.circle_type) for c in circles}
+
+
+# ============================================================================
+# B140 (A12): GIFT BOX — "Daily Gift" feature.
+# Additive, non-invasive. A variable (but non-re-rollable) daily reward that is
+# contingent on completing the daily report. Capped at one per day, non-monetized,
+# non-comparative between users, and it CLOSES the session rather than extending it.
+# This model records the reveal so report-completion vs. gift-exposure can be
+# measured later ("did this move retention?"). Created automatically by
+# db.create_all() at startup — it is a brand-new table, so no ALTER migration is
+# needed on either SQLite or Postgres.
+# ============================================================================
+class DailyGiftLog(db.Model):
+    __tablename__ = 'daily_gift_log'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    date = db.Column(db.String(10), index=True)   # local YYYY-MM-DD the report was completed
+    gift_id = db.Column(db.String(40))            # which curated item was revealed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)   # when the gift was SHOWN (revealed)
+    # B150 (A12 metrics): set when the user actually TAPS the box — powers open-rate
+    # (created_at = shown, opened_at = opened). NULL means shown-but-not-opened.
+    opened_at = db.Column(db.DateTime)
+    __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_gift_date_uc'),)
 
 
 class Alert(db.Model):
@@ -14593,6 +14636,440 @@ def get_today_status():
     except Exception as e:
         logger.error(f"Today status error: {str(e)}")
         return jsonify({'has_entry_today': False, 'has_complete_entry_today': False, 'error': str(e)})
+
+
+# ============================================================================
+# B140 (A12): GIFT BOX — curated content table + reveal endpoint.
+#
+# Curation is the whole feature, so these are short ORIGINAL reflections written
+# in a narrative-therapy spirit (externalizing, small steps, self-compassion) —
+# deliberately NOT recycled inspirational quotes, and never attributed to real
+# people. Provided in all four supported languages (en/he/ar/ru).
+#
+# The gift is a VARIABLE reward — a different item surfaces each day — but it is
+# selected deterministically from (user_id + date), so it cannot be re-rolled by
+# refreshing. It is capped at one per day, is identical in kind for every user
+# (non-comparative), is not monetized, and it CLOSES the daily ritual instead of
+# pulling the user deeper. No streaks (broken streaks breed guilt — a poor fit
+# for a wellness platform).
+# ============================================================================
+DAILY_GIFTS = [
+    {"id": "g01", "text": {
+        "en": "Showing up to notice how you feel is itself a form of care.",
+        "he": "עצם ההקשבה לרגשות שלך היא כבר סוג של טיפול עצמי.",
+        "ar": "مجرد إنصاتك لمشاعرك هو بالفعل نوع من العناية بالذات.",
+        "ru": "Само внимание к своим чувствам — уже форма заботы о себе."}},
+    {"id": "g02", "text": {
+        "en": "You are not your hardest day. You are the one who kept going after it.",
+        "he": "אינך היום הקשה ביותר שלך. אתה זה שהמשיך גם אחריו.",
+        "ar": "لست يومك الأصعب. أنت من واصل بعده.",
+        "ru": "Ты — не твой самый тяжёлый день. Ты тот, кто пошёл дальше после него."}},
+    {"id": "g03", "text": {
+        "en": "A feeling can be fully felt without being obeyed.",
+        "he": "אפשר להרגיש רגש במלואו בלי להישמע לו.",
+        "ar": "يمكن الشعور بالإحساس كاملًا دون الانصياع له.",
+        "ru": "Чувство можно прожить полностью, не подчиняясь ему."}},
+    {"id": "g04", "text": {
+        "en": "Small and honest beats big and forced. You did the small honest thing today.",
+        "he": "קטן וכן עדיף על גדול ומאולץ. היום עשית את הדבר הקטן והכן.",
+        "ar": "الصغير الصادق أفضل من الكبير المُتكلَّف. اليوم فعلت الشيء الصغير الصادق.",
+        "ru": "Маленькое и честное лучше большого и вымученного. Сегодня ты сделал маленькое честное."}},
+    {"id": "g05", "text": {
+        "en": "The story you tell about today can hold both what was heavy and what was kind.",
+        "he": "הסיפור שאתה מספר על היום יכול להכיל גם את מה שהיה כבד וגם את מה שהיה טוב.",
+        "ar": "الحكاية التي ترويها عن يومك تتّسع لما كان ثقيلًا ولما كان لطيفًا معًا.",
+        "ru": "История, которую ты рассказываешь о дне, вмещает и тяжёлое, и доброе."}},
+    {"id": "g06", "text": {
+        "en": "Rest is not a reward for finishing. It is part of how the work gets done.",
+        "he": "מנוחה אינה פרס על סיום. היא חלק מהדרך שבה הדברים נעשים.",
+        "ar": "الراحة ليست مكافأة على الإنجاز، بل جزء من طريقة إنجاز العمل.",
+        "ru": "Отдых — не награда за финиш, а часть того, как делается дело."}},
+    {"id": "g07", "text": {
+        "en": "You don't have to feel better to have done well. You showed up.",
+        "he": "אינך חייב להרגיש טוב יותר כדי לדעת שעשית טוב. הגעת.",
+        "ar": "لا يلزم أن تشعر بتحسّن لتعرف أنك أحسنت. لقد حضرت.",
+        "ru": "Необязательно чувствовать себя лучше, чтобы понять: ты справился. Ты пришёл."}},
+    {"id": "g08", "text": {
+        "en": "Naming a hard feeling shrinks it to a size you can carry.",
+        "he": "לתת שם לרגש קשה מקטין אותו לגודל שאפשר לשאת.",
+        "ar": "تسمية الشعور الصعب تُصغّره إلى حجم تستطيع حمله.",
+        "ru": "Назвать трудное чувство — значит уменьшить его до размера, который можно нести."}},
+    {"id": "g09", "text": {
+        "en": "Progress rarely feels like progress from the inside. Trust the direction, not the day.",
+        "he": "התקדמות רק לעיתים נדירות מרגישה כמו התקדמות מבפנים. סמוך על הכיוון, לא על היום.",
+        "ar": "نادرًا ما يبدو التقدّم تقدّمًا من الداخل. ثِق بالاتجاه لا باليوم.",
+        "ru": "Прогресс редко ощущается прогрессом изнутри. Доверяй направлению, а не дню."}},
+    {"id": "g10", "text": {
+        "en": "The part of you that worries is trying to protect you. You can thank it and still choose.",
+        "he": "החלק בך שדואג מנסה להגן עליך. אפשר להודות לו ועדיין לבחור.",
+        "ar": "الجزء القلِق فيك يحاول حمايتك. يمكنك أن تشكره وتختار مع ذلك.",
+        "ru": "Та часть тебя, что тревожится, пытается тебя защитить. Можно поблагодарить её — и всё же выбрать своё."}},
+    {"id": "g11", "text": {
+        "en": "One steady breath is a decision. You get to make it again and again.",
+        "he": "נשימה רגועה אחת היא החלטה. מותר לך לקבל אותה שוב ושוב.",
+        "ar": "نَفَسٌ هادئ واحد قرار. ولك أن تتّخذه مرة بعد مرة.",
+        "ru": "Один спокойный вдох — это решение. И его можно принимать снова и снова."}},
+    {"id": "g12", "text": {
+        "en": "You are allowed to be a work in progress and a whole person at the same time.",
+        "he": "מותר לך להיות בתהליך ובו בזמן אדם שלם.",
+        "ar": "يحقّ لك أن تكون قيد التكوّن وإنسانًا كاملًا في آنٍ واحد.",
+        "ru": "Ты можешь быть в процессе и целостным человеком одновременно."}},
+    {"id": "g13", "text": {
+        "en": "Whatever today held, you met it. That counts.",
+        "he": "מה שלא היה היום — התמודדת איתו. וזה נחשב.",
+        "ar": "مهما حمل يومك، فقد واجهته. وهذا يُحتسب.",
+        "ru": "Что бы ни принёс день, ты встретил его. И это важно."}},
+    {"id": "g14", "text": {
+        "en": "Kindness toward yourself is not going soft. It is staying in the game.",
+        "he": "חמלה כלפי עצמך אינה חולשה. היא הישארות במשחק.",
+        "ar": "اللطف مع نفسك ليس تراخيًا، بل بقاءٌ في الميدان.",
+        "ru": "Доброта к себе — не слабость, а способ остаться в игре."}},
+    {"id": "g15", "text": {
+        "en": "The problem is the problem. You are not the problem.",
+        "he": "הבעיה היא הבעיה. אתה אינך הבעיה.",
+        "ar": "المشكلة هي المشكلة. أنت لست المشكلة.",
+        "ru": "Проблема — это проблема. Ты — не проблема."}},
+    {"id": "g16", "text": {
+        "en": "You can put something down for the night and pick it back up tomorrow.",
+        "he": "מותר להניח משהו בצד ללילה ולהרים אותו מחר.",
+        "ar": "يمكنك أن تضع شيئًا جانبًا هذه الليلة وتعود إليه غدًا.",
+        "ru": "Можно отложить что-то на ночь и вернуться к этому завтра."}},
+    {"id": "g17", "text": {
+        "en": "A quiet, ordinary day of caring for yourself is not nothing. It is the foundation.",
+        "he": "יום שקט ורגיל של טיפול בעצמך אינו כלום. הוא היסוד.",
+        "ar": "يومٌ هادئ عاديّ من العناية بنفسك ليس لا شيء، بل هو الأساس.",
+        "ru": "Тихий обычный день заботы о себе — это не пустяк. Это фундамент."}},
+    {"id": "g18", "text": {
+        "en": "Courage sometimes looks like simply telling the truth about how you are.",
+        "he": "לפעמים אומץ נראה פשוט כמו לומר את האמת על איך אתה מרגיש.",
+        "ar": "أحيانًا تكون الشجاعة ببساطة قولَ الحقيقة عن حالك.",
+        "ru": "Иногда смелость выглядит просто как честность о том, как тебе сейчас."}},
+    {"id": "g19", "text": {
+        "en": "You don't have to earn tomorrow. It's already yours. Rest into it.",
+        "he": "אינך צריך להרוויח את המחר. הוא כבר שלך. הישען עליו במנוחה.",
+        "ar": "لست مضطرًا لكسب الغد. إنه لك بالفعل. استرح إليه.",
+        "ru": "Завтра не нужно заслуживать. Оно уже твоё. Обопрись на него и отдохни."}},
+    {"id": "g20", "text": {
+        "en": "The step you took today is small enough to repeat — and that's exactly its strength.",
+        "he": "הצעד שעשית היום קטן מספיק כדי לחזור עליו — וזו בדיוק עוצמתו.",
+        "ar": "الخطوة التي خطوتها اليوم صغيرة بما يكفي لتكرارها — وهنا تكمن قوّتها.",
+        "ru": "Шаг, что ты сделал сегодня, достаточно мал, чтобы повторить его, — в этом его сила."}},
+    {"id": "g21", "text": {
+        "en": "Being gentle with yourself tonight makes it easier to begin again tomorrow.",
+        "he": "עדינות כלפי עצמך הערב תקל עליך להתחיל מחדש מחר.",
+        "ar": "رفقك بنفسك الليلة يجعل البدء من جديد غدًا أسهل.",
+        "ru": "Мягкость к себе сегодня вечером облегчит новое начало завтра."}},
+]
+
+
+def _gift_is_report_complete(entry):
+    """A11 parity: 'complete' == all six daily-report fields filled (matches today-status)."""
+    if not entry:
+        return False
+    for f in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging']:
+        v = getattr(entry, f, None)
+        if not v or v == 0:
+            return False
+    return True
+
+
+def _gift_for(user_id, date_str):
+    """Deterministic (non-re-rollable) daily selection seeded by user + date."""
+    seed = f"{user_id}:{date_str}"
+    idx = int(hashlib.sha256(seed.encode('utf-8')).hexdigest(), 16) % len(DAILY_GIFTS)
+    return DAILY_GIFTS[idx]
+
+
+def _gift_json(payload, status=200):
+    """A12-AUDIT: gift responses are per-user and state-changing (a reveal is logged),
+    so they must never be cached by the browser or any intermediary — otherwise a stale
+    'already_opened' or another user's gift could be served from cache."""
+    resp = jsonify(payload)
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp, status
+
+
+@app.route('/api/gift/daily')
+@login_required
+def get_daily_gift():
+    """B140 (A12): Reveal today's gift IFF the daily report is complete.
+
+    Query params: client_date (local YYYY-MM-DD, like today-status), lang (optional).
+    Returns {eligible: False} when the report for that date is not complete, else
+    {eligible: True, already_opened: bool, gift: {id, text, date}}. One per day is
+    guaranteed by the deterministic selection plus a UNIQUE(user_id, date) log row.
+    """
+    try:
+        user_id = session['user_id']
+        client_date = request.args.get('client_date')
+        today_str = client_date if client_date else datetime.now().date().isoformat()
+
+        # A12-AUDIT: the previous guard was effectively dead code — it could only fire when
+        # NO client_date was supplied, but in that branch today_str already equals the server
+        # date, so the condition was never true. Replace it with a real, bounded check:
+        # validate the format, then accept only a date within ±1 day of the server's date.
+        # That tolerates client/server timezone skew for "today" while refusing arbitrary
+        # back-dated gift claims for any past date the user happens to have completed.
+        try:
+            _req_date = datetime.strptime(today_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return _gift_json({'eligible': False})
+        if abs((_req_date - datetime.now().date()).days) > 1:
+            return _gift_json({'eligible': False})
+
+        entry = db.session.execute(
+            select(SavedParameters).filter(
+                SavedParameters.user_id == user_id,
+                SavedParameters.date == today_str
+            )
+        ).scalar_one_or_none()
+
+        if not _gift_is_report_complete(entry):
+            return _gift_json({'eligible': False})
+
+        # Resolve language: explicit param → user profile → 'en'.
+        lang = (request.args.get('lang') or '').strip().lower()
+        if lang not in ('en', 'he', 'ar', 'ru'):
+            lang = None
+        if not lang:
+            try:
+                u = db.session.get(User, user_id)
+                lang = (getattr(u, 'preferred_language', None) or 'en').lower()
+            except Exception:
+                lang = 'en'
+        if lang not in ('en', 'he', 'ar', 'ru'):
+            lang = 'en'
+
+        gift = _gift_for(user_id, today_str)
+
+        # Record the reveal once (for later measurement); tolerate the unique-race.
+        already_opened = False
+        try:
+            existing = db.session.execute(
+                select(DailyGiftLog).filter(
+                    DailyGiftLog.user_id == user_id,
+                    DailyGiftLog.date == today_str
+                )
+            ).scalar_one_or_none()
+            if existing:
+                already_opened = True
+            else:
+                db.session.add(DailyGiftLog(user_id=user_id, date=today_str, gift_id=gift['id']))
+                db.session.commit()
+        except Exception as log_err:
+            logger.warning(f"[GIFT] Could not record gift reveal: {log_err}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            already_opened = True  # a concurrent insert likely won the race
+
+        return _gift_json({
+            'eligible': True,
+            'already_opened': already_opened,
+            'gift': {
+                'id': gift['id'],
+                'text': gift['text'].get(lang) or gift['text']['en'],
+                'date': today_str
+            }
+        })
+    except Exception as e:
+        logger.error(f"[GIFT] daily gift error: {str(e)}")
+        return _gift_json({'eligible': False, 'error': 'gift_unavailable'})
+
+
+# ============================================================================
+# B150 (A12 metrics): open-rate tracking + operator "did this move retention?"
+# endpoint. Both additive and read-mostly; no existing behaviour changed.
+# ============================================================================
+# Optional hard launch date ('YYYY-MM-DD'); None → auto-derive from the earliest
+# recorded reveal, so the before/after split needs no manual bookkeeping.
+GIFT_LAUNCH_DATE = None
+
+
+def _week_start(d):
+    """Monday of the ISO week containing date d (a datetime.date)."""
+    return d - timedelta(days=d.weekday())
+
+
+@app.route('/api/gift/opened', methods=['POST'])
+@login_required
+def mark_gift_opened():
+    """B150: record that the user actually TAPPED today's gift box (open-rate).
+    Idempotent — stamps opened_at once. The reveal row (created_at) already exists
+    from GET /api/gift/daily, so open_rate = opens ÷ reveals. No CSRF token needed
+    (this route is not decorated with @require_csrf, matching the reveal endpoint)."""
+    try:
+        user_id = session['user_id']
+        data = request.get_json(silent=True) or {}
+        date_str = data.get('date') or request.args.get('date') or datetime.now().date().isoformat()
+        try:
+            _d = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return _gift_json({'ok': False})
+        if abs((_d - datetime.now().date()).days) > 1:
+            return _gift_json({'ok': False})
+
+        row = db.session.execute(
+            select(DailyGiftLog).filter(
+                DailyGiftLog.user_id == user_id,
+                DailyGiftLog.date == date_str
+            )
+        ).scalar_one_or_none()
+
+        if row is None:
+            # Defensive: an open without a prior reveal row (shouldn't happen) — create it.
+            row = DailyGiftLog(user_id=user_id, date=date_str, gift_id=_gift_for(user_id, date_str)['id'])
+            db.session.add(row)
+        if getattr(row, 'opened_at', None) is None:
+            row.opened_at = datetime.utcnow()
+        db.session.commit()
+        return _gift_json({'ok': True})
+    except Exception as e:
+        logger.warning(f"[GIFT] mark opened failed: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return _gift_json({'ok': False})
+
+
+@app.route('/api/operator/gift-metrics')
+@operator_required
+def gift_metrics():
+    """B150: report-completion-rate before/after the gift launch, plus gift reveal/open
+    rates — so "did this move retention?" has a factual answer instead of an impression.
+
+    completion_rate = distinct users with a COMPLETE report that week
+                      ÷ distinct weekly-ACTIVE users that week.
+    weekly-active   = distinct users with any diary entry OR any Activity that week
+                      (a superset of completers, so the rate is always ≤ 1).
+    open_rate       = gift opens ÷ gift reveals that week.
+
+    Query param: weeks (lookback window, default 26, clamped 1..104).
+    """
+    try:
+        try:
+            weeks = int(request.args.get('weeks', 26))
+        except (ValueError, TypeError):
+            weeks = 26
+        weeks = max(1, min(weeks, 104))
+
+        today = datetime.now().date()
+        window_start = _week_start(today) - timedelta(weeks=weeks - 1)
+        window_start_str = window_start.isoformat()
+
+        completions = {}   # week -> count of complete reports
+        completers = {}    # week -> set(user_id) with >=1 complete report
+        active = {}        # week -> set(user_id) active (any diary entry or activity)
+        reveals = {}       # week -> count of gift reveals
+        opens = {}         # week -> count of gift opens
+
+        def _wk(d):
+            return _week_start(d).isoformat()
+
+        # 1) Diary entries → completions, distinct completers, and (any entry) active.
+        sp_rows = db.session.execute(
+            select(SavedParameters).filter(SavedParameters.date >= window_start_str)
+        ).scalars().all()
+        for r in sp_rows:
+            try:
+                d = datetime.strptime(r.date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                continue
+            wk = _wk(d)
+            active.setdefault(wk, set()).add(r.user_id)   # any diary entry counts as active
+            if _gift_is_report_complete(r):
+                completions[wk] = completions.get(wk, 0) + 1
+                completers.setdefault(wk, set()).add(r.user_id)
+
+        # 2) Activity rows → weekly-active (union with diary users above).
+        try:
+            act_rows = db.session.execute(
+                select(Activity.user_id, Activity.activity_date).filter(Activity.activity_date >= window_start)
+            ).all()
+            for uid, adate in act_rows:
+                if adate:
+                    active.setdefault(_wk(adate), set()).add(uid)
+        except Exception as act_err:
+            logger.warning(f"[GIFT METRICS] activity denominator unavailable: {act_err}")
+
+        # 3) Gift reveals / opens.
+        gift_rows = db.session.execute(
+            select(DailyGiftLog).filter(DailyGiftLog.date >= window_start_str)
+        ).scalars().all()
+        for g in gift_rows:
+            try:
+                d = datetime.strptime(g.date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                continue
+            wk = _wk(d)
+            reveals[wk] = reveals.get(wk, 0) + 1
+            if getattr(g, 'opened_at', None) is not None:
+                opens[wk] = opens.get(wk, 0) + 1
+
+        # Launch date: explicit constant, else earliest recorded reveal, else None.
+        launch = GIFT_LAUNCH_DATE
+        if not launch and gift_rows:
+            try:
+                launch = min(g.date for g in gift_rows if g.date)
+            except ValueError:
+                launch = None
+
+        # One row per week across the window (chronological, gaps zero-filled).
+        week_list = []
+        wcur = window_start
+        while wcur <= today:
+            wk = wcur.isoformat()
+            act_n = len(active.get(wk, ()))
+            comp_users = len(completers.get(wk, ()))
+            rev_n = reveals.get(wk, 0)
+            opn_n = opens.get(wk, 0)
+            week_list.append({
+                'week_start': wk,
+                'completions': completions.get(wk, 0),
+                'distinct_completers': comp_users,
+                'weekly_active': act_n,
+                'completion_rate': round(comp_users / act_n, 4) if act_n else None,
+                'gift_reveals': rev_n,
+                'gift_opens': opn_n,
+                'open_rate': round(opn_n / rev_n, 4) if rev_n else None,
+            })
+            wcur = wcur + timedelta(weeks=1)
+
+        # Before/after summary around the launch week.
+        def _avg(vals):
+            vals = [v for v in vals if v is not None]
+            return round(sum(vals) / len(vals), 4) if vals else None
+
+        summary = {'launch_date': launch}
+        if launch:
+            try:
+                launch_wk = _week_start(datetime.strptime(launch, '%Y-%m-%d').date()).isoformat()
+            except (ValueError, TypeError):
+                launch_wk = None
+            if launch_wk:
+                before = [w for w in week_list if w['week_start'] < launch_wk]
+                after = [w for w in week_list if w['week_start'] >= launch_wk]
+                b_rate = _avg([w['completion_rate'] for w in before])
+                a_rate = _avg([w['completion_rate'] for w in after])
+                summary.update({
+                    'before': {'weeks': len(before), 'avg_completion_rate': b_rate},
+                    'after': {'weeks': len(after), 'avg_completion_rate': a_rate,
+                              'avg_open_rate': _avg([w['open_rate'] for w in after])},
+                    'delta_completion_rate': (round(a_rate - b_rate, 4)
+                                              if (a_rate is not None and b_rate is not None) else None),
+                })
+
+        return _gift_json({
+            'window_weeks': weeks,
+            'generated_for': today.isoformat(),
+            'summary': summary,
+            'weeks': week_list,
+        })
+    except Exception as e:
+        logger.error(f"[GIFT METRICS] error: {e}")
+        return _gift_json({'error': 'metrics_unavailable'}, 500)
 
 
 # V2: User summary endpoint for home screen dashboard card

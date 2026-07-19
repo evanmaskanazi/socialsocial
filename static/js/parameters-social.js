@@ -1,3 +1,10 @@
+// Version B145 (A12 audit): (referenced as ?v=B145). Pre-existing-bug fix — loadParameters()
+// now writes social_belonging_privacy into the session-cache state object (it was omitted here,
+// though saveParameterState wrote it and restoreParameterState reads it, so it was silently lost
+// on cache-restore). One additive line. No other logic changed.
+// Version B140 (A12): (referenced as ?v=B140). Added ONE additive call in saveParameters()
+// on save-success to offer the daily GIFT BOX (window.TSGiftBox, defined in parameters.html).
+// No other logic changed. Cache-bust sync to B140.
 // Version B135 (A8): (referenced as ?v=B135). A8 audit fix — guarded the top-level
 // JSON.parse of 'savedParameterDates' so a corrupted value can't abort the whole script
 // on load. No other logic changed.
@@ -3017,6 +3024,12 @@ async function saveParameters() {
         if (result.success) {
             window.showMessage(getRandomPositiveMessage(), 'success', 5000, true);
 
+            // B140 (A12): offer the daily gift box (self-contained module in parameters.html).
+            // Eligibility (report complete + once-per-day) is enforced by the module + backend.
+            if (window.TSGiftBox && typeof window.TSGiftBox.onReportSaved === 'function') {
+                window.TSGiftBox.onReportSaved(dateStr);
+            }
+
              // Show invite CTA after successful save
             showInviteCTA();
 
@@ -3148,6 +3161,9 @@ async function loadParameters(showMsg = true) {
     sleep_quality_privacy: window.selectedPrivacy.sleep_quality || 'private',
     physical_activity_privacy: window.selectedPrivacy.physical_activity || 'private',
     anxiety_privacy: window.selectedPrivacy.anxiety || 'private',
+    // A12-AUDIT: was omitted here (present in saveParameterState + read by restoreParameterState),
+    // so social_belonging's privacy was silently dropped on session-cache restore. Additive fix.
+    social_belonging_privacy: window.selectedPrivacy.social_belonging || 'private',
     notes_privacy: window.selectedPrivacy.notes || 'private',  // NP1
     notes: result.data.notes || ''
 };
