@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!-- B150 (A12 metrics): GIFT BOX open-rate — the inline module now POSTs /api/gift/opened
+  (fire-and-forget) when the box is actually tapped, so open_rate = opens ÷ reveals is
+  measurable. No served .js changed, so cache ?v stays B145 (this is a template + backend
+  change, both fetched fresh). Backend adds DailyGiftLog.opened_at + /api/gift/opened +
+  operator-only /api/operator/gift-metrics (completion-rate before/after launch). -->
 <!-- B145 (A12 audit): Second-round hardening. GIFT BOX fixes — (a) inline module now has an
   in-flight guard so a rapid double-save can no longer stack two gift overlays; (b) backend
   /api/gift/daily returns Cache-Control: no-store (per-user, state-changing) and validates the
@@ -1570,6 +1575,15 @@ Storage.prototype.setItem = function(key, value) {
             var opened = false;
             var open = function () {
                 if (opened) return; opened = true;
+                // B150 (A12 metrics): record the actual open (open-rate). Fire-and-forget —
+                // never blocks or affects the animation; failures are silently ignored.
+                try {
+                    fetch('/api/gift/opened', {
+                        method: 'POST', credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date: (gift && gift.date) || todayStr() })
+                    }).catch(function () {});
+                } catch (_) {}
                 emoji.classList.remove('ts-gift-idle');
                 if (!reduce()) { emoji.classList.add('ts-gift-pop'); glow.classList.add('burst'); }
                 var swap = function () {
