@@ -1,4 +1,16 @@
 <!DOCTYPE html>
+<!-- B145 (A12 audit): Second-round hardening. GIFT BOX fixes — (a) inline module now has an
+  in-flight guard so a rapid double-save can no longer stack two gift overlays; (b) backend
+  /api/gift/daily returns Cache-Control: no-store (per-user, state-changing) and validates the
+  client date to within ±1 day of the server date (the previous guard was dead code that could
+  never fire). PLUS a pre-existing fix in parameters-social.js: social_belonging_privacy is now
+  written to the session cache in loadParameters() — it was silently dropped on cache-restore
+  even though saveParameterState wrote it and restoreParameterState read it. All JS ?v B140→B145. -->
+<!-- B140 (A12): Cache-bust sync — all JS bumped B135→B140. Added self-contained GIFT BOX
+  block before </body> (window.TSGiftBox): a once-per-day reward, contingent on completing
+  the daily report, that reveals one curated reflection with a single calm animation and then
+  ends the session (no streaks). parameters-social.js gains ONE additive call on save-success.
+  No existing markup, IDs, or diary logic changed. -->
 <!-- B135 (A8): Cache-bust sync — all JS bumped B130→B135. Added self-contained A8-UX block
   before the closing body tag (12 additive, reduced-motion-aware UX items incl. skeleton shimmer while the
   diary loads, haptics, offline banner, accessible toasts, scroll-to-top, tactile press,
@@ -881,9 +893,9 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B135"></script>
-    <script src="/static/js/parameters-social.js?v=B135"></script>
-    <script src="/static/js/feed-updates.js?v=B135"></script>
+    <script src="/static/js/i18n.js?v=B145"></script>
+    <script src="/static/js/parameters-social.js?v=B145"></script>
+    <script src="/static/js/feed-updates.js?v=B145"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -1365,5 +1377,257 @@ Storage.prototype.setItem = function(key, value) {
     })();
     </script>
     <!-- ===================== END A8-UX ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- B140 (A12): GIFT BOX — daily reward for completing the report.                -->
+    <!-- Fully self-contained (one style block + one guarded script), namespaced       -->
+    <!-- ts-gift-*. Feature-detected, reduced-motion aware, RTL aware. Adds NO markup   -->
+    <!-- to existing DOM until a completed report is saved. Exposes                     -->
+    <!-- window.TSGiftBox.onReportSaved(dateStr); parameters-social.js calls it once    -->
+    <!-- on a successful save. The box is a calm CLOSING moment: one animation, one     -->
+    <!-- curated reflection, then it ends the session (no streaks, no "next").          -->
+    <!-- ============================================================================ -->
+    <style id="ts-gift-style">
+        #ts-gift-overlay {
+            position: fixed; inset: 0; z-index: 100003;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; box-sizing: border-box;
+            background: rgba(31, 41, 55, 0.55);
+            -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+            opacity: 0; transition: opacity 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        #ts-gift-overlay.show { opacity: 1; }
+        #ts-gift-card {
+            position: relative; width: 100%; max-width: 380px;
+            background: linear-gradient(150deg, #ffffff 0%, #f4f1f8 100%);
+            border-radius: 22px; padding: 30px 26px 24px;
+            box-shadow: 0 18px 60px rgba(60, 60, 110, 0.35);
+            text-align: center; transform: translateY(14px) scale(0.98);
+            transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-sizing: border-box;
+        }
+        #ts-gift-overlay.show #ts-gift-card { transform: translateY(0) scale(1); }
+        .dark-mode #ts-gift-card, body.dark-mode #ts-gift-card {
+            background: linear-gradient(150deg, #2C3444 0%, #262034 100%);
+        }
+        #ts-gift-title {
+            font-size: 15px; font-weight: 600; color: #6B7A8D; margin: 0 0 14px;
+            letter-spacing: 0.01em;
+        }
+        .dark-mode #ts-gift-title, body.dark-mode #ts-gift-title { color: #AEB9C9; }
+        #ts-gift-emoji {
+            font-size: 66px; line-height: 1; display: inline-block; cursor: pointer;
+            user-select: none; -webkit-user-select: none;
+            filter: drop-shadow(0 6px 14px rgba(107, 139, 164, 0.35));
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            #ts-gift-emoji.ts-gift-idle { animation: ts-gift-bob 2.2s ease-in-out infinite; }
+            #ts-gift-emoji.ts-gift-pop { animation: ts-gift-pop 0.55s cubic-bezier(0.2, 0.9, 0.2, 1.2); }
+        }
+        @keyframes ts-gift-bob {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-8px) rotate(2deg); }
+        }
+        @keyframes ts-gift-pop {
+            0% { transform: scale(1); } 40% { transform: scale(1.35) rotate(6deg); }
+            70% { transform: scale(0.92); } 100% { transform: scale(1); }
+        }
+        #ts-gift-hint { font-size: 13px; color: #9AA6B4; margin: 14px 0 2px; }
+        .dark-mode #ts-gift-hint, body.dark-mode #ts-gift-hint { color: #8894A6; }
+        #ts-gift-reveal { display: none; }
+        #ts-gift-reveal.show { display: block; }
+        #ts-gift-reveal-title {
+            font-size: 12px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: #8B6BA4; margin: 4px 0 12px;
+        }
+        #ts-gift-text {
+            font-size: 19px; line-height: 1.5; font-weight: 500; color: #3D4F5F;
+            margin: 0 0 6px; padding: 0 4px;
+        }
+        .dark-mode #ts-gift-text, body.dark-mode #ts-gift-text { color: #E6EAF1; }
+        #ts-gift-footer { font-size: 13px; color: #9AA6B4; margin: 16px 0 18px; }
+        .dark-mode #ts-gift-footer, body.dark-mode #ts-gift-footer { color: #8894A6; }
+        .ts-gift-btn {
+            appearance: none; border: none; cursor: pointer;
+            padding: 12px 26px; border-radius: 12px; font-size: 15px; font-weight: 600;
+            color: #fff; background: linear-gradient(135deg, #5A7A93, #7B6BA0);
+            box-shadow: 0 4px 16px rgba(90, 107, 160, 0.30);
+            transition: transform 0.12s ease, box-shadow 0.2s ease; min-height: 44px;
+            -webkit-tap-highlight-color: rgba(0,0,0,0); touch-action: manipulation;
+        }
+        .ts-gift-btn:active { transform: scale(0.97); }
+        .ts-gift-btn.secondary {
+            background: transparent; color: #7B6BA0;
+            box-shadow: inset 0 0 0 1.5px rgba(123, 107, 160, 0.4);
+        }
+        .dark-mode .ts-gift-btn.secondary, body.dark-mode .ts-gift-btn.secondary { color: #B8A6D6; }
+        /* Soft one-shot sparkle behind the box on open (calm, not confetti). */
+        #ts-gift-glow {
+            position: absolute; top: 46px; left: 50%; width: 140px; height: 140px;
+            transform: translate(-50%, -50%) scale(0.4); border-radius: 50%;
+            background: radial-gradient(circle, rgba(155, 184, 160, 0.55) 0%, rgba(155, 184, 160, 0) 70%);
+            opacity: 0; pointer-events: none;
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            #ts-gift-glow.burst { animation: ts-gift-glow 0.9s ease-out forwards; }
+        }
+        @keyframes ts-gift-glow {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+            35% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); }
+        }
+        [dir="rtl"] #ts-gift-card { text-align: center; }
+    </style>
+    <script id="ts-gift-script">
+    (function () {
+        if (window.TSGiftBox) return;
+
+        var RTL = { he: 1, ar: 1 };
+        var STR = {
+            title: { en: 'A gift for showing up today', he: 'מתנה קטנה על שהגעת היום',
+                     ar: 'هديّة صغيرة لأنك حضرت اليوم', ru: 'Небольшой подарок за то, что ты пришёл сегодня' },
+            hint:  { en: 'Tap the gift to open', he: 'הקש/י על המתנה לפתיחה',
+                     ar: 'انقر على الهديّة لفتحها', ru: 'Нажми на подарок, чтобы открыть' },
+            revealTitle: { en: "Today's gift", he: 'המתנה של היום', ar: 'هديّة اليوم', ru: 'Подарок дня' },
+            footer: { en: "That's all for today — rest well. See you tomorrow. 🌙",
+                      he: 'זה הכול להיום — מנוחה נעימה. נתראה מחר. 🌙',
+                      ar: 'هذا كل شيء لليوم — استرح جيدًا. إلى اللقاء غدًا. 🌙',
+                      ru: 'На сегодня всё — отдохни. До завтра. 🌙' },
+            close: { en: 'Close', he: 'סגירה', ar: 'إغلاق', ru: 'Закрыть' },
+            aria:  { en: 'Daily gift', he: 'מתנה יומית', ar: 'هديّة يومية', ru: 'Подарок дня' }
+        };
+        var pick = function (map, lang) { return map[lang] || map.en; };
+        var reduce = function () {
+            return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        };
+        var todayStr = function () {
+            var d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+                   '-' + String(d.getDate()).padStart(2, '0');
+        };
+        var lang = function () {
+            var l = (localStorage.getItem('selectedLanguage') || localStorage.getItem('userLanguage') || 'en');
+            return (STR.title[l] ? l : 'en');
+        };
+
+        var shownForDate = null;   // guard: never show twice in one page-view
+        var fetching = false;      // A12-AUDIT: in-flight guard against double-save races
+        var lastFocus = null;
+
+        function close(overlay) {
+            if (!overlay) return;
+            overlay.classList.remove('show');
+            document.body.style.overflow = '';
+            document.removeEventListener('keydown', overlay.__esc);
+            setTimeout(function () { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 320);
+            try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (_) {}
+        }
+
+        function render(gift) {
+            var L = lang();
+            lastFocus = document.activeElement;
+
+            var overlay = document.createElement('div');
+            overlay.id = 'ts-gift-overlay';
+            overlay.setAttribute('dir', RTL[L] ? 'rtl' : 'ltr');
+
+            var card = document.createElement('div');
+            card.id = 'ts-gift-card';
+            card.setAttribute('role', 'dialog');
+            card.setAttribute('aria-modal', 'true');
+            card.setAttribute('aria-label', pick(STR.aria, L));
+
+            var glow = document.createElement('div'); glow.id = 'ts-gift-glow';
+
+            var title = document.createElement('p');
+            title.id = 'ts-gift-title'; title.textContent = pick(STR.title, L);
+
+            var emoji = document.createElement('div');
+            emoji.id = 'ts-gift-emoji'; emoji.textContent = '🎁';
+            emoji.setAttribute('role', 'button'); emoji.setAttribute('tabindex', '0');
+            emoji.setAttribute('aria-label', pick(STR.revealTitle, L));
+            if (!reduce()) emoji.classList.add('ts-gift-idle');
+
+            var hint = document.createElement('p');
+            hint.id = 'ts-gift-hint'; hint.textContent = pick(STR.hint, L);
+
+            var reveal = document.createElement('div');
+            reveal.id = 'ts-gift-reveal';
+            var rTitle = document.createElement('p');
+            rTitle.id = 'ts-gift-reveal-title'; rTitle.textContent = pick(STR.revealTitle, L);
+            var rText = document.createElement('p');
+            rText.id = 'ts-gift-text'; rText.textContent = gift.text;
+            var footer = document.createElement('p');
+            footer.id = 'ts-gift-footer'; footer.textContent = pick(STR.footer, L);
+            var closeBtn = document.createElement('button');
+            closeBtn.className = 'ts-gift-btn'; closeBtn.type = 'button';
+            closeBtn.textContent = pick(STR.close, L);
+            closeBtn.addEventListener('click', function () { close(overlay); });
+            reveal.appendChild(rTitle); reveal.appendChild(rText);
+            reveal.appendChild(footer); reveal.appendChild(closeBtn);
+
+            var opened = false;
+            var open = function () {
+                if (opened) return; opened = true;
+                emoji.classList.remove('ts-gift-idle');
+                if (!reduce()) { emoji.classList.add('ts-gift-pop'); glow.classList.add('burst'); }
+                var swap = function () {
+                    emoji.style.display = 'none';
+                    hint.style.display = 'none';
+                    reveal.classList.add('show');
+                    try { closeBtn.focus(); } catch (_) {}
+                };
+                setTimeout(swap, reduce() ? 0 : 430);
+            };
+            emoji.addEventListener('click', open);
+            emoji.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+            });
+
+            card.appendChild(glow); card.appendChild(title); card.appendChild(emoji);
+            card.appendChild(hint); card.appendChild(reveal);
+            overlay.appendChild(card);
+
+            // Backdrop click closes only after the gift has been opened.
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay && opened) close(overlay);
+            });
+            overlay.__esc = function (e) { if (e.key === 'Escape') close(overlay); };
+            document.addEventListener('keydown', overlay.__esc);
+
+            document.body.appendChild(overlay);
+            document.body.style.overflow = 'hidden';
+            requestAnimationFrame(function () { overlay.classList.add('show'); });
+        }
+
+        function onReportSaved(dateStr) {
+            try {
+                var today = todayStr();
+                // Only reward *today's* completion, and only once per page-view.
+                if (dateStr && dateStr !== today) return;
+                if (shownForDate === today) return;
+                if (fetching) return;                          // A12-AUDIT: a rapid double-save
+                if (document.getElementById('ts-gift-overlay')) return;
+
+                fetching = true;
+                var url = '/api/gift/daily?client_date=' + encodeURIComponent(today) +
+                          '&lang=' + encodeURIComponent(lang());
+                fetch(url, { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) {
+                        if (!data || !data.eligible || !data.gift) { fetching = false; return; }
+                        shownForDate = today;   // latch: `fetching` stays true so nothing re-shows this view
+                        // Let the save's success toast breathe before the box appears.
+                        setTimeout(function () { render(data.gift); }, 650);
+                    })
+                    .catch(function () { fetching = false; });
+            } catch (_) { fetching = false; }
+        }
+
+        window.TSGiftBox = { onReportSaved: onReportSaved };
+    })();
+    </script>
+    <!-- ===================== END GIFT BOX (A12) ===================== -->
 </body>
 </html>

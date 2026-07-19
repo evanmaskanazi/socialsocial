@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!-- B145 (A12 audit): Cache-bust sync — all JS ?v bumped B140→B145 in lockstep with the
+  audit round (the gift box was hardened and parameters-social.js received a pre-existing-bug
+  fix for social_belonging privacy). No functional/JS changes on the home page. -->
+<!-- B140 (A12): Cache-bust sync — all JS ?v bumped B135→B140 (utilities, triggers,
+  follow-requests, i18n, parameters-social, circles-messages, feed-updates) so every page
+  loads the same generation. The B140 GIFT BOX feature is scoped to the diary/parameters
+  page; no functional/JS changes on the home page in this release. -->
 <!-- B135 (A8): (1) Cache-bust sync — all JS ?v=B130→B135; utilities.js & triggers.js were
   previously UN-versioned (hard-cache risk) and now carry ?v=B135 too. (2) Added a single
   self-contained A8-UX block before the closing body tag: 12 additive, reduced-motion-aware UX polish
@@ -559,10 +566,10 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
-   <script src="/static/js/utilities.js?v=B135"></script>
+   <script src="/static/js/utilities.js?v=B145"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B135"></script>
-    <script src="/static/js/follow-requests.js?v=B135"></script>
+    <script src="/static/js/triggers.js?v=B145"></script>
+    <script src="/static/js/follow-requests.js?v=B145"></script>
 
 
     <style>
@@ -7748,7 +7755,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B135"></script>
+    <script src="/static/js/i18n.js?v=B145"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8044,9 +8051,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B135"></script>
-   <script src="/static/js/circles-messages.js?v=B135"></script>
-<script src="/static/js/feed-updates.js?v=B135"></script>
+<script src="/static/js/parameters-social.js?v=B145"></script>
+   <script src="/static/js/circles-messages.js?v=B145"></script>
+<script src="/static/js/feed-updates.js?v=B145"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
