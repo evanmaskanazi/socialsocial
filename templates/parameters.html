@@ -1,4 +1,16 @@
 <!DOCTYPE html>
+<!-- B165 (A16 audit fix): all JS ?v bumped B160→B165 in lockstep with index/circles. Gift-box
+  robustness fixes from the A16 self-audit: the points headline now derives from base+bonus when
+  the server omits an explicit total (headline can never disagree with the breakdown), and the
+  gift card gained max-height + overflow-y so the Close button stays reachable on very short
+  viewports. Focus-visible ring no longer forces a corner radius. No gift/diary logic changed. -->
+<!-- B160 (A16): Cache-bust sync — all JS ?v bumped B145→B160 (this file previously carried a
+  B150 doc-note while its served .js stayed at B145; that split is now resolved — everything is
+  B160). A16 changes here: the GIFT BOX now shows the check-in REWARD as its main content —
+  "+15 points" (or "+20" with the +5 streak/consistency bonus) shown large, with the curated
+  reflection kept below in smaller text as a gentle addition. Points/bonus/streak/total come
+  from /api/gift/daily. Added an additive A16-ANDROID CSS block before </body> + theme-color
+  meta. No existing gift/diary logic changed. -->
 <!-- B150 (A12 metrics): GIFT BOX open-rate — the inline module now POSTs /api/gift/opened
   (fire-and-forget) when the box is actually tapped, so open_rate = opens ÷ reveals is
   measurable. No served .js changed, so cache ?v stays B145 (this is a template + backend
@@ -52,6 +64,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- A16 (Android): colour the Chrome/Android status & address bar to match the app. -->
+    <meta name="theme-color" content="#6B8BA4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1F2937" media="(prefers-color-scheme: dark)">
     <title>Diary - TheraSocial</title>
     <!-- FIX: Security meta tags -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -898,9 +913,9 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B145"></script>
-    <script src="/static/js/parameters-social.js?v=B145"></script>
-    <script src="/static/js/feed-updates.js?v=B145"></script>
+    <script src="/static/js/i18n.js?v=B165"></script>
+    <script src="/static/js/parameters-social.js?v=B165"></script>
+    <script src="/static/js/feed-updates.js?v=B165"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -1411,6 +1426,9 @@ Storage.prototype.setItem = function(key, value) {
             text-align: center; transform: translateY(14px) scale(0.98);
             transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
             box-sizing: border-box;
+            /* A16: taller reveal (points headline + reflection) must stay fully reachable —
+               scroll within the card on very short viewports instead of clipping the button. */
+            max-height: calc(100vh - 40px); overflow-y: auto;
         }
         #ts-gift-overlay.show #ts-gift-card { transform: translateY(0) scale(1); }
         .dark-mode #ts-gift-card, body.dark-mode #ts-gift-card {
@@ -1446,11 +1464,22 @@ Storage.prototype.setItem = function(key, value) {
             font-size: 12px; font-weight: 700; text-transform: uppercase;
             letter-spacing: 0.08em; color: #8B6BA4; margin: 4px 0 12px;
         }
-        #ts-gift-text {
-            font-size: 19px; line-height: 1.5; font-weight: 500; color: #3D4F5F;
-            margin: 0 0 6px; padding: 0 4px;
+        /* A16: points are now the MAIN reward — big and bold, above the reflection. */
+        #ts-gift-points {
+            font-size: 34px; font-weight: 800; line-height: 1.1;
+            color: #6E56A6; margin: 6px 0 6px; letter-spacing: 0.01em;
         }
-        .dark-mode #ts-gift-text, body.dark-mode #ts-gift-text { color: #E6EAF1; }
+        .dark-mode #ts-gift-points, body.dark-mode #ts-gift-points { color: #C6B4EC; }
+        #ts-gift-points-break { font-size: 13px; font-weight: 600; color: #7C8A99; margin: 0 0 4px; }
+        .dark-mode #ts-gift-points-break, body.dark-mode #ts-gift-points-break { color: #9BA7B8; }
+        #ts-gift-points-total { font-size: 12.5px; color: #9AA6B4; margin: 0 0 16px; }
+        .dark-mode #ts-gift-points-total, body.dark-mode #ts-gift-points-total { color: #8894A6; }
+        /* A16: the reflection is now a smaller, gentle addition BELOW the points. */
+        #ts-gift-text {
+            font-size: 15px; line-height: 1.5; font-weight: 400; color: #6B7A8B;
+            margin: 4px 0 6px; padding: 0 8px; font-style: italic;
+        }
+        .dark-mode #ts-gift-text, body.dark-mode #ts-gift-text { color: #AEB9C9; }
         #ts-gift-footer { font-size: 13px; color: #9AA6B4; margin: 16px 0 18px; }
         .dark-mode #ts-gift-footer, body.dark-mode #ts-gift-footer { color: #8894A6; }
         .ts-gift-btn {
@@ -1500,7 +1529,13 @@ Storage.prototype.setItem = function(key, value) {
                       ar: 'هذا كل شيء لليوم — استرح جيدًا. إلى اللقاء غدًا. 🌙',
                       ru: 'На сегодня всё — отдохни. До завтра. 🌙' },
             close: { en: 'Close', he: 'סגירה', ar: 'إغلاق', ru: 'Закрыть' },
-            aria:  { en: 'Daily gift', he: 'מתנה יומית', ar: 'هديّة يومية', ru: 'Подарок дня' }
+            aria:  { en: 'Daily gift', he: 'מתנה יומית', ar: 'هديّة يومية', ru: 'Подарок дня' },
+            // A16: rewards labels — points are the main content of the gift now.
+            points: { en: 'points', he: 'נקודות', ar: 'نقاط', ru: 'очков' },
+            checkinReward: { en: 'check-in reward', he: 'על הצ׳ק־אין', ar: 'مكافأة تسجيل الحضور', ru: 'за отметку' },
+            streakBonus: { en: 'streak bonus', he: 'בונוס התמדה', ar: 'مكافأة المواظبة', ru: 'бонус за серию' },
+            totalPoints: { en: 'Your total: {n} points', he: 'סך הכול: {n} נקודות',
+                           ar: 'مجموعك: {n} نقطة', ru: 'Всего: {n} очков' }
         };
         var pick = function (map, lang) { return map[lang] || map.en; };
         var reduce = function () {
@@ -1561,6 +1596,29 @@ Storage.prototype.setItem = function(key, value) {
             reveal.id = 'ts-gift-reveal';
             var rTitle = document.createElement('p');
             rTitle.id = 'ts-gift-reveal-title'; rTitle.textContent = pick(STR.revealTitle, L);
+            // A16: POINTS are the main reward — large, above the reflection sentence.
+            var baseP  = (gift && typeof gift.base_points === 'number') ? gift.base_points : 15;
+            var bonusP = (gift && typeof gift.bonus === 'number') ? gift.bonus : 0;
+            // Prefer the server's authoritative total; if absent, derive it from base+bonus so
+            // the headline can never disagree with the breakdown line below it.
+            var earned = (gift && typeof gift.points === 'number') ? gift.points : (baseP + bonusP);
+            var pointsMain = document.createElement('div');
+            pointsMain.id = 'ts-gift-points';
+            pointsMain.textContent = '+' + earned + ' ' + pick(STR.points, L);
+            var pointsBreak = document.createElement('p');
+            pointsBreak.id = 'ts-gift-points-break';
+            if (bonusP > 0) {
+                pointsBreak.textContent = '+' + baseP + ' ' + pick(STR.checkinReward, L) +
+                                          '  ·  +' + bonusP + ' ' + pick(STR.streakBonus, L) + ' 🔥';
+            } else {
+                pointsBreak.textContent = pick(STR.checkinReward, L);
+            }
+            var pointsTotal = document.createElement('p');
+            pointsTotal.id = 'ts-gift-points-total';
+            if (gift && typeof gift.total_points === 'number' && gift.total_points > 0) {
+                pointsTotal.textContent = pick(STR.totalPoints, L).replace('{n}', gift.total_points);
+            }
+            // The reflection sentence stays, but now as a smaller pleasant addition below.
             var rText = document.createElement('p');
             rText.id = 'ts-gift-text'; rText.textContent = gift.text;
             var footer = document.createElement('p');
@@ -1569,7 +1627,11 @@ Storage.prototype.setItem = function(key, value) {
             closeBtn.className = 'ts-gift-btn'; closeBtn.type = 'button';
             closeBtn.textContent = pick(STR.close, L);
             closeBtn.addEventListener('click', function () { close(overlay); });
-            reveal.appendChild(rTitle); reveal.appendChild(rText);
+            reveal.appendChild(rTitle);
+            reveal.appendChild(pointsMain);
+            reveal.appendChild(pointsBreak);
+            if (pointsTotal.textContent) reveal.appendChild(pointsTotal);
+            reveal.appendChild(rText);
             reveal.appendChild(footer); reveal.appendChild(closeBtn);
 
             var opened = false;
@@ -1643,5 +1705,28 @@ Storage.prototype.setItem = function(key, value) {
     })();
     </script>
     <!-- ===================== END GIFT BOX (A12) ===================== -->
+
+    <!-- A16-ANDROID: additive, non-invasive Android-safe CSS (item 1). Presentation-only;
+         complements the tap-highlight / overscroll already present from A6/A8. -->
+    <style id="ts-a16-android">
+        @supports (min-height: 100dvh) { body { min-height: 100dvh; } }
+        html, body { overscroll-behavior-y: contain; }
+        input:-webkit-autofill, input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus, textarea:-webkit-autofill {
+            -webkit-box-shadow: inset 0 0 0 1000px #FAF9F7 !important;
+            -webkit-text-fill-color: #2D3748 !important;
+            caret-color: #2D3748; transition: background-color 9999s ease-out 0s;
+        }
+        .dark-mode input:-webkit-autofill, body.dark-mode input:-webkit-autofill,
+        .dark-mode textarea:-webkit-autofill, body.dark-mode textarea:-webkit-autofill {
+            -webkit-box-shadow: inset 0 0 0 1000px #2D3748 !important;
+            -webkit-text-fill-color: #E6EAF1 !important; caret-color: #E6EAF1;
+        }
+        a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+        input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 2px solid #6B8BA4; outline-offset: 2px;
+        }
+    </style>
+    <!-- ===================== END A16-ANDROID ===================== -->
 </body>
 </html>

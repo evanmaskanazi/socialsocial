@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!-- TheraSocial Circles Version B165 (A16 audit fix) -->
+<!-- B165 (A16 audit fix): all JS ?v bumped B160→B165 in lockstep with index/parameters.
+  Focus-visible ring no longer forces a corner radius. No functional/JS changes in this file. -->
+<!-- TheraSocial Circles Version B160 (A16) -->
+<!-- B160 (A16): Cache-bust sync — all JS ?v bumped B145→B160 to stay in lockstep with index
+  and parameters (i18n.js / circles-messages.js changed this round). Added an additive
+  A16-ANDROID CSS block before </body> + theme-color meta. No functional/JS changes in this
+  file. -->
 <!-- TheraSocial Circles Version B145 (A12 audit) -->
 <!-- B145 (A12 audit): Cache-bust sync — all JS ?v bumped B140→B145 to stay in lockstep with
   the app-wide audit round (parameters-social.js received a real pre-existing-bug fix). No
@@ -52,6 +60,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- A16 (Android): colour the Chrome/Android status & address bar to match the app. -->
+    <meta name="theme-color" content="#6B8BA4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1F2937" media="(prefers-color-scheme: dark)">
     <title>Circles - TheraSocial</title>
     <style>
         body {
@@ -126,9 +137,9 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B145"></script>
-    <script src="/static/js/circles-messages.js?v=B145"></script>
-    <script src="/static/js/feed-updates.js?v=B145"></script>
+    <script src="/static/js/i18n.js?v=B165"></script>
+    <script src="/static/js/circles-messages.js?v=B165"></script>
+    <script src="/static/js/feed-updates.js?v=B165"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
@@ -910,5 +921,28 @@ try {
     })();
     </script>
     <!-- ===================== END A8-UX ===================== -->
+
+    <!-- A16-ANDROID: additive, non-invasive Android-safe CSS (item 1). Presentation-only;
+         complements the tap-highlight / overscroll already present from A6/A8. -->
+    <style id="ts-a16-android">
+        @supports (min-height: 100dvh) { body { min-height: 100dvh; } }
+        html, body { overscroll-behavior-y: contain; }
+        input:-webkit-autofill, input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus, textarea:-webkit-autofill {
+            -webkit-box-shadow: inset 0 0 0 1000px #FAF9F7 !important;
+            -webkit-text-fill-color: #2D3748 !important;
+            caret-color: #2D3748; transition: background-color 9999s ease-out 0s;
+        }
+        .dark-mode input:-webkit-autofill, body.dark-mode input:-webkit-autofill,
+        .dark-mode textarea:-webkit-autofill, body.dark-mode textarea:-webkit-autofill {
+            -webkit-box-shadow: inset 0 0 0 1000px #2D3748 !important;
+            -webkit-text-fill-color: #E6EAF1 !important; caret-color: #E6EAF1;
+        }
+        a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+        input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 2px solid #6B8BA4; outline-offset: 2px;
+        }
+    </style>
+    <!-- ===================== END A16-ANDROID ===================== -->
 </body>
 </html>

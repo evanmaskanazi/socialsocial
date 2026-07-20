@@ -1380,7 +1380,7 @@ const translations = {
         'settings.invite_btn': 'Go to Invitations',
         'profile.timezone': 'Timezone',
         'settings.notification_settings': 'Email Notification Options',
-        'auth.continue_google': 'Continue with Google',
+        'auth.continue_google': 'Log In with Google',
         'auth.continue_microsoft': 'Continue with Microsoft',
         'auth.continue_apple': 'Continue with Apple',
 
@@ -3073,7 +3073,7 @@ const translations = {
         'settings.invite_btn': 'עבור להזמנות',
         'profile.timezone': 'אזור זמן',
         'settings.notification_settings': 'אפשרויות התראה במייל',
-        'auth.continue_google': 'המשך עם Google',
+        'auth.continue_google': 'התחברות עם Google',
         'auth.continue_microsoft': 'המשך עם Microsoft',
         'auth.continue_apple': 'המשך עם Apple',
 
@@ -4768,7 +4768,7 @@ const translations = {
         'settings.invite_btn': 'انتقل إلى الدعوات',
         'profile.timezone': 'المنطقة الزمنية',
         'settings.notification_settings': 'خيارات الإشعار عبر البريد الإلكتروني',
-        'auth.continue_google': 'المتابعة مع Google',
+        'auth.continue_google': 'تسجيل الدخول عبر Google',
         'auth.continue_microsoft': 'المتابعة مع Microsoft',
         'auth.continue_apple': 'المتابعة مع Apple',
 
@@ -6462,7 +6462,7 @@ const translations = {
         'settings.invite_btn': 'Перейти к приглашениям',
         'profile.timezone': 'Часовой пояс',
         'settings.notification_settings': 'Настройки уведомлений по email',
-        'auth.continue_google': 'Продолжить с Google',
+        'auth.continue_google': 'Войти через Google',
         'auth.continue_microsoft': 'Продолжить с Microsoft',
         'auth.continue_apple': 'Продолжить с Apple',
 

@@ -1348,7 +1348,7 @@ from flask_cors import CORS
 from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import select, and_, or_, desc, func, inspect, text
+from sqlalchemy import select, and_, or_, desc, func, inspect, text, update
 # SMTP email (Resend.com compatible)
 import smtplib
 import requests as http_requests  # L100: For Resend batch API (broadcast emails)
@@ -3524,6 +3524,74 @@ def ensure_privacy_schema():
         # Don't raise - allow app to start even if this fails
 
 
+def ensure_points_schema():
+    """A16: ensure the check-in rewards columns exist BEFORE any ORM query touches them.
+
+    The User and DailyGiftLog models now SELECT users.points and daily_gift_log.points_awarded,
+    so if those columns are missing every User/gift query 500s. auto_migrate_database() (where the
+    original ALTERs were placed) is NOT called at startup, so this runs the migration through the
+    same proven, idempotent 'ADD COLUMN IF NOT EXISTS' path as ensure_privacy_schema(), on both
+    Postgres and SQLite. Called from the startup init sequence, before create_system_operators /
+    create_test_users / the schedulers that read the users table.
+    """
+    # Guard: run at most once per process.
+    if hasattr(ensure_points_schema, '_completed'):
+        return
+
+    try:
+        with app.app_context():
+            inspector = inspect(db.engine)
+            is_postgres = 'postgresql' in str(db.engine.url)
+            table_names = set(inspector.get_table_names())
+            # (table, column, type) — additive, defaulted so existing rows backfill to 0.
+            targets = [
+                ('users', 'points', 'INTEGER DEFAULT 0'),
+                ('daily_gift_log', 'points_awarded', 'INTEGER DEFAULT 0'),
+            ]
+            for table, column_name, column_type in targets:
+                if table not in table_names:
+                    logger.info(f"[A16 POINTS] {table} not present yet; will be created by model")
+                    continue
+                existing = {col['name'] for col in inspector.get_columns(table)}
+                if column_name in existing:
+                    logger.info(f"[A16 POINTS] {table}.{column_name} already exists")
+                    continue
+                with db.engine.connect() as connection:
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+                        alter_query = text(
+                            f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+                    else:
+                        alter_query = text(
+                            f"ALTER TABLE {table} ADD COLUMN {column_name} {column_type}")
+                    try:
+                        connection.execute(alter_query)
+                        connection.commit()
+                        logger.info(f"[A16 POINTS] Added {table}.{column_name}")
+                    except Exception as e:
+                        logger.error(f"[A16 POINTS] Error adding {table}.{column_name}: {e}")
+
+            # A16 (hybrid): create the append-only points_ledger table if missing. It's a NEW
+            # table, so create_all() normally makes it — but create it explicitly here (checkfirst)
+            # so it's guaranteed present on already-provisioned databases regardless of which init
+            # branch ran, exactly like the column ensures above. Failure is non-fatal and cannot
+            # affect any existing table.
+            try:
+                PointsLedger.__table__.create(bind=db.engine, checkfirst=True)
+                logger.info("[A16 POINTS] points_ledger table ensured")
+            except Exception as e:
+                logger.error(f"[A16 POINTS] Error ensuring points_ledger table: {e}")
+
+        ensure_points_schema._completed = True
+
+    except Exception as e:
+        logger.error(f"[A16 POINTS] Error ensuring points schema: {str(e)}")
+        # Don't raise - allow app to start even if this fails
+
+
 def ensure_user_consents_schema():
     """
     QA FIX: Ensure user_consents table has all PL400 GDPR columns.
@@ -4299,6 +4367,41 @@ def auto_migrate_database():
                     except Exception:
                         pass
 
+                # A16: add points column to users for the check-in rewards system.
+                # New deployments get it from the model via create_all(); this covers
+                # instances where the users table already existed without the column.
+                try:
+                    if 'users' in inspector.get_table_names():
+                        _user_cols = [col['name'] for col in inspector.get_columns('users')]
+                        if 'points' not in _user_cols:
+                            logger.info("Adding points column to users table...")
+                            conn.execute(text("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0"))
+                            conn.commit()
+                            logger.info("✓ Added points column to users")
+                except Exception as pts_err:
+                    logger.warning(f"points migration skipped/failed (non-fatal): {pts_err}")
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+
+                # A16: add points_awarded column to daily_gift_log (per-day reward record
+                # + idempotency so points are never granted twice for the same check-in).
+                try:
+                    if 'daily_gift_log' in inspector.get_table_names():
+                        _gl_cols = [col['name'] for col in inspector.get_columns('daily_gift_log')]
+                        if 'points_awarded' not in _gl_cols:
+                            logger.info("Adding points_awarded column to daily_gift_log table...")
+                            conn.execute(text("ALTER TABLE daily_gift_log ADD COLUMN points_awarded INTEGER DEFAULT 0"))
+                            conn.commit()
+                            logger.info("✓ Added points_awarded column to daily_gift_log")
+                except Exception as gl_err:
+                    logger.warning(f"points_awarded migration skipped/failed (non-fatal): {gl_err}")
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+
                 # Add follow_note column to follows table
                 if 'follows' in inspector.get_table_names():
                     columns = [col['name'] for col in inspector.get_columns('follows')]
@@ -4598,6 +4701,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
+    points = db.Column(db.Integer, default=0)  # A16: check-in rewards balance
 
     # Keep ALL existing relationships
     profile = db.relationship('Profile', backref='user', uselist=False, cascade='all, delete-orphan')
@@ -4692,7 +4796,8 @@ class User(db.Model):
             'selected_city': self.selected_city or '',  # V3: Include city for settings page
             'timezone': self.timezone or '',  # Fix10C: User timezone
             'allow_professional_access': self.allow_professional_access or False,  # L170
-            'professional_verified': self.professional_verified or False  # L210
+            'professional_verified': self.professional_verified or False,  # L210
+            'points': self.points or 0  # A16: check-in rewards balance
         }
 
 
@@ -5154,7 +5259,30 @@ class DailyGiftLog(db.Model):
     # B150 (A12 metrics): set when the user actually TAPS the box — powers open-rate
     # (created_at = shown, opened_at = opened). NULL means shown-but-not-opened.
     opened_at = db.Column(db.DateTime)
+    # A16: points granted for this day's completed check-in (15 base + 5 streak bonus).
+    # Non-zero means points were already awarded, guaranteeing one award per check-in.
+    points_awarded = db.Column(db.Integer, default=0)
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_gift_date_uc'),)
+
+
+class PointsLedger(db.Model):
+    """A16 (hybrid): append-only audit trail for EVERY change to a user's points.
+
+    This is the source of truth; users.points is a cached projection of SUM(amount) here, kept
+    for O(1) reads. Rows are never updated in place. `amount` is positive for earnings and will
+    be negative for future store spends. `reason` examples: 'checkin' (+15), 'streak_bonus' (+5),
+    later 'store_purchase' (−N). Because this is a BRAND-NEW table (not a column on an existing
+    one), it has zero blast radius: no existing model's SELECT shape changes, so login / email /
+    alerts are wholly unaffected whether or not this table exists. The invariant
+    users.points == SUM(points_ledger.amount) holds from launch (every credit writes both here
+    and to users.points inside one transaction — see _points_grant)."""
+    __tablename__ = 'points_ledger'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    date = db.Column(db.String(10), index=True)   # local YYYY-MM-DD the change is attributed to
+    amount = db.Column(db.Integer)                 # +earned / -spent
+    reason = db.Column(db.String(40), index=True)  # 'checkin', 'streak_bonus', 'store_purchase', …
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
 
 class Alert(db.Model):
@@ -5730,6 +5858,7 @@ def init_database():
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
                 ensure_privacy_schema()  # ← PL405: Privacy columns
+                ensure_points_schema()  # ← A16: check-in rewards columns (users.points, daily_gift_log.points_awarded)
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 ensure_professional_schema()  # ← L170: Professional account tables
@@ -5750,6 +5879,7 @@ def init_database():
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
                 ensure_privacy_schema()  # ← PL405: Privacy columns
+                ensure_points_schema()  # ← A16: check-in rewards columns (must precede user queries below)
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 ensure_professional_schema()  # ← L170: Professional account tables
@@ -5818,6 +5948,7 @@ def init_database():
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
                 ensure_privacy_schema()  # ← PL405: Privacy columns
+                ensure_points_schema()  # ← A16: check-in rewards columns (must precede user queries below)
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 ensure_professional_schema()  # ← L170: Professional account tables
@@ -9758,7 +9889,8 @@ def profile():
             'goals': profile.goals or '',
             'favorite_hobbies': profile.favorite_hobbies or '',
             'mood_status': profile.mood_status or '',
-            'avatar_url': profile.avatar_url or ''
+            'avatar_url': profile.avatar_url or '',
+            'points': (user.points if user else 0) or 0  # A16: rewards balance for profile counter
         })
 
     elif request.method == 'PUT':
@@ -11101,6 +11233,22 @@ def get_conversations():
     except Exception as e:
         logger.error(f"Get conversations error: {str(e)}")
         return jsonify({'conversations': []})  # Return empty array on error instead of error object
+
+
+@app.route('/api/messages/unread_count')
+@login_required
+def messages_unread_count():
+    """A16: total unread messages for the current user, powering the Messages nav badge.
+    One cheap COUNT query; returns 0 on any error so the badge simply stays hidden."""
+    try:
+        user_id = session['user_id']
+        cnt = db.session.execute(
+            select(func.count(Message.id)).filter_by(recipient_id=user_id, is_read=False)
+        ).scalar() or 0
+        return jsonify({'unread_count': int(cnt)})
+    except Exception as e:
+        logger.error(f"Unread count error: {str(e)}")
+        return jsonify({'unread_count': 0})
 
 
 # =====================
@@ -14789,6 +14937,87 @@ def _gift_json(payload, status=200):
     return resp, status
 
 
+# A16: check-in rewards. +15 points for each completed daily check-in, plus a +5
+# "consistency" bonus when today continues a streak (i.e. yesterday was also complete).
+GIFT_CHECKIN_POINTS = 15
+GIFT_STREAK_BONUS = 5
+
+
+def _checkin_streak(user_id, date_str):
+    """Consecutive days (ending at date_str) that have a COMPLETE daily report.
+    One SQL query: pull every completed date, then walk backwards from date_str
+    until the first gap. Returns 0 on any parse/DB issue (fail-safe: no bonus)."""
+    try:
+        cur = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return 0
+    try:
+        rows = db.session.execute(
+            select(SavedParameters.date).filter(
+                SavedParameters.user_id == user_id,
+                SavedParameters.mood > 0,
+                SavedParameters.energy > 0,
+                SavedParameters.sleep_quality > 0,
+                SavedParameters.physical_activity > 0,
+                SavedParameters.anxiety > 0,
+                SavedParameters.social_belonging > 0,
+            )
+        ).scalars().all()
+    except Exception:
+        return 0
+    completed = set(str(d) for d in rows)
+    streak = 0
+    for _ in range(1000):  # bounded walk (guards against any pathological data)
+        if cur.isoformat() in completed:
+            streak += 1
+            cur = cur - timedelta(days=1)
+        else:
+            break
+    return streak
+
+
+def _award_entries(bonus):
+    """Break an award into itemised ledger entries: always a base check-in, plus a streak
+    bonus when earned. Keeping them as separate rows makes the ledger self-documenting
+    (SUM by reason → base vs bonus analytics) without changing the total."""
+    entries = [(GIFT_CHECKIN_POINTS, 'checkin')]
+    if bonus:
+        entries.append((bonus, 'streak_bonus'))
+    return entries
+
+
+def _points_grant(user_id, date_str, entries):
+    """A16 (hybrid): the SINGLE choke point for adding points. Appends one immutable
+    points_ledger row per (amount, reason) entry AND bumps the cached users.points balance by
+    the total — all in the CALLER'S transaction (the caller commits), so the ledger and the
+    cached balance can never diverge. The balance bump is an in-DB expression, so it is
+    race-safe. Use negative amounts for future spends. Returns the net total applied."""
+    total = 0
+    for amount, reason in entries:
+        db.session.add(PointsLedger(user_id=user_id, date=date_str, amount=amount, reason=reason))
+        total += amount
+    if total:
+        db.session.execute(
+            update(User).where(User.id == user_id)
+            .values(points=func.coalesce(User.points, 0) + total)
+            .execution_options(synchronize_session=False)
+        )
+    return total
+
+
+def _points_balance_from_ledger(user_id):
+    """Reconciliation/support helper: the authoritative balance is SUM(amount) over the ledger.
+    users.points is a cached projection of this and should always match for awards made under
+    the hybrid. Not used on any hot read path — reads still use the fast cached users.points."""
+    try:
+        return db.session.execute(
+            select(func.coalesce(func.sum(PointsLedger.amount), 0)).where(
+                PointsLedger.user_id == user_id)
+        ).scalar() or 0
+    except Exception:
+        return 0
+
+
 @app.route('/api/gift/daily')
 @login_required
 def get_daily_gift():
@@ -14842,8 +15071,19 @@ def get_daily_gift():
 
         gift = _gift_for(user_id, today_str)
 
+        # A16: compute the reward for this completed check-in. Today's report is already
+        # verified complete above, so the streak is >= 1; a streak >= 2 means yesterday was
+        # also complete → consistency bonus.
+        streak = _checkin_streak(user_id, today_str)
+        bonus = GIFT_STREAK_BONUS if streak >= 2 else 0
+        earn = GIFT_CHECKIN_POINTS + bonus
+
         # Record the reveal once (for later measurement); tolerate the unique-race.
+        # A16: the same first-reveal-of-the-day is also when points are granted, so the
+        # UNIQUE(user_id, date) row doubles as the idempotency guard for the reward.
         already_opened = False
+        awarded_points = earn
+        total_points = 0
         try:
             existing = db.session.execute(
                 select(DailyGiftLog).filter(
@@ -14853,16 +15093,67 @@ def get_daily_gift():
             ).scalar_one_or_none()
             if existing:
                 already_opened = True
+                if existing.points_awarded:
+                    # Already credited — display the STORED award so the breakdown can never
+                    # contradict itself if the streak has since changed.
+                    awarded_points = existing.points_awarded
+                    bonus = max(0, awarded_points - GIFT_CHECKIN_POINTS)
+                else:
+                    # Back-fill a legacy row (created before the rewards system) ATOMICALLY:
+                    # the conditional UPDATE lets exactly one concurrent request win
+                    # (rowcount == 1), and only the winner credits the balance — with an in-DB
+                    # increment, so there is no read-modify-write double-credit race.
+                    upd = db.session.execute(
+                        update(DailyGiftLog)
+                        .where(DailyGiftLog.id == existing.id,
+                               or_(DailyGiftLog.points_awarded.is_(None),
+                                   DailyGiftLog.points_awarded == 0))
+                        .values(points_awarded=earn)
+                        .execution_options(synchronize_session=False)
+                    )
+                    if upd.rowcount == 1:
+                        # Ledger + cached balance, one transaction (see _points_grant).
+                        _points_grant(user_id, today_str, _award_entries(bonus))
+                    db.session.commit()
+                    awarded_points = earn
             else:
-                db.session.add(DailyGiftLog(user_id=user_id, date=today_str, gift_id=gift['id']))
+                new_row = DailyGiftLog(user_id=user_id, date=today_str, gift_id=gift['id'])
+                new_row.points_awarded = earn
+                db.session.add(new_row)
+                # Surface the UNIQUE(user_id, date) race HERE (before crediting): a losing
+                # concurrent insert raises IntegrityError → except → rollback → no credit.
+                db.session.flush()
+                # Ledger + cached balance, same transaction as the reveal row above.
+                _points_grant(user_id, today_str, _award_entries(bonus))
                 db.session.commit()
+                awarded_points = earn
+            # Read the authoritative balance for display (post-commit reload is fresh).
+            u = db.session.get(User, user_id)
+            total_points = (u.points or 0) if u is not None else 0
         except Exception as log_err:
-            logger.warning(f"[GIFT] Could not record gift reveal: {log_err}")
+            logger.warning(f"[GIFT] Could not record gift reveal / award points: {log_err}")
             try:
                 db.session.rollback()
             except Exception:
                 pass
             already_opened = True  # a concurrent insert likely won the race
+            # Best-effort accurate display after a race/failure: reflect persisted state so the
+            # box never shows points that weren't actually credited.
+            try:
+                row = db.session.execute(
+                    select(DailyGiftLog).filter(
+                        DailyGiftLog.user_id == user_id,
+                        DailyGiftLog.date == today_str
+                    )
+                ).scalar_one_or_none()
+                awarded_points = (row.points_awarded or 0) if row is not None else 0
+                if awarded_points:
+                    bonus = max(0, awarded_points - GIFT_CHECKIN_POINTS)
+                u2 = db.session.get(User, user_id)
+                total_points = (u2.points or 0) if u2 is not None else 0
+            except Exception:
+                awarded_points = 0
+                total_points = 0
 
         return _gift_json({
             'eligible': True,
@@ -14870,7 +15161,13 @@ def get_daily_gift():
             'gift': {
                 'id': gift['id'],
                 'text': gift['text'].get(lang) or gift['text']['en'],
-                'date': today_str
+                'date': today_str,
+                # A16: rewards payload — the box shows these as the main content.
+                'points': awarded_points,
+                'base_points': GIFT_CHECKIN_POINTS,
+                'bonus': bonus,
+                'streak': streak,
+                'total_points': total_points
             }
         })
     except Exception as e:

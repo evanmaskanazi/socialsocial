@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!-- B165 (A16 audit fix): all JS ?v bumped B160→B165 in lockstep across the three pages.
+  Regression/robustness fixes from the A16 self-audit: (1) REMOVED the keyboard-hide rule that
+  wrongly pushed the TOP sticky nav down into content (it assumed a bottom nav) and its
+  visualViewport handler; replaced UX item 2 with tap-to-dismiss toasts; (2) focus-scroll now
+  fires on mobile only (no desktop page-jump on field focus); (3) auto-grow skips rows-sized
+  textareas (no shrink-then-grow jank on the support/broadcast composers); (4) focus-visible
+  ring no longer forces a 6px corner radius. Backend: the legacy points back-fill is now
+  race-safe (atomic conditional UPDATE + in-DB increment, one credit per check-in) and the
+  gift payload's breakdown stays self-consistent on repeat reveals. No user-facing feature
+  changed. -->
+<!-- B160 (A16): Cache-bust sync — all JS ?v bumped B145→B160 in lockstep across index,
+  parameters and circles (i18n.js, parameters-social.js and circles-messages.js all changed
+  this round, so every page that loads them is bumped together to avoid the stale-JS desync
+  seen in earlier rounds). A16 changes on the home page: (1) "Continue with Google" → "Log In
+  with Google" in en/he/ar/ru; (2) unread-messages badge on the mobile + desktop Messages nav;
+  (3) personal Points counter + "Store — coming soon" button in the profile (points earned via
+  the daily check-in / gift box, backed by users.points); (4) additive A16-ANDROID + A16-UX
+  block before </body> (Android-safe fixes + 10 UX enhancements); theme-color meta added; one
+  -webkit-backdrop-filter prefix added to the toast style. No existing logic changed. -->
 <!-- B145 (A12 audit): Cache-bust sync — all JS ?v bumped B140→B145 in lockstep with the
   audit round (the gift box was hardened and parameters-social.js received a pre-existing-bug
   fix for social_belonging privacy). No functional/JS changes on the home page. -->
@@ -560,16 +579,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- A16 (Android): colour the Chrome/Android status & address bar to match the app. -->
+    <meta name="theme-color" content="#6B8BA4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1F2937" media="(prefers-color-scheme: dark)">
     <title>Thera Social - Human Network Infrastructure</title>
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
-   <script src="/static/js/utilities.js?v=B145"></script>
+   <script src="/static/js/utilities.js?v=B165"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B145"></script>
-    <script src="/static/js/follow-requests.js?v=B145"></script>
+    <script src="/static/js/triggers.js?v=B165"></script>
+    <script src="/static/js/follow-requests.js?v=B165"></script>
 
 
     <style>
@@ -4805,7 +4827,7 @@
                         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
-                    <span data-i18n="auth.continue_google">Continue with Google</span>
+                    <span data-i18n="auth.continue_google">Log In with Google</span>
                 </button>
                 
                 <!-- CLEAN: Microsoft and Apple commented out - Google only for now -->
@@ -5438,6 +5460,8 @@
             <li class="mobile-nav-item" id="mobileMessagesNav" data-view="messages" onclick="showView('messages')">
                 <span class="mobile-nav-icon">💬</span>
                 <span class="mobile-nav-label" data-i18n="menu.messages">Messages</span>
+                <!-- A16: unread-messages indicator -->
+                <span class="mobile-alerts-badge" id="messagesNavBadge" style="display: none;"></span>
             </li>
             <li class="mobile-nav-item" data-view="more" onclick="toggleMobileMoreMenu()">
                 <span class="mobile-nav-icon">☰</span>
@@ -5518,6 +5542,8 @@
                     <li class="sidebar-item" id="desktopMessagesNav" data-view="messages">
                         <span class="sidebar-icon">💬</span>
                         <span class="sidebar-label" data-i18n="menu.messages">Messages</span>
+                        <!-- A16: unread-messages indicator -->
+                        <span id="desktopMessagesBadge" style="display: none; margin-inline-start: auto; background: var(--danger, #C17C74); color: #fff; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 9px; padding: 0 5px;"></span>
                     </li>
                     <li class="sidebar-item" data-view="tracking" onclick="handleParametersClick(event)" style="cursor: pointer;">
                         <span class="sidebar-icon">📊</span>
@@ -5778,6 +5804,21 @@
                         <div class="profile-header">
                             <div class="profile-avatar" id="profileAvatar">U</div>
                             <h3 id="profileUsername">Username</h3>
+                        </div>
+
+                        <!-- A16: personal points counter + Store (coming soon) button -->
+                        <div id="profilePointsCard" style="background: linear-gradient(135deg, #6B8BA4 0%, #8B6BA4 100%); color: #fff; padding: 20px; border-radius: 15px; margin: 18px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                            <div>
+                                <div style="font-size: 0.8rem; opacity: 0.9; letter-spacing: 0.02em;" data-i18n="profile.points_label">Your Points</div>
+                                <div style="display: flex; align-items: baseline; gap: 6px;">
+                                    <span id="profilePointsValue" style="font-size: 2rem; font-weight: 800; line-height: 1.1;">0</span>
+                                    <span style="font-size: 0.95rem; opacity: 0.9;" data-i18n="profile.points_unit">points</span>
+                                </div>
+                            </div>
+                            <button type="button" id="profileStoreBtn" onclick="showStoreComingSoon()" style="background: rgba(255,255,255,0.18); color: #fff; border: 1.5px solid rgba(255,255,255,0.45); border-radius: 10px; padding: 10px 16px; font-size: 0.9rem; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; min-height: 44px;">
+                                <span data-i18n="profile.store">Store</span>
+                                <span style="opacity: 0.85; font-size: 0.8rem;"> · <span data-i18n="profile.coming_soon">Coming soon</span></span>
+                            </button>
                         </div>
 
                         <div class="profile-fields">
@@ -7755,7 +7796,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B145"></script>
+    <script src="/static/js/i18n.js?v=B165"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -7842,22 +7883,22 @@
     (function() {
         const acctSocialTranslations = {
             en: {
-                'auth.continue_google': 'Continue with Google',
+                'auth.continue_google': 'Log In with Google',
                 'auth.continue_microsoft': 'Continue with Microsoft',
                 'auth.continue_apple': 'Continue with Apple',
             },
             he: {
-                'auth.continue_google': 'המשך עם Google',
+                'auth.continue_google': 'התחברות עם Google',
                 'auth.continue_microsoft': 'המשך עם Microsoft',
                 'auth.continue_apple': 'המשך עם Apple',
             },
             ar: {
-                'auth.continue_google': 'المتابعة مع Google',
+                'auth.continue_google': 'تسجيل الدخول عبر Google',
                 'auth.continue_microsoft': 'المتابعة مع Microsoft',
                 'auth.continue_apple': 'المتابعة مع Apple',
             },
             ru: {
-                'auth.continue_google': 'Продолжить с Google',
+                'auth.continue_google': 'Войти через Google',
                 'auth.continue_microsoft': 'Продолжить с Microsoft',
                 'auth.continue_apple': 'Продолжить с Apple',
             }
@@ -7877,6 +7918,55 @@
     })();
     </script>
     <!-- END ACCT Social login translations -->
+
+    <!-- A16: Points / Store translation keys (profile points card). Additive override,
+         same self-contained pattern as the social block above. -->
+    <script>
+    (function() {
+        const a16PointsTranslations = {
+            en: {
+                'profile.points_label': 'Your Points',
+                'profile.points_unit': 'points',
+                'profile.store': 'Store',
+                'profile.coming_soon': 'Coming soon',
+                'profile.store_msg': 'The points store is coming soon!'
+            },
+            he: {
+                'profile.points_label': 'הנקודות שלך',
+                'profile.points_unit': 'נקודות',
+                'profile.store': 'חנות',
+                'profile.coming_soon': 'בקרוב',
+                'profile.store_msg': 'חנות הנקודות תגיע בקרוב!'
+            },
+            ar: {
+                'profile.points_label': 'نقاطك',
+                'profile.points_unit': 'نقاط',
+                'profile.store': 'المتجر',
+                'profile.coming_soon': 'قريباً',
+                'profile.store_msg': 'متجر النقاط قادم قريباً!'
+            },
+            ru: {
+                'profile.points_label': 'Ваши очки',
+                'profile.points_unit': 'очков',
+                'profile.store': 'Магазин',
+                'profile.coming_soon': 'Скоро',
+                'profile.store_msg': 'Магазин очков скоро появится!'
+            }
+        };
+        function extendI18nPoints() {
+            if (window.i18n && window.i18n.translations) {
+                Object.keys(a16PointsTranslations).forEach(lang => {
+                    if (!window.i18n.translations[lang]) window.i18n.translations[lang] = {};
+                    Object.assign(window.i18n.translations[lang], a16PointsTranslations[lang]);
+                });
+            }
+        }
+        extendI18nPoints();
+        document.addEventListener('DOMContentLoaded', extendI18nPoints);
+        window.addEventListener('load', extendI18nPoints);
+    })();
+    </script>
+    <!-- END A16 Points/Store translations -->
 
     <!-- LL FIX: Alert/well-being translation keys for Hebrew, Arabic, Russian -->
     <script>
@@ -8051,9 +8141,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B145"></script>
-   <script src="/static/js/circles-messages.js?v=B145"></script>
-<script src="/static/js/feed-updates.js?v=B145"></script>
+<script src="/static/js/parameters-social.js?v=B165"></script>
+   <script src="/static/js/circles-messages.js?v=B165"></script>
+<script src="/static/js/feed-updates.js?v=B165"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -11470,6 +11560,7 @@ function showNotification(message, type = 'info') {
         font-size: 14px;
         font-weight: 500;
         word-break: break-word;
+        -webkit-backdrop-filter: blur(8px);
         backdrop-filter: blur(8px);
     `;
     
@@ -12042,7 +12133,13 @@ window.addEventListener('languageChanged', () => {
                 document.getElementById('profileOccupation').value = response.occupation || '';
                 document.getElementById('profileGoals').value = response.goals || '';
                 document.getElementById('profileFavoriteHobbies').value = response.favorite_hobbies || '';
-                
+
+                // A16: populate the personal points counter
+                const profilePointsEl = document.getElementById('profilePointsValue');
+                if (profilePointsEl) {
+                    profilePointsEl.textContent = (response.points != null ? response.points : 0);
+                }
+
                 // PJ6001: Load birth year
                 const birthYearInput = document.getElementById('profileBirthYear');
                 if (birthYearInput) {
@@ -17668,6 +17765,53 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         }, 60000);
 
+        // A16: unread-messages indicator. Fetches a single count and toggles the badge on
+        // both the mobile bottom-nav and the desktop sidebar Messages items. Additive and
+        // fail-safe — any error just leaves the badge hidden.
+        function updateMessagesBadge() {
+            try {
+                var dash = document.getElementById('dashboard');
+                if (!dash || dash.style.display === 'none') return; // only when logged in
+                fetch('/api/messages/unread_count', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) {
+                        if (!data) return;
+                        var n = data.unread_count || 0;
+                        var txt = n > 99 ? '99+' : String(n);
+                        var m = document.getElementById('messagesNavBadge');
+                        if (m) { m.textContent = txt; m.style.display = n > 0 ? 'block' : 'none'; }
+                        var d = document.getElementById('desktopMessagesBadge');
+                        if (d) { d.textContent = txt; d.style.display = n > 0 ? 'inline-block' : 'none'; }
+                    })
+                    .catch(function () {});
+            } catch (_) {}
+        }
+        window.updateMessagesBadge = updateMessagesBadge;
+
+        // A16: "Store — coming soon" feedback for the profile points card.
+        function showStoreComingSoon() {
+            var msg = 'The points store is coming soon!';
+            try {
+                if (window.i18n && window.i18n.translate) {
+                    msg = window.i18n.translate('profile.store_msg') || msg;
+                }
+            } catch (_) {}
+            if (typeof showNotification === 'function') { showNotification(msg, 'info'); }
+            else if (typeof showToast === 'function') { showToast(msg, 'info'); }
+            else { alert(msg); }
+        }
+        window.showStoreComingSoon = showStoreComingSoon;
+
+        setInterval(function () { if (currentUser) updateMessagesBadge(); }, 60000);
+        setTimeout(function () { if (currentUser) updateMessagesBadge(); }, 1500);
+        // Refresh shortly after the user visits Messages / opens a conversation (read state changes).
+        document.addEventListener('click', function (e) {
+            if (e.target && e.target.closest &&
+                e.target.closest('#messagesView, #mobileMessagesNav, #desktopMessagesNav')) {
+                setTimeout(function () { if (currentUser) updateMessagesBadge(); }, 2500);
+            }
+        });
+
         // Listen for language changes to reload dynamic content
         window.addEventListener('languageChanged', () => {
             // Reload alerts and other dynamic content if user is logged in
@@ -22656,6 +22800,186 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
     })();
     </script>
     <!-- ===================== END A8-UX ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- A16-ANDROID + A16-UX: additive, non-invasive polish (item 1 Android-safe fixes -->
+    <!-- + item 5 UX). Self-contained: one style block + one guarded script, namespaced -->
+    <!-- ts-a16-*. Feature-detected & reduced-motion aware. No existing markup, IDs, or  -->
+    <!-- logic changed. (theme-color meta + a -webkit-backdrop-filter prefix are applied -->
+    <!-- inline elsewhere in this file.)                                                 -->
+    <!-- ANDROID (item 1): dvh height · pull-to-refresh guard · autofill colours ·       -->
+    <!--   tap-highlight parity · invite-input zoom fix.                                 -->
+    <!-- UX (item 5): 1 smart input attrs · 2 tap-to-dismiss toasts · 3 focus-scroll      -->
+    <!--   4 broken-image fallback · 5 focus-visible outlines · 6 tap-active-tab-to-top  -->
+    <!--   7 long-press callout suppression · 8 tap-to-select invite link · 9 data-saver -->
+    <!--   blur trim · 10 auto-grow textareas.                                           -->
+    <!-- ============================================================================ -->
+    <style id="ts-a16-android">
+        /* (Android 1) Real viewport height on Android Chrome (address-bar aware). */
+        @supports (min-height: 100dvh) { body { min-height: 100dvh; } }
+        /* (Android 2) Stop Android Chrome pull-to-refresh from reloading the SPA. */
+        html, body { overscroll-behavior-y: contain; }
+        /* (Android 3) Keep autofilled fields on-palette (esp. dark mode) instead of
+           Chrome's forced yellow/blue box. */
+        input:-webkit-autofill, input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus, textarea:-webkit-autofill {
+            -webkit-box-shadow: inset 0 0 0 1000px #FAF9F7 !important;
+            -webkit-text-fill-color: #2D3748 !important;
+            caret-color: #2D3748;
+            transition: background-color 9999s ease-out 0s;
+        }
+        .dark-mode input:-webkit-autofill, body.dark-mode input:-webkit-autofill,
+        .dark-mode textarea:-webkit-autofill, body.dark-mode textarea:-webkit-autofill {
+            -webkit-box-shadow: inset 0 0 0 1000px #2D3748 !important;
+            -webkit-text-fill-color: #E6EAF1 !important;
+            caret-color: #E6EAF1;
+        }
+        /* (Android 4) Remove the grey/blue tap flash app-wide (parity with the
+           circles/parameters pages, which already do this). */
+        a, button, [role="button"], [onclick], input, select, textarea,
+        .mobile-nav-item, .sidebar-item { -webkit-tap-highlight-color: rgba(0,0,0,0); }
+        /* (Android 5) Prevent Android focus-zoom on the small invite-link input. */
+        @media (max-width: 480px) { .invite-link-input { font-size: 16px !important; } }
+        /* (UX 5) Visible focus ring for keyboard / switch-control users only. The outline
+           follows each element's own corner radius; we do NOT force a border-radius here. */
+        a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+        input:focus-visible, select:focus-visible, textarea:focus-visible,
+        .mobile-nav-item:focus-visible, .sidebar-item:focus-visible {
+            outline: 2px solid #6B8BA4; outline-offset: 2px;
+        }
+        /* (UX 7) Suppress the Android long-press callout menu on UI controls. */
+        button, [role="button"], .mobile-nav-item, .sidebar-item, .btn { -webkit-touch-callout: none; }
+        /* (UX 9) On explicit data-saver / reduced-transparency, drop costly blur. */
+        html.ts-a16-lite *, html.ts-a16-lite *::before, html.ts-a16-lite *::after {
+            -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+        }
+    </style>
+    <script id="ts-a16-ux">
+    (function () {
+        if (window.__tsA16Ux) return; window.__tsA16Ux = true;
+
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var onReady = function (fn) {
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+            else fn();
+        };
+
+        // (UX 1) Smarter mobile input attributes. Login/handle/link/search fields should
+        // not auto-capitalize/correct; give every field a sensible enter-key hint.
+        var enhanceInput = function (el) {
+            if (!el || el.dataset.tsA16i) return; el.dataset.tsA16i = '1';
+            var type = (el.getAttribute('type') || '').toLowerCase();
+            var name = ((el.id || '') + ' ' + (el.name || '') + ' ' + (el.getAttribute('autocomplete') || '')).toLowerCase();
+            var noAssist = type === 'email' || type === 'password' || type === 'url' ||
+                /email|user|handle|login|link|token|url|search/.test(name);
+            if (noAssist) {
+                if (!el.hasAttribute('autocapitalize')) el.setAttribute('autocapitalize', 'off');
+                if (!el.hasAttribute('autocorrect')) el.setAttribute('autocorrect', 'off');
+                if (!el.hasAttribute('spellcheck')) el.setAttribute('spellcheck', 'false');
+            }
+            if (!el.hasAttribute('enterkeyhint') && el.tagName === 'INPUT') {
+                el.setAttribute('enterkeyhint', (type === 'search' || /search/.test(name)) ? 'search' : 'done');
+            }
+        };
+        // (UX 10) Auto-grow textareas as the user types (nicer than an inner scrollbar on mobile).
+        var autoGrow = function (el) {
+            if (!el) return;
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 400) + 'px';
+        };
+        var enhanceTextarea = function (el) {
+            if (!el || el.dataset.tsA16t) return; el.dataset.tsA16t = '1';
+            // Skip textareas explicitly sized with a rows="" attribute so we don't collapse
+            // them to one line on the first keystroke (e.g. the support / broadcast composers).
+            if (el.hasAttribute('rows')) return;
+            el.addEventListener('input', function () { autoGrow(el); });
+        };
+        var scanFields = function (root) {
+            try {
+                var inputs = (root || document).getElementsByTagName('input');
+                for (var i = 0; i < inputs.length; i++) enhanceInput(inputs[i]);
+                var tas = (root || document).getElementsByTagName('textarea');
+                for (var j = 0; j < tas.length; j++) enhanceTextarea(tas[j]);
+            } catch (_) {}
+        };
+        onReady(function () {
+            scanFields(document);
+            if ('MutationObserver' in window) {
+                new MutationObserver(function (muts) {
+                    for (var i = 0; i < muts.length; i++)
+                        for (var j = 0; j < muts[i].addedNodes.length; j++) {
+                            var n = muts[i].addedNodes[j];
+                            if (n.nodeType === 1) scanFields(n);
+                        }
+                }).observe(document.body, { childList: true, subtree: true });
+            }
+        });
+
+        // (UX 3) Bring a focused field into view above the keyboard — MOBILE ONLY, so it
+        // never causes an unexpected page jump when clicking a field on desktop.
+        var isMobile = function () {
+            return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+        };
+        document.addEventListener('focusin', function (e) {
+            var el = e.target;
+            if (!el || !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+            if (!isMobile()) return;
+            setTimeout(function () {
+                try { el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); } catch (_) {}
+            }, 250);
+        });
+
+        // (UX 2) Tap a toast/notification to dismiss it early instead of waiting for the
+        // auto-timeout. Delegated + purely additive; the existing auto-remove still runs.
+        document.addEventListener('click', function (e) {
+            var host = e.target && e.target.closest &&
+                e.target.closest('#notification-container > *, #toastContainer > *');
+            if (host && host.parentNode) {
+                try { host.parentNode.removeChild(host); } catch (_) {}
+            }
+        });
+
+        // (UX 4) Graceful fallback for broken images (avatars etc.) — no broken-image icon.
+        // Never interferes with an image that carries its own onerror fallback, and restores
+        // visibility if the image later loads (e.g. after a fallback src is set).
+        document.addEventListener('error', function (e) {
+            var el = e.target;
+            if (el && el.tagName === 'IMG' && !el.dataset.tsA16err && !el.hasAttribute('onerror')) {
+                el.dataset.tsA16err = '1';
+                el.style.visibility = 'hidden';
+                el.addEventListener('load', function () { el.style.visibility = ''; }, { once: true });
+            }
+        }, true);
+
+        // (UX 6) Tap the already-active bottom-nav tab again to scroll back to top (iOS-style).
+        onReady(function () {
+            var nav = document.querySelector('.mobile-nav');
+            if (!nav) return;
+            nav.addEventListener('click', function (e) {
+                var item = e.target && e.target.closest && e.target.closest('.mobile-nav-item');
+                if (!item || !item.classList.contains('active')) return;
+                try { window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }
+                catch (_) { window.scrollTo(0, 0); }
+            });
+        });
+
+        // (UX 8) Tap the invite link to select it all (one-tap manual copy on mobile).
+        document.addEventListener('click', function (e) {
+            var el = e.target;
+            if (el && el.classList && el.classList.contains('invite-link-input') && el.select) {
+                try { el.select(); el.setSelectionRange(0, (el.value || '').length); } catch (_) {}
+            }
+        });
+
+        // (UX 9) Respect explicit data-saver / reduced-transparency: drop heavy blur.
+        try {
+            var saveData = navigator.connection && navigator.connection.saveData;
+            var lessTrans = window.matchMedia && window.matchMedia('(prefers-reduced-transparency: reduce)').matches;
+            if (saveData || lessTrans) document.documentElement.classList.add('ts-a16-lite');
+        } catch (_) {}
+    })();
+    </script>
+    <!-- ===================== END A16-ANDROID + A16-UX ===================== -->
 </body>
 
 </html>
