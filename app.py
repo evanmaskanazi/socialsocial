@@ -3524,6 +3524,63 @@ def ensure_privacy_schema():
         # Don't raise - allow app to start even if this fails
 
 
+def ensure_points_schema():
+    """A16: ensure the check-in rewards columns exist BEFORE any ORM query touches them.
+
+    The User and DailyGiftLog models now SELECT users.points and daily_gift_log.points_awarded,
+    so if those columns are missing every User/gift query 500s. auto_migrate_database() (where the
+    original ALTERs were placed) is NOT called at startup, so this runs the migration through the
+    same proven, idempotent 'ADD COLUMN IF NOT EXISTS' path as ensure_privacy_schema(), on both
+    Postgres and SQLite. Called from the startup init sequence, before create_system_operators /
+    create_test_users / the schedulers that read the users table.
+    """
+    # Guard: run at most once per process.
+    if hasattr(ensure_points_schema, '_completed'):
+        return
+
+    try:
+        with app.app_context():
+            inspector = inspect(db.engine)
+            is_postgres = 'postgresql' in str(db.engine.url)
+            table_names = set(inspector.get_table_names())
+            # (table, column, type) — additive, defaulted so existing rows backfill to 0.
+            targets = [
+                ('users', 'points', 'INTEGER DEFAULT 0'),
+                ('daily_gift_log', 'points_awarded', 'INTEGER DEFAULT 0'),
+            ]
+            for table, column_name, column_type in targets:
+                if table not in table_names:
+                    logger.info(f"[A16 POINTS] {table} not present yet; will be created by model")
+                    continue
+                existing = {col['name'] for col in inspector.get_columns(table)}
+                if column_name in existing:
+                    logger.info(f"[A16 POINTS] {table}.{column_name} already exists")
+                    continue
+                with db.engine.connect() as connection:
+                    if is_postgres:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+                        alter_query = text(
+                            f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+                    else:
+                        alter_query = text(
+                            f"ALTER TABLE {table} ADD COLUMN {column_name} {column_type}")
+                    try:
+                        connection.execute(alter_query)
+                        connection.commit()
+                        logger.info(f"[A16 POINTS] Added {table}.{column_name}")
+                    except Exception as e:
+                        logger.error(f"[A16 POINTS] Error adding {table}.{column_name}: {e}")
+
+        ensure_points_schema._completed = True
+
+    except Exception as e:
+        logger.error(f"[A16 POINTS] Error ensuring points schema: {str(e)}")
+        # Don't raise - allow app to start even if this fails
+
+
 def ensure_user_consents_schema():
     """
     QA FIX: Ensure user_consents table has all PL400 GDPR columns.
@@ -5770,6 +5827,7 @@ def init_database():
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
                 ensure_privacy_schema()  # ← PL405: Privacy columns
+                ensure_points_schema()  # ← A16: check-in rewards columns (users.points, daily_gift_log.points_awarded)
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 ensure_professional_schema()  # ← L170: Professional account tables
@@ -5790,6 +5848,7 @@ def init_database():
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
                 ensure_privacy_schema()  # ← PL405: Privacy columns
+                ensure_points_schema()  # ← A16: check-in rewards columns (must precede user queries below)
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 ensure_professional_schema()  # ← L170: Professional account tables
@@ -5858,6 +5917,7 @@ def init_database():
                 ensure_saved_parameters_schema()  # ← ADDED
                 ensure_notification_settings_schema()  # ← ADDED for email notification columns
                 ensure_privacy_schema()  # ← PL405: Privacy columns
+                ensure_points_schema()  # ← A16: check-in rewards columns (must precede user queries below)
                 ensure_user_consents_schema()  # ← QA FIX: GDPR consent columns
                 ensure_background_jobs_schema()  # ← ADDED for job queue
                 ensure_professional_schema()  # ← L170: Professional account tables
