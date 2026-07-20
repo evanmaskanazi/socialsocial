@@ -3574,6 +3574,17 @@ def ensure_points_schema():
                     except Exception as e:
                         logger.error(f"[A16 POINTS] Error adding {table}.{column_name}: {e}")
 
+            # A16 (hybrid): create the append-only points_ledger table if missing. It's a NEW
+            # table, so create_all() normally makes it — but create it explicitly here (checkfirst)
+            # so it's guaranteed present on already-provisioned databases regardless of which init
+            # branch ran, exactly like the column ensures above. Failure is non-fatal and cannot
+            # affect any existing table.
+            try:
+                PointsLedger.__table__.create(bind=db.engine, checkfirst=True)
+                logger.info("[A16 POINTS] points_ledger table ensured")
+            except Exception as e:
+                logger.error(f"[A16 POINTS] Error ensuring points_ledger table: {e}")
+
         ensure_points_schema._completed = True
 
     except Exception as e:
@@ -5252,6 +5263,26 @@ class DailyGiftLog(db.Model):
     # Non-zero means points were already awarded, guaranteeing one award per check-in.
     points_awarded = db.Column(db.Integer, default=0)
     __table_args__ = (db.UniqueConstraint('user_id', 'date', name='_user_gift_date_uc'),)
+
+
+class PointsLedger(db.Model):
+    """A16 (hybrid): append-only audit trail for EVERY change to a user's points.
+
+    This is the source of truth; users.points is a cached projection of SUM(amount) here, kept
+    for O(1) reads. Rows are never updated in place. `amount` is positive for earnings and will
+    be negative for future store spends. `reason` examples: 'checkin' (+15), 'streak_bonus' (+5),
+    later 'store_purchase' (−N). Because this is a BRAND-NEW table (not a column on an existing
+    one), it has zero blast radius: no existing model's SELECT shape changes, so login / email /
+    alerts are wholly unaffected whether or not this table exists. The invariant
+    users.points == SUM(points_ledger.amount) holds from launch (every credit writes both here
+    and to users.points inside one transaction — see _points_grant)."""
+    __tablename__ = 'points_ledger'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    date = db.Column(db.String(10), index=True)   # local YYYY-MM-DD the change is attributed to
+    amount = db.Column(db.Integer)                 # +earned / -spent
+    reason = db.Column(db.String(40), index=True)  # 'checkin', 'streak_bonus', 'store_purchase', …
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
 
 class Alert(db.Model):
@@ -14945,6 +14976,48 @@ def _checkin_streak(user_id, date_str):
     return streak
 
 
+def _award_entries(bonus):
+    """Break an award into itemised ledger entries: always a base check-in, plus a streak
+    bonus when earned. Keeping them as separate rows makes the ledger self-documenting
+    (SUM by reason → base vs bonus analytics) without changing the total."""
+    entries = [(GIFT_CHECKIN_POINTS, 'checkin')]
+    if bonus:
+        entries.append((bonus, 'streak_bonus'))
+    return entries
+
+
+def _points_grant(user_id, date_str, entries):
+    """A16 (hybrid): the SINGLE choke point for adding points. Appends one immutable
+    points_ledger row per (amount, reason) entry AND bumps the cached users.points balance by
+    the total — all in the CALLER'S transaction (the caller commits), so the ledger and the
+    cached balance can never diverge. The balance bump is an in-DB expression, so it is
+    race-safe. Use negative amounts for future spends. Returns the net total applied."""
+    total = 0
+    for amount, reason in entries:
+        db.session.add(PointsLedger(user_id=user_id, date=date_str, amount=amount, reason=reason))
+        total += amount
+    if total:
+        db.session.execute(
+            update(User).where(User.id == user_id)
+            .values(points=func.coalesce(User.points, 0) + total)
+            .execution_options(synchronize_session=False)
+        )
+    return total
+
+
+def _points_balance_from_ledger(user_id):
+    """Reconciliation/support helper: the authoritative balance is SUM(amount) over the ledger.
+    users.points is a cached projection of this and should always match for awards made under
+    the hybrid. Not used on any hot read path — reads still use the fast cached users.points."""
+    try:
+        return db.session.execute(
+            select(func.coalesce(func.sum(PointsLedger.amount), 0)).where(
+                PointsLedger.user_id == user_id)
+        ).scalar() or 0
+    except Exception:
+        return 0
+
+
 @app.route('/api/gift/daily')
 @login_required
 def get_daily_gift():
@@ -15039,11 +15112,8 @@ def get_daily_gift():
                         .execution_options(synchronize_session=False)
                     )
                     if upd.rowcount == 1:
-                        db.session.execute(
-                            update(User).where(User.id == user_id)
-                            .values(points=func.coalesce(User.points, 0) + earn)
-                            .execution_options(synchronize_session=False)
-                        )
+                        # Ledger + cached balance, one transaction (see _points_grant).
+                        _points_grant(user_id, today_str, _award_entries(bonus))
                     db.session.commit()
                     awarded_points = earn
             else:
@@ -15053,11 +15123,8 @@ def get_daily_gift():
                 # Surface the UNIQUE(user_id, date) race HERE (before crediting): a losing
                 # concurrent insert raises IntegrityError → except → rollback → no credit.
                 db.session.flush()
-                db.session.execute(
-                    update(User).where(User.id == user_id)
-                    .values(points=func.coalesce(User.points, 0) + earn)
-                    .execution_options(synchronize_session=False)
-                )
+                # Ledger + cached balance, same transaction as the reveal row above.
+                _points_grant(user_id, today_str, _award_entries(bonus))
                 db.session.commit()
                 awarded_points = earn
             # Read the authoritative balance for display (post-commit reload is fresh).
