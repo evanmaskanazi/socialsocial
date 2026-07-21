@@ -2,6 +2,27 @@
 """
 Complete app.py for Social Social Platform - V4 10Link — B140 (A8+)
 
+# A16-10 Changes (from A16-9) — THE ACTUAL CULPRIT: "current transaction is aborted":
+#   The deploy log finally captured a live check-in: even with the reward columns present, the
+#   award died with `psycopg2.errors.InFailedSqlTransaction: current transaction is aborted,
+#   commands ignored until end of transaction block` on the daily_gift_log SELECT. That means an
+#   EARLIER query in the same request already failed and was swallowed WITHOUT a rollback, leaving
+#   the session poisoned so the award (and the gift reveal) could not run — hence the display-only
+#   "+15" while users.points stayed 0 for everyone.
+#   The swallowed query was _checkin_streak()'s `mood > 0 AND ... AND social_belonging > 0` filter.
+#   social_belonging was added later and on this DB is stored as text, so Postgres raised
+#   "operator does not exist: character varying > integer"; the bare `except: return 0` hid it and
+#   poisoned the transaction.
+#   FIXES:
+#     1) _checkin_streak now SELECTs the raw values and decides completeness in Python (int()
+#        coercion), so no fragile `col > 0` SQL comparison can fail — the streak/bonus also work
+#        regardless of column type. On any error it rolls back and LOGS the real cause.
+#     2) operator_points_backfill()'s completed-days query got the same Python-side treatment.
+#     3) _award_checkin_points() and get_daily_gift() now begin their DB work with a defensive
+#        db.session.rollback() (clean slate) so no inherited aborted transaction can make them fail;
+#        the check-in row is already committed, so this never loses data.
+#     4) _points_balance_from_ledger() rolls back on error too (same class of bug).
+#
 # A16-9 Changes (from A16-8) — MAKE THE FIX DEPLOY-ONLY (no manual SQL):
 #   Added _a16_ensure_points_columns_now(), a dumb/unconditional/loudly-logged migration that runs
 #   the equivalent of the manual ALTERs on every boot (Postgres: ADD COLUMN IF NOT EXISTS; SQLite:
@@ -15128,27 +15149,57 @@ GIFT_STREAK_BONUS = 5
 
 def _checkin_streak(user_id, date_str):
     """Consecutive days (ending at date_str) that have a COMPLETE daily report.
-    One SQL query: pull every completed date, then walk backwards from date_str
-    until the first gap. Returns 0 on any parse/DB issue (fail-safe: no bonus)."""
+    Pull each day's six param values, decide completeness in PYTHON, then walk backwards from
+    date_str until the first gap. Returns 0 on any parse/DB issue (fail-safe: no bonus).
+
+    A16-10 ROOT-CAUSE FIX for "[GIFT][POINTS-DEGRADED] ... current transaction is aborted":
+    the previous version filtered `mood > 0 AND ... AND social_belonging > 0` IN SQL. If any of
+    those columns is stored as text on a given database (social_belonging was added later and can
+    end up VARCHAR), Postgres raises `operator does not exist: character varying > integer`. The old
+    except returned 0 WITHOUT rolling back, so the session stayed in an aborted-transaction state and
+    the very next query in the caller (reading daily_gift_log) died with "current transaction is
+    aborted" — the reward degraded to a display-only "+N" and users.points was NEVER credited (box
+    shows +15, admin dashboard stays 0). We now SELECT the raw values (no fragile SQL comparison) and
+    evaluate completeness in Python, so the streak — and the credit that depends on it not poisoning
+    the session — works regardless of column storage type. On any failure we roll back and log."""
     try:
         cur = datetime.strptime(date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
         return 0
     try:
         rows = db.session.execute(
-            select(SavedParameters.date).filter(
-                SavedParameters.user_id == user_id,
-                SavedParameters.mood > 0,
-                SavedParameters.energy > 0,
-                SavedParameters.sleep_quality > 0,
-                SavedParameters.physical_activity > 0,
-                SavedParameters.anxiety > 0,
-                SavedParameters.social_belonging > 0,
-            )
-        ).scalars().all()
-    except Exception:
+            select(
+                SavedParameters.date, SavedParameters.mood, SavedParameters.energy,
+                SavedParameters.sleep_quality, SavedParameters.physical_activity,
+                SavedParameters.anxiety, SavedParameters.social_belonging,
+            ).filter(SavedParameters.user_id == user_id)
+        ).all()
+    except Exception as _streak_err:
+        logger.warning(f"[POINTS] streak query failed for user {user_id} on {date_str} "
+                       f"(continuing WITHOUT streak bonus): {_streak_err}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         return 0
-    completed = set(str(d) for d in rows)
+
+    def _day_complete(vals):
+        # All six values must be present and > 0. int() coercion tolerates values stored as text
+        # ('4') or numbers (4); anything non-numeric or <= 0 means the day is incomplete.
+        for v in vals:
+            try:
+                if v is None or int(v) <= 0:
+                    return False
+            except (ValueError, TypeError):
+                return False
+        return True
+
+    completed = set()
+    for row in rows:
+        d = row[0]
+        if d is not None and _day_complete(row[1:]):
+            completed.add(str(d))
+
     streak = 0
     for _ in range(1000):  # bounded walk (guards against any pathological data)
         if cur.isoformat() in completed:
@@ -15198,6 +15249,12 @@ def _points_balance_from_ledger(user_id):
                 PointsLedger.user_id == user_id)
         ).scalar() or 0
     except Exception:
+        # A16-10: roll back so a failed read here can't leave the session's transaction aborted
+        # and poison the next query (same class of bug as the streak helper above).
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         return 0
 
 
@@ -15211,6 +15268,14 @@ def _award_checkin_points(user_id, date_str):
     with no ledger dependency; the ledger is a best-effort append afterward. Returns True if this
     call newly credited, else False. Never raises to the caller."""
     try:
+        # A16-10: begin from a CLEAN transaction. If anything earlier in this request left the
+        # session in an aborted state, inheriting it here would make every award query fail with
+        # "current transaction is aborted" (the observed POINTS-DEGRADED cause). The check-in row is
+        # already committed by save_parameters, so this rollback cannot lose the report itself.
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         entry = db.session.execute(
             select(SavedParameters).filter(
                 SavedParameters.user_id == user_id, SavedParameters.date == date_str)
@@ -15347,6 +15412,13 @@ def get_daily_gift():
         total_points = 0
         credited_now = False   # did THIS call newly credit points → (best-effort) write a ledger row
         try:
+            # A16-10: clean slate before touching daily_gift_log, so a transaction left aborted by
+            # an earlier query in this request can't make the reveal/credit fail with "current
+            # transaction is aborted" and degrade to a display-only +N.
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             existing = db.session.execute(
                 select(DailyGiftLog).filter(
                     DailyGiftLog.user_id == user_id,
@@ -15694,14 +15766,29 @@ def operator_points_backfill():
     already been rewarded. Safe to run repeatedly: only days with no prior reward are granted, and
     the daily_gift_log (user_id,date) row is the idempotency guard. Operator/admin only."""
     try:
-        # 1. Every completed check-in (all six fields > 0), as (user_id, date).
-        completed = db.session.execute(
-            select(SavedParameters.user_id, SavedParameters.date).filter(
-                SavedParameters.mood > 0, SavedParameters.energy > 0,
-                SavedParameters.sleep_quality > 0, SavedParameters.physical_activity > 0,
-                SavedParameters.anxiety > 0, SavedParameters.social_belonging > 0,
+        # 1. Every completed check-in (all six fields present and > 0), as (user_id, date).
+        # A16-10: evaluate completeness in PYTHON (not via `col > 0` in SQL) so a param column
+        # stored as text (e.g. social_belonging as VARCHAR on some DBs) can't raise
+        # "operator does not exist: character varying > integer" and abort the whole backfill.
+        _bf_rows = db.session.execute(
+            select(
+                SavedParameters.user_id, SavedParameters.date, SavedParameters.mood,
+                SavedParameters.energy, SavedParameters.sleep_quality,
+                SavedParameters.physical_activity, SavedParameters.anxiety,
+                SavedParameters.social_belonging,
             )
         ).all()
+
+        def _bf_complete(vals):
+            for v in vals:
+                try:
+                    if v is None or int(v) <= 0:
+                        return False
+                except (ValueError, TypeError):
+                    return False
+            return True
+
+        completed = [(r[0], r[1]) for r in _bf_rows if _bf_complete(r[2:])]
 
         # 2. Existing daily_gift_log rows: which (user,date) already have points, which exist at 0.
         existing = {}
