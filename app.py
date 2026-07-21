@@ -20569,7 +20569,7 @@ def operator_user_segments():
 
         q = select(
             User.id, User.username, User.selected_city, User.birth_year,
-            User.created_at, User.last_login, User.is_active
+            User.created_at, User.last_login, User.is_active, User.points
         ).filter(User.role == 'user')
 
         for f in scope_filters:
@@ -20600,6 +20600,7 @@ def operator_user_segments():
             'last_login': User.last_login.desc().nullslast() if 'postgresql' in str(db.engine.url) else User.last_login.desc(),
             'username': User.username.asc(),
             'city': User.selected_city.asc(),
+            'points': func.coalesce(User.points, 0).desc(),  # A16: sort by rewards balance
         }
         q = q.order_by(sort_map.get(sort_by, User.created_at.desc()))
 
@@ -20624,7 +20625,8 @@ def operator_user_segments():
                 'age': age,
                 'joined': str(row[4])[:10] if row[4] else None,
                 'last_active': str(row[5])[:10] if row[5] else 'Never',
-                'is_active': row[6]
+                'is_active': row[6],
+                'points': row[7] or 0  # A16: rewards balance
             })
 
         return jsonify({
