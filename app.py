@@ -2,6 +2,53 @@
 """
 Complete app.py for Social Social Platform - V4 10Link — B140 (A8+)
 
+# A16-9 Changes (from A16-8) — MAKE THE FIX DEPLOY-ONLY (no manual SQL):
+#   Added _a16_ensure_points_columns_now(), a dumb/unconditional/loudly-logged migration that runs
+#   the equivalent of the manual ALTERs on every boot (Postgres: ADD COLUMN IF NOT EXISTS; SQLite:
+#   add-if-absent), each in its own autocommit transaction. Wired in as the FIRST step of
+#   _background_init() (gunicorn) and before init_database() in __main__, so commit + deploy is the
+#   only action needed. Every statement logs an [A16 POINTS/deploy] OK/FAILED line and a final
+#   VERIFIED / STILL MISSING summary — so if the ALTER still can't run (e.g. the DB role lacks
+#   ALTER privilege on a copied preview DB), the deploy log names the exact blocker instead of
+#   silently degrading rewards to +0. No manual psql step required in the normal case.
+#
+# A16-8 Changes (from A16-7) — REAL ROOT CAUSE: "gift box shows +15 but the admin
+#   dashboard totals stay 0 for everyone":
+#   SYMPTOM (confirmed by the operator report + isolated reproduction): the reward box flashes
+#     "+15" yet users.points never increases, so /api/operator/segments and the profile counter
+#     show 0. That "+15" is the award path's DEGRADED FALLBACK, not a real credit.
+#   ROOT CAUSE: daily_gift_log was missing the A16 columns opened_at and/or points_awarded on
+#     that database. A table that pre-existed from before A16 is never altered by db.create_all()
+#     (create_all only CREATES missing tables), and ensure_points_schema() latched _completed even
+#     if its ALTER was skipped/failed — so it never retried. Because the DailyGiftLog ORM model
+#     always SELECTs/INSERTs those columns, EVERY award query raises → _award_checkin_points and
+#     get_daily_gift both fall into their except blocks → the box shows the intended +15 with NO
+#     committed credit and total_points=0. Reproduced exactly: "no such column
+#     daily_gift_log.opened_at" → box +15, users.points 0.
+#   FIX: ensure_points_schema() now VERIFIES (fresh inspector) that every target column actually
+#     exists after the ALTERs, and only latches _completed when they do — otherwise it logs a loud
+#     grep-able error with the exact remediation SQL and RETRIES on the next start. Immediate
+#     manual remediation for an already-running DB (Render Shell / psql):
+#       ALTER TABLE daily_gift_log ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP;
+#       ALTER TABLE daily_gift_log ADD COLUMN IF NOT EXISTS points_awarded INTEGER DEFAULT 0;
+#       ALTER TABLE users          ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;
+#     then run the operator "Backfill" button to credit past completed check-ins.
+#
+# A16-7 Changes (from A16-6) — correctness cleanup (NOT the visible symptom): "check-in shows no points":
+#   PROBLEM: After A16 added the guaranteed server-side award (_award_checkin_points, called
+#     from save_parameters), a completed check-in PRE-CREATES the daily_gift_log row before the
+#     frontend gift box ever calls GET /api/gift/daily. get_daily_gift() computed
+#     `already_opened = True` purely from that row EXISTING. So the user's very FIRST open of the
+#     day was reported as already-opened, and the gift box (which only reveals the +points reward
+#     when already_opened is False) showed nothing — "no points" — even though users.points was
+#     correctly credited in the DB. Reproduced in isolation: balance = 15, but first reveal
+#     returned already_opened=True.
+#   FIX: already_opened now reflects whether the user ACTUALLY TAPPED the box (daily_gift_log
+#     .opened_at is set by POST /api/gift/opened), not whether the reward row exists. First open
+#     of the day → already_opened=False → the reward reveals; after the tap → True. No change to
+#     crediting/idempotency (points still awarded exactly once). Three sites in get_daily_gift()
+#     updated (main branch + error fallback).
+
 # B140 / A8+ Changes (from B135 / A8) — EMAIL RELIABILITY BACKSTOP (backend only; HTML/JS
 #   files are unchanged and stay at ?v=B135):
 #   PROBLEM: Alerts were appearing on the home page with no matching email. Root cause: the
@@ -3590,11 +3637,133 @@ def ensure_points_schema():
             except Exception as e:
                 logger.error(f"[A16 POINTS] Error ensuring points_ledger table: {e}")
 
-        ensure_points_schema._completed = True
+            # A16-8 (ROOT-CAUSE FIX for "box shows +N but admin totals stay 0"): VERIFY the
+            # columns actually exist now, using a FRESH inspector (the one above is cached and
+            # still reflects the pre-ALTER state). If daily_gift_log.opened_at / points_awarded
+            # (or users.points) is still missing — e.g. the table pre-existed from before A16 and
+            # an earlier ALTER was skipped/failed — the DailyGiftLog model still SELECTs/INSERTs
+            # those columns, so EVERY award query raises and the reward falls back to a display-only
+            # "+N" while users.points is NEVER credited. In that case we do NOT latch _completed, so
+            # the next process start retries instead of silently leaving rewards broken forever.
+            verify = inspect(db.engine)
+            verify_tables = set(verify.get_table_names())
+            missing_after = []
+            for table, column_name, _t in targets:
+                if table not in verify_tables:
+                    missing_after.append(f"{table}.{column_name} (table absent)")
+                    continue
+                if column_name not in {c['name'] for c in verify.get_columns(table)}:
+                    missing_after.append(f"{table}.{column_name}")
+
+            if missing_after:
+                logger.error(
+                    "[A16 POINTS] SCHEMA INCOMPLETE — still missing %s. The check-in award will "
+                    "DEGRADE to a display-only reward (users.points stays 0, admin dashboard shows "
+                    "0) until these columns exist. Not latching _completed; will retry next start. "
+                    "Immediate fix: ALTER TABLE daily_gift_log ADD COLUMN IF NOT EXISTS opened_at "
+                    "TIMESTAMP; ALTER TABLE daily_gift_log ADD COLUMN IF NOT EXISTS points_awarded "
+                    "INTEGER DEFAULT 0; ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER "
+                    "DEFAULT 0;", missing_after)
+            else:
+                ensure_points_schema._completed = True
+                logger.info("[A16 POINTS] schema verified complete "
+                            "(users.points, daily_gift_log.opened_at, daily_gift_log.points_awarded)")
 
     except Exception as e:
         logger.error(f"[A16 POINTS] Error ensuring points schema: {str(e)}")
         # Don't raise - allow app to start even if this fails
+
+
+def _a16_ensure_points_columns_now():
+    """A16-9: GUARANTEED deploy-time creation of the check-in reward columns.
+
+    WHY THIS EXISTS: on the affected database the gift box shows '+15' but users.points never
+    moves and the admin dashboard shows 0 for everyone. Root cause: daily_gift_log is missing
+    opened_at / points_awarded, so every award query raises and the reward silently degrades to a
+    display-only '+N'. The prior ensure_points_schema() ran at startup (the schedulers came up) yet
+    the columns are still missing — meaning the ALTER itself failed and the error was swallowed.
+
+    This function is deliberately dumb and unconditional so that a single commit + deploy is the
+    ONLY step needed:
+      * It does NOT gate on an inspector (which can false-positive) or on a _completed latch.
+      * On Postgres it runs `ADD COLUMN IF NOT EXISTS` directly (a no-op when the column already
+        exists), each in its OWN autocommit transaction so one failure can't roll back the others.
+      * It LOGS the outcome of every statement with a grep-able [A16 POINTS/deploy] tag, so if a
+        statement still fails (e.g. the DB role lacks ALTER privilege on a copied preview DB), the
+        exact reason is visible in the deploy logs instead of being hidden.
+      * Never raises — cannot block app startup.
+    Runs on every boot; when the columns already exist it is a cheap set of no-ops.
+    """
+    pg_statements = [
+        "ALTER TABLE daily_gift_log ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP",
+        "ALTER TABLE daily_gift_log ADD COLUMN IF NOT EXISTS points_awarded INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0",
+    ]
+    # SQLite has no ADD COLUMN IF NOT EXISTS — add only when the column is absent.
+    sqlite_targets = [
+        ("daily_gift_log", "opened_at", "TIMESTAMP"),
+        ("daily_gift_log", "points_awarded", "INTEGER DEFAULT 0"),
+        ("users", "points", "INTEGER DEFAULT 0"),
+    ]
+    try:
+        with app.app_context():
+            is_pg = 'postgresql' in str(db.engine.url)
+            if is_pg:
+                for stmt in pg_statements:
+                    try:
+                        with db.engine.begin() as conn:
+                            try:
+                                conn.execute(text("SET lock_timeout = '5s'"))
+                            except Exception:
+                                pass
+                            conn.execute(text(stmt))
+                        logger.info(f"[A16 POINTS/deploy] OK: {stmt}")
+                    except Exception as e:
+                        logger.error(f"[A16 POINTS/deploy] FAILED (fix this to restore points): "
+                                     f"{stmt} :: {e}")
+            else:
+                insp = inspect(db.engine)
+                present_tables = set(insp.get_table_names())
+                for table, col, coltype in sqlite_targets:
+                    if table not in present_tables:
+                        logger.info(f"[A16 POINTS/deploy] {table} not present yet (fresh DB); "
+                                    f"model create_all will include {col}")
+                        continue
+                    if col in {c['name'] for c in insp.get_columns(table)}:
+                        logger.info(f"[A16 POINTS/deploy] {table}.{col} already present")
+                        continue
+                    try:
+                        with db.engine.begin() as conn:
+                            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {coltype}"))
+                        logger.info(f"[A16 POINTS/deploy] added {table}.{col}")
+                    except Exception as e:
+                        logger.error(f"[A16 POINTS/deploy] FAILED {table}.{col}: {e}")
+
+            # New table — safe to ensure here as well (checkfirst = no-op if present).
+            try:
+                PointsLedger.__table__.create(bind=db.engine, checkfirst=True)
+                logger.info("[A16 POINTS/deploy] points_ledger table ensured")
+            except Exception as e:
+                logger.error(f"[A16 POINTS/deploy] points_ledger ensure failed: {e}")
+
+            # Final verification so the deploy log states plainly whether points will work now.
+            try:
+                v = inspect(db.engine)
+                vt = set(v.get_table_names())
+                need = [("daily_gift_log", "opened_at"), ("daily_gift_log", "points_awarded"),
+                        ("users", "points")]
+                still_missing = [f"{t}.{c}" for t, c in need
+                                 if t not in vt or c not in {x['name'] for x in v.get_columns(t)}]
+                if still_missing:
+                    logger.error(f"[A16 POINTS/deploy] STILL MISSING after migration: {still_missing} "
+                                 f"— check-in points will remain broken until resolved.")
+                else:
+                    logger.info("[A16 POINTS/deploy] VERIFIED: all reward columns present — "
+                                "check-in points will credit normally.")
+            except Exception as e:
+                logger.error(f"[A16 POINTS/deploy] verification query failed: {e}")
+    except Exception as e:
+        logger.error(f"[A16 POINTS/deploy] fatal (non-blocking): {e}")
 
 
 def ensure_user_consents_schema():
@@ -15185,7 +15354,14 @@ def get_daily_gift():
                 )
             ).scalar_one_or_none()
             if existing:
-                already_opened = True
+                # A16 FIX (root cause of "no points shown on check-in"): the daily_gift_log row
+                # is now PRE-CREATED by the server-side save-time award (_award_checkin_points in
+                # save_parameters), so a row EXISTING no longer means the user has opened the box.
+                # Deriving already_opened from row existence made the very FIRST open of the day
+                # report already_opened=True, so the frontend suppressed the reward reveal and the
+                # user saw no points despite the balance being credited. already_opened must reflect
+                # whether the user actually TAPPED the box (opened_at stamped by /api/gift/opened).
+                already_opened = getattr(existing, 'opened_at', None) is not None
                 if existing.points_awarded:
                     # Already credited — display the STORED award so the breakdown can never
                     # contradict itself if the streak has since changed.
@@ -15244,7 +15420,7 @@ def get_daily_gift():
                 db.session.rollback()
             except Exception:
                 pass
-            already_opened = True  # a concurrent insert likely won the race
+            already_opened = False  # A16 FIX: refined below from opened_at; row existence ≠ opened
             # RESILIENCE: never show a confusing "+0" for an eligible check-in. If we can read the
             # real persisted award, show it. Otherwise DISPLAY the intended reward (base + bonus,
             # always >= the base) so the user still sees what they earned — but do NOT assert a
@@ -15257,6 +15433,8 @@ def get_daily_gift():
                         DailyGiftLog.date == today_str
                     )
                 ).scalar_one_or_none()
+                # A16 FIX: only "already opened" if the user actually tapped it (opened_at set).
+                already_opened = getattr(row, 'opened_at', None) is not None
                 persisted = (row.points_awarded or 0) if row is not None else 0
                 if persisted:
                     awarded_points = persisted
@@ -25274,6 +25452,10 @@ def _background_init():
     """Run heavy initialization in background so health checks pass immediately"""
     global _init_complete
     try:
+        # A16-9: run the reward-column migration FIRST and unconditionally, so a single deploy
+        # fixes "box shows +15 but admin totals stay 0" even if the heavier init_database() below
+        # has an issue. Idempotent no-op once the columns exist; logs [A16 POINTS/deploy] outcome.
+        _a16_ensure_points_columns_now()
         init_database()
         with _init_lock:
             _init_complete = True
@@ -25286,6 +25468,7 @@ def _background_init():
 
 if __name__ == '__main__':
     # Initialize database
+    _a16_ensure_points_columns_now()  # A16-9: guarantee reward columns on local/dev runs too
     init_database()
     migrate_circle_names()
     # data time
