@@ -15089,6 +15089,7 @@ def get_daily_gift():
         already_opened = False
         awarded_points = earn
         total_points = 0
+        credited_now = False   # did THIS call newly credit points → (best-effort) write a ledger row
         try:
             existing = db.session.execute(
                 select(DailyGiftLog).filter(
@@ -15106,8 +15107,7 @@ def get_daily_gift():
                 else:
                     # Back-fill a legacy row (created before the rewards system) ATOMICALLY:
                     # the conditional UPDATE lets exactly one concurrent request win
-                    # (rowcount == 1), and only the winner credits the balance — with an in-DB
-                    # increment, so there is no read-modify-write double-credit race.
+                    # (rowcount == 1), and only the winner credits the balance.
                     upd = db.session.execute(
                         update(DailyGiftLog)
                         .where(DailyGiftLog.id == existing.id,
@@ -15117,8 +15117,15 @@ def get_daily_gift():
                         .execution_options(synchronize_session=False)
                     )
                     if upd.rowcount == 1:
-                        # Ledger + cached balance, one transaction (see _points_grant).
-                        _points_grant(user_id, today_str, _award_entries(bonus))
+                        # GUARANTEED credit: bump the cached balance in the SAME transaction as the
+                        # daily_gift_log row — NO dependency on the ledger table, so points persist
+                        # even if the (best-effort) ledger write below later fails.
+                        db.session.execute(
+                            update(User).where(User.id == user_id)
+                            .values(points=func.coalesce(User.points, 0) + earn)
+                            .execution_options(synchronize_session=False)
+                        )
+                        credited_now = True
                     db.session.commit()
                     awarded_points = earn
             else:
@@ -15128,8 +15135,13 @@ def get_daily_gift():
                 # Surface the UNIQUE(user_id, date) race HERE (before crediting): a losing
                 # concurrent insert raises IntegrityError → except → rollback → no credit.
                 db.session.flush()
-                # Ledger + cached balance, same transaction as the reveal row above.
-                _points_grant(user_id, today_str, _award_entries(bonus))
+                # GUARANTEED credit (cached balance) in the same transaction as the reveal row.
+                db.session.execute(
+                    update(User).where(User.id == user_id)
+                    .values(points=func.coalesce(User.points, 0) + earn)
+                    .execution_options(synchronize_session=False)
+                )
+                credited_now = True
                 db.session.commit()
                 awarded_points = earn
             # Read the authoritative balance for display (post-commit reload is fresh).
@@ -15176,6 +15188,26 @@ def get_daily_gift():
                     pass
                 awarded_points = earn       # still show the earned amount, never 0
                 total_points = 0
+
+        # A16 (hybrid): best-effort append to the points ledger, in its OWN transaction AFTER the
+        # balance is already safely committed above. If the ledger table is missing or the write
+        # fails, the user KEEPS their points (users.points is what the app reads for the balance) —
+        # we only log a reconcilable miss. This decoupling is what prevents a ledger problem from
+        # zeroing out rewards for everyone.
+        if credited_now:
+            try:
+                for amount, reason in _award_entries(bonus):
+                    db.session.add(PointsLedger(user_id=user_id, date=today_str,
+                                                amount=amount, reason=reason))
+                db.session.commit()
+            except Exception as ledger_err:
+                logger.error(f"[GIFT][LEDGER-MISS] points credited but ledger row NOT written for "
+                             f"user {user_id} on {today_str} (balance is correct; ledger is "
+                             f"reconcilable): {ledger_err}")
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
 
         return _gift_json({
             'eligible': True,
@@ -15251,6 +15283,130 @@ def mark_gift_opened():
         except Exception:
             pass
         return _gift_json({'ok': False})
+
+
+@app.route('/api/operator/points')
+@operator_required
+def operator_points():
+    """A16: operator view of every user's points balance, plus a schema self-check so a missing
+    column/table is obvious at a glance (this is what silently zeroes rewards). Read-only."""
+    try:
+        insp = inspect(db.engine)
+        table_names = set(insp.get_table_names())
+        user_cols = {c['name'] for c in insp.get_columns('users')} if 'users' in table_names else set()
+        gift_cols = {c['name'] for c in insp.get_columns('daily_gift_log')} if 'daily_gift_log' in table_names else set()
+        schema = {
+            'users.points': 'points' in user_cols,
+            'daily_gift_log.opened_at': 'opened_at' in gift_cols,
+            'daily_gift_log.points_awarded': 'points_awarded' in gift_cols,
+            'points_ledger': 'points_ledger' in table_names,
+        }
+
+        users = []
+        total_points = 0
+        if schema['users.points']:
+            rows = db.session.execute(
+                select(User.id, User.username, User.email, User.points)
+                .order_by(func.coalesce(User.points, 0).desc(), User.username)
+            ).all()
+            for r in rows:
+                p = r.points or 0
+                users.append({'id': r.id, 'username': r.username, 'email': r.email, 'points': p})
+                total_points += p
+
+        ledger_total = None  # None = couldn't read (table missing or error)
+        if schema['points_ledger']:
+            try:
+                ledger_total = int(db.session.execute(
+                    select(func.coalesce(func.sum(PointsLedger.amount), 0))
+                ).scalar() or 0)
+            except Exception:
+                ledger_total = None
+
+        return jsonify({
+            'schema': schema,
+            'total_users': len(users),
+            'total_points': total_points,
+            'ledger_total': ledger_total,   # should equal total_points when the ledger is healthy
+            'users': users
+        })
+    except Exception as e:
+        logger.error(f"[OPERATOR POINTS] error: {e}")
+        return jsonify({'error': 'points_unavailable'}), 500
+
+
+@app.route('/operator/points')
+@operator_required
+def operator_points_page():
+    """A16: a simple, self-contained operator page listing every user's points — so you can see
+    balances (and the schema health check) in the browser without the shell. Operator-only."""
+    html = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Points — Operator</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0;background:#f4f5f7;color:#1f2937}
+  .wrap{max-width:900px;margin:0 auto;padding:20px}
+  h1{font-size:1.4rem;margin:0 0 4px}
+  .sub{color:#6b7280;font-size:.9rem;margin:0 0 16px}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .card{background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 1px 4px rgba(0,0,0,.08);min-width:120px}
+  .card .n{font-size:1.6rem;font-weight:800}
+  .card .l{color:#6b7280;font-size:.78rem;text-transform:uppercase;letter-spacing:.03em}
+  .schema{background:#fff;border-radius:12px;padding:12px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:16px;font-size:.9rem}
+  .schema b{display:block;margin-bottom:6px}
+  .ok{color:#059669;font-weight:700}.bad{color:#dc2626;font-weight:700}
+  input{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;margin-bottom:12px;box-sizing:border-box}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid #f0f1f3;font-size:.92rem}
+  th{background:#fafafa;font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;color:#6b7280}
+  td.pts{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  .muted{color:#9ca3af}
+  button{padding:8px 14px;border:none;border-radius:8px;background:#6B8BA4;color:#fff;font-weight:600;cursor:pointer}
+</style></head>
+<body><div class="wrap">
+  <h1>Points — all accounts</h1>
+  <p class="sub">Operator view · balances come from <code>users.points</code> · <button onclick="load()">Refresh</button></p>
+  <div id="schema" class="schema">Loading…</div>
+  <div class="cards">
+    <div class="card"><div class="n" id="cUsers">–</div><div class="l">Users</div></div>
+    <div class="card"><div class="n" id="cPoints">–</div><div class="l">Total points</div></div>
+    <div class="card"><div class="n" id="cLedger">–</div><div class="l">Ledger total</div></div>
+  </div>
+  <input id="q" placeholder="Filter by username or email…" oninput="render()">
+  <table><thead><tr><th>#</th><th>Username</th><th>Email</th><th class="pts">Points</th></tr></thead>
+  <tbody id="rows"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody></table>
+</div>
+<script>
+var DATA = {users:[]};
+function esc(s){var d=document.createElement('div');d.textContent=(s==null?'':String(s));return d.innerHTML;}
+function render(){
+  var q=(document.getElementById('q').value||'').toLowerCase();
+  var list=DATA.users.filter(function(u){return !q||((u.username||'').toLowerCase().indexOf(q)>=0)||((u.email||'').toLowerCase().indexOf(q)>=0);});
+  var tb=document.getElementById('rows');
+  if(!list.length){tb.innerHTML='<tr><td colspan="4" class="muted">No users.</td></tr>';return;}
+  tb.innerHTML=list.map(function(u,i){return '<tr><td class="muted">'+(i+1)+'</td><td>'+esc(u.username)+'</td><td class="muted">'+esc(u.email)+'</td><td class="pts">'+(u.points||0)+'</td></tr>';}).join('');
+}
+function schemaRow(k,v){return '<span class="'+(v?'ok':'bad')+'">'+(v?'✓':'✗')+' '+k+'</span>';}
+function load(){
+  fetch('/api/operator/points',{credentials:'include'}).then(function(r){return r.ok?r.json():Promise.reject(r.status);}).then(function(d){
+    DATA=d;
+    document.getElementById('cUsers').textContent=d.total_users;
+    document.getElementById('cPoints').textContent=d.total_points;
+    document.getElementById('cLedger').textContent=(d.ledger_total==null?'n/a':d.ledger_total);
+    var s=d.schema||{};
+    var allOk=Object.keys(s).every(function(k){return s[k];});
+    document.getElementById('schema').innerHTML='<b>Schema health '+(allOk?'<span class="ok">— all present</span>':'<span class="bad">— something is MISSING (this zeroes rewards)</span>')+'</b>'+
+      ['users.points','daily_gift_log.opened_at','daily_gift_log.points_awarded','points_ledger'].map(function(k){return schemaRow(k,!!s[k]);}).join(' &nbsp; ')+
+      (d.ledger_total!=null&&d.ledger_total!==d.total_points?'<div style="margin-top:6px" class="bad">⚠ ledger_total ('+d.ledger_total+') ≠ total_points ('+d.total_points+') — some ledger rows are missing (balances are still correct).</div>':'');
+    render();
+  }).catch(function(e){document.getElementById('schema').innerHTML='<span class="bad">Error loading ('+e+'). Are you logged in as an operator?</span>';});
+}
+load();
+</script>
+</body></html>"""
+    return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 
 @app.route('/api/operator/gift-metrics')
