@@ -13081,7 +13081,16 @@ def save_parameters():
         
         # PJ809: Log parameter values before trigger check
         logger.info(f"[SAVE PARAMS] Saved: mood={params.mood}, energy={params.energy}, sleep={params.sleep_quality}, activity={params.physical_activity}, anxiety={params.anxiety}, belonging={getattr(params, 'social_belonging', None)}")
-        
+
+        # A16: award check-in points SERVER-SIDE, right here on save — the GUARANTEED path.
+        # This no longer depends on the frontend gift box calling /api/gift/daily; any completed
+        # check-in, from any page, credits immediately. Idempotent (daily_gift_log guards the day),
+        # so the gift box calling get_daily_gift afterward will not double-credit. Never fatal.
+        try:
+            _award_checkin_points(user_id, date_str)
+        except Exception as _award_err:
+            logger.error(f"[SAVE PARAMS] points award error (non-fatal): {_award_err}")
+
         # PJ6006: Run trigger processing in background thread to avoid blocking response
         # This prevents the 5+ second delay when multiple alert emails need to be sent
         logger.info(f"[SAVE PARAMS] Creating background job for trigger processing user_id={user_id}")
@@ -15023,6 +15032,84 @@ def _points_balance_from_ledger(user_id):
         return 0
 
 
+def _award_checkin_points(user_id, date_str):
+    """A16: award points for a COMPLETED check-in on date_str — the SERVER-SIDE, guaranteed path.
+
+    Called directly from save_parameters() so a completed check-in ALWAYS credits, independent of
+    whether the frontend gift box ever calls /api/gift/daily. Idempotent: the daily_gift_log
+    (user_id, date) row guards against a second credit, so get_daily_gift() calling it again for
+    the box display cannot double-award. Two-phase: the balance (users.points) is committed first
+    with no ledger dependency; the ledger is a best-effort append afterward. Returns True if this
+    call newly credited, else False. Never raises to the caller."""
+    try:
+        entry = db.session.execute(
+            select(SavedParameters).filter(
+                SavedParameters.user_id == user_id, SavedParameters.date == date_str)
+        ).scalar_one_or_none()
+        if not _gift_is_report_complete(entry):
+            return False
+
+        streak = _checkin_streak(user_id, date_str)
+        bonus = GIFT_STREAK_BONUS if streak >= 2 else 0
+        earn = GIFT_CHECKIN_POINTS + bonus
+        credited_now = False
+
+        existing = db.session.execute(
+            select(DailyGiftLog).filter(
+                DailyGiftLog.user_id == user_id, DailyGiftLog.date == date_str)
+        ).scalar_one_or_none()
+        if existing:
+            if existing.points_awarded:
+                return False  # already credited for this day
+            upd = db.session.execute(
+                update(DailyGiftLog)
+                .where(DailyGiftLog.id == existing.id,
+                       or_(DailyGiftLog.points_awarded.is_(None), DailyGiftLog.points_awarded == 0))
+                .values(points_awarded=earn)
+                .execution_options(synchronize_session=False))
+            if upd.rowcount == 1:
+                db.session.execute(update(User).where(User.id == user_id)
+                    .values(points=func.coalesce(User.points, 0) + earn)
+                    .execution_options(synchronize_session=False))
+                credited_now = True
+            db.session.commit()
+        else:
+            db.session.add(DailyGiftLog(user_id=user_id, date=date_str,
+                                        gift_id=_gift_for(user_id, date_str)['id'],
+                                        points_awarded=earn))
+            db.session.flush()  # surface the UNIQUE(user_id,date) race before crediting
+            db.session.execute(update(User).where(User.id == user_id)
+                .values(points=func.coalesce(User.points, 0) + earn)
+                .execution_options(synchronize_session=False))
+            credited_now = True
+            db.session.commit()
+
+        if credited_now:
+            logger.info(f"[POINTS] credited {earn} to user {user_id} for check-in {date_str}")
+            try:
+                entries = [(GIFT_CHECKIN_POINTS, 'checkin')] + ([(bonus, 'streak_bonus')] if bonus else [])
+                for amount, reason in entries:
+                    db.session.add(PointsLedger(user_id=user_id, date=date_str,
+                                                amount=amount, reason=reason))
+                db.session.commit()
+            except Exception as ledger_err:
+                logger.error(f"[GIFT][LEDGER-MISS] user {user_id} {date_str} "
+                             f"(balance correct, ledger reconcilable): {ledger_err}")
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+        return credited_now
+    except Exception as e:
+        logger.error(f"[GIFT][POINTS-DEGRADED] server-side award failed for user {user_id} on "
+                     f"{date_str}: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return False
+
+
 @app.route('/api/gift/daily')
 @login_required
 def get_daily_gift():
@@ -15367,7 +15454,9 @@ def operator_points_page():
 </style></head>
 <body><div class="wrap">
   <h1>Points — all accounts</h1>
-  <p class="sub">Operator view · balances come from <code>users.points</code> · <button onclick="load()">Refresh</button></p>
+  <p class="sub">Operator view · balances come from <code>users.points</code> · <button onclick="load()">Refresh</button>
+     &nbsp; <button onclick="backfill()" style="background:#8B6BA4">Backfill from check-in history</button></p>
+  <div id="backfillMsg" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;font-size:.9rem"></div>
   <div id="schema" class="schema">Loading…</div>
   <div class="cards">
     <div class="card"><div class="n" id="cUsers">–</div><div class="l">Users</div></div>
@@ -15403,10 +15492,110 @@ function load(){
     render();
   }).catch(function(e){document.getElementById('schema').innerHTML='<span class="bad">Error loading ('+e+'). Are you logged in as an operator?</span>';});
 }
+function backfill(){
+  if(!confirm('Grant 15 points for every past completed check-in that has not already been rewarded? This is safe to run more than once.'))return;
+  var m=document.getElementById('backfillMsg');
+  m.style.display='block';m.style.background='#fef3c7';m.style.color='#92400e';m.textContent='Backfilling… (this can take a moment)';
+  fetch('/api/operator/points/backfill',{method:'POST',credentials:'include'}).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){m.style.background='#d1fae5';m.style.color='#065f46';m.textContent='✓ Granted '+d.points_granted+' points across '+d.users_credited+' users ('+d.days_rewarded+' past check-in days). Reloading…';setTimeout(load,900);}
+    else{m.style.background='#fee2e2';m.style.color='#991b1b';m.textContent='✗ Backfill failed: '+(d.error||'unknown');}
+  }).catch(function(e){m.style.background='#fee2e2';m.style.color='#991b1b';m.textContent='✗ Backfill error: '+e;});
+}
 load();
 </script>
 </body></html>"""
     return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
+
+
+@app.route('/api/operator/points/backfill', methods=['POST'])
+@operator_required
+def operator_points_backfill():
+    """A16: ONE-TIME (idempotent) grant of points for PAST completed check-ins, so existing users
+    immediately show balances that reflect their history — points are otherwise only granted on a
+    NEW check-in going forward. Awards GIFT_CHECKIN_POINTS (15) per completed day that hasn't
+    already been rewarded. Safe to run repeatedly: only days with no prior reward are granted, and
+    the daily_gift_log (user_id,date) row is the idempotency guard. Operator/admin only."""
+    try:
+        # 1. Every completed check-in (all six fields > 0), as (user_id, date).
+        completed = db.session.execute(
+            select(SavedParameters.user_id, SavedParameters.date).filter(
+                SavedParameters.mood > 0, SavedParameters.energy > 0,
+                SavedParameters.sleep_quality > 0, SavedParameters.physical_activity > 0,
+                SavedParameters.anxiety > 0, SavedParameters.social_belonging > 0,
+            )
+        ).all()
+
+        # 2. Existing daily_gift_log rows: which (user,date) already have points, which exist at 0.
+        existing = {}
+        for row in db.session.execute(
+            select(DailyGiftLog.user_id, DailyGiftLog.date, DailyGiftLog.points_awarded)
+        ).all():
+            existing[(row[0], row[1])] = row[2] or 0
+
+        per_user = {}
+        days_rewarded = 0
+        for user_id, date in completed:
+            key = (user_id, date)
+            prior = existing.get(key)
+            if prior:            # already rewarded (>0) → skip (idempotent)
+                continue
+            if prior == 0 and key in existing:
+                # a reveal row exists but was never credited → back-fill its points_awarded
+                db.session.execute(
+                    update(DailyGiftLog)
+                    .where(DailyGiftLog.user_id == user_id, DailyGiftLog.date == date,
+                           or_(DailyGiftLog.points_awarded.is_(None), DailyGiftLog.points_awarded == 0))
+                    .values(points_awarded=GIFT_CHECKIN_POINTS)
+                    .execution_options(synchronize_session=False)
+                )
+            else:
+                # no row for that completed day → create one, marked as rewarded
+                db.session.add(DailyGiftLog(
+                    user_id=user_id, date=date,
+                    gift_id=_gift_for(user_id, date)['id'],
+                    points_awarded=GIFT_CHECKIN_POINTS))
+            existing[key] = GIFT_CHECKIN_POINTS
+            per_user[user_id] = per_user.get(user_id, 0) + GIFT_CHECKIN_POINTS
+            days_rewarded += 1
+
+        # 3. Credit balances in the SAME transaction as the reward rows (atomic).
+        for user_id, pts in per_user.items():
+            db.session.execute(
+                update(User).where(User.id == user_id)
+                .values(points=func.coalesce(User.points, 0) + pts)
+                .execution_options(synchronize_session=False)
+            )
+        db.session.commit()
+
+        # 4. Best-effort ledger summary rows (balances are already committed and correct).
+        try:
+            today_iso = datetime.now().date().isoformat()
+            for user_id, pts in per_user.items():
+                db.session.add(PointsLedger(user_id=user_id, date=today_iso,
+                                            amount=pts, reason='checkin_backfill'))
+            db.session.commit()
+        except Exception as ledger_err:
+            logger.error(f"[BACKFILL] ledger write skipped (balances correct): {ledger_err}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+        logger.info(f"[BACKFILL] credited {len(per_user)} users, {days_rewarded} days, "
+                    f"{sum(per_user.values())} points")
+        return jsonify({
+            'ok': True,
+            'users_credited': len(per_user),
+            'days_rewarded': days_rewarded,
+            'points_granted': sum(per_user.values())
+        })
+    except Exception as e:
+        logger.error(f"[BACKFILL] error: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({'ok': False, 'error': str(e)[:300]}), 500
 
 
 @app.route('/api/operator/gift-metrics')
