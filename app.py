@@ -3544,8 +3544,13 @@ def ensure_points_schema():
             is_postgres = 'postgresql' in str(db.engine.url)
             table_names = set(inspector.get_table_names())
             # (table, column, type) — additive, defaulted so existing rows backfill to 0.
+            # NOTE: daily_gift_log.opened_at is a B150 column whose ONLY migration lived in the
+            # never-called auto_migrate_database(); on databases provisioned without it, the
+            # DailyGiftLog model still SELECTs it, so EVERY gift query aborts the transaction and
+            # the reward silently falls back to +0. Ensuring it here fixes that root cause.
             targets = [
                 ('users', 'points', 'INTEGER DEFAULT 0'),
+                ('daily_gift_log', 'opened_at', 'TIMESTAMP'),
                 ('daily_gift_log', 'points_awarded', 'INTEGER DEFAULT 0'),
             ]
             for table, column_name, column_type in targets:
@@ -15131,14 +15136,21 @@ def get_daily_gift():
             u = db.session.get(User, user_id)
             total_points = (u.points or 0) if u is not None else 0
         except Exception as log_err:
-            logger.warning(f"[GIFT] Could not record gift reveal / award points: {log_err}")
+            # Loud, grep-able alarm: a completed check-in did NOT get its points committed. This
+            # should not happen once the schema is correct; if it recurs, investigate the DB.
+            logger.error(f"[GIFT][POINTS-DEGRADED] award did not persist for user {user_id} on "
+                         f"{today_str}; showing the intended reward WITHOUT a committed credit — "
+                         f"investigate DB/schema: {log_err}")
             try:
                 db.session.rollback()
             except Exception:
                 pass
             already_opened = True  # a concurrent insert likely won the race
-            # Best-effort accurate display after a race/failure: reflect persisted state so the
-            # box never shows points that weren't actually credited.
+            # RESILIENCE: never show a confusing "+0" for an eligible check-in. If we can read the
+            # real persisted award, show it. Otherwise DISPLAY the intended reward (base + bonus,
+            # always >= the base) so the user still sees what they earned — but do NOT assert a
+            # running total we couldn't verify: total_points stays 0, which makes the box hide the
+            # "Your total" line rather than show a wrong number.
             try:
                 row = db.session.execute(
                     select(DailyGiftLog).filter(
@@ -15146,13 +15158,23 @@ def get_daily_gift():
                         DailyGiftLog.date == today_str
                     )
                 ).scalar_one_or_none()
-                awarded_points = (row.points_awarded or 0) if row is not None else 0
-                if awarded_points:
+                persisted = (row.points_awarded or 0) if row is not None else 0
+                if persisted:
+                    awarded_points = persisted
                     bonus = max(0, awarded_points - GIFT_CHECKIN_POINTS)
-                u2 = db.session.get(User, user_id)
-                total_points = (u2.points or 0) if u2 is not None else 0
+                    u2 = db.session.get(User, user_id)
+                    total_points = (u2.points or 0) if u2 is not None else 0
+                else:
+                    awarded_points = earn   # intended reward, never a confusing 0
+                    total_points = 0        # uncommitted/unknown → box hides the total line
             except Exception:
-                awarded_points = 0
+                # Roll back again so a still-failing query cannot leave this pooled DB connection
+                # aborted and break the NEXT request that reuses it ("transaction is aborted").
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                awarded_points = earn       # still show the earned amount, never 0
                 total_points = 0
 
         return _gift_json({
