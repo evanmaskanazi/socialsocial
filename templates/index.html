@@ -6617,6 +6617,7 @@
                                           <option value="last_login" data-i18n="operator.sort_recent">Recently active</option>
                                           <option value="username" data-i18n="operator.sort_name">By name</option>
                                           <option value="city" data-i18n="operator.sort_city">By city</option>
+                                          <option value="points" data-i18n="operator.sort_points">Most points</option>
                                       </select>
                                   </div>
                                   <!-- Table -->
@@ -6629,10 +6630,11 @@
                                                   <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_age">Age</th>
                                                   <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_joined">Joined</th>
                                                   <th style="text-align: start; padding: 6px 8px;" data-i18n="operator.col_last_active">Last Active</th>
+                                                  <th style="text-align: end; padding: 6px 8px;" data-i18n="operator.col_points">Points</th>
                                               </tr>
                                           </thead>
                                           <tbody id="opSegmentsBody">
-                                              <tr><td colspan="5" style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</td></tr>
+                                              <tr><td colspan="6" style="text-align: center; padding: 20px; color: #aaa;" data-i18n="operator.loading">Loading...</td></tr>
                                           </tbody>
                                       </table>
                                   </div>
@@ -7929,28 +7931,36 @@
                 'profile.points_unit': 'points',
                 'profile.store': 'Store',
                 'profile.coming_soon': 'Coming soon',
-                'profile.store_msg': 'The points store is coming soon!'
+                'profile.store_msg': 'The points store is coming soon!',
+                'operator.col_points': 'Points',
+                'operator.sort_points': 'Most points'
             },
             he: {
                 'profile.points_label': 'הנקודות שלך',
                 'profile.points_unit': 'נקודות',
                 'profile.store': 'חנות',
                 'profile.coming_soon': 'בקרוב',
-                'profile.store_msg': 'חנות הנקודות תגיע בקרוב!'
+                'profile.store_msg': 'חנות הנקודות תגיע בקרוב!',
+                'operator.col_points': 'נקודות',
+                'operator.sort_points': 'הכי הרבה נקודות'
             },
             ar: {
                 'profile.points_label': 'نقاطك',
                 'profile.points_unit': 'نقاط',
                 'profile.store': 'المتجر',
                 'profile.coming_soon': 'قريباً',
-                'profile.store_msg': 'متجر النقاط قادم قريباً!'
+                'profile.store_msg': 'متجر النقاط قادم قريباً!',
+                'operator.col_points': 'النقاط',
+                'operator.sort_points': 'الأكثر نقاطاً'
             },
             ru: {
                 'profile.points_label': 'Ваши очки',
                 'profile.points_unit': 'очков',
                 'profile.store': 'Магазин',
                 'profile.coming_soon': 'Скоро',
-                'profile.store_msg': 'Магазин очков скоро появится!'
+                'profile.store_msg': 'Магазин очков скоро появится!',
+                'operator.col_points': 'Очки',
+                'operator.sort_points': 'Больше всего очков'
             }
         };
         function extendI18nPoints() {
@@ -19878,7 +19888,7 @@ async function loadOperatorSegments(page) {
         if (!tbody) return;
 
         if (!data.users || data.users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #aaa;">' + _t('operator.no_data', 'No data available') + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #aaa;">' + _t('operator.no_data', 'No data available') + '</td></tr>';
         } else {
             tbody.innerHTML = data.users.map(u =>
                 '<tr style="border-bottom: 1px solid var(--border);">' +
@@ -19887,6 +19897,7 @@ async function loadOperatorSegments(page) {
                 '<td style="padding: 6px 8px;">' + (u.age || '—') + '</td>' +
                 '<td style="padding: 6px 8px;">' + (u.joined || '—') + '</td>' +
                 '<td style="padding: 6px 8px;">' + (u.last_active || '—') + '</td>' +
+                '<td style="padding: 6px 8px; text-align: end; font-weight: 700; font-variant-numeric: tabular-nums;">' + (u.points || 0) + '</td>' +
                 '</tr>'
             ).join('');
         }
