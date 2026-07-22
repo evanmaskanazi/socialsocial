@@ -682,11 +682,15 @@ window._applyAnxietyDisplayMode = function() {
     });
 
     // If diary data is already loaded, re-transform the selected anxiety button
-    if (window.selectedRatings && window.selectedRatings.anxiety) {
-        const displayVal = window.anxietyToDisplay(window.selectedRatings.anxiety);
-        if (displayVal !== window.selectedRatings.anxiety) {
+    // A21 (dormant-bug fix): use the in-scope module variable `selectedRatings`. This guard
+    // previously read `window.selectedRatings`, which is never assigned, so in calm mode the
+    // already-loaded anxiety button was never re-mapped to its calm display value when the
+    // trigger-settings config resolved after the auto-load (config race → wrong button shown).
+    if (selectedRatings && selectedRatings.anxiety) {
+        const displayVal = window.anxietyToDisplay(selectedRatings.anxiety);
+        if (displayVal !== selectedRatings.anxiety) {
             // The stored value was loaded raw; re-select with the display value
-            window.selectedRatings.anxiety = displayVal;
+            selectedRatings.anxiety = displayVal;
             selectRating('anxiety', displayVal);
         }
     }
@@ -2920,6 +2924,10 @@ function selectDate(date) {
 }
 
 function previousMonth() {
+    // A21 (dormant-bug fix): pin to day 1 before shifting the month. Without this, on the
+    // 29th–31st, setMonth() rolls over a shorter target month (e.g. "Feb 31" → Mar 3), silently
+    // skipping the month the user asked for.
+    currentDate.setDate(1);
     currentDate.setMonth(currentDate.getMonth() - 1);
     updateCalendar();
 
@@ -2947,6 +2955,9 @@ function nextMonth() {
         return;
     }
 
+    // A21 (dormant-bug fix): pin to day 1 before shifting the month (see previousMonth) so a
+    // day 29–31 current date can't roll past a shorter target month and skip it.
+    currentDate.setDate(1);
     currentDate.setMonth(currentDate.getMonth() + 1);
     updateCalendar();
 
@@ -2963,7 +2974,9 @@ function selectRating(categoryId, value) {
     // Update UI
     const buttons = document.querySelectorAll(`#${categoryId}-buttons .rating-button`);
     buttons.forEach(btn => {
-        if (parseInt(btn.dataset.value) === value) {
+        // A21 (dormant-bug fix): coerce `value` too, so a rating that arrives from the API as a
+        // string ("3") still matches its button (parseInt(dataset.value) === parseInt(value)).
+        if (parseInt(btn.dataset.value) === parseInt(value)) {
             btn.classList.add('selected');
         } else {
             btn.classList.remove('selected');

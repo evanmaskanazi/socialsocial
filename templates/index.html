@@ -1,4 +1,19 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B170 (A21) -->
+<!-- B170 (A21): Cache-bust sync — all active JS ?v bumped B165→B170 in lockstep across the
+  three pages (circles-messages.js and parameters-social.js changed this round; i18n.js is
+  unchanged but bumped in lockstep per the repo's cache-bust convention, so no page can end up on
+  a mismatched set). Functional changes in THIS file are all additive/non-invasive:
+    • block/unblock dialogs fall back to selectedLanguage (were always English for he/ar/ru
+      because nothing writes 'preferredLanguage');
+    • stored-XSS hardening on un-migrated render copies that still built innerHTML from user data:
+      loadComments, the two feed renderers (post category/content/mood), the connection-requests
+      list, the recommended-connections list, and the message user-search (also fixes a quote in a
+      username breaking its onclick);
+    • date correctness: the feed and in-page diary calendar now format the selected day with the
+      new _localDateStrOf() (local components) instead of toISOString() (UTC), which shifted the
+      day backward for UTC+ users near midnight so posts saved/loaded under the wrong calendar day.
+  No control flow or existing behavior changed beyond these fixes. -->
 <!-- B165 (A16 audit fix): all JS ?v bumped B160→B165 in lockstep across the three pages.
   Regression/robustness fixes from the A16 self-audit: (1) REMOVED the keyboard-hide rule that
   wrongly pushed the TOP sticky nav down into content (it assumed a bottom nav) and its
@@ -588,10 +603,10 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
-   <script src="/static/js/utilities.js?v=B165"></script>
+   <script src="/static/js/utilities.js?v=B170"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B165"></script>
-    <script src="/static/js/follow-requests.js?v=B165"></script>
+    <script src="/static/js/triggers.js?v=B170"></script>
+    <script src="/static/js/follow-requests.js?v=B170"></script>
 
 
     <style>
@@ -7798,7 +7813,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B165"></script>
+    <script src="/static/js/i18n.js?v=B170"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8151,9 +8166,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B165"></script>
-   <script src="/static/js/circles-messages.js?v=B165"></script>
-<script src="/static/js/feed-updates.js?v=B165"></script>
+<script src="/static/js/parameters-social.js?v=B170"></script>
+   <script src="/static/js/circles-messages.js?v=B170"></script>
+<script src="/static/js/feed-updates.js?v=B170"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -10666,12 +10681,12 @@ function loadUserRecommendations() {
                     <div class="user-card">
                         <div style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;" onclick="viewUserProfileFromInvite(${user.id})">
                             <div class="user-avatar" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">
-                                ${user.username.charAt(0).toUpperCase()}
+                                ${escapeHtml(String(user.username || 'U').charAt(0).toUpperCase())}
                             </div>
                             <div class="user-info">
-                                <div class="user-name">${user.username}</div>
-                                ${user.reason ? `<div style="font-size: 12px; color: var(--gray);">${user.reason}</div>` : ''}
-                                ${user.location ? `<div class="user-location">📍 ${user.location}</div>` : ''}
+                                <div class="user-name">${escapeHtml(user.username || '')}</div>
+                                ${user.reason ? `<div style="font-size: 12px; color: var(--gray);">${escapeHtml(user.reason)}</div>` : ''}
+                                ${user.location ? `<div class="user-location">📍 ${escapeHtml(user.location)}</div>` : ''}
                             </div>
                         </div>
                         <button class="follow-btn" onclick="sendFollowRequestFromInvite(${user.id})">
@@ -10870,12 +10885,12 @@ async function searchUsersToInviteInstant(query) {
                         <div class="search-result-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
                             <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromInviteSearch(${user.id})">
                                 <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
-                                    ${user.username.charAt(0).toUpperCase()}
+                                    ${escapeHtml(String(user.username || 'U').charAt(0).toUpperCase())}
                                 </div>
                                 <div>
-                                    <strong style="display: block;">${user.username}</strong>
+                                    <strong style="display: block;">${escapeHtml(user.username || '')}</strong>
                                     ${reason ? `<small style="color: var(--gray);">${reason}</small><br>` : ''}
-                                    ${user.selected_city ? `<small style="color: #6B7280;">📍 ${user.selected_city}</small>` : ''}
+                                    ${user.selected_city ? `<small style="color: #6B7280;">📍 ${escapeHtml(user.selected_city)}</small>` : ''}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -11075,7 +11090,7 @@ window.sendFollowRequestFromInviteSearch = sendFollowRequestFromInviteSearch;
             updateFeedSelectedDateDisplay();
 
             // Format date as string for API calls
-            const dateStr = feedSelectedDate.toISOString().split('T')[0];
+            const dateStr = _localDateStrOf(feedSelectedDate);
 
             // Check if viewing another user's feed
             if (viewingUserId !== null && viewingUserId !== currentUserId) {
@@ -11125,12 +11140,12 @@ async function loadUserFeedForDate(userId, dateStr) {
             feedContainer.innerHTML = data.posts.map(post => `
                 <div class="post-card">
                     <div class="post-header">
-                        <span class="post-category">${post.category || 'General'}</span>
+                        <span class="post-category">${escapeHtml(post.category || 'General')}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
                         ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 General'})</span>` : ''}
                     </div>
-                    <div class="post-content">${post.content}</div>
-                    ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
+                    <div class="post-content">${escapeHtml(post.content || '')}</div>
+                    ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${escapeHtml(String(post.mood))}</div>` : ''}
                    <div class="post-footer" style="margin-top: 1rem;">
                         <div class="post-stats">
                             <button class="like-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem;">
@@ -11193,7 +11208,7 @@ async function loadUserFeedForDate(userId, dateStr) {
         }
 
     async function loadFeedForDate() {
-    const dateStr = feedSelectedDate.toISOString().split('T')[0];
+    const dateStr = _localDateStrOf(feedSelectedDate);
     let visibility = document.getElementById('visibilitySelect').value;
 
     // Map old visibility values to ensure backward compatibility
@@ -11296,8 +11311,8 @@ async function loadComments(postId) {
         if (data.comments && data.comments.length > 0) {
             commentsList.innerHTML = data.comments.map(comment => `
                 <div class="comment" style="margin-bottom: 0.75rem; padding: 0.5rem; background: white; border-radius: 4px;">
-                    <div style="font-weight: 600; font-size: 0.9rem;">${comment.author.username}</div>
-                    <div style="margin-top: 0.25rem; font-size: 0.95rem;">${comment.content}</div>
+                    <div style="font-weight: 600; font-size: 0.9rem;">${escapeHtml(comment.author && comment.author.username || '')}</div>
+                    <div style="margin-top: 0.25rem; font-size: 0.95rem;">${escapeHtml(comment.content || '')}</div>
                     <div style="margin-top: 0.25rem; font-size: 0.8rem; color: var(--gray);">${new Date(comment.created_at).toLocaleDateString()}</div>
                 </div>
             `).join('');
@@ -11504,7 +11519,7 @@ document.addEventListener('click', function(e) {
             }
 
             try {
-                const dateStr = feedSelectedDate.toISOString().split('T')[0];
+                const dateStr = _localDateStrOf(feedSelectedDate);
 
                 await apiCall('/posts', 'POST', {
                     content: content,
@@ -12576,19 +12591,27 @@ async function loadCircleRecommendations() {
         let html = "";
         requests.forEach(req => {
             // Escape username for onclick to prevent XSS and quote issues
-            const escapedUsername = (req.requester_name || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+            // A21 (XSS): unicode-escape so the value is safe as a single-quoted onclick arg inside a
+            // double-quoted attribute (the old `\\'`/`\\"` form did not neutralize a `"`).
+            const escapedUsername = String(req.requester_name || '').replace(/[\\'"<>&]/g,
+                c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+            // A21 (pre-existing XSS): escapedUsername only guards the JS-string onclick context;
+            // fields placed into innerHTML still need HTML-escaping (mirrors the fix in the JS file).
+            const recSafeName = escapeHtml(req.requester_name || 'U');
+            const recSafeInitial = escapeHtml(((req.requester_name || 'U')[0] || 'U').toUpperCase());
+            const recSafeCity = escapeHtml(req.selected_city || '');
             html += `
                 <div class="recommendation-item" style="display: flex; align-items: center; gap: 15px; padding: 12px; border-radius: 10px; transition: background 0.2s; margin-bottom: 8px; background: white;">
                     <div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: ${req.avatar_color || 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)'}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                        ${(req.requester_name || "U")[0].toUpperCase()}
+                        ${recSafeInitial}
                     </div>
                     <div style="flex-grow: 1;">
-                        <div style="font-weight: 600; color: #667eea; cursor: pointer;" 
+                        <div style="font-weight: 600; color: #667eea; cursor: pointer;"
                              onclick="window.location.href='/?view=profile&user_id=${req.requester_id}'"
-                             onmouseover="this.style.textDecoration='underline'" 
-                             onmouseout="this.style.textDecoration='none'">${req.requester_name}</div>
+                             onmouseover="this.style.textDecoration='underline'"
+                             onmouseout="this.style.textDecoration='none'">${recSafeName}</div>
                         <div style="font-size: 12px; color: var(--gray);" data-i18n="circles.reason_pending_request">${_t('circles.reason_pending_request', 'Sent you a connection request')}</div>
-                        ${req.selected_city ? `<div style="font-size: 11px; color: var(--gray);">📍 ${req.selected_city}</div>` : ""}
+                        ${req.selected_city ? `<div style="font-size: 11px; color: var(--gray);">📍 ${recSafeCity}</div>` : ""}
                     </div>
                     <button onclick="showCircleAddMenu(${req.requester_id}, '${escapedUsername}')" 
                         style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
@@ -13078,7 +13101,7 @@ function updateCircleDisplay(type, members) {
                                     ${user.selected_city ? `<br><small style="color: var(--gray);">📍 ${escapeHtml(user.selected_city)}</small>` : ''}
                                 </div>
                             </div>
-                           <select onclick="event.stopPropagation();" onchange="addToCircle(${user.id}, this.value, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" style="width: 100%;">
+                           <select onclick="event.stopPropagation();" onchange="addToCircle(${user.id}, this.value, '${String(user.username || '').replace(/[\\'"<>&]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'))}')" style="width: 100%;">
     <option value="">${(window.i18n && window.i18n.t ? window.i18n.t('circles.add_to') : 'Add to circle...')}</option>
    <option value="general" data-i18n="privacy.public">General</option>
     <option value="close_friends" data-i18n="privacy.class_b">Close Friends</option>
@@ -13150,11 +13173,18 @@ showNotification(`${username} added to ${circleLabels[circleType]} circle!`, 'su
                 if (response.users.length === 0) {
                     container.innerHTML = `<div class="search-result-item">${(window.i18n && window.i18n.t ? window.i18n.t('circles.no_users') : 'No users found')}</div>`;
                 } else {
-                    container.innerHTML = response.users.map(user => `
-                        <div class="search-result-item" onclick="startConversation(${user.id}, '${user.username}')">
-                            <strong>${user.username}</strong>
+                    container.innerHTML = response.users.map(user => {
+                        // A21 (pre-existing XSS + broken onclick): escape the name for the text node,
+                        // and unicode-escape it for the single-quoted onclick arg so a name with
+                        // markup can't run and a name with a quote (e.g. O'Neil) can't break the call.
+                        const mSafeName = escapeHtml(user.username || '');
+                        const mJsName = String(user.username || '').replace(/[\\'"<>&]/g,
+                            c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+                        return `
+                        <div class="search-result-item" onclick="startConversation(${user.id}, '${mJsName}')">
+                            <strong>${mSafeName}</strong>
                         </div>
-                    `).join('');
+                    `;}).join('');
                 }
 
                 container.classList.add('active');
@@ -13564,7 +13594,7 @@ function renderCalendar() {
     renderCalendar();
     updateSelectedDateDisplay();
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = _localDateStrOf(selectedDate);
 
     // Check if viewing another user's parameters
     if (viewingUserId !== null && viewingUserId !== currentUserId) {
@@ -13707,7 +13737,7 @@ function clearParameterDisplays() {
         });
 
     async function saveParameters() {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = _localDateStrOf(selectedDate);
 
     // Helper to get selected radio button value
     function getSelectedRadioValue(name) {
@@ -13743,7 +13773,7 @@ function clearParameterDisplays() {
 }
 
      async function loadParameters() {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = _localDateStrOf(selectedDate);
 
     // Helper to set radio button selection
     function setRadioValue(name, value) {
@@ -14039,7 +14069,7 @@ async function loadFollowing() {
                 if (blockedResponse.ok) {
                     const blockedData = await blockedResponse.json();
                     if (blockedData.blocked_users) {
-                        blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+                        blockedUserIds = new Set(blockedData.blocked_users.map(u => Number(u.id)));  // A21: coerce id type
                     }
                 }
             } catch (e) {
@@ -14052,7 +14082,7 @@ async function loadFollowing() {
             if (recommendations && recommendations.length > 0) {
                 recommendedContainer.innerHTML = recommendations.map(user => {
                     // PJ601: Check if user is blocked and set button accordingly
-                    const isBlocked = blockedUserIds.has(user.id);
+                    const isBlocked = blockedUserIds.has(Number(user.id));  // A21: coerce id type
                     const buttonText = isBlocked ? (pt('block.unblock_user') || 'Unblock') : (pt('block.block_user') || 'Block');
                     const buttonStyle = isBlocked 
                         ? 'background: #6c757d; color: white;'  // Gray for unblock
@@ -14240,7 +14270,7 @@ window.viewingUserId = null;
         if (blockedResponse.ok) {
             const blockedData = await blockedResponse.json();
             if (blockedData.blocked_users) {
-                blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+                blockedUserIds = new Set(blockedData.blocked_users.map(u => Number(u.id)));  // A21: coerce id type
             }
         }
 
@@ -14248,7 +14278,7 @@ window.viewingUserId = null;
         if (followersContainer) {
             if (data.followers && data.followers.length > 0) {
                 followersContainer.innerHTML = data.followers.map(user => {
-                    const isBlocked = blockedUserIds.has(user.id);
+                    const isBlocked = blockedUserIds.has(Number(user.id));  // A21: coerce id type
                     const buttonText = isBlocked ? (pt('block.unblock_user') || 'Unblock') : (pt('block.block_user') || 'Block');
                     const buttonAction = isBlocked ? 'unblockUserAndRefresh' : 'blockUser';
                     const buttonStyle = isBlocked 
@@ -14269,7 +14299,7 @@ window.viewingUserId = null;
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             ${user.is_following_back ? `<span style="color: var(--success); font-size: 0.875rem;" data-i18n="following.following_back">${pt('following.following_back') || 'Connected'}</span>` : ''}
-                            <button onclick="${buttonAction}(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" 
+                            <button onclick="${buttonAction}(${user.id}, '${String(user.username || '').replace(/[\\'"<>&]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'))}')"
                                     class="block-btn" 
                                     style="${buttonStyle} border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;"
                                     data-i18n="${dataI18n}">${buttonText}</button>
@@ -14374,7 +14404,9 @@ async function followUser(userId, note = '', trigger = false) {
 // ========== BLOCK USER FUNCTIONS - START ==========
 
 async function blockUser(userId, username) {
-    const lang = localStorage.getItem('preferredLanguage') || 'en';
+    // A21 (dormant-bug fix): fall back to selectedLanguage. Nothing writes 'preferredLanguage',
+    // so this dialog/toast was always English for he/ar/ru users. Matches the working sites.
+    const lang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage') || 'en';
     const confirmMessages = {
         'en': `Are you sure you want to block ${username}? They will no longer be able to see your profile.`,
         'he': `האם אתה בטוח שברצונך לחסום את ${username}? הם לא יוכלו יותר לראות את הפרופיל שלך.`,
@@ -14427,7 +14459,7 @@ async function unblockUser(userId) {
             throw new Error(data.error || 'Failed to unblock user');
         }
         
-        const lang = localStorage.getItem('preferredLanguage') || 'en';
+        const lang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage') || 'en';  // A21: selectedLanguage fallback (see blockUser)
         const successMessages = {
             'en': 'User unblocked successfully',
             'he': 'החסימה הוסרה בהצלחה',
@@ -15158,17 +15190,17 @@ async function searchUsersToFollow() {
                     font-weight: bold;
                     margin-right: 1rem;
                 ">
-                    ${user.username.charAt(0).toUpperCase()}
+                    ${escapeHtml(String(user.username || 'U').charAt(0).toUpperCase())}
                 </div>
                 <div style="flex: 1;">
-                    <div style="font-weight: 500;">${user.username}</div>
-                    ${user.bio ? `<div style="font-size: 0.875rem; color: #666;">${user.bio.slice(0, 50)}...</div>` : ''}
+                    <div style="font-weight: 500;">${escapeHtml(user.username || '')}</div>
+                    ${user.bio ? `<div style="font-size: 0.875rem; color: #666;">${escapeHtml(user.bio.slice(0, 50))}...</div>` : ''}
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
                     <button class="conn-action-btn connect" onclick="event.stopPropagation(); followUser(${user.id}); this.disabled=true; this.textContent='Following'">
                         Connect
                     </button>
-                   <button class="conn-action-btn connect-note" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${user.username}')" data-i18n="following.with_note">
+                   <button class="conn-action-btn connect-note" onclick="event.stopPropagation(); followUserWithNote(${user.id}, '${String(user.username || '').replace(/[\\'"<>&]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'))}')" data-i18n="following.with_note">
                                 ${window.i18n && window.i18n.translate ? window.i18n.translate('following.with_note') : 'Connect with Note'}
                     </button>
                 </div>
@@ -15323,8 +15355,11 @@ async function viewUserParameters(userId, username) {
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 30);
 
-        const start = startDate.toISOString().split('T')[0];
-        const end = endDate.toISOString().split('T')[0];
+        // A21 (pre-existing bug): use local date, not UTC. toISOString() on a local Date yields the
+        // previous calendar day for UTC+ users in the local evening, so the newest day (e.g. today's
+        // entry) fell outside the fetched 30-day window.
+        const start = _localDateStrOf(startDate);
+        const end = _localDateStrOf(endDate);
 
         console.log('[DEBUG] Fetching parameters from API:', start, 'to', end);
         const response = await fetch(`/api/users/${userId}/parameters?start_date=${start}&end_date=${end}`);
@@ -16434,12 +16469,12 @@ async function loadUserFeed(userId) {
             feedContainer.innerHTML = data.posts.map(post => `
                 <div class="post-card">
                     <div class="post-header">
-                        <span class="post-category">${post.category || 'General'}</span>
+                        <span class="post-category">${escapeHtml(post.category || 'General')}</span>
                         <span class="post-date">${new Date(post.created_at).toLocaleDateString()}</span>
                         ${post.circle_id ? `<span class="post-visibility" style="margin-inline-start: 0.5rem; font-size: 0.85rem; color: var(--gray);">(${circleNames[post.circle_id] || circleNames[post.circle] || '🌍 General'})</span>` : ''}
                     </div>
-                    <div class="post-content">${post.content}</div>
-                    ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${post.mood}</div>` : ''}
+                    <div class="post-content">${escapeHtml(post.content || '')}</div>
+                    ${post.mood ? `<div class="post-mood" style="margin-top: 0.5rem; color: var(--gray);">Mood: ${escapeHtml(String(post.mood))}</div>` : ''}
                     <div class="post-footer" style="margin-top: 1rem; display: flex; justify-content: space-between;">
                         <div class="post-stats">
                             <button class="like-btn" data-post-id="${post.id}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem 0.5rem;">
@@ -17938,7 +17973,7 @@ async function searchUsersToFollowInstant(query) {
                         if (blockedResponse.ok) {
                             const blockedData = await blockedResponse.json();
                             if (blockedData.blocked_users) {
-                                blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+                                blockedUserIds = new Set(blockedData.blocked_users.map(u => Number(u.id)));  // A21: coerce id type
                             }
                         }
                     } catch (e) {
@@ -17960,14 +17995,23 @@ async function searchUsersToFollowInstant(query) {
                     // PJ706: Render with Follow/Unfollow toggle based on following status
                     // PJ6014: Updated to show mutual/city info like circle recommendations
                     resultsContainer.innerHTML = users.map(user => {
-                        const isBlocked = blockedUserIds.has(user.id);
+                        const isBlocked = blockedUserIds.has(Number(user.id));  // A21: coerce id type (string vs number)
+                        // A21 (pre-existing XSS): this index copy of searchUsersToFollowInstant SHADOWS the
+                        // hardened circles-messages.js copy (index loads later and reassigns the global), so
+                        // it is the ACTIVE render path and must be escaped too. escapeHtml for text nodes;
+                        // uJsName is unicode-escaped so it can't break out of the onclick string/attribute.
+                        const uSafeName = escapeHtml(user.username || 'U');
+                        const uSafeInitial = escapeHtml((String(user.username || 'U').charAt(0) || 'U').toUpperCase());
+                        const uSafeCity = escapeHtml(user.selected_city || '');
+                        const uJsName = String(user.username || '').replace(/[\\'"<>&]/g,
+                            c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
                         const buttonLabel = isBlocked ? unblockText : blockText;
-                        const buttonStyle = isBlocked 
+                        const buttonStyle = isBlocked
                             ? 'background-color: #6c757d;'  // Gray for unblock
                             : 'background-color: #ef4444;'; // Red for block
-                        const buttonAction = isBlocked 
+                        const buttonAction = isBlocked
                             ? `unblockUserFromSearchToggle(${user.id})`
-                            : `blockUserFromSearchToggle(${user.id}, '${user.username.replace(/'/g, "\\'")}')`;
+                            : `blockUserFromSearchToggle(${user.id}, '${uJsName}')`;
                         
                         // PJ706: Check if already following this user
                         const isFollowing = user.is_following === true;
@@ -17993,12 +18037,12 @@ async function searchUsersToFollowInstant(query) {
                         <div class="search-result-item" data-user-id="${user.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #E5E7EB;">
                             <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="viewUserProfileFromSearch(${user.id})">
                                 <div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">
-                                    ${user.username.charAt(0).toUpperCase()}
+                                    ${uSafeInitial}
                                 </div>
                                 <div>
-                                    <strong style="display: block;">${user.username}</strong>
+                                    <strong style="display: block;">${uSafeName}</strong>
                                     ${reason ? `<small style="color: var(--gray);">${reason}</small><br>` : ''}
-                                    ${user.selected_city ? `<small style="color: #6B7280;">📍 ${user.selected_city}</small>` : ''}
+                                    ${user.selected_city ? `<small style="color: #6B7280;">📍 ${uSafeCity}</small>` : ''}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
@@ -18008,7 +18052,7 @@ async function searchUsersToFollowInstant(query) {
                                 <button onclick="event.stopPropagation(); ${followButtonAction}" class="conn-action-btn${isFollowing ? ' block' : ' connect'}">
                                     ${followButtonText}
                                 </button>
-                                ${!isFollowing ? `<button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')" class="conn-action-btn connect-note">
+                                ${!isFollowing ? `<button onclick="event.stopPropagation(); followUserWithNoteFromSearch(${user.id}, '${uJsName}')" class="conn-action-btn connect-note">
                                     ${withNoteText}
                                 </button>` : ''}
                             </div>
@@ -19268,7 +19312,7 @@ async function loadConnections() {
         if (blockedResponse.ok) {
             const blockedData = await blockedResponse.json();
             if (blockedData.blocked_users) {
-                blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+                blockedUserIds = new Set(blockedData.blocked_users.map(u => Number(u.id)));  // A21: coerce id type
             }
         }
 
@@ -19307,7 +19351,7 @@ async function loadConnections() {
             const recs = recommendedData.recommendations || [];
             if (recs.length > 0) {
                 recList.innerHTML = recs.map(user => {
-                    const isBlocked = blockedUserIds.has(user.id);
+                    const isBlocked = blockedUserIds.has(Number(user.id));  // A21: coerce id type
                     const blockText = isBlocked ? _t('block.unblock_user', 'Unblock') : _t('block.block_user', 'Block');
                     const blockClass = isBlocked ? ' blocked' : '';
                     return `
@@ -19368,7 +19412,7 @@ async function loadConnections() {
             const requests = followRequestsData.requests || [];
             if (requests.length > 0) {
                 recList.innerHTML = requests.map(req => {
-                    const isBlocked = blockedUserIds.has(req.requester_id);
+                    const isBlocked = blockedUserIds.has(Number(req.requester_id));  // A21: coerce id type
                     const blockText = isBlocked ? _t('block.unblock_user', 'Unblock') : _t('block.block_user', 'Block');
                     const blockClass = isBlocked ? ' blocked' : '';
                     return `
@@ -21240,6 +21284,16 @@ function _localDateStr() {
     return s;
 }
 window._localDateStr = _localDateStr;  // expose globally for debugging
+
+// A21 (pre-existing bug): companion to _localDateStr for a SPECIFIC date. The feed and in-page
+// diary calendar formatted their selected day with `someDate.toISOString().split('T')[0]`, which
+// is UTC — on a local-midnight Date that shifts the day BACKWARD for UTC+ users near midnight
+// (the primary Hebrew/Israel, UTC+2/+3 audience), so a post was saved/loaded under the previous
+// calendar day than the one the user clicked and appeared to vanish. Format by local components.
+function _localDateStrOf(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+window._localDateStrOf = _localDateStrOf;
 
 async function loadHomeSummary() {
     try {

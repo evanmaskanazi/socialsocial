@@ -1829,7 +1829,10 @@ def require_csrf(f):
             token = request.headers.get('X-CSRF-Token')
         
         if not validate_csrf_token(token):
-            log_audit('csrf_validation_failed', 'security', None, {
+            # A21 (pre-existing bug): pass the context dict as details=, not positionally. The 4th
+            # positional arg is user_id (an Integer FK), so a dict there is dropped AND makes the
+            # later audit-log commit raise → the CSRF-failure trail was never recorded.
+            log_audit('csrf_validation_failed', 'security', details={
                 'ip': request.remote_addr,
                 'endpoint': request.endpoint
             })
@@ -4198,6 +4201,55 @@ def ensure_saved_parameters_schema():
                 logger.info("Successfully added all missing columns to saved_parameters")
             else:
                 logger.debug("All required columns exist in saved_parameters")  # Changed to debug
+
+            # A21 (dormant-bug fix / ROOT CAUSE of the social_belonging text-column oddity):
+            # convert any numeric wellness column that is currently stored as TEXT/VARCHAR to a
+            # real INTEGER. social_belonging was added later and, on databases where it was created
+            # before being declared INTEGER, ends up VARCHAR. A text column makes any SQL numeric
+            # comparison (`col > 0`, progress-chart and alert queries) raise
+            # "operator does not exist: character varying > integer", which aborts the transaction —
+            # the app currently sidesteps this by comparing in Python, but converting the column type
+            # removes the hazard at the source for any future SQL. This sweep:
+            #   • only runs on PostgreSQL (SQLite is dynamically typed, so it can't hit the error),
+            #   • is IDEMPOTENT — it only ALTERs a column whose data_type is actually text-like, so
+            #     re-running it (or running it on an already-integer column) is a no-op,
+            #   • is best-effort — if a column holds non-integer junk the ALTER fails, is rolled back,
+            #     and the column is left as-is (the Python-side int() coercion still guards reads).
+            if is_postgres:
+                try:
+                    numeric_param_cols = ['mood', 'energy', 'sleep_quality',
+                                          'physical_activity', 'anxiety', 'social_belonging']
+                    with db.engine.connect() as connection:
+                        try:
+                            connection.execute(text("SET lock_timeout = '5s'"))
+                        except Exception:
+                            pass
+                        type_rows = connection.execute(text(
+                            "SELECT column_name, data_type FROM information_schema.columns "
+                            "WHERE table_name = 'saved_parameters'"
+                        )).fetchall()
+                        col_types = {r[0]: (r[1] or '').lower() for r in type_rows}
+                        text_like = ('character varying', 'varchar', 'text', 'character', 'char')
+                        for col in numeric_param_cols:
+                            dtype = col_types.get(col)
+                            if dtype and any(t in dtype for t in text_like):
+                                try:
+                                    connection.execute(text(
+                                        f"ALTER TABLE saved_parameters ALTER COLUMN {col} TYPE INTEGER "
+                                        f"USING NULLIF(btrim({col}::text), '')::integer"
+                                    ))
+                                    connection.commit()
+                                    logger.info(f"[A21] Converted saved_parameters.{col} from {dtype} to INTEGER")
+                                except Exception as conv_err:
+                                    logger.warning(
+                                        f"[A21] Could not convert saved_parameters.{col} to INTEGER "
+                                        f"(leaving as {dtype}; Python-side coercion still guards reads): {conv_err}")
+                                    try:
+                                        connection.rollback()
+                                    except Exception:
+                                        pass
+                except Exception as _type_sweep_err:
+                    logger.warning(f"[A21] saved_parameters numeric-type sweep skipped: {_type_sweep_err}")
 
         # Mark as completed for this process
         ensure_saved_parameters_schema._completed = True
@@ -7492,7 +7544,7 @@ def support_contact():
             sender_identity = "Not registered"
         
         # Log the support request (audit trail)
-        log_audit('support_contact', 'support_request', None, {
+        log_audit('support_contact', 'support_request', details={  # A21: dict must be details=, not the positional user_id slot (see csrf_validation_failed)
             'name': name[:50],  # Truncate for log
             'email_domain': email.split('@')[-1] if '@' in email else 'unknown',
             'subject_length': len(subject),
@@ -8523,7 +8575,7 @@ def delete_account():
 
         # Send confirmation email
         try:
-            user_language = getattr(user, 'language', 'en') or 'en'
+            user_language = getattr(user, 'preferred_language', 'en') or 'en'  # A21: column is preferred_language (was always 'en')
             confirm_link = f"{os.environ.get('APP_URL', 'https://therasocial.org')}?delete_token={deletion_token}"
             is_rtl = user_language in ['he', 'ar']
             text_dir = 'rtl' if is_rtl else 'ltr'
@@ -8683,6 +8735,30 @@ def confirm_delete_account():
         db.session.execute(
             NotificationSettings.__table__.delete().where(NotificationSettings.user_id == user.id)
         )
+        # A21 (GDPR / deletion completeness): delete rows in user-referencing tables that have a
+        # NON-NULL FK to users.id and are NOT covered by an ORM cascade on User (profile, posts,
+        # activities, saved_parameters, owned circles/alerts already cascade). Without these,
+        # DELETE FROM users raises a foreign-key IntegrityError on Postgres and the ENTIRE account
+        # deletion fails — right-to-erasure broken — for any user who joined an objective group, had
+        # a professional relationship, or held an operator role.
+        db.session.execute(ProfessionalClient.__table__.delete().where(
+            (ProfessionalClient.professional_id == user.id) | (ProfessionalClient.client_id == user.id)))
+        db.session.execute(ObjectiveGroupMembership.__table__.delete().where(
+            ObjectiveGroupMembership.user_id == user.id))
+        db.session.execute(OperatorScope.__table__.delete().where(OperatorScope.operator_id == user.id))
+        db.session.execute(OperatorBroadcast.__table__.delete().where(OperatorBroadcast.operator_id == user.id))
+        db.session.execute(OperatorSettings.__table__.delete().where(OperatorSettings.operator_id == user.id))
+        # Objective groups the user CREATED (created_by is NOT NULL): detach child subgroups, remove
+        # every membership of those groups, then delete the groups themselves.
+        _created_group_ids = [g.id for g in ObjectiveGroup.query.filter_by(created_by=user.id).all()]
+        if _created_group_ids:
+            db.session.execute(ObjectiveGroup.__table__.update()
+                .where(ObjectiveGroup.parent_group_id.in_(_created_group_ids))
+                .values(parent_group_id=None))
+            db.session.execute(ObjectiveGroupMembership.__table__.delete()
+                .where(ObjectiveGroupMembership.group_id.in_(_created_group_ids)))
+            db.session.execute(ObjectiveGroup.__table__.delete()
+                .where(ObjectiveGroup.id.in_(_created_group_ids)))
         # Audit logs (set to null since nullable)
         db.session.execute(
             AuditLog.__table__.update().where(AuditLog.user_id == user.id).values(user_id=None)
@@ -8786,6 +8862,40 @@ def export_user_data():
                 'created_at': m.created_at.isoformat() if m.created_at else None
             })
         
+        # A21 (GDPR / right-to-access completeness): these arrays were declared but never populated,
+        # so the "complete export" silently omitted the user's posts, social graph, alerts, and
+        # triggers. Fill them now (defensively — a schema surprise degrades to a partial export
+        # rather than failing the whole request).
+        try:
+            for p in Post.query.filter_by(user_id=user_id).order_by(desc(Post.created_at)).limit(1000).all():
+                export_data['posts'].append({
+                    'content': p.content,
+                    'visibility': getattr(p, 'visibility', None),
+                    'created_at': p.created_at.isoformat() if getattr(p, 'created_at', None) else None
+                })
+            export_data['following'] = [f.followed_id for f in Follow.query.filter_by(follower_id=user_id).all()]
+            export_data['followers'] = [f.follower_id for f in Follow.query.filter_by(followed_id=user_id).all()]
+            for a in Alert.query.filter_by(user_id=user_id).order_by(desc(Alert.created_at)).limit(1000).all():
+                export_data['alerts'].append({
+                    'title': a.title,
+                    'content': a.content,
+                    'alert_type': a.alert_type,
+                    'is_read': a.is_read,
+                    'created_at': a.created_at.isoformat() if a.created_at else None
+                })
+            for tr in ParameterTrigger.query.filter_by(watcher_id=user_id).all():
+                export_data['triggers'].append({
+                    'watched_id': tr.watched_id,
+                    'parameter_name': tr.parameter_name,
+                    'trigger_condition': tr.trigger_condition,
+                    'trigger_value': tr.trigger_value,
+                    'consecutive_days': tr.consecutive_days,
+                    'is_active': tr.is_active,
+                    'created_at': tr.created_at.isoformat() if tr.created_at else None
+                })
+        except Exception as _exp_err:
+            logger.warning(f"[EXPORT] partial data population for user {user_id}: {_exp_err}")
+
         # Audit log for data export
         log_audit('data_exported', 'user', user_id, user_id)
         
@@ -10171,7 +10281,14 @@ def get_user_profile(user_id):
 
         # T25: Return partial profile when not connected (instead of 403)
         # Shows birth_year and bio only; hides interests, occupation, goals, hobbies
-        if not is_following and not is_in_circle and user_id != current_user_id and not allow_preview:
+        # A21 (pre-existing security fix): `allow_preview` is a client-controlled query param, so
+        # keeping `and not allow_preview` in this guard let ANY authenticated user append
+        # ?allow_preview=true to skip the connection check and fetch a non-connected user's FULL
+        # profile (email, city, occupation, interests, goals, hobbies). Preview is meant to show the
+        # BASIC profile only — which is exactly this partial branch — so a non-connected viewer must
+        # always fall through here regardless of allow_preview. (allow_preview is still used below
+        # only to set the is_preview flag for connected/self responses.)
+        if not is_following and not is_in_circle and user_id != current_user_id:
             user = User.query.get(user_id)
             if not user:
                 return jsonify({'error': 'User not found'}), 404
@@ -10616,36 +10733,40 @@ def get_user_parameters(user_id):
                 continue
 
             # Check privacy for each parameter
+            # A21 (dormant-bug fix / privacy leak): default a NULL privacy column to 'private',
+            # not 'public'. 'public' is visible to every viewer in any circle, so a legacy row with
+            # a NULL privacy column (e.g. added by ALTER without a default) was leaked to all
+            # followers. 'private' matches the app's default everywhere else (save, to_dict, notes).
             # mood
-            mood_privacy = row[7] or 'public'
+            mood_privacy = row[7] or 'private'
             if check_param_visibility(mood_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['mood'] = row[1]
             else:
                 param_dict['mood'] = None
 
             # energy
-            energy_privacy = row[8] or 'public'
+            energy_privacy = row[8] or 'private'  # A21: fail closed on NULL (see mood)
             if check_param_visibility(energy_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['energy'] = row[2]
             else:
                 param_dict['energy'] = None
 
             # sleep_quality
-            sleep_privacy = row[9] or 'public'
+            sleep_privacy = row[9] or 'private'  # A21: fail closed on NULL (see mood)
             if check_param_visibility(sleep_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['sleep_quality'] = row[3]
             else:
                 param_dict['sleep_quality'] = None
 
             # physical_activity
-            activity_privacy = row[10] or 'public'
+            activity_privacy = row[10] or 'private'  # A21: fail closed on NULL (see mood)
             if check_param_visibility(activity_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['physical_activity'] = row[4]
             else:
                 param_dict['physical_activity'] = None
 
             # anxiety
-            anxiety_privacy = row[11] or 'public'
+            anxiety_privacy = row[11] or 'private'  # A21: fail closed on NULL (see mood)
             if check_param_visibility(anxiety_privacy, circle_level, viewer_circles=viewer_circles):
                 param_dict['anxiety'] = row[5]
             else:
@@ -10666,6 +10787,12 @@ def get_user_parameters(user_id):
 
     except Exception as e:
         app.logger.error(f"Error loading user parameters: {str(e)}")
+        # A21 (dormant-bug fix): roll back so a failed read can't poison the pooled connection's
+        # transaction and break the next request (see get_today_status).
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         return jsonify({'error': 'Failed to load parameters'}), 500
 
 
@@ -11046,14 +11173,17 @@ def notification_settings():
                 settings.email_daily_diary_reminder = _a8_to_bool(data['email_daily_diary_reminder'])
             if 'email_on_new_message' in data:
                 settings.email_on_new_message = _a8_to_bool(data['email_on_new_message'])
+            # A21 (pre-existing bug): coerce these the same way the email_* flags above are coerced.
+            # They were assigned raw, so a JSON string "false"/"0" (truthy) silently ENABLED a
+            # setting the user tried to turn off — including daily_reminder/weekly_summary emails.
             if 'follow_requests' in data:
-                settings.follow_requests = data['follow_requests']
+                settings.follow_requests = _a8_to_bool(data['follow_requests'])
             if 'parameter_triggers' in data:
-                settings.parameter_triggers = data['parameter_triggers']
+                settings.parameter_triggers = _a8_to_bool(data['parameter_triggers'])
             if 'daily_reminder' in data:
-                settings.daily_reminder = data['daily_reminder']
+                settings.daily_reminder = _a8_to_bool(data['daily_reminder'])
             if 'weekly_summary' in data:
-                settings.weekly_summary = data['weekly_summary']
+                settings.weekly_summary = _a8_to_bool(data['weekly_summary'])
             if 'diary_reminder_time' in data:
                 # Validate time format (HH:MM in 24-hour format)
                 time_str = data['diary_reminder_time']
@@ -11076,7 +11206,7 @@ def notification_settings():
                 logger.info(f"[NOTIFICATION DEBUG] PUT - Setting diary_reminder_timezone to: {data['diary_reminder_timezone']}")
             # G9: V4 AI check-in feedback user preference
             if 'ai_checkin_feedback' in data:
-                settings.ai_checkin_feedback = data['ai_checkin_feedback']
+                settings.ai_checkin_feedback = _a8_to_bool(data['ai_checkin_feedback'])  # A21: coerce (see above)
                 logger.info(f"[NOTIFICATION DEBUG] PUT - Setting ai_checkin_feedback to: {data['ai_checkin_feedback']}")
             
             db.session.commit()
@@ -12396,22 +12526,26 @@ def get_hierarchical_feed():
                 is_published=True
             ).all()
 
+            # A21 (pre-existing bug): posts store visibility as general/close_friends/family, but
+            # this compared against public/class_b/class_a — values a post NEVER holds — so no
+            # other-user post ever matched and the hierarchical feed showed only the caller's own
+            # posts. circle_type also exists in both legacy (public/class_b/class_a) and new
+            # (general/close_friends/family) forms elsewhere in this file, so normalize BOTH sides.
+            ctype = circle.circle_type
+            is_class_a = ctype in ('class_a', 'family')
+            is_class_b = ctype in ('class_b', 'close_friends')
             for post in owner_posts:
-                # Apply hierarchy rules
-                if post.visibility == 'public':
-                    # Public posts visible to all circle members
-                    if post not in visible_posts:
-                        visible_posts.append(post)
-                elif post.visibility == 'class_b':
-                    # Class B posts visible to Class B and Class A members
-                    if circle.circle_type in ['class_b', 'class_a']:
-                        if post not in visible_posts:
-                            visible_posts.append(post)
-                elif post.visibility == 'class_a':
-                    # Class A posts only visible to Class A members
-                    if circle.circle_type == 'class_a':
-                        if post not in visible_posts:
-                            visible_posts.append(post)
+                vis = post.visibility
+                if vis in ('general', 'public'):
+                    allowed = True                      # visible to any circle member
+                elif vis in ('close_friends', 'class_b'):
+                    allowed = is_class_b or is_class_a  # close-friends + family
+                elif vis in ('family', 'class_a'):
+                    allowed = is_class_a                # family only
+                else:
+                    allowed = False                     # 'private'/unknown: not shared via circles
+                if allowed and post not in visible_posts:
+                    visible_posts.append(post)
 
         # Sort by created_at descending
         visible_posts.sort(key=lambda x: x.created_at, reverse=True)
@@ -12586,6 +12720,15 @@ def get_user_feed_dates(user_id):
         # T31: Check circle membership for other users
         # Use lowest-access circle when user is in multiple circles
         membership = _resolve_lowest_circle(user_id, current_user_id)
+
+        # A21 (security): require a connection and honor blocks before exposing even public-post
+        # DATES — mirrors get_user_feed_by_date (which 403s non-connections). Without this a blocked
+        # or unconnected user could enumerate any user's posting-activity calendar.
+        is_following = Follow.query.filter_by(
+            follower_id=user_id, followed_id=current_user_id).first() is not None
+        if BlockedUser.query.filter_by(blocker_id=user_id, blocked_id=current_user_id).first() \
+                or (not is_following and membership is None):
+            return jsonify({'dates': {}})
 
         # Determine which visibility levels current user can see
         visible_levels = ['general']  # Everyone can see public
@@ -12847,6 +12990,38 @@ def save_feed_entry():
         return jsonify({'error': 'Failed to save feed'}), 500
 
 
+# A21 (security): shared visibility gate for post interactions (like / read-comments / comment).
+# The like/comment endpoints previously fetched a post by id and acted on it with NO access check
+# (an IDOR: any authenticated user could like/read/comment on ANY post, including private ones and
+# posts by someone who blocked them). This mirrors get_user_posts' gate: owner always allowed; a
+# viewer the owner has blocked is denied; a non-connection is denied; otherwise the post's
+# visibility must fall within the viewer's circle level.
+def _can_access_post(post, viewer_id):
+    if post is None:
+        return False
+    owner_id = post.user_id
+    if owner_id == viewer_id:
+        return True
+    try:
+        if BlockedUser.query.filter_by(blocker_id=owner_id, blocked_id=viewer_id).first():
+            return False
+        is_following = Follow.query.filter_by(
+            follower_id=owner_id, followed_id=viewer_id).first() is not None
+        circle_types = _get_all_viewer_circle_types(owner_id, viewer_id)
+        if not is_following and not circle_types:
+            return False
+        visible = {'general'}
+        if 'class_a' in circle_types:
+            visible = {'general', 'close_friends', 'family'}
+        elif 'class_b' in circle_types:
+            visible = {'general', 'close_friends'}
+        return (post.visibility or 'general') in visible
+    except Exception as _access_err:
+        logger.warning(f"[POST-ACCESS] check failed for post {getattr(post,'id',None)} "
+                       f"viewer {viewer_id} (denying): {_access_err}")
+        return False
+
+
 @app.route('/api/posts/<int:post_id>/like', methods=['POST'])
 @login_required
 def like_post(post_id):
@@ -12858,6 +13033,10 @@ def like_post(post_id):
         post = db.session.get(Post, post_id)
         if not post:
             return jsonify({'error': 'Post not found'}), 404
+
+        # A21 (security): enforce the visibility/block gate before allowing a like.
+        if not _can_access_post(post, user_id):
+            return jsonify({'error': 'Not authorized'}), 403
 
         # Check if user already liked this post
         existing_reaction = db.session.execute(
@@ -12950,6 +13129,10 @@ def get_post_comments(post_id):
         if not post:
             return jsonify({'error': 'Post not found'}), 404
 
+        # A21 (security): only users who can see the post may read its comments.
+        if not _can_access_post(post, session.get('user_id')):
+            return jsonify({'error': 'Not authorized'}), 403
+
         # Get comments with author information
         comments = db.session.execute(
             select(Comment).filter_by(post_id=post_id).order_by(Comment.created_at.asc())
@@ -12991,6 +13174,10 @@ def add_comment(post_id):
         post = db.session.get(Post, post_id)
         if not post:
             return jsonify({'error': 'Post not found'}), 404
+
+        # A21 (security): only users who can see the post may comment on it.
+        if not _can_access_post(post, user_id):
+            return jsonify({'error': 'Not authorized'}), 403
 
         # Create new comment
         new_comment = Comment(
@@ -13147,6 +13334,12 @@ def get_parameters():
 
     except Exception as e:
         logger.error(f"Get parameters error: {str(e)}")
+        # A21 (dormant-bug fix): roll back so a failed read can't poison the pooled connection's
+        # transaction and break the next request (see get_today_status).
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         return jsonify({'error': 'Failed to get parameters'}), 500
 
 
@@ -14987,6 +15180,14 @@ def get_today_status():
         
     except Exception as e:
         logger.error(f"Today status error: {str(e)}")
+        # A21 (dormant-bug fix): roll back so a failed SELECT here (e.g. a param column stored as
+        # text) can't leave this pooled connection in an aborted-transaction state and poison the
+        # NEXT unrelated request with "current transaction is aborted" — the same failure class the
+        # A16-10 notes describe. save_parameters already does this; the hot read paths did not.
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         return jsonify({'has_entry_today': False, 'has_complete_entry_today': False, 'error': str(e)})
 
 
@@ -15120,7 +15321,14 @@ def _gift_is_report_complete(entry):
         return False
     for f in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging']:
         v = getattr(entry, f, None)
-        if not v or v == 0:
+        # A21 (dormant-bug fix): coerce with int() so a value stored as TEXT (social_belonging can be
+        # VARCHAR on some DBs) is judged the same way the streak helper judges it. Previously a text
+        # '0' passed (`not '0'` is False, `'0' == 0` is False), so a garbage/zero day could mint a
+        # gift + points while NOT counting toward the streak — the two completeness checks disagreed.
+        try:
+            if v is None or int(v) <= 0:
+                return False
+        except (ValueError, TypeError):
             return False
     return True
 
@@ -16387,7 +16595,7 @@ def get_user_progress(user_id):
         def can_see(privacy_setting):
             if is_professional_viewer:
                 return True
-            return check_param_visibility(privacy_setting or 'public', circle_level, viewer_circles=viewer_circles)
+            return check_param_visibility(privacy_setting or 'private', circle_level, viewer_circles=viewer_circles)  # A21: NULL privacy fails CLOSED (see get_user_parameters)
         
         end_date = datetime.now().date()
         start_date = end_date - timedelta(days=days)
@@ -16436,12 +16644,14 @@ def get_user_progress(user_id):
             dates.append(date_str)
             
             # Apply privacy per parameter
-            mood_privacy = getattr(p, 'mood_privacy', 'public') or 'public'
-            energy_privacy = getattr(p, 'energy_privacy', 'public') or 'public'
-            sleep_privacy = getattr(p, 'sleep_quality_privacy', 'public') or 'public'
-            activity_privacy = getattr(p, 'physical_activity_privacy', 'public') or 'public'
-            anxiety_privacy = getattr(p, 'anxiety_privacy', 'public') or 'public'
-            belonging_privacy = getattr(p, 'social_belonging_privacy', 'public') or 'public'  # C15
+            # A21 (privacy leak): default missing/NULL privacy to 'private' (fail closed), matching
+            # the app's real default and the get_user_parameters fix. 'public' leaked NULL rows.
+            mood_privacy = getattr(p, 'mood_privacy', 'private') or 'private'
+            energy_privacy = getattr(p, 'energy_privacy', 'private') or 'private'
+            sleep_privacy = getattr(p, 'sleep_quality_privacy', 'private') or 'private'
+            activity_privacy = getattr(p, 'physical_activity_privacy', 'private') or 'private'
+            anxiety_privacy = getattr(p, 'anxiety_privacy', 'private') or 'private'
+            belonging_privacy = getattr(p, 'social_belonging_privacy', 'private') or 'private'  # C15
             
             mood_val = safe_int(getattr(p, 'mood', None)) if can_see(mood_privacy) else None
             energy_val = safe_int(getattr(p, 'energy', None)) if can_see(energy_privacy) else None
@@ -22398,6 +22608,12 @@ def get_friends_updates():
             for param_name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging']:
                 value = getattr(latest_params, param_name, None)
                 if value:
+                    # A21: intentionally KEEP the 'public' default here (not 'private'). This is the
+                    # Friends Daily Updates feed; the documented "VINTER FIX" found that defaulting a
+                    # NULL privacy to 'private' hides all legacy (pre-privacy-column) rows and breaks
+                    # the feature. Direct profile views (get_user_parameters / _by_date / progress)
+                    # DO fail closed; this shared-feed path preserves existing behavior pending a
+                    # product decision on how to treat legacy NULL-privacy rows in the feed.
                     param_privacy = getattr(latest_params, privacy_map[param_name], 'public') or 'public'
                     if check_param_visibility(param_privacy, 'none', viewer_circles=viewer_circles):
                         visible_params.append({
@@ -22582,6 +22798,9 @@ def get_user_parameters_for_triggers(user_id):
                     # V4 FIX: Check privacy before including this parameter
                     # VINTER FIX: Use 'public' as default for NULL privacy (matches get_hierarchical_parameters behavior)
                     # Previously defaulted to 'private' which blocked all Friends Daily Updates visibility
+                    # A21: KEPT as 'public' on purpose — reverted an over-eager fail-closed change to
+                    # preserve this documented Friends Daily Updates behavior. Direct profile views
+                    # fail closed; this shared feed awaits a product decision on legacy NULL rows.
                     param_privacy = getattr(param, privacy_map[param_name], 'public') or 'public'
                     if check_param_visibility(param_privacy, circle_level, viewer_circles=viewer_circles):
                         result['parameters'].append({
@@ -22677,9 +22896,32 @@ def block_user(user_id):
         # Create the block
         block = BlockedUser(blocker_id=current_user_id, blocked_id=user_id)
         db.session.add(block)
+
+        # A21 (security): blocking must REVOKE all existing access, not just add a block row.
+        # Several read paths gate visibility on follow/circle status but NOT on block status, so
+        # without severing these edges a blocked user who already follows the blocker (or is in
+        # their circle) would keep reading the blocker's parameters/feed/posts. Remove the whole
+        # relationship in BOTH directions (the app creates reciprocal follows), plus any pending
+        # follow requests either way, so a clean re-connection is required after an unblock.
+        severed = {'follows': 0, 'circles': 0, 'requests': 0}
+        severed['follows'] += Follow.query.filter_by(
+            follower_id=user_id, followed_id=current_user_id).delete(synchronize_session=False)
+        severed['follows'] += Follow.query.filter_by(
+            follower_id=current_user_id, followed_id=user_id).delete(synchronize_session=False)
+        severed['circles'] += Circle.query.filter_by(
+            user_id=current_user_id, circle_user_id=user_id).delete(synchronize_session=False)
+        severed['circles'] += Circle.query.filter_by(
+            user_id=user_id, circle_user_id=current_user_id).delete(synchronize_session=False)
+        severed['requests'] += FollowRequest.query.filter_by(
+            requester_id=user_id, target_id=current_user_id, status='pending').delete(synchronize_session=False)
+        severed['requests'] += FollowRequest.query.filter_by(
+            requester_id=current_user_id, target_id=user_id, status='pending').delete(synchronize_session=False)
+
         db.session.commit()
-        
-        logger.info(f"User {current_user_id} blocked user {user_id}")
+
+        logger.info(f"User {current_user_id} blocked user {user_id} "
+                    f"(severed follows={severed['follows']}, circles={severed['circles']}, "
+                    f"pending_requests={severed['requests']})")
         return jsonify({'success': True, 'message': 'User blocked successfully'})
         
     except Exception as e:
@@ -25036,11 +25278,12 @@ def get_user_parameters_by_date(user_id, date_str):
                 'success': True,
                 'data': {
                     'parameters': {
-                        'mood': params.mood if check_param_visibility(params.mood_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None,
-                        'energy': params.energy if check_param_visibility(params.energy_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None,
-                        'sleep_quality': params.sleep_quality if check_param_visibility(params.sleep_quality_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None,
-                        'physical_activity': params.physical_activity if check_param_visibility(params.physical_activity_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None,
-                        'anxiety': params.anxiety if check_param_visibility(params.anxiety_privacy or 'public', circle_level, viewer_circles=viewer_circles) else None
+                        # A21 (privacy leak): NULL privacy fails CLOSED ('private'), not 'public'.
+                        'mood': params.mood if check_param_visibility(params.mood_privacy or 'private', circle_level, viewer_circles=viewer_circles) else None,
+                        'energy': params.energy if check_param_visibility(params.energy_privacy or 'private', circle_level, viewer_circles=viewer_circles) else None,
+                        'sleep_quality': params.sleep_quality if check_param_visibility(params.sleep_quality_privacy or 'private', circle_level, viewer_circles=viewer_circles) else None,
+                        'physical_activity': params.physical_activity if check_param_visibility(params.physical_activity_privacy or 'private', circle_level, viewer_circles=viewer_circles) else None,
+                        'anxiety': params.anxiety if check_param_visibility(params.anxiety_privacy or 'private', circle_level, viewer_circles=viewer_circles) else None
                     },
                     'notes': params.notes or ''
                 }
@@ -25151,6 +25394,12 @@ def respond_to_follow_request(request_id):
 
         if follow_request.status != 'pending':
             return jsonify({'error': 'Already processed'}), 400
+
+        # A21 (pre-existing bug): reject unknown actions instead of falling through to a commit that
+        # reports success ("Request {action}ed", 200) while the request stays pending and nothing
+        # happened — a misleading success a client can act on.
+        if action not in ('accept', 'reject'):
+            return jsonify({'error': 'Invalid action'}), 400
 
         if action == 'accept':
             follow_request.status = 'accepted'

@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!-- TheraSocial Parameters Version B170 (A21) -->
+<!-- B170 (A21): Cache-bust sync — all JS ?v bumped B165→B170 in lockstep with index/circles.
+  Functional changes in THIS file: (1) the daily gift-box CLOSING message was replaced with a
+  research-grounded one (reinforces the streak via continuity/"progress is always saved" and an
+  autonomy-supportive invitation, deliberately avoiding guilt/loss framing — see comment at the
+  STR.footer definition); (2) the diary init now honors window.parametersInitialized so it can't
+  run twice; (3) the gift reflection text defaults to '' so it can never render "undefined". -->
 <!-- B165 (A16 audit fix): all JS ?v bumped B160→B165 in lockstep with index/circles. Gift-box
   robustness fixes from the A16 self-audit: the points headline now derives from base+bonus when
   the server omits an explicit total (headline can never disagree with the breakdown), and the
@@ -913,9 +920,9 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B165"></script>
-    <script src="/static/js/parameters-social.js?v=B165"></script>
-    <script src="/static/js/feed-updates.js?v=B165"></script>
+    <script src="/static/js/i18n.js?v=B170"></script>
+    <script src="/static/js/parameters-social.js?v=B170"></script>
+    <script src="/static/js/feed-updates.js?v=B170"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -1017,8 +1024,18 @@ Storage.prototype.setItem = function(key, value) {
                     console.log('[Parameters] Could not fetch language preference, using default');
                 }
 
-                initializeParameters();
-                console.log('Parameters initialized successfully');
+                // A21 (dormant-bug fix): the diary has TWO init paths that both fire on the
+                // same DOMContentLoaded — this HTML bootstrap AND parameters-social.js's own
+                // guarded listener. That listener sets window.parametersInitialized; honor the
+                // same flag here so init runs exactly once (prevents double auto-load fetches
+                // and any future non-idempotent init side effect from firing twice).
+                if (window.parametersInitialized) {
+                    console.log('[DIARY] Parameters already initialized — skipping duplicate init');
+                } else {
+                    window.parametersInitialized = true;
+                    initializeParameters();
+                    console.log('Parameters initialized successfully');
+                }
 
                 if (window.i18n && window.i18n.applyLanguage) {
                     window.i18n.applyLanguage();
@@ -1524,10 +1541,19 @@ Storage.prototype.setItem = function(key, value) {
             hint:  { en: 'Tap the gift to open', he: 'הקש/י על המתנה לפתיחה',
                      ar: 'انقر على الهديّة لفتحها', ru: 'Нажми на подарок, чтобы открыть' },
             revealTitle: { en: "Today's gift", he: 'המתנה של היום', ar: 'هديّة اليوم', ru: 'Подарок дня' },
-            footer: { en: "That's all for today — rest well. See you tomorrow. 🌙",
-                      he: 'זה הכול להיום — מנוחה נעימה. נתראה מחר. 🌙',
-                      ar: 'هذا كل شيء لليوم — استرح جيدًا. إلى اللقاء غدًا. 🌙',
-                      ru: 'На сегодня всё — отдохни. До завтра. 🌙' },
+            // A21: research-grounded closing line. Reinforces the streak through CONTINUITY
+            // ("your progress is always saved" — no loss framing) and an AUTONOMY-SUPPORTIVE
+            // invitation ("whenever you're ready", not "see you tomorrow / don't break it"),
+            // affirming the act of showing up. This deliberately avoids the guilt/loss-aversion
+            // pressure that shame-based streak copy relies on. Grounded in: UX Magazine, "The
+            // Psychology of Hot Streak Game Design ... Without Shame" (celebrate progress over
+            // perfection; avoid confirmshaming; support autonomy) and the self-determination-theory
+            // finding that autonomy-supportive ("could/whenever") language beats controlling
+            // ("should/must") language for motivation and reduces reactance.
+            footer: { en: "You showed up for yourself today — and that's what counts. Come back whenever you're ready; your progress is always saved. 🌱",
+                      he: 'הגעתם היום בשביל עצמכם — וזה מה שחשוב. חזרו מתי שנוח לכם, וההתקדמות שלכם תמיד נשמרת. 🌱',
+                      ar: 'لقد حضرتَ اليوم من أجل نفسك — وهذا ما يهمّ. عُد وقتما تشاء، وتقدّمك محفوظ دائمًا. 🌱',
+                      ru: 'Сегодня ты пришёл ради себя — и это главное. Возвращайся, когда будешь готов; твой прогресс всегда сохраняется. 🌱' },
             close: { en: 'Close', he: 'סגירה', ar: 'إغلاق', ru: 'Закрыть' },
             aria:  { en: 'Daily gift', he: 'מתנה יומית', ar: 'هديّة يومية', ru: 'Подарок дня' },
             // A16: rewards labels — points are the main content of the gift now.
@@ -1620,7 +1646,9 @@ Storage.prototype.setItem = function(key, value) {
             }
             // The reflection sentence stays, but now as a smaller pleasant addition below.
             var rText = document.createElement('p');
-            rText.id = 'ts-gift-text'; rText.textContent = gift.text;
+            // A21 (dormant-bug fix): default to '' so a points-only gift (no reflection text)
+            // never renders the literal string "undefined". textContent = undefined → "undefined".
+            rText.id = 'ts-gift-text'; rText.textContent = gift.text || '';
             var footer = document.createElement('p');
             footer.id = 'ts-gift-footer'; footer.textContent = pick(STR.footer, L);
             var closeBtn = document.createElement('button');

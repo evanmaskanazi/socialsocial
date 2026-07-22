@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!-- TheraSocial Circles Version B170 (A21) -->
+<!-- B170 (A21): Cache-bust sync — all JS ?v bumped B165→B170 in lockstep with index/parameters
+  (circles-messages.js changed this round: it now HTML-escapes member names in
+  createMemberElement (XSS) and null-safes the circle count reads; i18n.js is unchanged but bumped
+  in lockstep per the repo's cache-bust convention). Functional change in
+  THIS file: the follow/blocked checks in the "viewing another user" flow now coerce ids with
+  Number() (matching the existing circle-membership check) so a string id can't mis-toggle the
+  Follow/Block buttons. -->
 <!-- TheraSocial Circles Version B165 (A16 audit fix) -->
 <!-- B165 (A16 audit fix): all JS ?v bumped B160→B165 in lockstep with index/parameters.
   Focus-visible ring no longer forces a corner radius. No functional/JS changes in this file. -->
@@ -137,9 +145,9 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B165"></script>
-    <script src="/static/js/circles-messages.js?v=B165"></script>
-    <script src="/static/js/feed-updates.js?v=B165"></script>
+    <script src="/static/js/i18n.js?v=B170"></script>
+    <script src="/static/js/circles-messages.js?v=B170"></script>
+    <script src="/static/js/feed-updates.js?v=B170"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
@@ -420,7 +428,11 @@ try {
                     const followingResponse = await fetch('/api/following', { credentials: 'include' });
                     if (followingResponse.ok) {
                         const followingData = await followingResponse.json();
-                        isFollowing = followingData.following.some(u => u.id === userId);
+                        // A21 (dormant-bug fix): coerce both sides (userId is parseInt'd above).
+                        // Matches the robust Number() comparison used for the circle check below;
+                        // a string id from the API would otherwise make an already-followed user
+                        // show "Follow" instead of "Unfollow".
+                        isFollowing = followingData.following.some(u => Number(u.id) === userId);
                     }
                 } catch (e) {
                     console.error('Error checking following status:', e);
@@ -444,7 +456,7 @@ try {
                     if (blockedResponse.ok) {
                         const blockedData = await blockedResponse.json();
                         if (blockedData.blocked_users) {
-                            isBlocked = blockedData.blocked_users.some(u => u.id === userId);
+                            isBlocked = blockedData.blocked_users.some(u => Number(u.id) === userId);  // A21: coerce ids (see isFollowing)
                         }
                     }
                 } catch (e) {
