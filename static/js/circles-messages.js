@@ -717,7 +717,10 @@ if (window.i18n && window.i18n.applyLanguage) {
                         <p data-i18n="circles.no_members">No members yet</p>
                     </div>`;
             }
-            document.getElementById('publicCount').textContent = circles.public.length || 0;
+            // A21 (dormant-bug fix): guard the .length read — circles.public can be null/absent
+            // (the render block above already treats it as optional). An unguarded read here threw
+            // and aborted loadCircles() mid-way, leaving Class B / Class A unrendered.
+            document.getElementById('publicCount').textContent = (circles.public && circles.public.length) || 0;
         }
 
         // Update display for Class B/Friends - Backend NOW returns 'class_b'
@@ -736,7 +739,7 @@ if (window.i18n && window.i18n.applyLanguage) {
                         <p data-i18n="circles.no_members">No members yet</p>
                     </div>`;
             }
-            document.getElementById('class_bCount').textContent = circles.class_b.length || 0;
+            document.getElementById('class_bCount').textContent = (circles.class_b && circles.class_b.length) || 0;  // A21: null-safe (see publicCount)
         }
 
         // Update display for Class A/Family - Backend NOW returns 'class_a'
@@ -755,7 +758,7 @@ if (window.i18n && window.i18n.applyLanguage) {
                         <p data-i18n="circles.no_members">No members yet</p>
                     </div>`;
             }
-            document.getElementById('class_aCount').textContent = circles.class_a.length || 0;
+            document.getElementById('class_aCount').textContent = (circles.class_a && circles.class_a.length) || 0;  // A21: null-safe (see publicCount)
         }
 
         // Re-apply translations after modifying DOM
@@ -837,19 +840,29 @@ async function loadCircleRecommendations() {
         requests.forEach((req, index) => {
             console.log(`[CircleRecs] Req ${index + 1}: ${req.requester_name} (${req.selected_city || 'no city'})`);
             // Escape username for onclick to prevent XSS and quote issues
-            const escapedUsername = (req.requester_name || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+            // A21 (XSS): unicode-escape so the value is safe as a single-quoted onclick arg INSIDE a
+            // double-quoted attribute. The old `\\'`/`\\"` form did not neutralize a `"` (backslash
+            // is not an HTML-attribute escape), leaving an attribute-breakout XSS.
+            const escapedUsername = String(req.requester_name || '').replace(/[\\'"<>&]/g,
+                c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+            // A21 (XSS): escapedUsername only neutralizes the JS-string context inside onclick;
+            // fields rendered into innerHTML still need HTML-escaping. Escape name/initial/city so a
+            // scripted requester_name or selected_city can't run in the viewer's session.
+            const recSafeName = escapeHtml(req.requester_name || 'U');
+            const recSafeInitial = escapeHtml(((req.requester_name || 'U')[0] || 'U').toUpperCase());
+            const recSafeCity = escapeHtml(req.selected_city || '');
             html += `
                 <div class="member-item" style="display: flex; align-items: center; gap: 15px; padding: 12px; border-radius: 10px; transition: background 0.2s; margin-bottom: 8px; background: #f8f9fa;">
                     <div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: ${req.avatar_color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                        ${(req.requester_name || "U")[0].toUpperCase()}
+                        ${recSafeInitial}
                     </div>
                     <div style="flex-grow: 1;">
                         <div style="font-weight: 600; color: #667eea; cursor: pointer;" 
                              onclick="window.location.href='/?view=profile&user_id=${req.requester_id}'"
                              onmouseover="this.style.textDecoration='underline'" 
-                             onmouseout="this.style.textDecoration='none'">${req.requester_name}</div>
+                             onmouseout="this.style.textDecoration='none'">${recSafeName}</div>
                         <div style="font-size: 12px; color: #8898aa;" data-i18n="circles.reason_pending_request">Sent you a connection request</div>
-                        ${req.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${req.selected_city}</div>` : ""}
+                        ${req.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${recSafeCity}</div>` : ""}
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <button onclick="showCircleAddMenu(${req.requester_id}, '${escapedUsername}')" 
@@ -944,12 +957,17 @@ function createMemberElement(member, circleType) {
     memberDiv.className = 'member-item';
     // 10Link: Make member name clickable to view their profile (same pattern as circles search)
     const displayName = member.display_name || member.username || member.email || 'U';
+    // A21 (dormant-bug fix / XSS): escape the display name before inserting into innerHTML.
+    // A member who sets their name to markup (e.g. "<img src=x onerror=...>") would otherwise run
+    // script in every viewer's session. Mirrors updateCircleDisplay(), which already escapes.
+    const safeName = escapeHtml(displayName);
+    const safeInitial = escapeHtml((displayName[0] || 'U').toUpperCase());
     memberDiv.innerHTML = `
-        <div class="user-avatar">${displayName[0].toUpperCase()}</div>
-        <div class="member-name" style="cursor: pointer; color: #667eea; font-weight: 600;" 
+        <div class="user-avatar">${safeInitial}</div>
+        <div class="member-name" style="cursor: pointer; color: #667eea; font-weight: 600;"
              onclick="window.location.href='/?view=profile&user_id=${member.id}'"
-             onmouseover="this.style.textDecoration='underline'" 
-             onmouseout="this.style.textDecoration='none'">${displayName}</div>
+             onmouseover="this.style.textDecoration='underline'"
+             onmouseout="this.style.textDecoration='none'">${safeName}</div>
         <button class="remove-btn" onclick="removeFromCircle(${member.id}, '${circleType}')">Remove</button>
     `;
     return memberDiv;
@@ -1064,28 +1082,41 @@ async function searchUsers() {
                 const interests = user.interests || '';
                 const city = user.selected_city || '';
 
+                // A21 (XSS): escape every user-supplied field before it enters innerHTML.
+                // safe* are HTML-entity escaped for text contexts; jsName is unicode-escaped so it
+                // can neither break out of the single-quoted onclick argument nor the double-quoted
+                // attribute that wraps it (a raw ' or " would otherwise escape those contexts).
+                const safeName = escapeHtml(displayName || 'U');
+                const safeInitialChar = escapeHtml(((displayName || 'U')[0] || 'U').toUpperCase());
+                const safeCity = escapeHtml(city);
+                const safeEmail = escapeHtml(email);
+                const safeOccupation = escapeHtml(occupation);
+                const safeInterests = escapeHtml(interests);
+                const jsName = String(displayName || '').replace(/[\\'"<>&]/g,
+                    c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+
                 // Build detail line (occupation and interests)
                 let detailLine = '';
                 if (occupation && interests) {
-                    detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${occupation} • ${interests}</div>`;
+                    detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${safeOccupation} • ${safeInterests}</div>`;
                 } else if (occupation) {
-                    detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${occupation}</div>`;
+                    detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${safeOccupation}</div>`;
                 } else if (interests) {
-                    detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${interests}</div>`;
+                    detailLine = `<div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${safeInterests}</div>`;
                 }
 
                 // PJN452: Make user info clickable to view profile
                resultItem.innerHTML = `
                     <div class="user-info" style="cursor: pointer;" onclick="viewUserProfileFromCircles(${user.id})">
-                        <div class="user-avatar">${(displayName || 'U')[0].toUpperCase()}</div>
+                        <div class="user-avatar">${safeInitialChar}</div>
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: 600;">${displayName}</div>
-                            ${city ? `<div style="font-size: 12px; color: #8898aa;">📍 ${city}</div>` : ''}
-                            <div style="font-size: 13px; color: #8898aa;">${email}</div>
+                            <div style="font-weight: 600;">${safeName}</div>
+                            ${city ? `<div style="font-size: 12px; color: #8898aa;">📍 ${safeCity}</div>` : ''}
+                            <div style="font-size: 13px; color: #8898aa;">${safeEmail}</div>
                             ${detailLine}
                         </div>
                     </div>
-                    <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${displayName}')" style="margin-inline-start: 10px; flex-shrink: 0;" onclick="event.stopPropagation()">
+                    <select onchange="if(this.value) addToCircle('${user.id}', this.value, '${jsName}')" style="margin-inline-start: 10px; flex-shrink: 0;" onclick="event.stopPropagation()">
                         <option value="">Add to circle...</option>
                         <option value="public" data-i18n="circles.public">General</option>
                         <option value="class_b" data-i18n="circles.class_b">Close Friends</option>
@@ -1867,8 +1898,8 @@ function updateConversationsList() {
 
         return `
             <div class="conversation-item ${currentRecipient?.id === conv.id ? 'active' : ''}"
-                 onclick="selectConversation(${conv.id}, '${escapeHtml(conv.name).replace(/'/g, "\\'")}')">
-                <div class="conversation-avatar">${conv.name[0].toUpperCase()}</div>
+                 onclick="selectConversation(${conv.id}, '${String(conv.name || '').replace(/[\\'"<>&]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'))}')">
+                <div class="conversation-avatar">${escapeHtml((String(conv.name || 'U')[0] || 'U').toUpperCase())}</div>
                 <div class="conversation-info">
                     <div class="conversation-name">
                         ${escapeHtml(conv.name)}
@@ -2284,7 +2315,7 @@ async function searchUsersToFollow() {
                     </div>
                     ${user.is_following ?
                         '<span style="color: green;">Following ✓</span>' :
-                        `<button onclick="followWithNote(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding: 6px 12px;">Follow</button>`
+                        `<button onclick="followWithNote(${user.id}, '${String(user.username || '').replace(/[\\'"<>&]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'))}')" class="btn btn-primary" style="padding: 6px 12px;">Follow</button>`  /* A21 (XSS): unicode-escape onclick arg (quotes survive escapeHtml) */
                     }
                 </div>
             `;
@@ -2406,7 +2437,10 @@ async function searchUsersToFollowInstant(query) {
                 if (blockedResponse.ok) {
                     const blockedData = await blockedResponse.json();
                     if (blockedData.blocked_users) {
-                        blockedUserIds = new Set(blockedData.blocked_users.map(u => u.id));
+                        // A21 (pre-existing dormant bug): coerce ids to Number so Set.has() (below)
+                        // still matches when the search API and blocked-users API disagree on id type
+                        // (string vs number) — otherwise an already-blocked user shows "Block".
+                        blockedUserIds = new Set(blockedData.blocked_users.map(u => Number(u.id)));
                     }
                 }
             } catch (e) {
@@ -2429,25 +2463,35 @@ async function searchUsersToFollowInstant(query) {
                 } else {
                     // PJ601: Make names clickable to view profile, add Follow + Block/Unblock toggle buttons
                     resultsContainer.innerHTML = users.map(user => {
-                        const isBlocked = blockedUserIds.has(user.id);
+                        const isBlocked = blockedUserIds.has(Number(user.id));  // A21: coerce (see Set build above)
                         const buttonText = isBlocked ? blockT.unblock : blockT.block;
-                        const buttonStyle = isBlocked 
+                        const buttonStyle = isBlocked
                             ? 'background: #6c757d;'  // Gray for unblock
                             : 'background: #ef4444;'; // Red for block
-                        const buttonAction = isBlocked 
+                        // A21 (XSS): escape user fields for the innerHTML below. uJsName is
+                        // unicode-escaped so it survives inside the single-quoted onclick argument
+                        // that sits in a double-quoted attribute (a raw ' or " would break out).
+                        const uSafeName = escapeHtml(user.username || 'U');
+                        const uSafeInitial = escapeHtml((String(user.username || 'U').charAt(0) || 'U').toUpperCase());
+                        const uSafeCity = escapeHtml(user.selected_city || '');
+                        const uBioRaw = user.bio ? (user.bio.substring(0, 50) + (user.bio.length > 50 ? '...' : '')) : '';
+                        const uSafeBio = escapeHtml(uBioRaw);
+                        const uJsName = String(user.username || '').replace(/[\\'"<>&]/g,
+                            c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+                        const buttonAction = isBlocked
                             ? `unblockUserFromSearch(${user.id})`
-                            : `blockUserFromSearch(${user.id}, '${user.username.replace(/'/g, "\\'")}')`;
+                            : `blockUserFromSearch(${user.id}, '${uJsName}')`;
                         
                         return `
                         <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #E5E7EB;" data-user-id="${user.id}">
                             <div style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1;" onclick="viewUserProfileFromSearch(${user.id})">
                                 <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                    ${user.username.charAt(0).toUpperCase()}
+                                    ${uSafeInitial}
                                 </div>
                                 <div>
-                                    <strong style="color: #2d3436;">${user.username}</strong>
-                                    ${user.selected_city ? `<p style="font-size: 12px; color: #6B7280; margin: 0;">📍 ${user.selected_city}</p>` : ''}
-                                    ${user.bio ? `<p style="font-size: 12px; color: #6B7280; margin: 0;">${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}</p>` : ''}
+                                    <strong style="color: #2d3436;">${uSafeName}</strong>
+                                    ${user.selected_city ? `<p style="font-size: 12px; color: #6B7280; margin: 0;">📍 ${uSafeCity}</p>` : ''}
+                                    ${user.bio ? `<p style="font-size: 12px; color: #6B7280; margin: 0;">${uSafeBio}</p>` : ''}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 6px; align-items: center;">
