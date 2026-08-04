@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!-- TheraSocial Parameters Version B175 (A26) -->
+<!-- B175 (A26): Cache-bust sync - all JS ?v bumped B170->B175 in lockstep with index/circles
+  (i18n.js and parameters-social.js both changed this round: parameters-social.js gained the
+  self-contained window.TSDiaryReminder module, which offers a 19:00 daily email diary reminder
+  once, after the user's first check-in, and one additive call to it inside saveParameters()).
+  No functional/JS changes in THIS file. -->
 <!-- TheraSocial Parameters Version B170 (A21) -->
 <!-- B170 (A21): Cache-bust sync — all JS ?v bumped B165→B170 in lockstep with index/circles.
   Functional changes in THIS file: (1) the daily gift-box CLOSING message was replaced with a
@@ -194,11 +200,17 @@
                 padding: 10px;
             }
 
+            /* A27 SCROLL FIX: `clip`, not `hidden`. Per the CSS Overflow spec, setting
+               one axis to `hidden` forces the other axis' `visible` to compute to `auto`,
+               turning these wrappers into scroll containers that swallow vertical swipes
+               and freeze the page. `clip` suppresses horizontal overflow without creating
+               a scroll container. (`overflow-x: hidden` on <body> is safe and is left
+               alone - it propagates to the viewport instead. Verified.) */
             .parameters-page, .calendar-container, .diary-card,
             .rating-container, .action-buttons, .form-group {
                 max-width: 100% !important;
                 box-sizing: border-box !important;
-                overflow-x: hidden !important;
+                overflow-x: clip !important;
             }
 
             .calendar-grid, .calendar-table, table {
@@ -753,7 +765,11 @@
     }
     function closeDiaryMoreMenu() {
         const menu = document.getElementById('diaryMoreMenu');
-        if (menu) { menu.classList.add('hidden'); document.body.style.overflow = ''; }
+        if (menu) { menu.classList.add('hidden'); }
+        // A27 FIX: the scroll-lock release used to sit INSIDE the `if (menu)` guard. If the
+        // element was ever missing when this ran, `overflow: hidden` stayed on <body>
+        // forever and the page became permanently unscrollable. Always release.
+        document.body.style.overflow = '';
     }
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDiaryMoreMenu(); });
     </script>
@@ -920,9 +936,9 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B170"></script>
-    <script src="/static/js/parameters-social.js?v=B170"></script>
-    <script src="/static/js/feed-updates.js?v=B170"></script>
+    <script src="/static/js/i18n.js?v=B180"></script>
+    <script src="/static/js/parameters-social.js?v=B180"></script>
+    <script src="/static/js/feed-updates.js?v=B180"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -1445,7 +1461,9 @@ Storage.prototype.setItem = function(key, value) {
             box-sizing: border-box;
             /* A16: taller reveal (points headline + reflection) must stay fully reachable —
                scroll within the card on very short viewports instead of clipping the button. */
-            max-height: calc(100vh - 40px); overflow-y: auto;
+            /* A27 ANDROID FIX: dvh tracks the real visible height while the browser
+               toolbar is showing; the 100vh value is kept first as a fallback. */
+            max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto;
         }
         #ts-gift-overlay.show #ts-gift-card { transform: translateY(0) scale(1); }
         .dark-mode #ts-gift-card, body.dark-mode #ts-gift-card {
@@ -1693,9 +1711,13 @@ Storage.prototype.setItem = function(key, value) {
             card.appendChild(hint); card.appendChild(reveal);
             overlay.appendChild(card);
 
-            // Backdrop click closes only after the gift has been opened.
+            // A27 FIX: backdrop click now closes ALWAYS, not only after the gift is opened.
+            // Previously the only dismissal paths before opening were the Escape key (which
+            // phones do not have) and tapping the gift itself. A user who did not realise
+            // they had to tap the gift was left with a modal they could not dismiss AND
+            // `overflow: hidden` on <body> - a fully frozen page.
             overlay.addEventListener('click', function (e) {
-                if (e.target === overlay && opened) close(overlay);
+                if (e.target === overlay) close(overlay);
             });
             overlay.__esc = function (e) { if (e.key === 'Escape') close(overlay); };
             document.addEventListener('keydown', overlay.__esc);
@@ -1756,5 +1778,39 @@ Storage.prototype.setItem = function(key, value) {
         }
     </style>
     <!-- ===================== END A16-ANDROID ===================== -->
+
+    <!-- A27 FIX: scroll-lock safety net. Any code path that sets
+         `document.body.style.overflow = 'hidden'` and fails to release it freezes the page
+         permanently. This clears the lock whenever no blocking overlay is actually on
+         screen, so a stuck lock can never outlive the thing that set it. -->
+    <script id="ts-a27-scrolllock-net">
+    (function () {
+        function blockingOverlayVisible() {
+            var els = document.querySelectorAll(
+                '#diaryMoreMenu, #mobileMoreMenu, #ts-gift-overlay, #onboarding-overlay, ' +
+                '#desktopPopup, #appload-splash, .modal'
+            );
+            for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                if (el.classList.contains('hidden')) continue;
+                var st = getComputedStyle(el);
+                if (st.display === 'none' || st.visibility === 'hidden') continue;
+                if (parseFloat(st.opacity) === 0) continue;
+                return true;
+            }
+            return false;
+        }
+        function releaseOrphanedLock() {
+            if (document.body.style.overflow !== 'hidden') return;
+            if (blockingOverlayVisible()) return;   // a real modal is open - leave it alone
+            document.body.style.overflow = '';
+        }
+        setInterval(releaseOrphanedLock, 1500);
+        window.addEventListener('pageshow', releaseOrphanedLock);
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) releaseOrphanedLock();
+        });
+    })();
+    </script>
 </body>
 </html>

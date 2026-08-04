@@ -1,4 +1,21 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B175 (A26) -->
+<!-- B175 (A26): Additive round. All JS ?v bumped B170->B175 in lockstep with parameters/circles
+  (i18n.js and parameters-social.js both changed this round).
+  1. HOME NOTIFICATIONS: loadHomeAlerts() now renders the translated alert TITLE
+     ("New message from <name>", "Well-Being Alert for <name>", ...) above the message body, so
+     the Home panel matches the full Alerts view on both desktop and mobile, in all 4 languages.
+     New helper translateAlertTitle(); the title line is only drawn when it adds information.
+  2. USERNAMES: the signup regex now accepts letters in ANY script (Hebrew, Arabic, Cyrillic,
+     Latin) plus digits, underscore, hyphen, apostrophe and single inner spaces. Mirrors the
+     validate_username override added in app.py.
+  3. CONSENT: one scrolling terms panel + one confirmation. The agree-all checkbox is gone -
+     "Accept and Continue" IS the agreement - and the 3 optional GDPR consents are folded into a
+     closed disclosure. Wording, i18n keys and the save-consent payload are unchanged.
+  4. FIRST CHECK-IN: quickCheckin() gained ONE additive call to window.TSDiaryReminder, which
+     offers a 19:00 daily email diary reminder once, after the user's first check-in.
+  5. A26-POLISH block before </body>: 10 additive layout/symmetry/contrast improvements.
+  No existing logic, markup or endpoints were changed beyond the points listed above. -->
 <!-- TheraSocial Version B170 (A21) -->
 <!-- B170 (A21): Cache-bust sync — all active JS ?v bumped B165→B170 in lockstep across the
   three pages (circles-messages.js and parameters-social.js changed this round; i18n.js is
@@ -603,10 +620,10 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
-   <script src="/static/js/utilities.js?v=B170"></script>
+   <script src="/static/js/utilities.js?v=B180"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B170"></script>
-    <script src="/static/js/follow-requests.js?v=B170"></script>
+    <script src="/static/js/triggers.js?v=B180"></script>
+    <script src="/static/js/follow-requests.js?v=B180"></script>
 
 
     <style>
@@ -973,17 +990,31 @@
         }
 
         /* MOB-FIX: iOS Safari height normalization */
-        html {
-            height: -webkit-fill-available;
+        /* A27 FIX: this is an iOS-Safari-only workaround, but it was applying on
+           Android too, where it pins the root element to the viewport height for no
+           benefit. @supports (-webkit-touch-callout: none) matches iOS Safari only. */
+        @supports (-webkit-touch-callout: none) {
+            html {
+                height: -webkit-fill-available;
+            }
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #6B8BA4 0%, #B6A9C9 100%);
             min-height: 100vh;
-            /* MOB-FIX: iOS Safari 100vh includes address bar area; use -webkit-fill-available as fallback */
-            min-height: -webkit-fill-available;
+            /* A27 FIX: 100dvh for every modern engine (tracks the real visible height
+               on Android and iOS alike). The iOS-only -webkit-fill-available override
+               now lives in the @supports block below. */
+            min-height: 100dvh;
             color: var(--dark);
+        }
+
+        /* MOB-FIX: iOS Safari 100vh includes the address bar area. */
+        @supports (-webkit-touch-callout: none) {
+            body {
+                min-height: -webkit-fill-available;
+            }
         }
 
         /* Fix10C: Removed @media (prefers-color-scheme: dark) auto-detection
@@ -1066,6 +1097,7 @@
             justify-content: center;
             align-items: center;
             min-height: calc(100vh - 70px);
+            min-height: calc(100dvh - 70px);
         }
 
         .auth-card {
@@ -2828,12 +2860,19 @@
             }
 
             /* === MOBILE MESSAGES - Full viewport containment === */
+            /* A27 ANDROID FIX: on Android, 100vh is the LARGE viewport (as if the
+               browser toolbar were hidden), so while the toolbar is visible the bottom
+               of this view sat off-screen and was unreachable. 100dvh tracks the real
+               visible height. The 100vh lines stay first as a fallback for engines
+               without dvh. */
             #messagesView {
                 display: flex !important;
                 flex-direction: column;
                 /* TOP-NAV: Account for navbar + top mobile nav + padding */
                 height: calc(100vh - 130px);
                 max-height: calc(100vh - 130px);
+                height: calc(100dvh - 130px);
+                max-height: calc(100dvh - 130px);
                 overflow: hidden;
             }
 
@@ -2994,16 +3033,22 @@
             }
 
             /* Prevent any view from overflowing horizontally */
+            /* A27 SCROLL FIX: `clip` instead of `hidden` — clip suppresses horizontal
+               overflow WITHOUT turning the element into a scroll container, so
+               overflow-y stays `visible` and the page scrolls normally. */
             .view {
-                overflow-x: hidden;
+                overflow-x: clip;
                 max-width: 100%;
             }
 
             /* Adjust navbar on mobile */
+            /* A27 SCROLL FIX: `clip`, not `hidden` — `hidden` on one axis forces the
+               other axis to `auto`, turning the navbar into a scroll container that
+               swallows vertical swipes starting on it. */
             .navbar {
                 padding: 0;
                 width: 100%;
-                overflow-x: hidden;
+                overflow-x: clip;
             }
 
             .nav-content {
@@ -3084,8 +3129,11 @@
                 display: none !important;
             }
             
+            /* A27 ANDROID FIX: dvh so the list bottom is reachable while the browser
+               toolbar is showing. 100vh line kept first as a fallback. */
             .mobile-alerts-container {
                 max-height: calc(100vh - 250px);
+                max-height: calc(100dvh - 250px);
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
             }
@@ -3746,13 +3794,16 @@
                 word-break: break-all;
                 padding: 4px 2px !important;
             }
+            /* A27 SCROLL FIX: see note above — `clip`, not `hidden`. */
             .view {
                 max-width: 100% !important;
-                overflow-x: hidden !important;
+                overflow-x: clip !important;
             }
             /* MS-4: Nav overflow fix */
+            /* A27 SCROLL FIX: `clip`, not `hidden` — see note on .view above. A swipe
+               that starts on the mobile nav must still scroll the page. */
             .bottom-nav, .mobile-bottom-nav, .mobile-nav {
-                overflow-x: hidden !important;
+                overflow-x: clip !important;
                 flex-wrap: nowrap !important;
             }
             .bottom-nav-item, .mobile-nav-item {
@@ -4641,11 +4692,16 @@
         }
 
         /* B30-M10: Prevent pull-to-refresh from interfering with scrollable areas */
+        /* A27 SCROLL FIX: `.view` REMOVED from this list. `.view` is given
+           `overflow-x: hidden` in two mobile media queries, which per spec forces
+           `overflow-y: visible` -> `auto`, making every view its own scroll box.
+           Combined with `overscroll-behavior: contain`, any swipe starting inside a
+           view was swallowed and blocked from reaching the document, freezing the
+           whole page. Only genuinely scrollable lists belong here. */
         .messages-list,
         .conversations-list,
         #friendsUpdatesList,
-        #connectionStatusList,
-        .view {
+        #connectionStatusList {
             overscroll-behavior: contain;
         }
     </style>
@@ -5059,35 +5115,21 @@
         <!-- Consent checkboxes -->
         <div class="consent-items" style="margin: 20px 0;">
 
-            <!-- CLEAN: 5 required items shown as text list with single agree-all checkbox -->
-            <div style="margin-top: 0; padding: 18px; background: #fafbfc; border-radius: 14px; border: 1px solid #e5e8eb;">
-                <p style="font-weight: 600; margin-bottom: 12px; color: #374151; font-size: 0.95rem;" data-i18n="consent.required_heading">By using TheraSocial, you agree to the following:</p>
-                <ul style="list-style: none; padding: 0; margin: 0 0 16px 0; display: flex; flex-direction: column; gap: 10px;">
-                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
-                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
-                        <span data-i18n="consent.privacy">I accept the privacy policy and understand my data will be protected</span>
-                    </li>
-                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
-                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
-                        <span data-i18n="consent.research">I agree to share de-identified data for platform improvement</span>
-                    </li>
-                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
-                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
-                        <span data-i18n="consent.team">I understand this is a good-faith community platform</span>
-                    </li>
-                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
-                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
-                        <span data-i18n="consent.responsible">I will use this platform responsibly and respectfully</span>
-                    </li>
-                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #4B5563; font-size: 14px; line-height: 1.5;">
-                        <span style="color: #9DB8A0; flex-shrink: 0; font-size: 16px;">✓</span>
-                        <span data-i18n="consent.waiver">I understand and accept the terms of service</span>
-                    </li>
-                </ul>
-                <label class="consent-item" style="font-weight: 600; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; gap: 10px; margin: 0; cursor: pointer;">
-                    <input type="checkbox" id="agreeAllRequired" required onchange="syncRequiredConsents(this.checked)" style="width: 18px; height: 18px; accent-color: #6B8BA4;">
-                    <span data-i18n="consent.agree_all" style="color: #374151;">I agree to all of the above</span>
-                </label>
+            <!-- A26 (item 2): One scrolling text, one confirmation.
+                 The 5 required terms are now a single quiet scroll panel instead of a checkbox
+                 stack, and the "Accept and Continue" button below IS the confirmation — the
+                 agree-all checkbox is gone. The optional GDPR preferences are folded into a
+                 closed disclosure so nothing competes for attention on first sight.
+                 Wording, translation keys and the request payload are all unchanged. -->
+            <div style="margin-top: 0; padding: 18px 18px 14px; background: #fafbfc; border-radius: 14px; border: 1px solid #e5e8eb;">
+                <p id="consentTermsHeading" style="font-weight: 600; margin: 0 0 10px 0; color: #374151; font-size: 0.95rem;" data-i18n="consent.required_heading">By using TheraSocial, you agree to the following:</p>
+                <div id="consentTermsScroll" class="ts-a26-consent-scroll" tabindex="0" role="region" aria-labelledby="consentTermsHeading">
+                    <p data-i18n="consent.privacy">I accept the privacy policy and understand my data will be protected</p>
+                    <p data-i18n="consent.research">I agree to share de-identified data for platform improvement</p>
+                    <p data-i18n="consent.team">I understand this is a good-faith community platform</p>
+                    <p data-i18n="consent.responsible">I will use this platform responsibly and respectfully</p>
+                    <p data-i18n="consent.waiver">I understand and accept the terms of service</p>
+                </div>
             </div>
             <!-- Hidden checkboxes to maintain backend compatibility -->
             <input type="hidden" id="privacyAccepted">
@@ -5095,26 +5137,31 @@
             <input type="hidden" id="teamDeclaration">
             <input type="hidden" id="responsibleUse">
             <input type="hidden" id="waiverClaims">
-            
-            <!-- PL400: GDPR Additional Optional Consents -->
-            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
-                <p style="font-size: 13px; color: #9CA3AF; margin-bottom: 12px; font-weight: 500;" data-i18n="consent.optional_title">Optional preferences (can be changed anytime in Privacy Settings):</p>
-                
-                <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 10px 0;">
-                    <input type="checkbox" id="marketingConsent" style="width: 16px; height: 16px; accent-color: #6B8BA4;">
-                    <span data-i18n="consent.marketing" style="color: #6B7280; font-size: 14px;">I agree to receive marketing communications</span>
-                </label>
-                
-                <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 10px 0;">
-                    <input type="checkbox" id="analyticsConsent" checked style="width: 16px; height: 16px; accent-color: #6B8BA4;">
-                    <span data-i18n="consent.analytics" style="color: #6B7280; font-size: 14px;">I allow usage analytics to improve the service</span>
-                </label>
-                
-                <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 10px 0;">
-                    <input type="checkbox" id="thirdPartySharing" style="width: 16px; height: 16px; accent-color: #6B8BA4;">
-                    <span data-i18n="consent.third_party" style="color: #6B7280; font-size: 14px;">I agree to data sharing with service partners</span>
-                </label>
-            </div>
+
+            <!-- PL400: GDPR Additional Optional Consents — A26: collapsed by default -->
+            <details class="ts-a26-optional">
+                <summary>
+                    <span data-i18n="consent.optional_toggle">Optional preferences</span>
+                </summary>
+                <div style="padding: 4px 2px 2px;">
+                    <p style="font-size: 13px; color: #9CA3AF; margin: 0 0 10px 0; font-weight: 500;" data-i18n="consent.optional_title">Optional preferences (can be changed anytime in Privacy Settings):</p>
+
+                    <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 10px 0;">
+                        <input type="checkbox" id="marketingConsent" style="width: 16px; height: 16px; accent-color: #6B8BA4;">
+                        <span data-i18n="consent.marketing" style="color: #6B7280; font-size: 14px;">I agree to receive marketing communications</span>
+                    </label>
+
+                    <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 10px 0;">
+                        <input type="checkbox" id="analyticsConsent" checked style="width: 16px; height: 16px; accent-color: #6B8BA4;">
+                        <span data-i18n="consent.analytics" style="color: #6B7280; font-size: 14px;">I allow usage analytics to improve the service</span>
+                    </label>
+
+                    <label class="consent-item" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 10px 0;">
+                        <input type="checkbox" id="thirdPartySharing" style="width: 16px; height: 16px; accent-color: #6B8BA4;">
+                        <span data-i18n="consent.third_party" style="color: #6B7280; font-size: 14px;">I agree to data sharing with service partners</span>
+                    </label>
+                </div>
+            </details>
         </div>
 
         <!-- PL400: Privacy Rights Notice -->
@@ -5124,6 +5171,8 @@
         </div>
 
         <div class="consent-actions" style="text-align: center;">
+            <!-- A26 (item 2): the button is the single confirmation, so say so plainly. -->
+            <p style="font-size: 13px; color: #6B7280; line-height: 1.5; margin: 0 0 12px 0; text-align: start;" data-i18n="consent.tap_to_agree">By selecting "Accept and Continue" you confirm you have read and agree to the terms above.</p>
             <button type="button" class="btn" onclick="submitConsent()" data-i18n="consent.accept" style="background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: white; border: none; padding: 14px 40px; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(107,139,164,0.3); width: 100%; transition: all 0.2s ease;">Accept and Continue</button>
             <p style="color: #EF4444; display: none; margin-top: 12px; font-size: 0.9rem;" id="consentError" data-i18n="consent.error">Please accept all required terms</p>
         </div>
@@ -5164,6 +5213,93 @@
     }
     .consent-item input {
         margin-right: 10px;
+    }
+
+    /* ============================================================== */
+    /* A26 (item 2): scroll-and-confirm consent.                       */
+    /* One quiet scrolling panel replaces the checkbox stack. The soft */
+    /* fade at the bottom is the only affordance telling the reader    */
+    /* there is more text below — no counters, no gating, no nagging.  */
+    /* ============================================================== */
+    .ts-a26-consent-scroll {
+        max-height: 148px;
+        overflow-y: auto;
+        /* Audit fix: logical padding. The scrollbar gutter must follow the writing direction,
+           otherwise Hebrew/Arabic text (scrollbar on the LEFT) runs under the thumb. */
+        padding: 2px 2px 32px;
+        padding-inline-end: 12px;
+        margin: 0;
+        color: #4B5563;
+        font-size: 14px;
+        line-height: 1.6;
+        -webkit-overflow-scrolling: touch;
+        /* Audit fix: NO overscroll-behavior here. This panel sits inside a modal that must
+           itself scroll on a phone; containing the scroll chain meant a swipe starting on the
+           terms could never reach "Accept and Continue". */
+    }
+    /* Audit fix: the fade is applied ONLY while there is more to read (set by the A26 polish
+       script). Unconditionally masking risked leaving the last line of a CONSENT record
+       permanently dimmed once the user had scrolled to the end. If the script never runs, the
+       panel simply has no fade — a safe failure direction. */
+    .ts-a26-consent-scroll[data-scrollable] {
+        -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+        mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+    }
+    .ts-a26-consent-scroll p {
+        margin: 0 0 12px 0;
+    }
+    .ts-a26-consent-scroll p:last-child {
+        margin-bottom: 0;
+    }
+    .ts-a26-consent-scroll:focus-visible {
+        outline: 2px solid #6B8BA4;
+        outline-offset: 3px;
+        border-radius: 8px;
+    }
+    .ts-a26-consent-scroll::-webkit-scrollbar { width: 6px; }
+    .ts-a26-consent-scroll::-webkit-scrollbar-track { background: transparent; }
+    .ts-a26-consent-scroll::-webkit-scrollbar-thumb {
+        background: rgba(107,139,164,0.30);
+        border-radius: 3px;
+    }
+    /* Optional preferences: present but not shouting. Closed on first sight. */
+    .ts-a26-optional {
+        margin-top: 16px;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 12px;
+    }
+    .ts-a26-optional > summary {
+        cursor: pointer;
+        list-style: none;
+        font-size: 13px;
+        font-weight: 500;
+        color: #6B8BA4;
+        padding: 6px 2px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 32px;
+    }
+    .ts-a26-optional > summary::-webkit-details-marker { display: none; }
+    .ts-a26-optional > summary::after {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-right: 1.5px solid currentColor;
+        border-bottom: 1.5px solid currentColor;
+        transform: rotate(45deg) translateY(-2px);
+        transition: transform 0.18s ease;
+    }
+    .ts-a26-optional[open] > summary::after {
+        transform: rotate(-135deg) translateY(-2px);
+    }
+    .ts-a26-optional > summary:focus-visible {
+        outline: 2px solid #6B8BA4;
+        outline-offset: 2px;
+        border-radius: 6px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .ts-a26-optional > summary::after { transition: none; }
     }
     .auth-divider {
         text-align: center;
@@ -5673,7 +5809,7 @@
                   <div id="homeAlertsSection" style="margin-bottom: 18px;">
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                           <h3 style="color: var(--primary); font-size: 1.15rem; margin: 0;" data-i18n="alerts.title">Alerts & Notifications</h3>
-                          <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('all')" style="width: auto !important; padding: 5px 12px !important; font-size: 0.78rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+                          <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('all')" style="width: auto !important; padding: 7px 14px !important; font-size: 0.78rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                               <span data-i18n="alerts.clear_all">Clear All</span>
                           </button>
@@ -7345,7 +7481,7 @@
     <!-- PJ6001: Well-Being Alerts List for Mobile -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h3 style="margin: 0;" data-i18n="alerts.title">Alerts</h3>
-        <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('wellness')" style="width: auto !important; padding: 6px 14px !important; font-size: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+        <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('wellness')" style="width: auto !important; padding: 7px 14px !important; font-size: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             <span data-i18n="alerts.clear_all">Clear All</span>
         </button>
@@ -7360,7 +7496,7 @@
     <!-- PJ6001: Notifications List for Mobile (messages, followers, invites) -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h3 style="margin: 0;" data-i18n="notifications.title">Notifications</h3>
-        <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('notifications')" style="width: auto !important; padding: 6px 14px !important; font-size: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
+        <button class="btn btn-secondary clear-all-alerts-btn" onclick="clearAllAlerts('notifications')" style="width: auto !important; padding: 7px 14px !important; font-size: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 5px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             <span data-i18n="alerts.clear_all">Clear All</span>
         </button>
@@ -7813,7 +7949,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B170"></script>
+    <script src="/static/js/i18n.js?v=B180"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8166,9 +8302,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B170"></script>
-   <script src="/static/js/circles-messages.js?v=B170"></script>
-<script src="/static/js/feed-updates.js?v=B170"></script>
+<script src="/static/js/parameters-social.js?v=B180"></script>
+   <script src="/static/js/circles-messages.js?v=B180"></script>
+<script src="/static/js/feed-updates.js?v=B180"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -8864,23 +9000,102 @@ async function loadUserCity() {
         }
 
         // Handle username - can be blank, will use email prefix
+        // A26: when the field is left blank, send '' and let the SERVER derive the name.
+        // Deriving here would defeat the server's collision handling (two people whose
+        // addresses both reduce to "john_doe" need different names), and a client-side
+        // ASCII rule produces nothing at all for a Hebrew/Arabic/Cyrillic address.
         let username = usernameInput ? usernameInput.trim() : '';
-        if (!username) {
-            username = email.split('@')[0].substring(0, 80);
+        const usernameWasBlank = !username;
+        // A26 audit fix: normalise to NFC before validating OR sending. macOS/iOS input methods
+        // emit decomposed (NFD) text, so "josé" can arrive as "e" + a combining accent. Without
+        // this, the same visible name could be stored twice in two different byte forms and the
+        // uniqueness check would not see them as equal. The server normalises to match.
+        try { username = username.normalize('NFC'); } catch (e) { /* pre-ES6 engine: send as typed */ }
+
+        // Username validation. The server (security.py validate_username) enforces 3-20
+        // characters, so check that here rather than the old 80 — an over-long name used to
+        // pass the client and come back as a generic "Invalid username format" from the API.
+        // Skipped entirely when the field was left blank: the server derives it.
+        if (!usernameWasBlank) {
+        // L1 audit fix: count CODE POINTS, not UTF-16 units, so an astral-plane name is
+        // measured the same way Python's len() measures it on the server.
+        const usernameCodePoints = [...username].length;
+        if (usernameCodePoints > 20) {
+            showNotification(_t('auth.username_too_long', 'Username is too long (max 20 characters)'), 'error');
+            return;
         }
-        
-        // Username validation
-        if (username.length > 80) {
-            showNotification(_t('auth.username_too_long', 'Username is too long (max 80 characters)'), 'error');
+        if (usernameCodePoints < 3) {
+            showNotification(_t('auth.username_too_short', 'Username must be at least 3 characters'), 'error');
             return;
         }
         
-        // Only allow alphanumeric and underscore in username
-        const usernameRegex = /^[a-zA-Z0-9_]+$/;
-        if (!usernameRegex.test(username)) {
+        // A26 (item 2): Allow usernames in any script — Hebrew, Arabic, Cyrillic, Latin — plus
+        // digits, underscore, hyphen, apostrophe and single inner spaces.
+        // Mirrors validate_username in security.py EXACTLY, including its 3-20 length policy.
+        // The legacy branch is security.py's own rule verbatim, so the client never accepts a
+        // name the server will reject (and never rejects one it would accept).
+        // Unicode property escapes are supported by every browser this app targets; the
+        // try/catch keeps very old engines working by falling back to the legacy rule alone.
+        const legacyUsernameRegex = /^[A-Za-z0-9_]{3,20}$/;
+        let unicodeUsernameRegex = null;
+        try {
+            // W = letter (any script) / combining mark / digit / underscore.  S = separator
+            // (hyphen, straight or curly apostrophe, space) — allowed inside only, never doubled.
+            const W = "[\\p{L}\\p{M}\\p{N}_]";
+            // L2 audit fix: the FIRST character may not be a combining mark — the server's
+            // _is_username_start_char forbids it, so "\u0301abc" passed here and 400'd there.
+            const WSTART = "[\\p{L}\\p{N}_]";
+            const S = "['’\\- ]";
+            unicodeUsernameRegex = new RegExp("^" + WSTART + "(?:" + W + "|" + S + "(?!" + S + "))*" + W + "$|^" + WSTART + "$", 'u');
+        } catch (e) {
+            unicodeUsernameRegex = null;   // very old engine — legacy rule still applies
+        }
+        // Never allow invisible or direction-flipping characters, whichever rule matched.
+        // Invisible LETTERS (Hangul/Khmer fillers) are category Lo, so \p{L} matches them
+        // even though they render as nothing - "admin" and "admin\u3164" would be two
+        // different but identical-looking accounts. Mirrors _A26_INVISIBLE_LETTERS in app.py.
+        // Invisible or direction-flipping characters. Includes the VARIATION SELECTORS and
+        // COMBINING GRAPHEME JOINER, which are category Mn - so \p{M} above accepts them and
+        // "admin"+U+FE0F would render identically to "admin". Mirrors security.py.
+        const hasInvisible = /[\x00-\x1f\x7f-\x9f\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180b-\u180f\u200b-\u200f\u202a-\u202e\u2060-\u206f\u3164\ufe00-\ufe0f\ufeff\uffa0]/u.test(username) ||
+            /[\u{E0000}-\u{E0FFF}]/u.test(username);
+        // A26 audit fix: mirror app.py's structure exactly. The "must contain something
+        // visible" rule gates ONLY the new Unicode branch — applying it to the legacy branch
+        // too would have rejected names the server still accepts (e.g. an email prefix of
+        // "___"), putting the client and server back out of step.
+        let hasVisible = false;
+        try { hasVisible = /[\p{L}\p{N}]/u.test(username); }
+        catch (e) { hasVisible = /[A-Za-z0-9]/.test(username); }
+        // Compatibility look-alikes: fullwidth "\uff41", math-bold, circled digits and Roman
+        // numerals are distinct code points that render almost identically to plain ASCII.
+        // NFC does not fold them, so compare each character against its NFKC form — the same
+        // test security.py applies via unicodedata.decomposition(). Verified against Hebrew,
+        // Arabic, Devanagari, Tamil, Greek, Cyrillic, Hangul and accented Latin: no false hits.
+        // Allow-list of compatibility-decomposable code points that are ORDINARY LETTERS in
+        // a living script — THAI SARA AM, LAO VOWEL SIGN AM, ARMENIAN ECH YIWN, the Dutch/
+        // Croatian digraphs, and the Hangul Compatibility Jamo block. Mirrors
+        // _USERNAME_COMPAT_LETTERS in security.py.
+        const COMPAT_OK = new Set(
+            ['\u0e33','\u0eb3','\u0587','\u0132','\u0133',
+             '\u01c4','\u01c5','\u01c6','\u01c7','\u01c8','\u01c9',
+             '\u01ca','\u01cb','\u01cc','\u01f1','\u01f2','\u01f3']
+        );
+        for (let cp = 0x3131; cp < 0x3164; cp++) { COMPAT_OK.add(String.fromCharCode(cp)); }
+        let hasConfusable = false;
+        try {
+            hasConfusable = [...username.normalize('NFC')]
+                .some(c => !COMPAT_OK.has(c) && c.normalize('NFKC') !== c);
+        } catch (e) { hasConfusable = false; }
+        const lengthOk = usernameCodePoints >= 3 && usernameCodePoints <= 20;
+        const usernameOk = !hasInvisible && !hasConfusable && lengthOk && (
+            legacyUsernameRegex.test(username) ||
+            (hasVisible && unicodeUsernameRegex !== null && unicodeUsernameRegex.test(username))
+        );
+        if (!usernameOk) {
             showNotification(_t('auth.username_invalid_chars', 'Username can only contain letters, numbers, and underscores'), 'error');
             return;
         }
+        }   // end: only validated when the user typed a username
 
         try {
             const body = { 
@@ -9453,8 +9668,13 @@ async function submitConsent() {
         return;
     }
 
-    // CLEAN: Use aggregate checkbox for all required consents
-    const allRequiredChecked = document.getElementById('agreeAllRequired')?.checked || false;
+    // A26 (item 2): The "Accept and Continue" button is now the single confirmation — reaching
+    // this function IS the agreement, so there is no checkbox to read. The lookup is kept so a
+    // stale cached copy of the old markup (which still renders the checkbox) keeps honouring it.
+    const agreeAllEl = document.getElementById('agreeAllRequired');
+    const allRequiredChecked = agreeAllEl ? !!agreeAllEl.checked : true;
+    // Keep the legacy hidden fields in step with what we are about to submit.
+    if (typeof syncRequiredConsents === 'function') syncRequiredConsents(allRequiredChecked);
 
     const consent = {
         username: username, // Empty string is valid - backend will use email prefix
@@ -10313,8 +10533,11 @@ function closeMobileMoreMenu() {
     const moreMenu = document.getElementById('mobileMoreMenu');
     if (moreMenu) {
         moreMenu.classList.add('hidden');
-        document.body.style.overflow = ''; // Restore scrolling
     }
+    // A27 FIX: the scroll-lock release used to live INSIDE the `if (moreMenu)` guard.
+    // If the element was ever missing when this ran, `overflow: hidden` stayed on
+    // <body> forever and the page became permanently unscrollable. Always release.
+    document.body.style.overflow = '';
 }
 
 function showViewFromMore(viewName) {
@@ -10336,6 +10559,38 @@ document.addEventListener('keydown', function(e) {
 });
 
 // Make functions globally available
+// A27 FIX: scroll-lock safety net. Any future code path that sets
+// `document.body.style.overflow = 'hidden'` and fails to release it would freeze the
+// page permanently. This releases the lock whenever no blocking overlay is actually
+// on screen, so a stuck lock can never outlive the thing that set it.
+(function () {
+    function blockingOverlayVisible() {
+        var els = document.querySelectorAll(
+            '#mobileMoreMenu, #diaryMoreMenu, #ts-gift-overlay, #onboarding-overlay, ' +
+            '#desktopPopup, #appload-splash, #consentModal, .modal'
+        );
+        for (var i = 0; i < els.length; i++) {
+            var el = els[i];
+            if (el.classList.contains('hidden')) continue;
+            var st = getComputedStyle(el);
+            if (st.display === 'none' || st.visibility === 'hidden') continue;
+            if (parseFloat(st.opacity) === 0) continue;
+            return true;
+        }
+        return false;
+    }
+    function releaseOrphanedLock() {
+        if (document.body.style.overflow !== 'hidden') return;
+        if (blockingOverlayVisible()) return;   // a real modal is open — leave it alone
+        document.body.style.overflow = '';
+    }
+    setInterval(releaseOrphanedLock, 1500);
+    window.addEventListener('pageshow', releaseOrphanedLock);
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) releaseOrphanedLock();
+    });
+})();
+
 window.toggleMobileMoreMenu = toggleMobileMoreMenu;
 window.closeMobileMoreMenu = closeMobileMoreMenu;
 window.showViewFromMore = showViewFromMore;
@@ -10617,7 +10872,7 @@ function loadInviteView() {
         })
         .then(data => {
             const username = data.user?.username || 'user';
-            const inviteLink = `${window.location.origin}/invite/${username}`;
+            const inviteLink = `${window.location.origin}/invite/${encodeURIComponent(username)}`;
             const linkInput = document.getElementById('userInviteLink');
             if (linkInput) {
                 linkInput.value = inviteLink;
@@ -10629,7 +10884,7 @@ function loadInviteView() {
             if (typeof currentUser !== 'undefined' && currentUser?.username) {
                 const linkInput = document.getElementById('userInviteLink');
                 if (linkInput) {
-                    linkInput.value = `${window.location.origin}/invite/${currentUser.username}`;
+                    linkInput.value = `${window.location.origin}/invite/${encodeURIComponent(currentUser.username)}`;
                 }
             }
         });
@@ -11810,15 +12065,41 @@ async function updateNotificationSetting(settingName, value) {
     
     try {
         console.log('[NOTIFICATION DEBUG] Sending PUT to /api/notification-settings...');
+        // A26 audit fix: this PUT sent ONLY the toggled field. A user with no
+        // notification_settings row yet (i.e. anyone who has never opened these settings)
+        // gets the row created here from the column defaults — diary_reminder_timezone
+        // = 'UTC' — so switching the diary reminder on scheduled the email at 09:00 UTC
+        // while the Settings page displayed their city's timezone next to it. Send the
+        // timezone alongside, exactly as updateDiaryReminderTime() already does.
+        // Only the timezone is added: diary_reminder_time is deliberately NOT sent, so a
+        // time the user already chose is never overwritten by enabling the toggle.
+        const notificationBody = { [settingName]: value };
+        if (settingName === 'email_daily_diary_reminder' && value) {
+            try {
+                const tzResponse = await fetch('/api/city-timezone', { credentials: 'include' });
+                if (tzResponse.ok) {
+                    const tzData = await tzResponse.json();
+                    // Only send a timezone we actually resolved. Falling back to 'UTC' here
+                    // would OVERWRITE a correct stored value whenever the lookup came back
+                    // empty — the precise failure this fix exists to prevent.
+                    if (tzData && tzData.timezone) {
+                        notificationBody.diary_reminder_timezone = tzData.timezone;
+                        console.log('[NOTIFICATION DEBUG] Including timezone:', tzData.timezone);
+                    }
+                }
+            } catch (tzError) {
+                // Leave the field out entirely on failure — the PUT handler only writes it
+                // when present, so a correct stored value is never clobbered.
+                console.warn('[NOTIFICATION DEBUG] Could not resolve timezone:', tzError);
+            }
+        }
         const response = await fetch('/api/notification-settings', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
             credentials: 'include',
-            body: JSON.stringify({
-                [settingName]: value
-            })
+            body: JSON.stringify(notificationBody)
         });
         
         console.log('[NOTIFICATION DEBUG] PUT Response status:', response.status);
@@ -13442,6 +13723,16 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
             if (response && response.success) {
                 await loadMessages(currentRecipient.id, currentRecipient.username);
                 await loadConversations();
+                // A26: the message is now DELIVERED even when it contains a crisis
+                // disclosure (previously the backend refused it outright). Show the sender
+                // the support resources alongside the confirmation rather than instead of it.
+                if (response.support_notice) {
+                    // Backend sends an i18n key plus an English fallback; show it in the
+                    // user's own language (the app ships en/he/ar/ru).
+                    showNotification(
+                        _t(response.support_notice_key || 'msg.crisis_support_notice', response.support_notice),
+                        'info');
+                }
             } else {
                 // Restore message if send failed
                 messageInput.value = messageToSend;
@@ -21407,6 +21698,11 @@ async function quickCheckin(moodValue) {
             if (card) card.style.display = 'none';
             // Refresh summary
             loadHomeSummary();
+            // A26 (item 2): after the FIRST check-in only, offer the 19:00 email reminder.
+            // Module + all eligibility guards live in parameters-social.js.
+            if (window.TSDiaryReminder && typeof window.TSDiaryReminder.onCheckinSaved === 'function') {
+                window.TSDiaryReminder.onCheckinSaved();
+            }
         } else {
             showNotification(_t('msg.mood_failed', 'Failed to save mood'), 'error');
         }
@@ -21693,8 +21989,71 @@ async function loadHomeAlerts() {
             return text;
         }
 
+        // A26 (item 1): Translate an alert TITLE the same way the full Alerts view does, so the
+        // home preview shows "New message from <name>" (all 4 languages) instead of only the
+        // message body. Mirrors the title branch of renderItem() in loadAlerts().
+        // Returns the translated title, or '' when the shape is not one we recognise.
+        // A26 audit fix: returning the raw string for unrecognised titles would have put a bold
+        // ENGLISH heading above every row in Hebrew/Arabic/Russian — including "New post from
+        // <name>", which is created for every follower on every feed post. Unrecognised titles
+        // now render exactly as they did before this change: no heading at all.
+        function translateAlertTitle(rawTitle) {
+            if (!rawTitle || typeof rawTitle !== 'string') return '';
+            let title = rawTitle;
+            // Well-being alert titles ("Well-Being Alert for {username}").
+            // A26 audit fix: gate on the SHAPE, not on whether the string changed. The English
+            // value of alerts.wellness_alert_for is byte-identical to what the backend stores,
+            // so a "did it change?" test was false in English and English users silently lost
+            // the heading that every other language got.
+            if (window._translateWellnessTitle &&
+                (title.indexOf('Well-Being Alert for ') === 0 || title.indexOf('Wellness Alert for ') === 0)) {
+                const w = window._translateWellnessTitle(title);
+                if (w) return w;
+            }
+            // A26 audit fix: window.i18n.translate returns the KEY itself when a key is missing,
+            // so the usual `translate(k) || fallback` idiom would render a raw key like
+            // "alerts.new_message_from" as a heading. Mirror translateKey()'s null-on-miss shape.
+            const rawT = (window.i18n && window.i18n.translate) ? window.i18n.translate : null;
+            const tFn = rawT ? function (k) { const r = rawT(k); return (r && r !== k) ? r : null; } : null;
+            // Legacy plain-English message titles stored as "New message from <username>"
+            if (title.startsWith('New message from ')) {
+                const username = title.replace('New message from ', '');
+                const template = (tFn && tFn('alerts.new_message_from')) || 'New message from {username}';
+                return template.replace('{username}', username);
+            }
+            if (title.includes(' started following')) {
+                const username = title.split(' started following')[0];
+                const template = (tFn && tFn('alerts.accepted_request')) || '{username} accepted your connection request';
+                return template.replace('{username}', username);
+            }
+            if (title.includes('accepted your connection request') || title.includes('accepted your follow request')) {
+                const username = title.split(' accepted your')[0];
+                const template = (tFn && tFn('alerts.accepted_request')) || '{username} accepted your connection request';
+                return template.replace('{username}', username);
+            }
+            if (title.includes('wants to connect with you') || title.includes('wants to follow you')) {
+                const username = title.split(' wants to ')[0];
+                const template = (tFn && tFn('alerts.follow_request')) || '{username} wants to connect with you';
+                return template.replace('{username}', username);
+            }
+            if (title === 'New Follow Request') {
+                return (tFn && tFn('invite.alert_title')) || 'New Invitation';
+            }
+            // JSON {key,params}, "alerts.*"/"invite.*"/"circles.*" keys and "username|key" pairs.
+            // If translateAlertText hands the string straight back, we did not recognise it —
+            // report that as "no title" rather than showing an untranslated heading.
+            const resolved = translateAlertText(title);
+            return (resolved && resolved !== title) ? resolved : '';
+        }
+
         homeAlertsList.innerHTML = alerts.slice(0, 5).map(alert => {
-            let displayText = translateAlertText(alert.message || alert.text || alert.title || 'Alert');
+            // A26 audit fix: keep the real body separate from the title fallback. When an alert
+            // has a title but no body, displayText falls back to the title — and because
+            // translateAlertText leaves plain strings alone while translateAlertTitle
+            // translates them, the two differed and the SAME sentence rendered twice, once
+            // translated and once not. rawBody lets us tell "has a body" from "borrowed the title".
+            const rawBody = alert.message || alert.text || '';
+            let displayText = translateAlertText(rawBody || alert.title || 'Alert');
             // LL FIX: Translate well-being alert content patterns (e.g., "julia's anxiety has been...")
             if (window._translateWellnessContent) displayText = window._translateWellnessContent(displayText);
             // T11: Translate "accepted your connection request" content on home page
@@ -21704,12 +22063,18 @@ async function loadHomeAlerts() {
                 const template = tFn ? (tFn('alerts.accepted_content') || '{username} has accepted your connection request. You are now connected!') : '{username} has accepted your connection request. You are now connected!';
                 displayText = template.replace('{username}', username);
             }
+            // A26 (item 1): Resolve the heading ("New message from <name>", "Well-Being Alert
+            // for <name>", ...). Only rendered when it adds information — i.e. when a separate
+            // body exists and differs — so single-line notifications keep their current look.
+            const titleText = translateAlertTitle(alert.title || '');
+            const showTitle = !!rawBody && !!titleText && titleText.trim() !== '' && titleText.trim() !== displayText.trim();
             return `
-            <div style="background: var(--peach-light); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 1.2rem;">🔔</span>
-                <div style="flex: 1;">
-                    <div style="font-size: 0.9rem; color: var(--dark);">${escapeHtml(displayText)}</div>
-                    <div style="font-size: 0.75rem; color: var(--gray);">${alert.created_at ? new Date(alert.created_at).toLocaleDateString() : ''}</div>
+            <div class="ts-a26-home-alert" style="background: var(--peach-light); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;">
+                <span style="font-size: 1.2rem; line-height: 1.4; flex-shrink: 0;">🔔</span>
+                <div style="flex: 1; min-width: 0;">
+                    ${showTitle ? `<div class="ts-a26-home-alert-title" style="font-size: 0.9rem; font-weight: 600; color: var(--dark); line-height: 1.35; margin-bottom: 2px;">${escapeHtml(titleText)}</div>` : ''}
+                    <div style="font-size: ${showTitle ? '0.85rem' : '0.9rem'}; color: var(--dark); ${showTitle ? 'opacity: 0.82;' : ''} line-height: 1.4; overflow-wrap: anywhere;">${escapeHtml(displayText)}</div>
+                    <div style="font-size: 0.75rem; color: var(--gray); margin-top: 2px;">${alert.created_at ? new Date(alert.created_at).toLocaleDateString() : ''}</div>
                 </div>
             </div>
         `}).join('');
@@ -23045,6 +23410,284 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
     })();
     </script>
     <!-- ===================== END A16-ANDROID + A16-UX ===================== -->
+    <!-- ============================================================================ -->
+    <!-- A26-POLISH: 10 additive layout / symmetry / contrast improvements (B175).      -->
+    <!-- Presentation-only. One style block + one small guarded script, appended last  -->
+    <!-- so nothing above needs editing. No behaviour, markup or logic is changed.     -->
+    <!--                                                                                -->
+    <!--  1 Alerts card heading reaches parity with its three sibling cards             -->
+    <!--  2 One inner-padding scale across the home card stack                          -->
+    <!--  3 One vertical rhythm between home cards                                      -->
+    <!--  4 Secondary text on the warm surfaces raised to WCAG AA                       -->
+    <!--  5 Notification rows share a text column (fixed icon gutter)                   -->
+    <!--  6 Scroll panels fade instead of slicing a row in half                         -->
+    <!--  7 Clear All buttons matched across home / mobile / desktop                    -->
+    <!--  8 Connection + update rows share one row height and avatar size               -->
+    <!--  9 Card headings share one optical rhythm                                      -->
+    <!-- 10 Dark-mode counterparts for all of the above                                 -->
+    <!-- ============================================================================ -->
+    <style id="ts-a26-polish">
+    /* -------------------------------------------------------------------------- */
+    /* (1) SYMMETRY - Alerts & Notifications heading parity.                       */
+    /* The three sibling cards are styled through "#<id> > h3". The alerts heading */
+    /* is nested one level deeper (inside the flex row that also holds "Clear      */
+    /* All"), so every one of those rules silently missed it and that card alone   */
+    /* had a lighter, smaller, un-ruled heading. Style the row itself instead.     */
+    /* -------------------------------------------------------------------------- */
+    #homeAlertsSection > div:first-child {
+        padding-bottom: 14px !important;
+        margin-bottom: 16px !important;
+        border-bottom: 1.5px solid rgba(157, 184, 160, 0.2) !important;
+        gap: 12px;
+    }
+    #homeAlertsSection > div:first-child > h3 {
+        color: var(--flow-heading-color, var(--dark)) !important;
+        font-weight: 600 !important;
+        font-size: 1.1rem !important;
+        letter-spacing: -0.01em !important;
+        line-height: 1.3 !important;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* (2) SYMMETRY - one inner padding for the whole home card stack.             */
+    /* Recommendations sat at 24px while the three white cards sat at 18px, so     */
+    /* their content columns started at different x-positions down the page.       */
+    /* -------------------------------------------------------------------------- */
+    #quickCheckinCard,
+    #todayRecommendations,
+    #friendsUpdatesSection,
+    #connectionStatusSection,
+    #homeAlertsSection {
+        padding: 20px !important;
+    }
+    @media (max-width: 768px) {
+        #todayRecommendations,
+        #friendsUpdatesSection,
+        #connectionStatusSection,
+        #homeAlertsSection,
+        #quickCheckinCard {
+            padding: 16px !important;
+        }
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* (3) SYMMETRY - one vertical rhythm between the home cards.                  */
+    /* Gaps ran 28 / 16 / 16 / 16px; an even 18px (14px on mobile) reads as a set. */
+    /* -------------------------------------------------------------------------- */
+    #quickCheckinCard,
+    #todayRecommendations,
+    #friendsUpdatesSection,
+    #connectionStatusSection,
+    #homeAlertsSection {
+        margin-bottom: 18px !important;
+    }
+    @media (max-width: 768px) {
+        #quickCheckinCard,
+        #todayRecommendations,
+        #friendsUpdatesSection,
+        #connectionStatusSection,
+        #homeAlertsSection {
+            margin-bottom: 14px !important;
+        }
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* (4) CONTRAST - secondary text on the warm surfaces.                         */
+    /* Measured: --gray #6B7280 on --peach-light #FBE8E0 = 4.08:1 and on --light   */
+    /* #F4F1EC = 4.29:1, both under the 4.5:1 AA floor at these small sizes.       */
+    /* #5A6472 lifts them to 5.06:1 and 5.32:1 while staying the same warm grey.   */
+    /* -------------------------------------------------------------------------- */
+    /* Audit fix: match <span> as well as <div> — the status text ("Active now", "3h ago")
+       and the row dates are spans, so a div-only selector missed exactly the text this rule
+       exists to fix, and left two different greys inside one row.
+       ".alert-item small" was deliberately REMOVED: that <small> is the notification body,
+       not secondary text, and recolouring it LOWERED contrast (8.29:1 -> 5.32:1). */
+    .ts-a26-home-alert [style*="var(--gray)"],
+    #friendsUpdatesList > div [style*="var(--gray)"],
+    #connectionStatusList > div [style*="var(--gray)"] {
+        color: #5A6472 !important;
+    }
+    /* Placeholders measured at 2.54:1 on white - well under AA.
+       #6B7280 = 4.83:1 on white and 4.55:1 on the #F8F7F5 search fields, so it clears AA on
+       both. (An earlier pass used #767F8F, which was still only 4.04:1.) */
+    ::placeholder { color: #6B7280 !important; opacity: 1; }
+    ::-webkit-input-placeholder { color: #6B7280 !important; }
+    ::-moz-placeholder { color: #6B7280 !important; opacity: 1; }
+
+    /* -------------------------------------------------------------------------- */
+    /* (5) STRUCTURE - notification rows share one text column.                    */
+    /* A fixed icon gutter means every title starts on the same x-axis instead of  */
+    /* drifting with the glyph width, and long names wrap instead of overflowing.  */
+    /* -------------------------------------------------------------------------- */
+    .ts-a26-home-alert {
+        min-height: 56px;
+        align-items: flex-start !important;
+        padding: 12px 14px !important;
+        border-inline-start: 3px solid rgba(232, 144, 122, 0.45);
+    }
+    .ts-a26-home-alert > span:first-child {
+        width: 22px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .ts-a26-home-alert-title {
+        overflow-wrap: anywhere;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* (6) STRUCTURE - scroll panels fade instead of slicing a row in half.        */
+    /* The 300px-capped lists cut the next row through its middle, which reads as  */
+    /* a rendering fault rather than as "there is more below".                     */
+    /* -------------------------------------------------------------------------- */
+    #homeAlertsList,
+    #connectionStatusList {
+        scroll-padding-block-end: 8px;
+        padding-inline-end: 4px;
+    }
+    #homeAlertsList[data-scrollable],
+    #connectionStatusList[data-scrollable] {
+        -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent 100%);
+        mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent 100%);
+    }
+    #homeAlertsList::-webkit-scrollbar,
+    #connectionStatusList::-webkit-scrollbar { width: 6px; }
+    #homeAlertsList::-webkit-scrollbar-track,
+    #connectionStatusList::-webkit-scrollbar-track { background: transparent; }
+    #homeAlertsList::-webkit-scrollbar-thumb,
+    #connectionStatusList::-webkit-scrollbar-thumb {
+        background: rgba(107,139,164,0.30);
+        border-radius: 3px;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* (7) SYMMETRY - the three "Clear All" buttons matched.                       */
+    /* They ran 5px/12px/0.78rem on home and 6px/14px/0.8rem in the alerts view.   */
+    /* One size, and a 36px min-height so the tap target is honest on mobile.      */
+    /* -------------------------------------------------------------------------- */
+    .clear-all-alerts-btn {
+        padding: 7px 14px !important;
+        font-size: 0.79rem !important;
+        border-radius: 9px !important;
+        min-height: 36px !important;
+        line-height: 1.2 !important;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* (8) SYMMETRY - connection and update rows read as one grid.                 */
+    /* Equal row height and a single avatar diameter stop the list from stepping   */
+    /* in and out as names and status pills change length.                         */
+    /* -------------------------------------------------------------------------- */
+    #friendsUpdatesList > div,
+    #connectionStatusList > div {
+        min-height: 60px;
+        padding: 12px 14px !important;
+        border-radius: 12px !important;
+        gap: 12px !important;
+    }
+    #friendsUpdatesList > div > div:first-child,
+    #connectionStatusList > div > div:first-child {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px;
+        font-size: 0.95rem !important;
+        flex-shrink: 0;
+    }
+    #friendsUpdatesList > div > div:nth-child(2),
+    #connectionStatusList > div > div:nth-child(2) {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* (9) STRUCTURE - card headings share one optical rhythm.                     */
+    /* -------------------------------------------------------------------------- */
+    #friendsUpdatesSection > h3,
+    #connectionStatusSection > h3,
+    #homeFeedSection > h3 {
+        letter-spacing: -0.01em !important;
+        line-height: 1.3 !important;
+        padding-bottom: 14px !important;
+        margin-bottom: 16px !important;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /* (10) Dark-mode counterparts.                                                */
+    /* On the dark peach surface the correction from (4) must go the other way.    */
+    /* -------------------------------------------------------------------------- */
+    .dark-mode .ts-a26-home-alert [style*="var(--gray)"],
+    .dark-mode #friendsUpdatesList > div [style*="var(--gray)"],
+    .dark-mode #connectionStatusList > div [style*="var(--gray)"] {
+        color: #B9BDC2 !important;
+    }
+    .dark-mode ::placeholder { color: #9AA3B0 !important; }
+    .dark-mode #homeAlertsSection > div:first-child {
+        border-bottom-color: rgba(168, 197, 171, 0.22) !important;
+    }
+    .dark-mode .ts-a26-home-alert {
+        border-inline-start-color: rgba(232, 144, 122, 0.40);
+    }
+    .dark-mode #homeAlertsList::-webkit-scrollbar-thumb,
+    .dark-mode #connectionStatusList::-webkit-scrollbar-thumb {
+        background: rgba(175, 199, 214, 0.30);
+    }
+    /* Very small phones: keep the fade from eating a whole row. */
+    @media (max-width: 380px) {
+        #homeAlertsList[data-scrollable],
+        #connectionStatusList[data-scrollable] {
+            -webkit-mask-image: none;
+            mask-image: none;
+        }
+    }
+    </style>
+    <script id="ts-a26-polish-script">
+    (function () {
+        // Only (6) needs JS: flag a panel as scrollable so the bottom fade appears
+        // exactly when there is more content, and disappears once the end is reached.
+        if (window.__tsA26Polish) return; window.__tsA26Polish = true;
+        var IDS = ['homeAlertsList', 'connectionStatusList', 'consentTermsScroll'];
+        function sync(el) {
+            if (!el) return;
+            var more = el.scrollHeight - el.clientHeight - el.scrollTop > 6;
+            if (more) el.setAttribute('data-scrollable', '');
+            else el.removeAttribute('data-scrollable');
+        }
+        function attach() {
+            IDS.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (!el || el.__tsA26Bound) return;
+                el.__tsA26Bound = true;
+                el.addEventListener('scroll', function () { sync(el); }, { passive: true });
+                sync(el);
+                if ('MutationObserver' in window) {
+                    new MutationObserver(function () { sync(el); })
+                        .observe(el, { childList: true, subtree: true });
+                }
+                // Panels inside a modal measure 0 while hidden, so re-measure the moment
+                // they become visible (consent terms) as well as when content changes.
+                if ('IntersectionObserver' in window) {
+                    new IntersectionObserver(function (entries) {
+                        for (var k = 0; k < entries.length; k++) {
+                            if (entries[k].isIntersecting) sync(el);
+                        }
+                    }).observe(el);
+                }
+            });
+        }
+        function onReady(fn) {
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+            else fn();
+        }
+        onReady(attach);
+        setTimeout(attach, 1500);   // panels are rendered after their fetch resolves
+        window.addEventListener('resize', function () {
+            IDS.forEach(function (id) { sync(document.getElementById(id)); });
+        }, { passive: true });
+    })();
+    </script>
+    <!-- ===================== END A26-POLISH ===================== -->
 </body>
+
 
 </html>
