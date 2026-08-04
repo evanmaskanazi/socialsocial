@@ -1,3 +1,9 @@
+// Version B175 (A26): (referenced as ?v=B175). Additive only. Adds the self-contained
+// window.TSDiaryReminder module at the END of this file — after a user's FIRST check-in it
+// offers, once, a 19:00 daily email diary reminder (with the "manage it in Settings" and
+// "check your spam folder" notes the offer needs to be honest). One additive call was added in
+// saveParameters() on save-success; index.html adds the matching call in quickCheckin(). No
+// existing logic changed. Cache-bust sync B170 -> B175.
 // Version B145 (A12 audit): (referenced as ?v=B145). Pre-existing-bug fix — loadParameters()
 // now writes social_belonging_privacy into the session-cache state object (it was omitted here,
 // though saveParameterState wrote it and restoreParameterState reads it, so it was silently lost
@@ -3043,6 +3049,12 @@ async function saveParameters() {
                 window.TSGiftBox.onReportSaved(dateStr);
             }
 
+            // A26 (item 2): after the FIRST check-in only, offer the 19:00 email reminder.
+            // All eligibility guards live inside the module (see bottom of this file).
+            if (window.TSDiaryReminder && typeof window.TSDiaryReminder.onCheckinSaved === 'function') {
+                window.TSDiaryReminder.onCheckinSaved();
+            }
+
              // Show invite CTA after successful save
             showInviteCTA();
 
@@ -3383,7 +3395,7 @@ function showInviteCTA() {
         .then(response => response.json())
         .then(data => {
             const username = data.user?.username || 'user';
-            const inviteLink = `${window.location.origin}/invite/${username}`;
+            const inviteLink = `${window.location.origin}/invite/${encodeURIComponent(username)}`;
 
             ctaDiv.innerHTML = `
                 <div class="cta-content">
@@ -4418,3 +4430,328 @@ window.closeUserParametersModal = closeUserParametersModal;
 window.checkParameterAlerts = checkParameterAlerts;
 
 console.log('[V2] Parameters-social.js vB7 loaded - Privacy reset fix, cache-buster B7');
+
+
+/* ==========================================================================================
+ * A26 (item 2): First-check-in daily reminder offer.
+ *
+ * The very first time someone completes a check-in, offer — once, gently — to email them a
+ * diary reminder at 19:00. The offer explains that it can always be managed from Settings and
+ * that the first email may land in spam, because a reminder that silently disappears into a
+ * spam folder is worse than no reminder at all.
+ *
+ * Self-contained and additive: it defines window.TSDiaryReminder and touches nothing else.
+ * This file is loaded by BOTH index.html and parameters.html, so a single copy covers the
+ * full diary save AND the home-page one-tap check-in.
+ *
+ * Guards, in order — the prompt is skipped unless every one of them passes:
+ *   1. never asked before on this browser (localStorage)
+ *   2. the daily reminder is not already switched on
+ *   3. this really is the user's first day of data (<= 1 recorded date)
+ * ========================================================================================== */
+(function () {
+    if (window.TSDiaryReminder) return;   // defensive: never define twice
+
+    var ASKED_KEY = 'therasocial_diary_reminder_asked';
+    var REMINDER_TIME = '19:00';
+    var MODAL_ID = 'tsA26ReminderModal';
+    // A26 audit fix: in-memory twin of the localStorage flag. With storage blocked
+    // (Safari private mode, hardened cookie settings) markAsked() is a no-op, and the
+    // user would be re-prompted after every save on their first day.
+    var askedThisSession = false;
+    var lastFocusedBeforeModal = null;
+
+    function tr(key, fallback) {
+        try {
+            if (window.i18n && window.i18n.translate) {
+                var v = window.i18n.translate(key);
+                if (v && v !== key) return v;
+            }
+        } catch (e) { /* fall through to the English fallback */ }
+        return fallback;
+    }
+
+    function alreadyAsked() {
+        if (askedThisSession) return true;
+        try { return localStorage.getItem(ASKED_KEY) === 'true'; } catch (e) { return false; }
+    }
+
+    function markAsked() {
+        askedThisSession = true;   // holds even when storage is unavailable
+        try { localStorage.setItem(ASKED_KEY, 'true'); } catch (e) { /* storage blocked: session flag still holds */ }
+    }
+
+    function isRtl() {
+        try {
+            var lang = localStorage.getItem('selectedLanguage') || 'en';
+            return lang === 'he' || lang === 'ar';
+        } catch (e) { return false; }
+    }
+
+    function toast(message, type) {
+        try {
+            if (typeof window.showNotification === 'function') { window.showNotification(message, type); return; }
+            if (typeof window.showMessage === 'function') { window.showMessage(message, type); return; }
+        } catch (e) { /* no toast host on this page — the modal already closed, so stay silent */ }
+    }
+
+    function closeModal() {
+        var el = document.getElementById(MODAL_ID);
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+        document.removeEventListener('keydown', onKeydown, true);
+        // Return focus where the user left it (matches what TSGiftBox does).
+        try { if (lastFocusedBeforeModal && lastFocusedBeforeModal.focus) lastFocusedBeforeModal.focus(); } catch (e) {}
+        lastFocusedBeforeModal = null;
+    }
+
+    function onKeydown(e) {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            // A26 audit fix: this listener is on the CAPTURE phase, so without stopping
+            // propagation a single Escape would also reach the gift box's own document-level
+            // handler and silently destroy an unopened gift the user never saw.
+            e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+            markAsked();
+            closeModal();
+            return;
+        }
+        // Keep Tab inside the dialog — the page behind is not inert.
+        if (e.key === 'Tab') {
+            var modal = document.getElementById(MODAL_ID);
+            if (!modal) return;
+            var f = modal.querySelectorAll('button');
+            if (!f.length) return;
+            var first = f[0], last = f[f.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault(); last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault(); first.focus();
+            } else if (!modal.contains(document.activeElement)) {
+                e.preventDefault(); first.focus();
+            }
+        }
+    }
+
+    async function enableReminder() {
+        markAsked();
+        closeModal();
+        try {
+            // A26 audit fix: the reminder cron matches on (timezone, time) pairs, and a brand-new
+            // user has no settings row, so diary_reminder_timezone would fall back to the column
+            // default of 'UTC' — the promised 19:00 would have fired at 19:00 UTC (22:00 in
+            // Israel, 12:00 in Los Angeles). Resolve the user's timezone first and send both,
+            // exactly as the Settings time-picker path already does.
+            var timezone = 'UTC';
+            try {
+                var tzResp = await fetch('/api/city-timezone', { credentials: 'include' });
+                if (tzResp.ok) {
+                    var tzData = await tzResp.json();
+                    timezone = tzData.timezone || 'UTC';
+                }
+            } catch (tzErr) {
+                console.warn('[A26 reminder] Could not resolve timezone, using UTC:', tzErr);
+            }
+            var resp = await fetch('/api/notification-settings', {
+                method: 'PUT',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email_daily_diary_reminder: true,
+                    diary_reminder_time: REMINDER_TIME,
+                    diary_reminder_timezone: timezone
+                })
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            toast(tr('reminder.prompt_enabled', 'Daily reminder set for 19:00'), 'success');
+            // Keep any Settings toggles that are already on the page in sync.
+            ['settingsDiaryReminder', 'dailyDiaryReminderToggle', 'mobileDailyDiaryReminderToggle'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.checked = true;
+            });
+            ['diaryReminderTimeInput', 'mobileDiaryReminderTimeInput'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.value = REMINDER_TIME;
+            });
+        } catch (err) {
+            console.error('[A26 reminder] Could not enable the daily reminder:', err);
+            toast(tr('reminder.prompt_failed', "Couldn't save the reminder. You can turn it on in Settings."), 'error');
+        }
+    }
+
+    function buildModal() {
+        var rtl = isRtl();
+        var overlay = document.createElement('div');
+        overlay.id = MODAL_ID;
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-labelledby', MODAL_ID + 'Title');
+        overlay.style.cssText =
+            'position: fixed; inset: 0; z-index: 100050; background: rgba(45, 55, 72, 0.45);' +
+            'display: flex; align-items: center; justify-content: center; padding: 20px;' +
+            '-webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);';
+        overlay.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+
+        var card = document.createElement('div');
+        card.style.cssText =
+            'background: #fff; border-radius: 18px; max-width: 420px; width: 100%;' +
+            'padding: 26px 24px 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.22);' +
+            'text-align: ' + (rtl ? 'right' : 'left') + '; max-height: 88vh; overflow-y: auto;' +
+            "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;";
+
+        var icon = document.createElement('div');
+        icon.textContent = '🔔';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.style.cssText = 'font-size: 30px; line-height: 1; margin-bottom: 12px;';
+
+        var h = document.createElement('h3');
+        h.id = MODAL_ID + 'Title';
+        h.textContent = tr('reminder.prompt_title', 'Want a gentle daily reminder?');
+        h.style.cssText = 'margin: 0 0 8px 0; font-size: 1.18rem; font-weight: 700; color: #2D3748; line-height: 1.35;';
+
+        var body = document.createElement('p');
+        body.textContent = tr('reminder.prompt_body', 'We can email you at 19:00 each day, so filling in your diary stays easy to remember.');
+        body.style.cssText = 'margin: 0 0 14px 0; font-size: 0.95rem; color: #4B5563; line-height: 1.55;';
+
+        var notes = document.createElement('div');
+        notes.style.cssText =
+            'background: #F4F7FA; border-radius: 12px; padding: 12px 14px; margin-bottom: 18px;' +
+            'font-size: 0.82rem; color: #5A6B7C; line-height: 1.5;';
+
+        var settingsNote = document.createElement('p');
+        settingsNote.textContent = tr('reminder.prompt_settings_note', 'You can change the time or turn this off at any time in Settings.');
+        settingsNote.style.cssText = 'margin: 0 0 8px 0;';
+
+        var spamNote = document.createElement('p');
+        spamNote.textContent = tr('reminder.prompt_spam_note', 'The first email may land in your spam folder. If it does, please open it there and mark the sender as safe.');
+        spamNote.style.cssText = 'margin: 0;';
+
+        notes.appendChild(settingsNote);
+        notes.appendChild(spamNote);
+
+        var actions = document.createElement('div');
+        actions.style.cssText = 'display: flex; flex-direction: column; gap: 10px;';
+
+        var yes = document.createElement('button');
+        yes.type = 'button';
+        yes.textContent = tr('reminder.prompt_accept', 'Yes, remind me at 19:00');
+        yes.style.cssText =
+            'width: 100%; padding: 13px 18px; border: none; border-radius: 12px; cursor: pointer;' +
+            'background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: #fff;' +
+            'font-size: 0.97rem; font-weight: 600; min-height: 46px;' +
+            'box-shadow: 0 4px 12px rgba(107,139,164,0.30); font-family: inherit;';
+        yes.addEventListener('click', enableReminder);
+
+        var no = document.createElement('button');
+        no.type = 'button';
+        no.textContent = tr('reminder.prompt_decline', 'Not now');
+        no.style.cssText =
+            'width: 100%; padding: 11px 18px; border: none; border-radius: 12px; cursor: pointer;' +
+            'background: transparent; color: #6B7280; font-size: 0.92rem; font-weight: 500;' +
+            'min-height: 44px; font-family: inherit;';
+        no.addEventListener('click', function () { markAsked(); closeModal(); });
+
+        actions.appendChild(yes);
+        actions.appendChild(no);
+
+        card.appendChild(icon);
+        card.appendChild(h);
+        card.appendChild(body);
+        card.appendChild(notes);
+        card.appendChild(actions);
+        overlay.appendChild(card);
+
+        // Dismissing by clicking the backdrop counts as "not now", not as "ask me again".
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) { markAsked(); closeModal(); }
+        });
+
+        try { lastFocusedBeforeModal = document.activeElement; } catch (e) { lastFocusedBeforeModal = null; }
+        document.body.appendChild(overlay);
+        document.addEventListener('keydown', onKeydown, true);
+        try { yes.focus(); } catch (e) { /* focus is a nicety, not a requirement */ }
+    }
+
+    async function shouldOffer() {
+        if (alreadyAsked()) return false;
+
+        // Guard 2: don't offer something the user already has switched on.
+        try {
+            var sResp = await fetch('/api/notification-settings', { credentials: 'include' });
+            if (sResp.ok) {
+                var settings = await sResp.json();
+                if (settings && settings.email_daily_diary_reminder) { markAsked(); return false; }
+            }
+        } catch (e) { /* settings unreachable — fall through to the first-day check */ }
+
+        // Guard 3: only on the first day of data, so long-standing users are never nagged.
+        // A26 audit fix: /api/parameters/dates returns HTTP 200 with {success:false, dates:[]}
+        // when it errors, so checking dResp.ok alone let a two-year user through as "0 dates".
+        // Require an explicit success AND exactly one recorded date — we have just saved one,
+        // so anything other than 1 means this is not the first check-in.
+        try {
+            var dResp = await fetch('/api/parameters/dates', { credentials: 'include' });
+            if (!dResp.ok) return false;
+            var data = await dResp.json();
+            if (!data || data.success === false) return false;
+            var dates = Array.isArray(data) ? data : (data.dates || []);
+            if (!Array.isArray(dates)) return false;
+            if (dates.length !== 1) {
+                if (dates.length > 1) markAsked();
+                return false;
+            }
+        } catch (e) {
+            return false;   // can't confirm it's the first check-in -> stay quiet
+        }
+        return true;
+    }
+
+    // A26 audit fix: on the diary page the FIRST save also triggers the gift box
+    // (window.TSGiftBox, overlay #ts-gift-overlay at z-index 100003). Both features key off
+    // "first check-in", so that collision is the normal path, not an edge case — this modal
+    // would have covered the unopened gift. Wait for the gift to be dismissed before asking,
+    // and give up rather than stacking if the user leaves it open.
+    function giftBoxOpen() {
+        return !!document.getElementById('ts-gift-overlay');
+    }
+
+    // A26 audit fix (round 2): sampling "is the gift open?" once was not enough. The gift
+    // renders after its own /api/gift/daily round-trip, so on a slow or cold endpoint it can
+    // still be in flight at the moment we look — and would then pop up UNDERNEATH this modal.
+    // Only build once the gift has had a fair chance to appear (GIFT_GRACE_TICKS) AND is not
+    // currently on screen.
+    var GIFT_GRACE_TICKS = 3;    // ~3s of settle time before we consider the coast clear
+    var GIFT_MAX_TICKS = 60;     // ~60s: user is lingering on the gift — don't interrupt at all
+
+    function showWhenClear(attempt) {
+        attempt = attempt || 0;
+        if (alreadyAsked() || document.getElementById(MODAL_ID)) return;
+        if (giftBoxOpen() || attempt < GIFT_GRACE_TICKS) {
+            if (attempt > GIFT_MAX_TICKS) return;
+            setTimeout(function () { showWhenClear(attempt + 1); }, 1000);
+            return;
+        }
+        buildModal();
+        // Belt and braces: if the gift still manages to arrive right after we opened, step
+        // aside rather than covering it — the reminder can wait for the next check-in.
+        setTimeout(function () {
+            if (giftBoxOpen() && document.getElementById(MODAL_ID)) {
+                closeModal();
+                setTimeout(function () { showWhenClear(GIFT_GRACE_TICKS); }, 1000);
+            }
+        }, 700);
+    }
+
+    async function onCheckinSaved() {
+        try {
+            if (alreadyAsked()) return;
+            if (document.getElementById(MODAL_ID)) return;   // already on screen
+            if (!(await shouldOffer())) return;
+            // Let the existing save toast be read first.
+            setTimeout(function () { showWhenClear(0); }, 1400);
+        } catch (err) {
+            console.error('[A26 reminder] offer skipped:', err);
+        }
+    }
+
+    window.TSDiaryReminder = { onCheckinSaved: onCheckinSaved };
+})();

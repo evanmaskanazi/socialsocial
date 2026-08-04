@@ -1,3 +1,8 @@
+// Version B175 (A26): (referenced as ?v=B175). ONE additive change - sendMessage() now
+// reads the response body and surfaces `support_notice` when the backend delivers a
+// message containing a crisis disclosure. index.html already did this; without the
+// same handling a member reaching out from the Circles page saw no resources at all.
+// No existing logic changed.
 // Version B145 (A12 audit): cache-bust sync only (referenced as ?v=B145). No functional changes in this file.
 // Version B140 (A12): cache-bust sync only (referenced as ?v=B140). No functional changes in this file.
 // Version B135 (A8): cache-bust sync only (referenced as ?v=B135). No functional changes in this file.
@@ -2028,6 +2033,21 @@ async function sendMessage() {
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
+
+        // A26: the backend now DELIVERS a message containing a crisis disclosure and
+        // returns support resources alongside the confirmation. index.html surfaces
+        // these; without the same handling here, a member who reaches out from the
+        // Circles page would see nothing at all.
+        try {
+            const _data = await response.json();
+            if (_data && _data.support_notice) {
+                const _t2 = (k, f) => (window.i18n && window.i18n.translate)
+                    ? (window.i18n.translate(k) !== k ? window.i18n.translate(k) : f) : f;
+                const _msg = _t2(_data.support_notice_key || 'msg.crisis_support_notice', _data.support_notice);
+                if (typeof showNotification === 'function') showNotification(_msg, 'info');
+                else if (typeof window.showMessage === 'function') window.showMessage(_msg, 'info');
+            }
+        } catch (e) { /* body already consumed or not JSON - delivery still succeeded */ }
 
         input.value = '';
 

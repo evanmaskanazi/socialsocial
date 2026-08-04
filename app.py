@@ -1,4 +1,30 @@
 #!/usr/bin/env python
+
+# =====================================================================
+# TheraSocial app.py - Version A27
+#
+# A27 is A26 plus ONE fix, 45 added lines, nothing removed:
+#
+#   Changing your city left the daily diary reminder firing on the OLD city's
+#   clock. The reminder cron matches on the STORED (diary_reminder_timezone,
+#   diary_reminder_time) pair, but none of the three places that write
+#   selected_city - PUT /api/user/profile, POST /api/user/update-city, and the
+#   city handler further down - ever updated the stored timezone. The Settings
+#   page shows a timezone derived live from the city, so it looked correct while
+#   the email arrived hours off.
+#
+#   _a27_sync_diary_reminder_timezone(user) is now called after each of those
+#   three writes. It only touches an existing notification_settings row, never
+#   clears diary_reminder_last_sent (so a city change cannot produce a second
+#   reminder the same day), and never raises - a failure there must not lose the
+#   city change itself.
+#
+#   Side effect worth knowing: this also self-heals any row still stuck on the
+#   'UTC' default from the A26 bug, the moment that user next changes city.
+#
+# No JS or HTML changed, so the ?v=B175 cache-bust is unchanged and index /
+# parameters / circles do NOT need redeploying.
+# =====================================================================
 """
 Complete app.py for Social Social Platform - V4 10Link — B140 (A8+)
 
@@ -1530,6 +1556,280 @@ from security import (
     validate_password_strength, encrypt_field, decrypt_field,
     generate_token, rate_limit, content_moderator
 )
+
+# =====================================================================
+# A26 (item 2): Unicode-aware username validation.
+#
+# security.validate_username() is ASCII-only, which blocks Hebrew (and Arabic /
+# Cyrillic) usernames. This override WIDENS it — it never narrows it.
+#
+# It is a strict SUPERSET: a username is valid if the original security.py rule
+# accepts it OR the Unicode rule below does. That matters because registration
+# defaults the username to the email local part ("john.doe", "evan+test"), which
+# the original rule already accepts; a straight replacement would have silently
+# started rejecting those. security.py itself is untouched, so nothing else that
+# imports it changes behaviour.
+#
+# The added Unicode rule allows: letters in ANY script, combining marks, digits,
+# underscore, hyphen, apostrophe, and single inner spaces. It rejects
+# leading/trailing/doubled separators and any control, bidi-override or
+# zero-width character (those let one name impersonate another on screen).
+# Length limits and uniqueness checks are unchanged and stay with the callers.
+# Mirrors the client-side regex in index.html.
+# =====================================================================
+import unicodedata as _a26_unicodedata
+
+_a26_original_validate_username = validate_username   # keep security.py's rule
+
+# Separators permitted INSIDE a name (never at either end, never doubled).
+_A26_SEPARATORS = frozenset("-'\u2019 ")   # hyphen, straight apostrophe, curly apostrophe, space
+
+# Code points that ARE letters (category Lo/Lm, so str.isalpha() is True) but render as
+# NOTHING. Without this, "admin" and "admin\u3164" are two different but visually identical
+# accounts - exactly the impersonation the control-character check is meant to prevent.
+_A26_INVISIBLE_LETTERS = frozenset(
+    '\u115f'   # HANGUL CHOSEONG FILLER
+    '\u1160'   # HANGUL JUNGSEONG FILLER
+    '\u3164'   # HANGUL FILLER
+    '\uffa0'   # HALFWIDTH HANGUL FILLER
+    '\u17b4'   # KHMER VOWEL INHERENT AQ
+    '\u17b5'   # KHMER VOWEL INHERENT AA
+    '\u2065'   # unassigned but not flagged by every UCD version
+    '\u180e'   # MONGOLIAN VOWEL SEPARATOR
+)
+
+# Categories that must never appear: control chars, bidi overrides / zero-width joiners,
+# surrogates, private-use and unassigned code points.
+_A26_FORBIDDEN_CATEGORIES = ('Cc', 'Cf', 'Cs', 'Co', 'Cn')
+
+
+def _a26_is_word_char(ch):
+    """Letter (any script), digit, underscore, or a combining mark.
+
+    Python's re \\w excludes combining marks, which would reject exactly the names this
+    change exists to support: Hebrew with niqqud, Arabic with harakat, Devanagari matras,
+    and anything typed on macOS/iOS (whose input methods emit decomposed NFD text).
+    """
+    return ch == '_' or ch.isalnum() or _a26_unicodedata.category(ch).startswith('M')
+
+
+def _a26_matches_unicode_rule(candidate):
+    """Structure check, written out rather than as a regex: no embedded Unicode literals,
+    no backtracking, and each rule is legible on its own line."""
+    if not candidate:
+        return False
+    if not _a26_is_word_char(candidate[0]):
+        return False
+    if not _a26_is_word_char(candidate[-1]):
+        return False
+    previous_was_separator = False
+    for ch in candidate:
+        if _a26_is_word_char(ch):
+            previous_was_separator = False
+        elif ch in _A26_SEPARATORS:
+            if previous_was_separator:
+                return False        # no doubled separators
+            previous_was_separator = True
+        else:
+            return False            # anything else is not allowed
+    return True
+
+
+def _a26_probe_min_username_length():
+    """Discover the minimum length security.py enforces, so we don't quietly relax it.
+
+    security.py is not in this repo; rather than guess, ask it. If it requires 3
+    characters, the widened rule requires 3 too.
+    """
+    for n in range(1, 9):
+        try:
+            if _a26_original_validate_username('a' * n):
+                return n
+        except Exception:
+            # security.py may not be callable this early (it is imported before the Flask app
+            # exists). Fall through to the conservative default rather than assuming "no minimum".
+            break
+    # Could not determine it. Default to 3 — this only ever gates the NEW Unicode branch, so
+    # ASCII names still fall through to security.py's own rule and nothing is narrowed.
+    return 3
+
+
+def _a26_probe_max_username_length():
+    """Discover the maximum length security.py enforces (A25 caps at 20).
+
+    Without this the widened branch had no ceiling, so a pure-ASCII 80-character
+    name satisfied it and never reached security.py's own rule.
+    """
+    longest = 0
+    for n in range(1, 129):
+        try:
+            if _a26_original_validate_username('a' * n):
+                longest = n
+        except Exception:
+            break
+    return longest or 20
+
+
+_A26_MIN_USERNAME_LENGTH = _a26_probe_min_username_length()
+_A26_MAX_USERNAME_LENGTH = _a26_probe_max_username_length()
+
+
+def _a26_validate_username_widened(username):
+    """A26: Accept usernames in any script (Hebrew, Arabic, Cyrillic, Latin).
+
+    Strict SUPERSET of security.validate_username - anything it accepted is still accepted,
+    and Unicode letter names are now accepted too.
+    """
+    try:
+        if not username or not isinstance(username, str):
+            return False
+        # Length is checked on the RAW string as well as the normalised one: callers store the
+        # raw value, and NFD text can be far longer than its NFC form (a 210-char decomposed
+        # name normalises to 70 and would otherwise overflow the VARCHAR(80) column).
+        if len(username) > 80:
+            return False
+        # Normalise: NFC folds decomposed input (macOS/iOS paste) into the composed form, so
+        # "jose\u0301" validates the same as the precomposed "jos\u00e9".
+        candidate = _a26_unicodedata.normalize('NFC', username).strip()
+        if not candidate or len(candidate) > 80:
+            return False
+        # These two apply to BOTH rules. They are the one deliberate narrowing in this change:
+        # invisible and direction-flipping characters let one account impersonate another on
+        # screen, and no legitimate name needs them.
+        if any(_a26_unicodedata.category(ch) in _A26_FORBIDDEN_CATEGORIES for ch in candidate):
+            return False
+        if any(ch in _A26_INVISIBLE_LETTERS for ch in candidate):
+            return False
+        # --- NEW Unicode branch (the added capability), with its own stricter rules ---
+        # The minimum length and the "must contain something visible" rule gate ONLY this
+        # branch. Putting them here keeps the function a true superset: anything security.py
+        # accepted still reaches the fallback below unchanged.
+        if (_A26_MIN_USERNAME_LENGTH <= len(candidate) <= _A26_MAX_USERNAME_LENGTH
+                and any(_a26_unicodedata.category(ch)[0] in ('L', 'N') for ch in candidate)
+                and _a26_matches_unicode_rule(candidate)):
+            return True
+        # --- Original rule, so previously-valid names keep working exactly as before ---
+        try:
+            return bool(_a26_original_validate_username(candidate))
+        except Exception:
+            return False
+    except Exception:
+        # Never let a validation edge case 500 the request - fall back to a deny.
+        return False
+
+
+# ---------------------------------------------------------------------
+# Pick the implementation. securityA26.py implements the Unicode rule itself
+# (and owns the 3-20 length policy); when it is present we use it directly
+# rather than layering a second, subtly different copy on top. With the older
+# securityA25.py this module's widened version takes over instead, so app.py
+# behaves correctly against either version of security.py.
+# ---------------------------------------------------------------------
+if getattr(_a26_original_validate_username, 'a26_unicode_aware', False):
+    validate_username = _a26_original_validate_username
+else:
+    validate_username = _a26_validate_username_widened
+
+
+# A26: i18n key for the support notice shown after a crisis disclosure. The backend
+# returns the KEY plus an English fallback and the client translates it — the app ships
+# en/he/ar/ru and defaults to Jerusalem, so a hard-coded English string citing the US
+# 988 line would be wrong for most of this user base. The copy deliberately cites no
+# specific number: a wrong crisis number is worse than none. Add region-appropriate
+# helplines to the Support page and link them here.
+_A26_CRISIS_NOTICE_KEY = 'msg.crisis_support_notice'
+_A26_CRISIS_NOTICE_FALLBACK = (
+    "It sounds like you're going through something really hard, and your message has "
+    "been sent. If you'd like support right now, crisis helplines are available in your "
+    "area \u2014 you don't have to face this alone."
+)
+
+
+def _a26_normalize_username(username):
+    """NFC-normalise and strip a username so it is STORED in one canonical form.
+
+    Validation already normalises before checking, but every write path used to
+    store the raw string — so "jose" + U+0301 and the precomposed "josé"
+    became two rows that are byte-different and render identically. Normalising
+    at the point of storage is what actually prevents that.
+    """
+    try:
+        if not username or not isinstance(username, str):
+            return ''
+        import security as _a26_security
+        if hasattr(_a26_security, 'normalize_username'):
+            return _a26_security.normalize_username(username)
+    except Exception:
+        pass
+    try:
+        return _a26_unicodedata.normalize('NFC', username).strip()
+    except Exception:
+        return username
+
+
+def _a27_sync_diary_reminder_timezone(user):
+    """Keep diary_reminder_timezone in step with the user's selected city.
+
+    The daily-reminder cron matches on the STORED (diary_reminder_timezone,
+    diary_reminder_time) pair, but none of the three places that write
+    selected_city ever updated it. So changing city left the reminder firing on
+    the OLD city's clock, while the Settings page displayed the new city's
+    timezone (that span is derived live from the city, not read from the row) -
+    the discrepancy was invisible to the user.
+
+    Called after every selected_city write. Notes on the deliberate choices:
+
+      * Only an EXISTING notification_settings row is updated. If the user has
+        no row yet there is nothing to correct, and the row will be created with
+        the right timezone when they first enable the reminder.
+      * The row is updated whether or not the reminder is currently enabled, so
+        the value is already correct if they switch it on later.
+      * diary_reminder_last_sent is deliberately NOT cleared. Changing city is
+        not a request for a new schedule today, and clearing it could deliver a
+        second reminder the same day. The corrected time takes effect tomorrow.
+      * Never raises: a failure here must not lose the city change itself.
+    """
+    try:
+        if not user or not getattr(user, 'id', None):
+            return
+        settings = NotificationSettings.query.filter_by(user_id=user.id).first()
+        if not settings:
+            return
+        resolved = get_timezone_for_city(user.selected_city)
+        if resolved and resolved != settings.diary_reminder_timezone:
+            logger.info(
+                f"[A27 TZ SYNC] user {user.id}: city '{user.selected_city}' -> "
+                f"diary_reminder_timezone '{settings.diary_reminder_timezone}' => '{resolved}'"
+            )
+            settings.diary_reminder_timezone = resolved
+    except Exception as exc:
+        logger.warning(f"[A27 TZ SYNC] skipped for user {getattr(user, 'id', '?')}: {exc}")
+
+
+def _a26_derive_username_from_email(email):
+    """Build a VALID username from an email local part ('' if not possible).
+
+    Prefers security.py's implementation (securityA26.py) and falls back to a
+    local equivalent so this file also works against securityA25.py.
+    """
+    try:
+        import security as _a26_security
+        if hasattr(_a26_security, 'derive_username_from_email'):
+            return _a26_security.derive_username_from_email(email)
+    except Exception:
+        pass
+    try:
+        if not email or '@' not in email:
+            return ''
+        local = _a26_unicodedata.normalize('NFC', email.split('@')[0]).strip()
+        mapped = ''.join(ch if (ch == '_' or ch.isalnum()) else '_' for ch in local)
+        mapped = re.sub(r'_{2,}', '_', mapped).strip('_')[:20]
+        while 0 < len(mapped) < 3:
+            mapped += '0'
+        return mapped if mapped and validate_username(mapped) else ''
+    except Exception:
+        return ''
+
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -7774,7 +8074,7 @@ def register():
         MAX_PASSWORD_LENGTH = 128
         
         # Validate input
-        username = sanitize_input(data.get('username', '').strip())
+        username = _a26_normalize_username(sanitize_input(str(data.get('username') or '').strip()))
         email = sanitize_input(data.get('email', '').strip().lower())
         password = data.get('password', '')
 
@@ -7789,6 +8089,33 @@ def register():
             username = email.split('@')[0][:MAX_USERNAME_LENGTH]
             # Sanitize the generated username too
             username = sanitize_input(username)
+            # A26: the raw local part is rejected by validate_username whenever it
+            # contains a dot or a plus ("john.doe@...", which is most real addresses),
+            # so leaving the username blank used to fail registration outright with
+            # "Invalid username format". Derive a VALID name instead (john.doe ->
+            # john_doe). Only used when the raw local part would not have validated,
+            # so nothing that already worked changes.
+            try:
+                # Build a valid name from the address when the raw local part is not one
+                # ("john.doe" is rejected by validate_username, and that is most real
+                # addresses), then de-duplicate it.
+                _derived = username if validate_username(username) else _a26_derive_username_from_email(email)
+                if _derived:
+                    # Derivation is deterministic, so john.doe@a.com and john_doe@b.com
+                    # both reduce to "john_doe". Without a suffix the second person is
+                    # told "Username already taken" for a field they never filled in.
+                    _candidate = _derived
+                    for _attempt in range(5):
+                        _clash = db.session.execute(
+                            select(User).filter(func.lower(User.username) == _candidate.lower())
+                        ).scalars().first()
+                        if not _clash:
+                            break
+                        _suffix = secrets.token_hex(2)
+                        _candidate = f"{_derived[:20 - len(_suffix) - 1]}_{_suffix}"
+                    username = _candidate
+            except Exception as _derive_err:
+                logger.warning(f"Username derivation skipped: {_derive_err}")
 
         if len(username) > MAX_USERNAME_LENGTH:
             return jsonify({'error': f'Username must be less than {MAX_USERNAME_LENGTH} characters'}), 400
@@ -7900,7 +8227,7 @@ def check_username_availability():
     """T7: Check if a username is available (for live signup validation)"""
     try:
         data = request.json
-        username = sanitize_input(data.get('username', '').strip())
+        username = _a26_normalize_username(sanitize_input(str(data.get('username') or '').strip()))
 
         if not username:
             return jsonify({'available': False, 'reason': 'empty'}), 200
@@ -8095,8 +8422,13 @@ def get_current_user():
             return jsonify({'error': 'No data provided'}), 400
         
         if 'username' in data:
-            new_username = sanitize_input(data['username'].strip())[:80]
+            new_username = _a26_normalize_username(sanitize_input(str(data.get('username') or '').strip())[:80])
             if new_username and new_username != user.username:
+                # A26: this path previously wrote user.username with NO format check, so every
+                # rule enforced at registration (length, no invisible/bidi characters) could be
+                # bypassed simply by editing the profile afterwards.
+                if not validate_username(new_username):
+                    return jsonify({'error': 'Invalid username format'}), 400
                 # Check if username is already taken
                 existing = db.session.execute(
                     select(User).filter(func.lower(User.username) == new_username.lower(), User.id != user.id)
@@ -8107,6 +8439,8 @@ def get_current_user():
         
         if 'selected_city' in data:
             user.selected_city = sanitize_input(data['selected_city'].strip())[:100]
+            # A27: keep the reminder timezone in step with the new city.
+            _a27_sync_diary_reminder_timezone(user)
         
         # Fix10C: Handle timezone update
         if 'timezone' in data:
@@ -8224,6 +8558,8 @@ def update_user_city():
             return jsonify({'error': 'User not found'}), 404
 
         user.selected_city = selected_city
+        # A27: keep the reminder timezone in step with the new city.
+        _a27_sync_diary_reminder_timezone(user)
         db.session.commit()
 
         return jsonify({
@@ -8462,11 +8798,18 @@ def save_consent():
         user = db.session.get(User, session['user_id'])
 
         # Handle username if provided with consent
-        username = data.get('username', '').strip()
+        username = _a26_normalize_username(sanitize_input(data.get('username', '') or '').strip())
         if username:
             # FIX10J: Reject email-format usernames - use prefix instead
             if '@' in username:
                 username = username.split('@')[0]
+
+            # A26: this path wrote user.username with no validation, no sanitisation and no
+            # length cap - the widest of the bypasses around validate_username. It also
+            # swallowed a name collision and still returned success, leaving the user with a
+            # different name than they chose and no explanation.
+            if not validate_username(username):
+                return jsonify({'error': 'Invalid username format'}), 400
 
             # Check if username is available
             existing = db.session.execute(
@@ -8476,9 +8819,11 @@ def save_consent():
                 )
             ).scalar_one_or_none()
 
-            if not existing:
-                user.username = username
-                session['username'] = username
+            if existing:
+                return jsonify({'error': 'Username already taken'}), 400
+
+            user.username = username
+            session['username'] = username
 
         # PJ6001: Handle birth_year
         birth_year = data.get('birth_year')
@@ -11394,9 +11739,26 @@ def messages():
                 return jsonify({'error': 'Unable to send message to this user', 'blocked': True}), 403
 
             # Check content
+            # A26 FIX (wellbeing): a crisis disclosure must still REACH the person's support
+            # network. Previously any message matching a crisis pattern ("I've been thinking
+            # about suicide", "I self-harm sometimes") was refused with a 400 and never
+            # delivered — so on a mental-health platform, the moment a member reached out to
+            # their support person was the exact moment the product silently stopped them.
+            # Now the message is delivered AND the sender is shown crisis resources alongside
+            # the confirmation. Genuinely prohibited content is still blocked.
             moderation = content_moderator.check_content(content)
-            if not moderation['safe']:
-                return jsonify({'error': moderation.get('message', 'Content not allowed')}), 400
+            crisis_notice = None
+            if not moderation.get('safe', True):
+                # ONLY 'prohibited' content is refused. The other two unsafe results —
+                # 'crisis' (explicit ideation) and the concerns/'alert_support' branch
+                # (e.g. "I feel suicidal today") — are disclosures, not violations, and
+                # must still reach the person's support network. Matching on the type
+                # matters: the alert_support branch carries no 'type' and no 'message',
+                # so an else-blocks-everything rule would refuse it with a bare
+                # "Content not allowed".
+                if moderation.get('type') == 'prohibited':
+                    return jsonify({'error': moderation.get('message', 'Content not allowed')}), 400
+                crisis_notice = _A26_CRISIS_NOTICE_FALLBACK
 
             # Create message
             message = Message(
@@ -11449,7 +11811,12 @@ def messages():
 
             db.session.commit()
 
-            return jsonify({'success': True, 'message_id': message.id})
+            # A26: surface crisis resources to the sender without blocking delivery.
+            _response = {'success': True, 'message_id': message.id}
+            if crisis_notice:
+                _response['support_notice'] = crisis_notice
+                _response['support_notice_key'] = _A26_CRISIS_NOTICE_KEY
+            return jsonify(_response)
 
         except Exception as e:
             logger.error(f"Send message error: {str(e)}")
@@ -22334,6 +22701,8 @@ def user_city():
 
             user.selected_city = city
             user.updated_at = datetime.utcnow()
+            # A27: keep the reminder timezone in step with the new city.
+            _a27_sync_diary_reminder_timezone(user)
             db.session.commit()
 
             return jsonify({

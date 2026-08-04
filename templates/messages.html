@@ -14,6 +14,9 @@
             padding: 20px;
             background: linear-gradient(135deg, #6B8BA4 0%, #B6A9C9 100%);
             min-height: 100vh;
+            /* A27 ANDROID FIX: on Android 100vh is the LARGE viewport (as if the browser
+               toolbar were hidden); dvh tracks the real visible height. */
+            min-height: 100dvh;
         }
 
         /* P305: Dark mode support */
@@ -31,9 +34,12 @@
         *, *::before, *::after {
             box-sizing: border-box;
         }
+        /* A27 SCROLL FIX: `clip`, not `hidden`. `overflow-x: hidden` forces `overflow-y`
+           to `auto`, making this container a scroll box that swallows vertical swipes and
+           freezes the page. `clip` has no such side effect. */
         #messagesContainer {
             max-width: 100%;
-            overflow-x: hidden;
+            overflow-x: clip;
         }
         @media (max-width: 768px) {
             body {
@@ -42,9 +48,10 @@
             #messagesContainer {
                 padding: 0;
             }
+            /* A27 SCROLL FIX: `clip`, not `hidden` - see note above. */
             .message-card, .messages-container, .chat-container {
                 max-width: 100% !important;
-                overflow-x: hidden !important;
+                overflow-x: clip !important;
                 box-sizing: border-box !important;
             }
             .message-input, textarea, input {
@@ -60,6 +67,7 @@
             }
             #messagesContainer {
                 max-height: calc(100vh - 10px);
+                max-height: calc(100dvh - 10px);   /* A27 ANDROID FIX */
                 overflow-y: auto;
             }
         }
@@ -69,8 +77,12 @@
     <!-- G-5: Apply dark mode from localStorage -->
     <script>if(localStorage.getItem('therasocial_dark_mode')==='true')document.body.classList.add('dark-mode');</script>
     <div id="messagesContainer"><span data-i18n="messages.loading">Loading...</span></div>
-    <script src="/static/js/i18n.js"></script>
-    <script src="/static/js/circles-messages.js?v=9.0"></script>
+    <!-- A27 FIX: these two were badly out of sync - i18n.js had NO cache-buster at all and
+         circles-messages.js was pinned at ?v=9.0 while every other page was at B175. Static
+         files are served `Cache-Control: public, max-age=604800`, so this page could serve a
+         week-old copy of both scripts. Now in lockstep with the rest of the app. -->
+    <script src="/static/js/i18n.js?v=B180"></script>
+    <script src="/static/js/circles-messages.js?v=B180"></script>
     <script>
         // Wait for i18n to be fully loaded
         function waitForI18n() {
@@ -123,19 +135,31 @@
     <!-- MS-6: Orientation change viewport recalculation -->
     <script>
     (function() {
+        // A27 FIX: this used to run on EVERY `resize`, and on Android `resize` fires every
+        // time the browser toolbar collapses or expands while you scroll. It capped
+        // #messagesContainer to the viewport height and pinned body's min-height, which
+        // turned normal scrolling into a nested-scroller fight. It is now scoped to the
+        // short-landscape case the matching CSS rule was written for, and clears itself in
+        // every other orientation.
+        var shortLandscape = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
         function recalcViewport() {
             const container = document.getElementById('messagesContainer');
+            if (!shortLandscape.matches) {
+                if (container) container.style.maxHeight = '';
+                document.body.style.minHeight = '';
+                return;
+            }
             if (container) {
                 container.style.maxHeight = window.innerHeight - 20 + 'px';
             }
-            // Force repaint on orientation change
             document.body.style.minHeight = window.innerHeight + 'px';
         }
         window.addEventListener('orientationchange', function() {
             setTimeout(recalcViewport, 100);
             setTimeout(recalcViewport, 300);
         });
-        window.addEventListener('resize', recalcViewport);
+        if (shortLandscape.addEventListener) shortLandscape.addEventListener('change', recalcViewport);
+        recalcViewport();
     })();
     </script>
 </body>
