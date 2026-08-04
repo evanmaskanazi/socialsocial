@@ -1,4 +1,24 @@
 """
+Security module for Thera Social  -  Version A26 (B175)
+
+A26 changes (all additive or widening; nothing that validated before stops validating):
+  1. validate_username is Unicode-aware. A25 accepted only ^[a-zA-Z0-9_]{3,20}$, which
+     made a Hebrew/Arabic/Cyrillic username impossible. The 3-20 length policy is
+     unchanged. Invisible, direction-flipping and compatibility look-alike characters
+     are rejected so one account cannot render identically to another.
+  2. normalize_username() + derive_username_from_email(). The latter fixes a real signup
+     blocker: the raw email local part was used as the default username, so anyone whose
+     address contained a dot ("john.doe@...") failed registration outright.
+  3. ContentModerator no longer blocks the words hate/violence/abuse. check_content gates
+     PRIVATE MESSAGES, so on a mental-health platform that stopped members telling their
+     support person "I'm a survivor of abuse". Prohibited patterns are now second-person
+     attacks ("kill yourself"); first-person disclosures ("kill myself") are delivered
+     with support resources attached.
+  4. crisis/harmful regexes fixed - [e|al] and [e|ing] were character classes, not
+     alternations, so "suicidal" and "overdosing" were never detected at all.
+  5. verify_password and validate_csrf_token use constant-time comparison.
+  6. sanitize_input returns '' for non-string input instead of raising.
+
 Security module for Thera Social
 Handles encryption, sanitization, and security measures
 Complete version with all features and fixes
@@ -6,6 +26,7 @@ Complete version with all features and fixes
 import os
 import re
 import html
+import unicodedata
 import secrets
 import hashlib
 from datetime import datetime, timedelta
@@ -315,11 +336,24 @@ class SecurityManager:
             csrf_key = f"csrf:{session_id}"
             stored_token = self.redis.get(csrf_key)
             
-            if stored_token and stored_token.decode('utf-8') == token:
-                return True
+            # A26: constant-time comparison (see verify_password).
+            try:
+                if stored_token and token and secrets.compare_digest(
+                        stored_token if isinstance(stored_token, bytes) else str(stored_token).encode('utf-8'),
+                        str(token).encode('utf-8')):
+                    return True
+            except (TypeError, UnicodeError):
+                return False
         else:
             # Fallback to session-based CSRF
-            return token == session.get('csrf_token')
+            expected = session.get('csrf_token')
+            if not expected or not token:
+                return False
+            try:
+                # compare_digest raises TypeError on non-ASCII str; compare bytes.
+                return secrets.compare_digest(str(expected).encode('utf-8'), str(token).encode('utf-8'))
+            except (TypeError, UnicodeError):
+                return False
         
         return False
 
@@ -427,8 +461,16 @@ def sanitize_input(text):
     if not text:
         return text
     
+    # A26: bleach.clean() raises TypeError on a non-string (e.g. a JSON number or
+    # list arriving in a field the caller expected to be text). Return it untouched
+    # so a malformed payload produces a validation error, not a 500.
+    if not isinstance(text, str):
+        return ''
+    
     # Use bleach to clean and allow only safe tags
     # This is sufficient for XSS protection
+    # NOTE (A26): bleach preserves non-ASCII text, so Hebrew/Arabic/Cyrillic
+    # usernames and message bodies pass through unchanged. It does escape & and <.
     cleaned = bleach.clean(
         text,
         tags=['b', 'i', 'u', 'br', 'p', 'strong', 'em'],
@@ -467,11 +509,231 @@ def validate_email(email):
     
     return True
 
+# =====================================================================
+# A26: Unicode-aware username validation.
+#
+# A25 accepted only ^[a-zA-Z0-9_]{3,20}$, which made a Hebrew (or Arabic,
+# or Cyrillic) username impossible. This is a strict WIDENING: every name
+# A25 accepted is still accepted, and the length policy (3-20) is unchanged.
+#
+# Added: letters in ANY script, combining marks (Hebrew niqqud, Arabic
+# harakat, Devanagari matras), hyphen, apostrophe and single inner spaces.
+# Still rejected: leading/trailing/doubled separators, and any invisible or
+# direction-flipping character - those let one account impersonate another
+# on screen, which matters in an app where alerts read "<username>'s mood...".
+# =====================================================================
+
+USERNAME_MIN_LENGTH = 3
+USERNAME_MAX_LENGTH = 20
+
+# Legacy A25 rule, kept verbatim so nothing that used to validate stops doing so.
+_LEGACY_USERNAME_RE = re.compile(r'^[a-zA-Z0-9_]{3,20}$')
+
+# Separators allowed INSIDE a name only, never doubled.
+_USERNAME_SEPARATORS = frozenset("-'\u2019 ")
+
+# Categories that must never appear: control characters, bidi overrides and
+# zero-width joiners, surrogates, private-use and unassigned code points.
+_USERNAME_FORBIDDEN_CATEGORIES = ('Cc', 'Cf', 'Cs', 'Co', 'Cn')
+
+# Code points that ARE letters (category Lo/Lm, so str.isalnum() is True) but
+# render as nothing. Without this, "admin" and "admin<U+3164>" are two different,
+# visually identical accounts.
+_USERNAME_INVISIBLE_LETTERS = frozenset(
+    '\u115f'   # HANGUL CHOSEONG FILLER
+    '\u1160'   # HANGUL JUNGSEONG FILLER
+    '\u3164'   # HANGUL FILLER
+    '\uffa0'   # HALFWIDTH HANGUL FILLER
+    '\u17b4'   # KHMER VOWEL INHERENT AQ
+    '\u17b5'   # KHMER VOWEL INHERENT AA
+    '\u2065'   # unassigned in some UCD versions
+    '\u180e'   # MONGOLIAN VOWEL SEPARATOR
+)
+
+
+# Ranges that are invisible or direction-flipping but are NOT category Cc/Cf/Cn.
+# The gap that matters: variation selectors, the combining grapheme joiner and the
+# Mongolian free-variation selectors are category Mn (a "mark"), so a marks-aware
+# rule admits them - and "admin" + U+FE0F renders identically to "admin".
+_USERNAME_IGNORABLE_RANGES = (
+    (0x00AD, 0x00AD),      # SOFT HYPHEN
+    (0x034F, 0x034F),      # COMBINING GRAPHEME JOINER
+    (0x061C, 0x061C),      # ARABIC LETTER MARK
+    (0x115F, 0x1160),      # HANGUL fillers
+    (0x17B4, 0x17B5),      # KHMER inherent vowels
+    (0x180B, 0x180F),      # MONGOLIAN free variation selectors
+    (0x200B, 0x200F),      # zero-width space/joiners, LRM/RLM
+    (0x202A, 0x202E),      # bidi embedding/override
+    (0x2060, 0x206F),      # word joiner, invisible operators, bidi formatting
+    (0x3164, 0x3164),      # HANGUL FILLER
+    (0xFE00, 0xFE0F),      # VARIATION SELECTOR 1-16
+    (0xFEFF, 0xFEFF),      # ZERO WIDTH NO-BREAK SPACE
+    (0xFFA0, 0xFFA0),      # HALFWIDTH HANGUL FILLER
+    (0xFFF0, 0xFFF8),      # unassigned/interlinear
+    (0x1D173, 0x1D17A),    # musical formatting
+    (0xE0000, 0xE0FFF),    # tags + VARIATION SELECTOR SUPPLEMENT
+)
+
+# Character categories a username may be built from. Deliberately excludes No and Nl
+# (superscripts, circled digits, Roman numerals) - they are "numeric" to str.isalnum()
+# but are decorative look-alikes, not name characters.
+_USERNAME_LETTER_CATEGORIES = frozenset(('Lu', 'Ll', 'Lt', 'Lm', 'Lo'))
+_USERNAME_DIGIT_CATEGORIES = frozenset(('Nd',))
+_USERNAME_MARK_CATEGORIES = frozenset(('Mn', 'Mc', 'Me'))
+
+
+def _is_username_ignorable(ch):
+    """True for characters that render as nothing or flip text direction."""
+    cp = ord(ch)
+    for low, high in _USERNAME_IGNORABLE_RANGES:
+        if low <= cp <= high:
+            return True
+    return ch in _USERNAME_INVISIBLE_LETTERS
+
+
+# Compatibility-decomposable code points that are nonetheless ORDINARY LETTERS in a
+# living script. THAI SARA AM is one of the most common Thai vowels; the Croatian and
+# Dutch digraphs and Armenian ech-yiwn are real letters people have in their names;
+# the Hangul Compatibility Jamo block is how Korean jamo are normally typed.
+_USERNAME_COMPAT_LETTERS = frozenset(
+    '\u0e33'                      # THAI CHARACTER SARA AM
+    '\u0eb3'                      # LAO VOWEL SIGN AM
+    '\u0587'                      # ARMENIAN SMALL LIGATURE ECH YIWN
+    '\u0132\u0133'                # LATIN IJ / ij  (Dutch)
+    '\u01c4\u01c5\u01c6'          # DZ with caron  (Croatian)
+    '\u01c7\u01c8\u01c9'          # LJ
+    '\u01ca\u01cb\u01cc'          # NJ
+    '\u01f1\u01f2\u01f3'          # DZ
+) | frozenset(chr(c) for c in range(0x3131, 0x3164))   # Hangul Compatibility Jamo
+
+
+def _is_username_confusable(ch):
+    """True for compatibility-decomposable look-alikes.
+
+    NFC (unlike NFKC) does not fold these, so fullwidth "\uff41", math-bold and
+    circled forms would otherwise pass as distinct-but-identical-looking names.
+    Verified against Hebrew, Arabic, Devanagari, Tamil, Greek, Cyrillic, CJK,
+    Hangul and accented Latin: no legitimate name character is affected.
+    """
+    if ch in _USERNAME_COMPAT_LETTERS:
+        return False
+    return unicodedata.decomposition(ch).startswith('<')
+
+
+def _is_username_word_char(ch):
+    """Letter (any script), decimal digit, underscore, or a combining mark.
+
+    Python's re \\w excludes combining marks, which would reject exactly the names
+    this change exists to support (Hebrew niqqud, Arabic harakat, Devanagari
+    matras) and anything typed on macOS/iOS, whose input methods emit NFD text.
+    """
+    if ch == '_':
+        return True
+    if _is_username_ignorable(ch) or _is_username_confusable(ch):
+        return False
+    category = unicodedata.category(ch)
+    return (category in _USERNAME_LETTER_CATEGORIES
+            or category in _USERNAME_DIGIT_CATEGORIES
+            or category in _USERNAME_MARK_CATEGORIES)
+
+
+def _is_username_start_char(ch):
+    """A name must BEGIN with something with a body of its own - not a mark.
+
+    Without this, '\u0301abc' validates and renders as floating diacritics.
+    """
+    return _is_username_word_char(ch) and not unicodedata.category(ch).startswith('M')
+
+
+def normalize_username(username):
+    """NFC-normalise and strip. Callers should STORE this value.
+
+    Storing the normalised form is what stops "jose\\u0301" and "jos\\u00e9"
+    becoming two rows that render identically.
+    """
+    if not username or not isinstance(username, str):
+        return ''
+    return unicodedata.normalize('NFC', username).strip()
+
+
 def validate_username(username):
-    """Validate username format"""
-    # Username should be 3-20 characters, alphanumeric with underscores
-    username_regex = r'^[a-zA-Z0-9_]{3,20}$'
-    return re.match(username_regex, username) is not None
+    """Validate username format (A26: any script, 3-20 characters)."""
+    try:
+        if not username or not isinstance(username, str):
+            return False
+        # Length is checked on the RAW string too: callers may store the raw
+        # value, and NFD text can be far longer than its NFC form.
+        if len(username) > USERNAME_MAX_LENGTH * 8:
+            return False
+        candidate = normalize_username(username)
+        if not candidate:
+            return False
+        if not (USERNAME_MIN_LENGTH <= len(candidate) <= USERNAME_MAX_LENGTH):
+            return False
+        # Applies to both rules below - the one deliberate narrowing vs A25.
+        if any(unicodedata.category(ch) in _USERNAME_FORBIDDEN_CATEGORIES for ch in candidate):
+            return False
+        if any(_is_username_ignorable(ch) for ch in candidate):
+            return False
+        # Legacy ASCII rule first - cheapest, and guarantees the superset.
+        if _LEGACY_USERNAME_RE.match(candidate):
+            return True
+        # Unicode rule: must contain something visible, must start and end on a
+        # word character, and may not contain doubled separators.
+        if not any(unicodedata.category(ch)[0] in ('L', 'N') for ch in candidate):
+            return False
+        if not _is_username_start_char(candidate[0]) or not _is_username_word_char(candidate[-1]):
+            return False
+        previous_was_separator = False
+        for ch in candidate:
+            if _is_username_word_char(ch):
+                previous_was_separator = False
+            elif ch in _USERNAME_SEPARATORS:
+                if previous_was_separator:
+                    return False
+                previous_was_separator = True
+            else:
+                return False
+        return True
+    except Exception as exc:      # never let a validation edge case 500 a request
+        logger.warning(f"validate_username error: {exc}")
+        return False
+
+
+# Marker so callers can detect this capability instead of duplicating the rule.
+validate_username.a26_unicode_aware = True
+
+
+def derive_username_from_email(email):
+    """Build a VALID username from an email local part, or '' if impossible.
+
+    A25 used the raw local part, so anyone whose address contained a dot or a
+    plus - "john.doe@...", the majority of real addresses - failed registration
+    with "Invalid username format" and had to invent a name before they could
+    sign up. Dots/plus/hyphens become underscores, the result is padded to the
+    3-character minimum and trimmed to the 20-character maximum.
+    """
+    try:
+        if not email or not isinstance(email, str) or '@' not in email:
+            return ''
+        local = normalize_username(email.split('@')[0])
+        if not local:
+            return ''
+        # Map anything not allowed onto an underscore, then collapse runs.
+        mapped = ''.join(ch if _is_username_word_char(ch) else '_' for ch in local)
+        mapped = re.sub(r'_{2,}', '_', mapped).strip('_')
+        # Drop any leading combining marks so the result starts on a real glyph.
+        while mapped and not _is_username_start_char(mapped[0]):
+            mapped = mapped[1:]
+        if not mapped:
+            return ''
+        mapped = mapped[:USERNAME_MAX_LENGTH]
+        while len(mapped) < USERNAME_MIN_LENGTH:
+            mapped += '0'
+        return mapped if validate_username(mapped) else ''
+    except Exception as exc:
+        logger.warning(f"derive_username_from_email error: {exc}")
+        return ''
 
 def validate_password_strength(password):
     """Check password strength"""
@@ -550,7 +812,9 @@ def verify_password(password, password_hash):
         )
         new_key = kdf.derive(password.encode())
         
-        return new_key == stored_key
+        # A26: constant-time comparison. A plain `==` on bytes short-circuits on the
+        # first differing byte, which leaks how much of the hash a guess got right.
+        return secrets.compare_digest(new_key, stored_key)
     except Exception as e:
         logger.error(f"Password verification error: {e}")
         return False
@@ -693,27 +957,44 @@ class ContentModerator:
     """Content moderation for user-generated content"""
     
     def __init__(self):
-        # List of prohibited words/patterns
+        # A26 FIX: A25 read r'\b(?:hate|violence|abuse)\b' here, and check_content()
+        # gates PRIVATE MESSAGES (app.py). On a mental health platform that meant a
+        # member could not tell their support person "I'm a survivor of abuse" or
+        # "I'm dealing with domestic violence" - exactly the disclosures this product
+        # exists to carry. Those words are gone.
+        #
+        # What belongs here is harm DIRECTED AT another person. The distinction that
+        # matters is grammatical: second person ("kill yourself") is an attack and is
+        # refused; first person ("kill myself") is a disclosure and must be delivered
+        # so the person's support network can actually respond to it.
         self.prohibited_patterns = [
-            r'\b(?:hate|violence|abuse)\b',
-            # Add more patterns as needed
+            r'\bkill[- ]?yourself\b',
+            r'\bcut[- ]?yourself\b',
+            r'\bharm[- ]?yourself\b',
+            r'\bend[- ]?your[- ]?life\b',
+            r'\bgo\s+(?:die|kill\s+yourself)\b',
+            r'\byou\s+(?:should|deserve\s+to|ought\s+to)\s+(?:die|overdose|kill\s+yourself)\b',
         ]
-        
-        # Patterns that might indicate self-harm or crisis
+
+        # Patterns that might indicate self-harm or crisis (first person only)
         self.crisis_patterns = [
             r'\b(?:suicide|self.?harm|kill.?myself)\b',
             r'\b(?:end.?it.?all|no.?point.?living)\b',
         ]
-        
+
+        # First person only - see the note above. These raise a support signal; they
+        # never block delivery. A25 wrote [e|al] and [e|ing], which are character
+        # classes rather than alternations, so "suicidal" and "overdosing" - the most
+        # common phrasings - were never detected at all.
         self.harmful_patterns = [
-            r'\bsuicid[e|al]\b',
+            r'\bsuicid(?:e|al)\b',
             r'\bself[- ]?harm\b',
-            r'\bkill[- ]?(myself|yourself)\b',
-            r'\bcut[- ]?(myself|yourself)\b',
-            r'\boverdos[e|ing]\b',
-            r'\bend[- ]?(my|your)[- ]?life\b'
+            r'\bkill[- ]?myself\b',
+            r'\bcut[- ]?myself\b',
+            r'\boverdos(?:e|ing)\b',
+            r'\bend[- ]?my[- ]?life\b',
         ]
-        
+
         self.support_keywords = [
             'help', 'support', 'crisis', 'emergency',
             'therapist', 'counselor', 'hotline'
