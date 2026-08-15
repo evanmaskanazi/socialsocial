@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<!-- TheraSocial Circles Version B185 (A41) -->
+<!-- B185 (A41): CACHE-BUST resync — all JS ?v bumped to B185 in lockstep with index/parameters
+  (i18n.js changed this round: cross-language completeness fixes). The prior round left the live
+  refs at ?v=B180 while this header read B175 — resynced so the ?v token and the header match.
+  Added the shared, self-contained A41-UX block before </body> (10 additive mobile UX items,
+  namespaced ts-a41-*, guarded/feature-detected). No existing markup, IDs or circles logic changed. -->
+<!-- TheraSocial Circles Version B175 (A26) -->
+<!-- B175 (A26): Cache-bust sync - all JS ?v bumped B170->B175 in lockstep with index/parameters
+  (i18n.js changed this round: new consent + reminder keys in all 4 languages; circles-messages.js
+  is unchanged but bumped in lockstep per the repo's cache-bust convention).
+  No functional/JS changes in this file. -->
+<!-- TheraSocial Circles Version B170 (A21) -->
+<!-- B170 (A21): Cache-bust sync — all JS ?v bumped B165→B170 in lockstep with index/parameters
+  (circles-messages.js changed this round: it now HTML-escapes member names in
+  createMemberElement (XSS) and null-safes the circle count reads; i18n.js is unchanged but bumped
+  in lockstep per the repo's cache-bust convention). Functional change in
+  THIS file: the follow/blocked checks in the "viewing another user" flow now coerce ids with
+  Number() (matching the existing circle-membership check) so a string id can't mis-toggle the
+  Follow/Block buttons. -->
+<!-- TheraSocial Circles Version B165 (A16 audit fix) -->
+<!-- B165 (A16 audit fix): all JS ?v bumped B160→B165 in lockstep with index/parameters.
+  Focus-visible ring no longer forces a corner radius. No functional/JS changes in this file. -->
+<!-- TheraSocial Circles Version B160 (A16) -->
+<!-- B160 (A16): Cache-bust sync — all JS ?v bumped B145→B160 to stay in lockstep with index
+  and parameters (i18n.js / circles-messages.js changed this round). Added an additive
+  A16-ANDROID CSS block before </body> + theme-color meta. No functional/JS changes in this
+  file. -->
+<!-- TheraSocial Circles Version B145 (A12 audit) -->
+<!-- B145 (A12 audit): Cache-bust sync — all JS ?v bumped B140→B145 to stay in lockstep with
+  the app-wide audit round (parameters-social.js received a real pre-existing-bug fix). No
+  functional/JS changes in this file. -->
+<!-- TheraSocial Circles Version B140 (A12) -->
+<!-- B140 (A12): Cache-bust sync — all JS ?v bumped B135→B140 to stay in lockstep with the
+  rest of the app (index/parameters). No functional/JS changes in this file. The gift-box
+  feature lives on the diary/parameters page, not here. -->
+<!-- TheraSocial Circles Version B135 (A8) -->
+<!-- B135 (A8): Cache-bust sync — all JS bumped B130→B135. Added self-contained A8-UX block
+  before the closing body tag (12 additive, reduced-motion-aware UX items incl. skeleton shimmer while the
+  circles list loads, haptics, offline banner, accessible toasts, scroll-to-top, tactile
+  press, scrollbar cohesion). No functional/JS changes to existing circles logic. -->
+<!-- TheraSocial Circles Version B130 (A6) -->
+<!-- B130 (A6): Cache-bust sync — all JS bumped B125→B130. Added viewport-fit=cover + additive A6-MOBILE CSS block (mobile-UX polish only). No functional/JS changes. -->
+<!-- TheraSocial Circles Version B125 -->
+<!-- B125: Cache-bust sync — all JS bumped to B125. No functional changes. -->
+<!-- TheraSocial Circles Version B120 -->
+<!-- B120: Cache-bust sync — all JS bumped to B120. No functional changes. -->
+<!-- TheraSocial Circles Version B115 -->
+<!-- B115: Cache-bust sync — all JS bumped to B115. No functional changes. -->
+<!-- TheraSocial Circles Version B110 -->
+<!-- B110: Cache-bust sync — all JS bumped to B110. No functional changes. -->
+<!-- TheraSocial Circles Version B105 -->
+<!-- B105: CACHE-BUST FIX — all JS bumped from B60 → B105.
+  circles.html was stuck at ?v=B60 while index.html was at B70.
+  No functional changes in this file. -->
+<!-- TheraSocial Circles Version B30 -->
+<!-- B30: Cache-bust sync — all JS bumped from B20 to B30. No functional changes in circles page. -->
+<!-- TheraSocial Circles Version B20 -->
+<!-- B20: Cache-bust sync — circles-messages.js bumped from B7 to B20. -->
+<!-- B7: Cache version bumped to B7.
+<!-- C32: Cache version bumped to C32.
+<!-- C31: Cache version bumped to C31.
+<!-- C30: Cache version bumped to C30.
+<!-- C25: Cache version bumped to C25.
+<!-- C20: Cache version bumped to C20.
+<!-- C15: Cache version bumped to C15.
+<!-- C13: Cache-buster version sync to C13; no functional changes in circles.html -->
+<!-- P305: Visual design overhaul - new calming color palette -->
+<!-- P305: Dark mode support for evening/nighttime use -->
+<!-- PJ501 Changes: Added block check before displaying user profile -->
+<!-- PJ601 Changes: Block/Unblock toggle button fix, Fixed navigation after 403 errors -->
+<!-- PJ602 Changes: Fixed Follow button width -->
+<!-- PJ704 Changes: Backend fix for alerts - no frontend changes needed -->
+<!-- PJ701 Changes: Hide Add to Circle button if user is already in any of my circles -->
+<!-- PJ702 Changes: Improved circle membership check with better logging and robust ID comparison -->
+<!-- PJ703 Changes: Version sync with indexPhase703 - no functional changes needed for circles.html -->
+<!-- 10LinkN2 Changes: Updated circles-messages.js cache-buster from 704.0 to 10LinkN2 -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- A16 (Android): colour the Chrome/Android status & address bar to match the app. -->
+    <meta name="theme-color" content="#6B8BA4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1F2937" media="(prefers-color-scheme: dark)">
+    <title>Circles - TheraSocial</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #6B8BA4 0%, #B6A9C9 100%);
+            min-height: 100vh;
+        }
+
+        /* P305: Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%);
+            }
+        }
+
+        .dark-mode body, body.dark-mode {
+            background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%);
+        }
+
+        /* RTL Support */
+        [dir="rtl"] {
+            direction: rtl;
+        }
+
+        [dir="rtl"] .circles-container {
+            text-align: right;
+        }
+
+        [dir="rtl"] .circle-selector {
+            flex-direction: row-reverse;
+        }
+
+        /* ================================================================== */
+        /* A6-MOBILE: Additive mobile-UX enhancements — no functional changes. */
+        /* Presentation-only; supports the viewport-fit=cover meta added above. */
+        /* ================================================================== */
+        /* (1) Stop iOS from auto-inflating text sizes in landscape. */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        /* (2) Remove grey tap-flash + (3) kill the 300ms tap delay on controls. */
+        a, button, [onclick], [role="button"], input, select, textarea {
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation;
+        }
+        /* (4) Prevent accidental text-selection on buttons (message text stays
+              selectable so users can still copy from conversations). */
+        button, [role="button"] { -webkit-user-select: none; user-select: none; }
+        @media (max-width: 768px) {
+            /* (5) Momentum scrolling + (6) no scroll-chaining / pull-to-refresh. */
+            html, body {
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+            }
+            /* (7) Prevent iOS "zoom on focus": form fields must be >= 16px. */
+            input, select, textarea { font-size: 16px; }
+            /* (8) Landscape notch: keep content out of the side safe-areas
+                  (needed now that viewport-fit=cover is enabled). */
+            body {
+                padding-left: calc(20px + env(safe-area-inset-left, 0px));
+                padding-right: calc(20px + env(safe-area-inset-right, 0px));
+            }
+            /* (9) Keep toast notifications clear of the notch / status bar. */
+            #toastContainer { top: calc(20px + env(safe-area-inset-top, 0px)) !important; }
+        }
+        /* ===================== END A6-MOBILE ============================== */
+    </style>
+</head>
+<body>
+    <!-- G-5: Apply dark mode from localStorage -->
+    <script>if(localStorage.getItem('therasocial_dark_mode')==='true')document.body.classList.add('dark-mode');</script>
+    <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
+    <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
+
+    <script src="/static/js/i18n.js?v=B185"></script>
+    <script src="/static/js/circles-messages.js?v=B185"></script>
+    <script src="/static/js/feed-updates.js?v=B185"></script>
+
+    <!-- MVP-FIX: Notification polyfill for circles.html -->
+    <script>
+    (function() {
+        if (typeof window.showNotification !== 'function') {
+            window.showNotification = function(message, type) {
+                type = type || 'info';
+                let container = document.getElementById('toastContainer');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'toastContainer';
+                    container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;';
+                    document.body.appendChild(container);
+                }
+                const colors = { success: '#9DB8A0', error: '#C17C74', warning: '#D4A574', info: '#6B8BA4' };
+                const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+                const toast = document.createElement('div');
+                toast.style.cssText = 'padding:16px 24px;border-radius:12px;color:white;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.2);display:flex;align-items:center;gap:12px;max-width:350px;background:' + (colors[type] || colors.info);
+                // QA FIX (MEDIUM): Use textContent instead of innerHTML for XSS safety
+                const iconSpan = document.createElement('span');
+                iconSpan.textContent = icons[type] || icons.info;
+                const msgSpan = document.createElement('span');
+                msgSpan.textContent = message;
+                toast.appendChild(iconSpan);
+                toast.appendChild(msgSpan);
+                container.appendChild(toast);
+                setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 5000);
+            };
+        }
+    })();
+    </script>
+
+    <script>
+        // SINGLE initialization flag to prevent race conditions
+        let pageInitialized = false;
+        let isUpdatingLanguage = false; // Prevent concurrent language updates
+
+        // Verify authentication before loading
+        async function checkAuthentication() {
+            try {
+                const response = await fetch('/api/auth/session');
+                if (response.status === 401) {
+                    window.location.href = '/';
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+                return false;
+            }
+        }
+
+        // Monitor DOM for when circles are actually populated
+        function waitForCirclesPopulated(maxWaitMs = 3000) {
+            return new Promise((resolve) => {
+                const startTime = Date.now();
+
+                const checkPopulated = () => {
+                    const publicMembers = document.getElementById('publicMembers');
+                    const classBMembers = document.getElementById('class_bMembers');
+                    const classAMembers = document.getElementById('class_aMembers');
+
+                    const hasRealContent =
+                        (publicMembers && (
+                            publicMembers.querySelector('.member-item') ||
+                            publicMembers.textContent.includes('private')
+                        )) ||
+                        (classBMembers && (
+                            classBMembers.querySelector('.member-item') ||
+                            classBMembers.textContent.includes('private')
+                        )) ||
+                        (classAMembers && (
+                            classAMembers.querySelector('.member-item') ||
+                            classAMembers.textContent.includes('private')
+                        ));
+
+                    if (hasRealContent) {
+                        console.log('Circles populated with real data');
+                        resolve(true);
+                        return;
+                    }
+
+                    if (Date.now() - startTime > maxWaitMs) {
+                        console.warn('Timeout waiting for circles to populate');
+                        resolve(false);
+                        return;
+                    }
+
+                    setTimeout(checkPopulated, 50);
+                };
+
+                checkPopulated();
+            });
+        }
+
+        // MAIN INITIALIZATION - runs exactly once
+        async function initializeCirclesPage() {
+            if (pageInitialized) {
+                console.log('Page already initialized, skipping...');
+                return;
+            }
+            pageInitialized = true;
+
+            console.log('Circles page initializing...');
+
+            // 1. Check authentication first
+            const isAuthenticated = await checkAuthentication();
+            if (!isAuthenticated) return;
+
+            // 2. Wait for i18n to load
+            let waitCount = 0;
+            while ((!window.i18n || !window.i18n.translations) && waitCount < 20) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                waitCount++;
+            }
+
+            // 3. Add circle translations if available
+            if (typeof addCircleTranslations === 'function') {
+                addCircleTranslations();
+            }
+
+            // 4. Load HTML structure (invisible)
+            if (typeof circlesHTML !== 'undefined') {
+                document.getElementById('circlesContainer').innerHTML = circlesHTML;
+                console.log('Circles HTML loaded');
+            } else {
+                console.error('circlesHTML not found');
+                return;
+            }
+
+         // 5. Apply user's language preference from localStorage
+// Note: We only read from localStorage to avoid race conditions with the main dashboard
+// The main dashboard handles syncing language with the backend
+try {
+    const localLang = localStorage.getItem('selectedLanguage');
+    console.log('[Circles] Using localStorage language (no backend sync):', localLang);
+
+    const langToUse = localLang || 'en';
+
+    if (window.i18n && window.i18n.setLanguage) {
+        await window.i18n.setLanguage(langToUse);
+        console.log('[Circles] Language set to:', langToUse);
+    }
+} catch (error) {
+    console.log('[Circles] Error setting language:', error);
+}
+
+            // 6. Apply initial translations
+            if (window.i18n && window.i18n.applyLanguage) {
+                const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+                window.i18n.applyLanguage(currentLang);
+
+                // Set RTL direction
+                const rtlLanguages = ['ar', 'he'];
+                document.body.setAttribute('dir', rtlLanguages.includes(currentLang) ? 'rtl' : 'ltr');
+            }
+
+            // 7. Initialize circles data
+            if (typeof initializeCircles === 'function') {
+                console.log('Calling initializeCircles');
+                initializeCircles();
+            } else if (typeof loadCircles === 'function') {
+                console.log('Calling loadCircles');
+                loadCircles();
+            } else {
+                console.error('No circle initialization function found');
+                return;
+            }
+
+            // 8. Wait for circles to populate
+            console.log('Waiting for circles to populate...');
+            await waitForCirclesPopulated(3000);
+
+            // 9. Apply translations (after data loaded)
+            if (window.i18n && window.i18n.applyLanguage) {
+                const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+                window.i18n.applyLanguage(currentLang);
+            }
+
+            // 10. Update circle displays (member lists)
+            if (typeof updateCirclesDisplay === 'function') {
+                updateCirclesDisplay();
+            }
+
+            // 11. Update privacy dropdown translations
+            if (typeof updatePrivacyDropdownTranslations === 'function') {
+                updatePrivacyDropdownTranslations();
+            }
+
+            // 12. Force-update circle titles as FINAL step (with delay to ensure all other translations complete)
+            // This fixes the race condition where applyLanguage() was overwriting manual title updates
+            if (typeof updateCircleTitles === 'function') {
+                setTimeout(() => {
+                    updateCircleTitles();
+                    console.log('[Circles] Final circle titles update complete');
+                }, 100);
+            }
+
+            // 12.5. Load circle recommendations (explicit call as backup)
+            if (typeof loadCircleRecommendations === 'function') {
+                setTimeout(() => {
+                    console.log('[Circles] Explicitly calling loadCircleRecommendations');
+                    loadCircleRecommendations();
+                }, 200);
+            }
+
+            // PJN452: Add action buttons when viewing another user's circles
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewingUserId = urlParams.get('user_id');
+            if (viewingUserId) {
+                console.log('[Circles] Viewing another user circles, adding action buttons');
+                await addCirclesActionButtons(parseInt(viewingUserId));
+            }
+
+            // 13. Make visible
+            const container = document.getElementById('circlesContainer');
+            const loadingDiv = document.getElementById('loadingMessage');
+            container.style.opacity = '1';
+            if (loadingDiv) loadingDiv.style.display = 'none';
+
+            console.log('Circles page fully initialized and visible');
+        }
+
+        // PJN452: Add action buttons to circles page when viewing another user
+        // PJ501: Added block check before displaying user profile
+        async function addCirclesActionButtons(userId) {
+            try {
+                // PJ501: Check if blocked by this user first
+                try {
+                    const blockCheckResponse = await fetch(`/api/users/${userId}/check-blocked`, { credentials: 'include' });
+                    if (blockCheckResponse.ok) {
+                        const blockStatus = await blockCheckResponse.json();
+                        if (blockStatus.blockedBy || blockStatus.is_blocked) {
+                            // Show Account Not Available message and redirect
+                            const lang = localStorage.getItem('selectedLanguage') || 'en';
+                            const accountMsg = (window.i18n && window.i18n.translate) ? window.i18n.translate('msg.account_not_available') : 'Account Not Available';
+                            // MVP-FIX: Use toast instead of alert()
+                            if (typeof showNotification === 'function') {
+                                showNotification(accountMsg, 'error');
+                            } else {
+                                console.warn(accountMsg);
+                            }
+                            setTimeout(() => { window.location.href = '/?view=following'; }, 1500);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error checking block status:', e);
+                }
+                
+                // Get user profile info
+                const profileResponse = await fetch(`/api/users/${userId}/profile`, { credentials: 'include' });
+                if (!profileResponse.ok) {
+                    // PJ501: Check if blocked (403 with blocked error)
+                    if (profileResponse.status === 403) {
+                        const errorData = await profileResponse.json().catch(() => ({}));
+                        if (errorData.blocked || errorData.error === 'account_not_available') {
+                            const lang = localStorage.getItem('selectedLanguage') || 'en';
+                            const accountMsg = (window.i18n && window.i18n.translate) ? window.i18n.translate('msg.account_not_available') : 'Account Not Available';
+                            // MVP-FIX: Use toast instead of alert()
+                            if (typeof showNotification === 'function') {
+                                showNotification(accountMsg, 'error');
+                            } else {
+                                console.warn(accountMsg);
+                            }
+                            setTimeout(() => { window.location.href = '/?view=following'; }, 1500);
+                            return;
+                        }
+                    }
+                    return;
+                }
+                const userData = await profileResponse.json();
+                const username = userData.username || 'User';
+                
+                // Check if following
+                let isFollowing = false;
+                try {
+                    const followingResponse = await fetch('/api/following', { credentials: 'include' });
+                    if (followingResponse.ok) {
+                        const followingData = await followingResponse.json();
+                        // A21 (dormant-bug fix): coerce both sides (userId is parseInt'd above).
+                        // Matches the robust Number() comparison used for the circle check below;
+                        // a string id from the API would otherwise make an already-followed user
+                        // show "Follow" instead of "Unfollow".
+                        isFollowing = followingData.following.some(u => Number(u.id) === userId);
+                    }
+                } catch (e) {
+                    console.error('Error checking following status:', e);
+                }
+                
+                // Translation labels
+                const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+                const t = {
+                    back: tt('common.back_to_following', '← Back to Following'),
+                    follow: tt('btn.follow', 'Follow'),
+                    unfollow: tt('btn.unfollow', 'Unfollow'),
+                    addToCircle: tt('circles.add_to_circle', 'Add to Circle'),
+                    block: tt('btn.block', 'Block'),
+                    unblock: tt('btn.unblock', 'Unblock')
+                };
+                
+                // PJ601: Check if user is blocked
+                let isBlocked = false;
+                try {
+                    const blockedResponse = await fetch('/api/blocked-users', { credentials: 'include' });
+                    if (blockedResponse.ok) {
+                        const blockedData = await blockedResponse.json();
+                        if (blockedData.blocked_users) {
+                            isBlocked = blockedData.blocked_users.some(u => Number(u.id) === userId);  // A21: coerce ids (see isFollowing)
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error checking blocked status:', e);
+                }
+                
+                // PJ702: Check if user is already in any of my circles (improved)
+                let isInCircles = false;
+                try {
+                    // Fetch MY circles (without user_id param) to check if viewed user is in them
+                    const circlesResponse = await fetch('/api/circles', { credentials: 'include' });
+                    if (circlesResponse.ok) {
+                        const circlesData = await circlesResponse.json();
+                        console.log('[PJ702] My circles data:', circlesData);
+                        console.log('[PJ702] Checking if userId', userId, 'is in my circles');
+                        
+                        // Check all circle types: general/public, close_friends/class_b, family/class_a
+                        const publicCircle = circlesData.general || circlesData.public || [];
+                        const classBCircle = circlesData.close_friends || circlesData.class_b || [];
+                        const classACircle = circlesData.family || circlesData.class_a || [];
+                        
+                        const allCircleMembers = [...publicCircle, ...classBCircle, ...classACircle];
+                        console.log('[PJ702] All circle members:', allCircleMembers.map(m => ({id: m.id, username: m.username})));
+                        
+                        // Use Number() for robust comparison in case of type mismatch
+                        isInCircles = allCircleMembers.some(m => Number(m.id) === Number(userId));
+                        console.log('[PJ702] isInCircles result:', isInCircles);
+                    }
+                } catch (e) {
+                    console.error('Error checking circles:', e);
+                }
+                
+                // Create container for buttons
+                const container = document.getElementById('circlesContainer');
+                if (!container) return;
+                
+                // Create back button
+                const backBtn = document.createElement('button');
+                backBtn.className = 'btn-secondary back-to-following-btn';
+                backBtn.textContent = t.back;
+                backBtn.style.cssText = 'margin-bottom: 1rem; display: block;';
+                backBtn.onclick = () => {
+                    window.location.href = '/?view=following';
+                };
+                
+                // Create action buttons container
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'profile-action-buttons';
+                buttonContainer.style.cssText = 'display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; padding: 0.5rem; background: #f8f9fa; border-radius: 8px;';
+                
+                if (isFollowing) {
+                    const unfollowBtn = document.createElement('button');
+                    unfollowBtn.className = 'btn-secondary';
+                    unfollowBtn.textContent = t.unfollow;
+                    unfollowBtn.style.cssText = 'padding: 0.5rem 1rem;';
+                    unfollowBtn.onclick = async () => {
+                        if (confirm(tt('msg.confirm_unfollow', 'Are you sure you want to unfollow this user?'))) {
+                            const response = await fetch(`/api/unfollow/${userId}`, { method: 'DELETE', credentials: 'include' });
+                            if (response.ok) {
+                                window.location.reload();
+                            }
+                        }
+                    };
+                    buttonContainer.appendChild(unfollowBtn);
+                } else {
+                    // PJ601: Block/Unblock button with toggle
+                    const blockBtn = document.createElement('button');
+                    blockBtn.textContent = isBlocked ? t.unblock : t.block;
+                    blockBtn.style.cssText = isBlocked 
+                        ? 'padding: 0.5rem 1rem; background-color: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;'
+                        : 'padding: 0.5rem 1rem; background-color: #C17C74; color: white; border: none; border-radius: 6px; cursor: pointer;';
+                    blockBtn.onclick = async () => {
+                        if (isBlocked) {
+                            // Unblock user
+                            const response = await fetch(`/api/users/${userId}/unblock`, { method: 'POST', credentials: 'include' });
+                            if (response.ok) {
+                                window.location.reload();
+                            }
+                        } else {
+                            // Block user
+                            if (confirm(tt('msg.confirm_block', 'Block this user?'))) {
+                                const response = await fetch(`/api/users/${userId}/block`, { method: 'POST', credentials: 'include' });
+                                if (response.ok) {
+                                    window.location.href = '/?view=following';
+                                }
+                            }
+                        }
+                    };
+                    buttonContainer.appendChild(blockBtn);
+                    
+                    // Follow button with min-width to match Follow with Note
+                    const followBtn = document.createElement('button');
+                    followBtn.className = 'btn-primary';
+                    followBtn.textContent = t.follow;
+                    followBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #6B8BA4; color: white; width: auto;';
+                    followBtn.onclick = async () => {
+                        const response = await fetch(`/api/follow/${userId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ note: '' })
+                        });
+                        if (response.ok) {
+                            window.location.reload();
+                        }
+                    };
+                    buttonContainer.appendChild(followBtn);
+                }
+                
+                // PJ702: Add to Circle button - only show if user is not already in any circle
+                if (!isInCircles) {
+                    const addCircleBtn = document.createElement('button');
+                    addCircleBtn.textContent = t.addToCircle;
+                    addCircleBtn.style.cssText = 'padding: 0.5rem 1rem; background-color: #9DB8A0; color: white; border: none; border-radius: 6px; cursor: pointer;';
+                    addCircleBtn.onclick = () => {
+                        if (typeof showCircleAddMenu === 'function') {
+                            showCircleAddMenu(userId, username);
+                        }
+                    };
+                    buttonContainer.appendChild(addCircleBtn);
+                }
+                
+                // Insert at top
+                const circlesHeader = container.querySelector('.circles-header');
+                if (circlesHeader) {
+                    circlesHeader.parentNode.insertBefore(backBtn, circlesHeader);
+                    circlesHeader.parentNode.insertBefore(buttonContainer, circlesHeader);
+                } else {
+                    container.insertBefore(backBtn, container.firstChild);
+                    backBtn.after(buttonContainer);
+                }
+                
+                // Update header with username
+                const header = container.querySelector('h1');
+                if (header) {
+                    header.textContent = tt('circles.users_circles', '{username}\'s Circles').replace('{username}', username);
+                }
+                
+            } catch (error) {
+                console.error('Error adding circles action buttons:', error);
+            }
+        }
+
+        // Language change handler - FIXED to prevent race conditions
+        window.addEventListener('languageChanged', async (event) => {
+            if (!pageInitialized) return; // Don't handle until page is ready
+
+            // Prevent concurrent language updates
+            if (isUpdatingLanguage) {
+                console.log('[Circles] Language update already in progress, skipping...');
+                return;
+            }
+
+            isUpdatingLanguage = true;
+
+            try {
+                console.log('Language changed to:', event.detail?.language || window.i18n?.currentLanguage);
+
+                // Update RTL direction
+                const rtlLanguages = ['ar', 'he'];
+                const newLang = event.detail?.language || window.i18n?.currentLanguage || 'en';
+                document.body.setAttribute('dir', rtlLanguages.includes(newLang) ? 'rtl' : 'ltr');
+
+                // Re-apply translations to all data-i18n elements
+                if (window.i18n && window.i18n.applyLanguage) {
+                    window.i18n.applyLanguage(newLang);
+                }
+
+                // Update privacy dropdown
+                if (typeof updatePrivacyDropdownTranslations === 'function') {
+                    updatePrivacyDropdownTranslations();
+                }
+
+                // Force-update circle titles AFTER all other translations (with delay)
+                if (typeof updateCircleTitles === 'function') {
+                    setTimeout(() => {
+                        updateCircleTitles();
+                        console.log('[Circles] Circle titles updated after language change');
+                    }, 100);
+                }
+            } finally {
+                // Reset flag after a delay to allow for async operations
+                setTimeout(() => {
+                    isUpdatingLanguage = false;
+                }, 300);
+            }
+        });
+
+        // Start initialization when DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeCirclesPage);
+        } else {
+            // DOM already loaded
+            initializeCirclesPage();
+        }
+    </script>
+    <!-- ============================================================================ -->
+    <!-- A8-UX: 12 additive, non-invasive UX polish enhancements (B135).               -->
+    <!-- Self-contained (one style block + one guarded script). Namespaced ts-a8-*. Feature- -->
+    <!-- detected and reduced-motion aware. No existing markup, IDs, or logic changed.  -->
+    <!--  1 Respect prefers-reduced-motion   2 Tactile press feedback                   -->
+    <!--  3 Offline / back-online banner      4 Accessible toasts (role/aria-live)       -->
+    <!--  5 Lazy + async images w/ fade-in    6 Scroll-to-top button                     -->
+    <!--  7 Skeleton shimmer loaders          8 Sticky-header elevation on scroll        -->
+    <!--  9 Slim scrollbar cohesion          10 Smooth content fade-in on load           -->
+    <!-- 11 Comfortable tap targets / iOS    12 Smooth in-page anchor scrolling          -->
+    <!-- ============================================================================ -->
+    <style id="ts-a8-ux-style">
+        /* (1) Respect the OS "reduce motion" setting — accessibility + comfort. */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+        /* (2) Tactile press feedback. Element-level selector so any existing class-based
+              :active rule keeps priority; only fills the gap where none exists. */
+        @media (prefers-reduced-motion: no-preference) {
+            /* A8 audit: element-level only, and NOT [role="button"] — arbitrary
+               role=button elements may carry their own transform we must not clobber.
+               The :not([style*="transform"]) guard also spares inline-transform buttons. */
+            button:not([style*="transform"]):active, .btn:not([style*="transform"]):active {
+                transform: scale(0.97);
+            }
+            button, .btn { transition: transform 0.08s ease; }
+        }
+        /* (3) Offline / back-online banner. */
+        #ts-a8-offline {
+            position: fixed; left: 0; right: 0; top: 0; z-index: 100002;
+            transform: translateY(-110%); transition: transform 0.28s ease;
+            padding: 9px 14px; text-align: center; font-size: 13px; font-weight: 600;
+            color: #fff; background: #C17C74;
+            padding-top: calc(9px + env(safe-area-inset-top, 0px));
+            box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #ts-a8-offline.show { transform: translateY(0); }
+        #ts-a8-offline.online { background: #9DB8A0; }
+        /* (5) Images fade in once decoded instead of popping in. */
+        img.ts-a8-fade { opacity: 0; transition: opacity 0.4s ease; }
+        img.ts-a8-fade.ts-a8-shown { opacity: 1; }
+        /* (6) Scroll-to-top button. */
+        #ts-a8-totop {
+            position: fixed; z-index: 99998; width: 44px; height: 44px; border: none;
+            border-radius: 50%; cursor: pointer; color: #fff; font-size: 20px; line-height: 44px;
+            bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+            inset-inline-end: calc(16px + env(safe-area-inset-right, 0px));
+            background: var(--primary, #6B8BA4); box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+            opacity: 0; visibility: hidden; transform: translateY(10px);
+            transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+            display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+        #ts-a8-totop.show { opacity: 0.92; visibility: visible; transform: translateY(0); }
+        #ts-a8-totop:hover { opacity: 1; }
+        @media (min-width: 769px) { #ts-a8-totop { bottom: 24px; } }
+        /* (7) Skeleton shimmer loaders. */
+        .ts-a8-skel-wrap { max-width: 600px; margin: 14px auto 0; padding: 0 4px; }
+        .ts-a8-skel {
+            height: 62px; border-radius: 14px; margin-bottom: 12px;
+            background: linear-gradient(100deg, rgba(255,255,255,0.28) 30%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.28) 70%);
+            background-size: 200% 100%; animation: ts-a8-shimmer 1.3s ease-in-out infinite;
+        }
+        .ts-a8-skel.sm { height: 38px; width: 60%; }
+        @keyframes ts-a8-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @media (prefers-reduced-motion: reduce) { .ts-a8-skel { animation: none; } }
+        /* (8) Subtle elevation under sticky top bars once the page is scrolled. */
+        .mobile-nav.ts-a8-scrolled, .diary-mobile-header.ts-a8-scrolled,
+        .diary-nav.ts-a8-scrolled, .nav.ts-a8-scrolled {
+            box-shadow: 0 4px 18px rgba(60, 80, 110, 0.16) !important;
+            transition: box-shadow 0.25s ease;
+        }
+        /* (9) Slim, brand-tinted scrollbar (cohesion for pages that lack one). */
+        .ts-a8-scroll-cohere ::-webkit-scrollbar { width: 7px; height: 7px; }
+        .ts-a8-scroll-cohere ::-webkit-scrollbar-track { background: transparent; }
+        .ts-a8-scroll-cohere ::-webkit-scrollbar-thumb { background: rgba(107,139,164,0.28); border-radius: 4px; }
+        .ts-a8-scroll-cohere ::-webkit-scrollbar-thumb:hover { background: rgba(107,139,164,0.45); }
+        /* (10) Gentle first-paint fade-in to avoid a harsh content flash. */
+        body.ts-a8-fadeready { animation: ts-a8-bodyin 0.42s ease both; }
+        @keyframes ts-a8-bodyin { from { opacity: 0; } to { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) { body.ts-a8-fadeready { animation: none; } }
+        /* (11) Prevent iOS landscape text auto-inflation + comfortable min tap targets. */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        @media (max-width: 768px) {
+            .mobile-nav a, .mobile-nav button,
+            .diary-mobile-nav-item, .diary-more-item, .diary-header-btn { min-height: 44px; }
+        }
+    </style>
+    <script id="ts-a8-ux-script">
+    (function () {
+        // Run once even if this block is accidentally included twice.
+        if (window.__tsA8Ux) return; window.__tsA8Ux = true;
+
+        var mqReduce = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+        var reduce = function () { return mqReduce.matches; };
+        var onReady = function (fn) {
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+            else fn();
+        };
+
+        // (2) Haptic tap feedback on supported mobile devices — subtle, throttled.
+        if ('vibrate' in navigator) {
+            var lastBuzz = 0;
+            document.addEventListener('pointerdown', function (e) {
+                if (reduce()) return;
+                var t = e.target && e.target.closest && e.target.closest(
+                    'button, [role="button"], .btn, a.diary-nav-link, .diary-mobile-nav-item, .diary-more-item, .mobile-nav a, .nav-item');
+                if (!t) return;
+                var now = e.timeStamp || Date.now();
+                if (now - lastBuzz < 40) return;
+                lastBuzz = now;
+                try { navigator.vibrate(8); } catch (_) {}
+            }, { passive: true });
+        }
+
+        // (3) Offline / back-online banner.
+        onReady(function () {
+            var bar = document.createElement('div');
+            bar.id = 'ts-a8-offline';
+            bar.setAttribute('role', 'status');
+            bar.setAttribute('aria-live', 'polite');
+            document.body.appendChild(bar);
+            var hideTimer = null;
+            var msg = function (key) {
+                var lang = (localStorage.getItem('selectedLanguage') || 'en');
+                var m = {
+                    off: { en: "You're offline — some actions may not work.", he: 'אין חיבור לאינטרנט — ייתכן שחלק מהפעולות לא יעבדו.', ar: 'أنت غير متصل — قد لا تعمل بعض الإجراءات.', ru: 'Нет подключения — некоторые действия могут не работать.' },
+                    on:  { en: 'Back online', he: 'החיבור חזר', ar: 'عاد الاتصال', ru: 'Соединение восстановлено' }
+                };
+                return (m[key][lang] || m[key].en);
+            };
+            var showOffline = function () {
+                if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+                bar.classList.remove('online'); bar.textContent = msg('off'); bar.classList.add('show');
+            };
+            var showOnline = function () {
+                bar.classList.add('online'); bar.textContent = msg('on'); bar.classList.add('show');
+                hideTimer = setTimeout(function () { bar.classList.remove('show'); }, 2200);
+            };
+            window.addEventListener('offline', showOffline);
+            window.addEventListener('online', showOnline);
+            if (navigator.onLine === false) showOffline();
+        });
+
+        // (4) Accessible toasts — announce notification/toast containers to screen readers.
+        var tagToast = function (el) {
+            if (!el || el.getAttribute('aria-live')) return;
+            el.setAttribute('role', 'status');
+            el.setAttribute('aria-live', 'polite');
+            el.setAttribute('aria-atomic', 'false');
+        };
+        onReady(function () {
+            ['notification-container', 'toastContainer'].forEach(function (id) { tagToast(document.getElementById(id)); });
+            if ('MutationObserver' in window) {
+                new MutationObserver(function (muts) {
+                    for (var i = 0; i < muts.length; i++) {
+                        for (var j = 0; j < muts[i].addedNodes.length; j++) {
+                            var n = muts[i].addedNodes[j];
+                            if (n.nodeType === 1 && (n.id === 'notification-container' || n.id === 'toastContainer')) tagToast(n);
+                        }
+                    }
+                }).observe(document.body, { childList: true });
+            }
+        });
+
+        // (5) Lazy-load + async-decode images, with a gentle fade-in.
+        var enhanceImg = function (img) {
+            if (!img || img.dataset.tsA8) return; img.dataset.tsA8 = '1';
+            if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
+            if (!img.hasAttribute('decoding')) img.setAttribute('decoding', 'async');
+            if (reduce()) return;
+            if (img.complete && img.naturalWidth > 0) return; // already painted; don't flash
+            img.classList.add('ts-a8-fade');
+            var reveal = function () { img.classList.add('ts-a8-shown'); };
+            img.addEventListener('load', reveal, { once: true });
+            img.addEventListener('error', reveal, { once: true });
+            setTimeout(reveal, 1500); // safety
+        };
+        onReady(function () {
+            var imgs = document.getElementsByTagName('img');
+            for (var i = 0; i < imgs.length; i++) enhanceImg(imgs[i]);
+            if ('MutationObserver' in window) {
+                new MutationObserver(function (muts) {
+                    for (var i = 0; i < muts.length; i++) {
+                        for (var j = 0; j < muts[i].addedNodes.length; j++) {
+                            var n = muts[i].addedNodes[j];
+                            if (n.nodeType !== 1) continue;
+                            if (n.tagName === 'IMG') enhanceImg(n);
+                            else if (n.getElementsByTagName) {
+                                var sub = n.getElementsByTagName('img');
+                                for (var k = 0; k < sub.length; k++) enhanceImg(sub[k]);
+                            }
+                        }
+                    }
+                }).observe(document.body, { childList: true, subtree: true });
+            }
+        });
+
+        // (6) Scroll-to-top button.
+        onReady(function () {
+            var btn = document.createElement('button');
+            btn.id = 'ts-a8-totop';
+            btn.type = 'button';
+            btn.setAttribute('aria-label', 'Scroll to top');
+            btn.innerHTML = '↑';
+            btn.addEventListener('click', function () {
+                try { window.scrollTo({ top: 0, behavior: reduce() ? 'auto' : 'smooth' }); }
+                catch (_) { window.scrollTo(0, 0); }
+            });
+            document.body.appendChild(btn);
+            var ticking = false;
+            var update = function () {
+                ticking = false;
+                var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+                if (y > 600) btn.classList.add('show'); else btn.classList.remove('show');
+            };
+            window.addEventListener('scroll', function () {
+                if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+            }, { passive: true });
+        });
+
+        // (8) Sticky-header elevation once scrolled.
+        onReady(function () {
+            var bars = document.querySelectorAll('.mobile-nav, .diary-mobile-header, .diary-nav');
+            if (!bars.length) return;
+            var ticking = false;
+            var update = function () {
+                ticking = false;
+                var scrolled = (window.pageYOffset || document.documentElement.scrollTop || 0) > 4;
+                for (var i = 0; i < bars.length; i++) bars[i].classList.toggle('ts-a8-scrolled', scrolled);
+            };
+            window.addEventListener('scroll', function () {
+                if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+            }, { passive: true });
+            update();
+        });
+
+        // (7) Skeleton shimmer loaders — shown inside the existing loading area, which the
+        //     page's own code hides when real content is ready (so they vanish automatically).
+        onReady(function () {
+            var loading = document.getElementById('loadingMessage');
+            if (!loading) return;
+            if (loading.querySelector('.ts-a8-skel-wrap')) return;
+            var wrap = document.createElement('div');
+            wrap.className = 'ts-a8-skel-wrap';
+            wrap.setAttribute('aria-hidden', 'true');
+            wrap.innerHTML = '<div class="ts-a8-skel sm"></div><div class="ts-a8-skel"></div><div class="ts-a8-skel"></div><div class="ts-a8-skel"></div>';
+            loading.appendChild(wrap);
+        });
+
+        // (9) + (10) Scrollbar cohesion + first-paint fade-in.
+        onReady(function () {
+            document.documentElement.classList.add('ts-a8-scroll-cohere');
+            if (!reduce() && !document.getElementById('appload-splash')) document.body.classList.add('ts-a8-fadeready');
+        });
+
+        // (12) Smooth in-page anchor scrolling (respects reduced-motion).
+        onReady(function () {
+            document.addEventListener('click', function (e) {
+                var a = e.target && e.target.closest && e.target.closest('a[href^="#"]');
+                if (!a) return;
+                if (a.getAttribute('onclick')) return; // A8 audit: don't fight JS-driven anchors
+                var id = a.getAttribute('href');
+                if (!id || id === '#') return;
+                var target;
+                try { target = document.querySelector(id); } catch (_) { return; } // A8 audit: invalid selector (e.g. #123) throws
+                if (!target) return;
+                e.preventDefault();
+                try { target.scrollIntoView({ behavior: reduce() ? 'auto' : 'smooth', block: 'start' }); }
+                catch (_) { target.scrollIntoView(); }
+            });
+        });
+    })();
+    </script>
+    <!-- ===================== END A8-UX ===================== -->
+
+    <!-- A16-ANDROID: additive, non-invasive Android-safe CSS (item 1). Presentation-only;
+         complements the tap-highlight / overscroll already present from A6/A8. -->
+    <style id="ts-a16-android">
+        @supports (min-height: 100dvh) { body { min-height: 100dvh; } }
+        html, body { overscroll-behavior-y: contain; }
+        input:-webkit-autofill, input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus, textarea:-webkit-autofill {
+            -webkit-box-shadow: inset 0 0 0 1000px #FAF9F7 !important;
+            -webkit-text-fill-color: #2D3748 !important;
+            caret-color: #2D3748; transition: background-color 9999s ease-out 0s;
+        }
+        .dark-mode input:-webkit-autofill, body.dark-mode input:-webkit-autofill,
+        .dark-mode textarea:-webkit-autofill, body.dark-mode textarea:-webkit-autofill {
+            -webkit-box-shadow: inset 0 0 0 1000px #2D3748 !important;
+            -webkit-text-fill-color: #E6EAF1 !important; caret-color: #E6EAF1;
+        }
+        a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+        input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 2px solid #6B8BA4; outline-offset: 2px;
+        }
+    </style>
+    <!-- ===================== END A16-ANDROID ===================== -->
+    <!-- ============================================================================ -->
+    <!-- A41-UX: 10 additive, non-invasive mobile UX improvements (B185).              -->
+    <!-- Self-contained: one style block + one guarded script, namespaced ts-a41-*.    -->
+    <!-- Feature-detected & reduced-motion aware. Chosen to NOT overlap the existing    -->
+    <!-- B30 / A8-UX / A16-ANDROID+UX / A26-POLISH blocks. No existing markup, IDs or   -->
+    <!-- logic changed. Helps iOS Safari, Android Chrome, and other mobile engines.     -->
+    <!--  1 Real autofill: autocomplete tokens on email/username/name/tel fields         -->
+    <!--  2 Right mobile keyboard: inputmode on email/tel fields                          -->
+    <!--  3 No accidental text-selection of buttons / nav labels on long-press           -->
+    <!--  4 scroll-margin so focused fields & anchors don't hide under the sticky nav     -->
+    <!--  5 Honest >=44px tap targets for form selects & buttons (nav lang box excluded) -->
+    <!--  6 prefers-contrast: more — stronger borders + underlined links                 -->
+    <!--  7 Tactile :active press feedback on nav / sidebar items (A8 covered buttons)    -->
+    <!--  8 Brand-native form controls (accent-color) + cross-engine slim scrollbar       -->
+    <!--  9 Stop horizontal rubber-band / side-swipe chaining + image overflow guard      -->
+    <!-- 10 Crisper text (font-smoothing) + tabular-nums so counters don't jitter         -->
+    <!-- ============================================================================ -->
+    <style id="ts-a41-ux">
+        /* (3) Don't let a long-press / double-tap select the text of a control or nav
+               label — reads as a native app. Content text is untouched. */
+        button, .btn, [role="button"], .nav-link, .mobile-nav-item, .sidebar-item,
+        .topbar-link, .mobile-more-menu-item, .stat-label, .clear-all-alerts-btn {
+            -webkit-user-select: none; -moz-user-select: none; user-select: none;
+        }
+        /* (4) When a field is focused (mobile focus-scroll) or an in-page anchor is
+               jumped to, keep it clear of the sticky top navigation instead of tucking
+               it underneath. Inert unless the element is actually scrolled into view. */
+        h1, h2, h3, h4, input, select, textarea, [data-scroll-anchor] {
+            scroll-margin-top: 84px;
+        }
+        /* (5) Comfortable, honest touch targets on phones. The compact navbar language
+               selector is deliberately excluded so it keeps its slim size. */
+        @media (max-width: 768px) {
+            select:not(.language-selector):not(#languageSelector) {
+                min-height: 44px;
+                font-size: 16px; /* also blocks iOS focus-zoom on selects */
+            }
+            .btn:not(.language-selector) { min-height: 44px; }
+        }
+        /* (6) Respect an explicit "increase contrast" OS setting. */
+        @media (prefers-contrast: more) {
+            input, select, textarea, .btn, button {
+                border-width: 2px !important;
+                border-color: #3D4852 !important;
+            }
+            a:not(.btn):not(.topbar-link):not(.nav-link) { text-decoration: underline; }
+        }
+        /* (7) Tactile press feedback for navigation items (A8 covered <button>/.btn only).
+               Motion-gated and skips anything carrying its own inline transform. */
+        @media (prefers-reduced-motion: no-preference) {
+            .mobile-nav-item:not([style*="transform"]):active,
+            .sidebar-item:not([style*="transform"]):active,
+            .nav-link:not([style*="transform"]):active,
+            .mobile-more-menu-item:not([style*="transform"]):active {
+                transform: scale(0.97);
+            }
+            .mobile-nav-item, .sidebar-item, .nav-link, .mobile-more-menu-item {
+                transition: transform 0.08s ease;
+            }
+        }
+        /* (8) Brand-tint native form controls (checkboxes/radios/range/progress) instead
+               of the default OS blue, on both iOS and Android; plus a slim, on-brand
+               scrollbar for Firefox/standard engines (A8's was -webkit- only). */
+        input[type="checkbox"], input[type="radio"], input[type="range"], progress {
+            accent-color: var(--primary, #6B8BA4);
+        }
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(107, 139, 164, 0.40) transparent;
+        }
+        /* (9) Stop horizontal overscroll chaining (accidental browser back/forward swipe)
+               and keep stray oversized media from forcing a sideways scroll on phones. */
+        html, body { overscroll-behavior-x: none; }
+        img, video { max-width: 100%; }
+        /* (10) Crisper type on high-DPI phones + tabular figures so live counters
+                (followers, points, unread badges) don't shift width as they tick. */
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        .stat-number, .stat-value, .unread-badge, .points-value {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1;
+        }
+    </style>
+    <script id="ts-a41-ux-script">
+    (function () {
+        if (window.__tsA41Ux) return; window.__tsA41Ux = true;
+
+        var onReady = function (fn) {
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+            else fn();
+        };
+
+        // (1) + (2) Additive autofill + keyboard hints. Only ever fills in an attribute
+        // that is ABSENT, so any field that already declares its own is left alone. This
+        // complements the A16 enhancer (which set autocapitalize/autocorrect/enterkeyhint
+        // but not autocomplete/inputmode). Passwords are intentionally skipped — browser
+        // heuristics handle those better than a guess would.
+        var enhance = function (el) {
+            if (!el || el.dataset.tsA41 || el.tagName !== 'INPUT') return;
+            el.dataset.tsA41 = '1';
+            var type = (el.getAttribute('type') || 'text').toLowerCase();
+            if (type === 'password' || type === 'hidden') return;
+            var key = ((el.id || '') + ' ' + (el.name || '')).toLowerCase();
+
+            if (!el.hasAttribute('autocomplete')) {
+                var token = '';
+                if (type === 'email' || /email/.test(key)) token = 'email';
+                else if (/user|handle|login/.test(key)) token = 'username';
+                else if (type === 'tel' || /phone|tel|mobile/.test(key)) token = 'tel';
+                else if (/name/.test(key)) token = 'name';
+                if (token) el.setAttribute('autocomplete', token);
+            }
+            if (!el.hasAttribute('inputmode')) {
+                if (type === 'email' || /email/.test(key)) el.setAttribute('inputmode', 'email');
+                else if (type === 'tel' || /phone|tel|mobile/.test(key)) el.setAttribute('inputmode', 'tel');
+            }
+        };
+        var scan = function (root) {
+            try {
+                var ins = (root || document).getElementsByTagName('input');
+                for (var i = 0; i < ins.length; i++) enhance(ins[i]);
+            } catch (_) {}
+        };
+        onReady(function () {
+            scan(document);
+            if ('MutationObserver' in window) {
+                new MutationObserver(function (muts) {
+                    for (var i = 0; i < muts.length; i++)
+                        for (var j = 0; j < muts[i].addedNodes.length; j++) {
+                            var n = muts[i].addedNodes[j];
+                            if (n.nodeType !== 1) continue;
+                            if (n.tagName === 'INPUT') enhance(n);
+                            else if (n.getElementsByTagName) scan(n);
+                        }
+                }).observe(document.body, { childList: true, subtree: true });
+            }
+        });
+    })();
+    </script>
+    <!-- ===================== END A41-UX ===================== -->
+</body>
+</html>
