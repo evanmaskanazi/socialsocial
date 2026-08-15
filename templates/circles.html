@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!-- TheraSocial Circles Version B195 (A43) -->
+<!-- B195 (A43): Cache-bust lockstep — all JS ?v bumped B186->B195 in sync with the index NAV FIX (the About link & Support button now navigate to the standalone /about and /support routes instead of toggling in-app views). No functional/JS changes in this file. -->
+<!-- B185 (A41): CACHE-BUST resync — all JS ?v bumped to B185 in lockstep with index/parameters
+  (i18n.js changed this round: cross-language completeness fixes). The prior round left the live
+  refs at ?v=B180 while this header read B175 — resynced so the ?v token and the header match.
+  Added the shared, self-contained A41-UX block before </body> (10 additive mobile UX items,
+  namespaced ts-a41-*, guarded/feature-detected). No existing markup, IDs or circles logic changed. -->
 <!-- TheraSocial Circles Version B175 (A26) -->
 <!-- B175 (A26): Cache-bust sync - all JS ?v bumped B170->B175 in lockstep with index/parameters
   (i18n.js changed this round: new consent + reminder keys in all 4 languages; circles-messages.js
@@ -150,9 +157,9 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B180"></script>
-    <script src="/static/js/circles-messages.js?v=B180"></script>
-    <script src="/static/js/feed-updates.js?v=B180"></script>
+    <script src="/static/js/i18n.js?v=B195"></script>
+    <script src="/static/js/circles-messages.js?v=B195"></script>
+    <script src="/static/js/feed-updates.js?v=B195"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
@@ -961,5 +968,144 @@ try {
         }
     </style>
     <!-- ===================== END A16-ANDROID ===================== -->
+    <!-- ============================================================================ -->
+    <!-- A41-UX: 10 additive, non-invasive mobile UX improvements (B185).              -->
+    <!-- Self-contained: one style block + one guarded script, namespaced ts-a41-*.    -->
+    <!-- Feature-detected & reduced-motion aware. Chosen to NOT overlap the existing    -->
+    <!-- B30 / A8-UX / A16-ANDROID+UX / A26-POLISH blocks. No existing markup, IDs or   -->
+    <!-- logic changed. Helps iOS Safari, Android Chrome, and other mobile engines.     -->
+    <!--  1 Real autofill: autocomplete tokens on email/username/name/tel fields         -->
+    <!--  2 Right mobile keyboard: inputmode on email/tel fields                          -->
+    <!--  3 No accidental text-selection of buttons / nav labels on long-press           -->
+    <!--  4 scroll-margin so focused fields & anchors don't hide under the sticky nav     -->
+    <!--  5 Honest >=44px tap targets for form selects & buttons (nav lang box excluded) -->
+    <!--  6 prefers-contrast: more — stronger borders + underlined links                 -->
+    <!--  7 Tactile :active press feedback on nav / sidebar items (A8 covered buttons)    -->
+    <!--  8 Brand-native form controls (accent-color) + cross-engine slim scrollbar       -->
+    <!--  9 Stop horizontal rubber-band / side-swipe chaining + image overflow guard      -->
+    <!-- 10 Crisper text (font-smoothing) + tabular-nums so counters don't jitter         -->
+    <!-- ============================================================================ -->
+    <style id="ts-a41-ux">
+        /* (3) Don't let a long-press / double-tap select the text of a control or nav
+               label — reads as a native app. Content text is untouched. */
+        button, .btn, [role="button"], .nav-link, .mobile-nav-item, .sidebar-item,
+        .topbar-link, .mobile-more-menu-item, .stat-label, .clear-all-alerts-btn {
+            -webkit-user-select: none; -moz-user-select: none; user-select: none;
+        }
+        /* (4) When a field is focused (mobile focus-scroll) or an in-page anchor is
+               jumped to, keep it clear of the sticky top navigation instead of tucking
+               it underneath. Inert unless the element is actually scrolled into view. */
+        h1, h2, h3, h4, input, select, textarea, [data-scroll-anchor] {
+            scroll-margin-top: 84px;
+        }
+        /* (5) Comfortable, honest touch targets on phones. The compact navbar language
+               selector is deliberately excluded so it keeps its slim size. */
+        @media (max-width: 768px) {
+            select:not(.language-selector):not(#languageSelector) {
+                min-height: 44px;
+                font-size: 16px; /* also blocks iOS focus-zoom on selects */
+            }
+            .btn:not(.language-selector) { min-height: 44px; }
+        }
+        /* (6) Respect an explicit "increase contrast" OS setting. */
+        @media (prefers-contrast: more) {
+            input, select, textarea, .btn, button {
+                border-width: 2px !important;
+                border-color: #3D4852 !important;
+            }
+            a:not(.btn):not(.topbar-link):not(.nav-link) { text-decoration: underline; }
+        }
+        /* (7) Tactile press feedback for navigation items (A8 covered <button>/.btn only).
+               Motion-gated and skips anything carrying its own inline transform. */
+        @media (prefers-reduced-motion: no-preference) {
+            .mobile-nav-item:not([style*="transform"]):active,
+            .sidebar-item:not([style*="transform"]):active,
+            .nav-link:not([style*="transform"]):active,
+            .mobile-more-menu-item:not([style*="transform"]):active {
+                transform: scale(0.97);
+            }
+            .mobile-nav-item, .sidebar-item, .nav-link, .mobile-more-menu-item {
+                transition: transform 0.08s ease;
+            }
+        }
+        /* (8) Brand-tint native form controls (checkboxes/radios/range/progress) instead
+               of the default OS blue, on both iOS and Android; plus a slim, on-brand
+               scrollbar for Firefox/standard engines (A8's was -webkit- only). */
+        input[type="checkbox"], input[type="radio"], input[type="range"], progress {
+            accent-color: var(--primary, #6B8BA4);
+        }
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(107, 139, 164, 0.40) transparent;
+        }
+        /* (9) Stop horizontal overscroll chaining (accidental browser back/forward swipe)
+               and keep stray oversized media from forcing a sideways scroll on phones. */
+        html, body { overscroll-behavior-x: none; }
+        img, video { max-width: 100%; }
+        /* (10) Crisper type on high-DPI phones + tabular figures so live counters
+                (followers, points, unread badges) don't shift width as they tick. */
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        .stat-number, .stat-value, .unread-badge, .points-value {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1;
+        }
+    </style>
+    <script id="ts-a41-ux-script">
+    (function () {
+        if (window.__tsA41Ux) return; window.__tsA41Ux = true;
+
+        var onReady = function (fn) {
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+            else fn();
+        };
+
+        // (1) + (2) Additive autofill + keyboard hints. Only ever fills in an attribute
+        // that is ABSENT, so any field that already declares its own is left alone. This
+        // complements the A16 enhancer (which set autocapitalize/autocorrect/enterkeyhint
+        // but not autocomplete/inputmode). Passwords are intentionally skipped — browser
+        // heuristics handle those better than a guess would.
+        var enhance = function (el) {
+            if (!el || el.dataset.tsA41 || el.tagName !== 'INPUT') return;
+            el.dataset.tsA41 = '1';
+            var type = (el.getAttribute('type') || 'text').toLowerCase();
+            if (type === 'password' || type === 'hidden') return;
+            var key = ((el.id || '') + ' ' + (el.name || '')).toLowerCase();
+
+            if (!el.hasAttribute('autocomplete')) {
+                var token = '';
+                if (type === 'email' || /email/.test(key)) token = 'email';
+                else if (/user|handle|login/.test(key)) token = 'username';
+                else if (type === 'tel' || /phone|tel|mobile/.test(key)) token = 'tel';
+                else if (/name/.test(key)) token = 'name';
+                if (token) el.setAttribute('autocomplete', token);
+            }
+            if (!el.hasAttribute('inputmode')) {
+                if (type === 'email' || /email/.test(key)) el.setAttribute('inputmode', 'email');
+                else if (type === 'tel' || /phone|tel|mobile/.test(key)) el.setAttribute('inputmode', 'tel');
+            }
+        };
+        var scan = function (root) {
+            try {
+                var ins = (root || document).getElementsByTagName('input');
+                for (var i = 0; i < ins.length; i++) enhance(ins[i]);
+            } catch (_) {}
+        };
+        onReady(function () {
+            scan(document);
+            if ('MutationObserver' in window) {
+                new MutationObserver(function (muts) {
+                    for (var i = 0; i < muts.length; i++)
+                        for (var j = 0; j < muts[i].addedNodes.length; j++) {
+                            var n = muts[i].addedNodes[j];
+                            if (n.nodeType !== 1) continue;
+                            if (n.tagName === 'INPUT') enhance(n);
+                            else if (n.getElementsByTagName) scan(n);
+                        }
+                }).observe(document.body, { childList: true, subtree: true });
+            }
+        });
+    })();
+    </script>
+    <!-- ===================== END A41-UX ===================== -->
 </body>
 </html>

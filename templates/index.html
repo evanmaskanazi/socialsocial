@@ -1,5 +1,43 @@
 <!DOCTYPE html>
-<!-- TheraSocial Index Version B175 (A26) -->
+<!-- TheraSocial Index Version B195 (A43) -->
+<!-- B195 (A43): NAV FIX — the "About" link and the "Support" button (plus the logged-out
+  "Contact Us" button and the mobile "More" menu Support/Contact items, which all dispatch the
+  'supportClick' event) now perform a real navigation to the standalone /about and /support
+  routes. Previously they only toggled the in-app aboutPage / supportPage views, so the URL
+  stayed on "/" and the user landed on the wrong page instead of /about or /support. navAbout
+  now uses href="/about" with a matching click handler; the supportClick handler now does
+  window.location.href='/support'. All JS ?v bumped B186->B195 in lockstep with the rest of
+  the app (cache-bust convention). The dormant in-app aboutPage/supportPage markup is left in
+  place (harmless) but is no longer the target of these controls. -->
+<!-- B186 (A41): follow-up fixes to the in-app About/Support unification.
+  1. HOURS RENDER BUG: support.hours_detail contained a literal <br>. i18n applies every string
+     via element.textContent (no HTML parsing), so it showed the raw "<br>" as text in the
+     Support > Contact Us > Hours line. Fixed in i18n.js (all 4 languages) by replacing the tag
+     with a comma; this corrects both the in-app Support view and the standalone /support page.
+  2. "Video Tutorials" link (in-app Support) now no-ops gracefully for logged-out visitors —
+     it launches the in-app tutorial only when signed in, otherwise sends them to sign-up
+     (startTutorial() POSTs an authed endpoint and 401'd with an error toast when logged out).
+  3. CACHE-BUST: all JS ?v bumped B185 -> B186 in lockstep (i18n.js changed), and every page's
+     version marker moved to B186 so the header matches the ?v token. -->
+<!-- B185 (A41): Additive, mobile-focused round.
+  CACHE-BUST: all JS ?v bumped to B185 in lockstep (utilities, triggers, follow-requests,
+    i18n, parameters-social, circles-messages, feed-updates). NOTE: the prior round bumped the
+    live references to ?v=B180 but left this header comment and i18n.js's own version marker at
+    B175 — the exact "cache version not actually updated" desync flagged internally. B185 resyncs
+    all three: the ?v tokens, this header, and the i18n.js header comment now all read B185.
+    REMINDER: parameters.html and circles.html load the same JS and must be bumped to ?v=B195
+    in the same lockstep (not included in this file set).
+  1. A41-UX block before </body>: 10 additive, non-duplicative mobile UX improvements
+     (autocomplete + inputmode hints, no-select UI chrome, sticky-nav scroll-margin, honest
+     44px tap targets, prefers-contrast support, nav :active feedback, accent-color + cross-
+     engine scrollbar, horizontal-overscroll/image-overflow guard, font-smoothing + tabular
+     numerals). Self-contained, namespaced ts-a41-*, feature-detected, reduced-motion aware.
+  2. ABOUT/SUPPORT UNIFICATION: the in-app About & Support views now carry the same fuller
+     content as the standalone /about and /support pages — About gains the intro paragraph,
+     "Our Mission" and "Our Values"; Support gains the "Contact Us / Quick Help / Resources"
+     card row (with #supportFaq anchor). Additive markup only, all via existing data-i18n keys.
+  No existing markup, IDs, logic or endpoints were changed. (The /invite page header — logo +
+  About + Support — lives in app.py's public_invite_page, which renders the live invite page.) -->
 <!-- B175 (A26): Additive round. All JS ?v bumped B170->B175 in lockstep with parameters/circles
   (i18n.js and parameters-social.js both changed this round).
   1. HOME NOTIFICATIONS: loadHomeAlerts() now renders the translated alert TITLE
@@ -620,10 +658,10 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
-   <script src="/static/js/utilities.js?v=B180"></script>
+   <script src="/static/js/utilities.js?v=B195"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B180"></script>
-    <script src="/static/js/follow-requests.js?v=B180"></script>
+    <script src="/static/js/triggers.js?v=B195"></script>
+    <script src="/static/js/follow-requests.js?v=B195"></script>
 
 
     <style>
@@ -4778,7 +4816,7 @@
             <div class="logo" style="cursor: pointer; display: flex; align-items: center; gap: 8px;" onclick="showView('home')"><img src="/static/images/LogoNew.jfif" alt="TheraSocial" style="height: 36px; width: 36px; border-radius: 8px; object-fit: contain;"> <span data-i18n="nav.logo">TheraSocial</span></div>
             <div class="nav-menu">
                 <!-- PJ6004: About shown when logged out only; Support always visible -->
-                <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
+                <a href="/about" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
                 <div class="lang-selector-wrap" style="display: flex; align-items: center; gap: 2px; position: relative;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                     <span id="langCodeLabel" class="lang-code-label" style="display: none; font-weight: 700; font-size: 12px; color: var(--primary); pointer-events: none;">EN</span>
@@ -5406,6 +5444,18 @@
                 A professional platform for personal empowerment and social well-being
             </p>
 
+            <!-- A41: intro + Our Mission (unify in-app About with the fuller standalone /about page) -->
+            <p style="color: var(--dark); line-height: 1.8; font-size: 1.05em; margin-bottom: 30px;" data-i18n="about.intro">
+                TheraSocial is built around one core principle: your well-being comes first. We offer a thoughtful alternative to mainstream social networks — a platform designed to strengthen your personal resilience, health, and meaningful human connections rather than capture your time and attention.
+            </p>
+
+            <div class="mission-section" style="background: var(--light); padding: 30px; border-radius: 15px; margin-bottom: 30px;">
+                <h2 style="color: var(--primary); margin-bottom: 20px;" data-i18n="about.mission_title">Our Mission</h2>
+                <p style="color: var(--dark); line-height: 1.8;" data-i18n="about.mission_text">
+                    We believe everyone deserves tools that support their quality of life — across sports, sleep, health, mood, and social connections. Our mission is to empower you with innovative features that cultivate trusted, safe, and effective relationships while protecting your personal data and privacy.
+                </p>
+            </div>
+
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
@@ -5476,6 +5526,14 @@
                 </p>
             </div>
 
+            <!-- A41: Our Values (unify in-app About with the fuller standalone /about page) -->
+            <h2 style="color: var(--primary); margin: 30px 0 20px;" data-i18n="about.values_title">Our Values</h2>
+            <ul style="margin-left: 30px; line-height: 2; color: var(--dark);">
+                <li><strong data-i18n="about.value1_title">Empowerment:</strong> <span data-i18n="about.value1_desc">We help you take charge of your well-being across every area of life</span></li>
+                <li><strong data-i18n="about.value2_title">Data Protection:</strong> <span data-i18n="about.value2_desc">End-to-end encryption and GDPR compliance ensure your data stays yours</span></li>
+                <li><strong data-i18n="about.value3_title">Innovation:</strong> <span data-i18n="about.value3_desc">Patent-protected features designed to cultivate meaningful human connection</span></li>
+                <li><strong data-i18n="about.value4_title">Accessibility:</strong> <span data-i18n="about.value4_desc">Available in multiple languages with support for every user, everywhere</span></li>
+            </ul>
 
             <div style="text-align: center; margin-top: 30px;">
                 <button class="btn btn-primary" onclick="goHome()" data-i18n="btn.getstarted">Get Started</button>
@@ -5491,7 +5549,38 @@
                 We're here to help! Find answers to common questions or send us a message below.
             </p>
 
-            <div style="background: var(--light); padding: 25px; border-radius: 15px; margin-bottom: 30px;">
+            <!-- A41: Contact Us / Quick Help / Resources (unify in-app Support with the fuller standalone /support page) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div style="background: var(--light); padding: 25px; border-radius: 15px;">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">📞 <span data-i18n="support.contact_us">Contact Us</span></h3>
+                    <div style="background: var(--white); padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                        <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.email">Email:</strong>
+                        <a href="mailto:support@therasocial.com" style="color: var(--primary);">support@therasocial.com</a>
+                    </div>
+                    <div style="background: var(--white); padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                        <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.phone">Phone:</strong>
+                        <span>1-800-THERAPY (843-7279)</span>
+                    </div>
+                    <div style="background: var(--white); padding: 12px; border-radius: 10px;">
+                        <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.hours">Hours:</strong>
+                        <span data-i18n="support.hours_detail">Monday-Friday<br>9:00 AM - 5:00 PM EST</span>
+                    </div>
+                </div>
+                <div style="background: var(--light); padding: 25px; border-radius: 15px;">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">🚀 <span data-i18n="support.quick_help">Quick Help</span></h3>
+                    <!-- A41: dropped links to pages that don't exist (Help Center, Community
+                         Forum, System Status); "Video Tutorials" now launches the in-app tutorial. -->
+                    <ul style="line-height: 2; margin-inline-start: 20px; color: var(--gray);">
+                        <li><a href="#supportFaq" style="color: var(--primary);" data-i18n="support.faq_link">Frequently Asked Questions</a></li>
+                        <li><a href="#" onclick="if (typeof currentUser !== 'undefined' && currentUser) { startTutorial(); } else { goHome(); } return false;" style="color: var(--primary);" data-i18n="support.video_tutorials">Video Tutorials</a></li>
+                    </ul>
+                </div>
+                <!-- A41: "Resources" card removed — every link (Privacy Policy, Terms of Service,
+                     Community Guidelines, Security Center, Blog) pointed to a route that does not
+                     exist yet. Restore this card once those pages are built. -->
+            </div>
+
+            <div id="supportFaq" style="background: var(--light); padding: 25px; border-radius: 15px; margin-bottom: 30px;">
                 <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="support.faq_title">Frequently Asked Questions</h3>
 
                 <div style="margin-bottom: 20px;">
@@ -7949,7 +8038,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B180"></script>
+    <script src="/static/js/i18n.js?v=B195"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8302,9 +8391,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B180"></script>
-   <script src="/static/js/circles-messages.js?v=B180"></script>
-<script src="/static/js/feed-updates.js?v=B180"></script>
+<script src="/static/js/parameters-social.js?v=B195"></script>
+   <script src="/static/js/circles-messages.js?v=B195"></script>
+<script src="/static/js/feed-updates.js?v=B195"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -8690,27 +8779,21 @@ async function loadUserCity() {
         }
 
         // Navigation Functions
+        // A43 FIX: "About" now navigates to the standalone /about page instead of showing
+        // the in-app aboutPage view (which stayed on "/" and read as the wrong page in the URL
+        // bar). The href="/about" already points there; this handler is kept only so a native
+        // navigation fires reliably even if the anchor's default is otherwise intercepted.
         document.getElementById('navAbout').addEventListener('click', (e) => {
             e.preventDefault();
-            hideAllViews();
-            document.getElementById('aboutPage').classList.remove('hidden');
+            window.location.href = '/about';
         });
 
-        // B70: Support button click — works both logged-in and logged-out
-        // B115/B125: Stores which top-level container was visible so goBack() can restore it.
-        //   No need to capture active inner view or viewingUserId — hideAllViews only hides
-        //   top-level containers, so inner dashboard state is naturally preserved.
+        // A43 FIX: "Support" (and every control that dispatches 'supportClick' — the navbar
+        // button, the logged-out "Contact Us" button, and the mobile "More" menu items) now
+        // navigates to the standalone /support page instead of revealing the in-app supportPage
+        // view at "/". This matches the dedicated /support route the app serves.
         document.getElementById('navSupportBtn').addEventListener('supportClick', (e) => {
-            if (document.getElementById('dashboard').style.display !== 'none' && document.getElementById('dashboard').style.display !== '') {
-                window._viewBeforeSupport = 'dashboard';
-            } else if (!document.getElementById('aboutPage').classList.contains('hidden')) {
-                window._viewBeforeSupport = 'about';
-            } else {
-                window._viewBeforeSupport = null;
-            }
-            hideAllViews();
-            document.getElementById('supportPage').classList.remove('hidden');
-            prefillSupportForm();
+            window.location.href = '/support';
         });
 
         // PJ6004: Removed navHome button and event listener
@@ -23687,6 +23770,145 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
     })();
     </script>
     <!-- ===================== END A26-POLISH ===================== -->
+    <!-- ============================================================================ -->
+    <!-- A41-UX: 10 additive, non-invasive mobile UX improvements (B185).              -->
+    <!-- Self-contained: one style block + one guarded script, namespaced ts-a41-*.    -->
+    <!-- Feature-detected & reduced-motion aware. Chosen to NOT overlap the existing    -->
+    <!-- B30 / A8-UX / A16-ANDROID+UX / A26-POLISH blocks. No existing markup, IDs or   -->
+    <!-- logic changed. Helps iOS Safari, Android Chrome, and other mobile engines.     -->
+    <!--  1 Real autofill: autocomplete tokens on email/username/name/tel fields         -->
+    <!--  2 Right mobile keyboard: inputmode on email/tel fields                          -->
+    <!--  3 No accidental text-selection of buttons / nav labels on long-press           -->
+    <!--  4 scroll-margin so focused fields & anchors don't hide under the sticky nav     -->
+    <!--  5 Honest >=44px tap targets for form selects & buttons (nav lang box excluded) -->
+    <!--  6 prefers-contrast: more — stronger borders + underlined links                 -->
+    <!--  7 Tactile :active press feedback on nav / sidebar items (A8 covered buttons)    -->
+    <!--  8 Brand-native form controls (accent-color) + cross-engine slim scrollbar       -->
+    <!--  9 Stop horizontal rubber-band / side-swipe chaining + image overflow guard      -->
+    <!-- 10 Crisper text (font-smoothing) + tabular-nums so counters don't jitter         -->
+    <!-- ============================================================================ -->
+    <style id="ts-a41-ux">
+        /* (3) Don't let a long-press / double-tap select the text of a control or nav
+               label — reads as a native app. Content text is untouched. */
+        button, .btn, [role="button"], .nav-link, .mobile-nav-item, .sidebar-item,
+        .topbar-link, .mobile-more-menu-item, .stat-label, .clear-all-alerts-btn {
+            -webkit-user-select: none; -moz-user-select: none; user-select: none;
+        }
+        /* (4) When a field is focused (mobile focus-scroll) or an in-page anchor is
+               jumped to, keep it clear of the sticky top navigation instead of tucking
+               it underneath. Inert unless the element is actually scrolled into view. */
+        h1, h2, h3, h4, input, select, textarea, [data-scroll-anchor] {
+            scroll-margin-top: 84px;
+        }
+        /* (5) Comfortable, honest touch targets on phones. The compact navbar language
+               selector is deliberately excluded so it keeps its slim size. */
+        @media (max-width: 768px) {
+            select:not(.language-selector):not(#languageSelector) {
+                min-height: 44px;
+                font-size: 16px; /* also blocks iOS focus-zoom on selects */
+            }
+            .btn:not(.language-selector) { min-height: 44px; }
+        }
+        /* (6) Respect an explicit "increase contrast" OS setting. */
+        @media (prefers-contrast: more) {
+            input, select, textarea, .btn, button {
+                border-width: 2px !important;
+                border-color: #3D4852 !important;
+            }
+            a:not(.btn):not(.topbar-link):not(.nav-link) { text-decoration: underline; }
+        }
+        /* (7) Tactile press feedback for navigation items (A8 covered <button>/.btn only).
+               Motion-gated and skips anything carrying its own inline transform. */
+        @media (prefers-reduced-motion: no-preference) {
+            .mobile-nav-item:not([style*="transform"]):active,
+            .sidebar-item:not([style*="transform"]):active,
+            .nav-link:not([style*="transform"]):active,
+            .mobile-more-menu-item:not([style*="transform"]):active {
+                transform: scale(0.97);
+            }
+            .mobile-nav-item, .sidebar-item, .nav-link, .mobile-more-menu-item {
+                transition: transform 0.08s ease;
+            }
+        }
+        /* (8) Brand-tint native form controls (checkboxes/radios/range/progress) instead
+               of the default OS blue, on both iOS and Android; plus a slim, on-brand
+               scrollbar for Firefox/standard engines (A8's was -webkit- only). */
+        input[type="checkbox"], input[type="radio"], input[type="range"], progress {
+            accent-color: var(--primary, #6B8BA4);
+        }
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(107, 139, 164, 0.40) transparent;
+        }
+        /* (9) Stop horizontal overscroll chaining (accidental browser back/forward swipe)
+               and keep stray oversized media from forcing a sideways scroll on phones. */
+        html, body { overscroll-behavior-x: none; }
+        img, video { max-width: 100%; }
+        /* (10) Crisper type on high-DPI phones + tabular figures so live counters
+                (followers, points, unread badges) don't shift width as they tick. */
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        .stat-number, .stat-value, .unread-badge, .points-value {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1;
+        }
+    </style>
+    <script id="ts-a41-ux-script">
+    (function () {
+        if (window.__tsA41Ux) return; window.__tsA41Ux = true;
+
+        var onReady = function (fn) {
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+            else fn();
+        };
+
+        // (1) + (2) Additive autofill + keyboard hints. Only ever fills in an attribute
+        // that is ABSENT, so any field that already declares its own is left alone. This
+        // complements the A16 enhancer (which set autocapitalize/autocorrect/enterkeyhint
+        // but not autocomplete/inputmode). Passwords are intentionally skipped — browser
+        // heuristics handle those better than a guess would.
+        var enhance = function (el) {
+            if (!el || el.dataset.tsA41 || el.tagName !== 'INPUT') return;
+            el.dataset.tsA41 = '1';
+            var type = (el.getAttribute('type') || 'text').toLowerCase();
+            if (type === 'password' || type === 'hidden') return;
+            var key = ((el.id || '') + ' ' + (el.name || '')).toLowerCase();
+
+            if (!el.hasAttribute('autocomplete')) {
+                var token = '';
+                if (type === 'email' || /email/.test(key)) token = 'email';
+                else if (/user|handle|login/.test(key)) token = 'username';
+                else if (type === 'tel' || /phone|tel|mobile/.test(key)) token = 'tel';
+                else if (/name/.test(key)) token = 'name';
+                if (token) el.setAttribute('autocomplete', token);
+            }
+            if (!el.hasAttribute('inputmode')) {
+                if (type === 'email' || /email/.test(key)) el.setAttribute('inputmode', 'email');
+                else if (type === 'tel' || /phone|tel|mobile/.test(key)) el.setAttribute('inputmode', 'tel');
+            }
+        };
+        var scan = function (root) {
+            try {
+                var ins = (root || document).getElementsByTagName('input');
+                for (var i = 0; i < ins.length; i++) enhance(ins[i]);
+            } catch (_) {}
+        };
+        onReady(function () {
+            scan(document);
+            if ('MutationObserver' in window) {
+                new MutationObserver(function (muts) {
+                    for (var i = 0; i < muts.length; i++)
+                        for (var j = 0; j < muts[i].addedNodes.length; j++) {
+                            var n = muts[i].addedNodes[j];
+                            if (n.nodeType !== 1) continue;
+                            if (n.tagName === 'INPUT') enhance(n);
+                            else if (n.getElementsByTagName) scan(n);
+                        }
+                }).observe(document.body, { childList: true, subtree: true });
+            }
+        });
+    })();
+    </script>
+    <!-- ===================== END A41-UX ===================== -->
 </body>
 
 

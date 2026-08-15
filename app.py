@@ -22720,6 +22720,7 @@ def user_city():
 # =====================
 @app.route('/api/follow/<int:user_id>', methods=['POST'])
 @login_required
+@require_csrf  # A41: CSRF protection (token supplied automatically by the i18n.js fetch interceptor)
 def follow_user(user_id):
     """Follow another user with optional note and trigger"""
     try:
@@ -22828,6 +22829,7 @@ def follow_user(user_id):
 
 @app.route('/api/unfollow/<int:user_id>', methods=['POST'])
 @login_required
+@require_csrf  # A41: CSRF protection (token supplied automatically by the i18n.js fetch interceptor)
 def unfollow_user(user_id):
     """Unfollow a user"""
     try:
@@ -22862,6 +22864,7 @@ def unfollow_user(user_id):
 # V2 FIX: Toggle alert tracking for a followed user
 @app.route('/api/follow/<int:user_id>/toggle-trigger', methods=['POST'])
 @login_required
+@require_csrf  # A41: CSRF protection (token supplied automatically by the i18n.js fetch interceptor)
 def toggle_follow_trigger(user_id):
     """Toggle alert tracking for a followed user"""
     try:
@@ -23240,6 +23243,7 @@ def get_followers():
 
 @app.route('/api/users/<int:user_id>/block', methods=['POST'])
 @login_required
+@require_csrf  # A41: CSRF protection (token supplied automatically by the i18n.js fetch interceptor)
 def block_user(user_id):
     """Block a user - they won't be able to view your profile"""
     try:
@@ -23301,6 +23305,7 @@ def block_user(user_id):
 
 @app.route('/api/users/<int:user_id>/unblock', methods=['POST'])
 @login_required
+@require_csrf  # A41: CSRF protection (token supplied automatically by the i18n.js fetch interceptor)
 def unblock_user(user_id):
     """Unblock a previously blocked user"""
     try:
@@ -25140,7 +25145,9 @@ def public_invite_page(username):
                 'follow_btn': f'Connect with {safe_username}',
                 'dashboard_btn': 'Go to Dashboard',
                 'already_following': 'Already Connected',
-                'request_pending': 'Request Pending'
+                'request_pending': 'Request Pending',
+                'about': 'About',
+                'support': 'Support'
             },
             'he': {
                 'kicker': 'קיבלת הזמנה 👋',
@@ -25154,7 +25161,9 @@ def public_invite_page(username):
                 'follow_btn': f'התחבר/י עם {safe_username}',
                 'dashboard_btn': 'עבור ללוח הבקרה',
                 'already_following': 'כבר מחובר/ת',
-                'request_pending': 'בקשה ממתינה'
+                'request_pending': 'בקשה ממתינה',
+                'about': 'אודות',
+                'support': 'תמיכה'
             },
             'ar': {
                 'kicker': 'لقد تمت دعوتك 👋',
@@ -25168,7 +25177,9 @@ def public_invite_page(username):
                 'follow_btn': f'تواصل مع {safe_username}',
                 'dashboard_btn': 'اذهب إلى لوحة التحكم',
                 'already_following': 'متصل بالفعل',
-                'request_pending': 'طلب قيد الانتظار'
+                'request_pending': 'طلب قيد الانتظار',
+                'about': 'حول',
+                'support': 'الدعم'
             },
             'ru': {
                 'kicker': 'Вас пригласили 👋',
@@ -25182,7 +25193,9 @@ def public_invite_page(username):
                 'follow_btn': f'Связаться с {safe_username}',
                 'dashboard_btn': 'Перейти к панели',
                 'already_following': 'Уже подключён',
-                'request_pending': 'Запрос ожидает'
+                'request_pending': 'Запрос ожидает',
+                'about': 'О нас',
+                'support': 'Поддержка'
             }
         }
 
@@ -25223,20 +25236,83 @@ def public_invite_page(username):
                     padding: 20px;
                     direction: {text_dir};
                 }}
-                .language-selector {{
+                /* A41: Top bar with brand logo + About + Support + language selector.
+                   Fixed + full-bleed so it clears the flex/padding on <body>; the card
+                   below carries enough top margin (incl. safe-area) to never overlap it. */
+                .topbar {{
                     position: fixed;
-                    top: 20px;
-                    {'left' if is_rtl else 'right'}: 20px;
+                    top: 0;
+                    left: 0;
+                    right: 0;
                     z-index: 1000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    padding: 10px 20px;
+                    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+                    background: rgba(255, 255, 255, 0.92);
+                    -webkit-backdrop-filter: saturate(180%) blur(10px);
+                    backdrop-filter: saturate(180%) blur(10px);
+                    box-shadow: 0 2px 12px rgba(60, 60, 90, 0.10);
+                }}
+                .topbar .brand {{
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    text-decoration: none;
+                    color: #764ba2;
+                    font-weight: 700;
+                    font-size: 18px;
+                    flex-shrink: 0;
+                }}
+                .topbar .brand img {{
+                    height: 32px;
+                    width: 32px;
+                    border-radius: 8px;
+                    object-fit: contain;
+                }}
+                .topbar-nav {{
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }}
+                .topbar-link {{
+                    text-decoration: none;
+                    color: #5a5a68;
+                    font-size: 14px;
+                    font-weight: 600;
+                    padding: 8px 12px;
+                    border-radius: 10px;
+                    transition: background 0.2s, color 0.2s, opacity 0.2s;
+                    white-space: nowrap;
+                    -webkit-tap-highlight-color: rgba(0,0,0,0);
+                }}
+                .topbar-link:hover {{
+                    background: rgba(118, 75, 162, 0.08);
+                    color: #764ba2;
+                }}
+                .topbar-link.support {{
+                    color: #fff;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.35);
+                }}
+                .topbar-link.support:hover {{
+                    color: #fff;
+                    opacity: 0.94;
+                }}
+                .language-selector {{
+                    display: flex;
+                    align-items: center;
                 }}
                 .language-selector select {{
-                    padding: 8px 16px;
-                    border-radius: 20px;
-                    border: none;
+                    padding: 7px 12px;
+                    border-radius: 12px;
+                    border: 1px solid rgba(118, 75, 162, 0.20);
                     background: white;
                     font-size: 14px;
                     cursor: pointer;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
                 }}
                 .card {{
                     background: white;
@@ -25244,7 +25320,7 @@ def public_invite_page(username):
                     padding: 40px;
                     max-width: 500px;
                     width: 100%;
-                    margin-top: 60px;
+                    margin-top: calc(60px + env(safe-area-inset-top, 0px));
                     box-shadow: 0 10px 40px rgba(0,0,0,0.2);
                     text-align: center;
                 }}
@@ -25361,7 +25437,7 @@ def public_invite_page(username):
                     }}
                     .card {{
                         padding: 24px 18px;
-                        margin-top: 48px;
+                        margin-top: calc(52px + env(safe-area-inset-top, 0px));
                         border-radius: 16px;
                     }}
                     .avatar {{
@@ -25399,19 +25475,44 @@ def public_invite_page(username):
                         width: 100%;
                         max-width: 280px;
                     }}
-                    .language-selector {{
-                        top: 10px;
-                        {{'left' if is_rtl else 'right'}}: 10px;
+                    .topbar {{
+                        padding: 8px 12px;
+                        padding-top: calc(8px + env(safe-area-inset-top, 0px));
+                        gap: 8px;
+                    }}
+                    .topbar .brand {{
+                        font-size: 16px;
+                    }}
+                    .topbar .brand img {{
+                        height: 28px;
+                        width: 28px;
+                    }}
+                    .topbar-nav {{
+                        gap: 6px;
+                    }}
+                    .topbar-link {{
+                        font-size: 13px;
+                        padding: 7px 10px;
                     }}
                     .language-selector select {{
-                        padding: 6px 12px;
+                        padding: 6px 10px;
                         font-size: 13px;
+                    }}
+                }}
+                @media (max-width: 400px) {{
+                    /* Keep the header on one row on small phones: the logo icon still
+                       conveys the brand once the wordmark is hidden. */
+                    .topbar .brand-name {{
+                        display: none;
+                    }}
+                    .topbar-link {{
+                        padding: 7px 9px;
                     }}
                 }}
                 @media (max-width: 360px) {{
                     .card {{
                         padding: 20px 14px;
-                        margin-top: 40px;
+                        margin-top: calc(48px + env(safe-area-inset-top, 0px));
                     }}
                     h1 {{
                         font-size: 19px;
@@ -25425,14 +25526,24 @@ def public_invite_page(username):
             </style>
         </head>
         <body>
-            <div class="language-selector">
-                <select id="langSelect" onchange="changeLanguage(this.value)">
-                    <option value="en" {'selected' if default_language == 'en' else ''}>English</option>
-                    <option value="he" {'selected' if default_language == 'he' else ''}>עברית</option>
-                    <option value="ar" {'selected' if default_language == 'ar' else ''}>العربية</option>
-                    <option value="ru" {'selected' if default_language == 'ru' else ''}>Русский</option>
-                </select>
-            </div>
+            <header class="topbar">
+                <a class="brand" href="/" aria-label="TheraSocial">
+                    <img src="/static/images/LogoNew.jfif" alt="TheraSocial">
+                    <span class="brand-name">TheraSocial</span>
+                </a>
+                <nav class="topbar-nav">
+                    <a class="topbar-link" href="/about">{t['about']}</a>
+                    <a class="topbar-link support" href="/support">{t['support']}</a>
+                    <div class="language-selector">
+                        <select id="langSelect" onchange="changeLanguage(this.value)">
+                            <option value="en" {'selected' if default_language == 'en' else ''}>English</option>
+                            <option value="he" {'selected' if default_language == 'he' else ''}>עברית</option>
+                            <option value="ar" {'selected' if default_language == 'ar' else ''}>العربية</option>
+                            <option value="ru" {'selected' if default_language == 'ru' else ''}>Русский</option>
+                        </select>
+                    </div>
+                </nav>
+            </header>
             <div class="card">
                 <div class="avatar">{username[0].upper()}</div>
                 <div class="kicker">{t['kicker']}</div>
@@ -25667,6 +25778,7 @@ def get_user_parameters_by_date(user_id, date_str):
 
 @app.route('/api/follow-requests', methods=['POST'])
 @login_required
+@require_csrf  # A41: CSRF protection (token supplied automatically by the i18n.js fetch interceptor)
 def create_follow_request():
     try:
         data = request.get_json()
@@ -25735,6 +25847,10 @@ def get_received_follow_requests():
         status='pending'
     ).all()
 
+    # A41 (dormant-bug fix): skip any request whose requester account no longer exists.
+    # A dangling requester_id (account removed without cascading its FollowRequest rows)
+    # previously made req.requester None -> AttributeError -> HTTP 500 that broke the entire
+    # Connection Requests list. Orphaned rows are simply omitted (they aren't actionable anyway).
     return jsonify({
         'requests': [{
             'id': req.id,
@@ -25742,13 +25858,14 @@ def get_received_follow_requests():
             'requester_name': req.requester.username,
             'avatar_color': getattr(req.requester, 'avatar_color', None) or '#6B8BA4',
             'selected_city': getattr(req.requester, 'selected_city', None) or '',
-            'created_at': req.created_at.isoformat()
-        } for req in requests]
+            'created_at': req.created_at.isoformat() if req.created_at else None
+        } for req in requests if req.requester is not None]
     })
 
 
 @app.route('/api/follow-requests/<int:request_id>/respond', methods=['POST'])
 @login_required
+@require_csrf  # A41: CSRF protection (token supplied automatically by the i18n.js fetch interceptor)
 def respond_to_follow_request(request_id):
     try:
         data = request.get_json()

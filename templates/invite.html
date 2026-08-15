@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Invite Version P305 Lang -->
+<!-- TheraSocial Invite Version B195 (A43) -->
+<!-- B195 (A43): Cache-bust lockstep — all JS ?v bumped B186->B195 in sync with the index NAV FIX (the About link & Support button now navigate to the standalone /about and /support routes instead of toggling in-app views). No functional/JS changes in this file. -->
+<!-- B185 (A41): (1) Added a shared top bar (brand logo linking home + About + Support),
+     matching the live /invite page. (2) CACHE-BUST FIX: i18n.js was referenced with NO ?v=
+     token (hard-cache risk) — now pinned to ?v=B195 in lockstep with index/parameters/circles.
+     NOTE: this template is not currently wired to a Flask route; the live /invite/<username>
+     page is generated inline in app.py (public_invite_page), which carries the same header. -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <html lang="en">
 <head>
@@ -213,10 +219,88 @@
             }
         }
 
+        /* A41: shared top bar — brand logo + About + Support (mirrors the live
+           /invite page rendered by app.py). Additive; nothing above was changed. */
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 20px;
+            padding-top: calc(10px + env(safe-area-inset-top, 0px));
+            background: rgba(255, 255, 255, 0.92);
+            -webkit-backdrop-filter: saturate(180%) blur(10px);
+            backdrop-filter: saturate(180%) blur(10px);
+            box-shadow: 0 2px 12px rgba(60, 60, 90, 0.10);
+        }
+        body {
+            padding-top: calc(72px + env(safe-area-inset-top, 0px));
+        }
+        .topbar .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: #6B8BA4;
+            font-weight: 700;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .topbar .brand img {
+            height: 32px;
+            width: 32px;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+        .topbar-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .topbar-link {
+            text-decoration: none;
+            color: #5a5a68;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 10px;
+            transition: background 0.2s, color 0.2s, opacity 0.2s;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+        }
+        .topbar-link:hover {
+            background: rgba(107, 139, 164, 0.10);
+            color: #6B8BA4;
+        }
+        .topbar-link.support {
+            color: #fff;
+            background: linear-gradient(135deg, #6B8BA4 0%, #B6A9C9 100%);
+            box-shadow: 0 2px 8px rgba(107, 139, 164, 0.35);
+        }
+        .topbar-link.support:hover {
+            color: #fff;
+            opacity: 0.94;
+        }
+
         @media (max-width: 768px) {
             .invite-container {
                 padding: 30px 20px;
             }
+
+            .topbar {
+                padding: 8px 12px;
+                padding-top: calc(8px + env(safe-area-inset-top, 0px));
+                gap: 8px;
+            }
+            .topbar .brand { font-size: 16px; }
+            .topbar .brand img { height: 28px; width: 28px; }
+            .topbar-nav { gap: 6px; }
+            .topbar-link { font-size: 13px; padding: 7px 10px; }
 
             h1 {
                 font-size: 1.5em;
@@ -245,9 +329,27 @@
                 max-width: 100%;
             }
         }
+
+        @media (max-width: 400px) {
+            /* Keep the header on one row on small phones: the logo still marks the brand. */
+            .topbar .brand-name { display: none; }
+            .topbar-link { padding: 7px 9px; }
+        }
     </style>
 </head>
 <body>
+    <!-- A41: top bar with brand logo + About + Support -->
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="TheraSocial">
+            <img src="/static/images/LogoNew.jfif" alt="TheraSocial">
+            <span class="brand-name" data-i18n="nav.logo">TheraSocial</span>
+        </a>
+        <nav class="topbar-nav">
+            <a class="topbar-link" href="/about" data-i18n="nav.about">About</a>
+            <a class="topbar-link support" href="/support" data-i18n="nav.support">Support</a>
+        </nav>
+    </header>
+
     <!-- FIX 1: Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -318,7 +420,7 @@
         {% endif %}
     </div>
 
-    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/i18n.js?v=B195"></script>
     <script>
         // FIX 1: Toast notification system (replaces alert())
         function showNotification(message, type = 'info') {

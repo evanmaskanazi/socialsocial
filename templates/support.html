@@ -1,5 +1,11 @@
 <!DOCTYPE html>
-<!-- TheraSocial Support Version P305 -->
+<!-- TheraSocial Support Version B195 (A43) -->
+<!-- B195 (A43): Cache-bust lockstep — all JS ?v bumped B186->B195 in sync with the index NAV FIX (the About link & Support button now navigate to the standalone /about and /support routes instead of toggling in-app views). No functional/JS changes in this file. -->
+<!-- B185 (A41): (1) "Back to Last Page" now actually returns to the previous page (e.g. the
+     /invite/<username> page a visitor arrived from) via history.back(), falling back to "/" only
+     when there is no same-origin referrer. (2) CACHE-BUST: the i18n.js reference had NO ?v token
+     at all (hard-cache risk — could serve a stale i18n.js missing later translations and the
+     shared CSRF interceptor); now pinned to ?v=B195 in lockstep with the rest of the app. -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <html lang="en">
 <head>
@@ -397,25 +403,17 @@
 
             <div class="support-card">
                 <h2>🚀 <span data-i18n="support.quick_help">Quick Help</span></h2>
+                <!-- A41: dropped links to pages that don't exist (Help Center, Community Forum,
+                     System Status); "Video Tutorials" repointed to the in-app tutorial via
+                     /?tutorial=start (the home page auto-launches it on load). -->
                 <ul style="color: #666; line-height: 2; margin-left: 20px;">
                     <li><a href="#faq" style="color: #B6A9C9;" data-i18n="support.faq_link">Frequently Asked Questions</a></li>
-                    <li><a href="/help" style="color: #B6A9C9;" data-i18n="support.help_center">Help Center</a></li>
-                    <li><a href="/tutorials" style="color: #B6A9C9;" data-i18n="support.video_tutorials">Video Tutorials</a></li>
-                    <li><a href="/community" style="color: #B6A9C9;" data-i18n="support.community_forum">Community Forum</a></li>
-                    <li><a href="/status" style="color: #B6A9C9;" data-i18n="support.system_status">System Status</a></li>
+                    <li><a href="/?tutorial=start" style="color: #B6A9C9;" data-i18n="support.video_tutorials">Video Tutorials</a></li>
                 </ul>
             </div>
-
-            <div class="support-card">
-                <h2>💡 <span data-i18n="support.resources">Resources</span></h2>
-                <ul style="color: #666; line-height: 2; margin-left: 20px;">
-                    <li><a href="/privacy" style="color: #B6A9C9;" data-i18n="support.privacy_policy">Privacy Policy</a></li>
-                    <li><a href="/terms" style="color: #B6A9C9;" data-i18n="support.terms_of_service">Terms of Service</a></li>
-                    <li><a href="/guidelines" style="color: #B6A9C9;" data-i18n="support.community_guidelines">Community Guidelines</a></li>
-                    <li><a href="/security" style="color: #B6A9C9;" data-i18n="support.security_center">Security Center</a></li>
-                    <li><a href="/blog" style="color: #B6A9C9;" data-i18n="support.blog_updates">Blog & Updates</a></li>
-                </ul>
-            </div>
+            <!-- A41: "Resources" card removed — every link in it (Privacy Policy, Terms of
+                 Service, Community Guidelines, Security Center, Blog) pointed to a route that
+                 does not exist yet. Restore this card once those pages are built. -->
         </div>
 
         <div class="faq-section" id="faq">
@@ -539,12 +537,27 @@
         </div>
 
         <center>
-            <a href="/" class="back-link" data-i18n="btn.back">Back to Home</a>
+            <a href="/" id="backLastPage" class="back-link" data-i18n="btn.back">Back to Home</a>
         </center>
     </div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js"></script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B195"></script>
     <script>
+        // A41: "Back to Last Page" returns the visitor to the page they came from (e.g. the
+        // /invite/<username> page), not the home/login page. Falls back to "/" if there is no
+        // same-origin referrer to go back to.
+        (function () {
+            var back = document.getElementById('backLastPage');
+            if (!back) return;
+            back.addEventListener('click', function (e) {
+                var ref = document.referrer || '';
+                if (ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href) {
+                    e.preventDefault();
+                    window.history.back();
+                }
+            });
+        })();
+
         // FIX 1: Toast notification system (replaces alert())
         function showNotification(message, type = 'info') {
             const container = document.getElementById('toastContainer');

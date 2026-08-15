@@ -1,5 +1,12 @@
 <!DOCTYPE html>
-<!-- TheraSocial About Version T800q Lang -->
+<!-- TheraSocial About Version B195 (A43) -->
+<!-- B195 (A43): Cache-bust lockstep — all JS ?v bumped B186->B195 in sync with the index NAV FIX (the About link & Support button now navigate to the standalone /about and /support routes instead of toggling in-app views). No functional/JS changes in this file. -->
+<!-- B185 (A41): (1) "Get Started" now points to "/" (the landing/sign-up page) instead of the
+     wrong "/register" route. (2) "Back to Last Page" now actually returns to the previous page
+     (e.g. the /invite/<username> page a visitor arrived from) via history.back(), falling back to
+     "/" only when there is no same-origin referrer. (3) CACHE-BUST: i18n.js was pinned at the
+     stale ?v=T800q (so this page could serve an old cached i18n.js, missing later translations
+     and the shared CSRF interceptor) — now bumped to ?v=B195 in lockstep with the rest of the app. -->
 <!-- T800q: Added origin details paragraph with hackathon, dates, and HQ info -->
 <html lang="en">
 <head>
@@ -339,16 +346,32 @@
             </ul>
 
             <div style="text-align: center; margin-top: 40px;">
-                <a href="/register" class="back-link" style="margin-right: 20px;" data-i18n="btn.getstarted">Get Started</a>
-                <a href="/" class="back-link" data-i18n="btn.back">Back to Home</a>
+                <a href="/" class="back-link" style="margin-right: 20px;" data-i18n="btn.getstarted">Get Started</a>
+                <a href="/" id="backLastPage" class="back-link" data-i18n="btn.back">Back to Home</a>
             </div>
 
 
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=T800q"></script>
+    <script src="/static/js/i18n.js?v=B195"></script>
     <script>
+        // A41: "Back to Last Page" should return the visitor to the page they came from
+        // (e.g. the /invite/<username> page), not hard-navigate to the home/login page.
+        // Falls back to home only when there is no same-origin page to go back to.
+        (function () {
+            var back = document.getElementById('backLastPage');
+            if (!back) return;
+            back.addEventListener('click', function (e) {
+                var ref = document.referrer || '';
+                if (ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href) {
+                    e.preventDefault();
+                    window.history.back();
+                }
+                // else: no usable previous page — let the href="/" fallback proceed.
+            });
+        })();
+
         document.addEventListener('DOMContentLoaded', () => {
             // Apply translations
             if (window.i18n) {
