@@ -1,3 +1,20 @@
+// Version B185 (A41): (referenced as ?v=B185).
+//   (0) CSRF: added a global, defensive fetch interceptor at the top of this file (loaded on
+//       every page) that attaches X-CSRF-Token to same-origin state-changing requests which
+//       don't already send one — this is what lets the backend enforce @require_csrf on the
+//       follow/unfollow/block/unblock/toggle-trigger/follow-request routes without breaking any
+//       raw fetch() caller. GET/cross-origin/already-tokened requests are untouched.
+//   (1) COMPLETENESS: filled every cross-language gap so all four blocks (en/he/ru/ar) now
+//       define the same key set. Added at the top of each block: en gained params.calm/
+//       params.calmness; he/ar/ru gained the calmness parameter + trigger keys, alerts.
+//       connection_added, and (per language) invite.cta_title (he), auth.or_use_magic_link +
+//       auth.send_magic_link_instead (ar/ru), feed.select_city (ru). Additive only — no existing
+//       key, value or logic changed. (Pre-existing duplicate key lines were left untouched;
+//       JS last-wins makes them harmless, and removing them is out of scope for this round.)
+//   (2) CACHE-BUST: resyncs this file's version marker with the ?v token used by index/
+//       parameters/circles. The prior round shipped ?v=B180 while this header still read B175
+//       (a cache-version desync). The invite page also referenced i18n.js with NO ?v at all —
+//       now pinned to ?v=B185.
 // Version B175 (A26): (referenced as ?v=B175). Additive only - 10 new keys added to EACH of
 // the en/he/ar/ru blocks: consent.tap_to_agree, consent.optional_toggle and the eight
 // reminder.prompt_* strings used by the first-check-in daily reminder offer. No existing
@@ -77,8 +94,91 @@
 // Version PI504 - Added onboarding.dont_show translation for all languages
 // Version PI503 - Added tutorial translations and nav.tutorial key for all languages
 // Version PJ703 - Fixed indentation for invite.alert_title and invite.alert_content keys
+
+// ============================================================================
+// A41 CSRF INTERCEPTOR — loaded on every page via i18n.js.
+// Transparently attaches the X-CSRF-Token header to SAME-ORIGIN, state-changing
+// requests (POST/PUT/PATCH/DELETE) that don't already carry a CSRF header, so
+// every raw fetch() caller (follow/unfollow/block/follow-requests, etc.) is
+// protected without editing each call site. It is fully defensive: GET/HEAD and
+// cross-origin requests are never touched, callers that already send a token are
+// left exactly as-is, and ANY internal error falls back to the native fetch so a
+// request can never be lost. The token is fetched once (GET /api/csrf-token,
+// itself exempt) and cached; a single silent retry covers token expiry.
+// ============================================================================
+(function () {
+    if (typeof window === 'undefined' || window.__tsCsrfFetch || typeof window.fetch !== 'function') return;
+    window.__tsCsrfFetch = true;
+    var nativeFetch = window.fetch.bind(window);
+    var _tok = null, _exp = 0, _inflight = null;
+
+    function needsToken(method) {
+        method = (method || 'GET').toUpperCase();
+        return method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+    }
+    function isSameOrigin(url) {
+        try { return new URL(url, window.location.href).origin === window.location.origin; }
+        catch (e) { return true; } // relative URL → same-origin
+    }
+    function alreadyHasToken(headers) {
+        try { var h = new Headers(headers || {}); return h.has('X-CSRF-Token') || h.has('X-CSRFToken'); }
+        catch (e) { return false; }
+    }
+    function getToken() {
+        if (_tok && Date.now() < _exp) return Promise.resolve(_tok);
+        if (_inflight) return _inflight;
+        _inflight = nativeFetch('/api/csrf-token', { credentials: 'include' })
+            .then(function (r) { return r && r.ok ? r.json() : null; })
+            .then(function (d) { _inflight = null; if (d && d.csrf_token) { _tok = d.csrf_token; _exp = Date.now() + 45 * 60 * 1000; return _tok; } return null; })
+            .catch(function () { _inflight = null; return null; });
+        return _inflight;
+    }
+    function withToken(init, tok) {
+        var opts = {};
+        for (var k in init) { if (Object.prototype.hasOwnProperty.call(init, k)) opts[k] = init[k]; }
+        var h = new Headers(init.headers || {});
+        h.set('X-CSRF-Token', tok);
+        opts.headers = h;
+        return opts;
+    }
+
+    window.fetch = function (input, init) {
+        try {
+            init = init || {};
+            var isReq = (typeof Request !== 'undefined') && (input instanceof Request);
+            var url = isReq ? input.url : String(input);
+            var method = init.method || (isReq ? input.method : 'GET');
+            // Only same-origin, state-changing, string-URL calls without an existing token.
+            // Request objects are passed through untouched (their headers are already committed).
+            if (isReq || !needsToken(method) || !isSameOrigin(url) || alreadyHasToken(init.headers)) {
+                return nativeFetch(input, init);
+            }
+            return getToken().then(function (tok) {
+                if (!tok) return nativeFetch(input, init); // couldn't get one → don't block the call
+                return nativeFetch(input, withToken(init, tok)).then(function (resp) {
+                    if (!resp || resp.status !== 403) return resp;
+                    // Token may have expired mid-session: refresh once and retry, but ONLY if the
+                    // 403 is actually a CSRF rejection (never re-issue other forbidden requests).
+                    return resp.clone().json().then(function (d) {
+                        if (d && d.error && String(d.error).toUpperCase().indexOf('CSRF') !== -1) {
+                            _tok = null; _exp = 0;
+                            return getToken().then(function (t2) { return t2 ? nativeFetch(input, withToken(init, t2)) : resp; });
+                        }
+                        return resp;
+                    }).catch(function () { return resp; });
+                });
+            }).catch(function () { return nativeFetch(input, init); });
+        } catch (e) {
+            return nativeFetch(input, init);
+        }
+    };
+})();
+
 const translations = {
     en: {
+        // A41 completeness: keys that existed in he/ar/ru but were missing here
+        'params.calm': 'Calm',
+        'params.calmness': 'Calmness',
         // Navigation & Menu
         'nav.logo': 'TheraSocial',
         'nav.home': 'Home',
@@ -1799,6 +1899,14 @@ const translations = {
     },
 
     he: {
+        // A41 completeness: keys previously missing in Hebrew
+        'alerts.connection_added': '{username} הוסיף/ה אותך לרשימת הקשרים שלו/ה',
+        'invite.cta_title': 'עבודה נהדרת במעקב אחר הרווחה שלך!',
+        'parameter_calmness': 'רוגע',
+        'parameters.calmness_desc': 'רמת הרוגע שחווית',
+        'trigger_parameter_calmness': 'רוגע',
+        'triggers.calmness': 'התראת רוגע',
+        'triggers.param_calmness': 'רוגע',
         // Navigation & Menu
         'nav.logo': 'TheraSocial',
         'nav.home': 'בית',
@@ -3504,6 +3612,15 @@ const translations = {
     },
 
     ar: {
+        // A41 completeness: keys previously missing in Arabic
+        'alerts.connection_added': 'أضافك {username} إلى قائمة اتصالاته',
+        'auth.or_use_magic_link': 'أو سجّل الدخول مباشرة:',
+        'auth.send_magic_link_instead': 'أرسل لي رابطًا سحريًا بدلاً من ذلك',
+        'parameter_calmness': 'الهدوء',
+        'parameters.calmness_desc': 'مستوى الهدوء الذي تم الشعور به',
+        'trigger_parameter_calmness': 'الهدوء',
+        'triggers.calmness': 'تنبيه الهدوء',
+        'triggers.param_calmness': 'الهدوء',
         // Navigation & Menu
         'nav.logo': 'TheraSocial',
         'nav.home': 'الرئيسية',
@@ -5212,6 +5329,16 @@ const translations = {
     },
 
     ru: {
+        // A41 completeness: keys previously missing in Russian
+        'alerts.connection_added': '{username} добавил(а) вас в свой список контактов',
+        'auth.or_use_magic_link': 'Или войдите напрямую:',
+        'auth.send_magic_link_instead': 'Отправьте мне волшебную ссылку вместо этого',
+        'feed.select_city': 'Выберите город',
+        'parameter_calmness': 'Спокойствие',
+        'parameters.calmness_desc': 'Уровень испытываемого спокойствия',
+        'trigger_parameter_calmness': 'Спокойствие',
+        'triggers.calmness': 'Оповещение о спокойствии',
+        'triggers.param_calmness': 'Спокойствие',
         // Navigation & Menu
         'nav.logo': 'TheraSocial',
          'auth.create_account': 'Зарегистрироваться',
@@ -7077,6 +7204,14 @@ if (typeof window !== 'undefined') {
 
     // en overrides
     var en_ov = {
+        // A41 completeness: mirror the 6 support-form labels that he/ar/ru already
+        // override here (English keeps its base wording, now present in this block too).
+        'support.contact_title': 'Send Us a Message',
+        'support.name': 'Name',
+        'support.email_label': 'Email',
+        'support.subject': 'Subject',
+        'support.message': 'Message',
+        'support.send': 'Send Message',
         'about.title': 'About TheraSocial',
         'about.subtitle': 'A professional platform for personal empowerment and social well-being',
         'about.intro': 'TheraSocial is built around one core principle: your well-being comes first. We offer a thoughtful alternative to mainstream social networks — a platform designed to strengthen your personal resilience, health, and meaningful human connections rather than capture your time and attention.',

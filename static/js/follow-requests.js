@@ -1,6 +1,15 @@
 // Complete Follow Requests Management for TheraSocial
 // follow-requests.js - Full Implementation
 // MVP-FIX: Replaced alert() with toast notifications
+//
+// Version B185 (A41): (referenced as ?v=B185, in lockstep with index/circles/parameters).
+//   1. TIMEZONE FIX: formatTimeAgo() now parses the backend's naive-UTC timestamps as UTC
+//      (via _tsToDate) instead of local time, so "x minutes/hours ago" and the fallback date
+//      are correct for non-UTC users (previously an Israel/UTC+3 user saw a fresh request as
+//      "3 hours ago"). Idempotent — timestamps that already carry a Z/offset are untouched.
+//   2. XSS hardening (defense-in-depth): requester_name is HTML-escaped before going into
+//      innerHTML, matching the escaping already used in circles-messages.js/index.html.
+//   CSRF for the POST calls here is handled centrally by the i18n.js fetch interceptor.
 
 // ============================================================
 // Notification Polyfill - ensures showNotification always works
@@ -87,6 +96,30 @@ class FollowRequestsManager {
             return window._t(key, fallback);
         }
         return fallback;
+    }
+
+    // A41: parse a backend timestamp as UTC. The API emits naive ISO datetimes with no
+    // timezone suffix; `new Date(that)` would read them as LOCAL time. Append 'Z' only when
+    // the string is a bare (offset-less) datetime, so values that already carry Z/±HH:MM or
+    // are non-standard are left to the native parser. Idempotent and safe.
+    _tsToDate(s) {
+        if (s instanceof Date) return s;
+        if (typeof s === 'string') {
+            var v = s.trim();
+            if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(v)) {
+                return new Date(v.replace(' ', 'T') + 'Z');
+            }
+            return new Date(v);
+        }
+        return new Date(s);
+    }
+
+    // A41: HTML-escape helper for defense-in-depth on values placed into innerHTML.
+    _escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        var d = document.createElement('div');
+        d.textContent = String(text);
+        return d.innerHTML;
     }
 
     async init() {
@@ -216,7 +249,8 @@ class FollowRequestsManager {
 
     renderRequest(request) {
         const timeAgo = this.formatTimeAgo(request.created_at);
-        const firstLetter = (request.requester_name || 'U').charAt(0).toUpperCase();
+        const firstLetter = this._escapeHtml((request.requester_name || 'U').charAt(0).toUpperCase());
+        const safeName = this._escapeHtml(request.requester_name || 'Anonymous User');  // A41: XSS hardening
 
         return `
             <div class="follow-request-card" data-request-id="${request.id}">
@@ -227,7 +261,7 @@ class FollowRequestsManager {
                 </div>
 
                 <div class="request-info">
-                    <div class="request-name">${request.requester_name || 'Anonymous User'}</div>
+                    <div class="request-name">${safeName}</div>
                     <div class="request-time">Requested ${timeAgo}</div>
                 </div>
 
@@ -255,7 +289,7 @@ class FollowRequestsManager {
     }
 
     formatTimeAgo(dateString) {
-        const date = new Date(dateString);
+        const date = this._tsToDate(dateString);  // A41: parse backend naive-UTC as UTC
         const now = new Date();
         const seconds = Math.floor((now - date) / 1000);
 

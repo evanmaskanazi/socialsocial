@@ -1,3 +1,10 @@
+// Version B185 (A41): (referenced as ?v=B185, in lockstep with index/circles/parameters).
+//   TIMEZONE FIX: formatMessageTime() now parses the backend's naive-UTC timestamps as UTC
+//   (via _tsToUTCDate) instead of local time, so "Just now / min ago / same-day time / Yesterday"
+//   and the fallback date are correct for non-UTC users. Idempotent — timestamps that already
+//   carry a Z/offset are untouched; the two message-to-message comparisons elsewhere were left
+//   as-is (comparing two backend timestamps is unaffected by the shared offset). CSRF for the
+//   POST/DELETE calls in this file is handled centrally by the i18n.js fetch interceptor.
 // Version B175 (A26): (referenced as ?v=B175). ONE additive change - sendMessage() now
 // reads the response body and surfaces `support_notice` when the backend delivers a
 // message containing a crisis disclosure. index.html already did this; without the
@@ -144,7 +151,7 @@ function formatMessageTime(timestamp) {
         if (!timestamp) return t('messages.unknown_time', 'Unknown time');
 
         const now = new Date();
-        const msgTime = new Date(timestamp);
+        const msgTime = _tsToUTCDate(timestamp);  // A41: parse backend naive-UTC as UTC
 
         if (isNaN(msgTime.getTime())) {
             return t('messages.unknown_time', 'Unknown time');
@@ -191,6 +198,22 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// A41: parse a backend timestamp as UTC. The API emits naive ISO datetimes with no timezone
+// suffix; `new Date(that)` would read them as LOCAL time and skew relative labels for non-UTC
+// users. Append 'Z' only for a bare (offset-less) datetime so values that already carry a
+// Z/±HH:MM offset, or are non-standard, are left to the native parser. Idempotent and safe.
+function _tsToUTCDate(s) {
+    if (s instanceof Date) return s;
+    if (typeof s === 'string') {
+        const v = s.trim();
+        if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(v)) {
+            return new Date(v.replace(' ', 'T') + 'Z');
+        }
+        return new Date(v);
+    }
+    return new Date(s);
 }
 
 // ===================
