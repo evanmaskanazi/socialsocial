@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <!-- TheraSocial Support Version B195 (A43) -->
-<!-- B195 (A43): Cache-bust lockstep — all JS ?v bumped B186->B195 in sync with the index NAV FIX (the About link & Support button now navigate to the standalone /about and /support routes instead of toggling in-app views). No functional/JS changes in this file. -->
+<!-- B195 (A43): (1) BACK-BUTTON FIX — "Back to Last Page" now navigates to document.referrer
+     directly instead of window.history.back(). history.back() could return to an in-page
+     "/support#faq" history entry (created when a visitor clicks a FAQ anchor) and leave them
+     stuck on /support; direct referrer navigation always returns to the real previous page,
+     so invite -> support -> Back now goes to the invite page (matching the About page), while
+     login -> support -> Back still returns to login. (2) Cache-bust lockstep — all JS ?v
+     bumped B186->B195 in sync with the index NAV FIX. -->
 <!-- B185 (A41): (1) "Back to Last Page" now actually returns to the previous page (e.g. the
      /invite/<username> page a visitor arrived from) via history.back(), falling back to "/" only
      when there is no same-origin referrer. (2) CACHE-BUST: the i18n.js reference had NO ?v token
@@ -543,9 +549,17 @@
 
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B195"></script>
     <script>
-        // A41: "Back to Last Page" returns the visitor to the page they came from (e.g. the
-        // /invite/<username> page), not the home/login page. Falls back to "/" if there is no
-        // same-origin referrer to go back to.
+        // A43 FIX: "Back to Last Page" now navigates DIRECTLY to the same-origin page the
+        // visitor came from (document.referrer) instead of window.history.back().
+        // Why the change: history.back() returns to the previous *history entry*, not
+        // necessarily the previous *page*. This page has in-page FAQ anchor links
+        // (href="#faq"); clicking one pushes a "/support#faq" history entry, so a later
+        // history.back() only strips the hash and leaves the visitor stuck on /support
+        // instead of returning to the /invite/<username> page. The About page has no in-page
+        // anchors, which is why its Back button worked while this one did not. Navigating to
+        // document.referrer always lands on the real previous page — invite -> invite,
+        // login -> login — and we still fall back to href="/" when there is no usable
+        // same-origin referrer.
         (function () {
             var back = document.getElementById('backLastPage');
             if (!back) return;
@@ -553,8 +567,9 @@
                 var ref = document.referrer || '';
                 if (ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href) {
                     e.preventDefault();
-                    window.history.back();
+                    window.location.href = ref;
                 }
+                // else: no usable previous page — let the href="/" fallback proceed.
             });
         })();
 
