@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <!-- TheraSocial Support Version B195 (A43) -->
-<!-- B195 (A43): (1) BACK-BUTTON FIX — "Back to Last Page" now navigates to document.referrer
-     directly instead of window.history.back(). history.back() could return to an in-page
-     "/support#faq" history entry (created when a visitor clicks a FAQ anchor) and leave them
-     stuck on /support; direct referrer navigation always returns to the real previous page,
-     so invite -> support -> Back now goes to the invite page (matching the About page), while
-     login -> support -> Back still returns to login. (2) Cache-bust lockstep — all JS ?v
-     bumped B186->B195 in sync with the index NAV FIX. -->
+<!-- B195 (A43, rev2): BACK-BUTTON FIX (final) — "Back to Last Page" now does a
+     referrer-INDEPENDENT window.history.back(). The /invite/<username> page sends no usable
+     Referer when its Support link is followed (origin-only referrer policy / noreferrer link),
+     so both earlier attempts — history.back() gated on referrer, then a direct
+     document.referrer navigation — fell through to href="/" and dumped the visitor on the home
+     page. We now step back one real entry in the tab's history (invite -> support -> Back =
+     invite; login -> support -> Back = login), skipping it only when there is no in-tab history
+     or the visitor arrived from a different origin. Also cache-bust lockstep: all JS ?v
+     B186->B195. -->
 <!-- B185 (A41): (1) "Back to Last Page" now actually returns to the previous page (e.g. the
      /invite/<username> page a visitor arrived from) via history.back(), falling back to "/" only
      when there is no same-origin referrer. (2) CACHE-BUST: the i18n.js reference had NO ?v token
@@ -549,27 +551,31 @@
 
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B195"></script>
     <script>
-        // A43 FIX: "Back to Last Page" now navigates DIRECTLY to the same-origin page the
-        // visitor came from (document.referrer) instead of window.history.back().
-        // Why the change: history.back() returns to the previous *history entry*, not
-        // necessarily the previous *page*. This page has in-page FAQ anchor links
-        // (href="#faq"); clicking one pushes a "/support#faq" history entry, so a later
-        // history.back() only strips the hash and leaves the visitor stuck on /support
-        // instead of returning to the /invite/<username> page. The About page has no in-page
-        // anchors, which is why its Back button worked while this one did not. Navigating to
-        // document.referrer always lands on the real previous page — invite -> invite,
-        // login -> login — and we still fall back to href="/" when there is no usable
-        // same-origin referrer.
+        // A43 (rev2): "Back to Last Page" now does a real, REFERRER-INDEPENDENT history back.
+        // Root cause of the earlier failure: the /invite/<username> page sends no usable
+        // Referer when its Support link is followed (an origin-only referrer policy, or a
+        // rel="noopener noreferrer" link, strips it). Both prior attempts GATED on
+        // document.referrer, so with no referrer they fell through to href="/" and dumped the
+        // visitor on the home page instead of the invite page. We now ignore the referrer for
+        // *navigation* and simply step back one entry in this tab's own history, which always
+        // holds the real previous page: invite -> support -> Back = invite, login -> support ->
+        // Back = login. We only skip the history step (letting href="/" run) when there is no
+        // in-tab history, or when we clearly arrived from a DIFFERENT origin (so Back never
+        // walks the visitor off the site).
         (function () {
             var back = document.getElementById('backLastPage');
             if (!back) return;
             back.addEventListener('click', function (e) {
                 var ref = document.referrer || '';
-                if (ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href) {
+                // external = referrer present AND from another origin. Empty referrer is
+                // treated as internal, because same-origin links are exactly what get their
+                // referrer stripped by noreferrer / origin-only policies.
+                var external = ref && ref.indexOf(window.location.origin) !== 0;
+                if (!external && window.history.length > 1) {
                     e.preventDefault();
-                    window.location.href = ref;
+                    window.history.back();
                 }
-                // else: no usable previous page — let the href="/" fallback proceed.
+                // else: no in-tab history, or arrived from another site — use href="/".
             });
         })();
 

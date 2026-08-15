@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!-- TheraSocial Index Version B195 (A43) -->
+<!-- B195 (A43, rev2): goBack() (the in-app Support/About "Back to Last Page" handler) now
+  falls back to a referrer-independent window.history.back() when no in-page origin was
+  recorded (e.g. the visitor came from the standalone /invite page), instead of always
+  going home. Prevents Back from dumping invite->support visitors on the landing page. -->
 <!-- B195 (A43): NAV FIX — the "About" link and the "Support" button (plus the logged-out
   "Contact Us" button and the mobile "More" menu Support/Contact items, which all dispatch the
   'supportClick' event) now perform a real navigation to the standalone /about and /support
@@ -8812,6 +8816,14 @@ async function loadUserCity() {
         //   sidebar active state, and viewingUserId are all naturally preserved. So we
         //   just re-show the dashboard container without calling showView (which would
         //   re-render, re-fetch data, and reset viewingUserId).
+        // A43 (rev2): added a real "history back" fallback. Previously, whenever the in-app
+        // Support/About view was NOT opened from within this same page (no _viewBeforeSupport
+        // recorded — e.g. the visitor arrived from the standalone /invite/<username> page),
+        // goBack() went straight to goHome() and dumped them on the landing/home screen instead
+        // of the page they came from. Now, when there is no recorded in-page origin, we step
+        // back one entry in the tab's own history (the real previous page) before falling all
+        // the way to goHome(). We only skip the history step when the visitor clearly arrived
+        // from a different origin, so Back never walks them off the site.
         function goBack() {
             if (window._viewBeforeSupport) {
                 hideAllViews();
@@ -8823,7 +8835,13 @@ async function loadUserCity() {
                     goHome();
                 }
             } else {
-                goHome();
+                var ref = document.referrer || '';
+                var external = ref && ref.indexOf(window.location.origin) !== 0;
+                if (!external && window.history.length > 1) {
+                    window.history.back();
+                } else {
+                    goHome();
+                }
             }
         }
 
