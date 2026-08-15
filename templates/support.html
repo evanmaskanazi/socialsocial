@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- TheraSocial Support Version B185 (A41) -->
+<!-- TheraSocial Support Version B186 (A41) -->
 <!-- B185 (A41): (1) "Back to Last Page" now actually returns to the previous page (e.g. the
      /invite/<username> page a visitor arrived from) via history.back(), falling back to "/" only
      when there is no same-origin referrer. (2) CACHE-BUST: the i18n.js reference had NO ?v token
      at all (hard-cache risk — could serve a stale i18n.js missing later translations and the
-     shared CSRF interceptor); now pinned to ?v=B185 in lockstep with the rest of the app. -->
+     shared CSRF interceptor); now pinned to ?v=B186 in lockstep with the rest of the app. -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <html lang="en">
 <head>
@@ -540,7 +540,7 @@
         </center>
     </div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B185"></script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B186"></script>
     <script>
         // A41: "Back to Last Page" returns the visitor to the page they came from (e.g. the
         // /invite/<username> page), not the home/login page. Falls back to "/" if there is no

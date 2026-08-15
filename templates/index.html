@@ -1,12 +1,22 @@
 <!DOCTYPE html>
-<!-- TheraSocial Index Version B185 (A41) -->
+<!-- TheraSocial Index Version B186 (A41) -->
+<!-- B186 (A41): follow-up fixes to the in-app About/Support unification.
+  1. HOURS RENDER BUG: support.hours_detail contained a literal <br>. i18n applies every string
+     via element.textContent (no HTML parsing), so it showed the raw "<br>" as text in the
+     Support > Contact Us > Hours line. Fixed in i18n.js (all 4 languages) by replacing the tag
+     with a comma; this corrects both the in-app Support view and the standalone /support page.
+  2. "Video Tutorials" link (in-app Support) now no-ops gracefully for logged-out visitors —
+     it launches the in-app tutorial only when signed in, otherwise sends them to sign-up
+     (startTutorial() POSTs an authed endpoint and 401'd with an error toast when logged out).
+  3. CACHE-BUST: all JS ?v bumped B185 -> B186 in lockstep (i18n.js changed), and every page's
+     version marker moved to B186 so the header matches the ?v token. -->
 <!-- B185 (A41): Additive, mobile-focused round.
   CACHE-BUST: all JS ?v bumped to B185 in lockstep (utilities, triggers, follow-requests,
     i18n, parameters-social, circles-messages, feed-updates). NOTE: the prior round bumped the
     live references to ?v=B180 but left this header comment and i18n.js's own version marker at
     B175 — the exact "cache version not actually updated" desync flagged internally. B185 resyncs
     all three: the ?v tokens, this header, and the i18n.js header comment now all read B185.
-    REMINDER: parameters.html and circles.html load the same JS and must be bumped to ?v=B185
+    REMINDER: parameters.html and circles.html load the same JS and must be bumped to ?v=B186
     in the same lockstep (not included in this file set).
   1. A41-UX block before </body>: 10 additive, non-duplicative mobile UX improvements
      (autocomplete + inputmode hints, no-select UI chrome, sticky-nav scroll-margin, honest
@@ -639,10 +649,10 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
-   <script src="/static/js/utilities.js?v=B185"></script>
+   <script src="/static/js/utilities.js?v=B186"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B185"></script>
-    <script src="/static/js/follow-requests.js?v=B185"></script>
+    <script src="/static/js/triggers.js?v=B186"></script>
+    <script src="/static/js/follow-requests.js?v=B186"></script>
 
 
     <style>
@@ -5553,7 +5563,7 @@
                          Forum, System Status); "Video Tutorials" now launches the in-app tutorial. -->
                     <ul style="line-height: 2; margin-inline-start: 20px; color: var(--gray);">
                         <li><a href="#supportFaq" style="color: var(--primary);" data-i18n="support.faq_link">Frequently Asked Questions</a></li>
-                        <li><a href="#" onclick="startTutorial(); return false;" style="color: var(--primary);" data-i18n="support.video_tutorials">Video Tutorials</a></li>
+                        <li><a href="#" onclick="if (typeof currentUser !== 'undefined' && currentUser) { startTutorial(); } else { goHome(); } return false;" style="color: var(--primary);" data-i18n="support.video_tutorials">Video Tutorials</a></li>
                     </ul>
                 </div>
                 <!-- A41: "Resources" card removed — every link (Privacy Policy, Terms of Service,
@@ -8019,7 +8029,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B185"></script>
+    <script src="/static/js/i18n.js?v=B186"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8372,9 +8382,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B185"></script>
-   <script src="/static/js/circles-messages.js?v=B185"></script>
-<script src="/static/js/feed-updates.js?v=B185"></script>
+<script src="/static/js/parameters-social.js?v=B186"></script>
+   <script src="/static/js/circles-messages.js?v=B186"></script>
+<script src="/static/js/feed-updates.js?v=B186"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
