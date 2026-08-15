@@ -1,3 +1,8 @@
+// Version B186 (A41): (referenced as ?v=B186). Fixed support.hours_detail in all 4 languages —
+//   it contained a literal <br>, which rendered as raw text because translations are applied via
+//   element.textContent (no HTML parsing). Replaced the tag with a comma so the Support > Hours
+//   line renders correctly on both the in-app Support view and the standalone /support page.
+//   All JS ?v bumped B185 -> B186 in lockstep.
 // Version B185 (A41): (referenced as ?v=B185).
 //   (0) CSRF: added a global, defensive fetch interceptor at the top of this file (loaded on
 //       every page) that attaches X-CSRF-Token to same-origin state-changing requests which
@@ -549,7 +554,7 @@ const translations = {
     'support.email': 'Email',
     'support.phone': 'Phone',
     'support.hours': 'Hours',
-    'support.hours_detail': 'Monday-Friday<br>9:00 AM - 5:00 PM EST',
+    'support.hours_detail': 'Monday-Friday, 9:00 AM - 5:00 PM EST',
     'support.quick_help': 'Quick Help',
     'support.faq_link': 'Frequently Asked Questions',
     'support.help_center': 'Help Center',
@@ -2519,7 +2524,7 @@ const translations = {
     'support.email': 'דוא"ל',
     'support.phone': 'טלפון',
     'support.hours': 'שעות',
-    'support.hours_detail': 'שני-שישי<br>9:00-17:00 EST',
+    'support.hours_detail': 'שני-שישי, 9:00-17:00 EST',
     'support.quick_help': 'עזרה מהירה',
     'support.faq_link': 'שאלות נפוצות',
     'support.help_center': 'מרכז עזרה',
@@ -4399,7 +4404,7 @@ const translations = {
     'support.email': 'البريد الإلكتروني',
     'support.phone': 'الهاتف',
     'support.hours': 'الساعات',
-    'support.hours_detail': 'الإثنين-الجمعة<br>9:00 صباحًا - 5:00 مساءً EST',
+    'support.hours_detail': 'الإثنين-الجمعة، 9:00 صباحًا - 5:00 مساءً EST',
     'support.quick_help': 'مساعدة سريعة',
     'support.faq_link': 'الأسئلة الشائعة',
     'support.help_center': 'مركز المساعدة',
@@ -5458,7 +5463,7 @@ const translations = {
     'support.email': 'Электронная почта',
     'support.phone': 'Телефон',
     'support.hours': 'Часы работы',
-    'support.hours_detail': 'Понедельник-Пятница<br>9:00 - 17:00 EST',
+    'support.hours_detail': 'Понедельник-Пятница, 9:00 - 17:00 EST',
 
     // Invite alerts
     'invite.alert_title': 'Новое приглашение',
