@@ -25142,6 +25142,15 @@ def public_invite_page(username):
         from markupsafe import escape as html_escape
         safe_username = str(html_escape(username))
 
+        # A43: explicit, cache-proof "return path" for the About/Support top-bar links.
+        # The support/about pages read this ?ret= value straight from their URL, so "Back to
+        # Last Page" returns here regardless of Referer headers, history length, or caching —
+        # the three things that made the earlier client-only fixes unreliable. URL-encode the
+        # path (usernames are simple, but this is safe) so it is valid in both the href and the
+        # query string.
+        from urllib.parse import quote as _url_quote
+        invite_ret = _url_quote('/invite/' + username, safe='/')
+
         translations = {
             'en': {
                 'kicker': "You're invited 👋",
@@ -25542,8 +25551,8 @@ def public_invite_page(username):
                     <span class="brand-name">TheraSocial</span>
                 </a>
                 <nav class="topbar-nav">
-                    <a class="topbar-link" href="/about">{t['about']}</a>
-                    <a class="topbar-link support" href="/support">{t['support']}</a>
+                    <a class="topbar-link" href="/about?ret={invite_ret}">{t['about']}</a>
+                    <a class="topbar-link support" href="/support?ret={invite_ret}">{t['support']}</a>
                     <div class="language-selector">
                         <select id="langSelect" onchange="changeLanguage(this.value)">
                             <option value="en" {'selected' if default_language == 'en' else ''}>English</option>
