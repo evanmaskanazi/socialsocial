@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- TheraSocial Support Version B195 (A43) -->
-<!-- B195 (A43, rev3 — FINAL): BACK-BUTTON FIX. "Back to Last Page" navigates to
+<!-- B195 (A43, rev4 — FINAL: explicit ?ret= return path): BACK-BUTTON FIX. "Back to Last Page" navigates to
      document.referrer. Render access logs proved the browser DOES send the invite page as the
      Referer (GET /support  Referer: /invite/<username>), so the referrer is the reliable
      signal. The rev2 attempt used window.history.length as the guard and broke: when the
@@ -551,30 +551,39 @@
 
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B195"></script>
     <script>
-        // A43 (rev3, FINAL): "Back to Last Page" navigates to document.referrer.
-        // Proven by the Render access logs: the browser sends
-        //   GET /support  Referer: https://<site>/invite/<username>
-        // so document.referrer on this page IS the real previous page (the site's
-        // Referrer-Policy is strict-origin-when-cross-origin, so same-origin navigations carry
-        // the full URL). The rev2 attempt used window.history.length as the guard and FAILED:
-        // when the visitor opens the invite link directly, the invite page is the first entry
-        // in the tab, so history.length === 1 on /support, the "length > 1" test was false, and
-        // the button fell through to href="/" and landed on the home page. We now use the
-        // referrer for the actual navigation (reliable here), and only fall back to
-        // history.back() when there is no same-origin referrer, then to href="/" as a last
-        // resort. Result: invite -> support -> Back = invite; login -> support -> Back = login.
+        // A43 (rev4, FINAL): "Back to Last Page" is now driven by an explicit ?ret= path.
+        // The three earlier client-only attempts all failed in the real environment because
+        // they relied on signals that behaved unexpectedly here (document.referrer, and
+        // window.history.length, which is 1 when the invite link is opened directly). The
+        // reliable fix: the invite page now links here as /support?ret=/invite/<username>, and
+        // we read that path LIVE from this page's own URL. That is immune to Referer stripping,
+        // history quirks, AND page caching (the param is in the URL, not the cached HTML).
+        // We set the button's href to it directly, so a plain click just works — no dependence
+        // on the click handler at all. Only a same-origin absolute path ("/...", not "//") is
+        // accepted, to prevent open-redirects. When there is no ?ret= (e.g. arriving from the
+        // home page), we fall back to the referrer, then history.back(), then href="/".
         (function () {
             var back = document.getElementById('backLastPage');
             if (!back) return;
+
+            var ret = null;
+            try { ret = new URLSearchParams(window.location.search).get('ret'); } catch (_) {}
+            var validRet = ret && ret.charAt(0) === '/' && ret.charAt(1) !== '/';
+            if (validRet) {
+                // Point the link straight at the origin page — works even if JS click
+                // handling is skipped for any reason.
+                back.setAttribute('href', ret);
+            }
+
             back.addEventListener('click', function (e) {
+                if (validRet) return;   // href is already correct; let the browser navigate.
                 var ref = document.referrer || '';
-                var sameOriginRef = ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href;
-                if (sameOriginRef) {
+                if (ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href) {
                     e.preventDefault();
-                    window.location.href = ref;      // reliable: go to the exact previous page
+                    window.location.href = ref;
                 } else if (window.history.length > 1) {
                     e.preventDefault();
-                    window.history.back();           // fallback if the referrer was not sent
+                    window.history.back();
                 }
                 // else: nothing to go back to — let href="/" proceed.
             });
