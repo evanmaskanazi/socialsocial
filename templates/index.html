@@ -1,5 +1,14 @@
 <!DOCTYPE html>
-<!-- TheraSocial Index Version B186 (A41) -->
+<!-- TheraSocial Index Version B195 (A43) -->
+<!-- B195 (A43): NAV FIX — the "About" link and the "Support" button (plus the logged-out
+  "Contact Us" button and the mobile "More" menu Support/Contact items, which all dispatch the
+  'supportClick' event) now perform a real navigation to the standalone /about and /support
+  routes. Previously they only toggled the in-app aboutPage / supportPage views, so the URL
+  stayed on "/" and the user landed on the wrong page instead of /about or /support. navAbout
+  now uses href="/about" with a matching click handler; the supportClick handler now does
+  window.location.href='/support'. All JS ?v bumped B186->B195 in lockstep with the rest of
+  the app (cache-bust convention). The dormant in-app aboutPage/supportPage markup is left in
+  place (harmless) but is no longer the target of these controls. -->
 <!-- B186 (A41): follow-up fixes to the in-app About/Support unification.
   1. HOURS RENDER BUG: support.hours_detail contained a literal <br>. i18n applies every string
      via element.textContent (no HTML parsing), so it showed the raw "<br>" as text in the
@@ -16,7 +25,7 @@
     live references to ?v=B180 but left this header comment and i18n.js's own version marker at
     B175 — the exact "cache version not actually updated" desync flagged internally. B185 resyncs
     all three: the ?v tokens, this header, and the i18n.js header comment now all read B185.
-    REMINDER: parameters.html and circles.html load the same JS and must be bumped to ?v=B186
+    REMINDER: parameters.html and circles.html load the same JS and must be bumped to ?v=B195
     in the same lockstep (not included in this file set).
   1. A41-UX block before </body>: 10 additive, non-duplicative mobile UX improvements
      (autocomplete + inputmode hints, no-select UI chrome, sticky-nav scroll-margin, honest
@@ -649,10 +658,10 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
-   <script src="/static/js/utilities.js?v=B186"></script>
+   <script src="/static/js/utilities.js?v=B195"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B186"></script>
-    <script src="/static/js/follow-requests.js?v=B186"></script>
+    <script src="/static/js/triggers.js?v=B195"></script>
+    <script src="/static/js/follow-requests.js?v=B195"></script>
 
 
     <style>
@@ -4807,7 +4816,7 @@
             <div class="logo" style="cursor: pointer; display: flex; align-items: center; gap: 8px;" onclick="showView('home')"><img src="/static/images/LogoNew.jfif" alt="TheraSocial" style="height: 36px; width: 36px; border-radius: 8px; object-fit: contain;"> <span data-i18n="nav.logo">TheraSocial</span></div>
             <div class="nav-menu">
                 <!-- PJ6004: About shown when logged out only; Support always visible -->
-                <a href="#" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
+                <a href="/about" class="nav-link auth-only-hide" id="navAbout" data-i18n="nav.about">About</a>
                 <div class="lang-selector-wrap" style="display: flex; align-items: center; gap: 2px; position: relative;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                     <span id="langCodeLabel" class="lang-code-label" style="display: none; font-weight: 700; font-size: 12px; color: var(--primary); pointer-events: none;">EN</span>
@@ -8029,7 +8038,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B186"></script>
+    <script src="/static/js/i18n.js?v=B195"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8382,9 +8391,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B186"></script>
-   <script src="/static/js/circles-messages.js?v=B186"></script>
-<script src="/static/js/feed-updates.js?v=B186"></script>
+<script src="/static/js/parameters-social.js?v=B195"></script>
+   <script src="/static/js/circles-messages.js?v=B195"></script>
+<script src="/static/js/feed-updates.js?v=B195"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -8770,27 +8779,21 @@ async function loadUserCity() {
         }
 
         // Navigation Functions
+        // A43 FIX: "About" now navigates to the standalone /about page instead of showing
+        // the in-app aboutPage view (which stayed on "/" and read as the wrong page in the URL
+        // bar). The href="/about" already points there; this handler is kept only so a native
+        // navigation fires reliably even if the anchor's default is otherwise intercepted.
         document.getElementById('navAbout').addEventListener('click', (e) => {
             e.preventDefault();
-            hideAllViews();
-            document.getElementById('aboutPage').classList.remove('hidden');
+            window.location.href = '/about';
         });
 
-        // B70: Support button click — works both logged-in and logged-out
-        // B115/B125: Stores which top-level container was visible so goBack() can restore it.
-        //   No need to capture active inner view or viewingUserId — hideAllViews only hides
-        //   top-level containers, so inner dashboard state is naturally preserved.
+        // A43 FIX: "Support" (and every control that dispatches 'supportClick' — the navbar
+        // button, the logged-out "Contact Us" button, and the mobile "More" menu items) now
+        // navigates to the standalone /support page instead of revealing the in-app supportPage
+        // view at "/". This matches the dedicated /support route the app serves.
         document.getElementById('navSupportBtn').addEventListener('supportClick', (e) => {
-            if (document.getElementById('dashboard').style.display !== 'none' && document.getElementById('dashboard').style.display !== '') {
-                window._viewBeforeSupport = 'dashboard';
-            } else if (!document.getElementById('aboutPage').classList.contains('hidden')) {
-                window._viewBeforeSupport = 'about';
-            } else {
-                window._viewBeforeSupport = null;
-            }
-            hideAllViews();
-            document.getElementById('supportPage').classList.remove('hidden');
-            prefillSupportForm();
+            window.location.href = '/support';
         });
 
         // PJ6004: Removed navHome button and event listener

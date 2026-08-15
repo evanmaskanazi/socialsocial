@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<!-- TheraSocial Invite Version B186 (A41) -->
+<!-- TheraSocial Invite Version B195 (A43) -->
+<!-- B195 (A43): Cache-bust lockstep — all JS ?v bumped B186->B195 in sync with the index NAV FIX (the About link & Support button now navigate to the standalone /about and /support routes instead of toggling in-app views). No functional/JS changes in this file. -->
 <!-- B185 (A41): (1) Added a shared top bar (brand logo linking home + About + Support),
      matching the live /invite page. (2) CACHE-BUST FIX: i18n.js was referenced with NO ?v=
-     token (hard-cache risk) — now pinned to ?v=B186 in lockstep with index/parameters/circles.
+     token (hard-cache risk) — now pinned to ?v=B195 in lockstep with index/parameters/circles.
      NOTE: this template is not currently wired to a Flask route; the live /invite/<username>
      page is generated inline in app.py (public_invite_page), which carries the same header. -->
 <!-- P305: Visual design overhaul - new calming color palette -->
@@ -419,7 +420,7 @@
         {% endif %}
     </div>
 
-    <script src="/static/js/i18n.js?v=B186"></script>
+    <script src="/static/js/i18n.js?v=B195"></script>
     <script>
         // FIX 1: Toast notification system (replaces alert())
         function showNotification(message, type = 'info') {
