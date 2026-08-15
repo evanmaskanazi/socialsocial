@@ -1,4 +1,5 @@
-// Version B186 (A41): (referenced as ?v=B186). Fixed support.hours_detail in all 4 languages —
+// Version B195 (A43): No string/logic changes this round — re-tagged and served as ?v=B195 in lockstep with the index NAV FIX (About/Support now navigate to the standalone /about and /support routes). Prior A41 note below.
+// Version B186 (A41): (referenced as ?v=B195). Fixed support.hours_detail in all 4 languages —
 //   it contained a literal <br>, which rendered as raw text because translations are applied via
 //   element.textContent (no HTML parsing). Replaced the tag with a comma so the Support > Hours
 //   line renders correctly on both the in-app Support view and the standalone /support page.
