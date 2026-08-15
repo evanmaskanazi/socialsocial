@@ -13,6 +13,10 @@
      44px tap targets, prefers-contrast support, nav :active feedback, accent-color + cross-
      engine scrollbar, horizontal-overscroll/image-overflow guard, font-smoothing + tabular
      numerals). Self-contained, namespaced ts-a41-*, feature-detected, reduced-motion aware.
+  2. ABOUT/SUPPORT UNIFICATION: the in-app About & Support views now carry the same fuller
+     content as the standalone /about and /support pages — About gains the intro paragraph,
+     "Our Mission" and "Our Values"; Support gains the "Contact Us / Quick Help / Resources"
+     card row (with #supportFaq anchor). Additive markup only, all via existing data-i18n keys.
   No existing markup, IDs, logic or endpoints were changed. (The /invite page header — logo +
   About + Support — lives in app.py's public_invite_page, which renders the live invite page.) -->
 <!-- B175 (A26): Additive round. All JS ?v bumped B170->B175 in lockstep with parameters/circles
@@ -5421,6 +5425,18 @@
                 A professional platform for personal empowerment and social well-being
             </p>
 
+            <!-- A41: intro + Our Mission (unify in-app About with the fuller standalone /about page) -->
+            <p style="color: var(--dark); line-height: 1.8; font-size: 1.05em; margin-bottom: 30px;" data-i18n="about.intro">
+                TheraSocial is built around one core principle: your well-being comes first. We offer a thoughtful alternative to mainstream social networks — a platform designed to strengthen your personal resilience, health, and meaningful human connections rather than capture your time and attention.
+            </p>
+
+            <div class="mission-section" style="background: var(--light); padding: 30px; border-radius: 15px; margin-bottom: 30px;">
+                <h2 style="color: var(--primary); margin-bottom: 20px;" data-i18n="about.mission_title">Our Mission</h2>
+                <p style="color: var(--dark); line-height: 1.8;" data-i18n="about.mission_text">
+                    We believe everyone deserves tools that support their quality of life — across sports, sleep, health, mood, and social connections. Our mission is to empower you with innovative features that cultivate trusted, safe, and effective relationships while protecting your personal data and privacy.
+                </p>
+            </div>
+
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
@@ -5491,6 +5507,14 @@
                 </p>
             </div>
 
+            <!-- A41: Our Values (unify in-app About with the fuller standalone /about page) -->
+            <h2 style="color: var(--primary); margin: 30px 0 20px;" data-i18n="about.values_title">Our Values</h2>
+            <ul style="margin-left: 30px; line-height: 2; color: var(--dark);">
+                <li><strong data-i18n="about.value1_title">Empowerment:</strong> <span data-i18n="about.value1_desc">We help you take charge of your well-being across every area of life</span></li>
+                <li><strong data-i18n="about.value2_title">Data Protection:</strong> <span data-i18n="about.value2_desc">End-to-end encryption and GDPR compliance ensure your data stays yours</span></li>
+                <li><strong data-i18n="about.value3_title">Innovation:</strong> <span data-i18n="about.value3_desc">Patent-protected features designed to cultivate meaningful human connection</span></li>
+                <li><strong data-i18n="about.value4_title">Accessibility:</strong> <span data-i18n="about.value4_desc">Available in multiple languages with support for every user, everywhere</span></li>
+            </ul>
 
             <div style="text-align: center; margin-top: 30px;">
                 <button class="btn btn-primary" onclick="goHome()" data-i18n="btn.getstarted">Get Started</button>
@@ -5506,7 +5530,38 @@
                 We're here to help! Find answers to common questions or send us a message below.
             </p>
 
-            <div style="background: var(--light); padding: 25px; border-radius: 15px; margin-bottom: 30px;">
+            <!-- A41: Contact Us / Quick Help / Resources (unify in-app Support with the fuller standalone /support page) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div style="background: var(--light); padding: 25px; border-radius: 15px;">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">📞 <span data-i18n="support.contact_us">Contact Us</span></h3>
+                    <div style="background: var(--white); padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                        <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.email">Email:</strong>
+                        <a href="mailto:support@therasocial.com" style="color: var(--primary);">support@therasocial.com</a>
+                    </div>
+                    <div style="background: var(--white); padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                        <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.phone">Phone:</strong>
+                        <span>1-800-THERAPY (843-7279)</span>
+                    </div>
+                    <div style="background: var(--white); padding: 12px; border-radius: 10px;">
+                        <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.hours">Hours:</strong>
+                        <span data-i18n="support.hours_detail">Monday-Friday<br>9:00 AM - 5:00 PM EST</span>
+                    </div>
+                </div>
+                <div style="background: var(--light); padding: 25px; border-radius: 15px;">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">🚀 <span data-i18n="support.quick_help">Quick Help</span></h3>
+                    <!-- A41: dropped links to pages that don't exist (Help Center, Community
+                         Forum, System Status); "Video Tutorials" now launches the in-app tutorial. -->
+                    <ul style="line-height: 2; margin-inline-start: 20px; color: var(--gray);">
+                        <li><a href="#supportFaq" style="color: var(--primary);" data-i18n="support.faq_link">Frequently Asked Questions</a></li>
+                        <li><a href="#" onclick="startTutorial(); return false;" style="color: var(--primary);" data-i18n="support.video_tutorials">Video Tutorials</a></li>
+                    </ul>
+                </div>
+                <!-- A41: "Resources" card removed — every link (Privacy Policy, Terms of Service,
+                     Community Guidelines, Security Center, Blog) pointed to a route that does not
+                     exist yet. Restore this card once those pages are built. -->
+            </div>
+
+            <div id="supportFaq" style="background: var(--light); padding: 25px; border-radius: 15px; margin-bottom: 30px;">
                 <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="support.faq_title">Frequently Asked Questions</h3>
 
                 <div style="margin-bottom: 20px;">
