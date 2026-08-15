@@ -1984,9 +1984,19 @@ def add_cache_headers(response):
     if request.path.startswith('/static/'):
         # Cache static JS/CSS/images for 1 week (they have cache-bust versions)
         response.headers['Cache-Control'] = 'public, max-age=604800'
-    elif request.path == '/' or request.path.endswith('.html'):
-        # Don't cache HTML pages - always get fresh version
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    else:
+        # A43 FIX: never cache HTML pages. The previous rule only matched '/' and paths
+        # ending in '.html', so the CLEAN page routes — /about, /support, /parameters,
+        # /circles and /invite/<username> — received NO Cache-Control header and could be
+        # served stale from the browser/CDN cache. That is why edits to about.html /
+        # support.html did not take effect (an old cached /support kept its old "Back"
+        # button that just went to "/"). Now any text/html response that is not a static
+        # asset is marked no-store, so every page route always serves fresh.
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if (request.path == '/'
+                or request.path.endswith('.html')
+                or 'text/html' in ctype):
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
 # Security headers middleware (Ethics Doc: Privacy and Security by Design)
