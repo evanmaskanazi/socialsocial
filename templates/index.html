@@ -8835,9 +8835,13 @@ async function loadUserCity() {
                     goHome();
                 }
             } else {
+                // A43 (rev3): prefer the same-origin referrer (reliable), then history.back(),
+                // then home — mirrors the standalone /about and /support back buttons.
                 var ref = document.referrer || '';
-                var external = ref && ref.indexOf(window.location.origin) !== 0;
-                if (!external && window.history.length > 1) {
+                var sameOriginRef = ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href;
+                if (sameOriginRef) {
+                    window.location.href = ref;
+                } else if (window.history.length > 1) {
                     window.history.back();
                 } else {
                     goHome();

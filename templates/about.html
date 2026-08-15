@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <!-- TheraSocial About Version B195 (A43) -->
-<!-- B195 (A43, rev2): "Back to Last Page" reworked to a referrer-INDEPENDENT
-     window.history.back() (matches the support page, so a stripped/absent Referer from the
-     /invite page can no longer force a fallback to "/"). Also cache-bust lockstep: all JS ?v
-     bumped B186->B195 in sync with the index NAV FIX (About/Support now navigate to the
-     standalone /about and /support routes). -->
+<!-- B195 (A43, rev3 — FINAL): "Back to Last Page" navigates to document.referrer (matches
+     the support page). The referrer is reliable here (Referrer-Policy strict-origin-when-
+     cross-origin; confirmed in server logs); the rev2 history.length guard broke when the
+     invite link was opened directly (history.length === 1). Now: same-origin referrer -> go
+     there; else history.back(); else "/". Also cache-bust lockstep: all JS ?v B186->B195 in
+     sync with the index NAV FIX (About/Support navigate to the standalone /about, /support). -->
 <!-- B185 (A41): (1) "Get Started" now points to "/" (the landing/sign-up page) instead of the
      wrong "/register" route. (2) "Back to Last Page" now actually returns to the previous page
      (e.g. the /invite/<username> page a visitor arrived from) via history.back(), falling back to
@@ -360,20 +361,23 @@
 
     <script src="/static/js/i18n.js?v=B195"></script>
     <script>
-        // A43 (rev2): "Back to Last Page" — referrer-INDEPENDENT history back, matching the
-        // support page. The prior version gated on document.referrer; if a referring page
-        // (e.g. /invite/<username>) sends no Referer — origin-only referrer policy, or a
-        // rel="noopener noreferrer" link — the gate failed and it fell back to "/". We now
-        // step back one entry in this tab's history (the real previous page) and only skip it
-        // (letting href="/" run) when there is no in-tab history or we arrived from a
-        // different origin, so Back never walks the visitor off the site.
+        // A43 (rev3, FINAL): "Back to Last Page" navigates to document.referrer (the real
+        // previous page), matching the support page. The site's Referrer-Policy is
+        // strict-origin-when-cross-origin, so same-origin navigations carry the full URL and
+        // document.referrer is reliable here (confirmed in the server access logs). The rev2
+        // attempt gated on window.history.length, which is 1 when the visitor opens the invite
+        // link directly, so it wrongly fell back to "/". We use the referrer for navigation,
+        // fall back to history.back() only if no same-origin referrer was sent, then href="/".
         (function () {
             var back = document.getElementById('backLastPage');
             if (!back) return;
             back.addEventListener('click', function (e) {
                 var ref = document.referrer || '';
-                var external = ref && ref.indexOf(window.location.origin) !== 0;
-                if (!external && window.history.length > 1) {
+                var sameOriginRef = ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href;
+                if (sameOriginRef) {
+                    e.preventDefault();
+                    window.location.href = ref;
+                } else if (window.history.length > 1) {
                     e.preventDefault();
                     window.history.back();
                 }

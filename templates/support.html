@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <!-- TheraSocial Support Version B195 (A43) -->
-<!-- B195 (A43, rev2): BACK-BUTTON FIX (final) — "Back to Last Page" now does a
-     referrer-INDEPENDENT window.history.back(). The /invite/<username> page sends no usable
-     Referer when its Support link is followed (origin-only referrer policy / noreferrer link),
-     so both earlier attempts — history.back() gated on referrer, then a direct
-     document.referrer navigation — fell through to href="/" and dumped the visitor on the home
-     page. We now step back one real entry in the tab's history (invite -> support -> Back =
-     invite; login -> support -> Back = login), skipping it only when there is no in-tab history
-     or the visitor arrived from a different origin. Also cache-bust lockstep: all JS ?v
-     B186->B195. -->
+<!-- B195 (A43, rev3 — FINAL): BACK-BUTTON FIX. "Back to Last Page" navigates to
+     document.referrer. Render access logs proved the browser DOES send the invite page as the
+     Referer (GET /support  Referer: /invite/<username>), so the referrer is the reliable
+     signal. The rev2 attempt used window.history.length as the guard and broke: when the
+     visitor opens the invite link directly, the invite page is the first tab entry, so
+     history.length === 1 on /support, the "length > 1" test failed, and the button fell back to
+     href="/" (home). Now: same-origin referrer -> go there; else history.back(); else "/".
+     invite -> support -> Back = invite; login -> support -> Back = login. Cache-bust lockstep:
+     all JS ?v B186->B195. -->
 <!-- B185 (A41): (1) "Back to Last Page" now actually returns to the previous page (e.g. the
      /invite/<username> page a visitor arrived from) via history.back(), falling back to "/" only
      when there is no same-origin referrer. (2) CACHE-BUST: the i18n.js reference had NO ?v token
@@ -551,31 +551,32 @@
 
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B195"></script>
     <script>
-        // A43 (rev2): "Back to Last Page" now does a real, REFERRER-INDEPENDENT history back.
-        // Root cause of the earlier failure: the /invite/<username> page sends no usable
-        // Referer when its Support link is followed (an origin-only referrer policy, or a
-        // rel="noopener noreferrer" link, strips it). Both prior attempts GATED on
-        // document.referrer, so with no referrer they fell through to href="/" and dumped the
-        // visitor on the home page instead of the invite page. We now ignore the referrer for
-        // *navigation* and simply step back one entry in this tab's own history, which always
-        // holds the real previous page: invite -> support -> Back = invite, login -> support ->
-        // Back = login. We only skip the history step (letting href="/" run) when there is no
-        // in-tab history, or when we clearly arrived from a DIFFERENT origin (so Back never
-        // walks the visitor off the site).
+        // A43 (rev3, FINAL): "Back to Last Page" navigates to document.referrer.
+        // Proven by the Render access logs: the browser sends
+        //   GET /support  Referer: https://<site>/invite/<username>
+        // so document.referrer on this page IS the real previous page (the site's
+        // Referrer-Policy is strict-origin-when-cross-origin, so same-origin navigations carry
+        // the full URL). The rev2 attempt used window.history.length as the guard and FAILED:
+        // when the visitor opens the invite link directly, the invite page is the first entry
+        // in the tab, so history.length === 1 on /support, the "length > 1" test was false, and
+        // the button fell through to href="/" and landed on the home page. We now use the
+        // referrer for the actual navigation (reliable here), and only fall back to
+        // history.back() when there is no same-origin referrer, then to href="/" as a last
+        // resort. Result: invite -> support -> Back = invite; login -> support -> Back = login.
         (function () {
             var back = document.getElementById('backLastPage');
             if (!back) return;
             back.addEventListener('click', function (e) {
                 var ref = document.referrer || '';
-                // external = referrer present AND from another origin. Empty referrer is
-                // treated as internal, because same-origin links are exactly what get their
-                // referrer stripped by noreferrer / origin-only policies.
-                var external = ref && ref.indexOf(window.location.origin) !== 0;
-                if (!external && window.history.length > 1) {
+                var sameOriginRef = ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href;
+                if (sameOriginRef) {
                     e.preventDefault();
-                    window.history.back();
+                    window.location.href = ref;      // reliable: go to the exact previous page
+                } else if (window.history.length > 1) {
+                    e.preventDefault();
+                    window.history.back();           // fallback if the referrer was not sent
                 }
-                // else: no in-tab history, or arrived from another site — use href="/".
+                // else: nothing to go back to — let href="/" proceed.
             });
         })();
 
