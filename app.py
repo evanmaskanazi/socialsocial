@@ -7752,16 +7752,76 @@ def favicon():
         return '', 204
 
 
+# A43 (rev5): compute the "Back to Last Page" target SERVER-SIDE and bake it straight into
+# the #backLastPage anchor's href. This is done in app.py (which deploys reliably here) so the
+# back button is correct REGARDLESS of which support.html / about.html template version is on
+# the server — the earlier client-only fixes only worked if the updated template was actually
+# deployed, and it wasn't. Source of the target, in order: the explicit ?ret= param the invite
+# page adds, then the Referer header, else "/". Only same-origin absolute paths are allowed.
+def _safe_back_url():
+    """Return a safe same-origin path for the About/Support back button.
+    Prefers ?ret=, then the Referer header, else '/'. Blocks open-redirects: the value must
+    start with a single '/' (so '//evil.com' and 'http://evil' are rejected)."""
+    from urllib.parse import urlparse, unquote
+
+    def ok(p):
+        return isinstance(p, str) and p.startswith('/') and not p.startswith('//')
+
+    # 1) explicit ?ret= passed by the linking page (e.g. the invite page)
+    ret = request.args.get('ret')
+    if ret:
+        ret = unquote(ret)
+        if ok(ret):
+            return ret
+
+    # 2) Referer header, same origin only, and not one of these two pages themselves
+    ref = request.referrer
+    if ref:
+        try:
+            p = urlparse(ref)
+            here = urlparse(request.url)
+            if p.netloc == here.netloc and ok(p.path) and p.path not in ('/support', '/about'):
+                return p.path + (('?' + p.query) if p.query else '')
+        except Exception:
+            pass
+
+    # 3) fallback
+    return '/'
+
+
+def _render_page_with_back(template_name):
+    """Render a page template, then force the #backLastPage anchor's href to the safe back URL
+    computed above. Works no matter how old the deployed template's own JS is, because the
+    href is fixed in the HTML before it ever reaches the browser."""
+    import re
+    from markupsafe import escape as _esc
+
+    html = render_template(template_name)
+    back = str(_esc(_safe_back_url()))  # escape for safe insertion into the href attribute
+
+    def _repl(m):
+        tag = m.group(0)
+        if 'href=' in tag:
+            return re.sub(r'href="[^"]*"', 'href="' + back + '"', tag, count=1)
+        return tag[:-1] + ' href="' + back + '">'
+
+    # Only the anchor carrying id="backLastPage" is touched (not the "Get Started" link).
+    html = re.sub(r'<a\b[^>]*id="backLastPage"[^>]*>', _repl, html, count=1)
+    # Visible deploy marker so the live version is easy to confirm via view-source.
+    html = html.replace('</body>', '<!-- A43-rev5 back_url=' + back + ' -->\n</body>', 1)
+    return html
+
+
 @app.route('/about')
 def about_page():
     """About page"""
-    return render_template('about.html')
+    return _render_page_with_back('about.html')
 
 
 @app.route('/support')
 def support_page():
     """Support page"""
-    return render_template('support.html')
+    return _render_page_with_back('support.html')
 
 
 # FIX 5: Support contact API endpoint with CSRF validation
