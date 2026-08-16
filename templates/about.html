@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <!-- TheraSocial About Version B195 (A43) -->
-<!-- B195 (A43): Cache-bust lockstep — all JS ?v bumped B186->B195 in sync with the index NAV FIX (the About link & Support button now navigate to the standalone /about and /support routes instead of toggling in-app views). No functional/JS changes in this file. -->
+<!-- B195 (A43, rev4 — FINAL: explicit ?ret= return path): "Back to Last Page" navigates to document.referrer (matches
+     the support page). The referrer is reliable here (Referrer-Policy strict-origin-when-
+     cross-origin; confirmed in server logs); the rev2 history.length guard broke when the
+     invite link was opened directly (history.length === 1). Now: same-origin referrer -> go
+     there; else history.back(); else "/". Also cache-bust lockstep: all JS ?v B186->B195 in
+     sync with the index NAV FIX (About/Support navigate to the standalone /about, /support). -->
 <!-- B185 (A41): (1) "Get Started" now points to "/" (the landing/sign-up page) instead of the
      wrong "/register" route. (2) "Back to Last Page" now actually returns to the previous page
      (e.g. the /invite/<username> page a visitor arrived from) via history.back(), falling back to
@@ -356,19 +361,34 @@
 
     <script src="/static/js/i18n.js?v=B195"></script>
     <script>
-        // A41: "Back to Last Page" should return the visitor to the page they came from
-        // (e.g. the /invite/<username> page), not hard-navigate to the home/login page.
-        // Falls back to home only when there is no same-origin page to go back to.
+        // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
+        // the support page. The invite page links here as /about?ret=/invite/<username>; we read
+        // that path live from this page's URL (immune to Referer stripping, history quirks, and
+        // caching) and point the button straight at it. Only a same-origin absolute path
+        // ("/...", not "//") is accepted. With no ?ret= (e.g. from the home page), we fall back
+        // to the referrer, then history.back(), then href="/".
         (function () {
             var back = document.getElementById('backLastPage');
             if (!back) return;
+
+            var ret = null;
+            try { ret = new URLSearchParams(window.location.search).get('ret'); } catch (_) {}
+            var validRet = ret && ret.charAt(0) === '/' && ret.charAt(1) !== '/';
+            if (validRet) {
+                back.setAttribute('href', ret);
+            }
+
             back.addEventListener('click', function (e) {
+                if (validRet) return;   // href already correct; let the browser navigate.
                 var ref = document.referrer || '';
                 if (ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href) {
                     e.preventDefault();
+                    window.location.href = ref;
+                } else if (window.history.length > 1) {
+                    e.preventDefault();
                     window.history.back();
                 }
-                // else: no usable previous page — let the href="/" fallback proceed.
+                // else: no in-tab history, or arrived from another site — use href="/".
             });
         })();
 

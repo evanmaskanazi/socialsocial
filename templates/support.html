@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <!-- TheraSocial Support Version B195 (A43) -->
-<!-- B195 (A43): Cache-bust lockstep — all JS ?v bumped B186->B195 in sync with the index NAV FIX (the About link & Support button now navigate to the standalone /about and /support routes instead of toggling in-app views). No functional/JS changes in this file. -->
+<!-- B195 (A43, rev4 — FINAL: explicit ?ret= return path): BACK-BUTTON FIX. "Back to Last Page" navigates to
+     document.referrer. Render access logs proved the browser DOES send the invite page as the
+     Referer (GET /support  Referer: /invite/<username>), so the referrer is the reliable
+     signal. The rev2 attempt used window.history.length as the guard and broke: when the
+     visitor opens the invite link directly, the invite page is the first tab entry, so
+     history.length === 1 on /support, the "length > 1" test failed, and the button fell back to
+     href="/" (home). Now: same-origin referrer -> go there; else history.back(); else "/".
+     invite -> support -> Back = invite; login -> support -> Back = login. Cache-bust lockstep:
+     all JS ?v B186->B195. -->
 <!-- B185 (A41): (1) "Back to Last Page" now actually returns to the previous page (e.g. the
      /invite/<username> page a visitor arrived from) via history.back(), falling back to "/" only
      when there is no same-origin referrer. (2) CACHE-BUST: the i18n.js reference had NO ?v token
@@ -543,19 +551,51 @@
 
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B195"></script>
     <script>
-        // A41: "Back to Last Page" returns the visitor to the page they came from (e.g. the
-        // /invite/<username> page), not the home/login page. Falls back to "/" if there is no
-        // same-origin referrer to go back to.
+        // A43 (rev6): BULLETPROOF back button. Every earlier revision ultimately trusted the
+        // anchor's href (rev4 set href once at load and then did `if (validRet) return;` on
+        // click, letting the browser follow href). If ANYTHING changed the href or the URL
+        // between load and click — i18n re-rendering, or a history.replaceState() elsewhere
+        // stripping the ?ret= query — the click silently went to "/" (home). That is exactly
+        // the reported symptom. This version does NOT depend on the href at all: it recomputes
+        // the destination LIVE at click time and navigates there itself, in a capture-phase
+        // listener (so it runs before any other click handler). It also logs to the console so
+        // the live behavior is verifiable. Order of preference: ?ret= param -> same-origin
+        // referrer -> history.back() -> the href="/" fallback. Only same-origin absolute paths
+        // ("/...", not "//") are accepted, to prevent open-redirects.
         (function () {
             var back = document.getElementById('backLastPage');
-            if (!back) return;
-            back.addEventListener('click', function (e) {
+            if (!back) { try { console.log('[BACK rev6] no #backLastPage element'); } catch (_) {} return; }
+
+            function destination() {
+                var ret = null;
+                try { ret = new URLSearchParams(window.location.search).get('ret'); } catch (_) {}
+                if (ret && ret.charAt(0) === '/' && ret.charAt(1) !== '/') return ret;
                 var ref = document.referrer || '';
-                if (ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href) {
+                if (ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href) return ref;
+                return null;
+            }
+
+            var initial = destination();
+            try {
+                console.log('[BACK rev6] loaded | search=' + window.location.search +
+                            ' | referrer=' + (document.referrer || '(none)') +
+                            ' | destination=' + (initial || '(none -> "/")'));
+            } catch (_) {}
+            if (initial) back.setAttribute('href', initial);  // progressive enhancement only
+
+            back.addEventListener('click', function (e) {
+                var dest = destination();
+                try { console.log('[BACK rev6] click | destination=' + (dest || '(none)') +
+                                  ' | history.length=' + window.history.length); } catch (_) {}
+                if (dest) {
+                    e.preventDefault();
+                    window.location.assign(dest);          // ACTIVE navigation — ignores href
+                } else if (window.history.length > 1) {
                     e.preventDefault();
                     window.history.back();
                 }
-            });
+                // else: nothing to go back to — allow the href="/" default.
+            }, true);  // capture phase: run before any other click handler
         })();
 
         // FIX 1: Toast notification system (replaces alert())
