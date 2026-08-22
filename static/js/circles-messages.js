@@ -907,7 +907,7 @@ async function loadCircleRecommendations() {
                             onmouseout="this.style.transform='scale(1)'">
                             <span data-i18n="circles.add_to_circle">Add to Circle</span>
                         </button>
-                        <button onclick="blockUser(${req.requester_id}, '${escapedUsername}')" 
+                        <button onclick="(typeof blockUser === 'function' ? blockUser : blockUserFromSearch)(${req.requester_id}, '${escapedUsername}')" 
                             style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
                             onmouseover="this.style.transform='scale(1.05)'; this.style.background='#dc2626';" 
                             onmouseout="this.style.transform='scale(1)'; this.style.background='#ef4444';">
