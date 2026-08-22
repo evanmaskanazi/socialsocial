@@ -9,7 +9,7 @@
      lockstep: all JS ?v bumped B195->B196 in sync with index/parameters/circles
      (circles-messages.js and parameters-social.js changed this round; i18n.js/feed-updates.js
      unchanged but bumped in lockstep per the repo's cache-bust convention). Also reconstructed
-     the truncated tail of the contact-form <script> (the uploaded A50 copy was cut off
+     the truncated tail of the contact-form script block (the uploaded A50 copy was cut off
      mid-statement). No existing form/JS logic changed. -->
 <!-- TheraSocial Support Version B195 (A43) -->
 <!-- B195 (A43, rev4 — FINAL: explicit ?ret= return path): BACK-BUTTON FIX. "Back to Last Page" navigates to
@@ -831,7 +831,7 @@
     </script>
     <!-- ============================================================================ -->
     <!-- A51-UX: 10 additive, presentation-only layout/readability improvements (B196). -->
-    <!-- Self-contained single <style> block, namespaced ts-a51-ux. No markup, IDs or JS -->
+    <!-- Self-contained single style block, namespaced ts-a51-ux. No markup, IDs or JS -->
     <!-- changed. Chosen to NOT overlap the existing A6/A8/A16/A41 blocks. Desktop+mobile.-->
     <!--  1 Long emails/URLs/handles never force horizontal overflow (word wrapping)      -->
     <!--  2 Images/video keep their aspect ratio (height:auto + the existing max-width)   -->
@@ -877,7 +877,7 @@
         @media (max-width: 768px) {
             /* (8) Hard guarantee that nothing overflows the viewport on phones. */
             input, select, textarea, table, pre, img, video { max-width: 100% !important; }
-            /* (9) Belt-and-braces guard against sideways page scroll (safe on <body>:
+            /* (9) Belt-and-braces guard against sideways page scroll (safe on the body element:
                    it propagates to the viewport without creating an inner scroll container). */
             body { overflow-x: hidden; }
             /* (10) Give stacked inline links (e.g. the three contact emails) a comfortable

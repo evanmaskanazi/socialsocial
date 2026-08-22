@@ -5,7 +5,7 @@
      picker) and parameters-social.js (widened first-check-in daily-reminder offer window so a
      new user who misses day 1 still gets prompted — Hebrew note H1; the reminder is already
      independent of other notification settings). Added the additive, self-contained A51-UX
-     presentation block before </body>. No existing markup/IDs/JS logic changed in this file. -->
+     presentation block before the closing body tag. No existing markup/IDs/JS logic changed in this file. -->
 <!-- TheraSocial Index Version B195 (A43) -->
 <!-- B195 (A43, rev2): goBack() (the in-app Support/About "Back to Last Page" handler) now
   falls back to a referrer-independent window.history.back() when no in-page origin was
@@ -23940,7 +23940,7 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
     <!-- ===================== END A41-UX ===================== -->
     <!-- ============================================================================ -->
     <!-- A51-UX: 10 additive, presentation-only layout/readability improvements (B196). -->
-    <!-- Self-contained single <style> block, namespaced ts-a51-ux. No markup, IDs or JS -->
+    <!-- Self-contained single style block, namespaced ts-a51-ux. No markup, IDs or JS -->
     <!-- changed. Chosen to NOT overlap the existing A6/A8/A16/A41 blocks. Desktop+mobile.-->
     <!--  1 Long emails/URLs/handles never force horizontal overflow (word wrapping)      -->
     <!--  2 Images/video keep their aspect ratio (height:auto + the existing max-width)   -->
@@ -23986,7 +23986,7 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
         @media (max-width: 768px) {
             /* (8) Hard guarantee that nothing overflows the viewport on phones. */
             input, select, textarea, table, pre, img, video { max-width: 100% !important; }
-            /* (9) Belt-and-braces guard against sideways page scroll (safe on <body>:
+            /* (9) Belt-and-braces guard against sideways page scroll (safe on the body element:
                    it propagates to the viewport without creating an inner scroll container). */
             body { overflow-x: hidden; }
             /* (10) Give stacked inline links (e.g. the three contact emails) a comfortable
