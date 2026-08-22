@@ -683,10 +683,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B196"></script>
+   <script src="/static/js/utilities.js?v=B197"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B196"></script>
-    <script src="/static/js/follow-requests.js?v=B196"></script>
+    <script src="/static/js/triggers.js?v=B197"></script>
+    <script src="/static/js/follow-requests.js?v=B197"></script>
 
 
     <style>
@@ -8063,7 +8063,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B196"></script>
+    <script src="/static/js/i18n.js?v=B197"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8416,9 +8416,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B196"></script>
-   <script src="/static/js/circles-messages.js?v=B196"></script>
-<script src="/static/js/feed-updates.js?v=B196"></script>
+<script src="/static/js/parameters-social.js?v=B197"></script>
+   <script src="/static/js/circles-messages.js?v=B197"></script>
+<script src="/static/js/feed-updates.js?v=B197"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -20760,7 +20760,7 @@ async function saveOperatorThreshold() {
     try {
         const res = await fetch('/api/operator/settings', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+            headers: { 'Content-Type': 'application/json' /* A71: CSRF header added by i18n.js fetch interceptor */ },
             credentials: 'include',
             body: JSON.stringify({ inactivity_threshold_days: parseInt(inp.value) || 30 })
         });
@@ -20809,7 +20809,7 @@ async function flagUser(userId, username) {
     try {
         const res = await fetch('/api/operator/flag-user', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+            headers: { 'Content-Type': 'application/json' /* A71: CSRF header added by i18n.js fetch interceptor */ },
             credentials: 'include',
             body: JSON.stringify({ user_id: userId, reason: 'inactivity' })
         });
