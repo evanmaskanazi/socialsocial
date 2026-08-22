@@ -7824,6 +7824,44 @@ def support_page():
     return _render_page_with_back('support.html')
 
 
+# ============================================================================
+# A60 SEO: robots.txt + sitemap.xml so Google/Bing can discover the public pages.
+# Additive, read-only, no auth, no DB. Exposes ONLY the three genuinely public
+# routes (/, /about, /support) and explicitly keeps the app, diary, API and
+# personal invite links out of search. URLs are built from the live request host,
+# so this works on any domain without hard-coding one.
+# ============================================================================
+@app.route('/robots.txt')
+def robots_txt():
+    """Tell crawlers what they may index, and where the sitemap is."""
+    base = request.url_root.rstrip('/')
+    lines = [
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /api/",        # internal endpoints
+        "Disallow: /parameters",  # the private diary page
+        "Disallow: /invite/",     # personal invite links
+        "Sitemap: " + base + "/sitemap.xml",
+    ]
+    return Response("\n".join(lines) + "\n", mimetype="text/plain")
+
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    """List the public pages for search engines to consider."""
+    base = request.url_root.rstrip('/')
+    public_paths = ['/', '/about', '/support']   # ONLY genuinely public pages
+    items = "".join(
+        "<url><loc>{}{}</loc><changefreq>weekly</changefreq></url>".format(base, p)
+        for p in public_paths
+    )
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>'
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+           + items +
+           '</urlset>')
+    return Response(xml, mimetype="application/xml")
+
+
 # FIX 5: Support contact API endpoint with CSRF validation
 @app.route('/api/support/contact', methods=['POST'])
 @rate_limit_endpoint(max_requests=25, window=86400, endpoint_name='support_contact')  # B105: 25 per day per IP
