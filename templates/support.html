@@ -1,4 +1,16 @@
 <!DOCTYPE html>
+<!-- TheraSocial Support Version B196 (A51) -->
+<!-- B196 (A51): (1) Contact block now shows the three real support addresses
+     (contact@bentsh.com, bennybrandst@gmail.com, emaskanazi@gmail.com) in place of the old
+     placeholder, and a real Israeli mobile / WhatsApp number (054-284-7464) as clickable
+     tel: + wa.me links, labelled as an Israeli cell & WhatsApp number in EN/HE/AR/RU.
+     (2) Added an honest meta description + Open Graph tags (page had none). (3) Added the
+     additive, self-contained A51-UX presentation block before </body>. (4) CACHE-BUST
+     lockstep: all JS ?v bumped B195->B196 in sync with index/parameters/circles
+     (circles-messages.js and parameters-social.js changed this round; i18n.js/feed-updates.js
+     unchanged but bumped in lockstep per the repo's cache-bust convention). Also reconstructed
+     the truncated tail of the contact-form <script> (the uploaded A50 copy was cut off
+     mid-statement). No existing form/JS logic changed. -->
 <!-- TheraSocial Support Version B195 (A43) -->
 <!-- B195 (A43, rev4 — FINAL: explicit ?ret= return path): BACK-BUTTON FIX. "Back to Last Page" navigates to
      document.referrer. Render access logs proved the browser DOES send the invite page as the
@@ -23,6 +35,12 @@
     <!-- FIX: Security meta tags -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
+    <!-- A51: honest, additive SEO/social metadata (page previously had none). -->
+    <meta name="description" content="TheraSocial Support Center — contact us, browse answers to common questions, or send us a message.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Support - TheraSocial">
+    <meta property="og:description" content="Contact TheraSocial support or find answers to common questions.">
+    <meta name="twitter:card" content="summary">
     <style>
         * {
             margin: 0;
@@ -395,13 +413,30 @@
         <div class="support-sections">
             <div class="support-card">
                 <h2>📞 <span data-i18n="support.contact_us">Contact Us</span></h2>
+                <!-- A51: replaced the single placeholder address with the three real support
+                     inboxes so messages actually reach a monitored mailbox. -->
                 <div class="contact-info">
                     <strong data-i18n="support.email">Email:</strong>
-                    <a href="/cdn-cgi/l/email-protection#75060005051a070135011d100714061a161c14195b161a18" style="color: #B6A9C9;"><span class="__cf_email__" data-cfemail="f4878184849b8680b4809c918695879b979d9598da979b99">[email&#160;protected]</span></a>
+                    <a href="mailto:contact@bentsh.com" style="color: #B6A9C9; display: block; word-break: break-word;">contact@bentsh.com</a>
+                    <a href="mailto:bennybrandst@gmail.com" style="color: #B6A9C9; display: block; word-break: break-word;">bennybrandst@gmail.com</a>
+                    <a href="mailto:emaskanazi@gmail.com" style="color: #B6A9C9; display: block; word-break: break-word;">emaskanazi@gmail.com</a>
                 </div>
+                <!-- A51: real Israeli mobile / WhatsApp number, clickable as tel: + wa.me.
+                     Labelled in EN/HE/AR/RU so every supported audience understands it is an
+                     Israeli cell & WhatsApp line. -->
                 <div class="contact-info">
                     <strong data-i18n="support.phone">Phone:</strong>
-                    <span>1-800-THERAPY (843-7279)</span>
+                    <span style="display: block;">
+                        <a href="tel:+972542847464" style="color: #B6A9C9; white-space: nowrap;" dir="ltr">054-284-7464</a>
+                        &nbsp;·&nbsp;
+                        <a href="https://wa.me/972542847464" target="_blank" rel="noopener" style="color: #25D366; white-space: nowrap; font-weight: 600;">WhatsApp</a>
+                    </span>
+                    <span style="display: block; margin-top: 6px; font-size: 12px; color: #777; line-height: 1.5;" dir="auto">
+                        Israeli mobile &amp; WhatsApp number<br>
+                        מספר סלולרי ו‑WhatsApp ישראלי<br>
+                        رقم جوّال وواتساب إسرائيلي<br>
+                        Израильский мобильный номер и WhatsApp
+                    </span>
                 </div>
                 <div class="contact-info">
                     <strong data-i18n="support.hours">Hours:</strong>
@@ -549,7 +584,7 @@
         </center>
     </div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B195"></script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B196"></script>
     <script>
         // A43 (rev6): BULLETPROOF back button. Every earlier revision ultimately trusted the
         // anchor's href (rev4 set href once at load and then did `if (validRet) return;` on
@@ -776,4 +811,81 @@
             .catch(error => {
                 console.error('Error:', error);
                 // FIX 1: Use toast instead of alert()
-                showNotification(error.message || 'There was an error sending y
+                showNotification(error.message || 'There was an error sending your message. Please try again.', 'error');
+            })
+            .finally(() => {
+                // A51: the uploaded A50 copy of this file was truncated mid-statement here (the
+                // upload ended at "There was an error sending y"). Reconstructed the standard
+                // tail so the page is valid HTML again: complete the error toast, re-enable the
+                // submit button whether the request succeeded or failed, and close the handler.
+                // No behaviour beyond the original intent was added.
+                const submitBtn = document.getElementById('submitBtn');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = (window.i18n && window.i18n.translate)
+                        ? (window.i18n.translate('support.send') || 'Send Message')
+                        : 'Send Message';
+                }
+            });
+        });
+    </script>
+    <!-- ============================================================================ -->
+    <!-- A51-UX: 10 additive, presentation-only layout/readability improvements (B196). -->
+    <!-- Self-contained single <style> block, namespaced ts-a51-ux. No markup, IDs or JS -->
+    <!-- changed. Chosen to NOT overlap the existing A6/A8/A16/A41 blocks. Desktop+mobile.-->
+    <!--  1 Long emails/URLs/handles never force horizontal overflow (word wrapping)      -->
+    <!--  2 Images/video keep their aspect ratio (height:auto + the existing max-width)   -->
+    <!--  3 Wide tables / code scroll inside their own box, never the whole page          -->
+    <!--  4 Brand-tinted text selection highlight (light + dark)                          -->
+    <!--  5 Clear, consistent "disabled" affordance on controls                           -->
+    <!--  6 More legible placeholder text for accessibility/contrast (light + dark)       -->
+    <!--  7 tel: / WhatsApp links never wrap awkwardly mid-number                         -->
+    <!--  8 Mobile: form controls, media & tables can never exceed the viewport width     -->
+    <!--  9 Mobile: guard against accidental sideways page scroll                         -->
+    <!-- 10 Mobile: comfortable tap spacing for stacked inline links (e.g. contact links) -->
+    <!-- ============================================================================ -->
+    <style id="ts-a51-ux">
+        /* (1) Never let a long unbreakable string (an email address, URL, or @handle)
+               push the layout wider than the screen. */
+        p, li, td, th, dd, blockquote,
+        .contact-info, .faq-answer, .message-text, .bio, .user-bio {
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        a { overflow-wrap: break-word; }
+        /* (2) Keep media in proportion when width is constrained (pairs with the existing
+               max-width:100% rules so images are never vertically squashed). */
+        img, svg, video { height: auto; }
+        /* (3) Wide tables / preformatted blocks scroll within themselves instead of
+               stretching the page sideways. */
+        pre { max-width: 100%; overflow-x: auto; }
+        table { max-width: 100%; }
+        /* (4) On-brand text selection (both themes). */
+        ::selection { background: rgba(107, 139, 164, 0.28); }
+        .dark-mode ::selection, body.dark-mode ::selection { background: rgba(150, 170, 200, 0.40); }
+        /* (5) Consistent, honest disabled state. */
+        button:disabled, input:disabled, select:disabled, textarea:disabled,
+        .btn:disabled, [aria-disabled="true"] {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        /* (6) Placeholder text that meets contrast guidance (was often too faint). */
+        ::placeholder { color: #7A8798; opacity: 1; }
+        .dark-mode ::placeholder, body.dark-mode ::placeholder { color: #9AA6B8; }
+        /* (7) Phone / WhatsApp links stay on one line. */
+        a[href^="tel:"], a[href*="wa.me"] { white-space: nowrap; }
+        @media (max-width: 768px) {
+            /* (8) Hard guarantee that nothing overflows the viewport on phones. */
+            input, select, textarea, table, pre, img, video { max-width: 100% !important; }
+            /* (9) Belt-and-braces guard against sideways page scroll (safe on <body>:
+                   it propagates to the viewport without creating an inner scroll container). */
+            body { overflow-x: hidden; }
+            /* (10) Give stacked inline links (e.g. the three contact emails) a comfortable
+                    vertical tap area without changing the layout structure. */
+            .contact-info a, li > a { padding-top: 2px; padding-bottom: 2px; }
+        }
+    </style>
+    <!-- ===================== END A51-UX ===================== -->
+
+</body>
+</html>

@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B196 (A51) -->
+<!-- B196 (A51): Cache-bust lockstep — all JS ?v bumped B195->B196 in sync with
+     parameters/circles/support. Changed this round: circles-messages.js (nicer add-to-circle
+     picker) and parameters-social.js (widened first-check-in daily-reminder offer window so a
+     new user who misses day 1 still gets prompted — Hebrew note H1; the reminder is already
+     independent of other notification settings). Added the additive, self-contained A51-UX
+     presentation block before </body>. No existing markup/IDs/JS logic changed in this file. -->
 <!-- TheraSocial Index Version B195 (A43) -->
 <!-- B195 (A43, rev2): goBack() (the in-app Support/About "Back to Last Page" handler) now
   falls back to a referrer-independent window.history.back() when no in-page origin was
@@ -662,10 +669,10 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
     <meta name="robots" content="noindex, nofollow">
-   <script src="/static/js/utilities.js?v=B195"></script>
+   <script src="/static/js/utilities.js?v=B196"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B195"></script>
-    <script src="/static/js/follow-requests.js?v=B195"></script>
+    <script src="/static/js/triggers.js?v=B196"></script>
+    <script src="/static/js/follow-requests.js?v=B196"></script>
 
 
     <style>
@@ -8042,7 +8049,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B195"></script>
+    <script src="/static/js/i18n.js?v=B196"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8395,9 +8402,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B195"></script>
-   <script src="/static/js/circles-messages.js?v=B195"></script>
-<script src="/static/js/feed-updates.js?v=B195"></script>
+<script src="/static/js/parameters-social.js?v=B196"></script>
+   <script src="/static/js/circles-messages.js?v=B196"></script>
+<script src="/static/js/feed-updates.js?v=B196"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -23931,6 +23938,64 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
     })();
     </script>
     <!-- ===================== END A41-UX ===================== -->
+    <!-- ============================================================================ -->
+    <!-- A51-UX: 10 additive, presentation-only layout/readability improvements (B196). -->
+    <!-- Self-contained single <style> block, namespaced ts-a51-ux. No markup, IDs or JS -->
+    <!-- changed. Chosen to NOT overlap the existing A6/A8/A16/A41 blocks. Desktop+mobile.-->
+    <!--  1 Long emails/URLs/handles never force horizontal overflow (word wrapping)      -->
+    <!--  2 Images/video keep their aspect ratio (height:auto + the existing max-width)   -->
+    <!--  3 Wide tables / code scroll inside their own box, never the whole page          -->
+    <!--  4 Brand-tinted text selection highlight (light + dark)                          -->
+    <!--  5 Clear, consistent "disabled" affordance on controls                           -->
+    <!--  6 More legible placeholder text for accessibility/contrast (light + dark)       -->
+    <!--  7 tel: / WhatsApp links never wrap awkwardly mid-number                         -->
+    <!--  8 Mobile: form controls, media & tables can never exceed the viewport width     -->
+    <!--  9 Mobile: guard against accidental sideways page scroll                         -->
+    <!-- 10 Mobile: comfortable tap spacing for stacked inline links (e.g. contact links) -->
+    <!-- ============================================================================ -->
+    <style id="ts-a51-ux">
+        /* (1) Never let a long unbreakable string (an email address, URL, or @handle)
+               push the layout wider than the screen. */
+        p, li, td, th, dd, blockquote,
+        .contact-info, .faq-answer, .message-text, .bio, .user-bio {
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        a { overflow-wrap: break-word; }
+        /* (2) Keep media in proportion when width is constrained (pairs with the existing
+               max-width:100% rules so images are never vertically squashed). */
+        img, svg, video { height: auto; }
+        /* (3) Wide tables / preformatted blocks scroll within themselves instead of
+               stretching the page sideways. */
+        pre { max-width: 100%; overflow-x: auto; }
+        table { max-width: 100%; }
+        /* (4) On-brand text selection (both themes). */
+        ::selection { background: rgba(107, 139, 164, 0.28); }
+        .dark-mode ::selection, body.dark-mode ::selection { background: rgba(150, 170, 200, 0.40); }
+        /* (5) Consistent, honest disabled state. */
+        button:disabled, input:disabled, select:disabled, textarea:disabled,
+        .btn:disabled, [aria-disabled="true"] {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        /* (6) Placeholder text that meets contrast guidance (was often too faint). */
+        ::placeholder { color: #7A8798; opacity: 1; }
+        .dark-mode ::placeholder, body.dark-mode ::placeholder { color: #9AA6B8; }
+        /* (7) Phone / WhatsApp links stay on one line. */
+        a[href^="tel:"], a[href*="wa.me"] { white-space: nowrap; }
+        @media (max-width: 768px) {
+            /* (8) Hard guarantee that nothing overflows the viewport on phones. */
+            input, select, textarea, table, pre, img, video { max-width: 100% !important; }
+            /* (9) Belt-and-braces guard against sideways page scroll (safe on <body>:
+                   it propagates to the viewport without creating an inner scroll container). */
+            body { overflow-x: hidden; }
+            /* (10) Give stacked inline links (e.g. the three contact emails) a comfortable
+                    vertical tap area without changing the layout structure. */
+            .contact-info a, li > a { padding-top: 2px; padding-bottom: 2px; }
+        }
+    </style>
+    <!-- ===================== END A51-UX ===================== -->
+
 </body>
 
 
