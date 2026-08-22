@@ -10,7 +10,11 @@
      (circles-messages.js and parameters-social.js changed this round; i18n.js/feed-updates.js
      unchanged but bumped in lockstep per the repo's cache-bust convention). Also reconstructed
      the truncated tail of the contact-form script block (the uploaded A50 copy was cut off
-     mid-statement). No existing form/JS logic changed. -->
+     mid-statement). No existing form/JS logic changed.
+     A52 FOLLOW-UP: localised the form's toast + inline validation messages (they were hardcoded
+     English and showed in English on the he/ar/ru page) via a small self-contained SUPPORT_MSGS
+     map — no i18n.js change, so no cache-bump needed. Also removed the remaining literal tag
+     strings (<script>/<style>/<body>) that were still sitting inside comments. -->
 <!-- TheraSocial Support Version B195 (A43) -->
 <!-- B195 (A43, rev4 — FINAL: explicit ?ret= return path): BACK-BUTTON FIX. "Back to Last Page" navigates to
      document.referrer. Render access logs proved the browser DOES send the invite page as the
@@ -633,6 +637,59 @@
             }, true);  // capture phase: run before any other click handler
         })();
 
+        // A52 (translation fix): the toast + inline validation messages below were hardcoded
+        // English and showed in English even on the Hebrew / Arabic / Russian page. This small,
+        // self-contained map localises them WITHOUT touching the shared i18n.js (so no app-wide
+        // cache-bump is needed). The language is read live at call time, so it also follows a
+        // mid-session language switch made with the selector above.
+        const SUPPORT_MSGS = {
+            fix_errors:    { en: 'Please fix the errors in the form',
+                             he: 'אנא תקנו את השגיאות בטופס',
+                             ar: 'يرجى تصحيح الأخطاء في النموذج',
+                             ru: 'Пожалуйста, исправьте ошибки в форме' },
+            required:      { en: 'This field is required',
+                             he: 'שדה חובה',
+                             ar: 'هذا الحقل مطلوب',
+                             ru: 'Это поле обязательно' },
+            invalid_email: { en: 'Please enter a valid email address',
+                             he: 'אנא הזינו כתובת אימייל תקינה',
+                             ar: 'يرجى إدخال عنوان بريد إلكتروني صالح',
+                             ru: 'Пожалуйста, введите корректный адрес эл. почты' },
+            name_short:    { en: 'Name must be at least 2 characters',
+                             he: 'השם חייב להכיל לפחות 2 תווים',
+                             ar: 'يجب أن يتكون الاسم من حرفين على الأقل',
+                             ru: 'Имя должно содержать не менее 2 символов' },
+            message_short: { en: 'Message must be at least 10 characters',
+                             he: 'ההודעה חייבת להכיל לפחות 10 תווים',
+                             ar: 'يجب أن تتكون الرسالة من 10 أحرف على الأقل',
+                             ru: 'Сообщение должно содержать не менее 10 символов' },
+            sending:       { en: 'Sending...',
+                             he: 'שולח...',
+                             ar: 'جارٍ الإرسال...',
+                             ru: 'Отправка...' },
+            too_many:      { en: 'Too many requests. Please wait a moment and try again.',
+                             he: 'יותר מדי בקשות. אנא המתינו רגע ונסו שוב.',
+                             ar: 'طلبات كثيرة جدًا. يرجى الانتظار لحظة والمحاولة مرة أخرى.',
+                             ru: 'Слишком много запросов. Подождите немного и повторите попытку.' },
+            thanks:        { en: 'Thank you for contacting us! We will respond within 24 hours.',
+                             he: 'תודה שפניתם אלינו! נחזור אליכם תוך 24 שעות.',
+                             ar: 'شكرًا لتواصلكم معنا! سنرد خلال 24 ساعة.',
+                             ru: 'Спасибо за обращение! Мы ответим в течение 24 часов.' },
+            send_error:    { en: 'There was an error sending your message. Please try again.',
+                             he: 'אירעה שגיאה בשליחת ההודעה. אנא נסו שוב.',
+                             ar: 'حدث خطأ أثناء إرسال رسالتك. يرجى المحاولة مرة أخرى.',
+                             ru: 'Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте снова.' }
+        };
+        function supportLang() {
+            try { if (window.i18n && window.i18n.getCurrentLanguage) { var l = window.i18n.getCurrentLanguage(); if (l) return l; } } catch (_) {}
+            try { return localStorage.getItem('selectedLanguage') || 'en'; } catch (_) { return 'en'; }
+        }
+        function supportMsg(key) {
+            var m = SUPPORT_MSGS[key];
+            if (!m) return '';
+            return m[supportLang()] || m.en;
+        }
+
         // FIX 1: Toast notification system (replaces alert())
         function showNotification(message, type = 'info') {
             const container = document.getElementById('toastContainer');
@@ -717,16 +774,16 @@
                 let errorMsg = '';
                 
                 if (!value) {
-                    errorMsg = 'This field is required';
+                    errorMsg = supportMsg('required');
                     isValid = false;
                 } else if (fieldId === 'email' && !validateEmail(value)) {
-                    errorMsg = 'Please enter a valid email address';
+                    errorMsg = supportMsg('invalid_email');
                     isValid = false;
                 } else if (fieldId === 'name' && value.length < 2) {
-                    errorMsg = 'Name must be at least 2 characters';
+                    errorMsg = supportMsg('name_short');
                     isValid = false;
                 } else if (fieldId === 'message' && value.length < 10) {
-                    errorMsg = 'Message must be at least 10 characters';
+                    errorMsg = supportMsg('message_short');
                     isValid = false;
                 }
                 
@@ -768,13 +825,13 @@
 
             // Client-side validation
             if (!validateForm()) {
-                showNotification('Please fix the errors in the form', 'error');
+                showNotification(supportMsg('fix_errors'), 'error');
                 return;
             }
 
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Sending...';
+            submitBtn.textContent = supportMsg('sending');
 
             const formData = {
                 name: document.getElementById('name').value.trim(),
@@ -794,7 +851,7 @@
             })
             .then(response => {
                 if (response.status === 429) {
-                    throw new Error('Too many requests. Please wait a moment and try again.');
+                    throw new Error(supportMsg('too_many'));
                 }
                 return response.json();
             })
@@ -803,7 +860,7 @@
                     throw new Error(data.error);
                 }
                 // FIX 1: Use toast instead of alert()
-                showNotification('Thank you for contacting us! We will respond within 24 hours.', 'success');
+                showNotification(supportMsg('thanks'), 'success');
                 document.getElementById('supportForm').reset();
                 // Refresh CSRF token after successful submission
                 fetchCSRFToken();
@@ -811,7 +868,7 @@
             .catch(error => {
                 console.error('Error:', error);
                 // FIX 1: Use toast instead of alert()
-                showNotification(error.message || 'There was an error sending your message. Please try again.', 'error');
+                showNotification(error.message || supportMsg('send_error'), 'error');
             })
             .finally(() => {
                 // A51: the uploaded A50 copy of this file was truncated mid-statement here (the
