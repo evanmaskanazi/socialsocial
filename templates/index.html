@@ -664,11 +664,25 @@
     <meta name="theme-color" content="#6B8BA4" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#1F2937" media="(prefers-color-scheme: dark)">
     <title>Thera Social - Human Network Infrastructure</title>
+    <!-- A60 SEO: public description + social-preview tags for the home page (additive). -->
+    <meta name="description" content="TheraSocial helps you track your daily well-being and share it privately with the people you trust.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="TheraSocial">
+    <meta property="og:description" content="Track daily well-being and share it privately with the people you trust.">
+    <meta name="twitter:card" content="summary">
+    <!-- A60 Google Search Console verification (HTML-tag method): when you add the site in Search
+         Console and pick "HTML tag", it shows a line like the one below. Paste the real value in
+         place of REPLACE-WITH-YOUR-CODE, REMOVE the surrounding comment markers so the tag is live,
+         redeploy, then click Verify in Search Console. (Leave it commented until you have the code.) -->
+    <!-- <meta name="google-site-verification" content="REPLACE-WITH-YOUR-CODE"> -->
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
-    <meta name="robots" content="noindex, nofollow">
+    <!-- A60: was "noindex, nofollow", which blocked Google entirely. Set to "index, follow"
+         so the public pages can be discovered and listed. Google only ever sees the logged-out
+         view of "/", so the private app and personal data are never exposed. -->
+    <meta name="robots" content="index, follow">
    <script src="/static/js/utilities.js?v=B196"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
     <script src="/static/js/triggers.js?v=B196"></script>

@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!-- TheraSocial About Version B196 (A60) -->
+<!-- B196 (A60): (1) Added the public SEO description + Open Graph/Twitter tags this page was
+     missing, in line with index/support. (2) Confirmed there is NO robots "noindex" tag here, so
+     /about is already eligible for search listing. (3) CACHE-BUST lockstep: i18n.js ?v bumped
+     B195 -> B196 to match index/parameters/circles/support (i18n.js is unchanged this round but
+     bumped in lockstep so every page requests the same cached copy). No functional/JS changes. -->
 <!-- TheraSocial About Version B195 (A43) -->
 <!-- B195 (A43, rev4 — FINAL: explicit ?ret= return path): "Back to Last Page" navigates to document.referrer (matches
      the support page). The referrer is reliable here (Referrer-Policy strict-origin-when-
@@ -18,6 +24,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About - TheraSocial</title>
+    <!-- A60 SEO: public description + social-preview tags (page previously had none). -->
+    <meta name="description" content="About TheraSocial — a well-being-first platform for tracking your daily health and staying privately connected with the people you trust.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="About TheraSocial">
+    <meta property="og:description" content="A well-being-first platform for tracking your daily health and staying privately connected with the people you trust.">
+    <meta name="twitter:card" content="summary">
     <!-- FIX: Security meta tags -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -359,7 +371,7 @@
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B195"></script>
+    <script src="/static/js/i18n.js?v=B196"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read
