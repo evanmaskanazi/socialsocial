@@ -7925,8 +7925,10 @@ def support_contact():
         logger.info(f"Support contact from {email}: {subject[:50]}")
         
         # Send email to support address (+ co-founder copy)
-        SUPPORT_EMAIL = 'notifications@therasocialconnect.com'
-        SUPPORT_RECIPIENTS = [SUPPORT_EMAIL, 'bennybrandst@gmail.com']
+        # A51: route contact-form submissions to the three real, monitored inboxes shown on the
+        # Support page, replacing the placeholder address that did not receive mail.
+        SUPPORT_EMAIL = 'contact@bentsh.com'
+        SUPPORT_RECIPIENTS = ['contact@bentsh.com', 'bennybrandst@gmail.com', 'emaskanazi@gmail.com']
         try:
             from_email = app.config.get('MAIL_DEFAULT_SENDER', os.environ.get('FROM_EMAIL', 'TheraSocial <onboarding@resend.dev>'))
             
