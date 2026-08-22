@@ -1,3 +1,11 @@
+// Version B196 (A51): (referenced as ?v=B196, in lockstep with index/circles/parameters).
+//   H2 (Hebrew note): showCircleAddMenu() no longer uses a browser prompt() that asked the user
+//   to TYPE "1/2/3" to classify a connection into a circle. It now opens a clean, self-contained,
+//   tappable button popup (three labelled circle choices + a short description each, RTL-aware).
+//   Same signature and same addToCircle() call, so both callers — the "Add to Circle" button on a
+//   pending connection request and the circles list — get the nicer picker with no other change.
+//   Additive only. Cache-bust sync B185 -> B196.
+//
 // Version B185 (A41): (referenced as ?v=B185, in lockstep with index/circles/parameters).
 //   TIMEZONE FIX: formatMessageTime() now parses the backend's naive-UTC timestamps as UTC
 //   (via _tsToUTCDate) instead of local time, so "Just now / min ago / same-day time / Yesterday"
@@ -931,48 +939,129 @@ async function loadCircleRecommendations() {
     }
 }
 
-// Show menu to select which circle to add user to
+// Show menu to select which circle to add user to.
+// A51 (Hebrew note H2): the old flow used a browser prompt() asking the user to TYPE "1, 2 or 3"
+// — cumbersome and easy to get wrong, and it can't be styled or localised well. Replaced with a
+// clean, self-contained, tappable button popup (one card, three labelled circle buttons + a
+// short description of each). Same signature and same addToCircle(userId, circleType) call, so
+// every existing caller — the "Add to Circle" button on a pending connection request and the
+// circles list — now shows the nicer picker with no other change. RTL-aware; no dependencies.
 function showCircleAddMenu(userId, username) {
     const currentLang = window.i18n && window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en";
-    
+
     const labels = {
-        "en": { public: "General", close_friends: "Close Friends", family: "Family", title: "Add to which circle?" },
-        "he": { public: "כללי", close_friends: "חברים קרובים", family: "משפחה", title: "להוסיף לאיזה מעגל?" },
-        "ar": { public: "عام", close_friends: "أصدقاء مقربون", family: "عائلة", title: "إضافة إلى أي دائرة?" },
-        "ru": { public: "Общий", close_friends: "Близкие друзья", family: "Семья", title: "Добавить в какой круг?" }
+        "en": { public: "General", close_friends: "Close Friends", family: "Family",
+                title: "Add to which circle?", cancel: "Cancel",
+                d_public: "Acquaintances", d_close: "People you trust", d_family: "Closest people" },
+        "he": { public: "כללי", close_friends: "חברים קרובים", family: "משפחה",
+                title: "להוסיף לאיזה מעגל?", cancel: "ביטול",
+                d_public: "מכרים", d_close: "אנשים שאתם סומכים עליהם", d_family: "האנשים הקרובים ביותר" },
+        "ar": { public: "عام", close_friends: "أصدقاء مقربون", family: "عائلة",
+                title: "إضافة إلى أي دائرة؟", cancel: "إلغاء",
+                d_public: "معارف", d_close: "أشخاص تثق بهم", d_family: "الأقرب إليك" },
+        "ru": { public: "Общий", close_friends: "Близкие друзья", family: "Семья",
+                title: "Добавить в какой круг?", cancel: "Отмена",
+                d_public: "Знакомые", d_close: "Люди, которым вы доверяете", d_family: "Самые близкие" }
     };
-    
+
     const t = labels[currentLang] || labels["en"];
-    
-    const choice = prompt(
-        `${t.title}
+    const rtl = (currentLang === "he" || currentLang === "ar");
 
-` +
-        `1. ${t.public}
-` +
-        `2. ${t.close_friends}
-` +
-        `3. ${t.family}
+    // Never stack two pickers.
+    const existing = document.getElementById("tsCircleAddMenu");
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
 
-` +
-        `Enter 1, 2, or 3:`
-    );
-    
-    if (!choice) return;
-    
-    const circleMap = {
-        "1": "public",
-        "2": "class_b",
-        "3": "class_a"
-    };
-    
-    const circleType = circleMap[choice.trim()];
-    if (!circleType) {
-        showNotification(translateCircle('circles.invalid_choice') || 'Invalid choice', 'error');
-        return;
+    const overlay = document.createElement("div");
+    overlay.id = "tsCircleAddMenu";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("dir", rtl ? "rtl" : "ltr");
+    overlay.style.cssText =
+        "position:fixed;inset:0;z-index:100060;background:rgba(45,55,72,0.45);" +
+        "display:flex;align-items:center;justify-content:center;padding:20px;" +
+        "-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);";
+
+    const card = document.createElement("div");
+    card.style.cssText =
+        "background:#fff;border-radius:18px;max-width:380px;width:100%;padding:22px 20px 16px;" +
+        "box-shadow:0 20px 60px rgba(0,0,0,0.22);text-align:" + (rtl ? "right" : "left") + ";" +
+        "max-height:88vh;overflow-y:auto;" +
+        "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;";
+
+    const h = document.createElement("h3");
+    h.textContent = t.title;
+    h.style.cssText = "margin:0 0 4px 0;font-size:1.12rem;font-weight:700;color:#2D3748;line-height:1.35;";
+    card.appendChild(h);
+
+    if (username) {
+        const sub = document.createElement("p");
+        sub.textContent = String(username);
+        sub.style.cssText = "margin:0 0 14px 0;font-size:0.9rem;color:#6B7280;font-weight:600;";
+        card.appendChild(sub);
     }
-    
-    addToCircle(userId, circleType);
+
+    const close = function () {
+        document.removeEventListener("keydown", onEsc, true);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    };
+    const onEsc = function (e) { if (e.key === "Escape") { e.preventDefault(); close(); } };
+
+    const options = [
+        { type: "public",  emoji: "🌐", label: t.public,        desc: t.d_public, color: "#6B8BA4" },
+        { type: "class_b", emoji: "💛", label: t.close_friends, desc: t.d_close,  color: "#9DB8A0" },
+        { type: "class_a", emoji: "❤️", label: t.family,        desc: t.d_family, color: "#C99BB0" }
+    ];
+
+    options.forEach(function (opt) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.style.cssText =
+            "display:flex;align-items:center;gap:12px;width:100%;margin:0 0 10px 0;padding:12px 14px;" +
+            "border:1.5px solid #E5E7EB;border-radius:12px;background:#fff;cursor:pointer;" +
+            "text-align:" + (rtl ? "right" : "left") + ";min-height:52px;transition:border-color .15s,background .15s;" +
+            "font-family:inherit;";
+        btn.onmouseover = function () { btn.style.borderColor = opt.color; btn.style.background = "#F7FAFC"; };
+        btn.onmouseout = function () { btn.style.borderColor = "#E5E7EB"; btn.style.background = "#fff"; };
+
+        const ic = document.createElement("span");
+        ic.textContent = opt.emoji;
+        ic.setAttribute("aria-hidden", "true");
+        ic.style.cssText = "font-size:22px;line-height:1;flex-shrink:0;";
+
+        const txt = document.createElement("span");
+        txt.style.cssText = "display:flex;flex-direction:column;gap:2px;";
+        const name = document.createElement("span");
+        name.textContent = opt.label;
+        name.style.cssText = "font-size:0.98rem;font-weight:600;color:#2D3748;";
+        const desc = document.createElement("span");
+        desc.textContent = opt.desc;
+        desc.style.cssText = "font-size:0.78rem;color:#8898aa;";
+        txt.appendChild(name);
+        txt.appendChild(desc);
+
+        btn.appendChild(ic);
+        btn.appendChild(txt);
+        btn.addEventListener("click", function () {
+            close();
+            addToCircle(userId, opt.type, username);
+        });
+        card.appendChild(btn);
+    });
+
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = t.cancel;
+    cancel.style.cssText =
+        "width:100%;margin-top:4px;padding:11px 14px;border:none;border-radius:12px;cursor:pointer;" +
+        "background:transparent;color:#6B7280;font-size:0.92rem;font-weight:500;min-height:44px;font-family:inherit;";
+    cancel.addEventListener("click", close);
+    card.appendChild(cancel);
+
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    document.addEventListener("keydown", onEsc, true);
+    try { card.querySelector("button").focus(); } catch (e) {}
 }
 
 window.loadCircleRecommendations = loadCircleRecommendations;

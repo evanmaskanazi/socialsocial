@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!-- TheraSocial Circles Version B196 (A51) -->
+<!-- B196 (A51): Cache-bust lockstep — all JS ?v bumped B195->B196 in sync with
+     index/parameters/support. circles-messages.js changed this round: the "Add to Circle"
+     picker is now a clean, tappable button popup instead of a browser prompt() that asked the
+     user to type 1/2/3 (Hebrew note H2 — classifying a connection into a circle was cumbersome).
+     Added the additive, self-contained A51-UX presentation block before the closing body tag. No functional/
+     JS changes in this file. -->
 <!-- TheraSocial Circles Version B195 (A43) -->
 <!-- B195 (A43): Cache-bust lockstep — all JS ?v bumped B186->B195 in sync with the index NAV FIX (the About link & Support button now navigate to the standalone /about and /support routes instead of toggling in-app views). No functional/JS changes in this file. -->
 <!-- B185 (A41): CACHE-BUST resync — all JS ?v bumped to B185 in lockstep with index/parameters
@@ -157,9 +164,9 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B195"></script>
-    <script src="/static/js/circles-messages.js?v=B195"></script>
-    <script src="/static/js/feed-updates.js?v=B195"></script>
+    <script src="/static/js/i18n.js?v=B196"></script>
+    <script src="/static/js/circles-messages.js?v=B196"></script>
+    <script src="/static/js/feed-updates.js?v=B196"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
@@ -1107,5 +1114,63 @@ try {
     })();
     </script>
     <!-- ===================== END A41-UX ===================== -->
+    <!-- ============================================================================ -->
+    <!-- A51-UX: 10 additive, presentation-only layout/readability improvements (B196). -->
+    <!-- Self-contained single style block, namespaced ts-a51-ux. No markup, IDs or JS -->
+    <!-- changed. Chosen to NOT overlap the existing A6/A8/A16/A41 blocks. Desktop+mobile.-->
+    <!--  1 Long emails/URLs/handles never force horizontal overflow (word wrapping)      -->
+    <!--  2 Images/video keep their aspect ratio (height:auto + the existing max-width)   -->
+    <!--  3 Wide tables / code scroll inside their own box, never the whole page          -->
+    <!--  4 Brand-tinted text selection highlight (light + dark)                          -->
+    <!--  5 Clear, consistent "disabled" affordance on controls                           -->
+    <!--  6 More legible placeholder text for accessibility/contrast (light + dark)       -->
+    <!--  7 tel: / WhatsApp links never wrap awkwardly mid-number                         -->
+    <!--  8 Mobile: form controls, media & tables can never exceed the viewport width     -->
+    <!--  9 Mobile: guard against accidental sideways page scroll                         -->
+    <!-- 10 Mobile: comfortable tap spacing for stacked inline links (e.g. contact links) -->
+    <!-- ============================================================================ -->
+    <style id="ts-a51-ux">
+        /* (1) Never let a long unbreakable string (an email address, URL, or @handle)
+               push the layout wider than the screen. */
+        p, li, td, th, dd, blockquote,
+        .contact-info, .faq-answer, .message-text, .bio, .user-bio {
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        a { overflow-wrap: break-word; }
+        /* (2) Keep media in proportion when width is constrained (pairs with the existing
+               max-width:100% rules so images are never vertically squashed). */
+        img, svg, video { height: auto; }
+        /* (3) Wide tables / preformatted blocks scroll within themselves instead of
+               stretching the page sideways. */
+        pre { max-width: 100%; overflow-x: auto; }
+        table { max-width: 100%; }
+        /* (4) On-brand text selection (both themes). */
+        ::selection { background: rgba(107, 139, 164, 0.28); }
+        .dark-mode ::selection, body.dark-mode ::selection { background: rgba(150, 170, 200, 0.40); }
+        /* (5) Consistent, honest disabled state. */
+        button:disabled, input:disabled, select:disabled, textarea:disabled,
+        .btn:disabled, [aria-disabled="true"] {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        /* (6) Placeholder text that meets contrast guidance (was often too faint). */
+        ::placeholder { color: #7A8798; opacity: 1; }
+        .dark-mode ::placeholder, body.dark-mode ::placeholder { color: #9AA6B8; }
+        /* (7) Phone / WhatsApp links stay on one line. */
+        a[href^="tel:"], a[href*="wa.me"] { white-space: nowrap; }
+        @media (max-width: 768px) {
+            /* (8) Hard guarantee that nothing overflows the viewport on phones. */
+            input, select, textarea, table, pre, img, video { max-width: 100% !important; }
+            /* (9) Belt-and-braces guard against sideways page scroll (safe on the body element:
+                   it propagates to the viewport without creating an inner scroll container). */
+            body { overflow-x: hidden; }
+            /* (10) Give stacked inline links (e.g. the three contact emails) a comfortable
+                    vertical tap area without changing the layout structure. */
+            .contact-info a, li > a { padding-top: 2px; padding-bottom: 2px; }
+        }
+    </style>
+    <!-- ===================== END A51-UX ===================== -->
+
 </body>
 </html>

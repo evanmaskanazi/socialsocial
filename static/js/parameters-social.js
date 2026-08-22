@@ -1,3 +1,10 @@
+// Version B196 (A51): (referenced as ?v=B196). Additive only. One targeted change: the
+// TSDiaryReminder offer window in shouldOffer() was widened from EXACTLY the first check-in to
+// the first few check-ins (<= 3) so a new user who missed the day-1 prompt still gets offered
+// the daily reminder (Hebrew note H1 — a new user never received it). The reminder is already
+// independent of all other notification settings, so no separation fix was needed. Cache-bust
+// sync B195 -> B196.
+//
 // Version B175 (A26): (referenced as ?v=B175). Additive only. Adds the self-contained
 // window.TSDiaryReminder module at the END of this file — after a user's FIRST check-in it
 // offers, once, a 19:00 daily email diary reminder (with the "manage it in Settings" and
@@ -4683,11 +4690,20 @@ console.log('[V2] Parameters-social.js vB7 loaded - Privacy reset fix, cache-bus
             }
         } catch (e) { /* settings unreachable — fall through to the first-day check */ }
 
-        // Guard 3: only on the first day of data, so long-standing users are never nagged.
+        // Guard 3: only during the user's first few days of data, so long-standing users are
+        // never nagged.
         // A26 audit fix: /api/parameters/dates returns HTTP 200 with {success:false, dates:[]}
         // when it errors, so checking dResp.ok alone let a two-year user through as "0 dates".
-        // Require an explicit success AND exactly one recorded date — we have just saved one,
-        // so anything other than 1 means this is not the first check-in.
+        // Require an explicit success AND a small recorded-date count.
+        // A51 (Hebrew note H1): a new user reported never receiving the daily reminder — not
+        // even in spam. The daily reminder is off by default and this modal is the only place a
+        // typical user turns it on; the old gate offered it on EXACTLY the first check-in, so if
+        // that single prompt was missed (gift-box collision, a reload, or a quick dismissal) the
+        // user was never offered it again. Widen the window to the first few check-ins (<= 3) so
+        // a missed day-1 prompt is recovered, while established users (> 3 days) are still never
+        // nagged. NOTE: the reminder itself is already fully independent of every other
+        // notification setting — both the backend PUT (/api/notification-settings) and the
+        // Settings UI toggle it on its own — so no "separation" fix is needed there.
         try {
             var dResp = await fetch('/api/parameters/dates', { credentials: 'include' });
             if (!dResp.ok) return false;
@@ -4695,12 +4711,12 @@ console.log('[V2] Parameters-social.js vB7 loaded - Privacy reset fix, cache-bus
             if (!data || data.success === false) return false;
             var dates = Array.isArray(data) ? data : (data.dates || []);
             if (!Array.isArray(dates)) return false;
-            if (dates.length !== 1) {
-                if (dates.length > 1) markAsked();
+            if (dates.length < 1 || dates.length > 3) {
+                if (dates.length > 3) markAsked();
                 return false;
             }
         } catch (e) {
-            return false;   // can't confirm it's the first check-in -> stay quiet
+            return false;   // can't confirm it's an early check-in -> stay quiet
         }
         return true;
     }
