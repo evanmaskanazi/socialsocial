@@ -22937,7 +22937,7 @@ def follow_user(user_id):
         return jsonify({'error': 'Failed to connect with user'}), 500
 
 
-@app.route('/api/unfollow/<int:user_id>', methods=['POST'])
+@app.route('/api/unfollow/<int:user_id>', methods=['POST', 'DELETE'])  # A71: frontend Disconnect button sends DELETE
 @login_required
 @require_csrf  # A41: CSRF protection (token supplied automatically by the i18n.js fetch interceptor)
 def unfollow_user(user_id):
