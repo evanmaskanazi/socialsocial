@@ -1,3 +1,11 @@
+// Version B198 (A81): (referenced as ?v=B198, in lockstep with index/circles/parameters/support).
+//   loadCircleRecommendations() now ALSO lists mutual connections that are not yet in any circle
+//   (via /api/following + /api/circles), so a connection APPROVED from the Connections page still
+//   appears in the "Connection Options Pending for Classification" box to be sorted into a circle.
+//   addToCircle() calls window.refreshCirclesBadge() (defined in index.html) so the Circles-menu
+//   counter updates immediately. New i18n key circles.reason_connected_unclassified added in all 4
+//   languages via addCircleTranslations() (no i18n.js change). Additive only; no existing circle
+//   logic changed. Cache-bust sync B197 -> B198.
 // Version B196 (A51): (referenced as ?v=B196, in lockstep with index/circles/parameters).
 //   H2 (Hebrew note): showCircleAddMenu() no longer uses a browser prompt() that asked the user
 //   to TYPE "1/2/3" to classify a connection into a circle. It now opens a clean, self-contained,
@@ -837,6 +845,21 @@ async function loadCircleRecommendations() {
         }
         console.log('[CircleRecs] Container found');
 
+        // A81: the "to classify" box is strictly about MY OWN connections. When viewing ANOTHER
+        // user's circles (?user_id= / window.viewingUserId), do NOT render it — otherwise MY
+        // pending requests and MY connections would appear on their page. Hide the section and
+        // bail; re-show it for my own circles. (Also fixes the pre-existing A80 leak where my
+        // received requests were shown on another user's circles page.)
+        const _rSection = document.getElementById("circleRecommendationsSection");
+        const _rViewingUserId = new URLSearchParams(window.location.search).get("user_id") ||
+                                (typeof window !== "undefined" && window.viewingUserId) || null;
+        if (_rViewingUserId) {
+            recommendationsContainer.innerHTML = "";
+            if (_rSection) _rSection.style.display = "none";
+            return;
+        }
+        if (_rSection) _rSection.style.display = "";
+
         // Show loading state
         recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;">Loading requests...</p>`;
 
@@ -862,8 +885,49 @@ async function loadCircleRecommendations() {
         console.log('[CircleRecs] Response data:', JSON.stringify(data, null, 2));
 
         const requests = data.requests || [];
-        if (requests.length === 0) {
-            console.log('[CircleRecs] No pending follow requests');
+
+        // A81: also surface mutual connections that are NOT yet sorted into any circle, so a
+        // connection APPROVED from the Connections page (which only creates the follow, not a
+        // circle membership) still appears here to be classified. Frontend-only — reuses the
+        // existing /api/following and /api/circles endpoints. A connection drops off this list
+        // the moment it is placed into a circle.
+        let unclassified = [];
+        try {
+            const pendingIds = new Set(requests.map(r => Number(r.requester_id)));
+            const myCirclesRes = await fetch('/api/circles', { credentials: 'include' });
+            // A81: paginate /api/following (backend caps per_page at 100) so a user with >100
+            // connections isn't silently undercounted in the "to classify" list.
+            let following = [];
+            let page = 1, guard = 0;
+            while (guard++ < 20) {
+                const fr = await fetch('/api/following?per_page=100&page=' + page, { credentials: 'include' });
+                if (!fr.ok) break;
+                const fd = await fr.json();
+                const arr = fd.following || [];
+                following = following.concat(arr);
+                const pages = fd.pages || 1;
+                if (page >= pages || arr.length === 0) break;
+                page++;
+            }
+            if (myCirclesRes.ok) {
+                const myCircles = await myCirclesRes.json();
+                const circledIds = new Set();
+                ['public', 'class_b', 'class_a', 'general', 'close_friends', 'family'].forEach(k => {
+                    (myCircles && myCircles[k] ? myCircles[k] : []).forEach(m => {
+                        if (m && m.id != null) circledIds.add(Number(m.id));
+                    });
+                });
+                unclassified = following.filter(u =>
+                    u && u.follows_you && !circledIds.has(Number(u.id)) && !pendingIds.has(Number(u.id))
+                );
+                console.log('[CircleRecs] Unclassified connections:', unclassified.length);
+            }
+        } catch (e) {
+            console.error('[CircleRecs] Could not load unclassified connections:', e);
+        }
+
+        if (requests.length === 0 && unclassified.length === 0) {
+            console.log('[CircleRecs] Nothing to classify');
             recommendationsContainer.innerHTML = `<p style="color: #8898aa; text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
             if (window.i18n && window.i18n.applyLanguage) {
                 window.i18n.applyLanguage(window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en");
@@ -918,14 +982,49 @@ async function loadCircleRecommendations() {
             `;
         });
 
+        // A81: append the "connected but not yet in a circle" entries after the pending requests.
+        // Same "Add to Circle" picker; no Accept/Block needed since they are already connections.
+        unclassified.forEach((u) => {
+            const uName = u.display_name || u.username || 'User';
+            const uSafeName = escapeHtml(uName);
+            const uSafeInitial = escapeHtml((uName[0] || 'U').toUpperCase());
+            const uSafeCity = escapeHtml(u.selected_city || '');
+            // Same JS-string hardening used for pending requests above.
+            const uJsName = String(uName).replace(/[\\'"<>&]/g,
+                c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+            html += `
+                <div class="member-item" style="display: flex; align-items: center; gap: 15px; padding: 12px; border-radius: 10px; transition: background 0.2s; margin-bottom: 8px; background: #f1f8f4;">
+                    <div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        ${uSafeInitial}
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <div style="font-weight: 600; color: #667eea; cursor: pointer;"
+                             onclick="window.location.href='/?view=profile&user_id=${Number(u.id)}'"
+                             onmouseover="this.style.textDecoration='underline'"
+                             onmouseout="this.style.textDecoration='none'">${uSafeName}</div>
+                        <div style="font-size: 12px; color: #20a144;" data-i18n="circles.reason_connected_unclassified">Connected — choose a circle</div>
+                        ${u.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${uSafeCity}</div>` : ""}
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button onclick="showCircleAddMenu(${Number(u.id)}, '${uJsName}')"
+                            style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
+                            onmouseover="this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <span data-i18n="circles.add_to_circle">Add to Circle</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
         recommendationsContainer.innerHTML = html;
 
         if (window.i18n && window.i18n.applyLanguage) {
             const currentLang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : "en";
             window.i18n.applyLanguage(currentLang);
         }
-        
-        console.log('[CircleRecs] SUCCESS: Displayed', requests.length, 'pending requests');
+
+        console.log('[CircleRecs] SUCCESS: Displayed', requests.length, 'pending +', unclassified.length, 'unclassified');
         console.log('[CircleRecs] ========================================');
 
     } catch (error) {
@@ -1430,6 +1529,8 @@ async function addToCircle(userId, circleType, username) {
         );
 
         loadCircles();
+        // A81: refresh the Circles menu counter after a classification (index.html defines this).
+        if (typeof window.refreshCirclesBadge === 'function') window.refreshCirclesBadge();
 
         const searchResults = document.getElementById('searchResults');
         const searchInput = document.getElementById('userSearchInput');
@@ -1472,6 +1573,7 @@ function addCircleTranslations() {
             'privacy.class_a': 'Family',
             'privacy.private': 'Private',
             'circles.reason_pending_request': 'Sent you a connection request',
+            'circles.reason_connected_unclassified': 'Connected — choose a circle',
             'circles.no_recommendations': 'No pending requests'
         });
 
@@ -1501,6 +1603,7 @@ function addCircleTranslations() {
             'privacy.class_a': 'משפחה',
             'privacy.private': 'פרטי',
             'circles.reason_pending_request': 'שלח לך בקשת חיבור',
+            'circles.reason_connected_unclassified': 'מחוברים — בחרו מעגל',
             'circles.no_recommendations': 'אין בקשות ממתינות'
         });
 
@@ -1530,6 +1633,7 @@ function addCircleTranslations() {
             'privacy.class_a': 'العائلة',
             'privacy.private': 'خاص',
             'circles.reason_pending_request': 'أرسل لك طلب اتصال',
+            'circles.reason_connected_unclassified': 'متصل — اختر دائرة',
             'circles.no_recommendations': 'لا توجد طلبات معلقة'
         });
 
@@ -1560,6 +1664,7 @@ function addCircleTranslations() {
             'privacy.class_a': 'Семья',
             'privacy.private': 'Приватный',
             'circles.reason_pending_request': 'Отправил вам запрос на подключение',
+            'circles.reason_connected_unclassified': 'В контактах — выберите круг',
             'circles.no_recommendations': 'Нет ожидающих запросов'
         });
 
