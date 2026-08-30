@@ -1,3 +1,10 @@
+// Version B198 (A81): Added ONE additive translation key in all 4 languages —
+//   'circles.reason_connected_unclassified' ("Connected — choose a circle") next to the existing
+//   'circles.reason_pending_request'. It labels the new "connected but not yet in a circle" cards
+//   in the Circles "to classify" list. Added natively here (not only via the runtime
+//   addCircleTranslations) because the in-app circles view does not call addCircleTranslations, so
+//   a data-i18n lookup would otherwise render the raw key. No other change. Served as ?v=B198 in
+//   lockstep with index/parameters/circles/support.
 // Version B195 (A43): No string/logic changes this round — re-tagged and served as ?v=B195 in lockstep with the index NAV FIX (About/Support now navigate to the standalone /about and /support routes). Prior A41 note below.
 // Version B186 (A41): (referenced as ?v=B195). Fixed support.hours_detail in all 4 languages —
 //   it contained a literal <br>, which rendered as raw text because translations are applied via
@@ -1377,6 +1384,7 @@ const translations = {
     'circles.add_to_circle': 'Add to Circle',
     'circles.no_recommendations': 'No pending requests',
     'circles.reason_pending_request': 'Sent you a connection request',
+    'circles.reason_connected_unclassified': 'Connected — choose a circle',
     'circles.reason_mutual': 'Mutual connection',
     'circles.reason_mutual_city': 'Mutual connection & same city',
     'circles.reason_same_city': 'Same city',
@@ -3086,6 +3094,7 @@ const translations = {
     'circles.add_to_circle': 'הוסף למעגל',
     'circles.no_recommendations': 'אין בקשות ממתינות',
     'circles.reason_pending_request': 'שלח לך בקשת חיבור',
+    'circles.reason_connected_unclassified': 'מחוברים — בחרו מעגל',
     'circles.reason_mutual': 'קשר הדדי',
     'circles.reason_mutual_city': 'קשר הדדי ואותה עיר',
     'circles.reason_same_city': 'אותה עיר',
@@ -4799,6 +4808,7 @@ const translations = {
     'circles.add_to_circle': 'إضافة إلى الدائرة',
     'circles.no_recommendations': 'لا توجد طلبات معلقة',
     'circles.reason_pending_request': 'أرسل لك طلب اتصال',
+    'circles.reason_connected_unclassified': 'متصل — اختر دائرة',
     'circles.reason_mutual': 'اتصال متبادل',
     'circles.reason_mutual_city': 'اتصال متبادل ونفس المدينة',
     'circles.reason_same_city': 'نفس المدينة',
@@ -6516,6 +6526,7 @@ const translations = {
     'circles.add_to_circle': 'Добавить в круг',
     'circles.no_recommendations': 'Нет ожидающих запросов',
     'circles.reason_pending_request': 'Отправил вам запрос на подключение',
+    'circles.reason_connected_unclassified': 'В контактах — выберите круг',
     'circles.reason_mutual': 'Взаимная связь',
     'circles.reason_mutual_city': 'Взаимная связь и тот же город',
     'circles.reason_same_city': 'Тот же город',

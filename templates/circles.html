@@ -1,5 +1,13 @@
 <!DOCTYPE html>
-<!-- TheraSocial Circles Version B196 (A51) -->
+<!-- TheraSocial Circles Version B198 (A81) -->
+<!-- B198 (A81): Cache-bust lockstep — all live JS ?v bumped B197->B198 in sync with
+     index/parameters/support. circles-messages.js changed this round: the "Connection Options
+     Pending for Classification" list now ALSO shows mutual connections that are not yet in any
+     circle, so a connection approved from the Connections page still appears here to be sorted
+     into a circle (with a matching counter on the app's Circles menu, added in index.html).
+     Added an additive, self-contained A81-SCROLL block (visible scrollbar + a "more" overflow
+     hint on the circle / recommendation lists — item 3 of the colleague's notes). No existing
+     circles logic in this file changed. -->
 <!-- B196 (A51): Cache-bust lockstep — all JS ?v bumped B195->B196 in sync with
      index/parameters/support. circles-messages.js changed this round: the "Add to Circle"
      picker is now a clean, tappable button popup instead of a browser prompt() that asked the
@@ -164,9 +172,9 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B197"></script>
-    <script src="/static/js/circles-messages.js?v=B197"></script>
-    <script src="/static/js/feed-updates.js?v=B197"></script>
+    <script src="/static/js/i18n.js?v=B198"></script>
+    <script src="/static/js/circles-messages.js?v=B198"></script>
+    <script src="/static/js/feed-updates.js?v=B198"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
@@ -1171,6 +1179,92 @@ try {
         }
     </style>
     <!-- ===================== END A51-UX ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- A81-SCROLL: additive scroll affordance (colleague note #3 — "not clear there is -->
+    <!-- a scroll function in the lists"). Gives the circle / recommendation lists a      -->
+    <!-- clearly visible scrollbar and an animated "⌄" hint that appears only while a     -->
+    <!-- list overflows and is not scrolled to the end. Self-contained; no logic change.  -->
+    <!-- ============================================================================ -->
+    <style id="ts-a81-scroll-style">
+        .circle-members, #circleRecommendationsList, .search-results, .follow-requests-list {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(107,139,164,0.55) rgba(107,139,164,0.12);
+        }
+        .circle-members::-webkit-scrollbar, #circleRecommendationsList::-webkit-scrollbar,
+        .search-results::-webkit-scrollbar, .follow-requests-list::-webkit-scrollbar {
+            width: 10px; height: 10px;
+        }
+        .circle-members::-webkit-scrollbar-track, #circleRecommendationsList::-webkit-scrollbar-track,
+        .search-results::-webkit-scrollbar-track, .follow-requests-list::-webkit-scrollbar-track {
+            background: rgba(107,139,164,0.12); border-radius: 8px;
+        }
+        .circle-members::-webkit-scrollbar-thumb, #circleRecommendationsList::-webkit-scrollbar-thumb,
+        .search-results::-webkit-scrollbar-thumb, .follow-requests-list::-webkit-scrollbar-thumb {
+            background: rgba(107,139,164,0.55); border-radius: 8px;
+        }
+        .ts-a81-scrollhint {
+            display: none; text-align: center; margin: -4px auto 8px; padding: 2px 0;
+            font-size: 16px; line-height: 1; color: #6B8BA4; cursor: pointer; user-select: none;
+            animation: ts-a81-bob 1.4s ease-in-out infinite;
+        }
+        .ts-a81-scrollhint.show { display: block; }
+        @keyframes ts-a81-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+        @media (prefers-reduced-motion: reduce) { .ts-a81-scrollhint { animation: none; } }
+    </style>
+    <script id="ts-a81-scroll-script">
+    (function () {
+        if (window.__tsA81Scroll) return; window.__tsA81Scroll = true;
+        var SEL = '.circle-members, #circleRecommendationsList, .follow-requests-list';
+        function overflowing(el) { return (el.scrollHeight - el.clientHeight) > 6; }
+        function atEnd(el) { return el.scrollTop >= (el.scrollHeight - el.clientHeight - 6); }
+        function update(el) {
+            var hint = el.__tsA81Hint; if (!hint) return;
+            if (overflowing(el) && !atEnd(el)) hint.classList.add('show'); else hint.classList.remove('show');
+        }
+        function enhance(el) {
+            if (!el || el.__tsA81Scroll) return; el.__tsA81Scroll = true;
+            var hint = document.createElement('div');
+            hint.className = 'ts-a81-scrollhint';
+            hint.setAttribute('aria-hidden', 'true');
+            hint.textContent = '⌄';
+            hint.addEventListener('click', function () {
+                try { el.scrollBy({ top: Math.max(60, el.clientHeight * 0.7), behavior: 'smooth' }); }
+                catch (_) { el.scrollTop += 80; }
+            });
+            if (el.parentNode) el.parentNode.insertBefore(hint, el.nextSibling);
+            el.__tsA81Hint = hint;
+            el.addEventListener('scroll', function () { update(el); }, { passive: true });
+            if ('ResizeObserver' in window) { try { new ResizeObserver(function () { update(el); }).observe(el); } catch (_) {} }
+            if ('MutationObserver' in window) { try { new MutationObserver(function () { setTimeout(function () { update(el); }, 0); }).observe(el, { childList: true, subtree: true }); } catch (_) {} }
+            update(el);
+        }
+        function scan(root) {
+            try { var l = (root || document).querySelectorAll(SEL); for (var i = 0; i < l.length; i++) enhance(l[i]); } catch (_) {}
+        }
+        function boot() {
+            scan(document);
+            if ('MutationObserver' in window) {
+                new MutationObserver(function (muts) {
+                    for (var i = 0; i < muts.length; i++)
+                        for (var j = 0; j < muts[i].addedNodes.length; j++) {
+                            var n = muts[i].addedNodes[j];
+                            if (n.nodeType !== 1) continue;
+                            if (n.matches && n.matches(SEL)) enhance(n);
+                            if (n.querySelectorAll) scan(n);
+                        }
+                }).observe(document.body, { childList: true, subtree: true });
+            }
+            [500, 1500, 3000].forEach(function (ms) { setTimeout(function () { scan(document); }, ms); });
+            window.addEventListener('resize', function () {
+                try { var l = document.querySelectorAll(SEL); for (var i = 0; i < l.length; i++) update(l[i]); } catch (_) {}
+            }, { passive: true });
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+        else boot();
+    })();
+    </script>
+    <!-- ===================== END A81-SCROLL ===================== -->
 
 </body>
 </html>

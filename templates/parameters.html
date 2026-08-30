@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<!-- TheraSocial Parameters Version B196 (A51) -->
+<!-- TheraSocial Parameters Version B198 (A81) -->
+<!-- B198 (A81): Cache-bust lockstep ONLY — all live JS ?v bumped B197->B198 in sync with
+     index/circles/support (every live script tag verified). No functional/JS changes in this
+     file this round. -->
 <!-- B196 (A51): Cache-bust lockstep — all JS ?v bumped B195->B196 in sync with
      index/circles/support. parameters-social.js changed this round: the first-check-in daily
      email-reminder offer window was widened from exactly the first check-in to the first few
@@ -740,6 +743,12 @@
                 <button class="diary-more-close-btn" onclick="closeDiaryMoreMenu()">✕</button>
             </div>
             <ul class="diary-more-list">
+                <!-- A81: Profile at the top of the More menu, matching the home page. -->
+                <li class="diary-more-item" onclick="window.location.href='/?view=profile'">
+                    <span class="diary-more-icon">👤</span>
+                    <span class="diary-more-label" data-i18n="menu.profile">Profile</span>
+                </li>
+                <li class="diary-more-divider"></li>
                 <li class="diary-more-item" onclick="window.location.href='/?view=circles'">
                     <span class="diary-more-icon">⭕</span>
                     <span class="diary-more-label" data-i18n="menu.circles">Circles</span>
@@ -796,6 +805,8 @@
         <a href="/" class="diary-nav-brand">TheraSocial</a>
         <div class="diary-nav-links">
             <a href="/" class="diary-nav-link"><span>🏠</span><span class="nav-text" data-i18n="menu.home">Home</span></a>
+            <!-- A81: Profile is now its own tab; place it right after Home to match the home page. -->
+            <a href="/?view=profile" class="diary-nav-link"><span>👤</span><span class="nav-text" data-i18n="menu.profile">Profile</span></a>
             <a href="/?view=progress" class="diary-nav-link"><span>📈</span><span class="nav-text" data-i18n="menu.progress">Progress</span></a>
             <a href="/?view=circles" class="diary-nav-link"><span>⭕</span><span class="nav-text" data-i18n="menu.circles">Circles</span></a>
             <a href="/?view=messages" class="diary-nav-link"><span>💬</span><span class="nav-text" data-i18n="menu.messages">Messages</span></a>
@@ -951,9 +962,9 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B197"></script>
-    <script src="/static/js/parameters-social.js?v=B197"></script>
-    <script src="/static/js/feed-updates.js?v=B197"></script>
+    <script src="/static/js/i18n.js?v=B198"></script>
+    <script src="/static/js/parameters-social.js?v=B198"></script>
+    <script src="/static/js/feed-updates.js?v=B198"></script>
 
     <script>
         console.log('Parameters page loading...');
