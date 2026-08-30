@@ -1,5 +1,26 @@
 <!DOCTYPE html>
-<!-- TheraSocial Index Version B196 (A51) -->
+<!-- TheraSocial Index Version B198 (A81) -->
+<!-- B198 (A81): Cache-bust lockstep — ALL live JS ?v bumped B197->B198 in sync with
+     parameters/circles/support. Every live script tag was re-verified this round because the
+     A51 header said B196 while the live refs were actually B197 (the exact mismatch that has
+     caused stale-cache trouble before). Functional, ADDITIVE changes this round
+     (circles-messages.js also changed):
+       1. PROFILE is its own top-level tab again — added to the desktop sidebar and to the top of
+          the mobile "More" menu. The Fix10C redirect that bounced own-profile into Settings is
+          reversed: showView('profile') loads #profileView via the existing loadProfile().
+          Settings is otherwise left intact.
+       2. EDIT USERNAME: #profileView gains an editable username field + Save, wired to the
+          EXISTING PUT /api/user/profile {username} endpoint (no backend change).
+       3. CIRCLES COUNTER: an additive badge on the Circles menu items (sidebar + "More" menu)
+          counts pending connection requests PLUS mutual connections not yet sorted into a circle,
+          so a just-approved connection is visibly waiting to be classified. Existing endpoints
+          only.
+       4. SCROLL AFFORDANCE: additive block makes scrollable lists show a visible scrollbar and a
+          "more" overflow hint.
+     No app.py change. Round 2 note: one additive i18n key
+     (circles.reason_connected_unclassified) was added to i18n.js in all 4 languages so the
+     IN-APP circles view resolves it (that view does not run addCircleTranslations); the username
+     label strings are still injected additively at runtime. -->
 <!-- B196 (A51): Cache-bust lockstep — all JS ?v bumped B195->B196 in sync with
      parameters/circles/support. Changed this round: circles-messages.js (nicer add-to-circle
      picker) and parameters-social.js (widened first-check-in daily-reminder offer window so a
@@ -683,10 +704,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B197"></script>
+   <script src="/static/js/utilities.js?v=B198"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B197"></script>
-    <script src="/static/js/follow-requests.js?v=B197"></script>
+    <script src="/static/js/triggers.js?v=B198"></script>
+    <script src="/static/js/follow-requests.js?v=B198"></script>
 
 
     <style>
@@ -5745,6 +5766,12 @@
                 <button class="mobile-more-close-btn" onclick="closeMobileMoreMenu()">✕</button>
             </div>
             <ul class="mobile-more-menu-list">
+                <!-- A81: Profile restored as its own menu entry, placed at the top of the list. -->
+                <li class="mobile-more-menu-item" onclick="showViewFromMore('profile')">
+                    <span class="mobile-more-icon">👤</span>
+                    <span class="mobile-more-label" data-i18n="menu.profile">Profile</span>
+                </li>
+                <li class="mobile-more-menu-divider"></li>
                 <li class="mobile-more-menu-item" onclick="showViewFromMore('circles')">
                     <span class="mobile-more-icon">⭕</span>
                     <span class="mobile-more-label" data-i18n="menu.circles">Circles</span>
@@ -5795,6 +5822,11 @@
                     <li class="sidebar-item active" data-view="home">
                         <span class="sidebar-icon">🏠</span>
                         <span class="sidebar-label" data-i18n="menu.home">Home</span>
+                    </li>
+                    <!-- A81: Profile restored as its own top-level tab (was merged into Settings). -->
+                    <li class="sidebar-item" data-view="profile" onclick="showView('profile')" style="cursor: pointer;">
+                        <span class="sidebar-icon">👤</span>
+                        <span class="sidebar-label" data-i18n="menu.profile">Profile</span>
                     </li>
                     <li class="sidebar-item" data-view="progress">
                         <span class="sidebar-icon">📈</span>
@@ -6087,6 +6119,20 @@
                         </div>
 
                         <div class="profile-fields">
+                            <!-- A81: editable username (was display-only). Saves via the existing
+                                 PUT /api/user/profile {username} endpoint — no backend change. -->
+                            <div class="form-group" id="usernameEditSection">
+                                <label class="form-label" data-i18n="profile.username">Username</label>
+                                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <input type="text" class="form-input" id="profileUsernameInput"
+                                           maxlength="80" autocomplete="username" spellcheck="false"
+                                           style="flex: 1; min-width: 0;">
+                                    <button type="button" class="btn btn-secondary" id="saveUsernameBtn"
+                                            style="padding: 8px 16px; white-space: nowrap;"
+                                            data-i18n="profile.save_username">Save Username</button>
+                                </div>
+                                <small id="usernameEditHint" style="display: none; margin-top: 4px; font-size: 12px;"></small>
+                            </div>
                             <!-- PJ6001: Birth Year Field -->
                             <div class="form-group" id="birthYearSection">
                                 <label class="form-label" data-i18n="profile.birth_year">Birth Year</label>
@@ -8063,7 +8109,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B197"></script>
+    <script src="/static/js/i18n.js?v=B198"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8416,9 +8462,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B197"></script>
-   <script src="/static/js/circles-messages.js?v=B197"></script>
-<script src="/static/js/feed-updates.js?v=B197"></script>
+<script src="/static/js/parameters-social.js?v=B198"></script>
+   <script src="/static/js/circles-messages.js?v=B198"></script>
+<script src="/static/js/feed-updates.js?v=B198"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -10364,6 +10410,16 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
             return;
         }
 
+        // A81: Skip profile handler - the Profile sidebar item has its own
+        // onclick="showView('profile')" (same pattern as invite/circles above). Without this
+        // skip, showView('profile') AND this delegated handler both call loadProfile() on one
+        // click -> a duplicate GET /api/profile and a double repaint that can clobber a value
+        // just typed into the username field.
+        if (item.dataset.view === 'profile') {
+            console.log('[DEBUG] Skipping generic handler for profile item');
+            return;
+        }
+
         document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
         item.classList.add('active');
 
@@ -10912,9 +10968,13 @@ function showView(viewName, resetContext) {
                 loadFeed();
                 break;
             case 'profile':
-                // Fix10C: Own profile is now inside Settings tab
-                showView('settings');
-                return;
+                // A81: Profile restored as its own tab (reverses the Fix10C redirect that sent
+                // own-profile into Settings). Loads own data into #profileView, matching the
+                // deep-link content-loader path that already used loadProfile().
+                viewingUserId = null;
+                window.viewingUserId = null;
+                loadProfile();
+                break;
             case 'circles':
                 // Reset viewingUserId if returning to own circles
                 if (viewingUserId === null || viewingUserId === currentUserId) {
@@ -12601,6 +12661,14 @@ window.addEventListener('languageChanged', () => {
                     profileAppearance.style.display = '';
                 }
 
+                // A81: editable username — show the section and populate it for the own profile.
+                const usernameEditSection = document.getElementById('usernameEditSection');
+                if (usernameEditSection) usernameEditSection.style.display = '';
+                const profileUsernameInput = document.getElementById('profileUsernameInput');
+                if (profileUsernameInput) profileUsernameInput.value = response.username || '';
+                const usernameEditHint = document.getElementById('usernameEditHint');
+                if (usernameEditHint) { usernameEditHint.style.display = 'none'; usernameEditHint.textContent = ''; }
+
                 // Re-enable profile fields for own profile
                 const bioElement = document.getElementById('profileBio');
                 const interestsElement = document.getElementById('profileInterests');
@@ -12675,6 +12743,108 @@ window.addEventListener('languageChanged', () => {
                 showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
             }
         });
+
+        // ===================================================================
+        // A81: Editable username. Additive, self-contained. Labels are injected
+        // into window.i18n at runtime (no i18n.js change); the save uses the
+        // EXISTING PUT /api/user/profile {username} endpoint (validates format +
+        // uniqueness server-side). No other profile logic is touched.
+        // ===================================================================
+        (function () {
+            function injectA81UsernameI18n() {
+                if (!window.i18n || !window.i18n.translations) return false;
+                var add = {
+                    en: { 'profile.username': 'Username', 'profile.save_username': 'Save Username',
+                          'profile.username_empty': 'Username cannot be empty',
+                          'profile.username_unchanged': 'That is already your username',
+                          'profile.username_updated': 'Username updated',
+                          'profile.username_error': 'Could not update username' },
+                    he: { 'profile.username': 'שם משתמש', 'profile.save_username': 'שמירת שם משתמש',
+                          'profile.username_empty': 'שם המשתמש לא יכול להיות ריק',
+                          'profile.username_unchanged': 'זהו כבר שם המשתמש שלך',
+                          'profile.username_updated': 'שם המשתמש עודכן',
+                          'profile.username_error': 'לא ניתן לעדכן את שם המשתמש' },
+                    ar: { 'profile.username': 'اسم المستخدم', 'profile.save_username': 'حفظ اسم المستخدم',
+                          'profile.username_empty': 'لا يمكن أن يكون اسم المستخدم فارغًا',
+                          'profile.username_unchanged': 'هذا هو اسم المستخدم الخاص بك بالفعل',
+                          'profile.username_updated': 'تم تحديث اسم المستخدم',
+                          'profile.username_error': 'تعذّر تحديث اسم المستخدم' },
+                    ru: { 'profile.username': 'Имя пользователя', 'profile.save_username': 'Сохранить имя',
+                          'profile.username_empty': 'Имя пользователя не может быть пустым',
+                          'profile.username_unchanged': 'Это уже ваше имя пользователя',
+                          'profile.username_updated': 'Имя пользователя обновлено',
+                          'profile.username_error': 'Не удалось обновить имя пользователя' }
+                };
+                Object.keys(add).forEach(function (lang) {
+                    if (!window.i18n.translations[lang]) window.i18n.translations[lang] = {};
+                    Object.assign(window.i18n.translations[lang], add[lang]);
+                });
+                try {
+                    var _a81lang = window.i18n.getCurrentLanguage ? window.i18n.getCurrentLanguage() : 'en';
+                    // A81: use safeApplyLanguage — the raw i18n.applyLanguage has the known PJ4007
+                    // bug that blanks the #languageSelector value. safeApplyLanguage wraps it.
+                    if (window.safeApplyLanguage) window.safeApplyLanguage(_a81lang);
+                    else if (window.i18n.applyLanguage) window.i18n.applyLanguage(_a81lang);
+                } catch (_) {}
+                return true;
+            }
+            if (!injectA81UsernameI18n()) {
+                var tries = 0;
+                var iv = setInterval(function () {
+                    if (injectA81UsernameI18n() || ++tries > 40) clearInterval(iv);
+                }, 100);
+            }
+
+            var a81Msg = function (key, fallback) {
+                return (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
+            };
+            var btn = document.getElementById('saveUsernameBtn');
+            if (!btn || btn.dataset.tsA81Bound) return;
+            btn.dataset.tsA81Bound = '1';
+            btn.addEventListener('click', async function () {
+                var input = document.getElementById('profileUsernameInput');
+                var hint = document.getElementById('usernameEditHint');
+                var newName = (input && input.value ? input.value : '').trim();
+                var showHint = function (text, ok) {
+                    if (!hint) return;
+                    hint.textContent = text;
+                    hint.style.color = ok ? '#2E7D32' : '#C17C74';
+                    hint.style.display = 'block';
+                };
+                if (!newName) { showHint(a81Msg('profile.username_empty', 'Username cannot be empty'), false); return; }
+                var prev = (typeof currentUser !== 'undefined' && currentUser && currentUser.username) ||
+                           (window.currentUser && window.currentUser.username) || '';
+                if (prev && newName === prev) { showHint(a81Msg('profile.username_unchanged', 'That is already your username'), true); return; }
+                btn.disabled = true;
+                try {
+                    // A81: apiCall returns null (it does NOT throw) on 401 / 429 rate-limit /
+                    // exhausted network retry. Treat that as a failure rather than a false success
+                    // that would locally mutate currentUser.username and show a green "updated".
+                    var res = await apiCall('/user/profile', 'PUT', { username: newName });
+                    if (!res) {
+                        showHint(a81Msg('profile.username_error', 'Could not update username'), false);
+                        return;
+                    }
+                    var disp = document.getElementById('profileUsername');
+                    if (disp) disp.textContent = newName;
+                    var avatar = document.getElementById('profileAvatar');
+                    if (avatar) avatar.textContent = newName.charAt(0).toUpperCase();
+                    var header = document.querySelector('#profileView h2');
+                    if (header) header.textContent = newName + "'s Profile";
+                    if (typeof currentUser !== 'undefined' && currentUser) currentUser.username = newName;
+                    if (window.currentUser) window.currentUser.username = newName;
+                    showHint(a81Msg('profile.username_updated', 'Username updated'), true);
+                    if (typeof showNotification === 'function') showNotification(a81Msg('profile.username_updated', 'Username updated'), 'success');
+                    if (typeof window.refreshCirclesBadge === 'function') window.refreshCirclesBadge();
+                } catch (e) {
+                    var em = (e && e.message) || a81Msg('profile.username_error', 'Could not update username');
+                    showHint(em, false);
+                    if (typeof showNotification === 'function') showNotification(em, 'error');
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        })();
 
         // PJ6001: Update birth year function
         async function updateBirthYear() {
@@ -12986,8 +13156,47 @@ async function loadCircleRecommendations() {
         console.log('[CircleRecs] Got data:', data);
 
         const requests = data.requests || [];
-        if (requests.length === 0) {
-            console.log('[CircleRecs] No pending follow requests');
+
+        // A81: also list mutual connections not yet in any circle, so a connection APPROVED from
+        // the Connections page still appears here (in the IN-APP circles view) to be classified.
+        // This mirrors the standalone circles page (circles-messages.js). This function is only
+        // called for own circles (see the guarded call site in loadCircles), so no gating needed
+        // here. Frontend-only via existing endpoints.
+        let unclassified = [];
+        try {
+            const pendingIds = new Set(requests.map(r => Number(r.requester_id)));
+            const myCirclesRes = await fetch('/api/circles', { credentials: 'include' });
+            // Paginate /api/following (backend caps per_page at 100) to avoid undercounting.
+            let following = [];
+            let page = 1, guard = 0;
+            while (guard++ < 20) {
+                const fr = await fetch('/api/following?per_page=100&page=' + page, { credentials: 'include' });
+                if (!fr.ok) break;
+                const fd = await fr.json();
+                const arr = fd.following || [];
+                following = following.concat(arr);
+                const pages = fd.pages || 1;
+                if (page >= pages || arr.length === 0) break;
+                page++;
+            }
+            if (myCirclesRes.ok) {
+                const myCircles = await myCirclesRes.json();
+                const circledIds = new Set();
+                ['public', 'class_b', 'class_a', 'general', 'close_friends', 'family'].forEach(k => {
+                    (myCircles && myCircles[k] ? myCircles[k] : []).forEach(m => {
+                        if (m && m.id != null) circledIds.add(Number(m.id));
+                    });
+                });
+                unclassified = following.filter(u =>
+                    u && u.follows_you && !circledIds.has(Number(u.id)) && !pendingIds.has(Number(u.id))
+                );
+            }
+        } catch (e) {
+            console.error('[CircleRecs] Could not load unclassified connections:', e);
+        }
+
+        if (requests.length === 0 && unclassified.length === 0) {
+            console.log('[CircleRecs] Nothing to classify');
             recommendationsContainer.innerHTML = `<p style="color: var(--gray); text-align: center;" data-i18n="circles.no_recommendations">No pending requests</p>`;
             // PJ4007: Use safe wrapper to protect language selector
             safeApplyLanguage(window.i18n?.getCurrentLanguage?.() || "en");
@@ -13030,12 +13239,43 @@ async function loadCircleRecommendations() {
             `;
         });
 
+        // A81: append connected-but-unclassified entries after the pending requests.
+        unclassified.forEach(u => {
+            const uName = u.display_name || u.username || 'User';
+            const uSafeName = escapeHtml(uName);
+            const uSafeInitial = escapeHtml((uName[0] || 'U').toUpperCase());
+            const uSafeCity = escapeHtml(u.selected_city || '');
+            const uJsName = String(uName).replace(/[\\'"<>&]/g,
+                c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+            html += `
+                <div class="recommendation-item" style="display: flex; align-items: center; gap: 15px; padding: 12px; border-radius: 10px; transition: background 0.2s; margin-bottom: 8px; background: #f1f8f4;">
+                    <div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        ${uSafeInitial}
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <div style="font-weight: 600; color: #667eea; cursor: pointer;"
+                             onclick="window.location.href='/?view=profile&user_id=${Number(u.id)}'"
+                             onmouseover="this.style.textDecoration='underline'"
+                             onmouseout="this.style.textDecoration='none'">${uSafeName}</div>
+                        <div style="font-size: 12px; color: #20a144;" data-i18n="circles.reason_connected_unclassified">${_t('circles.reason_connected_unclassified', 'Connected — choose a circle')}</div>
+                        ${u.selected_city ? `<div style="font-size: 11px; color: var(--gray);">📍 ${uSafeCity}</div>` : ""}
+                    </div>
+                    <button onclick="showCircleAddMenu(${Number(u.id)}, '${uJsName}')"
+                        style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s;"
+                        onmouseover="this.style.transform='scale(1.05)'"
+                        onmouseout="this.style.transform='scale(1)'">
+                        <span data-i18n="circles.add_to_circle">Add to Circle</span>
+                    </button>
+                </div>
+            `;
+        });
+
         recommendationsContainer.innerHTML = html;
 
         // PJ4007: Use safe wrapper to protect language selector
         safeApplyLanguage(window.i18n?.getCurrentLanguage?.() || "en");
-        
-        console.log('[CircleRecs] Successfully displayed', requests.length, 'pending requests');
+
+        console.log('[CircleRecs] Successfully displayed', requests.length, 'pending +', unclassified.length, 'unclassified');
 
     } catch (error) {
         console.error("[CircleRecs] Error loading circle recommendations:", error);
@@ -13540,6 +13780,10 @@ function updateCircleDisplay(type, members) {
 };
 showNotification(`${username} added to ${circleLabels[circleType]} circle!`, 'success');
                 loadCircles();
+                // A81 (round 2): keep the Circles menu counter honest immediately — classifying
+                // someone removes them from the "unclassified" set, so the badge should drop now
+                // rather than at the next 30s poll.
+                if (typeof window.refreshCirclesBadge === 'function') window.refreshCirclesBadge();
                 document.getElementById('userSearchInput').value = '';
                 document.getElementById('searchResults').classList.remove('active');
             } catch (error) {
@@ -13557,6 +13801,9 @@ showNotification(`${username} added to ${circleLabels[circleType]} circle!`, 'su
                 });
 
                 loadCircles();
+                // A81 (round 2): removing someone from a circle may make them "unclassified"
+                // again — refresh the Circles menu counter immediately.
+                if (typeof window.refreshCirclesBadge === 'function') window.refreshCirclesBadge();
             } catch (error) {
                 showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
             }
@@ -16182,7 +16429,7 @@ async function loadUserProfileView(userId) {
             if (saveButton) saveButton.style.display = 'none';
 
             // Hide Change Password, Delete Account, Appearance, Data Export sections
-            ['changePasswordSection', 'accountDeletionSection', 'profileAppearanceSection', 'dataExportSection'].forEach(id => {
+            ['changePasswordSection', 'accountDeletionSection', 'profileAppearanceSection', 'dataExportSection', 'usernameEditSection'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
@@ -16341,6 +16588,11 @@ async function loadUserProfileView(userId) {
         }
         if (profileAppearance) {
             profileAppearance.style.display = 'none';
+        }
+        // A81: hide the editable-username control when viewing someone else's profile.
+        const a81UsernameEditSection = document.getElementById('usernameEditSection');
+        if (a81UsernameEditSection) {
+            a81UsernameEditSection.style.display = 'none';
         }
         
         // 10Link: Also hide data export section for other users
@@ -18104,7 +18356,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                     if (viewParam === 'following') loadFollowing();
                     else if (viewParam === 'followers') loadFollowers();
                     else if (viewParam === 'invite') loadInviteView();
-                    else if (viewParam === 'profile') loadProfile();
+                    // A81: showView('profile') now loads the own profile itself (the Fix10C
+                    // reversal), so no separate loadProfile() here — that would double GET /api/profile.
                     else if (viewParam === 'circles') loadCircles();
                     else if (viewParam === 'messages') loadConversations();
                     else if (viewParam === 'alerts') loadAlerts();
@@ -24009,6 +24262,212 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
         }
     </style>
     <!-- ===================== END A51-UX ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- A81-CIRCLES-BADGE: additive counter on the Circles menu items (desktop sidebar  -->
+    <!-- + mobile "More" menu). Counts pending connection requests PLUS mutual            -->
+    <!-- connections not yet sorted into any circle, so an approved connection is         -->
+    <!-- visibly waiting to be classified. Self-contained; existing endpoints only;       -->
+    <!-- creates its own badge elements (no markup change) and hides at zero.             -->
+    <!-- ============================================================================ -->
+    <script id="ts-a81-circles-badge">
+    (function () {
+        if (window.__tsA81CirclesBadge) return; window.__tsA81CirclesBadge = true;
+
+        function makeBadge(id) {
+            var b = document.createElement('span');
+            b.id = id;
+            b.style.cssText = 'display:none; margin-inline-start:auto; background:#28a745; color:#fff; ' +
+                'font-size:11px; font-weight:700; min-width:18px; height:18px; line-height:18px; ' +
+                'text-align:center; border-radius:9px; padding:0 5px; font-variant-numeric:tabular-nums;';
+            return b;
+        }
+
+        function ensureBadges() {
+            var side = document.querySelector('.sidebar-item[data-view="circles"]');
+            if (side && !document.getElementById('circlesSidebarBadge')) {
+                side.appendChild(makeBadge('circlesSidebarBadge'));
+            }
+            if (!document.getElementById('circlesMoreBadge')) {
+                var items = document.querySelectorAll('.mobile-more-menu-item');
+                for (var i = 0; i < items.length; i++) {
+                    var oc = items[i].getAttribute('onclick') || '';
+                    if (oc.indexOf("showViewFromMore('circles')") !== -1) {
+                        items[i].appendChild(makeBadge('circlesMoreBadge'));
+                        break;
+                    }
+                }
+            }
+        }
+
+        function setBadges(n) {
+            ['circlesSidebarBadge', 'circlesMoreBadge'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                if (n > 0) { el.textContent = n > 99 ? '99+' : String(n); el.style.display = 'inline-block'; }
+                else { el.style.display = 'none'; }
+            });
+        }
+
+        // A81: only meaningful once logged in. On the auth screen #dashboard is display:none;
+        // gating here avoids a burst of 401s every 30s against the API.
+        function loggedIn() {
+            var dash = document.getElementById('dashboard');
+            return !!(dash && dash.style.display !== 'none' && !dash.classList.contains('hidden'));
+        }
+
+        // A81: page /api/following (backend caps per_page at 100) so users with >100 connections
+        // are not silently undercounted. Returns null if the first page is unauthorized/failed.
+        async function fetchAllFollowing() {
+            var all = [], page = 1, guard = 0;
+            while (guard++ < 20) {
+                var r = await fetch('/api/following?per_page=100&page=' + page, { credentials: 'include' });
+                if (!r.ok) { return page === 1 ? null : all; }
+                var d = await r.json();
+                var arr = d.following || [];
+                all = all.concat(arr);
+                var pages = d.pages || 1;
+                if (page >= pages || arr.length === 0) break;
+                page++;
+            }
+            return all;
+        }
+
+        async function computeCount() {
+            try {
+                var reqRes = await fetch('/api/follow-requests/received', { credentials: 'include' });
+                if (reqRes.status === 401) return 0;
+                var cirRes = await fetch('/api/circles', { credentials: 'include' });
+                if (cirRes.status === 401) return 0;
+                var following = await fetchAllFollowing();
+                if (following === null) return 0; // logged out / failed
+                var pendingIds = new Set();
+                var pending = 0;
+                if (reqRes.ok) {
+                    var rd = await reqRes.json();
+                    (rd.requests || []).forEach(function (r) { pendingIds.add(Number(r.requester_id)); });
+                    pending = (rd.requests || []).length;
+                }
+                var circled = new Set();
+                if (cirRes.ok) {
+                    var cd = await cirRes.json();
+                    ['public', 'class_b', 'class_a', 'general', 'close_friends', 'family'].forEach(function (k) {
+                        (cd && cd[k] ? cd[k] : []).forEach(function (m) { if (m && m.id != null) circled.add(Number(m.id)); });
+                    });
+                }
+                var unclassified = (following || []).filter(function (u) {
+                    return u && u.follows_you && !circled.has(Number(u.id)) && !pendingIds.has(Number(u.id));
+                }).length;
+                return pending + unclassified;
+            } catch (e) { return 0; }
+        }
+
+        async function refresh() {
+            ensureBadges();
+            if (!loggedIn()) { setBadges(0); return; }
+            setBadges(await computeCount());
+        }
+        window.refreshCirclesBadge = refresh;
+
+        function start() {
+            ensureBadges();
+            refresh();
+            // Early retries so the badge appears promptly right after login (before the poll).
+            setTimeout(refresh, 2500);
+            setTimeout(refresh, 8000);
+            setInterval(refresh, 30000);
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+        else start();
+    })();
+    </script>
+    <!-- ===================== END A81-CIRCLES-BADGE ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- A81-SCROLL: additive scroll affordance (colleague note #3 — "not clear there is -->
+    <!-- a scroll function in the lists"). Gives the app's scrollable lists a clearly     -->
+    <!-- visible scrollbar and an animated "⌄" hint that appears only while a list        -->
+    <!-- overflows and is not scrolled to the end. Self-contained; no markup/logic change.-->
+    <!-- ============================================================================ -->
+    <style id="ts-a81-scroll-style">
+        .circle-members, #circleRecommendationsList, .search-results, .follow-requests-list {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(107,139,164,0.55) rgba(107,139,164,0.12);
+        }
+        .circle-members::-webkit-scrollbar, #circleRecommendationsList::-webkit-scrollbar,
+        .search-results::-webkit-scrollbar, .follow-requests-list::-webkit-scrollbar {
+            width: 10px; height: 10px;
+        }
+        .circle-members::-webkit-scrollbar-track, #circleRecommendationsList::-webkit-scrollbar-track,
+        .search-results::-webkit-scrollbar-track, .follow-requests-list::-webkit-scrollbar-track {
+            background: rgba(107,139,164,0.12); border-radius: 8px;
+        }
+        .circle-members::-webkit-scrollbar-thumb, #circleRecommendationsList::-webkit-scrollbar-thumb,
+        .search-results::-webkit-scrollbar-thumb, .follow-requests-list::-webkit-scrollbar-thumb {
+            background: rgba(107,139,164,0.55); border-radius: 8px;
+        }
+        .ts-a81-scrollhint {
+            display: none; text-align: center; margin: -4px auto 8px; padding: 2px 0;
+            font-size: 16px; line-height: 1; color: #6B8BA4; cursor: pointer; user-select: none;
+            animation: ts-a81-bob 1.4s ease-in-out infinite;
+        }
+        .ts-a81-scrollhint.show { display: block; }
+        @keyframes ts-a81-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+        @media (prefers-reduced-motion: reduce) { .ts-a81-scrollhint { animation: none; } }
+    </style>
+    <script id="ts-a81-scroll-script">
+    (function () {
+        if (window.__tsA81Scroll) return; window.__tsA81Scroll = true;
+        var SEL = '.circle-members, #circleRecommendationsList, .follow-requests-list';
+        function overflowing(el) { return (el.scrollHeight - el.clientHeight) > 6; }
+        function atEnd(el) { return el.scrollTop >= (el.scrollHeight - el.clientHeight - 6); }
+        function update(el) {
+            var hint = el.__tsA81Hint; if (!hint) return;
+            if (overflowing(el) && !atEnd(el)) hint.classList.add('show'); else hint.classList.remove('show');
+        }
+        function enhance(el) {
+            if (!el || el.__tsA81Scroll) return; el.__tsA81Scroll = true;
+            var hint = document.createElement('div');
+            hint.className = 'ts-a81-scrollhint';
+            hint.setAttribute('aria-hidden', 'true');
+            hint.textContent = '⌄';
+            hint.addEventListener('click', function () {
+                try { el.scrollBy({ top: Math.max(60, el.clientHeight * 0.7), behavior: 'smooth' }); }
+                catch (_) { el.scrollTop += 80; }
+            });
+            if (el.parentNode) el.parentNode.insertBefore(hint, el.nextSibling);
+            el.__tsA81Hint = hint;
+            el.addEventListener('scroll', function () { update(el); }, { passive: true });
+            if ('ResizeObserver' in window) { try { new ResizeObserver(function () { update(el); }).observe(el); } catch (_) {} }
+            if ('MutationObserver' in window) { try { new MutationObserver(function () { setTimeout(function () { update(el); }, 0); }).observe(el, { childList: true, subtree: true }); } catch (_) {} }
+            update(el);
+        }
+        function scan(root) {
+            try { var l = (root || document).querySelectorAll(SEL); for (var i = 0; i < l.length; i++) enhance(l[i]); } catch (_) {}
+        }
+        function boot() {
+            scan(document);
+            if ('MutationObserver' in window) {
+                new MutationObserver(function (muts) {
+                    for (var i = 0; i < muts.length; i++)
+                        for (var j = 0; j < muts[i].addedNodes.length; j++) {
+                            var n = muts[i].addedNodes[j];
+                            if (n.nodeType !== 1) continue;
+                            if (n.matches && n.matches(SEL)) enhance(n);
+                            if (n.querySelectorAll) scan(n);
+                        }
+                }).observe(document.body, { childList: true, subtree: true });
+            }
+            [500, 1500, 3000].forEach(function (ms) { setTimeout(function () { scan(document); }, ms); });
+            window.addEventListener('resize', function () {
+                try { var l = document.querySelectorAll(SEL); for (var i = 0; i < l.length; i++) update(l[i]); } catch (_) {}
+            }, { passive: true });
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+        else boot();
+    })();
+    </script>
+    <!-- ===================== END A81-SCROLL ===================== -->
 
 </body>
 
