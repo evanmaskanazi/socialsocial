@@ -1,3 +1,6 @@
+// Version B199 (A91): No functional change. Cache-bust lockstep only — the HTML ?v refs to this
+//   file were bumped B198->B199 in sync with index/circles/parameters/about (about.html was stale
+//   at B196 and was resynced this round). File content is otherwise identical to A81/B198.
 // Version B198 (A81): (referenced as ?v=B198, in lockstep with index/circles/parameters/support).
 //   loadCircleRecommendations() now ALSO lists mutual connections that are not yet in any circle
 //   (via /api/following + /api/circles), so a connection APPROVED from the Connections page still

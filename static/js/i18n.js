@@ -1,3 +1,9 @@
+// Version B199 (A91): Additive only. Added the three About-page community-privacy-rule keys
+//   (about.community_privacy_title / _rule / _principle) in ALL 4 languages (en/he/ar/ru), inside
+//   the existing HEALTH-VERSION about override block, for work-plan #9. Needed because
+//   applyLanguage() overwrites textContent with translate(key), which returns the raw key when a
+//   key is missing — so the About page's data-i18n privacy section required real keys, not just
+//   inline English. HTML ?v refs bumped B198->B199 in lockstep across the app. No key removed.
 // Version B198 (A81): Added ONE additive translation key in all 4 languages —
 //   'circles.reason_connected_unclassified' ("Connected — choose a circle") next to the existing
 //   'circles.reason_pending_request'. It labels the new "connected but not yet in a circle" cards
@@ -7254,6 +7260,10 @@ if (typeof window !== 'undefined') {
         'about.community_title': 'Supportive Community',
         'about.community_desc': 'Share your journey with people who care, receive alerts when someone you love may need support, and grow together in a safe environment.',
         'about.values_title': 'Our Values',
+        // A91 (work-plan #9): community privacy rule shown on the About page.
+        'about.community_privacy_title': '🔒 Respecting Other Members\' Privacy',
+        'about.community_privacy_rule': 'Please respect the privacy of other community members. Information you access about other users through TheraSocial is intended for use within the community and should not be copied, published, forwarded, or shared outside the system without the person\'s permission. Deliberate misuse or disclosure of another member\'s information may be considered a harmful act and may result in restriction or removal of access to the community.',
+        'about.community_privacy_principle': 'Access to another member\'s information comes with a responsibility to protect their privacy.',
         'about.value1_title': 'Empowerment',
         'about.value1_desc': 'We help you take charge of your well-being across every area of life',
         'about.value2_title': 'Data Protection',
@@ -7325,6 +7335,10 @@ if (typeof window !== 'undefined') {
         'about.community_title': 'קהילה תומכת',
         'about.community_desc': 'שתף את המסע שלך עם אנשים שאכפת להם, קבל התראות כשמישהו שאתה אוהב עשוי להזדקק לתמיכה, וצמח יחד בסביבה בטוחה.',
         'about.values_title': 'הערכים שלנו',
+        // A91 (work-plan #9): community privacy rule shown on the About page.
+        'about.community_privacy_title': '🔒 כבוד לפרטיות של חברים אחרים',
+        'about.community_privacy_rule': 'אנא כבדו את פרטיותם של חברי הקהילה האחרים. מידע שאתם נחשפים אליו על משתמשים אחרים דרך TheraSocial מיועד לשימוש בתוך הקהילה בלבד, ואין להעתיק אותו, לפרסם, להעביר או לשתף מחוץ למערכת ללא רשות האדם. שימוש לרעה או חשיפה מכוונת של מידע על חבר אחר עלולים להיחשב כמעשה מזיק ולהוביל להגבלה או להסרה של הגישה לקהילה.',
+        'about.community_privacy_principle': 'הגישה למידע של חבר אחר מגיעה עם אחריות להגן על פרטיותו.',
         'about.value1_title': 'העצמה',
         'about.value1_desc': 'אנחנו עוזרים לך לקחת אחריות על הרווחה שלך בכל תחום בחיים',
         'about.value2_title': 'הגנת מידע',
@@ -7402,6 +7416,10 @@ if (typeof window !== 'undefined') {
         'about.community_title': 'مجتمع داعم',
         'about.community_desc': 'شارك رحلتك مع أشخاص يهتمون بك، واحصل على تنبيهات عندما يحتاج شخص تحبه إلى الدعم، وانمُ معاً في بيئة آمنة.',
         'about.values_title': 'قيمنا',
+        // A91 (work-plan #9): community privacy rule shown on the About page.
+        'about.community_privacy_title': '🔒 احترام خصوصية الأعضاء الآخرين',
+        'about.community_privacy_rule': 'يرجى احترام خصوصية أعضاء المجتمع الآخرين. المعلومات التي تطّلع عليها عن المستخدمين الآخرين عبر TheraSocial مخصّصة للاستخدام داخل المجتمع، ولا ينبغي نسخها أو نشرها أو إعادة توجيهها أو مشاركتها خارج النظام دون إذن الشخص المعني. قد يُعدّ سوء الاستخدام المتعمّد أو الإفصاح عن معلومات عضو آخر فعلاً ضارّاً وقد يؤدي إلى تقييد الوصول إلى المجتمع أو إزالته.',
+        'about.community_privacy_principle': 'الوصول إلى معلومات عضو آخر يأتي مع مسؤولية حماية خصوصيته.',
         'about.value1_title': 'التمكين',
         'about.value1_desc': 'نساعدك على تولي مسؤولية رفاهيتك في كل مجال من مجالات الحياة',
         'about.value2_title': 'حماية البيانات',
@@ -7479,6 +7497,10 @@ if (typeof window !== 'undefined') {
         'about.community_title': 'Поддерживающее сообщество',
         'about.community_desc': 'Делитесь своим путём с людьми, которым не всё равно, получайте оповещения, когда кому-то из близких может понадобиться поддержка, и развивайтесь вместе в безопасной среде.',
         'about.values_title': 'Наши ценности',
+        // A91 (work-plan #9): community privacy rule shown on the About page.
+        'about.community_privacy_title': '🔒 Уважение к конфиденциальности других участников',
+        'about.community_privacy_rule': 'Пожалуйста, уважайте конфиденциальность других участников сообщества. Информация, к которой вы получаете доступ о других пользователях через TheraSocial, предназначена для использования внутри сообщества и не должна копироваться, публиковаться, пересылаться или передаваться за пределы системы без разрешения соответствующего человека. Умышленное неправомерное использование или раскрытие информации о другом участнике может считаться вредоносным действием и привести к ограничению или лишению доступа к сообществу.',
+        'about.community_privacy_principle': 'Доступ к информации другого участника подразумевает ответственность за защиту его конфиденциальности.',
         'about.value1_title': 'Развитие',
         'about.value1_desc': 'Мы помогаем вам взять ответственность за своё благополучие во всех сферах жизни',
         'about.value2_title': 'Защита данных',

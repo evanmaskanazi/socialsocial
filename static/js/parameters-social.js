@@ -1,3 +1,5 @@
+// Version B199 (A91): No functional change. Cache-bust lockstep only — the HTML ?v refs to this
+//   file were bumped B198->B199 in sync with index/parameters/circles/about this round.
 // Version B196 (A51): (referenced as ?v=B196). Additive only. One targeted change: the
 // TSDiaryReminder offer window in shouldOffer() was widened from EXACTLY the first check-in to
 // the first few check-ins (<= 3) so a new user who missed the day-1 prompt still gets offered
