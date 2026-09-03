@@ -1,6 +1,50 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version A91 (backend)
+#
+# A91 (HIGHEST-PRIORITY PRIVACY FIX — operator must never see private user data):
+#   ONE targeted, additive change, nothing else in the backend touched.
+#   /api/operator/alerts (operator_alerts) previously returned each alert's raw
+#   content via alert_obj.to_dict() ('title'/'message') PLUS the source username.
+#   For wellness 'trigger' alerts that content is derived from a user's PRIVATE
+#   daily diary inputs; 'message' alerts reveal private communications — so a
+#   system operator could read private information they are not authorized to see.
+#   The results loop now returns ONLY non-identifying, generalized fields:
+#   category, type, date, and a generic per-category label — no content, no message
+#   body, no username. Operators keep the aggregated, anonymized view (counts by
+#   category/day) and lose all access to individual private data. Response shape is
+#   unchanged (title/message/type/created_at/alert_category/total/page/pages), so the
+#   existing dashboard renders unchanged and simply shows anonymized rows. See the
+#   'A91 PRIVACY' block inside operator_alerts().
+#
+# A91 audit follow-up (same highest-priority privacy goal): admin_get_users() (/api/admin/users,
+#   @operator_required) returned EVERY user's email, so a system_operator could read regular
+#   users' private email addresses. Both UI consumers only ever use role=='professional' rows
+#   (Professional Verification), so operators now receive emails ONLY for non-regular accounts;
+#   full admins still receive all emails. See the 'A91 PRIVACY' block inside admin_get_users().
+#
+# A91 audit round 2 (same goal — swept the remaining operator endpoints for private-data leaks):
+#   found two more operator-facing endpoints returning regular users' private emails and closed
+#   them the same way (operators get None, full admins keep the email):
+#     * operator_inactive_accounts() — the UI never even displays email (username/city/days/last
+#       login + Deactivate only), so zero UI impact.
+#     * operator_points() — email is incidental to a rewards-balance table; the page's esc() is
+#       null-safe so the column simply renders blank for operators. (User.role added to the select
+#       only to apply the rule.)
+#   Confirmed clean this round: no operator/admin endpoint returns diary or message CONTENT (the
+#   operator SavedParameters queries are aggregate counts only); the broadcast endpoint uses email
+#   server-side to send and does not return it.
+#
+# A91 audit round 3 (final — completed the sweep): closed the LAST operator email path,
+#   list_group_members() (/api/objective-groups/<id>/members). Its roster UI renders only
+#   username/role/joined date and never the email, so operators now get None there too (admins
+#   keep it) — zero UI impact. Full email sweep is now exhaustive: every operator-facing endpoint
+#   that returned a regular user's email (admin_get_users, operator_inactive_accounts,
+#   operator_points, list_group_members) is admin-gated; broadcast uses email server-side only;
+#   no operator endpoint returns diary or message content. All A91 backend changes remain
+#   additive and contained.
+# =====================================================================
 # TheraSocial app.py - Version A27
 #
 # A27 is A26 plus ONE fix, 45 added lines, nothing removed:
@@ -16324,16 +16368,24 @@ def operator_points():
             'points_ledger': 'points_ledger' in table_names,
         }
 
+        # A91 PRIVACY (audit round 2): this rewards-balance view is @operator_required, so it
+        # reached operators with EVERY user's private email attached (the page renders it). Email
+        # is incidental to a points table, so withhold regular users' emails from operators; full
+        # admins keep them. User.role is selected only to apply this rule.
+        requester = db.session.get(User, session['user_id'])
+        requester_is_admin = bool(requester and requester.role == 'admin')
+
         users = []
         total_points = 0
         if schema['users.points']:
             rows = db.session.execute(
-                select(User.id, User.username, User.email, User.points)
+                select(User.id, User.username, User.email, User.role, User.points)
                 .order_by(func.coalesce(User.points, 0).desc(), User.username)
             ).all()
             for r in rows:
                 p = r.points or 0
-                users.append({'id': r.id, 'username': r.username, 'email': r.email, 'points': p})
+                email = r.email if (requester_is_admin or r.role != 'user') else None
+                users.append({'id': r.id, 'username': r.username, 'email': email, 'points': p})
                 total_points += p
 
         ledger_total = None  # None = couldn't read (table missing or error)
@@ -20430,14 +20482,30 @@ def get_activity_dates():
 def admin_get_users():
     """Get all users (admin only)"""
     try:
+        # A91 PRIVACY (audit follow-up to the operator-alerts fix): this endpoint is
+        # @operator_required, so a system_operator reaches it too — but a regular user's email
+        # address is private information an operator must not have. The only UI consumers filter
+        # this list to role == 'professional' (Professional Verification, which needs the email
+        # DOMAIN to match trusted domains), so withholding REGULAR users' emails from operators
+        # costs the UI nothing. Full admins keep every email (user management may rely on it).
+        requester = db.session.get(User, session['user_id'])
+        requester_is_admin = bool(requester and requester.role == 'admin')
+
         # SQLAlchemy 2.0 style
         users_stmt = select(User).order_by(desc(User.created_at))
         users = db.session.execute(users_stmt).scalars().all()
 
+        def _email_for(u):
+            # Admin: see all. Operator: only non-regular accounts (professional/admin/operator),
+            # never a plain user's private email.
+            if requester_is_admin or u.role != 'user':
+                return u.email
+            return None
+
         return jsonify([{
             'id': u.id,
             'username': u.username,
-            'email': u.email,
+            'email': _email_for(u),
             'role': u.role,
             'is_active': u.is_active,
             'created_at': u.created_at.isoformat(),
@@ -20919,6 +20987,10 @@ def list_group_members(group_id):
         user = db.session.get(User, session['user_id'])
         if not _verify_operator_group_scope(user, group_id):  # C13: use helper
             return jsonify({'error': 'You do not have scope over this group'}), 403
+        # A91 PRIVACY (audit round 3 — closes the last operator email path): the roster UI renders
+        # only username / role / joined date and never the email, so withhold members' private
+        # emails from operators here too (full admins keep them), completing the sweep.
+        requester_is_admin = bool(user and user.role == 'admin')
 
         # C9: Single joined query instead of N+1 per-member get()
         rows = db.session.execute(
@@ -20935,7 +21007,7 @@ def list_group_members(group_id):
         members = [{
             'user_id': r[0],
             'username': r[1],
-            'email': r[2],
+            'email': r[2] if (requester_is_admin or r[3] != 'user') else None,  # A91: operators don't see it
             'role': r[3],
             'joined_at': r[4].isoformat() if r[4] else None
         } for r in rows]
@@ -22136,6 +22208,11 @@ def operator_inactive_accounts():
     try:
         user = db.session.get(User, session['user_id'])
         scope_filters = _build_operator_scope_filter(user)
+        # A91 PRIVACY (audit round 2, same operator-privacy goal as admin_get_users): every row
+        # here is a regular user (role == 'user' below), and the dashboard renders only
+        # username/city/days-inactive/last-login + a Deactivate button — it never displays email.
+        # So withhold the private email from operators; full admins still receive it.
+        requester_is_admin = bool(user and user.role == 'admin')
 
         # Get operator's threshold setting
         settings = OperatorSettings.query.filter_by(operator_id=user.id).first()
@@ -22166,7 +22243,7 @@ def operator_inactive_accounts():
             results.append({
                 'id': u.id,
                 'username': u.username,
-                'email': u.email,
+                'email': u.email if requester_is_admin else None,  # A91: operators don't see it (unused by UI)
                 'selected_city': u.selected_city or '',
                 'last_login': u.last_login.isoformat() if u.last_login else None,
                 'created_at': u.created_at.isoformat() if u.created_at else None,
@@ -22286,11 +22363,35 @@ def operator_alerts():
         total = q.count()
         results = q.offset((page - 1) * per_page).limit(per_page).all()
 
+        # A91 PRIVACY (highest priority): a system operator must NOT have access to any private
+        # user information — only generalized, aggregated statistics. The previous version returned
+        # each alert's raw content (alert_obj.to_dict() -> 'title'/'message', which for wellness
+        # 'trigger' alerts is derived from a user's PRIVATE daily diary inputs, and for 'message'
+        # alerts reveals private communication) plus the source username, exposing exactly the
+        # private data operators must never see. We now strip every per-user private field here and
+        # return only the non-identifying category / type / date, with a generic per-category label.
+        # No content, no message body, no username — the operator sees anonymized, categorized
+        # counts (grouped by day in the dashboard) rather than any individual's private information.
+        A91_ALERT_CATEGORY_LABELS = {
+            'trigger': 'Wellness alert',
+            'message': 'Message notification',
+            'follow': 'Connection activity',
+            'feed':   'Feed activity',
+            'general': 'System alert',
+        }
         alerts_out = []
         for alert_obj, username in results:
-            d = alert_obj.to_dict()
-            d['source_username'] = username
-            alerts_out.append(d)
+            cat = alert_obj.alert_category or 'general'
+            alerts_out.append({
+                'id': alert_obj.id,
+                'title': A91_ALERT_CATEGORY_LABELS.get(cat, 'Alert'),
+                'message': '',                 # never expose private alert / message content
+                'type': alert_obj.alert_type,
+                'created_at': alert_obj.created_at.isoformat() if alert_obj.created_at else None,
+                'alert_category': cat,
+                # source_username / source_user_id deliberately omitted — they identify the user
+                # the private alert is about, which an operator is not authorized to see.
+            })
 
         return jsonify({
             'alerts': alerts_out,
