@@ -1,3 +1,5 @@
+// Version B199 (A91): No functional change. Cache-bust lockstep only — the HTML ?v refs to this
+//   file (feed-updates.js/feed-calendar) were bumped B198->B199 in sync with the app this round.
 // Feed Calendar System with Circle Name Mapping Support
 // Version P307 - Updated colors to P305 palette
 // Complete version with all original functionality preserved

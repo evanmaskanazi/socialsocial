@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!-- TheraSocial About Version B199 (A91) -->
+<!-- B199 (A91): (1) Added an additive "Respecting Other Members' Privacy" community-rule section
+     (work-plan #9) before the Get Started / Back buttons — self-contained, no existing markup
+     changed, English text inline with data-i18n keys. (2) CACHE-BUST resync: i18n.js ?v was STALE
+     at B196 here while index/parameters/circles were at B198 — bumped straight to B199 in lockstep
+     with the whole app this round so every page requests the same cached i18n.js. No JS changed. -->
 <!-- TheraSocial About Version B196 (A60) -->
 <!-- B196 (A60): (1) Added the public SEO description + Open Graph/Twitter tags this page was
      missing, in line with index/support. (2) Confirmed there is NO robots "noindex" tag here, so
@@ -362,6 +368,19 @@
                 <li><strong data-i18n="about.value4_title">Accessibility:</strong> <span data-i18n="about.value4_desc">Available in multiple languages with support for every user, everywhere</span></li>
             </ul>
 
+            <!-- A91 (work-plan #9): Community privacy rule. Additive, self-contained section —
+                 no existing markup changed. data-i18n keys carry English fallbacks inline, so the
+                 text renders even before translations are added (matching this page's convention). -->
+            <div class="mission-section" style="margin-top: 40px; border-inline-start: 4px solid #6B8BA4;">
+                <h2 style="color: #6B8BA4; margin-bottom: 16px;" data-i18n="about.community_privacy_title">🔒 Respecting Other Members' Privacy</h2>
+                <p style="margin-bottom: 16px;" data-i18n="about.community_privacy_rule">
+                    Please respect the privacy of other community members. Information you access about other users through TheraSocial is intended for use within the community and should not be copied, published, forwarded, or shared outside the system without the person's permission. Deliberate misuse or disclosure of another member's information may be considered a harmful act and may result in restriction or removal of access to the community.
+                </p>
+                <p style="font-weight: 600; color: #6B8BA4; margin-bottom: 0;" data-i18n="about.community_privacy_principle">
+                    Access to another member's information comes with a responsibility to protect their privacy.
+                </p>
+            </div>
+
             <div style="text-align: center; margin-top: 40px;">
                 <a href="/" class="back-link" style="margin-right: 20px;" data-i18n="btn.getstarted">Get Started</a>
                 <a href="/" id="backLastPage" class="back-link" data-i18n="btn.back">Back to Home</a>
@@ -371,7 +390,7 @@
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B196"></script>
+    <script src="/static/js/i18n.js?v=B199"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read
