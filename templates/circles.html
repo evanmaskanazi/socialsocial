@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!-- TheraSocial Circles Version B199 (A91) -->
+<!-- B199 (A91): Cache-bust lockstep ONLY — all JS ?v bumped B198->B199 in sync with
+     index/parameters/about (about.html was stale at B196 and was resynced this round). No
+     functional/JS/markup change in this file; circles-messages.js is unchanged but its ?v is
+     bumped in lockstep per the repo convention so every page requests the same cached copy. -->
 <!-- TheraSocial Circles Version B198 (A81) -->
 <!-- B198 (A81): Cache-bust lockstep — all live JS ?v bumped B197->B198 in sync with
      index/parameters/support. circles-messages.js changed this round: the "Connection Options
@@ -172,9 +177,9 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B198"></script>
-    <script src="/static/js/circles-messages.js?v=B198"></script>
-    <script src="/static/js/feed-updates.js?v=B198"></script>
+    <script src="/static/js/i18n.js?v=B199"></script>
+    <script src="/static/js/circles-messages.js?v=B199"></script>
+    <script src="/static/js/feed-updates.js?v=B199"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>

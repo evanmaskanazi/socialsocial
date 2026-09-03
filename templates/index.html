@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B199 (A91) -->
+<!-- B199 (A91): Cache-bust lockstep — ALL live JS ?v bumped B198->B199 in sync with
+     parameters/circles/about (about.html was STALE at B196 and is resynced to B199 this round).
+     No external JS file changed this round; every ?v bump is a lockstep bump per the repo's
+     cache-bust convention, so every page requests the same cached copies. Functional, strictly
+     ADDITIVE changes this round, from the 09/2026 work plan, chosen as the most additive/least
+     invasive of the ten items:
+       * #1 Send Message button on every OTHER member's profile — appended in
+         addUserActionButtonsToView(); opens the Messages view + startConversation(). Never shown
+         on your own profile (that view loads via loadProfile()/Settings). Self-contained IIFE.
+       * #4 Messages screen responsive width — additive <style id="ts-a91-msg"> giving the flex
+         message panes min-width:0 + max-width:100% and wrapping long bubble text, so the screen
+         is fully contained with no horizontal overflow (esp. mobile). No existing rule removed.
+       * #6 Reduce unnecessary margins — additive <style id="ts-a91-space"> that trims the
+         --content-padding variable + .main-content padding + dead bottom space (surgical, since
+         the nav full-width breakout uses the same variable and stays aligned). Reversible.
+       * #7 Bio "No info" fallback — a91BioOrNoInfo() shows a localized "No info" when a viewed
+         member has no bio yet (display-only; field stays read-only). See loadUserProfileView().
+     No existing markup, IDs or logic were changed or removed; every change is additive. -->
 <!-- TheraSocial Index Version B198 (A81) -->
 <!-- B198 (A81): Cache-bust lockstep — ALL live JS ?v bumped B197->B198 in sync with
      parameters/circles/support. Every live script tag was re-verified this round because the
@@ -704,10 +723,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B198"></script>
+   <script src="/static/js/utilities.js?v=B199"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B198"></script>
-    <script src="/static/js/follow-requests.js?v=B198"></script>
+    <script src="/static/js/triggers.js?v=B199"></script>
+    <script src="/static/js/follow-requests.js?v=B199"></script>
 
 
     <style>
@@ -8117,7 +8136,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B198"></script>
+    <script src="/static/js/i18n.js?v=B199"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8470,9 +8489,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B198"></script>
-   <script src="/static/js/circles-messages.js?v=B198"></script>
-<script src="/static/js/feed-updates.js?v=B198"></script>
+<script src="/static/js/parameters-social.js?v=B199"></script>
+   <script src="/static/js/circles-messages.js?v=B199"></script>
+<script src="/static/js/feed-updates.js?v=B199"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -16309,6 +16328,14 @@ function formatDateDisplay(dateString) {
 
 
 
+// A91 (work-plan #7): small, self-contained helper — returns a member's bio, or a localized
+// "No info" when it is empty/whitespace. Used by loadUserProfileView when viewing another member.
+function a91BioOrNoInfo(bio) {
+    const lang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage') || 'en';
+    const noInfo = { en: 'No info', he: 'אין מידע', ar: 'لا توجد معلومات', ru: 'Нет информации' }[lang] || 'No info';
+    return (bio && String(bio).trim()) ? bio : noInfo;
+}
+
 async function loadUserProfileView(userId) {
     // Set the viewing user ID so feed knows we're viewing another user
     viewingUserId = userId;
@@ -16416,7 +16443,10 @@ async function loadUserProfileView(userId) {
 
             const bioElement = document.getElementById('profileBio');
             if (bioElement) {
-                bioElement.value = userData.bio || '';
+                // A91 (work-plan #7): a member's Bio is visible only to registered members; when it
+                // is empty, show a friendly "No info" instead of a blank box. Additive, display-only
+                // (the field remains read-only when viewing another member).
+                bioElement.value = a91BioOrNoInfo(userData.bio);
                 bioElement.disabled = true;
                 bioElement.style.backgroundColor = '#f3f4f6';
                 bioElement.style.cursor = 'default';
@@ -16515,7 +16545,8 @@ async function loadUserProfileView(userId) {
         const hobbiesElement = document.getElementById('profileFavoriteHobbies');
 
         if (bioElement) {
-            bioElement.value = userData.bio || '';
+            // A91 (work-plan #7): show "No info" when a connected member has not written a bio yet.
+            bioElement.value = a91BioOrNoInfo(userData.bio);
             bioElement.disabled = true;
             bioElement.style.backgroundColor = '#f3f4f6';
             bioElement.style.cursor = 'default';
@@ -17020,7 +17051,35 @@ async function addUserActionButtonsToView(viewId, userId, username, forceShowFol
     
     // PJN451: Block button only appears when NOT following (already added at start in the else block above)
     // No block button when following - removed per requirement #3
-    
+
+    // A91 (work-plan #1): "Send Message" button on every OTHER member's profile.
+    // Additive & self-contained — this function only ever runs for another user's profile
+    // (own profile loads via loadProfile() into Settings), so the button is inherently never
+    // shown on your own profile, as the spec requires. Clicking it opens the Messages view and
+    // starts a conversation with this member via the existing messaging flow (startConversation).
+    (function addA91SendMessageButton() {
+        const smLabels = {
+            en: 'Send Message', he: 'שלח הודעה', ar: 'إرسال رسالة', ru: 'Отправить сообщение'
+        };
+        const smText = smLabels[lang] || smLabels.en;
+        const sendMsgBtn = document.createElement('button');
+        sendMsgBtn.className = 'a91-send-message-btn';
+        sendMsgBtn.textContent = '✉️ ' + smText;
+        sendMsgBtn.style.cssText = 'padding: 10px 24px; background: white; color: #667eea; border: 2px solid #c3cff5; border-radius: 25px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;';
+        sendMsgBtn.onmouseover = () => { sendMsgBtn.style.background = '#f0f3ff'; sendMsgBtn.style.transform = 'translateY(-1px)'; };
+        sendMsgBtn.onmouseout = () => { sendMsgBtn.style.background = 'white'; sendMsgBtn.style.transform = ''; };
+        sendMsgBtn.onclick = () => {
+            try {
+                if (typeof showView === 'function') showView('messages');
+                if (typeof startConversation === 'function') {
+                    // Let the view switch paint first, then open the conversation.
+                    setTimeout(() => startConversation(userId, username), 0);
+                }
+            } catch (e) { console.error('[A91] Send Message error:', e); }
+        };
+        buttonContainer.appendChild(sendMsgBtn);
+    })();
+
     // Insert after back button
     const backButton = view.querySelector('.back-to-following-btn');
     if (backButton) {
@@ -24476,6 +24535,66 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
     })();
     </script>
     <!-- ===================== END A81-SCROLL ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- A91-MSG: Messages screen — responsive width fix (work-plan #4).               -->
+    <!-- Additive, presentation-only. The two-pane messages layout already stacks on   -->
+    <!-- mobile; the remaining problem is horizontal overflow: flex children default to -->
+    <!-- min-width:auto, so a long word / URL / handle inside a message bubble or the   -->
+    <!-- input can push the pane wider than the screen. We give the panes min-width:0   -->
+    <!-- and cap them at 100%, and let message text wrap. No existing rule is removed;  -->
+    <!-- this only closes the overflow gap so the screen is fully contained everywhere. -->
+    <!-- ============================================================================ -->
+    <style id="ts-a91-msg">
+        #messagesView { max-width: 100%; }
+        #messagesView .messages-container { max-width: 100%; }
+        /* The core fix: flex children must be allowed to shrink below their content
+           width, otherwise long content forces the whole pane to overflow sideways. */
+        #messagesView .chat-area,
+        #messagesView .messages-list,
+        #messagesView .conversations-list { min-width: 0; max-width: 100%; }
+        /* Long unbreakable strings inside a bubble wrap instead of overflowing. */
+        #messagesView .message-bubble,
+        #messagesView .conversation-item,
+        #messagesView .chat-header { overflow-wrap: break-word; word-break: break-word; }
+        #messagesView .message-input { min-width: 0; max-width: 100%; }
+        @media (max-width: 768px) {
+            /* Hard guarantee the container never exceeds the mobile viewport width. */
+            #messagesView .messages-container { width: 100%; max-width: 100%; }
+            #messagesView .message-bubble { max-width: 85%; }
+        }
+    </style>
+    <!-- ===================== END A91-MSG ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- A91-SPACE: Reduce unnecessary margins / wasted screen space (work-plan #6).    -->
+    <!-- Additive & surgical: the layout already drives its spacing from CSS variables  -->
+    <!-- and .main-content padding, so we simply trim those in ONE late-cascade block   -->
+    <!-- rather than touching individual rules across the app. This shrinks the outer   -->
+    <!-- "purple" margin and the inner white padding (giving content more usable width) -->
+    <!-- and trims dead bottom space, while keeping comfortable breathing room. Because  -->
+    <!-- the full-width nav breakout is expressed in the SAME --content-padding variable, -->
+    <!-- reducing the variable keeps that breakout perfectly aligned. Fully reversible.  -->
+    <!-- ============================================================================ -->
+    <style id="ts-a91-space">
+        /* Narrower outer (purple) margin + smaller mobile padding — both are design-system
+           variables, so overriding them here trims spacing app-wide from one place. The nav
+           full-width breakout is expressed in the SAME --content-padding, so it stays aligned. */
+        :root {
+            --content-padding: 14px;   /* was 20px */
+            --mobile-padding: 10px;    /* was 12px */
+        }
+        /* Desktop only: tighten the inner white padding and trim dead bottom space. Scoped to
+           min-width:769px so the existing mobile .main-content padding (var(--mobile-padding),
+           now 10px) is left untouched — this rule must NOT win over the mobile responsive rule. */
+        @media (min-width: 769px) {
+            .main-content { padding: 22px 22px 16px; }
+        }
+        /* Trim the empty scrollable space at the bottom of the Home screen (all widths). */
+        #homeView { padding-bottom: 0; }
+        #homeView > *:last-child { margin-bottom: 0; }
+    </style>
+    <!-- ===================== END A91-SPACE ===================== -->
 
 </body>
 
