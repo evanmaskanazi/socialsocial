@@ -3,6 +3,8 @@
 # =====================================================================
 # TheraSocial app.py - Version A92 (backend)
 #
+# A92 audit 1 follow-up: _A92_ASSET_VERSION = 'B202' (lockstep; i18n.js changed again).
+#
 # A92 audit round 1 (fixes to this round + pre-existing issues found while auditing):
 #   - AI text: _call_anthropic_api(..., language=) now knows the reply language. Russian keeps
 #     its grammatical тире (the converter no longer turns "Сон — это" into "Сон, это") and gets
@@ -7864,7 +7866,7 @@ def _safe_back_url():
 
 # A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
 # parameters.html, circles.html and support.html).
-_A92_ASSET_VERSION = 'B201'
+_A92_ASSET_VERSION = 'B202'
 
 
 def _a92_soften_dashes_in_html(html):
