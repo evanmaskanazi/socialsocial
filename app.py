@@ -1,6 +1,31 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version A92 (backend)
+#
+# A92 audit round 1 (fixes to this round + pre-existing issues found while auditing):
+#   - AI text: _call_anthropic_api(..., language=) now knows the reply language. Russian keeps
+#     its grammatical тире (the converter no longer turns "Сон — это" into "Сон, это") and gets
+#     a Russian-appropriate style note; word ranges ("Mon–Fri") become "Mon-Fri", not "Mon, Fri".
+#   - _a92_soften_dashes_in_html: a dash next to an INLINE tag becomes a comma instead of being
+#     dropped (was merging words, e.g. "<b>bar</b>— baz" -> "barbaz").
+#   - Pre-existing: consolidated alert email "no check-in" bullet had no subject; it now names
+#     the person (HTML-escaped). RU line gains its missing comma ("проверить, как дела").
+#   - _A92_ASSET_VERSION = 'B201' (lockstep with the HTML ?v bump).
+#
+# A92 (copy polish: luxury / calm / less "AI" feel). Additive, no route or schema change.
+#   1. AI house voice: _call_anthropic_api() appends a short style note to every system
+#      prompt (warm plain sentences, no long dashes, no hype words or emoji), and runs the
+#      reply through _a92_humanize_ai_text() so no em/en dash reaches the user.
+#   2. Long-dash cleanup in user-visible strings: alert-email "hasn't checked in" lines and
+#      the in-app no-check-in alert, the crisis-support notice fallback, daily gifts,
+#      the no-check-in weekly-summary fallback and the curated check-in feedback bank
+#      (en/he/ar; Russian keeps only its grammatical copula dash).
+#   3. /about and /support (_render_page_with_back): CACHE-BUST GUARD pins every
+#      /static/js/*.js ?v to _A92_ASSET_VERSION ('B200'), and the About page's visible text
+#      gets the same dash cleanup server-side (script/style/comments untouched).
+#
+# =====================================================================
 # TheraSocial app.py - Version A91 (backend)
 #
 # A91 (HIGHEST-PRIORITY PRIVACY FIX — operator must never see private user data):
@@ -1785,7 +1810,7 @@ _A26_CRISIS_NOTICE_KEY = 'msg.crisis_support_notice'
 _A26_CRISIS_NOTICE_FALLBACK = (
     "It sounds like you're going through something really hard, and your message has "
     "been sent. If you'd like support right now, crisis helplines are available in your "
-    "area \u2014 you don't have to face this alone."
+    "area. You don't have to face this alone."
 )
 
 
@@ -3407,7 +3432,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'why_received': f'You are receiving this because you set up a trigger alert for {watched_username}.',
                 'intro': f"Here is an update about {watched_username}'s recent activity:",
                 'param_line': '{param} has been at low levels for {days} consecutive days ({date_range})',
-                'no_checkin_line': "hasn't checked in for {days} days — it may be worth checking how they are",
+                'no_checkin_line': "hasn't checked in for {days} days. It may be worth checking how they are",
                 'recommendation': 'It may be worth reaching out to check on them.',
                 'send_message': 'Send a message',
                 'view_details': 'View Details',
@@ -3427,7 +3452,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'why_received': f'את/ה מקבל/ת הודעה זו כי הגדרת התראת טריגר עבור {watched_username}.',
                 'intro': f"הנה עדכון על הפעילות האחרונה של {watched_username}:",
                 'param_line': '{param} היה ברמות נמוכות במשך {days} ימים רצופים ({date_range})',
-                'no_checkin_line': 'לא ביצע/ה צ׳ק-אין במשך {days} ימים — כדאי לבדוק איך הם',
+                'no_checkin_line': 'לא ביצע/ה צ׳ק-אין במשך {days} ימים. כדאי לבדוק איך הם',
                 'recommendation': 'אולי כדאי ליצור קשר כדי לבדוק את מצבם.',
                 'send_message': 'שלח/י הודעה',
                 'view_details': 'צפה בפרטים',
@@ -3447,7 +3472,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'why_received': f'تتلقى هذا الإشعار لأنك أعددت تنبيه مراقبة لـ {watched_username}.',
                 'intro': f"إليك تحديث عن النشاط الأخير لـ {watched_username}:",
                 'param_line': '{param} كان عند مستويات منخفضة لمدة {days} أيام متتالية ({date_range})',
-                'no_checkin_line': 'لم يسجل/تسجل الدخول منذ {days} أيام — قد يكون من المفيد التواصل معهم',
+                'no_checkin_line': 'لم يسجل/تسجل الدخول منذ {days} أيام. قد يكون من المفيد التواصل معهم',
                 'recommendation': 'قد يكون من المفيد التواصل للاطمئنان عليهم.',
                 'send_message': 'إرسال رسالة',
                 'view_details': 'عرض التفاصيل',
@@ -3467,7 +3492,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'why_received': f'Вы получили это уведомление, потому что настроили триггер оповещения для {watched_username}.',
                 'intro': f"Вот обновление о недавней активности {watched_username}:",
                 'param_line': '{param} был на низком уровне {days} дней подряд ({date_range})',
-                'no_checkin_line': 'не отмечался/отмечалась {days} дней — возможно, стоит проверить как дела',
+                'no_checkin_line': 'не отмечался/отмечалась {days} дней. Возможно, стоит проверить, как дела',
                 'recommendation': 'Возможно, стоит связаться и узнать, как дела.',
                 'send_message': 'Отправить сообщение',
                 'view_details': 'Подробнее',
@@ -3499,7 +3524,11 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
             p_range = (p.get('date_range') or '').strip()
             # T32: Use distinct message for no_checkin alerts
             if p_name == 'no_checkin':
-                line = t.get('no_checkin_line', "hasn't checked in for {days} days — you may want to reach out").replace('{days}', str(p_days))
+                line = t.get('no_checkin_line', "hasn't checked in for {days} days. You may want to reach out").replace('{days}', str(p_days))
+                # A92 audit (pre-existing): the bullet had no subject ("hasn't checked in for 3
+                # days..."); name the person, as the in-app alert already does. Escaped for HTML.
+                from markupsafe import escape as _a92_esc
+                line = str(_a92_esc(watched_username)) + ' ' + line
             else:
                 param_display = t.get(p_name, p_name)
                 if p_range:
@@ -7833,6 +7862,42 @@ def _safe_back_url():
     return '/'
 
 
+# A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
+# parameters.html, circles.html and support.html).
+_A92_ASSET_VERSION = 'B201'
+
+
+def _a92_soften_dashes_in_html(html):
+    """A92: replace em/en dashes in an HTML page's visible text with natural punctuation.
+    Script, style, comments and tags are passed through untouched."""
+    import re as _re
+    parts = _re.split(r'(<script\b.*?</script>|<style\b.*?</style>|<!--.*?-->|<[^>]+>)',
+                      html, flags=_re.S | _re.I)
+    for i in range(0, len(parts), 2):            # even indexes are text between tags
+        seg = parts[i]
+        if '—' not in seg and '–' not in seg:
+            continue
+        if seg.strip() in ('—', '–'):
+            parts[i] = seg.replace('—', '·').replace('–', '·')
+            continue
+        seg = _re.sub(r'(\d)\s*[–—]\s*(\d)', r'\1-\2', seg)
+        # A92 audit: a dash at the edge of a text node only disappears at a BLOCK boundary
+        # (<p>— x, x —</li>). Next to an inline tag (<a>, <b>, <span>...) it joins two phrases,
+        # so it becomes a comma there instead of silently merging the words.
+        prev_tag = parts[i - 1] if i > 0 else ''
+        next_tag = parts[i + 1] if i + 1 < len(parts) else ''
+        block = r'^</?(p|div|li|ul|ol|h[1-6]|br|section|article|header|footer|td|th|tr|table|body|main|blockquote)\b'
+        lead = ' ' if not _re.match(block, prev_tag, _re.I) else ''
+        trail = ', ' if not _re.match(block, next_tag, _re.I) else ''
+        if _re.match(r'^\s*[—–]', seg):
+            seg = _re.sub(r'^(\s*)[—–]\s*', (r', ' if lead else r'\1'), seg)        # leading dash
+        if _re.search(r'[—–]\s*$', seg):
+            seg = _re.sub(r'\s*[—–](\s*)$', (trail.rstrip() + ' ' if trail else r'\1'), seg)  # trailing
+        seg = _re.sub(r'\s*[—–]\s*', ', ', seg)
+        parts[i] = _re.sub(r',\s*([,.;:!?])', r'\1', seg)
+    return ''.join(parts)
+
+
 def _render_page_with_back(template_name):
     """Render a page template, then force the #backLastPage anchor's href to the safe back URL
     computed above. Works no matter how old the deployed template's own JS is, because the
@@ -7851,6 +7916,16 @@ def _render_page_with_back(template_name):
 
     # Only the anchor carrying id="backLastPage" is touched (not the "Get Started" link).
     html = re.sub(r'<a\b[^>]*id="backLastPage"[^>]*>', _repl, html, count=1)
+    # A92 CACHE-BUST GUARD (additive): the standalone /about and /support templates have fallen
+    # out of ?v lockstep before (about.html sat at B196 while the app was on B199), which serves
+    # a stale cached i18n.js. Pin every /static/js/*.js reference on these two pages to the
+    # current asset version, including any reference that has no ?v at all.
+    html = re.sub(r'(/static/js/[\w.\-]+\.js)\?v=[\w.\-]*', r'\1?v=' + _A92_ASSET_VERSION, html)
+    html = re.sub(r'(src="/static/js/[\w.\-]+\.js)"', r'\1?v=' + _A92_ASSET_VERSION + '"', html)
+    # A92: the long dash reads as machine-written copy. On the static About page, convert it in
+    # visible text only (never inside script/style/comments/tags) to natural punctuation.
+    if template_name == 'about.html':
+        html = _a92_soften_dashes_in_html(html)
     # Visible deploy marker so the live version is easy to confirm via view-source.
     html = html.replace('</body>', '<!-- A43-rev5 back_url=' + back + ' -->\n</body>', 1)
     return html
@@ -15777,7 +15852,7 @@ DAILY_GIFTS = [
         "en": "The part of you that worries is trying to protect you. You can thank it and still choose.",
         "he": "החלק בך שדואג מנסה להגן עליך. אפשר להודות לו ועדיין לבחור.",
         "ar": "الجزء القلِق فيك يحاول حمايتك. يمكنك أن تشكره وتختار مع ذلك.",
-        "ru": "Та часть тебя, что тревожится, пытается тебя защитить. Можно поблагодарить её — и всё же выбрать своё."}},
+        "ru": "Та часть тебя, что тревожится, пытается тебя защитить. Можно поблагодарить её и всё же выбрать своё."}},
     {"id": "g11", "text": {
         "en": "One steady breath is a decision. You get to make it again and again.",
         "he": "נשימה רגועה אחת היא החלטה. מותר לך לקבל אותה שוב ושוב.",
@@ -15790,7 +15865,7 @@ DAILY_GIFTS = [
         "ru": "Ты можешь быть в процессе и целостным человеком одновременно."}},
     {"id": "g13", "text": {
         "en": "Whatever today held, you met it. That counts.",
-        "he": "מה שלא היה היום — התמודדת איתו. וזה נחשב.",
+        "he": "מה שלא היה היום, התמודדת איתו. וזה נחשב.",
         "ar": "مهما حمل يومك، فقد واجهته. وهذا يُحتسب.",
         "ru": "Что бы ни принёс день, ты встретил его. И это важно."}},
     {"id": "g14", "text": {
@@ -15824,10 +15899,10 @@ DAILY_GIFTS = [
         "ar": "لست مضطرًا لكسب الغد. إنه لك بالفعل. استرح إليه.",
         "ru": "Завтра не нужно заслуживать. Оно уже твоё. Обопрись на него и отдохни."}},
     {"id": "g20", "text": {
-        "en": "The step you took today is small enough to repeat — and that's exactly its strength.",
-        "he": "הצעד שעשית היום קטן מספיק כדי לחזור עליו — וזו בדיוק עוצמתו.",
-        "ar": "الخطوة التي خطوتها اليوم صغيرة بما يكفي لتكرارها — وهنا تكمن قوّتها.",
-        "ru": "Шаг, что ты сделал сегодня, достаточно мал, чтобы повторить его, — в этом его сила."}},
+        "en": "The step you took today is small enough to repeat, and that's exactly its strength.",
+        "he": "הצעד שעשית היום קטן מספיק כדי לחזור עליו, וזו בדיוק עוצמתו.",
+        "ar": "الخطوة التي خطوتها اليوم صغيرة بما يكفي لتكرارها، وهنا تكمن قوّتها.",
+        "ru": "Шаг, что ты сделал сегодня, достаточно мал, чтобы повторить его, и в этом его сила."}},
     {"id": "g21", "text": {
         "en": "Being gentle with yourself tonight makes it easier to begin again tomorrow.",
         "he": "עדינות כלפי עצמך הערב תקל עליך להתחיל מחדש מחר.",
@@ -17401,7 +17476,45 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
 
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 
-def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
+# A92 (house voice, additive): AI-written text (weekly summary, reflection prompt) is the
+# copy that most reads as "machine-written" to a new user, and the long dash is its tell.
+# (1) A short house-style note is appended to EVERY system prompt (one place, here).
+# (2) As a guarantee, any em/en dash that still comes back is converted to natural
+#     punctuation before the text reaches the user. Numeric ranges ("3–4") keep a hyphen.
+_A92_AI_STYLE_NOTE = (
+    "\n\nHouse style: write the way a warm, thoughtful person would, in plain natural "
+    "sentences. Never use em dashes or en dashes; use commas, colons or full stops instead. "
+    "Avoid hype and stock phrases (for example 'journey', 'delve', 'embark', 'unlock', "
+    "'empower', 'tapestry'), keep exclamation marks rare, and do not add emoji."
+)
+# A92 audit: Russian grammar REQUIRES the dash (тире) in "X — это Y" constructions, so the
+# Russian note only rules out English-style dashes, and the converter keeps the spaced тире.
+_A92_AI_STYLE_NOTE_RU = (
+    "\n\nHouse style: write the way a warm, thoughtful person would, in plain natural "
+    "sentences. Use a dash only where Russian grammar requires it (for example 'X — это Y'), "
+    "never as an English-style pause. Avoid hype and stock phrases, keep exclamation marks "
+    "rare, and do not add emoji."
+)
+
+
+def _a92_humanize_ai_text(text, language=None):
+    """A92: replace em/en dashes in model output with natural punctuation.
+    Russian keeps its grammatical spaced dash; only ranges and list/edge dashes are tidied."""
+    if not text:
+        return text
+    import re as _re
+    t = _re.sub(r'(\d)\s*[–—]\s*(\d)', r'\1-\2', text)      # 3–4 -> 3-4
+    t = _re.sub(r'(\w)–(\w)', r'\1-\2', t)                   # Mon–Fri -> Mon-Fri
+    t = _re.sub(r'^[ \t]*[—–][ \t]*', '', t, flags=_re.M)    # leading list dash
+    t = _re.sub(r'[ \t]*[—–][ \t]*$', '', t, flags=_re.M)    # trailing dash
+    if language == 'ru':
+        return t                                             # keep the grammatical тире
+    t = _re.sub(r'[ \t]*[—–][ \t]*', ', ', t)                # mid-sentence -> comma
+    t = _re.sub(r',\s*([,.;:!?])', r'\1', t)                           # tidy ", ." -> "."
+    return t
+
+
+def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500, language=None):
     """K4: Helper to call Anthropic API. Returns text response or None on failure.
     Enhanced with detailed logging for diagnosing preview deployment issues."""
     if not ANTHROPIC_API_KEY:
@@ -17420,7 +17533,7 @@ def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
             json={
                 'model': 'claude-haiku-4-5-20251001',
                 'max_tokens': max_tokens,
-                'system': system_prompt,
+                'system': (system_prompt or '') + (_A92_AI_STYLE_NOTE_RU if language == 'ru' else _A92_AI_STYLE_NOTE),  # A92 house voice
                 'messages': [{'role': 'user', 'content': user_prompt}]
             },
             timeout=30
@@ -17431,7 +17544,7 @@ def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
             for block in data.get('content', []):
                 if block.get('type') == 'text':
                     logger.info(f"[AI] SUCCESS — received {len(block['text'])} chars of AI text")
-                    return block['text']
+                    return _a92_humanize_ai_text(block['text'], language)  # A92: no long dashes
             logger.warning(f"[AI] 200 OK but no text block in response content")
         else:
             # Log the deny reason header from egress proxy if present
@@ -17485,10 +17598,10 @@ def ai_weekly_summary():
 
         if not params:
             fallback_msgs = {
-                'en': "You haven't checked in this week yet — once you do, your personalized weekly summary will appear here. It only takes a moment!",
-                'he': 'עדיין לא מילאת צ׳ק אין השבוע — ברגע שתעשה, הסיכום השבועי המותאם אישית שלך יופיע כאן. זה לוקח רק רגע!',
-                'ar': 'لم تسجل هذا الأسبوع بعد — بمجرد أن تفعل، سيظهر ملخصك الأسبوعي المخصص هنا. الأمر لا يستغرق سوى لحظة!',
-                'ru': 'Вы ещё не отмечались на этой неделе — как только это сделаете, здесь появится ваш персональный недельный итог. Это займёт всего минуту!'
+                'en': "You haven't checked in this week yet. Once you do, your personalized weekly summary will appear here. It only takes a moment!",
+                'he': 'עדיין לא מילאת צ׳ק אין השבוע. ברגע שתעשה, הסיכום השבועי המותאם אישית שלך יופיע כאן. זה לוקח רק רגע!',
+                'ar': 'لم تسجل هذا الأسبوع بعد. بمجرد أن تفعل، سيظهر ملخصك الأسبوعي المخصص هنا. الأمر لا يستغرق سوى لحظة!',
+                'ru': 'Вы ещё не отмечались на этой неделе. Как только это сделаете, здесь появится ваш персональный недельный итог. Это займёт всего минуту!'
             }
             return jsonify({'summary': fallback_msgs.get(user_language, fallback_msgs['en']), 'ai_generated': False})
 
@@ -17615,7 +17728,7 @@ def ai_weekly_summary():
             "Please provide a brief, personalized weekly summary."
         )
 
-        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=400)
+        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=400, language=user_language)
 
         if ai_text:
             return jsonify({
@@ -17786,7 +17899,7 @@ def ai_reflection_prompt():
             f"Generate one {chosen_style}-oriented reflection question."
         )
 
-        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=200)
+        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=200, language=user_language)
 
         if ai_text:
             return jsonify({'prompt': ai_text, 'ai_generated': True})
@@ -17866,19 +17979,19 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'mood': (3, 4), 'energy': (3, 4)},
         'messages': {
             'en': [
-                "You're radiating positive energy today — that's worth celebrating! What you're doing is clearly working for you.",
-                "High mood and high energy — that's a powerful combination. Today is a great day to tackle something meaningful."
+                "You're radiating positive energy today. That's worth celebrating! What you're doing is clearly working for you.",
+                "High mood and high energy: that's a powerful combination. Today is a great day to tackle something meaningful."
             ],
             'he': [
-                "את/ה מקרין/ה אנרגיה חיובית היום — שווה לחגוג את זה! מה שאת/ה עושה עובד.",
-                "מצב רוח גבוה ואנרגיה גבוהה — שילוב חזק. היום הוא יום מצוין להתמודד עם משהו משמעותי."
+                "את/ה מקרין/ה אנרגיה חיובית היום. שווה לחגוג את זה! מה שאת/ה עושה עובד.",
+                "מצב רוח גבוה ואנרגיה גבוהה: שילוב חזק. היום הוא יום מצוין להתמודד עם משהו משמעותי."
             ],
             'ar': [
-                "أنت تشع بطاقة إيجابية اليوم — هذا يستحق الاحتفال! ما تفعله يعمل بوضوح لصالحك.",
-                "مزاج عالي وطاقة عالية — مزيج قوي. اليوم يوم رائع لمواجهة شيء ذو معنى."
+                "أنت تشع بطاقة إيجابية اليوم. هذا يستحق الاحتفال! ما تفعله يعمل بوضوح لصالحك.",
+                "مزاج عالي وطاقة عالية: مزيج قوي. اليوم يوم رائع لمواجهة شيء ذو معنى."
             ],
             'ru': [
-                "Вы излучаете позитивную энергию сегодня — это стоит отметить! То, что вы делаете, явно работает.",
+                "Вы излучаете позитивную энергию сегодня. Это стоит отметить! То, что вы делаете, явно работает.",
                 "Хорошее настроение и высокая энергия — мощное сочетание. Сегодня отличный день для важных дел."
             ]
         }
@@ -17888,19 +18001,19 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'sleep_quality': (3, 4)},
         'messages': {
             'en': [
-                "Great sleep makes everything else easier — you gave yourself a real gift last night.",
+                "Great sleep makes everything else easier. You gave yourself a real gift last night.",
                 "Quality rest is the foundation of a good day, and you nailed it. Your body and mind will thank you."
             ],
             'he': [
-                "שינה טובה הופכת הכל לקל יותר — נתת לעצמך מתנה אמיתית אתמול בלילה.",
+                "שינה טובה הופכת הכל לקל יותר. נתת לעצמך מתנה אמיתית אתמול בלילה.",
                 "מנוחה איכותית היא הבסיס ליום טוב, ועשית את זה נהדר."
             ],
             'ar': [
-                "النوم الجيد يجعل كل شيء أسهل — لقد منحت نفسك هدية حقيقية الليلة الماضية.",
+                "النوم الجيد يجعل كل شيء أسهل. لقد منحت نفسك هدية حقيقية الليلة الماضية.",
                 "الراحة الجيدة هي أساس اليوم الجيد، وقد أتقنتها."
             ],
             'ru': [
-                "Хороший сон делает всё остальное легче — вы сделали себе настоящий подарок прошлой ночью.",
+                "Хороший сон делает всё остальное легче. Вы сделали себе настоящий подарок прошлой ночью.",
                 "Качественный отдых — основа хорошего дня, и у вас это отлично получилось."
             ]
         }
@@ -17910,15 +18023,15 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'physical_activity': (3, 4)},
         'messages': {
             'en': [
-                "Moving your body is one of the kindest things you can do for yourself — well done today.",
+                "Moving your body is one of the kindest things you can do for yourself. Well done today.",
                 "Physical activity is a natural mood booster. You're building something good for yourself, one day at a time."
             ],
             'he': [
-                "להזיז את הגוף זה אחד הדברים הטובים ביותר שאפשר לעשות בשביל עצמך — כל הכבוד.",
+                "להזיז את הגוף זה אחד הדברים הטובים ביותר שאפשר לעשות בשביל עצמך. כל הכבוד.",
                 "פעילות גופנית היא מעלה מצב רוח טבעית. את/ה בונה משהו טוב לעצמך."
             ],
             'ar': [
-                "تحريك جسمك من أفضل الأشياء التي يمكنك فعلها لنفسك — أحسنت اليوم.",
+                "تحريك جسمك من أفضل الأشياء التي يمكنك فعلها لنفسك. أحسنت اليوم.",
                 "النشاط البدني يرفع المعنويات بشكل طبيعي. أنت تبني شيئاً جيداً لنفسك."
             ],
             'ru': [
@@ -17954,20 +18067,20 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'energy': (1, 2)},
         'messages': {
             'en': [
-                "Low energy days are your body asking for gentleness. Listen to it — rest is productive too.",
+                "Low energy days are your body asking for gentleness. Listen to it. Rest is productive too.",
                 "Energy ebbs and flows. On days like this, even small wins count. You showed up, and that matters."
             ],
             'he': [
-                "ימים של אנרגיה נמוכה הם הגוף שלך מבקש עדינות. תקשיב לו — גם מנוחה היא פרודוקטיבית.",
+                "ימים של אנרגיה נמוכה הם הגוף שלך מבקש עדינות. תקשיב לו. גם מנוחה היא פרודוקטיבית.",
                 "האנרגיה עולה ויורדת. בימים כאלה, גם ניצחונות קטנים נחשבים. באת, וזה חשוב."
             ],
             'ar': [
-                "أيام الطاقة المنخفضة هي جسمك يطلب الرفق. استمع له — الراحة إنتاجية أيضاً.",
+                "أيام الطاقة المنخفضة هي جسمك يطلب الرفق. استمع له. الراحة إنتاجية أيضاً.",
                 "الطاقة تتقلب. في أيام كهذه، حتى الانتصارات الصغيرة مهمة. لقد حضرت، وهذا يعني الكثير."
             ],
             'ru': [
-                "Дни с низкой энергией — это тело просит мягкости. Послушайте его — отдых тоже продуктивен.",
-                "Энергия то растёт, то падает. В такие дни даже маленькие победы важны. Вы пришли — и это имеет значение."
+                "Дни с низкой энергией — это тело просит мягкости. Послушайте его: отдых тоже продуктивен.",
+                "Энергия то растёт, то падает. В такие дни даже маленькие победы важны. Вы пришли, и это имеет значение."
             ]
         }
     },
@@ -17999,19 +18112,19 @@ CHECKIN_FEEDBACK_BANK = [
         'messages': {
             'en': [
                 "A calm mind is a powerful mind. Whatever helped you find peace today, hold onto it.",
-                "Inner calm doesn't happen by accident — you're cultivating something valuable."
+                "Inner calm doesn't happen by accident. You're cultivating something valuable."
             ],
             'he': [
                 "מוח רגוע הוא מוח חזק. מה שעזר לך למצוא שלווה היום, תחזיק בזה.",
-                "שלווה פנימית לא קורית במקרה — את/ה מטפח/ת משהו יקר ערך."
+                "שלווה פנימית לא קורית במקרה. את/ה מטפח/ת משהו יקר ערך."
             ],
             'ar': [
                 "العقل الهادئ عقل قوي. مهما ساعدك في إيجاد السلام اليوم، تمسك به.",
-                "الهدوء الداخلي لا يحدث بالصدفة — أنت تزرع شيئاً ثميناً."
+                "الهدوء الداخلي لا يحدث بالصدفة. أنت تزرع شيئاً ثميناً."
             ],
             'ru': [
                 "Спокойный ум — сильный ум. Что бы ни помогло вам обрести покой сегодня, держитесь за это.",
-                "Внутреннее спокойствие не приходит случайно — вы взращиваете что-то ценное."
+                "Внутреннее спокойствие не приходит случайно. Вы взращиваете что-то ценное."
             ]
         }
     },
@@ -18042,19 +18155,19 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'trend': 'improving'},
         'messages': {
             'en': [
-                "Your numbers are trending up — that's not luck, that's you putting in the work.",
+                "Your numbers are trending up. That's not luck, that's you putting in the work.",
                 "An upward trend! Small daily choices are adding up. Keep going."
             ],
             'he': [
-                "המספרים שלך עולים — זה לא מזל, זה את/ה משקיע/ה מאמץ.",
+                "המספרים שלך עולים. זה לא מזל, זה את/ה משקיע/ה מאמץ.",
                 "מגמה עולה! בחירות יומיות קטנות מצטברות. המשיכ/י."
             ],
             'ar': [
-                "أرقامك في تحسن — هذا ليس حظاً، هذا أنت تبذل الجهد.",
+                "أرقامك في تحسن. هذا ليس حظاً، هذا أنت تبذل الجهد.",
                 "اتجاه تصاعدي! الخيارات اليومية الصغيرة تتراكم. استمر."
             ],
             'ru': [
-                "Ваши показатели растут — это не везение, это ваш труд.",
+                "Ваши показатели растут. Это не везение, это ваш труд.",
                 "Восходящий тренд! Маленькие ежедневные решения складываются. Продолжайте."
             ]
         }
@@ -24628,7 +24741,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 # PJ817: Generate content with date pattern for ALL streak lengths
                 # T30: Handle no_checkin triggers with a distinct message
                 if parameter == 'no_checkin':
-                    content = f"{watched_username} hasn't checked in for {consecutive_days} days — you may want to reach out"
+                    content = f"{watched_username} hasn't checked in for {consecutive_days} days. You may want to reach out"
                 elif alert_data.get('dates') and len(alert_data['dates']) >= 1:
                     try:
                         from datetime import datetime as dt
