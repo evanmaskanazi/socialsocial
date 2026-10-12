@@ -34,13 +34,30 @@
 #   Sessions / tokens
 #  15. Account-deletion tokens carry a 'del_' prefix; reset and deletion tokens no longer work
 #      for each other.
-#  16. If no SECRET_KEY environment variable is set, a random key is generated once, stored in
-#      the database (table app_secrets) and reused on every restart, instead of using the public
-#      default key written in this file.
+#  16. If no SECRET_KEY environment variable is set, the key is derived from DATABASE_URL (secret,
+#      always present on Render) instead of using the public default written in this file. No
+#      database access at import time; identical on every worker and restart.
 #  17. _get_client_ip uses security.get_client_ip (the first X-Forwarded-For entry was spoofable).
 #   Logging
 #  18. Email addresses are masked in all app log lines (filter); alert/notification text (another
 #      person's wellbeing) is no longer logged.
+#   Time-bomb review (changes made during F5-F7 checked for failures that only appear later:
+#   at deploy, under multiple workers, after future edits, or with growth)
+#  19. SECRET_KEY: an earlier F7 draft stored a generated key in a database table at import time;
+#      replaced by item 16 (no database work at import - the pattern behind the earlier
+#      rolling-deploy deadlock - and no race between workers creating different keys).
+#  20. Handler bridge is embedded in each page as small nonce'd inline scripts (core + chunks of
+#      25 handlers) instead of two separately fetched files: during a zero-downtime deploy a page
+#      from the new instance can no longer receive a bridge file from the old one. A chunk the
+#      generator mis-reads after a future template edit disables only its own handlers (tested:
+#      breaking any one chunk left 188-191 of the 191 index handlers working).
+#  21. Silent-failure reporting: the bridge reports (POST /ts-csp/report) an inline handler it
+#      cannot match and any CSP violation (directive + host only, values stripped in the
+#      browser); logged once per shape as "[A94 CSP]" warnings, capped at 300 per process.
+#  22. Friend-of-friend suggestions read the viewer's blocks in one query (was one per candidate).
+#  23. A CF-Connecting-IP header from an address outside Cloudflare's published ranges logs a
+#      warning at most hourly, so a future Cloudflare range change shows up in the logs instead
+#      of silently merging rate-limit buckets.
 #   DEPLOY: no environment variables are required. Diary reminders run from the in-app
 #   scheduler; the HTTP trigger /api/diary-reminder/process is only opened by setting CRON_SECRET.
 #   The Resend inbound-email webhook needs RESEND_WEBHOOK_SECRET (the webhook's signing secret
@@ -69,7 +86,7 @@
 #      'unsafe-inline' removed and script-src-attr 'none'. Injected <script> tags and injected
 #      inline handlers are refused by the browser. object-src/base-uri/frame-ancestors as A93.
 #   2. _a94_nonce_html adds the nonce to the <script> tags in the HTML the server sends.
-#   3. Handler bridge (/ts-csp/core.js + /ts-csp/handlers.js, loaded first on every page): the
+#   3. Handler bridge (inline nonce'd scripts at the top of <head> since F7; was /ts-csp/*.js): the
 #      existing inline onclick/onchange/... handlers keep working because each one is turned
 #      into a normal JS handler, and ONLY handler code found in the app's own templates,
 #      static/js files and this file is run (table rebuilt from the deployed files at startup).
@@ -2049,10 +2066,9 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-i
 if is_production and app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
     print("WARNING: Using default SECRET_KEY in production!")
     # F7: the default key is written in this file, so sessions and CSRF tokens would be signed
-    # with a public key. When no SECRET_KEY is configured, a strong random key is generated once,
-    # stored in the database and reused by every worker and every restart (see
-    # _f7_load_persisted_secret_key below). Nothing needs to be set in the host's environment;
-    # a SECRET_KEY environment variable, if present, always takes priority.
+    # with a public key. When no SECRET_KEY is configured, a key is derived from DATABASE_URL
+    # (see _f7_derive_secret_key below): same on every worker and restart, no database access.
+    # A SECRET_KEY environment variable, if present, always takes priority.
 _F7_NEEDS_PERSISTED_SECRET = (app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production')
 
 # Database configuration
@@ -2101,37 +2117,28 @@ if REDIS_URL:
 db = SQLAlchemy(app)
 
 
-def _f7_load_persisted_secret_key():
-    """F7: replace the built-in default SECRET_KEY with a random key kept in the database.
-    Created on first start, then read back by every worker/restart, so sessions stay valid
-    across deploys. Only runs when no SECRET_KEY environment variable is set."""
+def _f7_derive_secret_key():
+    """F7: replace the built-in default SECRET_KEY without touching the database.
+
+    When no SECRET_KEY environment variable is set, the key is derived from DATABASE_URL, which
+    Render always provides and which contains the database's long random password (a secret).
+    Every worker and every restart computes the same key, so sessions stay valid, and nothing is
+    read or written at import time (DB work during import once blocked gunicorn from opening its
+    port during rolling deploys). If the database password is rotated, users sign in once more.
+    A SECRET_KEY environment variable, when present, always takes priority."""
     if not _F7_NEEDS_PERSISTED_SECRET:
         return
-    try:
-        with app.app_context():
-            with db.engine.begin() as conn:
-                conn.execute(text("CREATE TABLE IF NOT EXISTS app_secrets ("
-                                  "name VARCHAR(64) PRIMARY KEY, value VARCHAR(256) NOT NULL)"))
-            with db.engine.begin() as conn:
-                row = conn.execute(text("SELECT value FROM app_secrets WHERE name = 'flask_secret_key'")).first()
-            if not row:
-                try:
-                    with db.engine.begin() as conn:
-                        conn.execute(text("INSERT INTO app_secrets (name, value) VALUES ('flask_secret_key', :v)"),
-                                     {'v': secrets.token_hex(32)})
-                except Exception:
-                    pass  # another worker inserted it first; read theirs below
-                with db.engine.begin() as conn:
-                    row = conn.execute(text("SELECT value FROM app_secrets WHERE name = 'flask_secret_key'")).first()
-            if row and row[0]:
-                app.config['SECRET_KEY'] = row[0]
-                app.secret_key = row[0]
-                print("[F7] SECRET_KEY not set in the environment - using the generated key stored in the database.")
-    except Exception as _sk_err:
-        print(f"WARNING: could not load or create a stored SECRET_KEY ({_sk_err}); using the default key.")
+    db_url = os.environ.get('DATABASE_URL', '')
+    if not db_url or db_url.startswith('sqlite'):
+        return  # local development: keep the default
+    import hashlib as _hl
+    derived = _hl.sha256(b'therasocial-flask-secret-key-v1|' + db_url.encode('utf-8')).hexdigest()
+    app.config['SECRET_KEY'] = derived
+    app.secret_key = derived
+    print("[F7] SECRET_KEY not set in the environment - using a key derived from DATABASE_URL.")
 
 
-_f7_load_persisted_secret_key()
+_f7_derive_secret_key()
 migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite
 
 # CHANGE 1: Enhanced CORS with explicit origins and security headers
@@ -2272,7 +2279,7 @@ def add_security_headers(response):
 #      (templates and the few pages built in this file). User data in those pages is already
 #      HTML-escaped, so this only ever marks the app's own script tags.
 #   3. The pages still contain ~300 inline handlers (onclick="showView('home')"). A strict
-#      policy blocks those, so a small bridge script (served at /ts-csp/core.js) turns each one
+#      policy blocks those, so a small bridge script (embedded inline at the top of each page) turns each one
 #      into an ordinary JS handler (element.onclick = function), which CSP allows. It will ONLY
 #      run handler code that exists in the app's own source files: at startup
 #      _a94_build_handler_table() scans templates/*.html, static/js/*.js and this file, and
@@ -2729,17 +2736,25 @@ def _a94_build_handler_table(paths):
         tpls[rx] = code
     # most specific (longest literal text) first
     order = sorted(tpls.items(), key=lambda kv: -len(re.sub(r'\([^)]*\)', '', kv[0])))
-    out = ['/* TheraSocial A94: inline handlers precompiled from the app source. Generated. */',
-           '(function(){var __tsR=window.__tsCspRegister;if(!__tsR)return;']
-    out.append('__tsR.s({')
-    out.append(',\n'.join('%s:function(event){%s\n}' % (_a94_json.dumps(c), c) for c in statics))
-    out.append('});')
-    out.append('__tsR.t([')
-    out.append(',\n'.join('[%s,function(event,__h,__u,__f,__p,__v,__c){%s\n}]' % (_a94_json.dumps(rx), code)
-                          for rx, code in order))
-    out.append(']);})();')
-    js = '\n'.join(out).replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
-    return js, len(statics), len(order)
+    # F7 (fault isolation): the table is split into small, independent script files. One entry
+    # that the generator mis-read (e.g. after a future template change) can then only disable
+    # the handlers in its own chunk, never every button on the site. Chunks load in order, so
+    # template matching priority is unchanged.
+    chunk_size = 25
+    chunks = []
+    head = ('/* TheraSocial A94: inline handlers precompiled from the app source. Generated. */\n'
+            '(function(){var __tsR=window.__tsCspRegister;if(!__tsR)return;\n')
+    for i in range(0, len(statics), chunk_size):
+        part = statics[i:i + chunk_size]
+        body = '__tsR.s({\n' + ',\n'.join('%s:function(event){%s\n}' % (_a94_json.dumps(c), c) for c in part) + '\n});'
+        chunks.append(head + body + '\n})();')
+    for i in range(0, len(order), chunk_size):
+        part = order[i:i + chunk_size]
+        body = '__tsR.t([\n' + ',\n'.join('[%s,function(event,__h,__u,__f,__p,__v,__c){%s\n}]' % (_a94_json.dumps(rx), code)
+                                           for rx, code in part) + '\n]);'
+        chunks.append(head + body + '\n})();')
+    chunks = [c.replace('\u2028', '\\u2028').replace('\u2029', '\\u2029') for c in chunks]
+    return chunks, len(statics), len(order)
 
 
 _A94_CORE_JS = r"""/* TheraSocial A94 strict-CSP handler bridge. Runs first on every page. */
@@ -2870,6 +2885,12 @@ _A94_CORE_JS = r"""/* TheraSocial A94 strict-CSP handler bridge. Runs first on e
   function warn(code) {
     if (WARNED[code]) return; WARNED[code] = 1; stats.blocked.push(code);
     try { console.warn('[TS-CSP] blocked inline handler that is not in the app source:', code); } catch (_) {}
+    // F7: tell the server, so a button broken by a future change shows up in the server log.
+    // Quoted text and numbers are stripped first (they can hold names or ids).
+    try {
+      var shape = String(code).replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/g, "''").replace(/\d+/g, '0').slice(0, 200);
+      if (navigator.sendBeacon) navigator.sendBeacon('/ts-csp/report', new Blob([JSON.stringify({h: shape, p: location.pathname})], {type: 'application/json'}));
+    } catch (_) {}
   }
   function applyAttr(el, name) {
     var code = el.getAttribute(name);
@@ -2904,6 +2925,19 @@ _A94_CORE_JS = r"""/* TheraSocial A94 strict-CSP handler bridge. Runs first on e
   });
   mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ATTRS });
   document.addEventListener('DOMContentLoaded', rescan);
+  // F7: report any CSP violation (directive + host only) so something a future change breaks
+  // under the strict policy - a javascript: link, a new external API, an un-nonced script -
+  // shows up in the server log instead of failing silently in users' browsers.
+  var VREP = Object.create(null);
+  document.addEventListener('securitypolicyviolation', function (e) {
+    try {
+      var host = '';
+      try { host = e.blockedURI && /^https?:/.test(e.blockedURI) ? new URL(e.blockedURI).host : String(e.blockedURI || ''); } catch (_) { host = 'unparsed'; }
+      var key = (e.effectiveDirective || e.violatedDirective || '') + '|' + host.slice(0, 80);
+      if (VREP[key]) return; VREP[key] = 1;
+      if (navigator.sendBeacon) navigator.sendBeacon('/ts-csp/report', new Blob([JSON.stringify({v: key, p: location.pathname})], {type: 'application/json'}));
+    } catch (_) {}
+  });
 })();
 """
 
@@ -2940,16 +2974,25 @@ def _a94_assets():
             return _a94_assets_cache
         built = {}
         try:
-            js, n_static, n_tpl = _a94_build_handler_table(_a94_source_paths())
+            chunks, n_static, n_tpl = _a94_build_handler_table(_a94_source_paths())
         except Exception as e:
-            js, n_static, n_tpl = '/* A94: handler table unavailable */', 0, 0
+            chunks, n_static, n_tpl = ['/* A94: handler table unavailable */'], 0, 0
             try:
                 logger.error(f"[A94 CSP] handler table build failed: {e}")
             except Exception:
                 pass
-        for name, body in (('core', _A94_CORE_JS), ('handlers', js)):
+        named = [('core', _A94_CORE_JS)] + [('handlers-%d' % i, c) for i, c in enumerate(chunks)]
+        for name, body in named:
             ver = _a94_hashlib.sha256(body.encode('utf-8')).hexdigest()[:12]
-            built[name] = (body, ver)
+            # F7: a chunk that could end the inline <script> early is not embedded (and logged).
+            embeddable = ('</script' not in body.lower()) and ('<!--' not in body)
+            if not embeddable:
+                try:
+                    logger.error(f"[A94 CSP] {name} not embedded: contains </script or <!--")
+                except Exception:
+                    pass
+            built[name] = (body, ver, embeddable)
+        built['_order'] = [n for n, _b in named]  # F7: boot order (core first, then chunks)
         _a94_assets_cache.update(built)
         try:
             logger.info(f"[A94 CSP] handler table: {n_static} exact + {n_tpl} templated handlers")
@@ -2961,12 +3004,36 @@ def _a94_assets():
 @app.route('/ts-csp/<name>.js')
 def a94_csp_asset(name):
     assets = _a94_assets()
-    if name not in assets:
+    if name not in assets or name.startswith('_'):
         return '', 404
-    body, ver = assets[name]
+    body, ver = assets[name][0], assets[name][1]
     resp = Response(body, mimetype='application/javascript')
     resp.headers['Cache-Control'] = 'public, max-age=31536000, immutable' if request.args.get('v') == ver else 'no-cache'
     return resp
+
+
+_a94_reported = set()
+
+
+@app.route('/ts-csp/report', methods=['POST'])
+def a94_csp_report():
+    """F7: the bridge reports an inline handler it could not match (a button that would not
+    work). Logged once per distinct shape per process; values were stripped in the browser."""
+    try:
+        data = request.get_json(silent=True, force=True) or {}
+        _clean = lambda v, n: ''.join(ch if ch.isprintable() else ' ' for ch in str(v))[:n]
+        shape = _clean(data.get('h', ''), 200)
+        violation = _clean(data.get('v', ''), 200)
+        page = _clean(data.get('p', ''), 100)
+        if shape and shape not in _a94_reported and len(_a94_reported) < 300:
+            _a94_reported.add(shape)
+            logger.warning(f"[A94 CSP] blocked inline handler not found in app source (page {page}): {shape}")
+        elif violation and ('v:' + violation) not in _a94_reported and len(_a94_reported) < 300:
+            _a94_reported.add('v:' + violation)
+            logger.warning(f"[A94 CSP] browser blocked something under the security policy (page {page}): {violation}")
+    except Exception:
+        pass
+    return '', 204
 
 
 def _a94_nonce():
@@ -3045,9 +3112,12 @@ def _a94_nonce_html(response):
 
         body = _a94_add_nonces(body, nonce)
         assets = _a94_assets()
-        boot = ('<script nonce="%s" src="/ts-csp/core.js?v=%s"></script>'
-                '<script nonce="%s" src="/ts-csp/handlers.js?v=%s"></script>'
-                % (nonce, assets['core'][1], nonce, assets['handlers'][1]))
+        # F7: the bridge is embedded in the page (one inline script per chunk, each with the
+        # nonce) instead of separate /ts-csp/*.js requests. During a zero-downtime deploy the old
+        # and new instances overlap; a page from one could otherwise load chunks from the other
+        # and get a mismatched handler set. Separate <script> elements keep a faulty chunk isolated.
+        boot = ''.join('<script nonce="%s">%s</script>' % (nonce, assets[n][0])
+                       for n in assets['_order'] if assets[n][2])
         # A94 audit 1: find the real <head>/<html> tag, never one quoted inside an HTML comment.
         at = None
         for tag in ('head', 'html'):
@@ -3347,6 +3417,9 @@ def check_rate_limit(user_id, max_requests=100, window=60, endpoint=None):
 # B110: Extract real client IP behind reverse proxy (Render, nginx, etc.)
 # X-Forwarded-For format: "client, proxy1, proxy2" — first entry is the real client.
 # Falls back to request.remote_addr if header is absent (direct connection).
+_f7_cf_warned_at = 0.0
+
+
 def _get_client_ip():
     # F7: the FIRST X-Forwarded-For entry is whatever the client sent, so rate limits keyed on it
     # could be bypassed by sending a new made-up IP each time. Use the same logic as
@@ -3354,7 +3427,20 @@ def _get_client_ip():
     # Cloudflare edge, otherwise the right-most entry (added by the hosting proxy).
     try:
         from security import get_client_ip as _sec_client_ip
-        return _sec_client_ip()
+        ip = _sec_client_ip()
+        # F7: if Cloudflare's visitor header is present but was not trusted, the connecting
+        # address is outside the Cloudflare ranges in security.py (Cloudflare added a range, or
+        # someone is calling the origin directly with a made-up header). Log it at most hourly so
+        # an outdated list - which would make visitors share rate-limit buckets - gets noticed.
+        cf = (request.headers.get('CF-Connecting-IP') or '').strip()
+        if cf and ip != cf:
+            global _f7_cf_warned_at
+            now = time.time()
+            if now - _f7_cf_warned_at > 3600:
+                _f7_cf_warned_at = now
+                logger.warning("[F7 CLIENT IP] CF-Connecting-IP present but the connecting address is not a "
+                               "known Cloudflare range; check https://www.cloudflare.com/ips/ against security.py")
+        return ip
     except Exception:
         forwarded = [p.strip() for p in (request.headers.get('X-Forwarded-For') or '').split(',') if p.strip()]
         return forwarded[-1] if forwarded else request.remote_addr
@@ -14810,7 +14896,14 @@ def _f7_public_circle_members(owner_id, viewer_id):
         ids = db.session.execute(
             select(Circle.circle_user_id).filter_by(user_id=owner_id).filter(Circle.circle_user_id != viewer_id)
         ).scalars().all()
-        return [i for i in ids if not _f7_blocked_either_way(i, viewer_id)]
+        # One query for all of the viewer's blocks (not one query per member), so a large circle
+        # cannot turn a recommendations request into thousands of queries.
+        blocked = set()
+        for b_er, b_ed in db.session.execute(
+                select(BlockedUser.blocker_id, BlockedUser.blocked_id).filter(
+                    (BlockedUser.blocker_id == viewer_id) | (BlockedUser.blocked_id == viewer_id))).all():
+            blocked.add(b_ed if b_er == viewer_id else b_er)
+        return [i for i in ids if i not in blocked]
     except Exception as _e:
         logger.warning(f"[F7 RECS] circle lookup failed, skipping: {_e}")
         return []
