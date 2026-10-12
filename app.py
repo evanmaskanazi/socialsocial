@@ -1,6 +1,67 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version F7 / B205 (backend; no front-end change, cache-bust unchanged)
+#
+# F7 (security review: access control, sessions/tokens, logging):
+#   Access control
+#   1. /api/user/<id>/parameters/<date>: diary NOTES were returned regardless of notes_privacy,
+#      and the gate was "viewer follows target" (one-sided, anyone can create it). Now: target
+#      follows viewer or viewer is in target's circles; notes obey notes_privacy; owner sees all.
+#   2. /api/user/<id>/feed/<date>: 'private' posts were returned. Now uses _can_access_post().
+#   3. /api/parameters/hierarchical/<id>: had no connection/block check (diary calendar leak).
+#   4. GET /api/circles?user_id=: same one-sided gate fixed; block check; multi-circle 500 fixed.
+#   5. Other users' email addresses removed from search, following, followers, blocked-users,
+#      circles lists and both recommendation routes (14 places).
+#   6. Friend-of-friend suggestions only use circles their owner made public, minus blocks.
+#   7. Professional access is re-checked on every request (_is_active_professional_for): ends when
+#      the client turns professional access off, either side blocks, or the role changes; a block
+#      also revokes the relationship.
+#   8. POST /api/circles refuses when a block exists either way (was a block bypass + email spam).
+#   9. POST /api/triggers requires a real, connected, unblocked user.
+#  10. Role/scope: admin cleanup routes -> @admin_required; verify-professional, operator inbox,
+#      create-dept-operator, operator points (+backfill) and /api/admin/users ->
+#      @system_operator_required (new; system operators and admins, not department operators);
+#      unflag-user gets the same scope check as flag-user; admin/operator/professional decorators
+#      reject deactivated accounts.
+#  11. invite-group-user: never returns the temporary password; existing accounts get an invitation
+#      instead of being enrolled silently, and their id/username is not returned.
+#  12. /api/admin/migrate-language now @admin_required (had no auth); /api/setup/sample-users
+#      @admin_required and blocked on Render even if FLASK_DEBUG is set.
+#  13. Diary-reminder cron refuses without CRON_SECRET in production; constant-time comparison.
+#  14. Resend inbound-email webhook verifies the Svix signature (RESEND_WEBHOOK_SECRET); refused
+#      in production without it.
+#   Sessions / tokens
+#  15. Account-deletion tokens carry a 'del_' prefix; reset and deletion tokens no longer work
+#      for each other.
+#  16. If no SECRET_KEY environment variable is set, a random key is generated once, stored in
+#      the database (table app_secrets) and reused on every restart, instead of using the public
+#      default key written in this file.
+#  17. _get_client_ip uses security.get_client_ip (the first X-Forwarded-For entry was spoofable).
+#   Logging
+#  18. Email addresses are masked in all app log lines (filter); alert/notification text (another
+#      person's wellbeing) is no longer logged.
+#   DEPLOY: no environment variables are required. Diary reminders run from the in-app
+#   scheduler; the HTTP trigger /api/diary-reminder/process is only opened by setting CRON_SECRET.
+#   The Resend inbound-email webhook needs RESEND_WEBHOOK_SECRET (the webhook's signing secret
+#   from the Resend dashboard) ONLY if such a webhook is configured in Resend.
+#
+# =====================================================================
+# TheraSocial app.py - Version F6 / B205 (backend)
+#
+# F6 (consent and disclosure accuracy; no route added or removed):
+#   1. save_consent: analytics_consent and research_data default to False when not sent
+#      (analytics defaulted to True). Birth-year checks use the current year (were 2025) in
+#      save_consent, the profile update and rectify-data.
+#   2. DATA_RETENTION_PERIODS matches actual behaviour: diary data, messages, profile and consent
+#      records last until account deletion (was "7 years, clinical record standards").
+#   3. /api/privacy/data-processing lists the AI provider (Anthropic) for the weekly summary,
+#      Resend for email, hosting/delivery providers (Render, Redis when configured, jsDelivr), and
+#      approved professionals. "Restrict processing" now says to contact support (no in-app button).
+#   4. The account-deletion audit record no longer stores the username.
+#   5. _A92_ASSET_VERSION = 'B205' (cache-bust lockstep; i18n.js and index.html changed).
+#
+# =====================================================================
 # TheraSocial app.py - Version A94 (backend)
 #
 # A94 (strict Content Security Policy; additive, no route or page markup changed):
@@ -1960,6 +2021,13 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Environment detection - using modern Flask approach
 is_production = os.environ.get('FLASK_DEBUG', 'False').lower() == 'false'
+
+
+def _f7_is_production():
+    """F7: production if FLASK_DEBUG is off OR the app runs on Render (which sets RENDER=true).
+    Used where 'not production' unlocks something unsafe, so a stray FLASK_DEBUG=true on the live
+    host does not open it."""
+    return bool(is_production or os.environ.get('RENDER'))
 app.config['DEBUG'] = not is_production
 
 # L170: Professional account — historical parameter access default.
@@ -1980,6 +2048,12 @@ TRUSTED_PROFESSIONAL_DOMAINS = set(
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 if is_production and app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
     print("WARNING: Using default SECRET_KEY in production!")
+    # F7: the default key is written in this file, so sessions and CSRF tokens would be signed
+    # with a public key. When no SECRET_KEY is configured, a strong random key is generated once,
+    # stored in the database and reused by every worker and every restart (see
+    # _f7_load_persisted_secret_key below). Nothing needs to be set in the host's environment;
+    # a SECRET_KEY environment variable, if present, always takes priority.
+_F7_NEEDS_PERSISTED_SECRET = (app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production')
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///social.db')
@@ -2025,6 +2099,39 @@ if REDIS_URL:
 
 # Initialize extensions
 db = SQLAlchemy(app)
+
+
+def _f7_load_persisted_secret_key():
+    """F7: replace the built-in default SECRET_KEY with a random key kept in the database.
+    Created on first start, then read back by every worker/restart, so sessions stay valid
+    across deploys. Only runs when no SECRET_KEY environment variable is set."""
+    if not _F7_NEEDS_PERSISTED_SECRET:
+        return
+    try:
+        with app.app_context():
+            with db.engine.begin() as conn:
+                conn.execute(text("CREATE TABLE IF NOT EXISTS app_secrets ("
+                                  "name VARCHAR(64) PRIMARY KEY, value VARCHAR(256) NOT NULL)"))
+            with db.engine.begin() as conn:
+                row = conn.execute(text("SELECT value FROM app_secrets WHERE name = 'flask_secret_key'")).first()
+            if not row:
+                try:
+                    with db.engine.begin() as conn:
+                        conn.execute(text("INSERT INTO app_secrets (name, value) VALUES ('flask_secret_key', :v)"),
+                                     {'v': secrets.token_hex(32)})
+                except Exception:
+                    pass  # another worker inserted it first; read theirs below
+                with db.engine.begin() as conn:
+                    row = conn.execute(text("SELECT value FROM app_secrets WHERE name = 'flask_secret_key'")).first()
+            if row and row[0]:
+                app.config['SECRET_KEY'] = row[0]
+                app.secret_key = row[0]
+                print("[F7] SECRET_KEY not set in the environment - using the generated key stored in the database.")
+    except Exception as _sk_err:
+        print(f"WARNING: could not load or create a stored SECRET_KEY ({_sk_err}); using the default key.")
+
+
+_f7_load_persisted_secret_key()
 migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite
 
 # CHANGE 1: Enhanced CORS with explicit origins and security headers
@@ -3241,11 +3348,16 @@ def check_rate_limit(user_id, max_requests=100, window=60, endpoint=None):
 # X-Forwarded-For format: "client, proxy1, proxy2" — first entry is the real client.
 # Falls back to request.remote_addr if header is absent (direct connection).
 def _get_client_ip():
-    forwarded = request.headers.get('X-Forwarded-For', '')
-    if forwarded:
-        # First IP in the chain is the original client
-        return forwarded.split(',')[0].strip()
-    return request.remote_addr
+    # F7: the FIRST X-Forwarded-For entry is whatever the client sent, so rate limits keyed on it
+    # could be bypassed by sending a new made-up IP each time. Use the same logic as
+    # security.get_client_ip(): Cloudflare's CF-Connecting-IP when the request really came from a
+    # Cloudflare edge, otherwise the right-most entry (added by the hosting proxy).
+    try:
+        from security import get_client_ip as _sec_client_ip
+        return _sec_client_ip()
+    except Exception:
+        forwarded = [p.strip() for p in (request.headers.get('X-Forwarded-For') or '').split(',') if p.strip()]
+        return forwarded[-1] if forwarded else request.remote_addr
 
 
 def rate_limit_endpoint(max_requests=100, window=60, endpoint_name=None):
@@ -3285,6 +3397,29 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('thera_social')
+
+
+# F7 (privacy): mask email addresses in every log line from the app's loggers. 66 log calls
+# included full addresses (send confirmations, cron, support, operator setup); hosting logs
+# are kept and readable by more people than the database. "jane.doe@gmail.com" is logged as
+# "ja***@gmail.com" (enough to debug delivery by domain, not enough to identify someone).
+class _F7RedactEmailsFilter(logging.Filter):
+    _EMAIL_RE = re.compile(r'([A-Za-z0-9._%+-]{1,2})[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})')
+
+    def filter(self, record):
+        try:
+            msg = record.getMessage()
+            red = self._EMAIL_RE.sub(r'\1***@\2', msg)
+            if red != msg:
+                record.msg = red
+                record.args = ()
+        except Exception:
+            pass
+        return True
+
+
+logger.addFilter(_F7RedactEmailsFilter())
+app.logger.addFilter(_F7RedactEmailsFilter())
 
 # Email configuration - using SMTP with Resend.com
 # NOTE: Using standard SMTP library, compatible with Resend
@@ -3881,7 +4016,7 @@ def translate_alert_content(title, content, user_language='en'):
         template = accepted_content_translations.get(user_language, accepted_content_translations['en'])
         translated_content = template.replace('{username}', username)
     
-    logger.info(f"[PJ6003] Translated notification - title: '{title}' -> '{translated_title}', content: '{content}' -> '{translated_content}'")
+    logger.info("[PJ6003] Translated notification")  # F7: notification title/content no longer logged
     
     return translated_title, translated_content
 
@@ -8649,9 +8784,26 @@ def admin_required(f):
             return jsonify({'error': 'Authentication required'}), 401
 
         user = db.session.get(User, session['user_id'])
-        if not user or user.role != 'admin':
+        # F7: a deactivated admin loses access immediately (was only checked at login).
+        if not user or user.role != 'admin' or not getattr(user, 'is_active', True):
             return jsonify({'error': 'Admin privileges required'}), 403
 
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+# F7: system operators and admins only - NOT department operators (scoped professionals).
+# Used for platform-wide actions: verifying professionals, minting operator accounts, and the
+# shared support inbox.
+def system_operator_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        user = db.session.get(User, session['user_id'])
+        if not user or user.role not in ('system_operator', 'admin') or not getattr(user, 'is_active', True):
+            return jsonify({'error': 'System operator privileges required'}), 403
         return f(*args, **kwargs)
 
     return decorated_function
@@ -8667,6 +8819,8 @@ def operator_required(f):
         user = db.session.get(User, session['user_id'])
         if not user:
             return jsonify({'error': 'User not found'}), 401
+        if not getattr(user, 'is_active', True):  # F7: deactivated operators lose access at once
+            return jsonify({'error': 'Operator privileges required'}), 403
 
         # G27: Allow system_operator, admin, AND professionals with OperatorScope (dept operators)
         if user.role in ('system_operator', 'admin'):
@@ -8692,7 +8846,7 @@ def professional_required(f):
             return jsonify({'error': 'Authentication required'}), 401
 
         user = db.session.get(User, session['user_id'])
-        if not user or user.role != 'professional':
+        if not user or user.role != 'professional' or not getattr(user, 'is_active', True):  # F7: is_active
             return jsonify({'error': 'Professional account required'}), 403
 
         return f(*args, **kwargs)
@@ -8707,11 +8861,33 @@ def _is_active_professional_for(professional_user_id, client_user_id):
     Returns the ProfessionalClient row if active, else None."""
     if professional_user_id == client_user_id:
         return None
-    return ProfessionalClient.query.filter_by(
+    pc = ProfessionalClient.query.filter_by(
         professional_id=professional_user_id,
         client_id=client_user_id,
         status='active'
     ).first()
+    if pc is None:
+        return None
+    # F7 (access control): an approval used to grant access for as long as the row said
+    # 'active'. Access is now re-checked on every request and ends as soon as:
+    #   - the account is no longer a professional (role changed),
+    #   - the client turns "Allow Professional Access" off,
+    #   - either side blocks the other.
+    try:
+        prof = db.session.get(User, professional_user_id)
+        client = db.session.get(User, client_user_id)
+        if not prof or not client or prof.role != 'professional' or not getattr(prof, 'is_active', True):
+            return None
+        if not (getattr(client, 'allow_professional_access', False) or False):
+            return None
+        if BlockedUser.query.filter(
+                ((BlockedUser.blocker_id == client_user_id) & (BlockedUser.blocked_id == professional_user_id)) |
+                ((BlockedUser.blocker_id == professional_user_id) & (BlockedUser.blocked_id == client_user_id))).first():
+            return None
+    except Exception as _pc_err:
+        logger.warning(f"[F7 PROFESSIONAL ACCESS] check failed, denying: {_pc_err}")
+        return None
+    return pc
 
 
 # L170: Helper to determine the earliest date a professional can see for a client.
@@ -8830,7 +9006,7 @@ def _safe_back_url():
 
 # A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
 # parameters.html, circles.html and support.html).
-_A92_ASSET_VERSION = 'B204'
+_A92_ASSET_VERSION = 'B205'
 
 
 def _a92_soften_dashes_in_html(html):
@@ -10025,7 +10201,7 @@ def save_consent():
         if birth_year:
             try:
                 birth_year = int(birth_year)
-                if 1900 <= birth_year <= 2025:
+                if 1900 <= birth_year <= datetime.utcnow().year:  # F6: was hard-coded 2025
                     user.birth_year = birth_year
             except (ValueError, TypeError):
                 pass  # Ignore invalid birth year
@@ -10047,7 +10223,7 @@ def save_consent():
         # Update consent fields
         consent.email_updates = data.get('email_updates', False)
         consent.privacy_accepted = data.get('privacy_accepted', False)
-        consent.research_data = data.get('research_data', False)
+        consent.research_data = bool(data.get('research_data', False))  # F6: optional, unticked by default
         consent.team_declaration = data.get('team_declaration', False)
         consent.responsible_use = data.get('responsible_use', False)
         consent.waiver_claims = data.get('waiver_claims', False)
@@ -10058,7 +10234,9 @@ def save_consent():
         consent.consent_ip = request.remote_addr
         consent.consent_user_agent = request.user_agent.string[:500] if request.user_agent else None
         consent.marketing_consent = data.get('marketing_consent', False)
-        consent.analytics_consent = data.get('analytics_consent', True)  # Default true for basic analytics
+        # F6 (B205): optional consent defaults to NO when not sent (was True). The sign-up form
+        # also sent "|| true", so analytics was recorded as accepted even when unticked.
+        consent.analytics_consent = bool(data.get('analytics_consent', False))
         consent.third_party_sharing = data.get('third_party_sharing', False)
         consent.updated_at = datetime.utcnow()
 
@@ -10104,7 +10282,9 @@ def delete_account():
             return jsonify({'error': 'User not found'}), 404
 
         # Generate deletion confirmation token (reuse PasswordResetToken model)
-        deletion_token = generate_token()
+        # F7: 'del_' prefix marks the token's purpose. Both kinds share one table, so a deletion
+        # token used to work as a password-reset token and a reset token could confirm deletion.
+        deletion_token = 'del_' + generate_token()
         token_record = PasswordResetToken(
             user_id=user.id,
             token=deletion_token,
@@ -10190,6 +10370,8 @@ def confirm_delete_account():
 
         if not token:
             return jsonify({'error': 'Deletion token required'}), 400
+        if not str(token).startswith('del_'):  # F7: only deletion tokens confirm a deletion
+            return jsonify({'error': 'Invalid or expired deletion token'}), 400
 
         token_record = db.session.execute(
             select(PasswordResetToken).filter_by(token=token, used=False)
@@ -10206,7 +10388,9 @@ def confirm_delete_account():
             return jsonify({'error': 'User not found'}), 404
 
         logger.info(f"Confirming account deletion for user {user.id} ({user.username})")
-        log_audit('account_deleted', 'user', user.id, user.id, {'username': user.username})
+        # F6 (B205): the deletion record no longer stores the username, so the security log kept
+        # after deletion is not linked back to the person (user_id is cleared below as well).
+        log_audit('account_deleted', 'user', user.id, user.id, {})
 
         token_record.used = True
 
@@ -10490,12 +10674,15 @@ PRIVACY_REGIMES = {
 
 # Data retention periods (for transparency)
 DATA_RETENTION_PERIODS = {
-    'wellness_data': {'period': '7 years', 'reason': 'Clinical record standards'},
-    'messages': {'period': '7 years', 'reason': 'Communication record standards'},
-    'profile': {'period': 'Account lifetime + 2 years', 'reason': 'Service provision'},
-    'account': {'period': 'Until deletion request', 'reason': 'Service provision'},
-    'audit_logs': {'period': '7 years', 'reason': 'Legal compliance'},
-    'consent_records': {'period': '7 years', 'reason': 'Consent proof requirements'}
+    # F6 (B205): aligned with what the app actually does. Previously listed "7 years (clinical
+    # record standards)" for diary data and messages, but account deletion removes them at once
+    # and the platform keeps no clinical records.
+    'wellness_data': {'period': 'Until you delete your account', 'reason': 'Service provision'},
+    'messages': {'period': 'Until either person in the conversation deletes their account', 'reason': 'Service provision'},
+    'profile': {'period': 'Until you delete your account', 'reason': 'Service provision'},
+    'account': {'period': 'Until you delete your account', 'reason': 'Service provision'},
+    'audit_logs': {'period': 'Kept as security records; detached from your account when it is deleted', 'reason': 'Security and fraud prevention'},
+    'consent_records': {'period': 'Until you delete your account', 'reason': 'Proof of the choices you made'}
 }
 
 
@@ -10855,8 +11042,19 @@ def get_data_processing_info():
                 'legal_basis': 'Contract performance and consent',
                 'data_categories': ['mood', 'energy', 'sleep quality', 'physical activity', 'anxiety', 'social belonging', 'notes'],
                 'retention': DATA_RETENTION_PERIODS['wellness_data']['period'],
-                'recipients': ['You', 'Users you grant access to via circles'],
+                'recipients': ['You', 'Users you grant access to via circles',
+                               'Professionals you approve (only if you allow professional access)'],
                 'cross_border': False
+            },
+            {
+                # F6 (B205): previously undisclosed recipient.
+                'name': 'AI Weekly Summary',
+                'purpose': 'To write your personal weekly well-being summary when you view it',
+                'legal_basis': 'Consent',
+                'data_categories': ['the last 7 days of diary scores (mood, energy, sleep quality, physical activity, anxiety)', 'diary notes'],
+                'retention': 'Not stored by TheraSocial beyond the summary shown to you',
+                'recipients': ['AI provider (Anthropic), which generates the summary text'],
+                'cross_border': True
             },
             {
                 'name': 'Social Features',
@@ -10873,7 +11071,7 @@ def get_data_processing_info():
                 'legal_basis': 'Consent',
                 'data_categories': ['email', 'notification preferences'],
                 'retention': 'Until consent withdrawn',
-                'recipients': ['Email service provider'],
+                'recipients': ['Email service provider (Resend)'],
                 'cross_border': True,
                 'transfer_safeguards': 'Service provider complies with privacy standards'
             },
@@ -10885,6 +11083,18 @@ def get_data_processing_info():
                 'retention': DATA_RETENTION_PERIODS['audit_logs']['period'],
                 'recipients': ['Security team'],
                 'cross_border': False
+            },
+            {
+                # F6 (B205): service providers that process data on the platform's behalf.
+                'name': 'Hosting and Delivery',
+                'purpose': 'To run the platform and deliver pages to your browser',
+                'legal_basis': 'Contract performance',
+                'data_categories': ['all platform data (stored and processed by the host)', 'session data', 'IP address'],
+                'retention': 'As listed for each data type above',
+                'recipients': ['Render (application hosting and database)',
+                               'Redis session store (when configured)',
+                               'jsDelivr (serves the charting library; receives your IP address)'],
+                'cross_border': True
             }
         ]
         
@@ -10907,7 +11117,7 @@ def get_data_processing_info():
                 'rectification': 'Use profile settings or contact support',
                 'erasure': 'Use Delete Account feature',
                 'portability': 'Use Export Data feature (JSON format)',
-                'restriction': 'Use Restrict Processing feature',
+                'restriction': 'Contact support (see the Support page)',  # F6: there is no in-app button
                 'withdraw_consent': 'Use Privacy Settings'
             }
         }), 200
@@ -10946,7 +11156,7 @@ def rectify_user_data():
                 if field == 'birth_year':
                     try:
                         new_value = int(new_value)
-                        if not (1900 <= new_value <= 2025):
+                        if not (1900 <= new_value <= datetime.utcnow().year):  # F6: was 2025
                             continue
                     except (ValueError, TypeError):
                         continue
@@ -11286,6 +11496,8 @@ def reset_password():
 
         if not token or not new_password:
             return jsonify({'error': 'Token and new password required'}), 400
+        if str(token).startswith('del_'):  # F7: a deletion token is not a password-reset token
+            return jsonify({'error': 'Invalid or expired reset token'}), 400
 
         # Find token
         token_record = db.session.execute(
@@ -11662,6 +11874,7 @@ def get_user_language():
 
 
 @app.route('/api/admin/migrate-language', methods=['POST'])
+@admin_required  # F7: had no authentication at all ("Add authentication check here if needed")
 def migrate_language_column():
     """
     Migration endpoint to copy 'language' to 'preferred_language' if needed
@@ -11700,7 +11913,7 @@ def migrate_language_column():
         logger.error(f"Migration error: {e}")
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': 'Migration failed'  # F7: no raw exception text in the response
         }), 500
 
 
@@ -11778,7 +11991,7 @@ def profile():
             if user:
                 try:
                     birth_year = int(data['birth_year'])
-                    if 1900 <= birth_year <= 2025:
+                    if 1900 <= birth_year <= datetime.utcnow().year:  # F6: was hard-coded 2025
                         user.birth_year = birth_year
                 except (ValueError, TypeError):
                     pass
@@ -12115,7 +12328,7 @@ def get_user_circles(user_id):
                 user_info = {
                     'id': member_user.id,
                     'username': member_user.username,
-                    'email': member_user.email
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                 }
 
                 # Map to normalized circle type
@@ -12443,7 +12656,7 @@ def search_users():
                 user_data = {
                     'id': user.id,
                     'username': user.username,
-                    'email': user.email,  # Keep for backward compatibility but frontend won't display
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'display_name': user.username,
                     'bio': profile.bio if profile else None,
                     'occupation': profile.occupation if profile else None,
@@ -12464,7 +12677,7 @@ def search_users():
                 results.append({
                     'id': user.id,
                     'username': user.username,
-                    'email': user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'display_name': user.username,
                     'bio': None,
                     'occupation': None,
@@ -13161,21 +13374,22 @@ def circles():
             if not target_user:
                 return jsonify({'error': 'User not found'}), 404
 
-            circles_privacy = getattr(target_user, 'circles_privacy', 'public')
+            # F7: a missing setting counts as private (was treated as public).
+            circles_privacy = getattr(target_user, 'circles_privacy', None) or 'private'
 
             logger.info(
                 f"User {user_id} viewing circles of user {target_user_id} (privacy: {circles_privacy}, is_own: {is_viewing_own})")
 
-            # If viewing someone else's circles, check follow status
+            # If viewing someone else's circles, check the connection
             if not is_viewing_own:
-                is_following = db.session.execute(
-                    select(Follow).filter_by(
-                        follower_id=user_id,
-                        followed_id=target_user_id
-                    )
-                ).scalar_one_or_none()
-
-                if not is_following:
+                # F7 (access control): was "viewer follows target", which anyone can create. Now
+                # the target must have connected to the viewer (follows them or has them in a
+                # circle), and there must be no block either way.
+                connected = (
+                    Follow.query.filter_by(follower_id=target_user_id, followed_id=user_id).first() is not None
+                    or Circle.query.filter_by(user_id=target_user_id, circle_user_id=user_id).first() is not None
+                )
+                if not connected or _f7_blocked_either_way(target_user_id, user_id):
                     return jsonify({'error': 'Must be connected to user to view circles'}), 403
 
                 # If circles are private AND viewing someone else's, return empty
@@ -13188,11 +13402,8 @@ def circles():
                     })
 
                 # Determine viewer's circle level for this user
-                viewer_circle_stmt = select(Circle).filter(
-                    Circle.user_id == target_user_id,
-                    Circle.circle_user_id == user_id
-                )
-                viewer_circle = db.session.execute(viewer_circle_stmt).scalar_one_or_none()
+                # F7: scalar_one_or_none() raised (500) when the viewer was in several circles.
+                viewer_circle = _resolve_lowest_circle(target_user_id, user_id)
 
                 if viewer_circle:
                     # Map to standardized circle type
@@ -13248,7 +13459,7 @@ def circles():
                     return {
                         'id': user.id,
                         'username': user.username,
-                        'email': user.email,
+                        # F7 (privacy): other users' email addresses are no longer returned here.
                         'display_name': user.username,
                         'selected_city': user.selected_city or ''
                     }
@@ -13327,9 +13538,24 @@ def circles():
             if circle_type not in ['public', 'class_b', 'class_a']:
                 return jsonify({'error': 'Invalid circle type'}), 400
 
+            # F7: user_id must be a real integer id other than your own.
+            try:
+                circle_user_id = int(circle_user_id)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Invalid user'}), 400
+            if circle_user_id == user_id:
+                return jsonify({'error': 'You cannot add yourself to a circle'}), 400
+
             # Check if user exists
             if not db.session.get(User, circle_user_id):
                 return jsonify({'error': 'User not found'}), 404
+
+            # F7 (access control): adding someone to a circle also creates a follow, a follow
+            # request and an invite email. A block in either direction used to be ignored here,
+            # so a blocked user could keep re-creating the connection and emailing the person who
+            # blocked them. Same rule as /api/follow.
+            if _f7_blocked_either_way(user_id, circle_user_id):
+                return jsonify({'error': 'Unable to add this user'}), 403
 
             # Check if already in circle - SQLAlchemy 2.0 style
             existing_stmt = select(Circle).filter_by(
@@ -13852,7 +14078,7 @@ def get_circle_recommendations():
                 recommendations.append({
                     'id': mutual_user.id,
                     'username': mutual_user.username,
-                    'email': mutual_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'selected_city': mutual_user.selected_city,
                     'reason': reason,
                     'reason_key': 'circles.reason_mutual' if 'same city' not in reason else 'circles.reason_mutual_city'
@@ -13872,7 +14098,7 @@ def get_circle_recommendations():
                     recommendations.append({
                         'id': followed_user.id,
                         'username': followed_user.username,
-                        'email': followed_user.email,
+                        # F7 (privacy): other users' email addresses are no longer returned here.
                         'selected_city': followed_user.selected_city,
                         'reason': 'Same city',
                         'reason_key': 'circles.reason_same_city'
@@ -13892,7 +14118,7 @@ def get_circle_recommendations():
                     recommendations.append({
                         'id': followed_user.id,
                         'username': followed_user.username,
-                        'email': followed_user.email,
+                        # F7 (privacy): other users' email addresses are no longer returned here.
                         'selected_city': followed_user.selected_city,
                         'reason': 'Connected',
                         'reason_key': 'circles.reason_following'
@@ -13919,7 +14145,7 @@ def get_circle_recommendations():
                 recommendations.append({
                     'id': city_user.id,
                     'username': city_user.username,
-                    'email': city_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'selected_city': city_user.selected_city,
                     'reason': 'Same city',
                     'reason_key': 'circles.reason_same_city'
@@ -13933,11 +14159,9 @@ def get_circle_recommendations():
                 if len(recommendations) >= 20:
                     break
 
-                their_circles = db.session.execute(
-                    select(Circle.circle_user_id).filter_by(
-                        user_id=circle_user_id
-                    ).filter(Circle.circle_user_id != user_id)
-                ).scalars().all()
+                # F7 (privacy): only use a person's circle members as suggestions when that
+                # person has made their circles public and is not in a block with the viewer.
+                their_circles = _f7_public_circle_members(circle_user_id, user_id)
 
                 for potential_id in their_circles[:5]:
                     if len(recommendations) >= 20:
@@ -13957,7 +14181,7 @@ def get_circle_recommendations():
                         recommendations.append({
                             'id': potential_user.id,
                             'username': potential_user.username,
-                            'email': potential_user.email,
+                            # F7 (privacy): other users' email addresses are no longer returned here.
                             'selected_city': potential_user.selected_city,
                             'reason': reason,
                             'reason_key': 'circles.reason_friend_of_friend'
@@ -14176,6 +14400,14 @@ def get_hierarchical_parameters(view_user_id):
                 param_dict = param.to_dict(viewer_id=current_user_id, _notes_privacy=np_cache.get(param.id, 'private'), is_professional=True)
                 visible_params.append(param_dict)
             return jsonify({'parameters': visible_params})
+
+        # F7 (access control): there was no connection or block check here, so any user could
+        # read another user's full check-in calendar (dates and timestamps of every entry). Same
+        # gate as get_user_parameters: the target follows the viewer or has them in a circle.
+        if _f7_blocked_either_way(view_user_id, current_user_id) or not (
+                Follow.query.filter_by(follower_id=view_user_id, followed_id=current_user_id).first()
+                or Circle.query.filter_by(user_id=view_user_id, circle_user_id=current_user_id).first()):
+            return jsonify({'error': 'Must be connected with this user to view parameters'}), 403
 
         # T31: Check what circle current user is in for the viewed user
         # T800q: Use ALL circle memberships for non-hierarchical visibility
@@ -14558,6 +14790,32 @@ def save_feed_entry():
 # posts by someone who blocked them). This mirrors get_user_posts' gate: owner always allowed; a
 # viewer the owner has blocked is denied; a non-connection is denied; otherwise the post's
 # visibility must fall within the viewer's circle level.
+def _f7_blocked_either_way(a_id, b_id):
+    """F7: True if either user has blocked the other."""
+    return BlockedUser.query.filter(
+        ((BlockedUser.blocker_id == a_id) & (BlockedUser.blocked_id == b_id)) |
+        ((BlockedUser.blocker_id == b_id) & (BlockedUser.blocked_id == a_id))).first() is not None
+
+
+def _f7_public_circle_members(owner_id, viewer_id):
+    """F7 (privacy): members of owner_id's circles that viewer_id may learn about for
+    'friend of friend' suggestions. Empty unless the owner set circles_privacy to 'public' and
+    there is no block between owner and viewer; members in a block with the viewer are left out."""
+    try:
+        owner = db.session.get(User, owner_id)
+        if not owner or (owner.circles_privacy or 'private') != 'public':
+            return []
+        if _f7_blocked_either_way(owner_id, viewer_id):
+            return []
+        ids = db.session.execute(
+            select(Circle.circle_user_id).filter_by(user_id=owner_id).filter(Circle.circle_user_id != viewer_id)
+        ).scalars().all()
+        return [i for i in ids if not _f7_blocked_either_way(i, viewer_id)]
+    except Exception as _e:
+        logger.warning(f"[F7 RECS] circle lookup failed, skipping: {_e}")
+        return []
+
+
 def _can_access_post(post, viewer_id):
     if post is None:
         return False
@@ -15747,7 +16005,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
-                                    logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
+                                    logger.info("[TRIGGER PROCESS ASYNC] Creating alert")  # F7: alert text (another person's wellbeing) no longer logged
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
                                         title=f"Well-Being Alert for {watched_user.username}",
@@ -15797,7 +16055,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     
                                     if not existing:
                                         content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
-                                        logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
+                                        logger.info("[TRIGGER PROCESS ASYNC] Creating alert")  # F7: alert text (another person's wellbeing) no longer logged
                                         alert = create_alert_no_email(
                                             user_id=watcher_id,
                                             title=f"Well-Being Alert for {watched_user.username}",
@@ -15837,7 +16095,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
-                                    logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
+                                    logger.info("[TRIGGER PROCESS ASYNC] Creating alert")  # F7: alert text (another person's wellbeing) no longer logged
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
                                         title=f"Well-Being Alert for {watched_user.username}",
@@ -15876,7 +16134,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                         
                         if not existing:
                             content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
-                            logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
+                            logger.info("[TRIGGER PROCESS ASYNC] Creating alert")  # F7: alert text (another person's wellbeing) no longer logged
                             alert = create_alert_no_email(
                                 user_id=watcher_id,
                                 title=f"Well-Being Alert for {watched_user.username}",
@@ -17393,7 +17651,7 @@ def mark_gift_opened():
 
 
 @app.route('/api/operator/points')
-@operator_required
+@system_operator_required  # F7: lists every user platform-wide (ignored department scope)
 def operator_points():
     """A16: operator view of every user's points balance, plus a schema self-check so a missing
     column/table is obvious at a glance (this is what silently zeroes rewards). Read-only."""
@@ -17536,7 +17794,7 @@ load();
 
 
 @app.route('/api/operator/points/backfill', methods=['POST'])
-@operator_required
+@system_operator_required  # F7: platform-wide write
 def operator_points_backfill():
     """A16: ONE-TIME (idempotent) grant of points for PAST completed check-ins, so existing users
     immediately show balances that reflect their history — points are otherwise only granted on a
@@ -21215,7 +21473,7 @@ def cleanup_trigger_privacy():
 # If you want an admin endpoint that cleans up ALL users' alerts at once:
 
 @app.route('/api/admin/cleanup-all-trigger-privacy', methods=['POST'])
-@login_required
+@admin_required  # F7: was @login_required (any user could run a platform-wide cleanup)
 def cleanup_all_trigger_privacy():
     """
     Clean up ALL trigger alerts across all users that violate privacy.
@@ -21343,7 +21601,7 @@ def cleanup_all_trigger_privacy():
 
 
 @app.route('/api/admin/cleanup-duplicate-triggers', methods=['POST'])
-@login_required
+@admin_required  # F7: was @login_required
 def cleanup_duplicate_triggers():
     """
     PJ6019: Clean up duplicate trigger rows that were created when users
@@ -21557,7 +21815,7 @@ def get_activity_dates():
 # =====================
 
 @app.route('/api/admin/users')
-@operator_required  # L270: Was @admin_required — system_operator needs this for Professional Verification + user management
+@system_operator_required  # F7: was @operator_required (department operators saw every user). L270: system operators keep access.
 def admin_get_users():
     """Get all users (admin only)"""
     try:
@@ -21673,7 +21931,7 @@ def admin_set_role():
 # L210: Admin/operator endpoint to verify/unverify a professional account
 # L250: Changed from @admin_required to @operator_required so system_operator can verify
 @app.route('/api/admin/verify-professional', methods=['POST'])
-@operator_required
+@system_operator_required  # F7: department operators could verify any professional, incl. themselves
 def admin_verify_professional():
     """L210: Set professional_verified flag on a user. Admin or system_operator can call this."""
     try:
@@ -22275,7 +22533,7 @@ def create_org_manager():
 
 # G27: Org manager creates dept operator (professional with group scope)
 @app.route('/api/operator/create-dept-operator', methods=['POST'])
-@operator_required
+@system_operator_required  # F7: org managers are system_operator; dept operators could mint more verified professionals
 @require_csrf
 def create_dept_operator():
     """G27: Organization manager creates a Department Operator (professional with group scope).
@@ -22398,17 +22656,24 @@ def invite_group_user():
         # Check if email already registered
         existing_user = db.session.execute(select(User).filter_by(email=email)).scalars().first()
         if existing_user:
-            # User exists — just add them to the group if not already a member
+            # F7 (consent): an existing account is no longer enrolled without being asked.
+            # Joining a group puts the person inside this operator's scope (broadcasts,
+            # deactivation, segment views), so they now get an invitation and decide themselves.
+            # The response no longer returns the account's user id or username either.
             existing_membership = ObjectiveGroupMembership.query.filter_by(
                 user_id=existing_user.id, group_id=group_id
             ).first()
-            if existing_membership:
-                return jsonify({'error': 'User is already a member of this group'}), 400
-            membership = ObjectiveGroupMembership(user_id=existing_user.id, group_id=group_id)
-            db.session.add(membership)
-            db.session.commit()
-            logger.info(f"[G27] Existing user {email} added to group {group_id}")
-            return jsonify({'success': True, 'message': 'Existing user added to group' + b45_capacity_note, 'user_id': existing_user.id, 'username': existing_user.username})
+            if not existing_membership:
+                db.session.add(Alert(
+                    user_id=existing_user.id,
+                    alert_type='info',
+                    alert_category='general',
+                    title='Group invitation',
+                    content=f'You have been invited to join the group "{group.name}". You can join it from the groups section if you wish.'
+                ))
+                db.session.commit()
+            logger.info(f"[G27] Invitation alert for existing account to group {group_id}")
+            return jsonify({'success': True, 'message': 'This person already has an account. They have been invited and can join the group themselves.' + b45_capacity_note})
 
         # Generate temporary password
         temp_password = secrets.token_urlsafe(12)
@@ -22451,6 +22716,7 @@ def invite_group_user():
         db.session.commit()
 
         # Send invite email via Resend (if configured)
+        email_sent = False  # F7
         resend_key = os.environ.get('RESEND_API_KEY', '')
         if resend_key:
             try:
@@ -22473,18 +22739,25 @@ def invite_group_user():
                         <p>Please log in at <a href="{base_url}">{base_url}</a> and change your password.</p>
                     '''
                 })
-                logger.info(f"[G27] Invite email sent to {email}")
+                logger.info(f"[G27] Invite email sent for new group member {new_user.id}")
+                email_sent = True
             except Exception as mail_err:
-                logger.warning(f"[G27] Failed to send invite email to {email}: {str(mail_err)}")
+                logger.warning(f"[G27] Failed to send invite email for user {new_user.id}: {str(mail_err)}")
         else:
-            logger.info(f"[G27] No RESEND_API_KEY — invite email not sent for {email}")
+            logger.info(f"[G27] No RESEND_API_KEY — invite email not sent for user {new_user.id}")
 
+        # F7 (access control): the temporary password is no longer returned to the operator, who
+        # could otherwise log in as this user later (many people never change a temp password
+        # and sign in by magic link instead). It goes only to the invitee by email; if that
+        # email could not be sent, the person can set their own password with "Forgot password".
         return jsonify({
             'success': True,
             'user_id': new_user.id,
             'username': username,
-            'temp_password': temp_password,  # Return so operator can share manually if email fails
-            'message': 'User created and added to group' + b45_capacity_note
+            'message': ('User created and added to group. Login details were emailed to them.'
+                        if email_sent else
+                        'User created and added to group, but the invite email could not be sent. '
+                        'Ask them to use "Forgot password" on the login page with this email address.') + b45_capacity_note
         })
 
     except Exception as e:
@@ -23147,12 +23420,51 @@ def operator_list_broadcasts():
         return jsonify({'error': 'Failed to list broadcasts'}), 500
 
 
+def _f7_verify_resend_webhook():
+    """F7: verify a Resend (Svix) webhook signature.
+
+    Resend signs each delivery with the endpoint's signing secret ('whsec_...', shown in the
+    Resend dashboard for the webhook). Signature = base64(HMAC-SHA256(secret, f"{svix-id}.
+    {svix-timestamp}.{raw body}")), sent in the 'svix-signature' header as 'v1,<sig>' entries.
+    Without RESEND_WEBHOOK_SECRET the webhook is refused in production (allowed in development).
+    """
+    import base64 as _b64
+    import hmac as _hmac
+    import hashlib as _hashlib
+    secret = os.environ.get('RESEND_WEBHOOK_SECRET', '').strip()
+    if not secret:
+        return not _f7_is_production()
+    msg_id = request.headers.get('svix-id', '')
+    ts = request.headers.get('svix-timestamp', '')
+    sig_header = request.headers.get('svix-signature', '')
+    if not (msg_id and ts and sig_header):
+        return False
+    try:
+        if abs(time.time() - int(ts)) > 300:  # reject replays older than 5 minutes
+            return False
+        key = _b64.b64decode(secret[6:] if secret.startswith('whsec_') else secret)
+    except Exception:
+        return False
+    body = request.get_data(cache=True)
+    expected = _b64.b64encode(_hmac.new(key, f"{msg_id}.{ts}.".encode('utf-8') + body, _hashlib.sha256).digest()).decode('ascii')
+    for part in sig_header.split():
+        version, _, sig = part.partition(',')
+        if version == 'v1' and _hmac.compare_digest(sig, expected):
+            return True
+    return False
+
+
 @app.route('/api/operator/inbound-email', methods=['POST'])
 def operator_inbound_email():
     """L100: Resend webhook endpoint for inbound emails.
     Receives email.received events from Resend and stores them for operator review.
     This endpoint is NOT behind operator_required — Resend POST webhooks are unauthenticated
-    but should be verified via webhook signature in production."""
+    but should be verified via webhook signature in production.
+    F7: the signature is now verified (set RESEND_WEBHOOK_SECRET); unsigned posts are refused in
+    production, so nobody can drop fake emails into the operator inbox."""
+    if not _f7_verify_resend_webhook():
+        logger.warning("[L100 INBOUND] Rejected webhook: missing or invalid signature")
+        return jsonify({'error': 'Invalid signature'}), 401
     try:
         data = request.get_json(silent=True)
         if not data:
@@ -23194,7 +23506,7 @@ def operator_inbound_email():
 
 
 @app.route('/api/operator/inbox')
-@operator_required
+@system_operator_required  # F7: the shared support inbox holds users' private emails
 def operator_inbox():
     """L100: List inbound emails for the operator inbox, with pagination and read filter."""
     try:
@@ -23225,7 +23537,7 @@ def operator_inbox():
 
 
 @app.route('/api/operator/inbox/<int:email_id>/read', methods=['PATCH'])
-@operator_required
+@system_operator_required  # F7
 def operator_mark_email_read(email_id):
     """L100: Mark an inbound email as read."""
     try:
@@ -23395,6 +23707,17 @@ def operator_unflag_user():
         target = db.session.get(User, target_user_id)
         if not target or target.role != 'user':
             return jsonify({'error': 'User not found'}), 404
+
+        # F7 (access control): same scope check as flag-user. A department operator could
+        # reactivate ANY account, including ones an admin had deactivated.
+        operator_user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(operator_user)
+        if scope_filters:
+            scoped_q = User.query.filter(User.id == target_user_id)
+            for f in scope_filters:
+                scoped_q = scoped_q.filter(f)
+            if not scoped_q.first():
+                return jsonify({'error': 'User not in your scope'}), 403
 
         target.is_active = True
         db.session.commit()
@@ -23885,9 +24208,10 @@ def my_professionals():
 # =====================
 
 @app.route('/api/setup/sample-users', methods=['POST'])
+@admin_required  # F7: was open to anyone whenever FLASK_DEBUG=true (creates password123 accounts)
 def create_sample_users():
     """Create sample users for testing"""
-    if is_production:
+    if _f7_is_production():  # F7: also blocked on Render even if FLASK_DEBUG is set
         return jsonify({'error': 'Not available in production'}), 403
 
     try:
@@ -24354,7 +24678,7 @@ def get_following():
                     'id': followed_user.id,
                     'username': followed_user.username,
                     'display_name': getattr(followed_user, 'display_name', None) or followed_user.username,
-                    'email': followed_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'note': follow.follow_note,  # ADD THIS FIELD
                     'follow_trigger': getattr(follow, 'follow_trigger', False) or False,  # V2: alert tracking status
                     'follows_you': follows_back,  # VINTER2: whether this user follows you back
@@ -24508,7 +24832,7 @@ def get_followers():
                 followers.append({
                     'id': follower_user.id,
                     'username': follower_user.username,
-                    'email': follower_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'selected_city': follower_user.selected_city,
                     'created_at': follow.created_at.isoformat(),
                     'is_following_back': user.is_following(follower_user)
@@ -24579,6 +24903,13 @@ def block_user(user_id):
             requester_id=user_id, target_id=current_user_id, status='pending').delete(synchronize_session=False)
         severed['requests'] += FollowRequest.query.filter_by(
             requester_id=current_user_id, target_id=user_id, status='pending').delete(synchronize_session=False)
+        # F7 (access control): a block also ends any professional-client relationship between
+        # the two accounts (active or pending), in either direction.
+        ProfessionalClient.query.filter(
+            ((ProfessionalClient.professional_id == user_id) & (ProfessionalClient.client_id == current_user_id)) |
+            ((ProfessionalClient.professional_id == current_user_id) & (ProfessionalClient.client_id == user_id)),
+            ProfessionalClient.status.in_(['active', 'pending'])
+        ).update({'status': 'revoked', 'revoked_at': datetime.utcnow()}, synchronize_session=False)
 
         db.session.commit()
 
@@ -24669,7 +25000,7 @@ def get_blocked_users():
                 blocked_list.append({
                     'id': blocked_user.id,
                     'username': blocked_user.username,
-                    'email': blocked_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'blocked_at': block.created_at.isoformat() if block.created_at else None
                 })
         
@@ -24874,12 +25205,18 @@ def process_diary_reminders():
     cron_secret = os.environ.get('CRON_SECRET')
     if cron_secret:
         # Check header first, then query parameter
-        provided_secret = request.headers.get('X-Cron-Secret') or request.args.get('secret')
-        if provided_secret != cron_secret:
+        provided_secret = request.headers.get('X-Cron-Secret') or request.args.get('secret') or ''
+        # F7: constant-time comparison (was !=).
+        if not secrets.compare_digest(provided_secret.encode('utf-8'), cron_secret.encode('utf-8')):
             logger.warning(f"[DAILY REMINDER CRON] Unauthorized access attempt - invalid secret")
             return jsonify({'error': 'Unauthorized'}), 401
+    elif _f7_is_production():
+        # F7 (access control): without CRON_SECRET this endpoint used to run for ANYONE, letting a
+        # stranger trigger reminder emails to every user. In production it now refuses.
+        logger.error("[DAILY REMINDER CRON] CRON_SECRET is not set - refusing (set it in the host's environment)")
+        return jsonify({'error': 'Unauthorized'}), 401
     else:
-        logger.warning(f"[DAILY REMINDER CRON] CRON_SECRET not configured - endpoint is unprotected!")
+        logger.warning(f"[DAILY REMINDER CRON] CRON_SECRET not configured - endpoint is unprotected (development only)")
     
     try:
         logger.info(f"[DAILY REMINDER CRON] ========================================")
@@ -26140,7 +26477,7 @@ def get_recommendations():
                     recommendations.append({
                         'id': city_user.id,
                         'username': city_user.username,
-                        'email': city_user.email,
+                        # F7 (privacy): other users' email addresses are no longer returned here.
                         'selected_city': city_user.selected_city,
                         'reason': 'Same city'
                     })
@@ -26157,11 +26494,9 @@ def get_recommendations():
                 if len(recommendations) >= 20:
                     break
 
-                their_circles = db.session.execute(
-                    select(Circle.circle_user_id).filter_by(
-                        user_id=circle_user_id
-                    ).filter(Circle.circle_user_id != user_id)
-                ).scalars().all()
+                # F7 (privacy): only use a person's circle members as suggestions when that
+                # person has made their circles public and is not in a block with the viewer.
+                their_circles = _f7_public_circle_members(circle_user_id, user_id)
 
                 for potential_id in their_circles[:5]:
                     if len(recommendations) >= 20:
@@ -26182,7 +26517,7 @@ def get_recommendations():
                         recommendations.append({
                             'id': potential_user.id,
                             'username': potential_user.username,
-                            'email': potential_user.email,
+                            # F7 (privacy): other users' email addresses are no longer returned here.
                             'selected_city': potential_user.selected_city,
                             'reason': reason
                         })
@@ -26943,8 +27278,14 @@ def get_user_feed(user_id, date_str):
         if not target_user:
             return jsonify({'error': 'User not found'}), 404
 
-        if user_id != current_user_id and not current_user.is_following(target_user):
-            return jsonify({'error': 'You must be connected to this user to view their feed'}), 403
+        # F7 (access control): the old gate was "viewer follows target", which any user can
+        # create alone, and 'private' posts fell through every visibility branch. Connection,
+        # block and visibility are now decided by the shared _can_access_post() helper (target
+        # follows viewer or viewer is in the target's circles; post visibility; fails closed).
+        if user_id != current_user_id:
+            if not (Follow.query.filter_by(follower_id=user_id, followed_id=current_user_id).first()
+                    or Circle.query.filter_by(user_id=user_id, circle_user_id=current_user_id).first()):
+                return jsonify({'error': 'You must be connected to this user to view their feed'}), 403
 
         post = Post.query.filter_by(user_id=user_id).filter(
             db.func.date(Post.created_at) == date_str
@@ -26953,31 +27294,8 @@ def get_user_feed(user_id, date_str):
         if not post:
             return jsonify({'content': '', 'date': date_str})
 
-        # Check circle permission if viewing another user's post
-        if user_id != current_user_id:
-            post_visibility = post.visibility if post.visibility else 'general'
-
-            if post_visibility == 'family':
-                # Must be in family circle
-                in_circle = Circle.query.filter_by(
-                    user_id=user_id,
-                    circle_user_id=current_user_id,
-                    circle_type='family'
-                ).first() is not None
-
-                if not in_circle:
-                    return jsonify({'error': 'This post is only visible to family members'}), 403
-
-            elif post_visibility == 'close_friends':
-                # Must be in family OR close_friends circle
-                in_circle = Circle.query.filter(
-                    Circle.user_id == user_id,
-                    Circle.circle_user_id == current_user_id,
-                    Circle.circle_type.in_(['family', 'close_friends'])
-                ).first() is not None
-
-                if not in_circle:
-                    return jsonify({'error': 'This post is only visible to close friends'}), 403
+        if user_id != current_user_id and not _can_access_post(post, current_user_id):
+            return jsonify({'error': 'This post is not visible to you'}), 403
 
         return jsonify({
             'content': post.content,
@@ -27008,8 +27326,15 @@ def get_user_parameters_by_date(user_id, date_str):
         pc_row = _is_active_professional_for(current_user_id, user_id) if user_id != current_user_id else None
         is_professional_viewer = pc_row is not None
 
-        if user_id != current_user_id and not is_professional_viewer and not current_user.is_following(target_user):
-            return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
+        # F7 (access control): was "viewer follows target" (one-sided, anyone can create it).
+        # Now the same rule as get_user_parameters: the TARGET follows the viewer, or the viewer
+        # is in one of the target's circles.
+        if user_id != current_user_id and not is_professional_viewer:
+            if BlockedUser.query.filter_by(blocker_id=user_id, blocked_id=current_user_id).first():
+                return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
+            if not (Follow.query.filter_by(follower_id=user_id, followed_id=current_user_id).first()
+                    or Circle.query.filter_by(user_id=user_id, circle_user_id=current_user_id).first()):
+                return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
 
         # L170: Professional date filter
         if is_professional_viewer:
@@ -27038,7 +27363,8 @@ def get_user_parameters_by_date(user_id, date_str):
 
         if params:
             # L170: Professional bypass — return all parameters
-            if is_professional_viewer:
+            # F7: the owner also sees everything (their own 'private' fields were hidden before).
+            if is_professional_viewer or user_id == current_user_id:
                 return jsonify({
                     'success': True,
                     'data': {
@@ -27064,7 +27390,8 @@ def get_user_parameters_by_date(user_id, date_str):
                         'physical_activity': params.physical_activity if check_param_visibility(params.physical_activity_privacy or 'private', circle_level, viewer_circles=viewer_circles) else None,
                         'anxiety': params.anxiety if check_param_visibility(params.anxiety_privacy or 'private', circle_level, viewer_circles=viewer_circles) else None
                     },
-                    'notes': params.notes or ''
+                    # F7 (privacy leak): notes were returned regardless of notes_privacy.
+                    'notes': (params.notes or '') if check_param_visibility(_get_notes_privacy(params.id) or 'private', circle_level, viewer_circles=viewer_circles) else None
                 }
             })
         else:
@@ -27289,6 +27616,21 @@ def create_trigger():
         trigger_value = data.get('value')
         consecutive_days = data.get('consecutive_days')
         
+        # F7 (access control): the watched user must exist, must not be yourself, must not be in a
+        # block with you, and you must be connected (you follow them or are in their circles),
+        # matching /api/parameters/triggers/<id>. Alerts were already gated on circles; this stops
+        # trigger rows being created on arbitrary accounts.
+        try:
+            watched_id = int(watched_id)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid user'}), 400
+        if watched_id == watcher_id or not db.session.get(User, watched_id):
+            return jsonify({'error': 'Invalid user'}), 400
+        if _f7_blocked_either_way(watcher_id, watched_id) or not (
+                Follow.query.filter_by(follower_id=watcher_id, followed_id=watched_id).first()
+                or Circle.query.filter_by(user_id=watched_id, circle_user_id=watcher_id).first()):
+            return jsonify({'error': 'You must be connected to this user to set a trigger'}), 403
+
         # PI502alt: Enforce minimum consecutive days
         if consecutive_days is None or consecutive_days == '' or consecutive_days == 0:
             consecutive_days = MINIMUM_TRIGGER_DAYS  # Default to minimum
