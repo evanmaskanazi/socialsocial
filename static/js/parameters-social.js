@@ -1,3 +1,10 @@
+// Version B204 (A94) audit 1 (pre-existing): two buttons put a username into a quoted JS
+//   string without JS escaping, so names with an apostrophe (allowed since A26) broke them:
+//   confirmFollowWithParameters(...) and copyInviteLink(...) (encodeURIComponent keeps ').
+//   Both now go through _psJsArg (\u0027-style escapes, same form as uJsName elsewhere).
+// Version B204 (A94): otherwise no content change; ?v bumped B203->B204 in lockstep. Checked against the
+//   new strict CSP: every inline handler this file builds is picked up by app.py's handler
+//   bridge (no eval, string timers or javascript: links here).
 // Version B201 (A92 audit round 1): no content change; ?v bumped B200->B201 in lockstep.
 // Version B200 (A92): (referenced as ?v=B200). Copy/presentation only. (1) Diary-save
 //   confirmations rewritten from hype ("Amazing work! ... superpower 🦸") to calm, warm lines in
@@ -2845,7 +2852,7 @@ function followFromParameters(userId, username) {
                 <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                     ${pt('params.cancel_btn') || 'Cancel'}
                 </button>
-                <button class="btn-primary" onclick="confirmFollowWithParameters(${userId}, '${username}')">
+                <button class="btn-primary" onclick="confirmFollowWithParameters(${userId}, '${_psJsArg(username)}')">
                     ${pt('params.follow_btn') || 'Follow'}
                 </button>
             </div>
@@ -3418,7 +3425,7 @@ function showInviteCTA() {
                     <p data-i18n="invite.cta_subtitle">Share your journey with others:</p>
 
                     <div class="cta-actions">
-                        <button class="cta-button primary" onclick="copyInviteLink('${inviteLink}')">
+                        <button class="cta-button primary" onclick="copyInviteLink('${_psJsArg(inviteLink)}')">
                             <span data-i18n="invite.copy_link">📋 Copy Your Invite Link</span>
                         </button>
                         <button class="cta-button secondary" onclick="showInviteTab()">
@@ -4779,3 +4786,9 @@ console.log('[V2] Parameters-social.js vB7 loaded - Privacy reset fix, cache-bus
 
     window.TSDiaryReminder = { onCheckinSaved: onCheckinSaved };
 })();
+
+// B204 audit 1: JS-string escape for values placed inside on*="fn('...')" attributes.
+function _psJsArg(v) {
+    return String(v === null || v === undefined ? '' : v).replace(/[\\'"<>&\n\r\u2028\u2029]/g,
+        function (c) { return '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'); });
+}

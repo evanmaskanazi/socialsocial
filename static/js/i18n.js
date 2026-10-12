@@ -1,3 +1,12 @@
+// Version B204 (A94): (referenced as ?v=B204). 4 languages: about.privacy_desc and support.faq3_a
+//   "full GDPR compliance" -> "data controls built around your GDPR rights"; about.value2_desc ->
+//   "Encrypted connections and your GDPR data rights keep your data yours". support.faq3_a:
+//   "strict Content Security Policy headers" restored (app.py A94 now sends a strict CSP).
+// Version B203 (A93): (referenced as ?v=B203). Security-claim accuracy, 4 languages:
+//   about.value2_desc: "End-to-end encryption" -> "Encrypted connections" (not E2E: the server
+//   stores and can read message content). support.faq3_a: "strict" dropped from the CSP claim
+//   (the CSP still allows 'unsafe-inline'). CSRF wording unchanged: app.py A93 now covers every
+//   state-changing request.
 // Version B202 (A92 audit 1, follow-up): (referenced as ?v=B202). Pre-existing About-page bug:
 //   the four "Our Values" titles (about.value1-4_title, override block, 4 languages) had no colon,
 //   so the page read "Empowerment We help you..." once i18n replaced the HTML's "Empowerment:".
@@ -7261,7 +7270,7 @@ if (typeof window !== 'undefined') {
         'about.mission_title': 'Our Mission',
         'about.mission_text': 'We believe everyone deserves tools that support their quality of life across sports, sleep, health, mood, and social connections. Our mission is to empower you with innovative features that cultivate trusted, safe, and effective relationships while protecting your personal data and privacy.',
         'about.privacy_title': 'Your Data, Your Control',
-        'about.privacy_desc': 'Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and full GDPR compliance. You decide who sees what, always.',
+        'about.privacy_desc': 'Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and data controls built around your GDPR rights. You decide who sees what, always.',
         'about.track_title': 'Track Your Well-Being',
         'about.track_desc': 'Monitor your sleep, exercise, mood, energy, and anxiety with an easy daily diary and beautiful visual insights over time.',
         'about.goals_title': 'Personal Empowerment',
@@ -7280,7 +7289,7 @@ if (typeof window !== 'undefined') {
         'about.value1_title': 'Empowerment:',
         'about.value1_desc': 'We help you take charge of your well-being across every area of life',
         'about.value2_title': 'Data Protection:',
-        'about.value2_desc': 'End-to-end encryption and GDPR compliance ensure your data stays yours',
+        'about.value2_desc': 'Encrypted connections and your GDPR data rights keep your data yours',
         'about.value3_title': 'Innovation:',
         'about.value3_desc': 'Patent-protected features designed to cultivate meaningful human connection',
         'about.value4_title': 'Accessibility:',
@@ -7307,7 +7316,7 @@ if (typeof window !== 'undefined') {
         'support.faq2_q': 'What are Circles and how do they work?',
         'support.faq2_a': 'Circles let you organize your connections into trust levels: General (acquaintances), Close Friends, and Family. When you post in your feed or save diary entries, you choose which circle can see them. This gives you full control over your privacy. Share as much or as little as you want with each group.',
         'support.faq3_q': 'Is my data secure?',
-        'support.faq3_a': 'Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and full GDPR compliance. You can view, export, or delete your data at any time from your Settings.',
+        'support.faq3_a': 'Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.',
         'support.faq4_q': 'How do alerts and triggers work?',
         'support.faq4_a': 'You can set well-being alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds. For example, get notified if their mood drops below 2 or their anxiety rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.',
         'support.faq5_q': 'How do I change my language preference?',
@@ -7336,7 +7345,7 @@ if (typeof window !== 'undefined') {
         'about.mission_title': 'המשימה שלנו',
         'about.mission_text': 'אנחנו מאמינים שכל אחד ראוי לכלים שתומכים באיכות החיים שלו בתחומי הספורט, השינה, הבריאות, מצב הרוח והקשרים החברתיים. המשימה שלנו היא להעצים אותך עם תכונות חדשניות שמטפחות מערכות יחסים אמינות, בטוחות ואפקטיביות תוך הגנה על המידע האישי והפרטיות שלך.',
         'about.privacy_title': 'המידע שלך, השליטה שלך',
-        'about.privacy_desc': 'המידע שלך מוגן בהצפנה תעשייתית הן בהעברה והן באחסון, הגנת CSRF, סשנים מאובטחים ותאימות מלאה ל-GDPR. אתה מחליט מי רואה מה, תמיד.',
+        'about.privacy_desc': 'המידע שלך מוגן בהצפנה תעשייתית הן בהעברה והן באחסון, הגנת CSRF, סשנים מאובטחים ובקרות נתונים שנבנו סביב זכויותיך לפי ה-GDPR. אתה מחליט מי רואה מה, תמיד.',
         'about.track_title': 'עקוב אחר הרווחה שלך',
         'about.track_desc': 'עקוב אחר השינה, הפעילות הגופנית, מצב הרוח, האנרגיה והחרדה שלך עם יומן יומי פשוט ותובנות ויזואליות מרהיבות לאורך זמן.',
         'about.goals_title': 'העצמה אישית',
@@ -7355,7 +7364,7 @@ if (typeof window !== 'undefined') {
         'about.value1_title': 'העצמה:',
         'about.value1_desc': 'אנחנו עוזרים לך לקחת אחריות על הרווחה שלך בכל תחום בחיים',
         'about.value2_title': 'הגנת מידע:',
-        'about.value2_desc': 'הצפנה מקצה לקצה ותאימות GDPR מבטיחות שהמידע שלך נשאר שלך',
+        'about.value2_desc': 'חיבורים מוצפנים וזכויות הנתונים שלך לפי ה-GDPR שומרים שהמידע שלך נשאר שלך',
         'about.value3_title': 'חדשנות:',
         'about.value3_desc': 'תכונות מוגנות בפטנט שנועדו לטפח קשר אנושי משמעותי',
         'about.value4_title': 'נגישות:',
@@ -7382,7 +7391,7 @@ if (typeof window !== 'undefined') {
         'support.faq2_q': 'מה הם מעגלים ואיך הם עובדים?',
         'support.faq2_a': 'מעגלים מאפשרים לך לארגן את הקשרים שלך לרמות אמון: כללי (מכרים), חברים קרובים ומשפחה. כשאתה מפרסם בפיד או שומר רשומות יומן, אתה בוחר איזה מעגל יכול לראות אותם. זה נותן לך שליטה מלאה על הפרטיות שלך.',
         'support.faq3_q': 'האם הנתונים שלי מאובטחים?',
-        'support.faq3_a': 'כן. אנו משתמשים בהצפנה תעשייתית להגנה על הנתונים שלך הן בהעברה (HTTPS/SSL) והן באחסון. הפלטפורמה שלנו כוללת הגנת CSRF, ניהול סשנים מאובטח, כותרות אבטחת תוכן מחמירות ותאימות מלאה ל-GDPR. תוכל לצפות, לייצא או למחוק את הנתונים שלך בכל עת מההגדרות.',
+        'support.faq3_a': 'כן. אנו משתמשים בהצפנה תעשייתית להגנה על הנתונים שלך הן בהעברה (HTTPS/SSL) והן באחסון. הפלטפורמה שלנו כוללת הגנת CSRF, ניהול סשנים מאובטח, כותרות מחמירות של מדיניות אבטחת תוכן (CSP) ובקרות נתונים שנבנו סביב זכויותיך לפי ה-GDPR. תוכל לצפות, לייצא או למחוק את הנתונים שלך בכל עת מההגדרות.',
         'support.faq4_q': 'איך התראות וטריגרים עובדים?',
         'support.faq4_a': 'תוכל להגדיר התראות רווחה עבור אנשים שאכפת לך מהם. בקר בפרופיל שלהם ולחץ על כפתור ההתראות כדי להגדיר סף. למשל, קבל התראה אם מצב הרוח שלהם יורד מתחת ל-2 או החרדה עולה מעל 3 למספר ימים רצופים. תקבל התראה במייל כשמתגלה דפוס.',
         'support.faq5_q': 'איך אני משנה את העדפת השפה שלי?',
@@ -7417,7 +7426,7 @@ if (typeof window !== 'undefined') {
         'about.mission_title': 'مهمتنا',
         'about.mission_text': 'نؤمن بأن كل شخص يستحق أدوات تدعم جودة حياته في مجالات الرياضة والنوم والصحة والمزاج والعلاقات الاجتماعية. مهمتنا هي تمكينك بميزات مبتكرة تبني علاقات موثوقة وآمنة وفعالة مع حماية بياناتك الشخصية وخصوصيتك.',
         'about.privacy_title': 'بياناتك، سيطرتك',
-        'about.privacy_desc': 'معلوماتك محمية بتشفير معياري صناعي أثناء النقل والتخزين، وحماية CSRF، وجلسات آمنة، وامتثال كامل لـ GDPR. أنت تقرر من يرى ماذا، دائماً.',
+        'about.privacy_desc': 'معلوماتك محمية بتشفير معياري صناعي أثناء النقل والتخزين، وحماية CSRF، وجلسات آمنة، وأدوات تحكم في البيانات مبنية حول حقوقك بموجب GDPR. أنت تقرر من يرى ماذا، دائماً.',
         'about.track_title': 'تتبع رفاهيتك',
         'about.track_desc': 'راقب نومك وتمارينك ومزاجك وطاقتك وقلقك من خلال مفكرة يومية سهلة ورؤى بصرية جميلة عبر الزمن.',
         'about.goals_title': 'التمكين الشخصي',
@@ -7436,7 +7445,7 @@ if (typeof window !== 'undefined') {
         'about.value1_title': 'التمكين:',
         'about.value1_desc': 'نساعدك على تولي مسؤولية رفاهيتك في كل مجال من مجالات الحياة',
         'about.value2_title': 'حماية البيانات:',
-        'about.value2_desc': 'التشفير الشامل والامتثال لـ GDPR يضمنان بقاء بياناتك ملكاً لك',
+        'about.value2_desc': 'الاتصالات المشفرة وحقوقك في البيانات بموجب GDPR تُبقي بياناتك ملكاً لك',
         'about.value3_title': 'الابتكار:',
         'about.value3_desc': 'ميزات محمية ببراءات اختراع مصممة لتعزيز التواصل الإنساني الهادف',
         'about.value4_title': 'إمكانية الوصول:',
@@ -7463,7 +7472,7 @@ if (typeof window !== 'undefined') {
         'support.faq2_q': 'ما هي الدوائر وكيف تعمل؟',
         'support.faq2_a': 'تتيح لك الدوائر تنظيم علاقاتك في مستويات ثقة: عام (معارف)، أصدقاء مقربون، وعائلة. عند النشر في موجزك أو حفظ إدخالات المفكرة، تختار أي دائرة يمكنها رؤيتها. هذا يمنحك تحكماً كاملاً في خصوصيتك.',
         'support.faq3_q': 'هل بياناتي آمنة؟',
-        'support.faq3_a': 'نعم. نستخدم تشفيراً معيارياً صناعياً لحماية بياناتك أثناء النقل (HTTPS/SSL) وأثناء التخزين. تتضمن منصتنا حماية CSRF وإدارة جلسات آمنة ورؤوس سياسة أمان محتوى صارمة وامتثالاً كاملاً لـ GDPR. يمكنك عرض بياناتك أو تصديرها أو حذفها في أي وقت من الإعدادات.',
+        'support.faq3_a': 'نعم. نستخدم تشفيراً معيارياً صناعياً لحماية بياناتك أثناء النقل (HTTPS/SSL) وأثناء التخزين. تتضمن منصتنا حماية CSRF وإدارة جلسات آمنة ورؤوس صارمة لسياسة أمان المحتوى (CSP) وأدوات تحكم في البيانات مبنية حول حقوقك بموجب GDPR. يمكنك عرض بياناتك أو تصديرها أو حذفها في أي وقت من الإعدادات.',
         'support.faq4_q': 'كيف تعمل التنبيهات والمحفزات؟',
         'support.faq4_a': 'يمكنك تعيين تنبيهات رفاهية للأشخاص الذين تهتم بهم. قم بزيارة ملفهم الشخصي وانقر على زر المحفزات لتحديد العتبات. على سبيل المثال، احصل على إشعار إذا انخفض مزاجهم إلى أقل من 2 أو ارتفع قلقهم فوق 3 لعدد من الأيام المتتالية.',
         'support.faq5_q': 'كيف أغير تفضيل اللغة الخاص بي؟',
@@ -7498,7 +7507,7 @@ if (typeof window !== 'undefined') {
         'about.mission_title': 'Наша миссия',
         'about.mission_text': 'Мы верим, что каждый заслуживает инструментов, поддерживающих качество его жизни в области спорта, сна, здоровья, настроения и социальных связей. Наша миссия — дать вам инновационные инструменты для создания надёжных, безопасных и эффективных отношений при защите ваших персональных данных и конфиденциальности.',
         'about.privacy_title': 'Ваши данные под вашим контролем',
-        'about.privacy_desc': 'Ваша информация защищена промышленным шифрованием при передаче и хранении, защитой CSRF, безопасными сессиями и полным соответствием GDPR. Вы решаете, кто что видит, всегда.',
+        'about.privacy_desc': 'Ваша информация защищена промышленным шифрованием при передаче и хранении, защитой CSRF, безопасными сессиями и инструментами управления данными, построенными вокруг ваших прав по GDPR. Вы решаете, кто что видит, всегда.',
         'about.track_title': 'Отслеживайте своё благополучие',
         'about.track_desc': 'Следите за сном, физической активностью, настроением, энергией и тревожностью с помощью простого ежедневного дневника и наглядной визуальной аналитики.',
         'about.goals_title': 'Личное развитие',
@@ -7517,7 +7526,7 @@ if (typeof window !== 'undefined') {
         'about.value1_title': 'Развитие:',
         'about.value1_desc': 'Мы помогаем вам взять ответственность за своё благополучие во всех сферах жизни',
         'about.value2_title': 'Защита данных:',
-        'about.value2_desc': 'Сквозное шифрование и соответствие GDPR гарантируют, что ваши данные остаются вашими',
+        'about.value2_desc': 'Зашифрованные соединения и ваши права на данные по GDPR сохраняют ваши данные вашими',
         'about.value3_title': 'Инновации:',
         'about.value3_desc': 'Запатентованные функции, созданные для развития значимых человеческих связей',
         'about.value4_title': 'Доступность:',
@@ -7544,7 +7553,7 @@ if (typeof window !== 'undefined') {
         'support.faq2_q': 'Что такое Круги и как они работают?',
         'support.faq2_a': 'Круги позволяют организовать ваши связи по уровням доверия: Общий (знакомые), Близкие друзья и Семья. Когда вы публикуете в ленте или сохраняете записи дневника, вы выбираете, какой круг может их видеть. Это даёт вам полный контроль над конфиденциальностью.',
         'support.faq3_q': 'Мои данные в безопасности?',
-        'support.faq3_a': 'Да. Мы используем промышленное шифрование для защиты данных при передаче (HTTPS/SSL) и хранении. Наша платформа включает защиту CSRF, безопасное управление сессиями, строгие заголовки политики безопасности контента и полное соответствие GDPR. Вы можете просматривать, экспортировать или удалять свои данные в любое время в Настройках.',
+        'support.faq3_a': 'Да. Мы используем промышленное шифрование для защиты данных при передаче (HTTPS/SSL) и хранении. Наша платформа включает защиту CSRF, безопасное управление сессиями, строгие заголовки политики безопасности контента (CSP) и инструменты управления данными, построенные вокруг ваших прав по GDPR. Вы можете просматривать, экспортировать или удалять свои данные в любое время в Настройках.',
         'support.faq4_q': 'Как работают оповещения и триггеры?',
         'support.faq4_a': 'Вы можете установить оповещения о благополучии для людей, которые вам дороги. Посетите их профиль и нажмите кнопку Триггеры, чтобы задать пороги. Например, получите уведомление, если их настроение упадёт ниже 2 или тревожность поднимется выше 3 в течение нескольких дней подряд.',
         'support.faq5_q': 'Как изменить языковые настройки?',

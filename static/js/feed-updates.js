@@ -1,3 +1,6 @@
+// Version B204 (A94): no content change; ?v bumped B203->B204 in lockstep. Checked against the
+//   new strict CSP: every inline handler this file builds is picked up by app.py's handler
+//   bridge (no eval, string timers or javascript: links here).
 // Version P320 Lang - Uses existing CIRCLE_EMOJIS, does not redeclare
 // feed-updates.js - Circle display name mappings
 // Version Lang - Replaced hardcoded English visibility names with i18n lookups

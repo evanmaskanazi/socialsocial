@@ -1,3 +1,7 @@
+// Version B204 (A94) audit 1 (pre-existing): escapeHtml() now escapes quotes and keeps 0.
+// Version B204 (A94): otherwise no content change; ?v bumped B203->B204 in lockstep. Checked against the
+//   new strict CSP: every inline handler this file builds is picked up by app.py's handler
+//   bridge (no eval, string timers or javascript: links here).
 // Version B201 (A92 audit round 1): no content change; ?v bumped B200->B201 in lockstep.
 // Version B200 (A92): (referenced as ?v=B200). Copy only: the "Connected — choose a circle"
 //   reason label now uses a colon in all 4 languages (long-dash cleanup). No logic change.
@@ -216,10 +220,13 @@ function formatMessageTime(timestamp) {
 // Safe HTML escape function
 // ============================================================
 function escapeHtml(text) {
-    if (!text) return '';
+    // B204 audit 1 (pre-existing): this global copy can replace index's escapeHtml (same name,
+    // loaded later), so it now matches it: 0 renders as "0" (was ''), and quotes are escaped so
+    // the result is also safe inside quoted HTML attributes.
+    if (text === null || text === undefined) return '';
     const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    div.textContent = String(text);
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // A41: parse a backend timestamp as UTC. The API emits naive ISO datetimes with no timezone
