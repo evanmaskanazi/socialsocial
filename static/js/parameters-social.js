@@ -1,3 +1,4 @@
+// Version B205 (F6): no content change; ?v bumped B204->B205 in lockstep.
 // Version B204 (A94) audit 1 (pre-existing): two buttons put a username into a quoted JS
 //   string without JS escaping, so names with an apostrophe (allowed since A26) broke them:
 //   confirmFollowWithParameters(...) and copyInviteLink(...) (encodeURIComponent keeps ').

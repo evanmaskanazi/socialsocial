@@ -1,3 +1,4 @@
+// Version B205 (F6): no content change; ?v bumped B204->B205 in lockstep.
 // Version B204 (A94) audit 1 (pre-existing): escapeHtml() now escapes quotes and keeps 0.
 // Version B204 (A94): otherwise no content change; ?v bumped B203->B204 in lockstep. Checked against the
 //   new strict CSP: every inline handler this file builds is picked up by app.py's handler
