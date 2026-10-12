@@ -1,4 +1,15 @@
 <!DOCTYPE html>
+<!-- TheraSocial About Version B204 (A94) -->
+<!-- B204 (A94): fallback text: "full GDPR compliance" -> "data controls built around your GDPR
+     rights"; Our Values -> "Encrypted connections and your GDPR data rights keep your data yours".
+     CACHE-BUST: every live JS ?v bumped B203->B204 in lockstep (i18n.js changed); app.py
+     _A92_ASSET_VERSION = 'B204'.
+-->
+<!-- TheraSocial About Version B203 (A93) -->
+<!-- B203 (A93): "Our Values" fallback text: "End-to-end encryption" -> "Encrypted connections".
+     CACHE-BUST: every live JS ?v bumped B202->B203 in lockstep (i18n.js changed); app.py
+     _A92_ASSET_VERSION = 'B203'.
+-->
 <!-- TheraSocial About Version B202 (A92 round 2) -->
 <!-- B202 (A92 round 2): fixes from the live-page review. Additive; no JS or IDs changed.
      (1) Long-dash cleanup in this page's built-in English text and meta description (the text
@@ -326,7 +337,7 @@
                     <div class="feature-icon">🛡️</div>
                     <div class="feature-title" data-i18n="about.privacy_title">Your Data, Your Control</div>
                     <p class="feature-desc" data-i18n="about.privacy_desc">
-                        Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and full GDPR compliance. You decide who sees what, always.
+                        Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and data controls built around your GDPR rights. You decide who sees what, always.
                     </p>
                 </div>
 
@@ -374,7 +385,7 @@
             <h2 style="color: #6B8BA4; margin: 30px 0 20px;" data-i18n="about.values_title">Our Values</h2>
             <ul class="values-list">
                 <li><strong data-i18n="about.value1_title">Empowerment:</strong> <span data-i18n="about.value1_desc">We help you take charge of your well-being across every area of life</span></li>
-                <li><strong data-i18n="about.value2_title">Data Protection:</strong> <span data-i18n="about.value2_desc">End-to-end encryption and GDPR compliance ensure your data stays yours</span></li>
+                <li><strong data-i18n="about.value2_title">Data Protection:</strong> <span data-i18n="about.value2_desc">Encrypted connections and your GDPR data rights keep your data yours</span></li>
                 <li><strong data-i18n="about.value3_title">Innovation:</strong> <span data-i18n="about.value3_desc">Patent-protected features designed to cultivate meaningful human connection</span></li>
                 <li><strong data-i18n="about.value4_title">Accessibility:</strong> <span data-i18n="about.value4_desc">Available in multiple languages with support for every user, everywhere</span></li>
             </ul>
@@ -401,7 +412,7 @@
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B202"></script>
+    <script src="/static/js/i18n.js?v=B204"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read

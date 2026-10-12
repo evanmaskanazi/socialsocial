@@ -1,4 +1,31 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B204 (A94) -->
+<!-- B204 (A94): (1) About + Support fallback text: "full GDPR compliance" -> "data controls built
+     around your GDPR rights"; Our Values -> "Encrypted connections and your GDPR data rights keep
+     your data yours". (2) In-app Support FAQ fallback: "strict Content Security Policy headers"
+     restored; the claim is now true (app.py A94: nonce-based strict CSP). (3) This page's own CSP
+     meta tag matches the new server policy: script-src 'nonce-(csp_nonce)' 'strict-dynamic'
+     (the server fills in the per-request nonce), script-src-attr 'none', 'unsafe-inline' removed
+     from script-src; frame-ancestors dropped from the meta tag only (browsers ignore it there and
+     logged a console error; the server header still sends it). No handler or script changed.
+     AUDIT 1 (B204): (4) pre-existing: handler arguments built from names/cities now use
+     _tsJsArg() (JS-string escaping) so names with an apostrophe, allowed since A26, no longer
+     break openConnectionInfo / loadMessages / trigger / flagUser buttons. (5) pre-existing:
+     escapeHtml() also escapes quotes (safe in attributes). (6) pre-existing: dormant in-app
+     Support view showed a placeholder email and 1-800 number; now the real contact details.
+     CACHE-BUST: every live JS ?v bumped B203->B204 in lockstep (i18n.js changed); app.py
+     _A92_ASSET_VERSION = 'B204'.
+-->
+<!-- TheraSocial Index Version B203 (A93) -->
+<!-- B203 (A93): Security-claim accuracy round. (1) About "Our Values" fallback text:
+     "End-to-end encryption" -> "Encrypted connections" (messages are HTTPS-encrypted in transit,
+     not end-to-end). (2) In-app Support FAQ fallback: "strict" removed from the CSP claim.
+     (3) The page's own CSP meta tag gets the same hardening as the server header:
+     object-src 'none', base-uri 'self', and api.anthropic.com dropped from connect-src (the
+     browser never calls it; AI calls are server-side).
+     CACHE-BUST: every live JS ?v bumped B202->B203 in lockstep (i18n.js changed); app.py
+     _A92_ASSET_VERSION = 'B203'.
+-->
 <!-- TheraSocial Index Version B202 (A92 audit 1 follow-up) -->
 <!-- B202: CACHE-BUST lockstep ONLY: every live JS ?v bumped B201->B202 because i18n.js changed
      again (About "Our Values" titles regain their colon). No markup/JS change in this file. -->
@@ -747,15 +774,15 @@
     <!-- CHANGE 1: Security meta tags per ethics document -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'nonce-{{ csp_nonce }}' 'strict-dynamic' 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self';">
     <!-- A60: was "noindex, nofollow", which blocked Google entirely. Set to "index, follow"
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B202"></script>
+   <script src="/static/js/utilities.js?v=B204"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B202"></script>
-    <script src="/static/js/follow-requests.js?v=B202"></script>
+    <script src="/static/js/triggers.js?v=B204"></script>
+    <script src="/static/js/follow-requests.js?v=B204"></script>
 
 
     <style>
@@ -5554,7 +5581,7 @@
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
                     <h3 data-i18n="about.privacy_title">Your Data, Your Control</h3>
-                    <p data-i18n="about.privacy_desc">Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and full GDPR compliance. You decide who sees what, always.</p>
+                    <p data-i18n="about.privacy_desc">Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and data controls built around your GDPR rights. You decide who sees what, always.</p>
                 </div>
 
                 <div class="feature-card">
@@ -5624,7 +5651,7 @@
             <h2 style="color: var(--primary); margin: 30px 0 20px;" data-i18n="about.values_title">Our Values</h2>
             <ul style="margin-left: 30px; line-height: 2; color: var(--dark);">
                 <li><strong data-i18n="about.value1_title">Empowerment:</strong> <span data-i18n="about.value1_desc">We help you take charge of your well-being across every area of life</span></li>
-                <li><strong data-i18n="about.value2_title">Data Protection:</strong> <span data-i18n="about.value2_desc">End-to-end encryption and GDPR compliance ensure your data stays yours</span></li>
+                <li><strong data-i18n="about.value2_title">Data Protection:</strong> <span data-i18n="about.value2_desc">Encrypted connections and your GDPR data rights keep your data yours</span></li>
                 <li><strong data-i18n="about.value3_title">Innovation:</strong> <span data-i18n="about.value3_desc">Patent-protected features designed to cultivate meaningful human connection</span></li>
                 <li><strong data-i18n="about.value4_title">Accessibility:</strong> <span data-i18n="about.value4_desc">Available in multiple languages with support for every user, everywhere</span></li>
             </ul>
@@ -5649,11 +5676,19 @@
                     <h3 style="color: var(--primary); margin-bottom: 15px;"><span data-i18n="support.contact_us">Contact Us</span></h3>
                     <div style="background: var(--white); padding: 12px; border-radius: 10px; margin-bottom: 10px;">
                         <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.email">Email:</strong>
-                        <a href="mailto:support@therasocial.com" style="color: var(--primary);">support@therasocial.com</a>
+                        <!-- B204 audit 1 (pre-existing): placeholder support@therasocial.com replaced with the
+                             three real inboxes shown on the standalone /support page (A51). -->
+                        <a href="mailto:contact@bentsh.com" style="color: var(--primary); display: block; word-break: break-word;">contact@bentsh.com</a>
+                        <a href="mailto:bennybrandst@gmail.com" style="color: var(--primary); display: block; word-break: break-word;">bennybrandst@gmail.com</a>
+                        <a href="mailto:emaskanazi@gmail.com" style="color: var(--primary); display: block; word-break: break-word;">emaskanazi@gmail.com</a>
                     </div>
                     <div style="background: var(--white); padding: 12px; border-radius: 10px; margin-bottom: 10px;">
                         <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.phone">Phone:</strong>
-                        <span>1-800-THERAPY (843-7279)</span>
+                        <!-- B204 audit 1 (pre-existing): placeholder 1-800 number replaced with the real
+                             Israeli mobile / WhatsApp line from the standalone /support page. -->
+                        <a href="tel:+972542847464" style="color: var(--primary); white-space: nowrap;" dir="ltr">054-284-7464</a>
+                        &nbsp;·&nbsp;
+                        <a href="https://wa.me/972542847464" target="_blank" rel="noopener" style="color: #128C7E; white-space: nowrap; font-weight: 600;">WhatsApp</a>
                     </div>
                     <div style="background: var(--white); padding: 12px; border-radius: 10px;">
                         <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.hours">Hours:</strong>
@@ -5689,7 +5724,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq3_q">Is my data secure?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and full GDPR compliance. You can view, export, or delete your data at any time from your Settings.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -8164,7 +8199,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B202"></script>
+    <script src="/static/js/i18n.js?v=B204"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8519,9 +8554,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B202"></script>
-   <script src="/static/js/circles-messages.js?v=B202"></script>
-<script src="/static/js/feed-updates.js?v=B202"></script>
+<script src="/static/js/parameters-social.js?v=B204"></script>
+   <script src="/static/js/circles-messages.js?v=B204"></script>
+<script src="/static/js/feed-updates.js?v=B204"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -13757,7 +13792,7 @@ function updateCircleDisplay(type, members) {
             <div class="member-item">
                 <div class="member-avatar">${escapeHtml(member.username[0].toUpperCase())}</div>
                 <span class="member-name" style="cursor: pointer; color: #667eea; font-weight: 600;" 
-                      onclick="openConnectionInfo(${member.id}, '${escapeHtml(member.username)}', '${escapeHtml(member.selected_city || 'Unknown')}', '#6B8BA4', false, false)"
+                      onclick="openConnectionInfo(${member.id}, '${_tsJsArg(member.username)}', '${_tsJsArg(member.selected_city || 'Unknown')}', '#6B8BA4', false, false)"
                       onmouseover="this.style.textDecoration='underline'" 
                       onmouseout="this.style.textDecoration='none'">${escapeHtml(member.username)}</span>
                 ${!isReadOnly ? `<button class="remove-btn" onclick="removeFromCircle(${member.id}, '${type}')" data-i18n="circles.remove">${t('circles.remove')}</button>` : ''}
@@ -13974,7 +14009,7 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
                 const safeUsername = escapeHtml(username);
 
                 return `
-                    <div class="conversation-item" data-user-id="${userId}" onclick="loadMessages(${userId}, '${safeUsername}')">
+                    <div class="conversation-item" data-user-id="${userId}" onclick="loadMessages(${userId}, '${_tsJsArg(username)}')">
                         <div class="conversation-header">
                             <span class="conversation-username">${safeUsername}</span>
                             <span class="conversation-time">${lastMessageTime}</span>
@@ -15587,7 +15622,7 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
                 <button class="btn" onclick="document.getElementById('addTriggerModal').remove()" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 10px; font-weight: 500; cursor: pointer;">
                     ${window.i18n ? window.i18n.translate('trigger_cancel') : 'Cancel'}
                 </button>
-                <button class="btn" onclick="createTriggerForUser(${targetUserId}, '${targetUsername}')" style="padding: 10px 20px; background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(107,139,164,0.3);">
+                <button class="btn" onclick="createTriggerForUser(${targetUserId}, '${_tsJsArg(targetUsername)}')" style="padding: 10px 20px; background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(107,139,164,0.3);">
                     ${window.i18n ? window.i18n.translate('trigger_create') : 'Create Trigger'}
                 </button>
             </div>
@@ -15754,7 +15789,7 @@ async function loadTriggersForUser(userId, username) {
                 <span style="color: #3D4852; font-size: 0.92rem; line-height: 1.4;">
                     ${translateTrigger(trigger)}
                 </span>
-                <button class="btn" onclick="deleteTrigger(${trigger.id}); setTimeout(() => loadTriggersForUser(${userId}, '${username}'), 500);"
+                <button class="btn" onclick="deleteTrigger(${trigger.id}); setTimeout(() => loadTriggersForUser(${userId}, '${_tsJsArg(username)}'), 500);"
                         style="padding: 5px 12px; font-size: 0.8rem; background: #f5e6e6; color: #b44; border: 1px solid #e8c8c8; border-radius: 8px; cursor: pointer; font-weight: 500; white-space: nowrap; margin-left: 10px; transition: all 0.2s ease;">
                     ${removeText}
                 </button>
@@ -16261,7 +16296,7 @@ function showUserParametersModal(userId, username, parameters, startDate, endDat
                         <div id="modalTriggersList" style="margin-bottom: 14px;">
                             <p style="color: #6a8a7a; font-size: 0.9rem;">${_t('loading.triggers', 'Loading triggers...')}</p>
                         </div>
-                        <button class="btn" onclick="showAddTriggerModalForUser(${userId}, '${escapeHtml(username)}')" style="padding: 10px 20px; font-size: 0.9rem; background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(107,139,164,0.3);">
+                        <button class="btn" onclick="showAddTriggerModalForUser(${userId}, '${_tsJsArg(username)}')" style="padding: 10px 20px; font-size: 0.9rem; background: linear-gradient(135deg, #6B8BA4 0%, #7a9ab3 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(107,139,164,0.3);">
                             ${window.i18n ? window.i18n.t('trigger_add') : 'Add Trigger'}
                         </button>
                     </div>
@@ -18247,8 +18282,21 @@ async function checkAndLoadTriggerAlerts() {
             // Use textContent approach for basic escaping
             const div = document.createElement('div');
             div.textContent = str;
-            return div.innerHTML;
+            // B204 audit (pre-existing): also escape quotes, so the result is safe inside a
+            // quoted HTML attribute (title="...", value="..."), not only in element text.
+            return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
+
+        // B204 audit (pre-existing): value placed inside a quoted JS string inside an on*="..."
+        // attribute. escapeHtml() is not enough there: it leaves ' and " alone, and the browser
+        // decodes &#39; back to ' before the JS runs, so a name like O'Brien (allowed since A26)
+        // or a city like Be'er Sheva broke the button. This returns \u0027-style escapes, which
+        // are safe in both the HTML attribute and the JS string (same form already used for
+        // uJsName / mJsName elsewhere in this file).
+        window._tsJsArg = function (v) {
+            return String(v === null || v === undefined ? '' : v).replace(/[\\'"<>&\n\r\u2028\u2029]/g,
+                function (c) { return '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'); });
+        };
         
         // CHANGE 2: Additional sanitization for URLs
         function sanitizeUrl(url) {
@@ -20089,7 +20137,7 @@ async function loadConnections() {
             const connections = followingData.following || [];
             if (connections.length > 0) {
                 myConnectionsList.innerHTML = connections.map(user => `
-                    <div class="user-card" style="cursor: pointer; border-left: 3px solid transparent;" onclick="openConnectionInfo(${user.id}, '${escapeHtml(user.username)}', '${escapeHtml(user.selected_city || user.city || 'Unknown')}', '${user.avatar_color || '#6B8BA4'}', false, ${user.follows_you || false})">
+                    <div class="user-card" style="cursor: pointer; border-left: 3px solid transparent;" onclick="openConnectionInfo(${user.id}, '${_tsJsArg(user.username)}', '${_tsJsArg(user.selected_city || user.city || 'Unknown')}', '${_tsJsArg(user.avatar_color || '#6B8BA4')}', false, ${user.follows_you ? true : false})">
                         <div class="user-avatar" style="background: ${user.avatar_color || '#6B8BA4'};">
                             ${escapeHtml(user.username.charAt(0).toUpperCase())}
                         </div>
@@ -21139,7 +21187,7 @@ async function loadInactiveAccounts(page) {
                 '<td style="padding:6px 8px;">' + escapeHtml(u.selected_city || '') + '</td>' +
                 '<td style="padding:6px 8px; font-weight:600; color:#dc3545;">' + (u.days_inactive != null ? u.days_inactive : '·') + '</td>' +
                 '<td style="padding:6px 8px;">' + (u.last_login ? u.last_login.slice(0, 10) : _t('operator.never', 'Never')) + '</td>' +
-                '<td style="padding:6px 8px;"><button onclick="flagUser(' + u.id + ',\'' + escapeHtml(u.username) + '\')" style="padding:4px 10px;background:#dc3545;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.78rem;">' + _t('operator.deactivate', 'Deactivate') + '</button></td>' +
+                '<td style="padding:6px 8px;"><button onclick="flagUser(' + u.id + ',\'' + _tsJsArg(u.username) + '\')" style="padding:4px 10px;background:#dc3545;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.78rem;">' + _t('operator.deactivate', 'Deactivate') + '</button></td>' +
                 '</tr>'
             ).join('');
         }
@@ -22386,7 +22434,7 @@ async function loadFriendsUpdates() {
         listDiv.innerHTML = updates.map(u => {
             const paramDisplay = u.params.map(p => `${paramLabels[p.parameter_name] || p.parameter_name}: ${emojis[p.value] || p.value}`).join(' · ');
             return `
-                <div style="background: var(--light); padding: 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="openConnectionInfo(${u.user.id}, '${escapeHtml(u.user.username)}', '${escapeHtml(u.user.selected_city || 'Unknown')}', '#6B8BA4', false, ${u.user.follows_you || false})">
+                <div style="background: var(--light); padding: 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="openConnectionInfo(${u.user.id}, '${_tsJsArg(u.user.username)}', '${_tsJsArg(u.user.selected_city || 'Unknown')}', '#6B8BA4', false, ${u.user.follows_you ? true : false})">
                     <div style="width: 40px; height: 40px; border-radius: 50%; background: #6B8BA4; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">${escapeHtml(u.user.username.charAt(0).toUpperCase())}</div>
                     <div style="flex: 1;">
                         <div style="font-weight: 600; color: var(--dark); font-size: 0.9rem;"><a href="#" onclick="event.stopPropagation(); viewUserProfileFromHome(${u.user.id}); return false;" style="color: var(--dark); text-decoration: none;" onmouseover="this.style.color='var(--primary)'; this.style.textDecoration='underline';" onmouseout="this.style.color='var(--dark)'; this.style.textDecoration='none';">${escapeHtml(u.user.username)}</a></div>
