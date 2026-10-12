@@ -1,3 +1,8 @@
+// Version B201 (A92 audit round 1): no content change; ?v bumped B200->B201 in lockstep.
+// Version B200 (A92): (referenced as ?v=B200). Copy/presentation only. (1) Diary-save
+//   confirmations rewritten from hype ("Amazing work! ... superpower 🦸") to calm, warm lines in
+//   en/he/ar/ru; one 🌿 instead of two spinning stars. (2) "Reflection saved." without ✨.
+//   (3) Privacy info lines use a colon instead of the long dash. No logic change.
 // Version B199 (A91): No functional change. Cache-bust lockstep only — the HTML ?v refs to this
 //   file were bumped B198->B199 in sync with index/parameters/circles/about this round.
 // Version B196 (A51): (referenced as ?v=B196). Additive only. One targeted change: the
@@ -545,10 +550,10 @@ function showPrivacyInfoModal(event) {
     if (existing) existing.remove();
 
     const title = pt('privacy.info_title') || 'Circle Privacy Levels';
-    const privInfo = pt('privacy.info_private') || 'Private — Only you can see this. No one else has access.';
-    const famInfo = pt('privacy.info_family') || 'Family — Only users you have placed in your Family circle can see this.';
-    const cfInfo = pt('privacy.info_close_friends') || 'Close Friends — Only users you have placed in your Close Friends circle can see this.';
-    const genInfo = pt('privacy.info_general') || 'General — Users in any of your circles (General, Close Friends, or Family) can see this.';
+    const privInfo = pt('privacy.info_private') || 'Private: Only you can see this. No one else has access.';
+    const famInfo = pt('privacy.info_family') || 'Family: Only users you have placed in your Family circle can see this.';
+    const cfInfo = pt('privacy.info_close_friends') || 'Close Friends: Only users you have placed in your Close Friends circle can see this.';
+    const genInfo = pt('privacy.info_general') || 'General: Users in any of your circles (General, Close Friends, or Family) can see this.';
 
     const modal = document.createElement('div');
     modal.className = 'tooltip-modal';
@@ -1203,7 +1208,7 @@ window.showMessage = function(text, type = 'success', duration = 5000, isFlashy 
 
         const icon1 = document.createElement('span');
         icon1.className = 'flashy-icon';
-        icon1.textContent = '🌟';
+        icon1.textContent = '🌿';  // A92: calm leaf (was a spinning star)
 
         const flashyText = document.createElement('p');
         flashyText.className = 'flashy-text';
@@ -1211,7 +1216,7 @@ window.showMessage = function(text, type = 'success', duration = 5000, isFlashy 
 
         const icon2 = document.createElement('span');
         icon2.className = 'flashy-icon';
-        icon2.textContent = '🌟';
+        icon2.textContent = '';  // A92: single icon only (was a second spinning star)
 
         flashyContent.appendChild(icon1);
         flashyContent.appendChild(flashyText);
@@ -3342,34 +3347,35 @@ function updateTranslations() {
 
 // Get random positive message
 function getRandomPositiveMessage() {
+    // A92: calmer, warmer save confirmations (was hype copy: "Amazing work! ... superpower 🦸").
     const messages = {
         'en': [
-            "Amazing work! You're tracking your wellness journey beautifully! 💪",
-            "Fantastic job! Your dedication to self-awareness is inspiring! ⭐",
-            "Wonderful! Every parameter logged is a step towards understanding yourself better! 🌈",
-            "Brilliant! You're building valuable insights about your wellbeing! 🎯",
-            "Outstanding! Your consistency in tracking is your superpower! 🦸"
+            "Saved. Thank you for checking in with yourself today.",
+            "Saved. A few quiet moments of noticing, and you're done.",
+            "Saved. Each entry helps you see your patterns a little more clearly.",
+            "Saved. Small, steady check-ins are what make the picture clear.",
+            "Saved. Well done for making time for yourself today."
         ],
         'he': [
-            "עבודה מדהימה! אתה עוקב אחר מסע הבריאות שלך בצורה יפהפייה! 💪",
-            "עבודה פנטסטית! המסירות שלך למודעות עצמית מעוררת השראה! ⭐",
-            "נפלא! כל פרמטר שנרשם הוא צעד להבנה טובה יותר של עצמך! 🌈",
-            "מבריק! אתה בונה תובנות חשובות על הרווחה שלך! 🎯",
-            "יוצא מן הכלל! העקביות שלך במעקב היא כוח העל שלך! 🦸"
+            "נשמר. תודה שהקדשת רגע לעצמך היום.",
+            "נשמר. כמה רגעים של הקשבה לעצמך, וזהו.",
+            "נשמר. כל רישום עוזר לראות את הדפוסים שלך קצת יותר בבירור.",
+            "נשמר. צ׳ק-אינים קטנים וקבועים הם מה שיוצר תמונה ברורה.",
+            "נשמר. יפה שמצאת זמן לעצמך היום."
         ],
         'ar': [
-            "عمل رائع! أنت تتابع رحلتك الصحية بشكل جميل! 💪",
-            "عمل رائع! إخلاصك للوعي الذاتي ملهم! ⭐",
-            "رائع! كل معامل مسجل هو خطوة نحو فهم نفسك بشكل أفضل! 🌈",
-            "ممتاز! أنت تبني رؤى قيمة حول رفاهيتك! 🎯",
-            "متميز! ثباتك في التتبع هو قوتك الخارقة! 🦸"
+            "تم الحفظ. شكرًا لأنك منحت نفسك لحظة اليوم.",
+            "تم الحفظ. لحظات قليلة من الإنصات لنفسك، وانتهيت.",
+            "تم الحفظ. كل تسجيل يساعدك على رؤية أنماطك بوضوح أكبر.",
+            "تم الحفظ. التسجيلات الصغيرة المنتظمة هي ما يجعل الصورة واضحة.",
+            "تم الحفظ. جميل أنك خصصت وقتًا لنفسك اليوم."
         ],
         'ru': [
-            "Потрясающая работа! Вы прекрасно отслеживаете свой путь к здоровью! 💪",
-            "Фантастическая работа! Ваша преданность самосознанию вдохновляет! ⭐",
-            "Замечательно! Каждый записанный параметр - это шаг к лучшему пониманию себя! 🌈",
-            "Блестяще! Вы создаете ценные инсайты о своем благополучии! 🎯",
-            "Выдающийся результат! Ваша последовательность в отслеживании - это ваша суперсила! 🦸"
+            "Сохранено. Спасибо, что уделили себе минуту сегодня.",
+            "Сохранено. Несколько спокойных минут внимания к себе, и готово.",
+            "Сохранено. Каждая запись помогает чуть яснее видеть свои закономерности.",
+            "Сохранено. Небольшие регулярные отметки складываются в ясную картину.",
+            "Сохранено. Хорошо, что вы нашли время для себя сегодня."
         ]
     };
 
@@ -3649,10 +3655,10 @@ async function saveReflectionResponse() {
         if (response.ok) {
             const lang = localStorage.getItem('selectedLanguage') || 'en';
             const savedMsgs = {
-                'en': 'Reflection saved! ✨',
-                'he': 'הרפלקציה נשמרה! ✨',
-                'ar': 'تم حفظ التأمل! ✨',
-                'ru': 'Размышление сохранено! ✨'
+                'en': 'Reflection saved.',
+                'he': 'הרפלקציה נשמרה.',
+                'ar': 'تم حفظ التأمل.',
+                'ru': 'Размышление сохранено.'
             };
             window.showMessage(savedMsgs[lang] || savedMsgs['en'], 'success', 3000, true);
 

@@ -1,3 +1,6 @@
+// Version B201 (A92 audit round 1): no content change; ?v bumped B200->B201 in lockstep.
+// Version B200 (A92): (referenced as ?v=B200). Copy only: the "Connected — choose a circle"
+//   reason label now uses a colon in all 4 languages (long-dash cleanup). No logic change.
 // Version B199 (A91): No functional change. Cache-bust lockstep only — the HTML ?v refs to this
 //   file were bumped B198->B199 in sync with index/circles/parameters/about (about.html was stale
 //   at B196 and was resynced this round). File content is otherwise identical to A81/B198.
@@ -1005,7 +1008,7 @@ async function loadCircleRecommendations() {
                              onclick="window.location.href='/?view=profile&user_id=${Number(u.id)}'"
                              onmouseover="this.style.textDecoration='underline'"
                              onmouseout="this.style.textDecoration='none'">${uSafeName}</div>
-                        <div style="font-size: 12px; color: #20a144;" data-i18n="circles.reason_connected_unclassified">Connected — choose a circle</div>
+                        <div style="font-size: 12px; color: #20a144;" data-i18n="circles.reason_connected_unclassified">Connected: choose a circle</div>
                         ${u.selected_city ? `<div style="font-size: 11px; color: #adb5bd;">📍 ${uSafeCity}</div>` : ""}
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
@@ -1576,7 +1579,7 @@ function addCircleTranslations() {
             'privacy.class_a': 'Family',
             'privacy.private': 'Private',
             'circles.reason_pending_request': 'Sent you a connection request',
-            'circles.reason_connected_unclassified': 'Connected — choose a circle',
+            'circles.reason_connected_unclassified': 'Connected: choose a circle',
             'circles.no_recommendations': 'No pending requests'
         });
 
@@ -1606,7 +1609,7 @@ function addCircleTranslations() {
             'privacy.class_a': 'משפחה',
             'privacy.private': 'פרטי',
             'circles.reason_pending_request': 'שלח לך בקשת חיבור',
-            'circles.reason_connected_unclassified': 'מחוברים — בחרו מעגל',
+            'circles.reason_connected_unclassified': 'מחוברים: בחרו מעגל',
             'circles.no_recommendations': 'אין בקשות ממתינות'
         });
 
@@ -1636,7 +1639,7 @@ function addCircleTranslations() {
             'privacy.class_a': 'العائلة',
             'privacy.private': 'خاص',
             'circles.reason_pending_request': 'أرسل لك طلب اتصال',
-            'circles.reason_connected_unclassified': 'متصل — اختر دائرة',
+            'circles.reason_connected_unclassified': 'متصل: اختر دائرة',
             'circles.no_recommendations': 'لا توجد طلبات معلقة'
         });
 
@@ -1667,7 +1670,7 @@ function addCircleTranslations() {
             'privacy.class_a': 'Семья',
             'privacy.private': 'Приватный',
             'circles.reason_pending_request': 'Отправил вам запрос на подключение',
-            'circles.reason_connected_unclassified': 'В контактах — выберите круг',
+            'circles.reason_connected_unclassified': 'В контактах: выберите круг',
             'circles.no_recommendations': 'Нет ожидающих запросов'
         });
 
