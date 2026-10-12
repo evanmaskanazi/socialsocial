@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B202 (A92 audit 1 follow-up) -->
+<!-- B202: CACHE-BUST lockstep ONLY: every live JS ?v bumped B201->B202 because i18n.js changed
+     again (About "Our Values" titles regain their colon). No markup/JS change in this file. -->
 <!-- TheraSocial Index Version B201 (A92 audit round 1) -->
 <!-- B201 (A92 audit 1): fixes to this round's changes + pre-existing issues found while auditing.
      * luxe L2: text-colour selectors anchored so border-color/background-color can never match;
@@ -749,10 +752,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B201"></script>
+   <script src="/static/js/utilities.js?v=B202"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B201"></script>
-    <script src="/static/js/follow-requests.js?v=B201"></script>
+    <script src="/static/js/triggers.js?v=B202"></script>
+    <script src="/static/js/follow-requests.js?v=B202"></script>
 
 
     <style>
@@ -8161,7 +8164,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B201"></script>
+    <script src="/static/js/i18n.js?v=B202"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8516,9 +8519,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B201"></script>
-   <script src="/static/js/circles-messages.js?v=B201"></script>
-<script src="/static/js/feed-updates.js?v=B201"></script>
+<script src="/static/js/parameters-social.js?v=B202"></script>
+   <script src="/static/js/circles-messages.js?v=B202"></script>
+<script src="/static/js/feed-updates.js?v=B202"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';

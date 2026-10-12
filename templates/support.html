@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!-- TheraSocial Support Version B202 (A92 round 2) -->
+<!-- B202 (A92 round 2): fixes from the live-page review (all pre-existing, all additive).
+     (1) Phone labels: each language line now has its own direction; the shared dir="auto" span
+         made the Hebrew line render scrambled.
+     (2) Contact + Quick Help links: deep slate instead of pale lilac (~2.2:1); WhatsApp link in
+         WhatsApp's darker teal instead of bright green (~2:1).
+     (3) Send Message / Back buttons: slate gradient so the white text stays readable.
+     CACHE-BUST: i18n.js ?v bumped B201->B202 in lockstep (i18n.js changed: About value titles). -->
 <!-- TheraSocial Support Version B201 (A92 audit round 1) -->
 <!-- B201 (A92 audit 1): pre-existing: removed a hard-coded Cloudflare email-decode script saved in
      from a live page. i18n.js ?v bumped B200->B201 in lockstep. -->
@@ -447,11 +455,15 @@
                         &nbsp;·&nbsp;
                         <a href="https://wa.me/972542847464" target="_blank" rel="noopener" style="color: #25D366; white-space: nowrap; font-weight: 600;">WhatsApp</a>
                     </span>
-                    <span style="display: block; margin-top: 6px; font-size: 12px; color: #777; line-height: 1.5;" dir="auto">
-                        Israeli mobile &amp; WhatsApp number<br>
-                        מספר סלולרי ו‑WhatsApp ישראלי<br>
-                        رقم جوّال وواتساب إسرائيلي<br>
-                        Израильский мобильный номер и WhatsApp
+                    <!-- A92 round 2 (pre-existing bidi bug): the four labels shared ONE dir="auto"
+                         span, so the whole block took the English line's LTR direction and the
+                         Hebrew line rendered scrambled ("ישראלי WhatsApp-מספר סלולרי ו"). Each line
+                         now carries its own direction; alignment is handled in ts-a92-luxe. -->
+                    <span class="ts92-phone-labels" style="display: block; margin-top: 6px; font-size: 12px; color: #777; line-height: 1.5;">
+                        <span dir="ltr">Israeli mobile &amp; WhatsApp number</span>
+                        <span dir="rtl">מספר סלולרי ו‑WhatsApp ישראלי</span>
+                        <span dir="rtl">رقم جوّال وواتساب إسرائيلي</span>
+                        <span dir="ltr">Израильский мобильный номер и WhatsApp</span>
                     </span>
                 </div>
                 <div class="contact-info">
@@ -603,7 +615,7 @@
     <!-- A92 audit (pre-existing): removed a hard-coded Cloudflare email-decode script that had been
          saved into the template from a live page; Cloudflare injects its own copy when it needs one,
          and off Cloudflare the path 404s. The mailto links here are plain and need no decoding. -->
-    <script src="/static/js/i18n.js?v=B201"></script>
+    <script src="/static/js/i18n.js?v=B202"></script>
     <script>
         // A43 (rev6): BULLETPROOF back button. Every earlier revision ultimately trusted the
         // anchor's href (rev4 set href once at load and then did `if (validRet) return;` on
@@ -992,6 +1004,18 @@
         @media (prefers-reduced-motion: reduce) {
             .support-card:hover, .submit-btn:hover, .back-link:hover { transform: none; }
         }
+        /* S4 (round 2, pre-existing): the contact links and Quick Help links were pale lilac
+               #B6A9C9 on white (about 2.2:1) and WhatsApp bright green (about 2:1), both hard to
+               read. Deep slate and WhatsApp's darker brand teal instead; underline kept. */
+        .contact-info a[href^="mailto:"], .contact-info a[href^="tel:"],
+        .support-card li > a { color: #5A7A93 !important; }
+        .contact-info a[href*="wa.me"] { color: #128C7E !important; }
+        /* S5 (round 2, pre-existing): white button text ended on the light lilac end of the
+               gradient (about 2.2:1). Same slate gradient as the rest of the app. */
+        .submit-btn, .back-link { background: linear-gradient(135deg, #5A7A93 0%, #6B8BA4 100%); }
+        /* S6 (round 2): per-line phone labels, aligned with the page direction. */
+        .ts92-phone-labels > span { display: block; text-align: left; }
+        [dir="rtl"] .ts92-phone-labels > span { text-align: right; }
         /* S3 */
         h1, h2, h3 { text-wrap: balance; }
         p, li, .faq-answer { text-wrap: pretty; }
