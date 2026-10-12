@@ -1,6 +1,55 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version A94 (backend)
+#
+# A94 (strict Content Security Policy; additive, no route or page markup changed):
+#   1. CSP script-src is now strict: a fresh nonce per request + 'strict-dynamic', with
+#      'unsafe-inline' removed and script-src-attr 'none'. Injected <script> tags and injected
+#      inline handlers are refused by the browser. object-src/base-uri/frame-ancestors as A93.
+#   2. _a94_nonce_html adds the nonce to the <script> tags in the HTML the server sends.
+#   3. Handler bridge (/ts-csp/core.js + /ts-csp/handlers.js, loaded first on every page): the
+#      existing inline onclick/onchange/... handlers keep working because each one is turned
+#      into a normal JS handler, and ONLY handler code found in the app's own templates,
+#      static/js files and this file is run (table rebuilt from the deployed files at startup).
+#   4. index.html's own CSP <meta> uses {{ csp_nonce }} (context processor) to match.
+#   5. _A92_ASSET_VERSION = 'B204' (cache-bust lockstep; i18n.js changed: GDPR-rights wording,
+#      "strict Content Security Policy headers" restored in the Support FAQ, 4 languages).
+#   AUDIT 1 fixes:
+#   - Handler table built once at startup under a lock and published atomically (a request
+#     thread could previously see it half-built and serve a page with every script blocked).
+#   - Fail-safe: if the nonce cannot be added to an HTML page, that response gets the A93
+#     policy (logged) instead of a strict policy that would block all of its scripts.
+#   - The bridge is inserted after the real <head>, never inside an HTML comment that
+#     mentions <head>.
+#   - HTML responses add Cache-Control no-transform, so Cloudflare does not inject its own
+#     un-nonced scripts (Email Obfuscation, Rocket Loader), which the strict CSP would block.
+#   - Bridge: ignores attributes that only start with "on" (not event handlers); lookup
+#     cache is bounded.
+#   AUDIT 2 fixes:
+#   - Nonce injection is a jump-scanner instead of one lazy regex over the page: ~39 ms per
+#     index.html load down to a few ms.
+#   - An .html file served from disk (pass-through response, e.g. /static/*.html) now gets
+#     nonces too instead of a strict header with blocked scripts; partial/streamed/encoded HTML
+#     gets the A93 policy.
+#
+# =====================================================================
+# TheraSocial app.py - Version A93 (backend)
+#
+# A93 (security-claim accuracy; additive, no route changed):
+#   1. CSRF: new _a93_csrf_origin_check before_request verifies Origin/Referer (and
+#      Sec-Fetch-Site) on EVERY POST/PUT/PATCH/DELETE, refusing cross-site browser requests with
+#      403. Previously only ~20 of ~86 state-changing routes had an explicit CSRF check
+#      (@require_csrf, kept as is). Exempt: OAuth callbacks (cross-site by design, protected by
+#      the OAuth state parameter) and the Resend inbound-email webhook (server-to-server).
+#   2. CSP header hardened: object-src 'none', base-uri 'self', frame-ancestors 'self';
+#      api.anthropic.com removed from connect-src (never called from the browser).
+#      NOT made "strict": a strict (nonce/hash) script policy needs the ~300 inline event
+#      handlers and inline script blocks across the pages moved into script files first.
+#      (Superseded by A94: strict policy delivered via a nonce + handler bridge instead.)
+#   3. _A92_ASSET_VERSION = 'B203' (cache-bust lockstep; i18n.js changed).
+#
+# =====================================================================
 # TheraSocial app.py - Version A92 (backend)
 #
 # A92 audit 1 follow-up: _A92_ASSET_VERSION = 'B202' (lockstep; i18n.js changed again).
@@ -2067,7 +2116,11 @@ def add_cache_headers(response):
         if (request.path == '/'
                 or request.path.endswith('.html')
                 or 'text/html' in ctype):
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            # A94 audit 1: no-transform tells Cloudflare (and any proxy) not to rewrite the page.
+            # Cloudflare's Email Obfuscation and Rocket Loader inject their own <script> tags,
+            # which would not carry this request's CSP nonce and would be blocked by the strict
+            # policy (support-page addresses would show as "[email protected]").
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, no-transform'
     return response
 
 # Security headers middleware (Ethics Doc: Privacy and Security by Design)
@@ -2084,8 +2137,919 @@ def add_security_headers(response):
     # Content Security Policy
     # PL406: Added cdn.jsdelivr.net to script-src to allow Chart.js library for progress charts
     # LINK FIX: Added cdn.jsdelivr.net to connect-src for source maps
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net"
+    # A93 (CSP hardening, additive directives only): object-src 'none' (no plugins/embeds;
+    # nothing in the app uses <object>/<embed>), base-uri 'self' (blocks <base> hijacking of
+    # relative URLs), frame-ancestors 'self' (CSP twin of the X-Frame-Options header above).
+    # connect-src no longer lists api.anthropic.com: the browser never calls it (the AI calls
+    # are server-side in _call_anthropic_api).
+    # A94: STRICT policy. script-src is now nonce-based with 'strict-dynamic' (no 'unsafe-inline',
+    # no 'unsafe-eval'); the page's own <script> tags get the per-request nonce in
+    # _a94_nonce_html. All other directives are unchanged from A93. See the A94 block below.
+    # A94 audit 1: if the nonce could not be added to an HTML page, send the A93 policy for that
+    # one response (logged) instead of a strict policy that would block every script on it.
+    if _a94_nonce_html(response):
+        response.headers['Content-Security-Policy'] = _a94_csp_header()
+    else:
+        response.headers['Content-Security-Policy'] = _A94_FALLBACK_CSP
     return response
+
+# =====================
+# A94: STRICT CONTENT SECURITY POLICY (nonce + 'strict-dynamic', no 'unsafe-inline')
+# =====================
+# Additive. No page markup or existing JS is rewritten.
+#   1. Every request gets a fresh random nonce (_a94_nonce). The CSP header allows ONLY scripts
+#      that carry it (plus scripts those scripts load, via 'strict-dynamic'). 'unsafe-inline'
+#      and 'unsafe-eval' are gone, so injected <script> tags and injected inline event
+#      handlers (onclick=..., onerror=...) are refused by the browser.
+#   2. _a94_nonce_html adds nonce="..." to the <script> tags in HTML the server itself sends
+#      (templates and the few pages built in this file). User data in those pages is already
+#      HTML-escaped, so this only ever marks the app's own script tags.
+#   3. The pages still contain ~300 inline handlers (onclick="showView('home')"). A strict
+#      policy blocks those, so a small bridge script (served at /ts-csp/core.js) turns each one
+#      into an ordinary JS handler (element.onclick = function), which CSP allows. It will ONLY
+#      run handler code that exists in the app's own source files: at startup
+#      _a94_build_handler_table() scans templates/*.html, static/js/*.js and this file, and
+#      precompiles every inline handler it finds, including the ones built at runtime from
+#      templates (onclick="submitComment(${post.id})": the ${...} slots may only receive a
+#      number, a quoted-string value or a plain name, never new code). Handler text that is
+#      not in the source is not executed and is logged to the console as "[TS-CSP] blocked".
+#      A last-resort path accepts only "appFunction(literal, ...)" calls to functions the
+#      app itself defined (never browser built-ins such as fetch or eval).
+#   The table is rebuilt from the deployed files on every start, so future pages and JS
+#   files are covered without editing this block.
+import html as _a94_html
+import hashlib as _a94_hashlib
+import json as _a94_json
+from flask import g as _a94_g
+
+_A94_JS_PUNCT3 = ('===', '!==', '...', '**=', '<<=', '>>=', '>>>', '&&=', '||=', '??=')
+_A94_JS_PUNCT2 = ('==', '!=', '<=', '>=', '=>', '&&', '||', '??', '?.', '++', '--', '+=', '-=',
+                  '*=', '/=', '%=', '&=', '|=', '^=', '<<', '>>', '**')
+_A94_REGEX_AFTER_WORDS = {'return', 'typeof', 'case', 'in', 'of', 'new', 'delete', 'void',
+                          'throw', 'else', 'do', 'instanceof', 'yield', 'await'}
+_A94_ATTR_RE = re.compile(r'(?<=\s)on([a-z]{3,24})\s*=\s*(["\'])')
+
+
+def _a94_cook_js_string(raw):
+    """Decode the escape sequences of a JS string literal body."""
+    out = []
+    i, n = 0, len(raw)
+    simple = {'n': '\n', 't': '\t', 'r': '\r', 'b': '\b', 'f': '\f', 'v': '\v', '0': '\0'}
+    while i < n:
+        c = raw[i]
+        if c != '\\' or i + 1 >= n:
+            out.append(c)
+            i += 1
+            continue
+        d = raw[i + 1]
+        if d in simple and not (d == '0' and i + 2 < n and raw[i + 2].isdigit()):
+            out.append(simple[d])
+            i += 2
+        elif d == 'x' and re.match(r'[0-9a-fA-F]{2}', raw[i + 2:i + 4]):
+            out.append(chr(int(raw[i + 2:i + 4], 16)))
+            i += 4
+        elif d == 'u' and raw[i + 2:i + 3] == '{':
+            j = raw.find('}', i + 3)
+            try:
+                out.append(chr(int(raw[i + 3:j], 16)))
+                i = j + 1
+            except Exception:
+                out.append('u')
+                i += 2
+        elif d == 'u' and re.match(r'[0-9a-fA-F]{4}', raw[i + 2:i + 6]):
+            out.append(chr(int(raw[i + 2:i + 6], 16)))
+            i += 6
+        elif d == '\r':
+            i += 3 if raw[i + 2:i + 3] == '\n' else 2
+        elif d in '\n\u2028\u2029':
+            i += 2
+        else:
+            out.append(d)
+            i += 2
+    return ''.join(out)
+
+
+def _a94_skip_regex(src, i):
+    """src[i] == '/' starting a regex literal; return the index after it (flags included)."""
+    n = len(src)
+    j = i + 1
+    in_class = False
+    while j < n:
+        c = src[j]
+        if c == '\\':
+            j += 2
+            continue
+        if c == '\n':
+            return j  # not a regex after all; bail out safely
+        if in_class:
+            if c == ']':
+                in_class = False
+        elif c == '[':
+            in_class = True
+        elif c == '/':
+            j += 1
+            while j < n and (src[j].isalnum() or src[j] == '_'):
+                j += 1
+            return j
+        j += 1
+    return n
+
+
+def _a94_lex(src, i=0, stop_on_brace=False):
+    """Small JS tokenizer. Returns (tokens, end). Tokens are (kind, value, start, end) where
+    kind is 'str' (value = list of parts: cooked text or ('hole', source)), 'word', 'num',
+    'punc' or 're'. With stop_on_brace it stops at the '}' that closes a ${...} slot."""
+    toks = []
+    n = len(src)
+    depth = 0
+
+    def regex_ok():
+        if not toks:
+            return True
+        k, v = toks[-1][0], toks[-1][1]
+        if k == 'punc':
+            return v not in (')', ']', '}', '++', '--')
+        if k == 'word':
+            return v in _A94_REGEX_AFTER_WORDS
+        return False
+
+    while i < n:
+        c = src[i]
+        if c in ' \t\r\n\u00a0\ufeff\u2028\u2029':
+            i += 1
+            continue
+        if src.startswith('//', i):
+            j = src.find('\n', i)
+            i = n if j < 0 else j
+            continue
+        if src.startswith('/*', i):
+            j = src.find('*/', i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        if src.startswith('<!--', i):  # HTML comment inside a script block
+            j = src.find('-->', i + 4)
+            i = n if j < 0 else j + 3
+            continue
+        if c in '\'"':
+            j = i + 1
+            while j < n and src[j] != c and src[j] != '\n':
+                j += 2 if src[j] == '\\' else 1
+            toks.append(('str', [_a94_cook_js_string(src[i + 1:j])], i, j + 1))
+            i = j + 1
+            continue
+        if c == '`':
+            parts = []
+            j = i + 1
+            buf_start = j
+            while j < n and src[j] != '`':
+                if src[j] == '\\':
+                    j += 2
+                    continue
+                if src.startswith('${', j):
+                    parts.append(_a94_cook_js_string(src[buf_start:j]))
+                    _t, end = _a94_lex(src, j + 2, stop_on_brace=True)
+                    parts.append(('hole', src[j + 2:end]))
+                    j = end + 1
+                    buf_start = j
+                    continue
+                j += 1
+            parts.append(_a94_cook_js_string(src[buf_start:j]))
+            toks.append(('str', parts, i, j + 1))
+            i = j + 1
+            continue
+        if c == '/' and regex_ok():
+            j = _a94_skip_regex(src, i)
+            toks.append(('re', src[i:j], i, j))
+            i = j
+            continue
+        if c.isalpha() or c in '_$' or ord(c) > 127:
+            j = i + 1
+            while j < n and (src[j].isalnum() or src[j] in '_$' or ord(src[j]) > 127):
+                j += 1
+            toks.append(('word', src[i:j], i, j))
+            i = j
+            continue
+        if c.isdigit() or (c == '.' and i + 1 < n and src[i + 1].isdigit()):
+            j = i + 1
+            while j < n and (src[j].isalnum() or src[j] in '._'):
+                j += 1
+            toks.append(('num', src[i:j], i, j))
+            i = j
+            continue
+        p = src[i:i + 4] if src.startswith('>>>=', i) else None
+        if not p:
+            p = next((x for x in _A94_JS_PUNCT3 if src.startswith(x, i)), None)
+        if not p:
+            p = next((x for x in _A94_JS_PUNCT2 if src.startswith(x, i)), None)
+        if not p:
+            p = c
+        if p in ('(', '[', '{'):
+            depth += 1
+        elif p in (')', ']', '}'):
+            if p == '}' and stop_on_brace and depth == 0:
+                return toks, i
+            depth -= 1
+        toks.append(('punc', p, i, i + len(p)))
+        i += len(p)
+    return toks, n
+
+
+_A94_OPERAND_STOP = {';', ',', '?', ':', '=', '&&', '||', '??', '===', '!==', '==', '!=',
+                     '=>', '+=', '-=', '*=', '/=', '||=', '&&=', '??=', '<', '>', '<=', '>='}
+
+
+def _a94_string_chains(src, toks):
+    """Group 'str' tokens joined by '+' into chains of parts (text / ('hole', source))."""
+    chains = []
+    used = set()
+    n = len(toks)
+    for s in range(n):
+        if toks[s][0] != 'str' or s in used:
+            continue
+        parts = list(toks[s][1])
+        used.add(s)
+        k = s + 1
+        while k < n and toks[k][0] == 'punc' and toks[k][1] == '+':
+            # operand: tokens up to the next depth-0 '+', or a terminator
+            a = k + 1
+            depth = 0
+            b = a
+            while b < n:
+                kind, v = toks[b][0], toks[b][1]
+                if kind == 'punc':
+                    if v in ('(', '[', '{'):
+                        depth += 1
+                    elif v in (')', ']', '}'):
+                        if depth == 0:
+                            break
+                        depth -= 1
+                    elif depth == 0 and (v == '+' or v in _A94_OPERAND_STOP):
+                        break
+                b += 1
+            if b == a:
+                break
+            if b == a + 1 and toks[a][0] == 'str':
+                parts.extend(toks[a][1])
+                used.add(a)
+            else:
+                parts.append(('hole', src[toks[a][2]:toks[b - 1][3]]))
+            k = b
+            if not (k < n and toks[k][0] == 'punc' and toks[k][1] == '+'):
+                break
+        chains.append(parts)
+    return chains
+
+
+def _a94_attrs_from_parts(parts):
+    """Find on<event>="..." attributes inside a chain. Returns lists of parts per value."""
+    found = []
+    for pi, p in enumerate(parts):
+        if not isinstance(p, str):
+            continue
+        for m in _A94_ATTR_RE.finditer(p):
+            q = m.group(2)
+            val = []
+            cur = p[m.end():]
+            idx = pi
+            closed = False
+            while True:
+                if isinstance(cur, str):
+                    e = cur.find(q)
+                    if e >= 0:
+                        val.append(cur[:e])
+                        closed = True
+                        break
+                    val.append(cur)
+                else:
+                    val.append(cur)
+                idx += 1
+                if idx >= len(parts):
+                    break
+                cur = parts[idx]
+            if closed:
+                found.append(val)
+    return found
+
+
+def _a94_rx_escape(text):
+    """Escape literal text for a JS RegExp source (no 'u' flag)."""
+    out = []
+    for ch in text:
+        if ch in '\\^$.*+?()[]{}|/':
+            out.append('\\' + ch)
+        elif ch == '\n':
+            out.append('\\n')
+        elif ch == '\r':
+            out.append('\\r')
+        elif ch == '\t':
+            out.append('\\t')
+        elif ch in '\u2028\u2029':
+            out.append('\\u%04x' % ord(ch))
+        else:
+            out.append(ch)
+    return ''.join(out)
+
+
+def _a94_classify_template(val_parts):
+    """Turn a handler value with ${...} slots into (regex_source, js_code) or None."""
+    # Merge text, html-unescape it (the browser decodes entities in attribute values).
+    items = []
+    for p in val_parts:
+        if isinstance(p, str):
+            t = _a94_html.unescape(p)
+            if items and isinstance(items[-1], str):
+                items[-1] += t
+            else:
+                items.append(t)
+        else:
+            items.append(p)
+    holes = [x for x in items if not isinstance(x, str)]
+    if not holes:
+        return None
+    # Walk the handler code to know, for each slot, whether it sits inside a string literal.
+    code_out = []
+    rx = ['^']
+    state = None  # None or the quote char of the JS string we are inside
+    esc = False
+    hk = 0
+    plain = []  # code text emitted so far without slot replacements (for context checks)
+    for pos, it in enumerate(items):
+        if isinstance(it, str):
+            for ch in it:
+                if state:
+                    if esc:
+                        esc = False
+                    elif ch == '\\':
+                        esc = True
+                    elif ch == state:
+                        state = None
+                elif ch in '\'"`':
+                    state = ch
+            code_out.append(it)
+            plain.append(it)
+            rx.append(_a94_rx_escape(it))
+            continue
+        # a ${...} slot
+        before = ''.join(plain).rstrip()
+        prev = before[-1:] if before else ''
+        nxt_text = ''
+        if pos + 1 < len(items) and isinstance(items[pos + 1], str):
+            nxt_text = items[pos + 1].lstrip()
+        nxt = nxt_text[:1]
+        ref = '__h[%d]' % hk
+        if state in ('\'', '"'):
+            rx.append('((?:[^%s\\\\\\n]|\\\\[\\s\\S])*)' % ('\'' if state == '\'' else '"'))
+            code_out.append('%s+__u(%s)+%s' % (state, ref, state))
+        elif state == '`':
+            rx.append('((?:[^`\\\\$]|\\\\[\\s\\S])*)')
+            code_out.append('${__u(%s)}' % ref)
+        elif prev == '.':
+            rx.append('([A-Za-z_$][\\w$]*)')
+            joined = ''.join(code_out).rstrip()
+            code_out = [joined[:-1], '[__p(%s)]' % ref]
+        elif nxt == '(':
+            if prev and (prev.isalnum() or prev in '_$'):
+                return None
+            rx.append('([A-Za-z_$][\\w$]*)')
+            code_out.append('__f(%s)' % ref)
+        elif prev in ('', ';', '{', '}') and nxt in ('', ';', '}'):
+            rx.append('([\\s\\S]*?)')
+            code_out.append('__c(this,event,%s)' % ref)
+        else:
+            if (prev and (prev.isalnum() or prev in '_$')) or (nxt and (nxt.isalnum() or nxt in '_$')):
+                return None
+            rx.append('(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[eE][+-]?\\d+)?|true|false|null|undefined|NaN)')
+            code_out.append('__v(%s)' % ref)
+        plain.append('0')
+        hk += 1
+    if state:
+        return None
+    rx.append('$')
+    return ''.join(rx), ''.join(code_out)
+
+
+def _a94_balanced(code):
+    """Cheap sanity check so one mis-read handler can never break the whole generated file."""
+    try:
+        toks, end = _a94_lex(code)
+    except Exception:
+        return False
+    depth = []
+    pairs = {')': '(', ']': '[', '}': '{'}
+    for t in toks:
+        if t[0] == 'punc':
+            if t[1] in '([{':
+                depth.append(t[1])
+            elif t[1] in pairs:
+                if not depth or depth.pop() != pairs[t[1]]:
+                    return False
+    if depth:
+        return False
+    for t in toks:
+        if t[0] == 'str':
+            q = code[t[2]:t[2] + 1]
+            if t[3] > len(code) or code[t[3] - 1:t[3]] != q or t[3] - t[2] < 2:
+                return False
+    return '</script' not in code.lower()
+
+
+def _a94_collect(text, kind, static_set, tpl_list):
+    if kind in ('html', 'py'):
+        markup = text
+        if kind == 'html':
+            scripts = re.findall(r'<script\b([^>]*)>(.*?)</script\s*>', text, re.S | re.I)
+            for attrs, body in scripts:
+                if 'src=' not in attrs:
+                    _a94_collect(body, 'js', static_set, tpl_list)
+            markup = re.sub(r'<script\b[^>]*>.*?</script\s*>', ' ', text, flags=re.S | re.I)
+            markup = re.sub(r'<style\b[^>]*>.*?</style\s*>', ' ', markup, flags=re.S | re.I)
+        for m in re.finditer(r'(?<=\s)on([a-z]{3,24})\s*=\s*(?:"([^"]*)"|\'([^\']*)\')', markup):
+            v = m.group(2) if m.group(2) is not None else m.group(3)
+            if kind == 'py' and ('{' in v or '\\' in v):
+                continue
+            if kind == 'html' and ('{{' in v or '{%' in v):
+                continue
+            static_set.add(_a94_html.unescape(v))
+        return
+    # JS source
+    try:
+        toks, _end = _a94_lex(text)
+    except Exception:
+        return
+    for parts in _a94_string_chains(text, toks):
+        for val in _a94_attrs_from_parts(parts):
+            if all(isinstance(x, str) for x in val):
+                static_set.add(_a94_html.unescape(''.join(val)))
+            else:
+                tpl_list.append(val)
+    # Template-literal slots can themselves contain markup with handlers (nested templates).
+    for t in toks:
+        if t[0] == 'str':
+            for p in t[1]:
+                if not isinstance(p, str) and ('on' in p[1]) and ('`' in p[1] or "'" in p[1]):
+                    _a94_collect(p[1], 'js', static_set, tpl_list)
+
+
+def _a94_build_handler_table(paths):
+    static_set = set()
+    tpl_raw = []
+    for path in paths:
+        try:
+            with open(path, encoding='utf-8', errors='replace') as fh:
+                text = fh.read()
+        except Exception:
+            continue
+        kind = 'py' if path.endswith('.py') else ('js' if path.endswith('.js') else 'html')
+        try:
+            _a94_collect(text, kind, static_set, tpl_raw)
+        except Exception as e:  # never let one odd file stop the app
+            try:
+                logger.warning(f"[A94 CSP] could not scan {path}: {e}")
+            except Exception:
+                pass
+    statics = []
+    for code in sorted(static_set):
+        if code.strip() and _a94_balanced(code):
+            statics.append(code)
+    tpls = {}
+    for val in tpl_raw:
+        res = _a94_classify_template(val)
+        if not res:
+            continue
+        rx, code = res
+        if rx in tpls or not _a94_balanced(code):
+            continue
+        tpls[rx] = code
+    # most specific (longest literal text) first
+    order = sorted(tpls.items(), key=lambda kv: -len(re.sub(r'\([^)]*\)', '', kv[0])))
+    out = ['/* TheraSocial A94: inline handlers precompiled from the app source. Generated. */',
+           '(function(){var __tsR=window.__tsCspRegister;if(!__tsR)return;']
+    out.append('__tsR.s({')
+    out.append(',\n'.join('%s:function(event){%s\n}' % (_a94_json.dumps(c), c) for c in statics))
+    out.append('});')
+    out.append('__tsR.t([')
+    out.append(',\n'.join('[%s,function(event,__h,__u,__f,__p,__v,__c){%s\n}]' % (_a94_json.dumps(rx), code)
+                          for rx, code in order))
+    out.append(']);})();')
+    js = '\n'.join(out).replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
+    return js, len(statics), len(order)
+
+
+_A94_CORE_JS = r"""/* TheraSocial A94 strict-CSP handler bridge. Runs first on every page. */
+(function () {
+  'use strict';
+  if (window.__tsCspRegister) return;
+  var BASE = Object.create(null);
+  try { Object.getOwnPropertyNames(window).forEach(function (k) { BASE[k] = 1; }); } catch (_) {}
+  var EXACT = Object.create(null), TPL = [], CACHE = new Map(), WARNED = Object.create(null);
+  var stats = { applied: 0, blocked: [] };
+  window.__tsCspStats = stats;
+  var EVENTS = ['click','dblclick','change','input','submit','reset','keyup','keydown','keypress',
+    'focus','blur','focusin','focusout','mouseover','mouseout','mouseenter','mouseleave','mousedown',
+    'mouseup','mousemove','touchstart','touchend','touchmove','pointerdown','pointerup','pointerover',
+    'pointerout','contextmenu','wheel','scroll','load','error','abort','select','toggle','paste',
+    'copy','cut','drag','dragstart','dragend','dragover','dragenter','dragleave','drop','play',
+    'pause','ended','animationend','transitionend','invalid','search','beforeinput','loadeddata'];
+  var ATTRS = EVENTS.map(function (e) { return 'on' + e; });
+  var SEL = ATTRS.map(function (a) { return '[' + a + ']'; }).join(',');
+  var IDENT = /^[A-Za-z_$][\w$]*$/;
+  var NATIVE = /\{\s*\[native code\]\s*\}\s*$/;
+  function isNative(f) { try { return NATIVE.test(Function.prototype.toString.call(f)); } catch (_) { return true; } }
+  function appGlobal(name) {
+    if (typeof name !== 'string' || !IDENT.test(name) || BASE[name]) return undefined;
+    try { return window[name]; } catch (_) { return undefined; }
+  }
+  function U(s) {  // decode JS string escapes in a captured value (data only, never code)
+    return String(s).replace(/\\(u\{[0-9a-fA-F]+\}|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|[\s\S])/g, function (m, e) {
+      if (e[0] === 'u' && e[1] === '{') return String.fromCodePoint(parseInt(e.slice(2, -1), 16));
+      if (e[0] === 'u' && e.length === 5) return String.fromCharCode(parseInt(e.slice(1), 16));
+      if (e[0] === 'x' && e.length === 3) return String.fromCharCode(parseInt(e.slice(1), 16));
+      return ({ n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v', '0': '\0' })[e] || e;
+    });
+  }
+  function F(name) {
+    var v = appGlobal(name);
+    if (typeof v === 'function' && !isNative(v)) return v;
+    throw new Error('[TS-CSP] not an app function: ' + name);
+  }
+  function P(name) {
+    if (!IDENT.test(name) || /^__/.test(name) || name === 'constructor' || name === 'prototype') {
+      throw new Error('[TS-CSP] property not allowed: ' + name);
+    }
+    return name;
+  }
+  function V(s) {
+    if (s === 'true') return true; if (s === 'false') return false; if (s === 'null') return null;
+    if (s === 'undefined') return undefined; if (s === 'NaN') return NaN; return Number(s);
+  }
+  // Last-resort mini language: "fn(1, 'a', this.value); event.stopPropagation(); return false".
+  function parseSimple(code) {
+    var re = /\s*(?:([A-Za-z_$][\w$]*)|(-?\d+(?:\.\d+)?)|'((?:[^'\\\n]|\\[\s\S])*)'|"((?:[^"\\\n]|\\[\s\S])*)"|([().,;]))/y;
+    var toks = [], m, i = 0;
+    code = String(code).replace(/\s+$/, '');
+    while (i < code.length) {
+      re.lastIndex = i; m = re.exec(code); if (!m) return null; i = re.lastIndex;
+      if (m[1] !== undefined) toks.push({ t: 'id', v: m[1] });
+      else if (m[2] !== undefined) toks.push({ t: 'lit', v: Number(m[2]) });
+      else if (m[3] !== undefined) toks.push({ t: 'lit', v: U(m[3]) });
+      else if (m[4] !== undefined) toks.push({ t: 'lit', v: U(m[4]) });
+      else toks.push({ t: 'p', v: m[5] });
+    }
+    var k = 0, prog = [];
+    function peek(v) { return toks[k] && toks[k].t === 'p' && toks[k].v === v; }
+    function arg() {
+      var t = toks[k++]; if (!t) return null;
+      if (t.t === 'lit') return { lit: t.v };
+      if (t.t !== 'id') return null;
+      if (t.v === 'true' || t.v === 'false' || t.v === 'null' || t.v === 'undefined') return { lit: V(t.v) };
+      if (t.v === 'event') return { ev: 1 };
+      if (t.v === 'this') {
+        if (peek('.')) { k++; var p = toks[k++]; if (!p || (p.v !== 'value' && p.v !== 'checked')) return null; return { self: p.v }; }
+        return { self: '' };
+      }
+      return null;
+    }
+    while (k < toks.length) {
+      if (peek(';')) { k++; continue; }
+      var t = toks[k];
+      if (t.t !== 'id') return null;
+      if (t.v === 'return') { k++; var r = toks[k]; if (r && r.t === 'id' && (r.v === 'false' || r.v === 'true')) { k++; prog.push({ ret: r.v === 'true' }); continue; } prog.push({ ret: undefined }); continue; }
+      var path = [t.v]; k++;
+      while (peek('.')) { k++; var n = toks[k++]; if (!n || n.t !== 'id') return null; path.push(n.v); }
+      if (!peek('(')) return null; k++;
+      var args = [];
+      if (!peek(')')) { for (;;) { var a = arg(); if (!a) return null; args.push(a); if (peek(',')) { k++; continue; } break; } }
+      if (!peek(')')) return null; k++;
+      if (path[0] === 'event') { if (path.length !== 2 || (path[1] !== 'stopPropagation' && path[1] !== 'preventDefault') || args.length) return null; }
+      else { for (var j = 1; j < path.length; j++) { if (/^__/.test(path[j]) || path[j] === 'constructor' || path[j] === 'prototype') return null; } }
+      prog.push({ call: path, args: args });
+      if (k < toks.length && !peek(';')) return null;
+    }
+    return prog.length ? prog : null;
+  }
+  function runSimple(prog, el, ev) {
+    for (var i = 0; i < prog.length; i++) {
+      var s = prog[i];
+      if ('ret' in s) return s.ret;
+      if (s.call[0] === 'event') { if (ev) ev[s.call[1]](); continue; }
+      var obj = appGlobal(s.call[0]), owner = window;
+      if (obj == null || (typeof obj === 'function' && isNative(obj))) throw new Error('[TS-CSP] not an app global: ' + s.call[0]);
+      for (var j = 1; j < s.call.length; j++) { owner = obj; obj = obj[s.call[j]]; if (obj == null) throw new Error('[TS-CSP] missing: ' + s.call.join('.')); }
+      if (typeof obj !== 'function' || isNative(obj)) throw new Error('[TS-CSP] not an app function: ' + s.call.join('.'));
+      var args = s.args.map(function (a) { return 'lit' in a ? a.lit : a.ev ? ev : a.self ? el[a.self] : el; });
+      obj.apply(owner === window ? undefined : owner, args);
+    }
+  }
+  function C(el, ev, code) {
+    var fn = lookup(code);
+    if (!fn) { warn(code); return; }
+    return fn.call(el, ev);
+  }
+  function lookup(code) {
+    if (CACHE.has(code)) return CACHE.get(code);
+    var out = null, f = EXACT[code];
+    if (f) out = f;
+    if (!out) {
+      for (var i = 0; i < TPL.length; i++) {
+        var m = TPL[i][0].exec(code);
+        if (m) { var g = TPL[i][1], caps = m.slice(1); out = (function (g, caps) { return function (ev) { return g.call(this, ev, caps, U, F, P, V, C); }; })(g, caps); break; }
+      }
+    }
+    if (!out) { var prog = parseSimple(code); if (prog) out = function (ev) { return runSimple(prog, this, ev); }; }
+    if (CACHE.size > 4000) CACHE.clear();  // handlers embed ids, so keep the cache bounded
+    CACHE.set(code, out);
+    return out;
+  }
+  function warn(code) {
+    if (WARNED[code]) return; WARNED[code] = 1; stats.blocked.push(code);
+    try { console.warn('[TS-CSP] blocked inline handler that is not in the app source:', code); } catch (_) {}
+  }
+  function applyAttr(el, name) {
+    var code = el.getAttribute(name);
+    if (code === null) { try { el[name] = null; } catch (_) {} return; }
+    var fn = lookup(code);
+    if (!fn) { warn(code); return; }
+    el[name] = function (ev) { return fn.call(this, ev); };
+    stats.applied++;
+  }
+  function applyEl(el) {
+    var at = el.attributes;
+    // only real event-handler attributes (an attribute such as "onboarding-step" is not one)
+    for (var i = 0; i < at.length; i++) { var n = at[i].name; if (n.length > 2 && n[0] === 'o' && n[1] === 'n' && (n in el)) applyAttr(el, n); }
+  }
+  function scan(root) {
+    if (!root || root.nodeType !== 1) return;
+    applyEl(root);
+    var list = root.querySelectorAll(SEL);
+    for (var i = 0; i < list.length; i++) applyEl(list[i]);
+  }
+  window.__tsCspRegister = {
+    s: function (map) { for (var k in map) EXACT[k] = map[k]; CACHE.clear(); rescan(); },
+    t: function (list) { list.forEach(function (x) { try { TPL.push([new RegExp(x[0]), x[1]]); } catch (_) {} }); CACHE.clear(); rescan(); }
+  };
+  function rescan() { if (document.documentElement) scan(document.documentElement); }
+  var mo = new MutationObserver(function (recs) {
+    for (var i = 0; i < recs.length; i++) {
+      var r = recs[i];
+      if (r.type === 'attributes') applyAttr(r.target, r.attributeName);
+      else for (var j = 0; j < r.addedNodes.length; j++) scan(r.addedNodes[j]);
+    }
+  });
+  mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ATTRS });
+  document.addEventListener('DOMContentLoaded', rescan);
+})();
+"""
+
+_a94_assets_cache = {}
+_a94_assets_lock = threading.Lock()
+
+
+def _a94_source_paths():
+    paths = []
+    try:
+        tdir = os.path.join(app.root_path, app.template_folder or 'templates')
+        for root, _dirs, files in os.walk(tdir):
+            paths += [os.path.join(root, f) for f in files if f.endswith('.html')]
+    except Exception:
+        pass
+    try:
+        jdir = os.path.join(app.static_folder or os.path.join(app.root_path, 'static'), 'js')
+        for root, _dirs, files in os.walk(jdir):
+            paths += [os.path.join(root, f) for f in files if f.endswith('.js')]
+    except Exception:
+        pass
+    paths.append(os.path.abspath(__file__))
+    return sorted(set(paths))
+
+
+def _a94_assets():
+    # A94 audit 1: built once under a lock and published in one step. Previously a second
+    # request thread could see a half-filled cache ('core' without 'handlers'), skip the
+    # nonce injection and serve a page whose scripts were all blocked.
+    if _a94_assets_cache:
+        return _a94_assets_cache
+    with _a94_assets_lock:
+        if _a94_assets_cache:
+            return _a94_assets_cache
+        built = {}
+        try:
+            js, n_static, n_tpl = _a94_build_handler_table(_a94_source_paths())
+        except Exception as e:
+            js, n_static, n_tpl = '/* A94: handler table unavailable */', 0, 0
+            try:
+                logger.error(f"[A94 CSP] handler table build failed: {e}")
+            except Exception:
+                pass
+        for name, body in (('core', _A94_CORE_JS), ('handlers', js)):
+            ver = _a94_hashlib.sha256(body.encode('utf-8')).hexdigest()[:12]
+            built[name] = (body, ver)
+        _a94_assets_cache.update(built)
+        try:
+            logger.info(f"[A94 CSP] handler table: {n_static} exact + {n_tpl} templated handlers")
+        except Exception:
+            pass
+    return _a94_assets_cache
+
+
+@app.route('/ts-csp/<name>.js')
+def a94_csp_asset(name):
+    assets = _a94_assets()
+    if name not in assets:
+        return '', 404
+    body, ver = assets[name]
+    resp = Response(body, mimetype='application/javascript')
+    resp.headers['Cache-Control'] = 'public, max-age=31536000, immutable' if request.args.get('v') == ver else 'no-cache'
+    return resp
+
+
+def _a94_nonce():
+    n = getattr(_a94_g, 'csp_nonce', None)
+    if not n:
+        n = secrets.token_urlsafe(18)
+        _a94_g.csp_nonce = n
+    return n
+
+
+@app.context_processor
+def _a94_template_nonce():
+    # index.html's own CSP <meta> tag uses {{ csp_nonce }} so it matches the header.
+    return {'csp_nonce': _a94_nonce()}
+
+
+_A94_OPEN_RE = re.compile(r'<!--|<script\b', re.I)
+_A94_CLOSE_SCRIPT_RE = re.compile(r'</script\s*>', re.I)
+_A94_HAS_NONCE_RE = re.compile(r'\bnonce\s*=', re.I)
+
+
+def _a94_add_nonces(body, nonce):
+    """Add nonce="..." to every real <script> start tag. Skips HTML comments and never touches
+    script bodies. A94 audit 2: jump-scanner (C-level searches between tags) instead of one
+    lazy regex over the whole page: index.html (1.2 MB) went from ~39 ms to a few ms."""
+    out = []
+    pos = 0
+    n = len(body)
+    while pos < n:
+        m = _A94_OPEN_RE.search(body, pos)
+        if not m:
+            break
+        if m.group(0) == '<!--':
+            end = body.find('-->', m.end())
+            end = n if end < 0 else end + 3
+            out.append(body[pos:end])
+            pos = end
+            continue
+        tag_end = body.find('>', m.end())
+        if tag_end < 0:
+            break
+        attrs = body[m.end():tag_end]
+        out.append(body[pos:m.end()])
+        if not _A94_HAS_NONCE_RE.search(attrs):
+            out.append(' nonce="' + nonce + '"')
+        close = _A94_CLOSE_SCRIPT_RE.search(body, tag_end + 1)
+        end = n if not close else close.end()
+        out.append(body[m.end():end])
+        pos = end
+    out.append(body[pos:])
+    return ''.join(out)
+
+
+def _a94_nonce_html(response):
+    """Mark the server's own <script> tags with this request's nonce and load the handler
+    bridge first thing in <head>. Script bodies and HTML comments are passed through as-is.
+    Returns False only when an HTML page could not be prepared (caller then relaxes the CSP)."""
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' not in ctype:
+            return True
+        # A94 audit 2: an .html file served straight from disk (e.g. Flask's /static route) is
+        # sent as a pass-through file; read it so it gets nonces too. Partial (206), streamed or
+        # already-encoded HTML cannot be rewritten safely, so it gets the relaxed policy.
+        if response.headers.get('Content-Encoding') or response.status_code == 206:
+            return False
+        if response.direct_passthrough:
+            response.direct_passthrough = False
+            response.make_sequence()  # read the (small) file into memory so it can be rewritten
+        if response.is_streamed:
+            return False
+        body = response.get_data(as_text=True)
+        if '<script' not in body.lower() and not re.search(r'\son[a-z]+\s*=', body):
+            return True
+        nonce = _a94_nonce()
+
+        body = _a94_add_nonces(body, nonce)
+        assets = _a94_assets()
+        boot = ('<script nonce="%s" src="/ts-csp/core.js?v=%s"></script>'
+                '<script nonce="%s" src="/ts-csp/handlers.js?v=%s"></script>'
+                % (nonce, assets['core'][1], nonce, assets['handlers'][1]))
+        # A94 audit 1: find the real <head>/<html> tag, never one quoted inside an HTML comment.
+        at = None
+        for tag in ('head', 'html'):
+            for m in re.finditer(r'<!--.*?-->|<' + tag + r'\b[^>]*>', body, re.S | re.I):
+                if not m.group(0).startswith('<!--'):
+                    at = m.end()
+                    break
+            if at is not None:
+                break
+        if at is not None:
+            body = body[:at] + boot + body[at:]
+        else:
+            body = boot + body
+        response.set_data(body)
+        return True
+    except Exception as e:
+        try:
+            logger.error(f"[A94 CSP] nonce injection failed, relaxed CSP for this response: {e}")
+        except Exception:
+            pass
+        return False
+
+
+# The A93 policy, used only for a response whose nonce injection failed (see above).
+_A94_FALLBACK_CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com "
+                     "https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; "
+                     "font-src 'self' https:; connect-src 'self' https://cdn.jsdelivr.net; object-src 'none'; "
+                     "base-uri 'self'; frame-ancestors 'self'")
+
+# Build the handler table at startup (not on the first visitor's request).
+try:
+    _a94_assets()
+except Exception:
+    pass
+
+
+def _a94_csp_header():
+    nonce = _a94_nonce()
+    # 'self' and the CDN hosts are only a fallback for very old browsers: every browser that
+    # understands 'strict-dynamic' ignores them and trusts nonce-carrying scripts only.
+    return ("default-src 'self'; "
+            "script-src 'nonce-" + nonce + "' 'strict-dynamic' 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+            "script-src-attr 'none'; "
+            "style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; "
+            "connect-src 'self' https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; "
+            "frame-ancestors 'self'")
+
+
+
+# =====================
+# A93: CSRF ORIGIN VERIFICATION (covers EVERY state-changing request)
+# =====================
+# The signed-token check (@require_csrf) protects the most sensitive endpoints, and the
+# SameSite=Lax session cookie blocks most cross-site form posts, but ~66 of the ~86
+# POST/PUT/DELETE routes had no explicit CSRF check. This adds the OWASP "verify origin with
+# standard headers" defence to ALL of them in one place, without touching any route:
+#   - A browser always sends Origin (or at least Referer) on a cross-site POST; if it names a
+#     host other than this site, the request is refused with 403 before the route runs.
+#   - Sec-Fetch-Site: cross-site (modern browsers) and Origin: null are refused too.
+#   - Requests with NO Origin/Referer (server-to-server: the Resend webhook, mail providers'
+#     one-click unsubscribe, health checks, curl) are not browser CSRF and are allowed.
+#   - OAuth callbacks are exempt: providers like Apple legitimately POST to them cross-site
+#     (response_mode=form_post), and they are protected by the OAuth state parameter instead.
+_A93_CSRF_EXEMPT_PREFIXES = ('/api/auth/oauth/', '/api/operator/inbound-email')
+_A93_UNSAFE_METHODS = ('POST', 'PUT', 'PATCH', 'DELETE')
+
+
+def _a93_trusted_hosts():
+    from urllib.parse import urlparse
+    hosts = {(request.host or '').lower()}
+    for u in (os.environ.get('APP_URL', 'https://therasocial.org'), 'https://therasocial.org',
+              'https://www.therasocial.org', 'https://socialsocial-72gn.onrender.com'):
+        try:
+            hosts.add(urlparse(u).netloc.lower())
+        except Exception:
+            pass
+    hosts.discard('')
+    return hosts
+
+
+@app.before_request
+def _a93_csrf_origin_check():
+    if request.method not in _A93_UNSAFE_METHODS:
+        return None
+    path = request.path or ''
+    if path.startswith(_A93_CSRF_EXEMPT_PREFIXES):
+        return None
+    from urllib.parse import urlparse
+    origin = request.headers.get('Origin')
+    referer = request.headers.get('Referer')
+    fetch_site = (request.headers.get('Sec-Fetch-Site') or '').lower()
+    blocked = None
+    if fetch_site == 'cross-site':
+        blocked = 'sec-fetch-site=cross-site'
+    elif origin is not None and origin.strip().lower() == 'null':
+        blocked = 'origin=null'
+    else:
+        source = origin or referer
+        if source:
+            try:
+                host = urlparse(source).netloc.lower()
+            except Exception:
+                host = ''
+            if host not in _a93_trusted_hosts():
+                blocked = 'foreign origin ' + (host or '?')
+    if blocked:
+        logger.warning(f"[A93 CSRF] Blocked {request.method} {path}: {blocked}")
+        return jsonify({'error': 'Cross-site request blocked'}), 403
+    return None
 
 # =====================
 # CSRF PROTECTION (FIX 5: Add CSRF token generation and validation)
@@ -7866,7 +8830,7 @@ def _safe_back_url():
 
 # A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
 # parameters.html, circles.html and support.html).
-_A92_ASSET_VERSION = 'B202'
+_A92_ASSET_VERSION = 'B204'
 
 
 def _a92_soften_dashes_in_html(html):
