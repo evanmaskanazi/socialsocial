@@ -1,4 +1,30 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B201 (A92 audit round 1) -->
+<!-- B201 (A92 audit 1): fixes to this round's changes + pre-existing issues found while auditing.
+     * luxe L2: text-colour selectors anchored so border-color/background-color can never match;
+       dark mode keeps the deep slate on the few white-background buttons (Follow with Note /
+       Send Message), which were ~2.3:1 otherwise.
+     * Pre-existing: Circles page title/subtitle/language label were near-invisible on the page
+       gradient (now light text, scoped to #circlesContainer).
+     * Pre-existing: Chart.js pinned to 4.4.1 (the unversioned CDN URL follows new majors).
+     * Copy: "Tip: Look for patterns, for example how..." (no double colon).
+     CACHE-BUST: every live script tag re-verified and bumped B200->B201 (so a browser that already
+     cached the first F2 drop re-fetches the corrected i18n.js); app.py _A92_ASSET_VERSION = 'B201'.
+-->
+<!-- TheraSocial Index Version B200 (A92) -->
+<!-- B200 (A92): Presentation/copy polish (luxury, calm, less "AI-template" feel). Additive.
+     (1) LONG-DASH CLEANUP: every user-visible em/en dash (the "minus-like" character) in this
+     page's text, placeholders and inline JS strings replaced with natural punctuation (colon,
+     comma, full stop) in en/he/ar/ru; empty-value placeholders now show a quiet middle dot.
+     Comments were left as they are (never visible).
+     (2) Removed the 🚀/📞 from the in-app Support headings, the ✨ from the empty-alerts
+     line and the AI summary heading; summary title fallback is now "Your Week at a Glance"
+     (the "AI" badge is kept for transparency). "We're here to help." / "Yes." (calmer copy).
+     (3) Additive <style id="ts-a92-luxe"> before the closing body tag (see its header).
+     CACHE-BUST: every live script tag re-verified and bumped to ?v=B200 (index, parameters, circles,
+     support; support was at B198). Changed JS this round: i18n.js, circles-messages.js,
+     parameters-social.js; the rest are lockstep bumps. about.html (not in this round's files)
+     is now pinned server-side: app.py rewrites its /static/js ?v to B200 at render time. -->
 <!-- TheraSocial Index Version B199 (A91) -->
 <!-- B199 (A91): Cache-bust lockstep — ALL live JS ?v bumped B198->B199 in sync with
      parameters/circles/about (about.html was STALE at B196 and is resynced to B199 this round).
@@ -723,10 +749,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B199"></script>
+   <script src="/static/js/utilities.js?v=B201"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B199"></script>
-    <script src="/static/js/follow-requests.js?v=B199"></script>
+    <script src="/static/js/triggers.js?v=B201"></script>
+    <script src="/static/js/follow-requests.js?v=B201"></script>
 
 
     <style>
@@ -5511,13 +5537,13 @@
 
             <!-- A41: intro + Our Mission (unify in-app About with the fuller standalone /about page) -->
             <p style="color: var(--dark); line-height: 1.8; font-size: 1.05em; margin-bottom: 30px;" data-i18n="about.intro">
-                TheraSocial is built around one core principle: your well-being comes first. We offer a thoughtful alternative to mainstream social networks — a platform designed to strengthen your personal resilience, health, and meaningful human connections rather than capture your time and attention.
+                TheraSocial is built around one core principle: your well-being comes first. We offer a thoughtful alternative to mainstream social networks: a platform designed to strengthen your personal resilience, health, and meaningful human connections rather than capture your time and attention.
             </p>
 
             <div class="mission-section" style="background: var(--light); padding: 30px; border-radius: 15px; margin-bottom: 30px;">
                 <h2 style="color: var(--primary); margin-bottom: 20px;" data-i18n="about.mission_title">Our Mission</h2>
                 <p style="color: var(--dark); line-height: 1.8;" data-i18n="about.mission_text">
-                    We believe everyone deserves tools that support their quality of life — across sports, sleep, health, mood, and social connections. Our mission is to empower you with innovative features that cultivate trusted, safe, and effective relationships while protecting your personal data and privacy.
+                    We believe everyone deserves tools that support their quality of life across sports, sleep, health, mood, and social connections. Our mission is to empower you with innovative features that cultivate trusted, safe, and effective relationships while protecting your personal data and privacy.
                 </p>
             </div>
 
@@ -5525,7 +5551,7 @@
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
                     <h3 data-i18n="about.privacy_title">Your Data, Your Control</h3>
-                    <p data-i18n="about.privacy_desc">Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and full GDPR compliance. You decide who sees what — always.</p>
+                    <p data-i18n="about.privacy_desc">Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and full GDPR compliance. You decide who sees what, always.</p>
                 </div>
 
                 <div class="feature-card">
@@ -5549,13 +5575,13 @@
                 <div class="feature-card">
                     <div class="feature-icon">💪</div>
                     <h3 data-i18n="about.goals_title">Personal Empowerment</h3>
-                    <p data-i18n="about.goals_desc">Build personal resilience and flourish in every area of life — sports performance, sleep quality, health habits, mood awareness, and social connections.</p>
+                    <p data-i18n="about.goals_desc">Build personal resilience and flourish in every area of life: sports performance, sleep quality, health habits, mood awareness, and social connections.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">📅</div>
                     <h3 data-i18n="about.checkin_title">Daily Check-ins</h3>
-                    <p data-i18n="about.checkin_desc">A quick daily check-in helps you understand your patterns in sleep, exercise, mood, and energy — building self-awareness one day at a time.</p>
+                    <p data-i18n="about.checkin_desc">A quick daily check-in helps you understand your patterns in sleep, exercise, mood, and energy, building self-awareness one day at a time.</p>
                 </div>
             </div>
 
@@ -5567,19 +5593,19 @@
                 </p>
 
                 <p style="margin-bottom: 15px;" data-i18n="about.story_para1">
-                    The initial idea for TheraSocial was born at a meaningful hackathon hosted by the "Bishvil HaChaim" Association together with Reichman University — an event dedicated to advancing innovation in welfare and quality of life.
+                    The initial idea for TheraSocial was born at a meaningful hackathon hosted by the “Bishvil HaChaim” Association together with Reichman University, an event dedicated to advancing innovation in welfare and quality of life.
                 </p>
 
                 <p style="margin-bottom: 15px;" data-i18n="about.story_para2">
-                    We recognized that mainstream social networks are engineered to capture time and attention by leveraging the human need for connection — often leaving people feeling more isolated, not less. We set out to build something fundamentally different.
+                    We recognized that mainstream social networks are engineered to capture time and attention by leveraging the human need for connection, often leaving people feeling more isolated, not less. We set out to build something fundamentally different.
                 </p>
 
                 <p style="margin-bottom: 20px;" data-i18n="about.story_para3">
-                    TheraSocial is designed to strengthen the relationships you already have. Track what matters to you — sleep, exercise, mood, health — and stay connected to the people you care about through customizable trust circles and private messaging. Receive gentle alerts when someone close to you may need support. This is not another feed of curated highlights — it is a platform built for mutual care, authentic check-ins, and the meaningful human connections we all need to flourish.
+                    TheraSocial is designed to strengthen the relationships you already have. Track what matters to you (sleep, exercise, mood, health) and stay connected to the people you care about through customizable trust circles and private messaging. Receive gentle alerts when someone close to you may need support. This is not another feed of curated highlights. It is a platform built for mutual care, authentic check-ins, and the meaningful human connections we all need to flourish.
                 </p>
 
                 <p style="margin-bottom: 20px;" data-i18n="about.origin_details">
-                    The TheraSocial project originated at a social innovation hackathon organized by HaKaveret (The Hive) in partnership with the "Bishvil HaChaim" Association and Reichman University in 2025. Development began on July 1, 2025. Our headquarters are in Israel, and the platform officially launched on March 1, 2026.
+                    The TheraSocial project originated at a social innovation hackathon organized by HaKaveret (The Hive) in partnership with the “Bishvil HaChaim” Association and Reichman University in 2025. Development began on July 1, 2025. Our headquarters are in Israel, and the platform officially launched on March 1, 2026.
                 </p>
 
                 <p>
@@ -5611,13 +5637,13 @@
         <div class="page-content">
             <h1 class="page-title" data-i18n="support.title">Support Center</h1>
             <p style="text-align: center; font-size: 18px; color: var(--gray); margin-bottom: 30px;" data-i18n="support.subtitle">
-                We're here to help! Find answers to common questions or send us a message below.
+                We're here to help. Find answers to common questions or send us a message below.
             </p>
 
             <!-- A41: Contact Us / Quick Help / Resources (unify in-app Support with the fuller standalone /support page) -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px;">
                 <div style="background: var(--light); padding: 25px; border-radius: 15px;">
-                    <h3 style="color: var(--primary); margin-bottom: 15px;">📞 <span data-i18n="support.contact_us">Contact Us</span></h3>
+                    <h3 style="color: var(--primary); margin-bottom: 15px;"><span data-i18n="support.contact_us">Contact Us</span></h3>
                     <div style="background: var(--white); padding: 12px; border-radius: 10px; margin-bottom: 10px;">
                         <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.email">Email:</strong>
                         <a href="mailto:support@therasocial.com" style="color: var(--primary);">support@therasocial.com</a>
@@ -5632,7 +5658,7 @@
                     </div>
                 </div>
                 <div style="background: var(--light); padding: 25px; border-radius: 15px;">
-                    <h3 style="color: var(--primary); margin-bottom: 15px;">🚀 <span data-i18n="support.quick_help">Quick Help</span></h3>
+                    <h3 style="color: var(--primary); margin-bottom: 15px;"><span data-i18n="support.quick_help">Quick Help</span></h3>
                     <!-- A41: dropped links to pages that don't exist (Help Center, Community
                          Forum, System Status); "Video Tutorials" now launches the in-app tutorial. -->
                     <ul style="line-height: 2; margin-inline-start: 20px; color: var(--gray);">
@@ -5655,17 +5681,17 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq2_q">What are Circles and how do they work?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq2_a">Circles let you organize your connections into trust levels: General (acquaintances), Close Friends, and Family. When you post in your feed or save diary entries, you choose which circle can see them. This gives you full control over your privacy — share as much or as little as you want with each group.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq2_a">Circles let you organize your connections into trust levels: General (acquaintances), Close Friends, and Family. When you post in your feed or save diary entries, you choose which circle can see them. This gives you full control over your privacy. Share as much or as little as you want with each group.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq3_q">Is my data secure?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Absolutely. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and full GDPR compliance. You can view, export, or delete your data at any time from your Settings.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and full GDPR compliance. You can view, export, or delete your data at any time from your Settings.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq4_q">How do alerts and triggers work?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq4_a">You can set well-being alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or their anxiety rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq4_a">You can set well-being alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds. For example, get notified if their mood drops below 2 or their anxiety rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -5680,7 +5706,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq7_q">How do I see my progress over time?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq7_a">The Progress page shows your well-being data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and anxiety change over weeks and months. Look for patterns — for example, how exercise affects your mood the following day.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq7_a">The Progress page shows your well-being data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and anxiety change over weeks and months. Look for patterns: for example, how exercise affects your mood the following day.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -5695,7 +5721,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq10_q">How do I delete my account?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq10_a">Go to Settings, scroll to the bottom, and select Delete Account. You will be asked to confirm. Please note that this action is permanent and cannot be undone — all your data will be removed from our servers.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq10_a">Go to Settings, scroll to the bottom, and select Delete Account. You will be asked to confirm. Please note that this action is permanent and cannot be undone. All your data will be removed from our servers.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -5909,27 +5935,27 @@
                       <div id="summaryParams" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px;">
                           <div class="param-mini" style="background: var(--white); padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;" onclick="openParamQuickSet('mood')" title="Tap to set">
                               <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.mood">Mood</div>
-                              <div id="summaryMood" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
+                              <div id="summaryMood" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">·</div>
                           </div>
                           <div class="param-mini" style="background: var(--white); padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;" onclick="openParamQuickSet('energy')" title="Tap to set">
                               <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.energy">Energy</div>
-                              <div id="summaryEnergy" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
+                              <div id="summaryEnergy" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">·</div>
                           </div>
                           <div class="param-mini" style="background: var(--white); padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;" onclick="openParamQuickSet('sleep_quality')" title="Tap to set">
                               <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.sleep">Sleep</div>
-                              <div id="summarySleep" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
+                              <div id="summarySleep" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">·</div>
                           </div>
                           <div class="param-mini" style="background: var(--white); padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;" onclick="openParamQuickSet('physical_activity')" title="Tap to set">
                               <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.exercise">Exercise</div>
-                              <div id="summaryExercise" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
+                              <div id="summaryExercise" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">·</div>
                           </div>
                           <div class="param-mini" style="background: var(--white); padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;" onclick="openParamQuickSet('anxiety')" title="Tap to set">
                               <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.anxiety">Anxiety</div>
-                              <div id="summaryStress" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
+                              <div id="summaryStress" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">·</div>
                           </div>
                           <div class="param-mini" style="background: var(--white); padding: 12px; border-radius: 12px; text-align: center; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;" onclick="openParamQuickSet('social_belonging')" title="Tap to set">
                               <div style="font-size: 0.75rem; color: var(--gray);" data-i18n="params.belonging">Belonging</div>
-                              <div id="summaryBelonging" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">—</div>
+                              <div id="summaryBelonging" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">·</div>
                           </div>
                       </div>
                   </div>
@@ -6063,8 +6089,7 @@
                       <!-- K2/G13: AI Weekly Summary — Enhanced with highlights -->
                       <div id="aiWeeklySummary" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%); padding: 22px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(102, 126, 234, 0.2);">
                           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                              <span style="font-size: 1.2em;">✨</span>
-                              <h4 style="margin: 0; color: var(--primary);" data-i18n="ai.weekly_summary_title">AI Weekly Summary</h4>
+                              <h4 style="margin: 0; color: var(--primary);" data-i18n="ai.weekly_summary_title">Your Week at a Glance</h4>
                               <span id="aiBadge" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; display: none;">AI</span>
                               <span id="aiDaysCount" style="color: var(--gray); font-size: 0.75rem; margin-left: auto; display: none;"></span>
                           </div>
@@ -6873,27 +6898,27 @@
                               <div id="operatorStatsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
                                   <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
                                       <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.total_users">Total Users</div>
-                                      <div id="opStatTotal" style="font-size: 1.5rem; font-weight: 700; color: #667eea;">—</div>
+                                      <div id="opStatTotal" style="font-size: 1.5rem; font-weight: 700; color: #667eea;">·</div>
                                   </div>
                                   <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
                                       <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.active_users">Active Users</div>
-                                      <div id="opStatActive" style="font-size: 1.5rem; font-weight: 700; color: #28a745;">—</div>
+                                      <div id="opStatActive" style="font-size: 1.5rem; font-weight: 700; color: #28a745;">·</div>
                                   </div>
                                   <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
                                       <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.new_7d">New (7 days)</div>
-                                      <div id="opStatNew7" style="font-size: 1.5rem; font-weight: 700; color: #17a2b8;">—</div>
+                                      <div id="opStatNew7" style="font-size: 1.5rem; font-weight: 700; color: #17a2b8;">·</div>
                                   </div>
                                   <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
                                       <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.new_30d">New (30 days)</div>
-                                      <div id="opStatNew30" style="font-size: 1.5rem; font-weight: 700; color: #6f42c1;">—</div>
+                                      <div id="opStatNew30" style="font-size: 1.5rem; font-weight: 700; color: #6f42c1;">·</div>
                                   </div>
                                   <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
                                       <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.checkin_rate">Check-in Rate (7d)</div>
-                                      <div id="opStatCheckin" style="font-size: 1.5rem; font-weight: 700; color: #fd7e14;">—</div>
+                                      <div id="opStatCheckin" style="font-size: 1.5rem; font-weight: 700; color: #fd7e14;">·</div>
                                   </div>
                                   <div style="background: var(--light); border-radius: 12px; padding: 14px; text-align: center;">
                                       <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.active_today">Active Today</div>
-                                      <div id="opStatToday" style="font-size: 1.5rem; font-weight: 700; color: #20c997;">—</div>
+                                      <div id="opStatToday" style="font-size: 1.5rem; font-weight: 700; color: #20c997;">·</div>
                                   </div>
                               </div>
 
@@ -7165,19 +7190,19 @@
                                   <div id="opHealthStatsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px;">
                                       <div style="background: var(--light); padding: 10px 14px; border-radius: 10px; text-align: center;">
                                           <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.health_total_req">Total Requests</div>
-                                          <div id="opHealthTotalReq" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">—</div>
+                                          <div id="opHealthTotalReq" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">·</div>
                                       </div>
                                       <div style="background: var(--light); padding: 10px 14px; border-radius: 10px; text-align: center;">
                                           <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.health_avg_ms">Avg Response</div>
-                                          <div id="opHealthAvgMs" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">—</div>
+                                          <div id="opHealthAvgMs" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">·</div>
                                       </div>
                                       <div style="background: var(--light); padding: 10px 14px; border-radius: 10px; text-align: center;">
                                           <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.health_error_rate">Error Rate</div>
-                                          <div id="opHealthErrorRate" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">—</div>
+                                          <div id="opHealthErrorRate" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">·</div>
                                       </div>
                                       <div style="background: var(--light); padding: 10px 14px; border-radius: 10px; text-align: center;">
                                           <div style="font-size: 0.78rem; color: #888; margin-bottom: 4px;" data-i18n="operator.health_max_ms">Max Response</div>
-                                          <div id="opHealthMaxMs" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">—</div>
+                                          <div id="opHealthMaxMs" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">·</div>
                                       </div>
                                   </div>
                                   <!-- Health charts -->
@@ -7238,7 +7263,7 @@
                                                       <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.type_label">Group Type</label>
                                                       <select id="b45GroupType" onchange="var ci=document.getElementById('b50CustomTypeRow'); if(ci) ci.style.display=this.value==='custom'?'block':'none';"
                                                               style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; background: var(--light);">
-                                                          <option value="" data-i18n="objective_group.type_none">— None —</option>
+                                                          <option value="" data-i18n="objective_group.type_none">None</option>
                                                           <option value="department" data-i18n="objective_group.type_department">Department</option>
                                                           <option value="cohort" data-i18n="objective_group.type_cohort">Cohort</option>
                                                           <option value="wellness_program" data-i18n="objective_group.type_wellness">Wellness Program</option>
@@ -7257,7 +7282,7 @@
                                                   <div>
                                                       <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.industry_label">Industry</label>
                                                       <select id="b45Industry" style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; background: var(--light);">
-                                                          <option value="" data-i18n="objective_group.industry_none">— None —</option>
+                                                          <option value="" data-i18n="objective_group.industry_none">None</option>
                                                           <option value="healthcare" data-i18n="objective_group.industry_healthcare">Healthcare</option>
                                                           <option value="education" data-i18n="objective_group.industry_education">Education</option>
                                                           <option value="corporate" data-i18n="objective_group.industry_corporate">Corporate</option>
@@ -7306,7 +7331,7 @@
                                                   <div>
                                                       <label style="font-size: 0.78rem; color: var(--gray); font-weight: 600; display: block; margin-bottom: 3px;" data-i18n="objective_group.parent_label">Parent Group</label>
                                                       <select id="b45ParentGroup" style="width: 100%; padding: 7px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 0.83rem; background: var(--light);">
-                                                          <option value="" data-i18n="objective_group.parent_none">— None (top-level) —</option>
+                                                          <option value="" data-i18n="objective_group.parent_none">None (top-level)</option>
                                                       </select>
                                                   </div>
                                               </div>
@@ -8136,7 +8161,7 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B199"></script>
+    <script src="/static/js/i18n.js?v=B201"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8324,7 +8349,7 @@
                 'alerts.wellness_alert_for': 'Well-Being Alert for {username}',
                 'alerts.wellness_content': "{username}'s {param} has been at low levels for {days} consecutive days ({dateRange})",
                 'alerts.wellness_content_no_date': "{username}'s {param} has been at low levels for {days} consecutive days",
-                'alerts.no_checkin_content': "{username} hasn't checked in for {days} days — you may want to reach out",
+                'alerts.no_checkin_content': "{username} hasn't checked in for {days} days. You may want to reach out",
                 'alerts.new_message_from': 'New message from {username}',
                 'alerts.started_following': '{username} accepted your connection request',
                 'alerts.accepted_request': '{username} accepted your connection request',
@@ -8343,7 +8368,7 @@
                 'alerts.wellness_alert_for': 'התראת בריאות עבור {username}',
                 'alerts.wellness_content': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים ({dateRange})',
                 'alerts.wellness_content_no_date': 'ה{param} של {username} היה ברמות מדאיגות במשך {days} ימים רצופים',
-                'alerts.no_checkin_content': '{username} לא ביצע/ה צ׳ק-אין במשך {days} ימים — כדאי לבדוק איך הם',
+                'alerts.no_checkin_content': '{username} לא ביצע/ה צ׳ק-אין במשך {days} ימים. כדאי לבדוק איך הם',
                 'alerts.new_message_from': 'הודעה חדשה מ-{username}',
                 'alerts.started_following': '{username} אישר/ה את בקשת ההתחברות שלך',
                 'alerts.accepted_request': '{username} אישר/ה את בקשת ההתחברות שלך',
@@ -8362,7 +8387,7 @@
                 'alerts.wellness_alert_for': 'تنبيه صحي لـ {username}',
                 'alerts.wellness_content': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} الخاص بـ {username} كان عند مستويات مقلقة لمدة {days} أيام متتالية',
-                'alerts.no_checkin_content': '{username} لم يسجل/تسجل الدخول منذ {days} أيام — قد ترغب في التواصل معهم',
+                'alerts.no_checkin_content': '{username} لم يسجل/تسجل الدخول منذ {days} أيام. قد ترغب في التواصل معهم',
                 'alerts.new_message_from': 'رسالة جديدة من {username}',
                 'alerts.started_following': '{username} قبل طلب الاتصال الخاص بك',
                 'alerts.accepted_request': '{username} قبل طلب الاتصال الخاص بك',
@@ -8381,7 +8406,7 @@
                 'alerts.wellness_alert_for': 'Оповещение о здоровье {username}',
                 'alerts.wellness_content': '{param} пользователя {username} был на тревожном уровне {days} дней подряд ({dateRange})',
                 'alerts.wellness_content_no_date': '{param} пользователя {username} был на тревожном уровне {days} дней подряд',
-                'alerts.no_checkin_content': '{username} не отмечался/отмечалась {days} дней — возможно, стоит связаться',
+                'alerts.no_checkin_content': '{username} не отмечался/отмечалась {days} дней. Возможно, стоит связаться',
                 'alerts.new_message_from': 'Новое сообщение от {username}',
                 'alerts.started_following': '{username} принял(а) ваш запрос на подключение',
                 'alerts.accepted_request': '{username} принял(а) ваш запрос на подключение',
@@ -8450,7 +8475,7 @@
             const mNoCheckin = content.match(/^(.+?) hasn't checked in for (\d+) days/);
             if (mNoCheckin) {
                 const username = mNoCheckin[1], days = mNoCheckin[2];
-                const template = tFn('alerts.no_checkin_content') || "{username} hasn't checked in for {days} days — you may want to reach out";
+                const template = tFn('alerts.no_checkin_content') || "{username} hasn't checked in for {days} days. You may want to reach out";
                 return template.replace('{username}', username).replace('{days}', days);
             }
             
@@ -8478,7 +8503,9 @@
     })();
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- A92 audit (pre-existing): pinned. The unversioned URL silently follows the newest major
+         release, so a future Chart.js 5 would break every chart without any deploy here. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
     // Global variables needed by parameters-social.js - MUST be declared first
     let selectedDate = new Date();
@@ -8489,9 +8516,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B199"></script>
-   <script src="/static/js/circles-messages.js?v=B199"></script>
-<script src="/static/js/feed-updates.js?v=B199"></script>
+<script src="/static/js/parameters-social.js?v=B201"></script>
+   <script src="/static/js/circles-messages.js?v=B201"></script>
+<script src="/static/js/feed-updates.js?v=B201"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -13284,7 +13311,7 @@ async function loadCircleRecommendations() {
                              onclick="window.location.href='/?view=profile&user_id=${Number(u.id)}'"
                              onmouseover="this.style.textDecoration='underline'"
                              onmouseout="this.style.textDecoration='none'">${uSafeName}</div>
-                        <div style="font-size: 12px; color: #20a144;" data-i18n="circles.reason_connected_unclassified">${_t('circles.reason_connected_unclassified', 'Connected — choose a circle')}</div>
+                        <div style="font-size: 12px; color: #20a144;" data-i18n="circles.reason_connected_unclassified">${_t('circles.reason_connected_unclassified', 'Connected: choose a circle')}</div>
                         ${u.selected_city ? `<div style="font-size: 11px; color: var(--gray);">📍 ${uSafeCity}</div>` : ""}
                     </div>
                     <button onclick="showCircleAddMenu(${Number(u.id)}, '${uJsName}')"
@@ -19698,31 +19725,31 @@ const InlineOnboarding = {
         'onboarding.welcome': 'Welcome to TheraSocial!',
         'onboarding.welcome_desc': 'Your well-being companion for tracking, connecting, and growing together. This short guide will walk you through everything you need to know.',
         'onboarding.welcome_tip': 'You can restart this tour anytime from the Tutorial button in the navigation bar.',
-        'onboarding.home': 'Home — Your Daily Dashboard',
+        'onboarding.home': 'Home: Your Daily Dashboard',
         'onboarding.home_desc': "Your home page shows everything at a glance: today's well-being status, your streak, a quick mood check-in, personalized recommendations, friends' updates, and your journal feed.",
-        'onboarding.home_tip': 'Tip: Use the Quick Check-In to log your mood with a single tap — even on busy days.',
-        'onboarding.diary': 'Diary — Track Your Well-Being',
+        'onboarding.home_tip': 'Tip: Use the Quick Check-In to log your mood with a single tap, even on busy days.',
+        'onboarding.diary': 'Diary: Track Your Well-Being',
         'onboarding.diary_desc': 'The Diary is where you record daily well-being: Mood, Energy, Sleep Quality, Physical Activity, and Anxiety. Select a date on the calendar, set your values using the sliders, and save. The Diary page opens in its own view.',
-        'onboarding.diary_tip': 'Tip: Each parameter (Mood, Sleep, etc.) has its own privacy setting — you control exactly who sees what, down to individual metrics.',
-        'onboarding.progress': 'Progress — See Your Trends',
+        'onboarding.diary_tip': 'Tip: Each parameter (Mood, Sleep, etc.) has its own privacy setting, so you control exactly who sees what, down to individual metrics.',
+        'onboarding.progress': 'Progress: See Your Trends',
         'onboarding.progress_desc': 'The Progress page shows your well-being data as visual charts and graphs. Track how your mood, sleep, and energy change over weeks and months.',
-        'onboarding.progress_tip': 'Tip: Look for patterns — for example, how exercise affects your mood the following day.',
-        'onboarding.circles': 'Circles — Privacy Levels',
-        'onboarding.circles_desc': "Circles are TheraSocial's three-tier privacy system. Assign each connection to General, Close Friends, or Family — then set per-parameter visibility so that, for example, only Family sees your sleep data while Close Friends see your mood. Each circle enforces its own access boundary independently.",
+        'onboarding.progress_tip': 'Tip: Look for patterns, for example how exercise affects your mood the following day.',
+        'onboarding.circles': 'Circles: Privacy Levels',
+        'onboarding.circles_desc': "Circles are TheraSocial's three-tier privacy system. Assign each connection to General, Close Friends, or Family, then set per-parameter visibility so that, for example, only Family sees your sleep data while Close Friends see your mood. Each circle enforces its own access boundary independently.",
         'onboarding.circles_tip': 'Tip: When posting in your feed or saving diary entries, choose which circle can see them using the visibility dropdown.',
-        'onboarding.messages': 'Messages — Private Conversations',
+        'onboarding.messages': 'Messages: Private Conversations',
         'onboarding.messages_desc': "Send private messages to any of your connections. Use the 💬 template button for quick supportive messages when you're not sure what to say.",
-        'onboarding.messages_tip': "Tip: A short encouraging message can brighten someone's day — don't overthink it!",
-        'onboarding.connections': 'Connections — Build Your Network',
+        'onboarding.messages_tip': "Tip: A short encouraging message can brighten someone's day. Don't overthink it!",
+        'onboarding.connections': 'Connections: Build Your Network',
         'onboarding.connections_desc': 'Find and follow other users in the Connections tab. Browse recommendations, search for people, and manage your connections. Click any connection to view their profile, send a message, or set up well-being alerts.',
         'onboarding.connections_tip': 'Tip: Follow people you trust to see their well-being updates and support each other.',
-        'onboarding.invite': 'Invite — Bring Friends Along',
+        'onboarding.invite': 'Invite: Bring Friends Along',
         'onboarding.invite_desc': "Share your unique invite link with friends, family, or your therapist. When they join through your link, they'll be prompted to connect with you. Growing your circle makes the experience more meaningful.",
         'onboarding.invite_tip': 'Tip: Your invite link can be shared via text message, email, WhatsApp, or social media.',
-        'onboarding.triggers': 'Triggers & Alerts — Watch Over Loved Ones',
-        'onboarding.triggers_desc': "Set well-being alerts for people you care about. The system monitors their diary data over multiple days — when it detects a sustained pattern (for example, mood below 2 for three consecutive days), it sends you an email alert. Alerts respect each person's per-parameter privacy settings across circle boundaries.",
+        'onboarding.triggers': 'Triggers & Alerts: Watch Over Loved Ones',
+        'onboarding.triggers_desc': "Set well-being alerts for people you care about. The system monitors their diary data over multiple days. When it detects a sustained pattern (for example, mood below 2 for three consecutive days), it sends you an email alert. Alerts respect each person's per-parameter privacy settings across circle boundaries.",
         'onboarding.triggers_tip': 'Tip: To set a trigger, go to Connections → click a person → View Full Profile → tap the Triggers button next to their name.',
-        'onboarding.settings': 'Settings — Personalize Everything',
+        'onboarding.settings': 'Settings: Personalize Everything',
         'onboarding.settings_desc': 'In Settings, manage your profile (bio, interests, goals, timezone), change your password, toggle notifications and alerts, set a daily diary reminder time, export your data, or delete your account.',
         'onboarding.settings_tip': 'Tip: Set a daily diary reminder to build a consistent tracking habit. Toggle dark mode for comfortable evening use.',
         'onboarding.finish_title': "You're All Set!",
@@ -20675,9 +20702,9 @@ async function loadOperatorSegments(page) {
                 '<tr style="border-bottom: 1px solid var(--border);">' +
                 '<td style="padding: 6px 8px;">' + escapeHtml(u.username) + '</td>' +
                 '<td style="padding: 6px 8px;">' + escapeHtml(u.city) + '</td>' +
-                '<td style="padding: 6px 8px;">' + (u.age || '—') + '</td>' +
-                '<td style="padding: 6px 8px;">' + (u.joined || '—') + '</td>' +
-                '<td style="padding: 6px 8px;">' + (u.last_active || '—') + '</td>' +
+                '<td style="padding: 6px 8px;">' + (u.age || '·') + '</td>' +
+                '<td style="padding: 6px 8px;">' + (u.joined || '·') + '</td>' +
+                '<td style="padding: 6px 8px;">' + (u.last_active || '·') + '</td>' +
                 '<td style="padding: 6px 8px; text-align: end; font-weight: 700; font-variant-numeric: tabular-nums;">' + (u.points || 0) + '</td>' +
                 '</tr>'
             ).join('');
@@ -20944,7 +20971,7 @@ async function loadOperatorBroadcastHistory(page) {
             tbody.innerHTML = data.broadcasts.map(b => {
                 const statusColor = b.status === 'sent' ? '#28a745' : (b.status === 'partial' ? '#fd7e14' : '#dc3545');
                 return '<tr style="border-bottom:1px solid var(--border);">' +
-                    '<td style="padding:6px 8px;">' + (b.created_at ? b.created_at.slice(0, 10) : '—') + '</td>' +
+                    '<td style="padding:6px 8px;">' + (b.created_at ? b.created_at.slice(0, 10) : '·') + '</td>' +
                     '<td style="padding:6px 8px;">' + escapeHtml(b.subject || '') + '</td>' +
                     '<td style="padding:6px 8px;">' + (b.recipient_count || 0) + '</td>' +
                     '<td style="padding:6px 8px;"><span style="color:' + statusColor + ';font-weight:600;">' + escapeHtml(b.status || '') + '</span></td>' +
@@ -21107,7 +21134,7 @@ async function loadInactiveAccounts(page) {
                 '<tr style="border-bottom:1px solid var(--border);">' +
                 '<td style="padding:6px 8px;">' + escapeHtml(u.username) + '</td>' +
                 '<td style="padding:6px 8px;">' + escapeHtml(u.selected_city || '') + '</td>' +
-                '<td style="padding:6px 8px; font-weight:600; color:#dc3545;">' + (u.days_inactive != null ? u.days_inactive : '—') + '</td>' +
+                '<td style="padding:6px 8px; font-weight:600; color:#dc3545;">' + (u.days_inactive != null ? u.days_inactive : '·') + '</td>' +
                 '<td style="padding:6px 8px;">' + (u.last_login ? u.last_login.slice(0, 10) : _t('operator.never', 'Never')) + '</td>' +
                 '<td style="padding:6px 8px;"><button onclick="flagUser(' + u.id + ',\'' + escapeHtml(u.username) + '\')" style="padding:4px 10px;background:#dc3545;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.78rem;">' + _t('operator.deactivate', 'Deactivate') + '</button></td>' +
                 '</tr>'
@@ -22068,7 +22095,7 @@ async function loadHomeSummary() {
                     val = 5 - parseInt(val);
                 }
                 const emojiMap = (paramKey === 'anxiety' && window.ANXIETY_DISPLAY_MODE !== 'calm') ? anxietyEmojis : emojis;
-                elem.textContent = val ? (emojiMap[val] || val + '/4') : '—';
+                elem.textContent = val ? (emojiMap[val] || val + '/4') : '·';
                 elem.style.color = val ? 'var(--primary)' : 'var(--gray)';
             }
         }
@@ -22099,7 +22126,7 @@ function generateTodayRecommendations(summaryData) {
         recs.push({ icon: '📝', text: tt('home.rec_diary', 'Complete your daily diary check-in'), action: 'handleParametersClick(event)' });
     }
     if (params.mood && params.mood <= 2) {
-        recs.push({ icon: '🌿', text: tt('home.rec_mood', 'Your mood was low recently — try a short walk or breathing exercise'), action: null });
+        recs.push({ icon: '🌿', text: tt('home.rec_mood', 'Your mood was low recently. Try a short walk or breathing exercise'), action: null });
     }
     if (params.physical_activity && params.physical_activity <= 1) {
         recs.push({ icon: '🏃', text: tt('home.rec_exercise', 'Even 10 minutes of light exercise can improve your day'), action: null });
@@ -22384,7 +22411,7 @@ async function loadHomeAlerts() {
         const alerts = data.alerts || [];
         if (alerts.length === 0) {
             const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
-            homeAlertsList.innerHTML = `<p style="color: var(--gray); text-align: center; padding: 16px;">${tt('home.no_alerts', 'No alerts right now.')} ✨</p>`;
+            homeAlertsList.innerHTML = `<p style="color: var(--gray); text-align: center; padding: 16px;">${tt('home.no_alerts', 'No alerts right now.')}</p>`;
             return;
         }
 
@@ -22565,11 +22592,11 @@ async function sendForgotPasswordMagicLink() {
 const MESSAGE_TEMPLATES = (function() {
     const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
     return [
-    { icon: '\uD83D\uDC4B', text: tt('msg_template.checkin', 'Hi! Just checking in \u2014 how are you doing today?') },
+    { icon: '\uD83D\uDC4B', text: tt('msg_template.checkin', 'Hi! Just checking in. How are you doing today?') },
     { icon: '\uD83D\uDCAA', text: tt('msg_template.great', "You're doing great! Keep it up!") },
     { icon: '\uD83E\uDD17', text: tt('msg_template.here', "I'm here if you want to talk.") },
     { icon: '\uD83C\uDF1F', text: tt('msg_template.care', 'Remember to take care of yourself today.') },
-    { icon: '\u2764\uFE0F', text: tt('msg_template.vibes', 'Thinking of you \u2014 sending good vibes!') }
+    { icon: '\u2764\uFE0F', text: tt('msg_template.vibes', 'Thinking of you and sending good vibes!') }
     ];
 })();
 
@@ -22684,7 +22711,7 @@ function startNudgeTimer() {
         const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
         const nudges = [
             '\uD83D\uDC9A ' + tt('nudge.breathe', 'Take a moment to breathe deeply.'),
-            '\uD83C\uDF31 ' + tt('nudge.steps', 'Small steps count \u2014 check in with yourself today.'),
+            '\uD83C\uDF31 ' + tt('nudge.steps', 'Small steps count. Check in with yourself today.'),
             '\u2600\uFE0F ' + tt('nudge.showed_up', 'You showed up today. That matters.'),
             '\uD83D\uDCA7 ' + tt('nudge.hydrate', 'Have you had water recently? Stay hydrated!'),
             '\uD83E\uDDD8 ' + tt('nudge.stretch', 'A 2-minute stretch can make a difference.')
@@ -22982,7 +23009,7 @@ async function g27LoadOpGroups() {
                 if (g.description) {
                     const descEl = document.createElement('span');
                     descEl.style.cssText = 'color: var(--gray); font-size: 0.82rem; margin-left: 8px;';
-                    descEl.textContent = '— ' + g.description;
+                    descEl.textContent = '· ' + g.description;
                     info.appendChild(descEl);
                 }
                 row.appendChild(info);
@@ -23045,7 +23072,7 @@ async function g27LoadOpGroups() {
                     memberPanel.style.display = '';
                     try {
                         const mRes = await fetch('/api/objective-groups/' + g.id + '/members', { credentials: 'include' });
-                        if (!mRes.ok) { memberPanel.innerHTML = '<span style="color: var(--gray); font-size: 0.82rem;">—</span>'; return; }
+                        if (!mRes.ok) { memberPanel.innerHTML = '<span style="color: var(--gray); font-size: 0.82rem;">·</span>'; return; }
                         const mData = await mRes.json();
                         const members = mData.members || [];
                         memberPanel.innerHTML = '';
@@ -23134,7 +23161,7 @@ async function g27LoadOpGroups() {
             parentSelect.innerHTML = '';
             const noneOpt = document.createElement('option');
             noneOpt.value = '';
-            noneOpt.textContent = _t('objective_group.parent_none', '— None (top-level) —');
+            noneOpt.textContent = _t('objective_group.parent_none', 'None (top-level)');
             parentSelect.appendChild(noneOpt);
             groups.forEach(g => {
                 const opt = document.createElement('option');
@@ -23527,7 +23554,7 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
             var msg = function (key) {
                 var lang = (localStorage.getItem('selectedLanguage') || 'en');
                 var m = {
-                    off: { en: "You're offline — some actions may not work.", he: 'אין חיבור לאינטרנט — ייתכן שחלק מהפעולות לא יעבדו.', ar: 'أنت غير متصل — قد لا تعمل بعض الإجراءات.', ru: 'Нет подключения — некоторые действия могут не работать.' },
+                    off: { en: "You're offline. Some actions may not work.", he: 'אין חיבור לאינטרנט. ייתכן שחלק מהפעולות לא יעבדו.', ar: 'أنت غير متصل. قد لا تعمل بعض الإجراءات.', ru: 'Нет подключения. Некоторые действия могут не работать.' },
                     on:  { en: 'Back online', he: 'החיבור חזר', ar: 'عاد الاتصال', ru: 'Соединение восстановлено' }
                 };
                 return (m[key][lang] || m[key].en);
@@ -24595,6 +24622,121 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
         #homeView > *:last-child { margin-bottom: 0; }
     </style>
     <!-- ===================== END A91-SPACE ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- A92-LUXE: additive, presentation-only refinements toward a calmer, more        -->
+    <!-- premium (Apple-inspired) look with less of a generic "AI template" feel.       -->
+    <!-- One self-contained, namespaced block; identical on index/parameters/circles.   -->
+    <!-- No markup, IDs or JS changed by this block. Remove it to revert completely.    -->
+    <!--  L1 Retire the stock #667eea->#764ba2 purple gradient (the best-known template  -->
+    <!--     colour pair) on buttons/cards/badges -> the brand slate gradient           -->
+    <!--  L2 Retire #667eea text/focus accents and lavender panel washes -> brand slate  -->
+    <!--  L3 Frosted-glass modal backdrops (soft ink tint + blur instead of flat black)  -->
+    <!--  L4 Balanced headings + orphan-free paragraphs (text-wrap)                      -->
+    <!--  L5 Optical heading tracking + kerning (LTR only; never applied to he/ar)       -->
+    <!--  L6 Calm save confirmation: no spinning stars / endless pulse                  -->
+    <!-- ============================================================================ -->
+    <style id="ts-a92-luxe">
+        :root {
+            --ts92-grad: linear-gradient(135deg, #5A7A93 0%, #6B8BA4 100%);
+            --ts92-accent-ink: #5A7A93;
+            --ts92-tint: linear-gradient(135deg, rgba(107, 139, 164, 0.08) 0%, rgba(157, 184, 160, 0.10) 100%);
+        }
+        .dark-mode, body.dark-mode { --ts92-accent-ink: var(--primary, #8FAFC4); }
+
+        /* L1 - inline gradients (hex as authored, and rgb() as browsers re-serialise cssText) */
+        html body [style*="#667eea 0%, #764ba2"],
+        html body [style*="#667eea, #764ba2"],
+        html body [style*="#667eea 0%, #7c6dd8"],
+        html body [style*="rgb(102, 126, 234) 0%, rgb(118, 75, 162)"],
+        html body [style*="rgb(102, 126, 234), rgb(118, 75, 162)"] {
+            background: var(--ts92-grad) !important;
+        }
+        /* L1 - the same gradient set from stylesheet classes (circles/messages/diary) */
+        html body .search-btn, html body .new-message-btn,
+        html body .message-sent, html body .send-btn, html body .user-avatar,
+        html body .conversation-avatar, html body .conn-action-btn.connect {
+            background: var(--ts92-grad);
+        }
+        html body .add-to-circle-btn, html body .diary-nav-link.active { background: #5A7A93; }
+        html body .add-to-circle-btn:hover { background: #4C6A82; }
+        html body .conn-action-btn.connect { box-shadow: 0 2px 6px rgba(90, 122, 147, 0.22); }
+        html body .conn-action-btn.connect:hover { box-shadow: 0 4px 12px rgba(90, 122, 147, 0.28); }
+        html body .invite-cta { box-shadow: 0 10px 30px rgba(61, 72, 82, 0.16); }
+
+        /* L2 - text accents and focus rings */
+        /* A92 audit: anchored so border-color / background-color never match (text colour only) */
+        html body [style^="color: #667eea"], html body [style^="color:#667eea"],
+        html body [style*=" color: #667eea"], html body [style*=";color:#667eea"],
+        html body [style^="color: rgb(102, 126, 234)"], html body [style*=" color: rgb(102, 126, 234)"] {
+            color: var(--ts92-accent-ink) !important;
+        }
+        /* A92 audit: in dark mode these few controls keep a WHITE background, so the accent must
+           stay the deep slate there (the light dark-mode accent would be ~2.3:1 on white). */
+        .dark-mode [style*="background: white"][style*="color: #667eea"],
+        .dark-mode [style*="background: white"][style*="color: rgb(102, 126, 234)"],
+        .dark-mode .circle-privacy-section label {
+            color: #5A7A93 !important;
+        }
+        html body .circles-header h1, html body .circle-privacy-section label,
+        html body .diary-nav-brand, html body .diary-mobile-header-brand,
+        html body .diary-nav-link:hover {
+            color: var(--ts92-accent-ink);
+        }
+        html body .search-input:focus,
+        html body .circle-privacy-section .privacy-select:focus,
+        html body .message-input:focus {
+            border-color: var(--primary, #6B8BA4);
+            box-shadow: 0 0 0 3px rgba(107, 139, 164, 0.18);
+        }
+        /* L2 - lavender panel washes (AI weekly summary card, reflection prompt box) */
+        html body [style*="rgba(102, 126, 234, 0.08) 0%"],
+        html body [style*="rgba(102, 126, 234, 0.06) 0%"] {
+            background: var(--ts92-tint) !important;
+            border-color: rgba(107, 139, 164, 0.18) !important;
+        }
+
+        /* L3 - frosted modal backdrops */
+        html body .modal { background-color: rgba(31, 41, 55, 0.42); }
+        @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+            html body .modal,
+            html body [style*="position: fixed"][style*="rgba(0,0,0,0.5)"],
+            html body [style*="position: fixed"][style*="rgba(0, 0, 0, 0.5)"] {
+                -webkit-backdrop-filter: blur(8px) saturate(120%);
+                backdrop-filter: blur(8px) saturate(120%);
+            }
+        }
+
+        /* L4 - balanced headings, no single-word last lines in body copy */
+        h1, h2, h3, h4 { text-wrap: balance; }
+        p, li, .faq-answer, .message-bubble, .flashy-text { text-wrap: pretty; }
+
+        /* L5 - optical tracking for large Latin/Cyrillic headings (Arabic/Hebrew excluded:
+               letter-spacing would break Arabic joining) */
+        html:not([dir="rtl"]) h1 { letter-spacing: -0.02em; }
+        html:not([dir="rtl"]) h2 { letter-spacing: -0.015em; }
+        html:not([dir="rtl"]) h3 { letter-spacing: -0.01em; }
+        body { font-kerning: normal; }
+
+        /* L6 - calm save confirmation (diary save toast) */
+        html body .message.flashy {
+            animation: slideInDown 0.45s ease;
+            background: linear-gradient(135deg, #4F6E86 0%, #5A7A93 100%);
+            border-radius: 14px;
+            font-size: 1.05em;
+            box-shadow: 0 10px 30px rgba(61, 72, 82, 0.16);
+        }
+        html body .flashy-icon { animation: none; font-size: 1.5em; }
+        html body .flashy-icon:empty { display: none; }
+
+        /* A92 audit (pre-existing): on the standalone Circles page the title, subtitle and
+           language label sit directly on the blue-lilac page gradient, where #667eea / #8898aa
+           were close to invisible (~1.0-1.3:1). Light text there; scoped to that page's container. */
+        #circlesContainer .circles-header h1 { color: #FFFFFF; text-shadow: 0 1px 2px rgba(31, 41, 55, 0.22); }
+        #circlesContainer .circles-header p,
+        #circlesContainer label[for="languageSelect"] { color: rgba(255, 255, 255, 0.9) !important; }
+    </style>
+    <!-- ===================== END A92-LUXE ===================== -->
 
 </body>
 

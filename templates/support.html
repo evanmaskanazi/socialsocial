@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<!-- TheraSocial Support Version B201 (A92 audit round 1) -->
+<!-- B201 (A92 audit 1): pre-existing: removed a hard-coded Cloudflare email-decode script saved in
+     from a live page. i18n.js ?v bumped B200->B201 in lockstep. -->
+<!-- TheraSocial Support Version B200 (A92) -->
+<!-- B200 (A92): (1) Long-dash cleanup in visible FAQ text + meta description. (2) Removed the
+     🚀/📞 from the "Quick Help"/"Contact Us" headings; "We're here to help." and "Yes." (calmer copy); "Sending…" uses a real
+     ellipsis. (3) Additive <style id="ts-a92-luxe"> before the closing body tag: solid title
+     instead of gradient text, gentle hovers instead of a 5% bounce and purple glow.
+     CACHE-BUST: i18n.js ?v bumped B198->B200 (this page had fallen one version behind). -->
 <!-- TheraSocial Support Version B198 (A81) -->
 <!-- B198 (A81): Cache-bust lockstep ONLY — i18n.js ?v bumped B197->B198 in sync with
      index/parameters/circles (live tag verified). No functional/JS changes in this file this
@@ -43,7 +52,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <!-- A51: honest, additive SEO/social metadata (page previously had none). -->
-    <meta name="description" content="TheraSocial Support Center — contact us, browse answers to common questions, or send us a message.">
+    <meta name="description" content="TheraSocial Support Center. Contact us, browse answers to common questions, or send us a message.">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Support - TheraSocial">
     <meta property="og:description" content="Contact TheraSocial support or find answers to common questions.">
@@ -414,12 +423,12 @@
         <h1 data-i18n="support.title">Support Center</h1>
 
         <p class="subtitle" data-i18n="support.subtitle">
-            We're here to help! Find answers to common questions or send us a message below.
+            We're here to help. Find answers to common questions or send us a message below.
         </p>
 
         <div class="support-sections">
             <div class="support-card">
-                <h2>📞 <span data-i18n="support.contact_us">Contact Us</span></h2>
+                <h2><span data-i18n="support.contact_us">Contact Us</span></h2>
                 <!-- A51: replaced the single placeholder address with the three real support
                      inboxes so messages actually reach a monitored mailbox. -->
                 <div class="contact-info">
@@ -452,7 +461,7 @@
             </div>
 
             <div class="support-card">
-                <h2>🚀 <span data-i18n="support.quick_help">Quick Help</span></h2>
+                <h2><span data-i18n="support.quick_help">Quick Help</span></h2>
                 <!-- A41: dropped links to pages that don't exist (Help Center, Community Forum,
                      System Status); "Video Tutorials" repointed to the in-app tutorial via
                      /?tutorial=start (the home page auto-launches it on load). -->
@@ -481,21 +490,21 @@
             <div class="faq-item">
                 <div class="faq-question" data-i18n="support.faq2_q">What are Circles and how do they work?</div>
                 <div class="faq-answer" data-i18n="support.faq2_a">
-                    Circles let you organize your connections into trust levels: General (acquaintances), Close Friends, and Family. When you post in your feed or save diary entries, you choose which circle can see them. This gives you full control over your privacy — share as much or as little as you want with each group.
+                    Circles let you organize your connections into trust levels: General (acquaintances), Close Friends, and Family. When you post in your feed or save diary entries, you choose which circle can see them. This gives you full control over your privacy. Share as much or as little as you want with each group.
                 </div>
             </div>
 
             <div class="faq-item">
                 <div class="faq-question" data-i18n="support.faq3_q">Is my data secure?</div>
                 <div class="faq-answer" data-i18n="support.faq3_a">
-                    Absolutely. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and full GDPR compliance. You can view, export, or delete your data at any time from your Settings.
+                    Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and full GDPR compliance. You can view, export, or delete your data at any time from your Settings.
                 </div>
             </div>
 
             <div class="faq-item">
                 <div class="faq-question" data-i18n="support.faq4_q">How do alerts and triggers work?</div>
                 <div class="faq-answer" data-i18n="support.faq4_a">
-                    You can set well-being alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds — for example, get notified if their mood drops below 2 or their stress rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.
+                    You can set well-being alerts for people you care about. Visit their profile and tap the Triggers button to define thresholds. For example, get notified if their mood drops below 2 or their stress rises above 3 for a number of consecutive days. You will receive an email alert when a pattern is detected, so you can reach out with support.
                 </div>
             </div>
 
@@ -516,7 +525,7 @@
             <div class="faq-item">
                 <div class="faq-question" data-i18n="support.faq7_q">How do I see my progress over time?</div>
                 <div class="faq-answer" data-i18n="support.faq7_a">
-                    The Progress page shows your well-being data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and stress change over weeks and months. Look for patterns — for example, how exercise affects your mood the following day.
+                    The Progress page shows your well-being data as visual charts and graphs. Track how your sleep, mood, energy, physical activity, and stress change over weeks and months. Look for patterns: for example, how exercise affects your mood the following day.
                 </div>
             </div>
 
@@ -537,7 +546,7 @@
             <div class="faq-item">
                 <div class="faq-question" data-i18n="support.faq10_q">How do I delete my account?</div>
                 <div class="faq-answer" data-i18n="support.faq10_a">
-                    Go to Settings, scroll to the bottom, and select Delete Account. You will be asked to confirm. Please note that this action is permanent and cannot be undone — all your data will be removed from our servers.
+                    Go to Settings, scroll to the bottom, and select Delete Account. You will be asked to confirm. Please note that this action is permanent and cannot be undone. All your data will be removed from our servers.
                 </div>
             </div>
 
@@ -591,7 +600,10 @@
         </center>
     </div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/static/js/i18n.js?v=B198"></script>
+    <!-- A92 audit (pre-existing): removed a hard-coded Cloudflare email-decode script that had been
+         saved into the template from a live page; Cloudflare injects its own copy when it needs one,
+         and off Cloudflare the path 404s. The mailto links here are plain and need no decoding. -->
+    <script src="/static/js/i18n.js?v=B201"></script>
     <script>
         // A43 (rev6): BULLETPROOF back button. Every earlier revision ultimately trusted the
         // anchor's href (rev4 set href once at load and then did `if (validRet) return;` on
@@ -666,10 +678,10 @@
                              he: 'ההודעה חייבת להכיל לפחות 10 תווים',
                              ar: 'يجب أن تتكون الرسالة من 10 أحرف على الأقل',
                              ru: 'Сообщение должно содержать не менее 10 символов' },
-            sending:       { en: 'Sending...',
-                             he: 'שולח...',
-                             ar: 'جارٍ الإرسال...',
-                             ru: 'Отправка...' },
+            sending:       { en: 'Sending…',
+                             he: 'שולח…',
+                             ar: 'جارٍ الإرسال…',
+                             ru: 'Отправка…' },
             too_many:      { en: 'Too many requests. Please wait a moment and try again.',
                              he: 'יותר מדי בקשות. אנא המתינו רגע ונסו שוב.',
                              ar: 'طلبات كثيرة جدًا. يرجى الانتظار لحظة والمحاولة مرة أخرى.',
@@ -946,6 +958,48 @@
         }
     </style>
     <!-- ===================== END A51-UX ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- A92-LUXE (support): additive, presentation-only. Calmer, more premium detail.  -->
+    <!--  S1 Solid deep-slate title instead of gradient-clipped text                    -->
+    <!--  S2 Gentle hover on cards and buttons: no 5% "bounce" scale and no blue-purple -->
+    <!--     glow; a 1-2px lift with a soft neutral shadow instead                      -->
+    <!--  S3 Balanced headings, orphan-free paragraphs, optical heading tracking (LTR) -->
+    <!-- ============================================================================ -->
+    <style id="ts-a92-luxe">
+        /* S1 */
+        h1 {
+            background: none;
+            -webkit-background-clip: border-box;
+            background-clip: border-box;
+            -webkit-text-fill-color: currentColor;
+            color: #3D4852;
+            font-weight: 700;
+        }
+        /* S2 */
+        .support-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+        .support-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(61, 72, 82, 0.10);
+        }
+        .submit-btn, .back-link { transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease; }
+        .submit-btn:hover, .back-link:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(61, 72, 82, 0.14);
+            filter: brightness(1.03);
+        }
+        .submit-btn:disabled { transform: none; box-shadow: none; filter: none; }
+        @media (prefers-reduced-motion: reduce) {
+            .support-card:hover, .submit-btn:hover, .back-link:hover { transform: none; }
+        }
+        /* S3 */
+        h1, h2, h3 { text-wrap: balance; }
+        p, li, .faq-answer { text-wrap: pretty; }
+        html:not([dir="rtl"]) h1 { letter-spacing: -0.02em; }
+        html:not([dir="rtl"]) h2 { letter-spacing: -0.015em; }
+        body { font-kerning: normal; }
+    </style>
+    <!-- ===================== END A92-LUXE ===================== -->
 
 </body>
 </html>

@@ -1,4 +1,17 @@
 <!DOCTYPE html>
+<!-- TheraSocial Circles Version B201 (A92 audit round 1) -->
+<!-- B201 (A92 audit 1): shared luxe block updated (anchored text-colour selectors, dark-mode
+     white-button contrast, pre-existing Circles-page title contrast fix). No other change.
+     CACHE-BUST: every live script tag re-verified and bumped B200->B201 (so a browser that already
+     cached the first F2 drop re-fetches the corrected i18n.js); app.py _A92_ASSET_VERSION = 'B201'.
+-->
+<!-- TheraSocial Circles Version B200 (A92) -->
+<!-- B200 (A92): (1) Long-dash cleanup in the offline banner (4 languages). (2) Additive
+     <style id="ts-a92-luxe"> before the closing body tag (same block as index/parameters).
+     CACHE-BUST: every live script tag re-verified and bumped to ?v=B200 (index, parameters, circles,
+     support; support was at B198). Changed JS this round: i18n.js, circles-messages.js,
+     parameters-social.js; the rest are lockstep bumps. about.html (not in this round's files)
+     is now pinned server-side: app.py rewrites its /static/js ?v to B200 at render time. -->
 <!-- TheraSocial Circles Version B199 (A91) -->
 <!-- B199 (A91): Cache-bust lockstep ONLY — all JS ?v bumped B198->B199 in sync with
      index/parameters/about (about.html was stale at B196 and was resynced this round). No
@@ -177,9 +190,9 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B199"></script>
-    <script src="/static/js/circles-messages.js?v=B199"></script>
-    <script src="/static/js/feed-updates.js?v=B199"></script>
+    <script src="/static/js/i18n.js?v=B201"></script>
+    <script src="/static/js/circles-messages.js?v=B201"></script>
+    <script src="/static/js/feed-updates.js?v=B201"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
@@ -816,7 +829,7 @@ try {
             var msg = function (key) {
                 var lang = (localStorage.getItem('selectedLanguage') || 'en');
                 var m = {
-                    off: { en: "You're offline — some actions may not work.", he: 'אין חיבור לאינטרנט — ייתכן שחלק מהפעולות לא יעבדו.', ar: 'أنت غير متصل — قد لا تعمل بعض الإجراءات.', ru: 'Нет подключения — некоторые действия могут не работать.' },
+                    off: { en: "You're offline. Some actions may not work.", he: 'אין חיבור לאינטרנט. ייתכן שחלק מהפעולות לא יעבדו.', ar: 'أنت غير متصل. قد لا تعمل بعض الإجراءات.', ru: 'Нет подключения. Некоторые действия могут не работать.' },
                     on:  { en: 'Back online', he: 'החיבור חזר', ar: 'عاد الاتصال', ru: 'Соединение восстановлено' }
                 };
                 return (m[key][lang] || m[key].en);
@@ -1270,6 +1283,121 @@ try {
     })();
     </script>
     <!-- ===================== END A81-SCROLL ===================== -->
+
+    <!-- ============================================================================ -->
+    <!-- A92-LUXE: additive, presentation-only refinements toward a calmer, more        -->
+    <!-- premium (Apple-inspired) look with less of a generic "AI template" feel.       -->
+    <!-- One self-contained, namespaced block; identical on index/parameters/circles.   -->
+    <!-- No markup, IDs or JS changed by this block. Remove it to revert completely.    -->
+    <!--  L1 Retire the stock #667eea->#764ba2 purple gradient (the best-known template  -->
+    <!--     colour pair) on buttons/cards/badges -> the brand slate gradient           -->
+    <!--  L2 Retire #667eea text/focus accents and lavender panel washes -> brand slate  -->
+    <!--  L3 Frosted-glass modal backdrops (soft ink tint + blur instead of flat black)  -->
+    <!--  L4 Balanced headings + orphan-free paragraphs (text-wrap)                      -->
+    <!--  L5 Optical heading tracking + kerning (LTR only; never applied to he/ar)       -->
+    <!--  L6 Calm save confirmation: no spinning stars / endless pulse                  -->
+    <!-- ============================================================================ -->
+    <style id="ts-a92-luxe">
+        :root {
+            --ts92-grad: linear-gradient(135deg, #5A7A93 0%, #6B8BA4 100%);
+            --ts92-accent-ink: #5A7A93;
+            --ts92-tint: linear-gradient(135deg, rgba(107, 139, 164, 0.08) 0%, rgba(157, 184, 160, 0.10) 100%);
+        }
+        .dark-mode, body.dark-mode { --ts92-accent-ink: var(--primary, #8FAFC4); }
+
+        /* L1 - inline gradients (hex as authored, and rgb() as browsers re-serialise cssText) */
+        html body [style*="#667eea 0%, #764ba2"],
+        html body [style*="#667eea, #764ba2"],
+        html body [style*="#667eea 0%, #7c6dd8"],
+        html body [style*="rgb(102, 126, 234) 0%, rgb(118, 75, 162)"],
+        html body [style*="rgb(102, 126, 234), rgb(118, 75, 162)"] {
+            background: var(--ts92-grad) !important;
+        }
+        /* L1 - the same gradient set from stylesheet classes (circles/messages/diary) */
+        html body .search-btn, html body .new-message-btn,
+        html body .message-sent, html body .send-btn, html body .user-avatar,
+        html body .conversation-avatar, html body .conn-action-btn.connect {
+            background: var(--ts92-grad);
+        }
+        html body .add-to-circle-btn, html body .diary-nav-link.active { background: #5A7A93; }
+        html body .add-to-circle-btn:hover { background: #4C6A82; }
+        html body .conn-action-btn.connect { box-shadow: 0 2px 6px rgba(90, 122, 147, 0.22); }
+        html body .conn-action-btn.connect:hover { box-shadow: 0 4px 12px rgba(90, 122, 147, 0.28); }
+        html body .invite-cta { box-shadow: 0 10px 30px rgba(61, 72, 82, 0.16); }
+
+        /* L2 - text accents and focus rings */
+        /* A92 audit: anchored so border-color / background-color never match (text colour only) */
+        html body [style^="color: #667eea"], html body [style^="color:#667eea"],
+        html body [style*=" color: #667eea"], html body [style*=";color:#667eea"],
+        html body [style^="color: rgb(102, 126, 234)"], html body [style*=" color: rgb(102, 126, 234)"] {
+            color: var(--ts92-accent-ink) !important;
+        }
+        /* A92 audit: in dark mode these few controls keep a WHITE background, so the accent must
+           stay the deep slate there (the light dark-mode accent would be ~2.3:1 on white). */
+        .dark-mode [style*="background: white"][style*="color: #667eea"],
+        .dark-mode [style*="background: white"][style*="color: rgb(102, 126, 234)"],
+        .dark-mode .circle-privacy-section label {
+            color: #5A7A93 !important;
+        }
+        html body .circles-header h1, html body .circle-privacy-section label,
+        html body .diary-nav-brand, html body .diary-mobile-header-brand,
+        html body .diary-nav-link:hover {
+            color: var(--ts92-accent-ink);
+        }
+        html body .search-input:focus,
+        html body .circle-privacy-section .privacy-select:focus,
+        html body .message-input:focus {
+            border-color: var(--primary, #6B8BA4);
+            box-shadow: 0 0 0 3px rgba(107, 139, 164, 0.18);
+        }
+        /* L2 - lavender panel washes (AI weekly summary card, reflection prompt box) */
+        html body [style*="rgba(102, 126, 234, 0.08) 0%"],
+        html body [style*="rgba(102, 126, 234, 0.06) 0%"] {
+            background: var(--ts92-tint) !important;
+            border-color: rgba(107, 139, 164, 0.18) !important;
+        }
+
+        /* L3 - frosted modal backdrops */
+        html body .modal { background-color: rgba(31, 41, 55, 0.42); }
+        @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+            html body .modal,
+            html body [style*="position: fixed"][style*="rgba(0,0,0,0.5)"],
+            html body [style*="position: fixed"][style*="rgba(0, 0, 0, 0.5)"] {
+                -webkit-backdrop-filter: blur(8px) saturate(120%);
+                backdrop-filter: blur(8px) saturate(120%);
+            }
+        }
+
+        /* L4 - balanced headings, no single-word last lines in body copy */
+        h1, h2, h3, h4 { text-wrap: balance; }
+        p, li, .faq-answer, .message-bubble, .flashy-text { text-wrap: pretty; }
+
+        /* L5 - optical tracking for large Latin/Cyrillic headings (Arabic/Hebrew excluded:
+               letter-spacing would break Arabic joining) */
+        html:not([dir="rtl"]) h1 { letter-spacing: -0.02em; }
+        html:not([dir="rtl"]) h2 { letter-spacing: -0.015em; }
+        html:not([dir="rtl"]) h3 { letter-spacing: -0.01em; }
+        body { font-kerning: normal; }
+
+        /* L6 - calm save confirmation (diary save toast) */
+        html body .message.flashy {
+            animation: slideInDown 0.45s ease;
+            background: linear-gradient(135deg, #4F6E86 0%, #5A7A93 100%);
+            border-radius: 14px;
+            font-size: 1.05em;
+            box-shadow: 0 10px 30px rgba(61, 72, 82, 0.16);
+        }
+        html body .flashy-icon { animation: none; font-size: 1.5em; }
+        html body .flashy-icon:empty { display: none; }
+
+        /* A92 audit (pre-existing): on the standalone Circles page the title, subtitle and
+           language label sit directly on the blue-lilac page gradient, where #667eea / #8898aa
+           were close to invisible (~1.0-1.3:1). Light text there; scoped to that page's container. */
+        #circlesContainer .circles-header h1 { color: #FFFFFF; text-shadow: 0 1px 2px rgba(31, 41, 55, 0.22); }
+        #circlesContainer .circles-header p,
+        #circlesContainer label[for="languageSelect"] { color: rgba(255, 255, 255, 0.9) !important; }
+    </style>
+    <!-- ===================== END A92-LUXE ===================== -->
 
 </body>
 </html>
