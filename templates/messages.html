@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- TheraSocial Messages Version B205 (F6): cache-bust only (stale ?v=B180 -> B205). -->
 <!-- TheraSocial Messages Version P305 Lang -->
 <!-- P305: Visual design overhaul - new calming color palette -->
 <!-- P305: Dark mode support for evening/nighttime use -->
@@ -81,8 +82,11 @@
          circles-messages.js was pinned at ?v=9.0 while every other page was at B175. Static
          files are served `Cache-Control: public, max-age=604800`, so this page could serve a
          week-old copy of both scripts. Now in lockstep with the rest of the app. -->
-    <script src="/static/js/i18n.js?v=B180"></script>
-    <script src="/static/js/circles-messages.js?v=B180"></script>
+    <!-- B205 (F6): both bumped B180 -> B205 in lockstep with the rest of the app. At B180 this
+         page could keep serving a cached circles-messages.js without the B204 escaping fixes
+         (escapeHtml now escapes quotes) and an i18n.js without the current wording. -->
+    <script src="/static/js/i18n.js?v=B205"></script>
+    <script src="/static/js/circles-messages.js?v=B205"></script>
     <script>
         // Wait for i18n to be fully loaded
         function waitForI18n() {

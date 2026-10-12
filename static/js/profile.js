@@ -1,9 +1,13 @@
+// Version B205 (F6): renamed the local translation helper t -> _profT (clashed with i18n.js).
 // Profile Page JavaScript with Enhanced Fields, Modern Styling, and i18n support
 // Version Lang - Verified fully translated with t() calls
 // Add this to your existing profile page or create a new profile.html
 
 // Use translation function helper
-const t = (key) => window.i18n ? window.i18n.translate(key) : key;
+// B205 (F6, pre-existing bug): this was `const t = ...`, but i18n.js already declares a global
+// `function t(...)`. Two global declarations of the same name are a SyntaxError, so the whole
+// of profile.js was skipped and /profile rendered blank. Renamed to a local helper.
+const _profT = (key) => window.i18n ? window.i18n.translate(key) : key;
 
 // Profile HTML Structure (add to profile.html)
 const profileHTML = `
@@ -237,11 +241,11 @@ const profileHTML = `
 
     <div class="profile-header">
         <div class="profile-avatar" id="profileAvatar">👤</div>
-        <div class="profile-name" id="profileName">${t('profile.loading')}</div>
+        <div class="profile-name" id="profileName">${_profT('profile.loading')}</div>
     </div>
 
     <div class="profile-completion">
-        <div class="completion-text"><span data-i18n="profile.completion">${t('profile.completion')}</span> <span id="completionPercent">0%</span></div>
+        <div class="completion-text"><span data-i18n="profile.completion">${_profT('profile.completion')}</span> <span id="completionPercent">0%</span></div>
         <div class="completion-bar">
             <div class="completion-progress" id="completionBar" style="width: 0%"></div>
         </div>
@@ -251,14 +255,14 @@ const profileHTML = `
         <div class="profile-section">
             <div class="section-header">
                 <span class="section-icon">📝</span>
-                <span data-i18n="profile.about_me">${t('profile.about_me')}</span>
+                <span data-i18n="profile.about_me">${_profT('profile.about_me')}</span>
             </div>
             <div class="section-content">
                 <div class="profile-field">
-                    <label class="profile-label" data-i18n="profile.bio">${t('profile.bio')}</label>
+                    <label class="profile-label" data-i18n="profile.bio">${_profT('profile.bio')}</label>
                     <textarea class="profile-textarea" id="bio"
                               data-i18n-placeholder="profile.bio_placeholder"
-                              placeholder="${t('profile.bio_placeholder')}" maxlength="500"></textarea>
+                              placeholder="${_profT('profile.bio_placeholder')}" maxlength="500"></textarea>
                     <span class="character-count"><span id="bioCount">0</span> / 500</span>
                 </div>
             </div>
@@ -267,14 +271,14 @@ const profileHTML = `
         <div class="profile-section">
             <div class="section-header">
                 <span class="section-icon">💼</span>
-                <span data-i18n="profile.professional">${t('profile.professional')}</span>
+                <span data-i18n="profile.professional">${_profT('profile.professional')}</span>
             </div>
             <div class="section-content">
                 <div class="profile-field">
-                    <label class="profile-label" data-i18n="profile.occupation">${t('profile.occupation')}</label>
+                    <label class="profile-label" data-i18n="profile.occupation">${_profT('profile.occupation')}</label>
                     <input type="text" class="profile-input" id="occupation"
                            data-i18n-placeholder="profile.occupation_placeholder"
-                           placeholder="${t('profile.occupation_placeholder')}">
+                           placeholder="${_profT('profile.occupation_placeholder')}">
                 </div>
             </div>
         </div>
@@ -282,14 +286,14 @@ const profileHTML = `
         <div class="profile-section">
             <div class="section-header">
                 <span class="section-icon">🎯</span>
-                <span data-i18n="profile.goals_aspirations">${t('profile.goals_aspirations')}</span>
+                <span data-i18n="profile.goals_aspirations">${_profT('profile.goals_aspirations')}</span>
             </div>
             <div class="section-content">
                 <div class="profile-field">
-                    <label class="profile-label" data-i18n="profile.my_goals">${t('profile.my_goals')}</label>
+                    <label class="profile-label" data-i18n="profile.my_goals">${_profT('profile.my_goals')}</label>
                     <textarea class="profile-textarea" id="goals"
                               data-i18n-placeholder="profile.goals_placeholder"
-                              placeholder="${t('profile.goals_placeholder')}" maxlength="300"></textarea>
+                              placeholder="${_profT('profile.goals_placeholder')}" maxlength="300"></textarea>
                     <span class="character-count"><span id="goalsCount">0</span> / 300</span>
                 </div>
             </div>
@@ -298,22 +302,22 @@ const profileHTML = `
         <div class="profile-section">
             <div class="section-header">
                 <span class="section-icon">💫</span>
-                <span data-i18n="profile.interests_hobbies">${t('profile.interests_hobbies')}</span>
+                <span data-i18n="profile.interests_hobbies">${_profT('profile.interests_hobbies')}</span>
             </div>
             <div class="section-content">
                 <div class="profile-field">
-                    <label class="profile-label" data-i18n="profile.interests">${t('profile.interests')}</label>
+                    <label class="profile-label" data-i18n="profile.interests">${_profT('profile.interests')}</label>
                     <textarea class="profile-textarea" id="interests"
                               data-i18n-placeholder="profile.interests_placeholder"
-                              placeholder="${t('profile.interests_placeholder')}" maxlength="300"></textarea>
+                              placeholder="${_profT('profile.interests_placeholder')}" maxlength="300"></textarea>
                     <span class="character-count"><span id="interestsCount">0</span> / 300</span>
                 </div>
 
                 <div class="profile-field" style="margin-top: 30px;">
-                    <label class="profile-label" data-i18n="profile.favorite_hobbies">${t('profile.favorite_hobbies')}</label>
+                    <label class="profile-label" data-i18n="profile.favorite_hobbies">${_profT('profile.favorite_hobbies')}</label>
                     <textarea class="profile-textarea" id="favorite_hobbies"
                               data-i18n-placeholder="profile.hobbies_placeholder"
-                              placeholder="${t('profile.hobbies_placeholder')}" maxlength="300"></textarea>
+                              placeholder="${_profT('profile.hobbies_placeholder')}" maxlength="300"></textarea>
                     <span class="character-count"><span id="hobbiesCount">0</span> / 300</span>
                 </div>
             </div>
@@ -321,8 +325,8 @@ const profileHTML = `
     </div>
 
     <div class="profile-actions">
-        <button class="btn-save" onclick="saveProfile()" data-i18n="profile.save_changes">${t('profile.save_changes')}</button>
-        <button class="btn-cancel" onclick="loadProfile()" data-i18n="profile.cancel">${t('profile.cancel')}</button>
+        <button class="btn-save" onclick="saveProfile()" data-i18n="profile.save_changes">${_profT('profile.save_changes')}</button>
+        <button class="btn-cancel" onclick="loadProfile()" data-i18n="profile.cancel">${_profT('profile.cancel')}</button>
     </div>
 </div>
 `;
@@ -362,7 +366,7 @@ async function loadProfile() {
             const userResponse = await fetch('/api/user/profile');
             if (userResponse.ok) {
                 const userData = await userResponse.json();
-                document.getElementById('profileName').textContent = userData.username || t('profile.loading');
+                document.getElementById('profileName').textContent = userData.username || _profT('profile.loading');
 
                 // Set avatar based on first letter
                 const firstLetter = (userData.username || 'U')[0].toUpperCase();
@@ -393,14 +397,14 @@ async function saveProfile() {
         });
 
         if (response.ok) {
-            showNotification(t('profile.updated'), 'success');
+            showNotification(_profT('profile.updated'), 'success');
             updateProfileCompletion();
         } else {
-            showNotification(t('error.saving'), 'error');
+            showNotification(_profT('error.saving'), 'error');
         }
     } catch (error) {
         console.error('Error saving profile:', error);
-        showNotification(t('error.saving'), 'error');
+        showNotification(_profT('error.saving'), 'error');
     }
 }
 

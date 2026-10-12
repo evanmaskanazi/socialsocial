@@ -1,6 +1,160 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version F7 / B205 (backend; no front-end change, cache-bust unchanged)
+#
+# F7 (security review: access control, sessions/tokens, logging):
+#   Access control
+#   1. /api/user/<id>/parameters/<date>: diary NOTES were returned regardless of notes_privacy,
+#      and the gate was "viewer follows target" (one-sided, anyone can create it). Now: target
+#      follows viewer or viewer is in target's circles; notes obey notes_privacy; owner sees all.
+#   2. /api/user/<id>/feed/<date>: 'private' posts were returned. Now uses _can_access_post().
+#   3. /api/parameters/hierarchical/<id>: had no connection/block check (diary calendar leak).
+#   4. GET /api/circles?user_id=: same one-sided gate fixed; block check; multi-circle 500 fixed.
+#   5. Other users' email addresses removed from search, following, followers, blocked-users,
+#      circles lists and both recommendation routes (14 places).
+#   6. Friend-of-friend suggestions only use circles their owner made public, minus blocks.
+#   7. Professional access is re-checked on every request (_is_active_professional_for): ends when
+#      the client turns professional access off, either side blocks, or the role changes; a block
+#      also revokes the relationship.
+#   8. POST /api/circles refuses when a block exists either way (was a block bypass + email spam).
+#   9. POST /api/triggers requires a real, connected, unblocked user.
+#  10. Role/scope: admin cleanup routes -> @admin_required; verify-professional, operator inbox,
+#      create-dept-operator, operator points (+backfill) and /api/admin/users ->
+#      @system_operator_required (new; system operators and admins, not department operators);
+#      unflag-user gets the same scope check as flag-user; admin/operator/professional decorators
+#      reject deactivated accounts.
+#  11. invite-group-user: never returns the temporary password; existing accounts get an invitation
+#      instead of being enrolled silently, and their id/username is not returned.
+#  12. /api/admin/migrate-language now @admin_required (had no auth); /api/setup/sample-users
+#      @admin_required and blocked on Render even if FLASK_DEBUG is set.
+#  13. Diary-reminder cron refuses without CRON_SECRET in production; constant-time comparison.
+#  14. Resend inbound-email webhook verifies the Svix signature (RESEND_WEBHOOK_SECRET); refused
+#      in production without it.
+#   Sessions / tokens
+#  15. Account-deletion tokens carry a 'del_' prefix; reset and deletion tokens no longer work
+#      for each other.
+#  16. If no SECRET_KEY environment variable is set, the key is derived from DATABASE_URL (secret,
+#      always present on Render) instead of using the public default written in this file. No
+#      database access at import time; identical on every worker and restart.
+#  17. _get_client_ip uses security.get_client_ip (the first X-Forwarded-For entry was spoofable).
+#   Logging
+#  18. Email addresses are masked in all app log lines (filter); alert/notification text (another
+#      person's wellbeing) is no longer logged.
+#   Time-bomb review (changes made during F5-F7 checked for failures that only appear later:
+#   at deploy, under multiple workers, after future edits, or with growth)
+#  19. SECRET_KEY: an earlier F7 draft stored a generated key in a database table at import time;
+#      replaced by item 16 (no database work at import - the pattern behind the earlier
+#      rolling-deploy deadlock - and no race between workers creating different keys).
+#  20. Handler bridge is embedded in each page as small nonce'd inline scripts (core + chunks of
+#      25 handlers) instead of two separately fetched files: during a zero-downtime deploy a page
+#      from the new instance can no longer receive a bridge file from the old one. A chunk the
+#      generator mis-reads after a future template edit disables only its own handlers (tested:
+#      breaking any one chunk left 188-191 of the 191 index handlers working).
+#  21. Silent-failure reporting: the bridge reports (POST /ts-csp/report) an inline handler it
+#      cannot match and any CSP violation (directive + host only, values stripped in the
+#      browser); logged once per shape as "[A94 CSP]" warnings, capped at 300 per process.
+#  22. Friend-of-friend suggestions read the viewer's blocks in one query (was one per candidate).
+#  23. A CF-Connecting-IP header from an address outside Cloudflare's published ranges logs a
+#      warning at most hourly, so a future Cloudflare range change shows up in the logs instead
+#      of silently merging rate-limit buckets.
+#   DEPLOY: no environment variables are required. Diary reminders run from the in-app
+#   scheduler; the HTTP trigger /api/diary-reminder/process is only opened by setting CRON_SECRET.
+#   The Resend inbound-email webhook needs RESEND_WEBHOOK_SECRET (the webhook's signing secret
+#   from the Resend dashboard) ONLY if such a webhook is configured in Resend.
+#
+# =====================================================================
+# TheraSocial app.py - Version F6 / B205 (backend)
+#
+# F6 (consent and disclosure accuracy; no route added or removed):
+#   1. save_consent: analytics_consent and research_data default to False when not sent
+#      (analytics defaulted to True). Birth-year checks use the current year (were 2025) in
+#      save_consent, the profile update and rectify-data.
+#   2. DATA_RETENTION_PERIODS matches actual behaviour: diary data, messages, profile and consent
+#      records last until account deletion (was "7 years, clinical record standards").
+#   3. /api/privacy/data-processing lists the AI provider (Anthropic) for the weekly summary,
+#      Resend for email, hosting/delivery providers (Render, Redis when configured, jsDelivr), and
+#      approved professionals. "Restrict processing" now says to contact support (no in-app button).
+#   4. The account-deletion audit record no longer stores the username.
+#   5. _A92_ASSET_VERSION = 'B205' (cache-bust lockstep; i18n.js and index.html changed).
+#
+# =====================================================================
+# TheraSocial app.py - Version A94 (backend)
+#
+# A94 (strict Content Security Policy; additive, no route or page markup changed):
+#   1. CSP script-src is now strict: a fresh nonce per request + 'strict-dynamic', with
+#      'unsafe-inline' removed and script-src-attr 'none'. Injected <script> tags and injected
+#      inline handlers are refused by the browser. object-src/base-uri/frame-ancestors as A93.
+#   2. _a94_nonce_html adds the nonce to the <script> tags in the HTML the server sends.
+#   3. Handler bridge (inline nonce'd scripts at the top of <head> since F7; was /ts-csp/*.js): the
+#      existing inline onclick/onchange/... handlers keep working because each one is turned
+#      into a normal JS handler, and ONLY handler code found in the app's own templates,
+#      static/js files and this file is run (table rebuilt from the deployed files at startup).
+#   4. index.html's own CSP <meta> uses {{ csp_nonce }} (context processor) to match.
+#   5. _A92_ASSET_VERSION = 'B204' (cache-bust lockstep; i18n.js changed: GDPR-rights wording,
+#      "strict Content Security Policy headers" restored in the Support FAQ, 4 languages).
+#   AUDIT 1 fixes:
+#   - Handler table built once at startup under a lock and published atomically (a request
+#     thread could previously see it half-built and serve a page with every script blocked).
+#   - Fail-safe: if the nonce cannot be added to an HTML page, that response gets the A93
+#     policy (logged) instead of a strict policy that would block all of its scripts.
+#   - The bridge is inserted after the real <head>, never inside an HTML comment that
+#     mentions <head>.
+#   - HTML responses add Cache-Control no-transform, so Cloudflare does not inject its own
+#     un-nonced scripts (Email Obfuscation, Rocket Loader), which the strict CSP would block.
+#   - Bridge: ignores attributes that only start with "on" (not event handlers); lookup
+#     cache is bounded.
+#   AUDIT 2 fixes:
+#   - Nonce injection is a jump-scanner instead of one lazy regex over the page: ~39 ms per
+#     index.html load down to a few ms.
+#   - An .html file served from disk (pass-through response, e.g. /static/*.html) now gets
+#     nonces too instead of a strict header with blocked scripts; partial/streamed/encoded HTML
+#     gets the A93 policy.
+#
+# =====================================================================
+# TheraSocial app.py - Version A93 (backend)
+#
+# A93 (security-claim accuracy; additive, no route changed):
+#   1. CSRF: new _a93_csrf_origin_check before_request verifies Origin/Referer (and
+#      Sec-Fetch-Site) on EVERY POST/PUT/PATCH/DELETE, refusing cross-site browser requests with
+#      403. Previously only ~20 of ~86 state-changing routes had an explicit CSRF check
+#      (@require_csrf, kept as is). Exempt: OAuth callbacks (cross-site by design, protected by
+#      the OAuth state parameter) and the Resend inbound-email webhook (server-to-server).
+#   2. CSP header hardened: object-src 'none', base-uri 'self', frame-ancestors 'self';
+#      api.anthropic.com removed from connect-src (never called from the browser).
+#      NOT made "strict": a strict (nonce/hash) script policy needs the ~300 inline event
+#      handlers and inline script blocks across the pages moved into script files first.
+#      (Superseded by A94: strict policy delivered via a nonce + handler bridge instead.)
+#   3. _A92_ASSET_VERSION = 'B203' (cache-bust lockstep; i18n.js changed).
+#
+# =====================================================================
+# TheraSocial app.py - Version A92 (backend)
+#
+# A92 audit 1 follow-up: _A92_ASSET_VERSION = 'B202' (lockstep; i18n.js changed again).
+#
+# A92 audit round 1 (fixes to this round + pre-existing issues found while auditing):
+#   - AI text: _call_anthropic_api(..., language=) now knows the reply language. Russian keeps
+#     its grammatical тире (the converter no longer turns "Сон — это" into "Сон, это") and gets
+#     a Russian-appropriate style note; word ranges ("Mon–Fri") become "Mon-Fri", not "Mon, Fri".
+#   - _a92_soften_dashes_in_html: a dash next to an INLINE tag becomes a comma instead of being
+#     dropped (was merging words, e.g. "<b>bar</b>— baz" -> "barbaz").
+#   - Pre-existing: consolidated alert email "no check-in" bullet had no subject; it now names
+#     the person (HTML-escaped). RU line gains its missing comma ("проверить, как дела").
+#   - _A92_ASSET_VERSION = 'B201' (lockstep with the HTML ?v bump).
+#
+# A92 (copy polish: luxury / calm / less "AI" feel). Additive, no route or schema change.
+#   1. AI house voice: _call_anthropic_api() appends a short style note to every system
+#      prompt (warm plain sentences, no long dashes, no hype words or emoji), and runs the
+#      reply through _a92_humanize_ai_text() so no em/en dash reaches the user.
+#   2. Long-dash cleanup in user-visible strings: alert-email "hasn't checked in" lines and
+#      the in-app no-check-in alert, the crisis-support notice fallback, daily gifts,
+#      the no-check-in weekly-summary fallback and the curated check-in feedback bank
+#      (en/he/ar; Russian keeps only its grammatical copula dash).
+#   3. /about and /support (_render_page_with_back): CACHE-BUST GUARD pins every
+#      /static/js/*.js ?v to _A92_ASSET_VERSION ('B200'), and the About page's visible text
+#      gets the same dash cleanup server-side (script/style/comments untouched).
+#
+# =====================================================================
 # TheraSocial app.py - Version A91 (backend)
 #
 # A91 (HIGHEST-PRIORITY PRIVACY FIX — operator must never see private user data):
@@ -1785,7 +1939,7 @@ _A26_CRISIS_NOTICE_KEY = 'msg.crisis_support_notice'
 _A26_CRISIS_NOTICE_FALLBACK = (
     "It sounds like you're going through something really hard, and your message has "
     "been sent. If you'd like support right now, crisis helplines are available in your "
-    "area \u2014 you don't have to face this alone."
+    "area. You don't have to face this alone."
 )
 
 
@@ -1884,6 +2038,13 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Environment detection - using modern Flask approach
 is_production = os.environ.get('FLASK_DEBUG', 'False').lower() == 'false'
+
+
+def _f7_is_production():
+    """F7: production if FLASK_DEBUG is off OR the app runs on Render (which sets RENDER=true).
+    Used where 'not production' unlocks something unsafe, so a stray FLASK_DEBUG=true on the live
+    host does not open it."""
+    return bool(is_production or os.environ.get('RENDER'))
 app.config['DEBUG'] = not is_production
 
 # L170: Professional account — historical parameter access default.
@@ -1904,6 +2065,11 @@ TRUSTED_PROFESSIONAL_DOMAINS = set(
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 if is_production and app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production':
     print("WARNING: Using default SECRET_KEY in production!")
+    # F7: the default key is written in this file, so sessions and CSRF tokens would be signed
+    # with a public key. When no SECRET_KEY is configured, a key is derived from DATABASE_URL
+    # (see _f7_derive_secret_key below): same on every worker and restart, no database access.
+    # A SECRET_KEY environment variable, if present, always takes priority.
+_F7_NEEDS_PERSISTED_SECRET = (app.config['SECRET_KEY'] == 'dev-secret-key-change-in-production')
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///social.db')
@@ -1949,6 +2115,30 @@ if REDIS_URL:
 
 # Initialize extensions
 db = SQLAlchemy(app)
+
+
+def _f7_derive_secret_key():
+    """F7: replace the built-in default SECRET_KEY without touching the database.
+
+    When no SECRET_KEY environment variable is set, the key is derived from DATABASE_URL, which
+    Render always provides and which contains the database's long random password (a secret).
+    Every worker and every restart computes the same key, so sessions stay valid, and nothing is
+    read or written at import time (DB work during import once blocked gunicorn from opening its
+    port during rolling deploys). If the database password is rotated, users sign in once more.
+    A SECRET_KEY environment variable, when present, always takes priority."""
+    if not _F7_NEEDS_PERSISTED_SECRET:
+        return
+    db_url = os.environ.get('DATABASE_URL', '')
+    if not db_url or db_url.startswith('sqlite'):
+        return  # local development: keep the default
+    import hashlib as _hl
+    derived = _hl.sha256(b'therasocial-flask-secret-key-v1|' + db_url.encode('utf-8')).hexdigest()
+    app.config['SECRET_KEY'] = derived
+    app.secret_key = derived
+    print("[F7] SECRET_KEY not set in the environment - using a key derived from DATABASE_URL.")
+
+
+_f7_derive_secret_key()
 migrate = Migrate(app, db, render_as_batch=True)  # render_as_batch for SQLite
 
 # CHANGE 1: Enhanced CORS with explicit origins and security headers
@@ -2040,7 +2230,11 @@ def add_cache_headers(response):
         if (request.path == '/'
                 or request.path.endswith('.html')
                 or 'text/html' in ctype):
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            # A94 audit 1: no-transform tells Cloudflare (and any proxy) not to rewrite the page.
+            # Cloudflare's Email Obfuscation and Rocket Loader inject their own <script> tags,
+            # which would not carry this request's CSP nonce and would be blocked by the strict
+            # policy (support-page addresses would show as "[email protected]").
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, no-transform'
     return response
 
 # Security headers middleware (Ethics Doc: Privacy and Security by Design)
@@ -2057,8 +2251,982 @@ def add_security_headers(response):
     # Content Security Policy
     # PL406: Added cdn.jsdelivr.net to script-src to allow Chart.js library for progress charts
     # LINK FIX: Added cdn.jsdelivr.net to connect-src for source maps
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net"
+    # A93 (CSP hardening, additive directives only): object-src 'none' (no plugins/embeds;
+    # nothing in the app uses <object>/<embed>), base-uri 'self' (blocks <base> hijacking of
+    # relative URLs), frame-ancestors 'self' (CSP twin of the X-Frame-Options header above).
+    # connect-src no longer lists api.anthropic.com: the browser never calls it (the AI calls
+    # are server-side in _call_anthropic_api).
+    # A94: STRICT policy. script-src is now nonce-based with 'strict-dynamic' (no 'unsafe-inline',
+    # no 'unsafe-eval'); the page's own <script> tags get the per-request nonce in
+    # _a94_nonce_html. All other directives are unchanged from A93. See the A94 block below.
+    # A94 audit 1: if the nonce could not be added to an HTML page, send the A93 policy for that
+    # one response (logged) instead of a strict policy that would block every script on it.
+    if _a94_nonce_html(response):
+        response.headers['Content-Security-Policy'] = _a94_csp_header()
+    else:
+        response.headers['Content-Security-Policy'] = _A94_FALLBACK_CSP
     return response
+
+# =====================
+# A94: STRICT CONTENT SECURITY POLICY (nonce + 'strict-dynamic', no 'unsafe-inline')
+# =====================
+# Additive. No page markup or existing JS is rewritten.
+#   1. Every request gets a fresh random nonce (_a94_nonce). The CSP header allows ONLY scripts
+#      that carry it (plus scripts those scripts load, via 'strict-dynamic'). 'unsafe-inline'
+#      and 'unsafe-eval' are gone, so injected <script> tags and injected inline event
+#      handlers (onclick=..., onerror=...) are refused by the browser.
+#   2. _a94_nonce_html adds nonce="..." to the <script> tags in HTML the server itself sends
+#      (templates and the few pages built in this file). User data in those pages is already
+#      HTML-escaped, so this only ever marks the app's own script tags.
+#   3. The pages still contain ~300 inline handlers (onclick="showView('home')"). A strict
+#      policy blocks those, so a small bridge script (embedded inline at the top of each page) turns each one
+#      into an ordinary JS handler (element.onclick = function), which CSP allows. It will ONLY
+#      run handler code that exists in the app's own source files: at startup
+#      _a94_build_handler_table() scans templates/*.html, static/js/*.js and this file, and
+#      precompiles every inline handler it finds, including the ones built at runtime from
+#      templates (onclick="submitComment(${post.id})": the ${...} slots may only receive a
+#      number, a quoted-string value or a plain name, never new code). Handler text that is
+#      not in the source is not executed and is logged to the console as "[TS-CSP] blocked".
+#      A last-resort path accepts only "appFunction(literal, ...)" calls to functions the
+#      app itself defined (never browser built-ins such as fetch or eval).
+#   The table is rebuilt from the deployed files on every start, so future pages and JS
+#   files are covered without editing this block.
+import html as _a94_html
+import hashlib as _a94_hashlib
+import json as _a94_json
+from flask import g as _a94_g
+
+_A94_JS_PUNCT3 = ('===', '!==', '...', '**=', '<<=', '>>=', '>>>', '&&=', '||=', '??=')
+_A94_JS_PUNCT2 = ('==', '!=', '<=', '>=', '=>', '&&', '||', '??', '?.', '++', '--', '+=', '-=',
+                  '*=', '/=', '%=', '&=', '|=', '^=', '<<', '>>', '**')
+_A94_REGEX_AFTER_WORDS = {'return', 'typeof', 'case', 'in', 'of', 'new', 'delete', 'void',
+                          'throw', 'else', 'do', 'instanceof', 'yield', 'await'}
+_A94_ATTR_RE = re.compile(r'(?<=\s)on([a-z]{3,24})\s*=\s*(["\'])')
+
+
+def _a94_cook_js_string(raw):
+    """Decode the escape sequences of a JS string literal body."""
+    out = []
+    i, n = 0, len(raw)
+    simple = {'n': '\n', 't': '\t', 'r': '\r', 'b': '\b', 'f': '\f', 'v': '\v', '0': '\0'}
+    while i < n:
+        c = raw[i]
+        if c != '\\' or i + 1 >= n:
+            out.append(c)
+            i += 1
+            continue
+        d = raw[i + 1]
+        if d in simple and not (d == '0' and i + 2 < n and raw[i + 2].isdigit()):
+            out.append(simple[d])
+            i += 2
+        elif d == 'x' and re.match(r'[0-9a-fA-F]{2}', raw[i + 2:i + 4]):
+            out.append(chr(int(raw[i + 2:i + 4], 16)))
+            i += 4
+        elif d == 'u' and raw[i + 2:i + 3] == '{':
+            j = raw.find('}', i + 3)
+            try:
+                out.append(chr(int(raw[i + 3:j], 16)))
+                i = j + 1
+            except Exception:
+                out.append('u')
+                i += 2
+        elif d == 'u' and re.match(r'[0-9a-fA-F]{4}', raw[i + 2:i + 6]):
+            out.append(chr(int(raw[i + 2:i + 6], 16)))
+            i += 6
+        elif d == '\r':
+            i += 3 if raw[i + 2:i + 3] == '\n' else 2
+        elif d in '\n\u2028\u2029':
+            i += 2
+        else:
+            out.append(d)
+            i += 2
+    return ''.join(out)
+
+
+def _a94_skip_regex(src, i):
+    """src[i] == '/' starting a regex literal; return the index after it (flags included)."""
+    n = len(src)
+    j = i + 1
+    in_class = False
+    while j < n:
+        c = src[j]
+        if c == '\\':
+            j += 2
+            continue
+        if c == '\n':
+            return j  # not a regex after all; bail out safely
+        if in_class:
+            if c == ']':
+                in_class = False
+        elif c == '[':
+            in_class = True
+        elif c == '/':
+            j += 1
+            while j < n and (src[j].isalnum() or src[j] == '_'):
+                j += 1
+            return j
+        j += 1
+    return n
+
+
+def _a94_lex(src, i=0, stop_on_brace=False):
+    """Small JS tokenizer. Returns (tokens, end). Tokens are (kind, value, start, end) where
+    kind is 'str' (value = list of parts: cooked text or ('hole', source)), 'word', 'num',
+    'punc' or 're'. With stop_on_brace it stops at the '}' that closes a ${...} slot."""
+    toks = []
+    n = len(src)
+    depth = 0
+
+    def regex_ok():
+        if not toks:
+            return True
+        k, v = toks[-1][0], toks[-1][1]
+        if k == 'punc':
+            return v not in (')', ']', '}', '++', '--')
+        if k == 'word':
+            return v in _A94_REGEX_AFTER_WORDS
+        return False
+
+    while i < n:
+        c = src[i]
+        if c in ' \t\r\n\u00a0\ufeff\u2028\u2029':
+            i += 1
+            continue
+        if src.startswith('//', i):
+            j = src.find('\n', i)
+            i = n if j < 0 else j
+            continue
+        if src.startswith('/*', i):
+            j = src.find('*/', i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        if src.startswith('<!--', i):  # HTML comment inside a script block
+            j = src.find('-->', i + 4)
+            i = n if j < 0 else j + 3
+            continue
+        if c in '\'"':
+            j = i + 1
+            while j < n and src[j] != c and src[j] != '\n':
+                j += 2 if src[j] == '\\' else 1
+            toks.append(('str', [_a94_cook_js_string(src[i + 1:j])], i, j + 1))
+            i = j + 1
+            continue
+        if c == '`':
+            parts = []
+            j = i + 1
+            buf_start = j
+            while j < n and src[j] != '`':
+                if src[j] == '\\':
+                    j += 2
+                    continue
+                if src.startswith('${', j):
+                    parts.append(_a94_cook_js_string(src[buf_start:j]))
+                    _t, end = _a94_lex(src, j + 2, stop_on_brace=True)
+                    parts.append(('hole', src[j + 2:end]))
+                    j = end + 1
+                    buf_start = j
+                    continue
+                j += 1
+            parts.append(_a94_cook_js_string(src[buf_start:j]))
+            toks.append(('str', parts, i, j + 1))
+            i = j + 1
+            continue
+        if c == '/' and regex_ok():
+            j = _a94_skip_regex(src, i)
+            toks.append(('re', src[i:j], i, j))
+            i = j
+            continue
+        if c.isalpha() or c in '_$' or ord(c) > 127:
+            j = i + 1
+            while j < n and (src[j].isalnum() or src[j] in '_$' or ord(src[j]) > 127):
+                j += 1
+            toks.append(('word', src[i:j], i, j))
+            i = j
+            continue
+        if c.isdigit() or (c == '.' and i + 1 < n and src[i + 1].isdigit()):
+            j = i + 1
+            while j < n and (src[j].isalnum() or src[j] in '._'):
+                j += 1
+            toks.append(('num', src[i:j], i, j))
+            i = j
+            continue
+        p = src[i:i + 4] if src.startswith('>>>=', i) else None
+        if not p:
+            p = next((x for x in _A94_JS_PUNCT3 if src.startswith(x, i)), None)
+        if not p:
+            p = next((x for x in _A94_JS_PUNCT2 if src.startswith(x, i)), None)
+        if not p:
+            p = c
+        if p in ('(', '[', '{'):
+            depth += 1
+        elif p in (')', ']', '}'):
+            if p == '}' and stop_on_brace and depth == 0:
+                return toks, i
+            depth -= 1
+        toks.append(('punc', p, i, i + len(p)))
+        i += len(p)
+    return toks, n
+
+
+_A94_OPERAND_STOP = {';', ',', '?', ':', '=', '&&', '||', '??', '===', '!==', '==', '!=',
+                     '=>', '+=', '-=', '*=', '/=', '||=', '&&=', '??=', '<', '>', '<=', '>='}
+
+
+def _a94_string_chains(src, toks):
+    """Group 'str' tokens joined by '+' into chains of parts (text / ('hole', source))."""
+    chains = []
+    used = set()
+    n = len(toks)
+    for s in range(n):
+        if toks[s][0] != 'str' or s in used:
+            continue
+        parts = list(toks[s][1])
+        used.add(s)
+        k = s + 1
+        while k < n and toks[k][0] == 'punc' and toks[k][1] == '+':
+            # operand: tokens up to the next depth-0 '+', or a terminator
+            a = k + 1
+            depth = 0
+            b = a
+            while b < n:
+                kind, v = toks[b][0], toks[b][1]
+                if kind == 'punc':
+                    if v in ('(', '[', '{'):
+                        depth += 1
+                    elif v in (')', ']', '}'):
+                        if depth == 0:
+                            break
+                        depth -= 1
+                    elif depth == 0 and (v == '+' or v in _A94_OPERAND_STOP):
+                        break
+                b += 1
+            if b == a:
+                break
+            if b == a + 1 and toks[a][0] == 'str':
+                parts.extend(toks[a][1])
+                used.add(a)
+            else:
+                parts.append(('hole', src[toks[a][2]:toks[b - 1][3]]))
+            k = b
+            if not (k < n and toks[k][0] == 'punc' and toks[k][1] == '+'):
+                break
+        chains.append(parts)
+    return chains
+
+
+def _a94_attrs_from_parts(parts):
+    """Find on<event>="..." attributes inside a chain. Returns lists of parts per value."""
+    found = []
+    for pi, p in enumerate(parts):
+        if not isinstance(p, str):
+            continue
+        for m in _A94_ATTR_RE.finditer(p):
+            q = m.group(2)
+            val = []
+            cur = p[m.end():]
+            idx = pi
+            closed = False
+            while True:
+                if isinstance(cur, str):
+                    e = cur.find(q)
+                    if e >= 0:
+                        val.append(cur[:e])
+                        closed = True
+                        break
+                    val.append(cur)
+                else:
+                    val.append(cur)
+                idx += 1
+                if idx >= len(parts):
+                    break
+                cur = parts[idx]
+            if closed:
+                found.append(val)
+    return found
+
+
+def _a94_rx_escape(text):
+    """Escape literal text for a JS RegExp source (no 'u' flag)."""
+    out = []
+    for ch in text:
+        if ch in '\\^$.*+?()[]{}|/':
+            out.append('\\' + ch)
+        elif ch == '\n':
+            out.append('\\n')
+        elif ch == '\r':
+            out.append('\\r')
+        elif ch == '\t':
+            out.append('\\t')
+        elif ch in '\u2028\u2029':
+            out.append('\\u%04x' % ord(ch))
+        else:
+            out.append(ch)
+    return ''.join(out)
+
+
+def _a94_classify_template(val_parts):
+    """Turn a handler value with ${...} slots into (regex_source, js_code) or None."""
+    # Merge text, html-unescape it (the browser decodes entities in attribute values).
+    items = []
+    for p in val_parts:
+        if isinstance(p, str):
+            t = _a94_html.unescape(p)
+            if items and isinstance(items[-1], str):
+                items[-1] += t
+            else:
+                items.append(t)
+        else:
+            items.append(p)
+    holes = [x for x in items if not isinstance(x, str)]
+    if not holes:
+        return None
+    # Walk the handler code to know, for each slot, whether it sits inside a string literal.
+    code_out = []
+    rx = ['^']
+    state = None  # None or the quote char of the JS string we are inside
+    esc = False
+    hk = 0
+    plain = []  # code text emitted so far without slot replacements (for context checks)
+    for pos, it in enumerate(items):
+        if isinstance(it, str):
+            for ch in it:
+                if state:
+                    if esc:
+                        esc = False
+                    elif ch == '\\':
+                        esc = True
+                    elif ch == state:
+                        state = None
+                elif ch in '\'"`':
+                    state = ch
+            code_out.append(it)
+            plain.append(it)
+            rx.append(_a94_rx_escape(it))
+            continue
+        # a ${...} slot
+        before = ''.join(plain).rstrip()
+        prev = before[-1:] if before else ''
+        nxt_text = ''
+        if pos + 1 < len(items) and isinstance(items[pos + 1], str):
+            nxt_text = items[pos + 1].lstrip()
+        nxt = nxt_text[:1]
+        ref = '__h[%d]' % hk
+        if state in ('\'', '"'):
+            rx.append('((?:[^%s\\\\\\n]|\\\\[\\s\\S])*)' % ('\'' if state == '\'' else '"'))
+            code_out.append('%s+__u(%s)+%s' % (state, ref, state))
+        elif state == '`':
+            rx.append('((?:[^`\\\\$]|\\\\[\\s\\S])*)')
+            code_out.append('${__u(%s)}' % ref)
+        elif prev == '.':
+            rx.append('([A-Za-z_$][\\w$]*)')
+            joined = ''.join(code_out).rstrip()
+            code_out = [joined[:-1], '[__p(%s)]' % ref]
+        elif nxt == '(':
+            if prev and (prev.isalnum() or prev in '_$'):
+                return None
+            rx.append('([A-Za-z_$][\\w$]*)')
+            code_out.append('__f(%s)' % ref)
+        elif prev in ('', ';', '{', '}') and nxt in ('', ';', '}'):
+            rx.append('([\\s\\S]*?)')
+            code_out.append('__c(this,event,%s)' % ref)
+        else:
+            if (prev and (prev.isalnum() or prev in '_$')) or (nxt and (nxt.isalnum() or nxt in '_$')):
+                return None
+            rx.append('(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[eE][+-]?\\d+)?|true|false|null|undefined|NaN)')
+            code_out.append('__v(%s)' % ref)
+        plain.append('0')
+        hk += 1
+    if state:
+        return None
+    rx.append('$')
+    return ''.join(rx), ''.join(code_out)
+
+
+def _a94_balanced(code):
+    """Cheap sanity check so one mis-read handler can never break the whole generated file."""
+    try:
+        toks, end = _a94_lex(code)
+    except Exception:
+        return False
+    depth = []
+    pairs = {')': '(', ']': '[', '}': '{'}
+    for t in toks:
+        if t[0] == 'punc':
+            if t[1] in '([{':
+                depth.append(t[1])
+            elif t[1] in pairs:
+                if not depth or depth.pop() != pairs[t[1]]:
+                    return False
+    if depth:
+        return False
+    for t in toks:
+        if t[0] == 'str':
+            q = code[t[2]:t[2] + 1]
+            if t[3] > len(code) or code[t[3] - 1:t[3]] != q or t[3] - t[2] < 2:
+                return False
+    return '</script' not in code.lower()
+
+
+def _a94_collect(text, kind, static_set, tpl_list):
+    if kind in ('html', 'py'):
+        markup = text
+        if kind == 'html':
+            scripts = re.findall(r'<script\b([^>]*)>(.*?)</script\s*>', text, re.S | re.I)
+            for attrs, body in scripts:
+                if 'src=' not in attrs:
+                    _a94_collect(body, 'js', static_set, tpl_list)
+            markup = re.sub(r'<script\b[^>]*>.*?</script\s*>', ' ', text, flags=re.S | re.I)
+            markup = re.sub(r'<style\b[^>]*>.*?</style\s*>', ' ', markup, flags=re.S | re.I)
+        for m in re.finditer(r'(?<=\s)on([a-z]{3,24})\s*=\s*(?:"([^"]*)"|\'([^\']*)\')', markup):
+            v = m.group(2) if m.group(2) is not None else m.group(3)
+            if kind == 'py' and ('{' in v or '\\' in v):
+                continue
+            if kind == 'html' and ('{{' in v or '{%' in v):
+                continue
+            static_set.add(_a94_html.unescape(v))
+        return
+    # JS source
+    try:
+        toks, _end = _a94_lex(text)
+    except Exception:
+        return
+    for parts in _a94_string_chains(text, toks):
+        for val in _a94_attrs_from_parts(parts):
+            if all(isinstance(x, str) for x in val):
+                static_set.add(_a94_html.unescape(''.join(val)))
+            else:
+                tpl_list.append(val)
+    # Template-literal slots can themselves contain markup with handlers (nested templates).
+    for t in toks:
+        if t[0] == 'str':
+            for p in t[1]:
+                if not isinstance(p, str) and ('on' in p[1]) and ('`' in p[1] or "'" in p[1]):
+                    _a94_collect(p[1], 'js', static_set, tpl_list)
+
+
+def _a94_build_handler_table(paths):
+    static_set = set()
+    tpl_raw = []
+    for path in paths:
+        try:
+            with open(path, encoding='utf-8', errors='replace') as fh:
+                text = fh.read()
+        except Exception:
+            continue
+        kind = 'py' if path.endswith('.py') else ('js' if path.endswith('.js') else 'html')
+        try:
+            _a94_collect(text, kind, static_set, tpl_raw)
+        except Exception as e:  # never let one odd file stop the app
+            try:
+                logger.warning(f"[A94 CSP] could not scan {path}: {e}")
+            except Exception:
+                pass
+    statics = []
+    for code in sorted(static_set):
+        if code.strip() and _a94_balanced(code):
+            statics.append(code)
+    tpls = {}
+    for val in tpl_raw:
+        res = _a94_classify_template(val)
+        if not res:
+            continue
+        rx, code = res
+        if rx in tpls or not _a94_balanced(code):
+            continue
+        tpls[rx] = code
+    # most specific (longest literal text) first
+    order = sorted(tpls.items(), key=lambda kv: -len(re.sub(r'\([^)]*\)', '', kv[0])))
+    # F7 (fault isolation): the table is split into small, independent script files. One entry
+    # that the generator mis-read (e.g. after a future template change) can then only disable
+    # the handlers in its own chunk, never every button on the site. Chunks load in order, so
+    # template matching priority is unchanged.
+    chunk_size = 25
+    chunks = []
+    head = ('/* TheraSocial A94: inline handlers precompiled from the app source. Generated. */\n'
+            '(function(){var __tsR=window.__tsCspRegister;if(!__tsR)return;\n')
+    for i in range(0, len(statics), chunk_size):
+        part = statics[i:i + chunk_size]
+        body = '__tsR.s({\n' + ',\n'.join('%s:function(event){%s\n}' % (_a94_json.dumps(c), c) for c in part) + '\n});'
+        chunks.append(head + body + '\n})();')
+    for i in range(0, len(order), chunk_size):
+        part = order[i:i + chunk_size]
+        body = '__tsR.t([\n' + ',\n'.join('[%s,function(event,__h,__u,__f,__p,__v,__c){%s\n}]' % (_a94_json.dumps(rx), code)
+                                           for rx, code in part) + '\n]);'
+        chunks.append(head + body + '\n})();')
+    chunks = [c.replace('\u2028', '\\u2028').replace('\u2029', '\\u2029') for c in chunks]
+    return chunks, len(statics), len(order)
+
+
+_A94_CORE_JS = r"""/* TheraSocial A94 strict-CSP handler bridge. Runs first on every page. */
+(function () {
+  'use strict';
+  if (window.__tsCspRegister) return;
+  var BASE = Object.create(null);
+  try { Object.getOwnPropertyNames(window).forEach(function (k) { BASE[k] = 1; }); } catch (_) {}
+  var EXACT = Object.create(null), TPL = [], CACHE = new Map(), WARNED = Object.create(null);
+  var stats = { applied: 0, blocked: [] };
+  window.__tsCspStats = stats;
+  var EVENTS = ['click','dblclick','change','input','submit','reset','keyup','keydown','keypress',
+    'focus','blur','focusin','focusout','mouseover','mouseout','mouseenter','mouseleave','mousedown',
+    'mouseup','mousemove','touchstart','touchend','touchmove','pointerdown','pointerup','pointerover',
+    'pointerout','contextmenu','wheel','scroll','load','error','abort','select','toggle','paste',
+    'copy','cut','drag','dragstart','dragend','dragover','dragenter','dragleave','drop','play',
+    'pause','ended','animationend','transitionend','invalid','search','beforeinput','loadeddata'];
+  var ATTRS = EVENTS.map(function (e) { return 'on' + e; });
+  var SEL = ATTRS.map(function (a) { return '[' + a + ']'; }).join(',');
+  var IDENT = /^[A-Za-z_$][\w$]*$/;
+  var NATIVE = /\{\s*\[native code\]\s*\}\s*$/;
+  function isNative(f) { try { return NATIVE.test(Function.prototype.toString.call(f)); } catch (_) { return true; } }
+  function appGlobal(name) {
+    if (typeof name !== 'string' || !IDENT.test(name) || BASE[name]) return undefined;
+    try { return window[name]; } catch (_) { return undefined; }
+  }
+  function U(s) {  // decode JS string escapes in a captured value (data only, never code)
+    return String(s).replace(/\\(u\{[0-9a-fA-F]+\}|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|[\s\S])/g, function (m, e) {
+      if (e[0] === 'u' && e[1] === '{') return String.fromCodePoint(parseInt(e.slice(2, -1), 16));
+      if (e[0] === 'u' && e.length === 5) return String.fromCharCode(parseInt(e.slice(1), 16));
+      if (e[0] === 'x' && e.length === 3) return String.fromCharCode(parseInt(e.slice(1), 16));
+      return ({ n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v', '0': '\0' })[e] || e;
+    });
+  }
+  function F(name) {
+    var v = appGlobal(name);
+    if (typeof v === 'function' && !isNative(v)) return v;
+    throw new Error('[TS-CSP] not an app function: ' + name);
+  }
+  function P(name) {
+    if (!IDENT.test(name) || /^__/.test(name) || name === 'constructor' || name === 'prototype') {
+      throw new Error('[TS-CSP] property not allowed: ' + name);
+    }
+    return name;
+  }
+  function V(s) {
+    if (s === 'true') return true; if (s === 'false') return false; if (s === 'null') return null;
+    if (s === 'undefined') return undefined; if (s === 'NaN') return NaN; return Number(s);
+  }
+  // Last-resort mini language: "fn(1, 'a', this.value); event.stopPropagation(); return false".
+  function parseSimple(code) {
+    var re = /\s*(?:([A-Za-z_$][\w$]*)|(-?\d+(?:\.\d+)?)|'((?:[^'\\\n]|\\[\s\S])*)'|"((?:[^"\\\n]|\\[\s\S])*)"|([().,;]))/y;
+    var toks = [], m, i = 0;
+    code = String(code).replace(/\s+$/, '');
+    while (i < code.length) {
+      re.lastIndex = i; m = re.exec(code); if (!m) return null; i = re.lastIndex;
+      if (m[1] !== undefined) toks.push({ t: 'id', v: m[1] });
+      else if (m[2] !== undefined) toks.push({ t: 'lit', v: Number(m[2]) });
+      else if (m[3] !== undefined) toks.push({ t: 'lit', v: U(m[3]) });
+      else if (m[4] !== undefined) toks.push({ t: 'lit', v: U(m[4]) });
+      else toks.push({ t: 'p', v: m[5] });
+    }
+    var k = 0, prog = [];
+    function peek(v) { return toks[k] && toks[k].t === 'p' && toks[k].v === v; }
+    function arg() {
+      var t = toks[k++]; if (!t) return null;
+      if (t.t === 'lit') return { lit: t.v };
+      if (t.t !== 'id') return null;
+      if (t.v === 'true' || t.v === 'false' || t.v === 'null' || t.v === 'undefined') return { lit: V(t.v) };
+      if (t.v === 'event') return { ev: 1 };
+      if (t.v === 'this') {
+        if (peek('.')) { k++; var p = toks[k++]; if (!p || (p.v !== 'value' && p.v !== 'checked')) return null; return { self: p.v }; }
+        return { self: '' };
+      }
+      return null;
+    }
+    while (k < toks.length) {
+      if (peek(';')) { k++; continue; }
+      var t = toks[k];
+      if (t.t !== 'id') return null;
+      if (t.v === 'return') { k++; var r = toks[k]; if (r && r.t === 'id' && (r.v === 'false' || r.v === 'true')) { k++; prog.push({ ret: r.v === 'true' }); continue; } prog.push({ ret: undefined }); continue; }
+      var path = [t.v]; k++;
+      while (peek('.')) { k++; var n = toks[k++]; if (!n || n.t !== 'id') return null; path.push(n.v); }
+      if (!peek('(')) return null; k++;
+      var args = [];
+      if (!peek(')')) { for (;;) { var a = arg(); if (!a) return null; args.push(a); if (peek(',')) { k++; continue; } break; } }
+      if (!peek(')')) return null; k++;
+      if (path[0] === 'event') { if (path.length !== 2 || (path[1] !== 'stopPropagation' && path[1] !== 'preventDefault') || args.length) return null; }
+      else { for (var j = 1; j < path.length; j++) { if (/^__/.test(path[j]) || path[j] === 'constructor' || path[j] === 'prototype') return null; } }
+      prog.push({ call: path, args: args });
+      if (k < toks.length && !peek(';')) return null;
+    }
+    return prog.length ? prog : null;
+  }
+  function runSimple(prog, el, ev) {
+    for (var i = 0; i < prog.length; i++) {
+      var s = prog[i];
+      if ('ret' in s) return s.ret;
+      if (s.call[0] === 'event') { if (ev) ev[s.call[1]](); continue; }
+      var obj = appGlobal(s.call[0]), owner = window;
+      if (obj == null || (typeof obj === 'function' && isNative(obj))) throw new Error('[TS-CSP] not an app global: ' + s.call[0]);
+      for (var j = 1; j < s.call.length; j++) { owner = obj; obj = obj[s.call[j]]; if (obj == null) throw new Error('[TS-CSP] missing: ' + s.call.join('.')); }
+      if (typeof obj !== 'function' || isNative(obj)) throw new Error('[TS-CSP] not an app function: ' + s.call.join('.'));
+      var args = s.args.map(function (a) { return 'lit' in a ? a.lit : a.ev ? ev : a.self ? el[a.self] : el; });
+      obj.apply(owner === window ? undefined : owner, args);
+    }
+  }
+  function C(el, ev, code) {
+    var fn = lookup(code);
+    if (!fn) { warn(code); return; }
+    return fn.call(el, ev);
+  }
+  function lookup(code) {
+    if (CACHE.has(code)) return CACHE.get(code);
+    var out = null, f = EXACT[code];
+    if (f) out = f;
+    if (!out) {
+      for (var i = 0; i < TPL.length; i++) {
+        var m = TPL[i][0].exec(code);
+        if (m) { var g = TPL[i][1], caps = m.slice(1); out = (function (g, caps) { return function (ev) { return g.call(this, ev, caps, U, F, P, V, C); }; })(g, caps); break; }
+      }
+    }
+    if (!out) { var prog = parseSimple(code); if (prog) out = function (ev) { return runSimple(prog, this, ev); }; }
+    if (CACHE.size > 4000) CACHE.clear();  // handlers embed ids, so keep the cache bounded
+    CACHE.set(code, out);
+    return out;
+  }
+  function warn(code) {
+    if (WARNED[code]) return; WARNED[code] = 1; stats.blocked.push(code);
+    try { console.warn('[TS-CSP] blocked inline handler that is not in the app source:', code); } catch (_) {}
+    // F7: tell the server, so a button broken by a future change shows up in the server log.
+    // Quoted text and numbers are stripped first (they can hold names or ids).
+    try {
+      var shape = String(code).replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/g, "''").replace(/\d+/g, '0').slice(0, 200);
+      if (navigator.sendBeacon) navigator.sendBeacon('/ts-csp/report', new Blob([JSON.stringify({h: shape, p: location.pathname})], {type: 'application/json'}));
+    } catch (_) {}
+  }
+  function applyAttr(el, name) {
+    var code = el.getAttribute(name);
+    if (code === null) { try { el[name] = null; } catch (_) {} return; }
+    var fn = lookup(code);
+    if (!fn) { warn(code); return; }
+    el[name] = function (ev) { return fn.call(this, ev); };
+    stats.applied++;
+  }
+  function applyEl(el) {
+    var at = el.attributes;
+    // only real event-handler attributes (an attribute such as "onboarding-step" is not one)
+    for (var i = 0; i < at.length; i++) { var n = at[i].name; if (n.length > 2 && n[0] === 'o' && n[1] === 'n' && (n in el)) applyAttr(el, n); }
+  }
+  function scan(root) {
+    if (!root || root.nodeType !== 1) return;
+    applyEl(root);
+    var list = root.querySelectorAll(SEL);
+    for (var i = 0; i < list.length; i++) applyEl(list[i]);
+  }
+  window.__tsCspRegister = {
+    s: function (map) { for (var k in map) EXACT[k] = map[k]; CACHE.clear(); rescan(); },
+    t: function (list) { list.forEach(function (x) { try { TPL.push([new RegExp(x[0]), x[1]]); } catch (_) {} }); CACHE.clear(); rescan(); }
+  };
+  function rescan() { if (document.documentElement) scan(document.documentElement); }
+  var mo = new MutationObserver(function (recs) {
+    for (var i = 0; i < recs.length; i++) {
+      var r = recs[i];
+      if (r.type === 'attributes') applyAttr(r.target, r.attributeName);
+      else for (var j = 0; j < r.addedNodes.length; j++) scan(r.addedNodes[j]);
+    }
+  });
+  mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ATTRS });
+  document.addEventListener('DOMContentLoaded', rescan);
+  // F7: report any CSP violation (directive + host only) so something a future change breaks
+  // under the strict policy - a javascript: link, a new external API, an un-nonced script -
+  // shows up in the server log instead of failing silently in users' browsers.
+  var VREP = Object.create(null);
+  document.addEventListener('securitypolicyviolation', function (e) {
+    try {
+      var host = '';
+      try { host = e.blockedURI && /^https?:/.test(e.blockedURI) ? new URL(e.blockedURI).host : String(e.blockedURI || ''); } catch (_) { host = 'unparsed'; }
+      var key = (e.effectiveDirective || e.violatedDirective || '') + '|' + host.slice(0, 80);
+      if (VREP[key]) return; VREP[key] = 1;
+      if (navigator.sendBeacon) navigator.sendBeacon('/ts-csp/report', new Blob([JSON.stringify({v: key, p: location.pathname})], {type: 'application/json'}));
+    } catch (_) {}
+  });
+})();
+"""
+
+_a94_assets_cache = {}
+_a94_assets_lock = threading.Lock()
+
+
+def _a94_source_paths():
+    paths = []
+    try:
+        tdir = os.path.join(app.root_path, app.template_folder or 'templates')
+        for root, _dirs, files in os.walk(tdir):
+            paths += [os.path.join(root, f) for f in files if f.endswith('.html')]
+    except Exception:
+        pass
+    try:
+        jdir = os.path.join(app.static_folder or os.path.join(app.root_path, 'static'), 'js')
+        for root, _dirs, files in os.walk(jdir):
+            paths += [os.path.join(root, f) for f in files if f.endswith('.js')]
+    except Exception:
+        pass
+    paths.append(os.path.abspath(__file__))
+    return sorted(set(paths))
+
+
+def _a94_assets():
+    # A94 audit 1: built once under a lock and published in one step. Previously a second
+    # request thread could see a half-filled cache ('core' without 'handlers'), skip the
+    # nonce injection and serve a page whose scripts were all blocked.
+    if _a94_assets_cache:
+        return _a94_assets_cache
+    with _a94_assets_lock:
+        if _a94_assets_cache:
+            return _a94_assets_cache
+        built = {}
+        try:
+            chunks, n_static, n_tpl = _a94_build_handler_table(_a94_source_paths())
+        except Exception as e:
+            chunks, n_static, n_tpl = ['/* A94: handler table unavailable */'], 0, 0
+            try:
+                logger.error(f"[A94 CSP] handler table build failed: {e}")
+            except Exception:
+                pass
+        named = [('core', _A94_CORE_JS)] + [('handlers-%d' % i, c) for i, c in enumerate(chunks)]
+        for name, body in named:
+            ver = _a94_hashlib.sha256(body.encode('utf-8')).hexdigest()[:12]
+            # F7: a chunk that could end the inline <script> early is not embedded (and logged).
+            embeddable = ('</script' not in body.lower()) and ('<!--' not in body)
+            if not embeddable:
+                try:
+                    logger.error(f"[A94 CSP] {name} not embedded: contains </script or <!--")
+                except Exception:
+                    pass
+            built[name] = (body, ver, embeddable)
+        built['_order'] = [n for n, _b in named]  # F7: boot order (core first, then chunks)
+        _a94_assets_cache.update(built)
+        try:
+            logger.info(f"[A94 CSP] handler table: {n_static} exact + {n_tpl} templated handlers")
+        except Exception:
+            pass
+    return _a94_assets_cache
+
+
+@app.route('/ts-csp/<name>.js')
+def a94_csp_asset(name):
+    assets = _a94_assets()
+    if name not in assets or name.startswith('_'):
+        return '', 404
+    body, ver = assets[name][0], assets[name][1]
+    resp = Response(body, mimetype='application/javascript')
+    resp.headers['Cache-Control'] = 'public, max-age=31536000, immutable' if request.args.get('v') == ver else 'no-cache'
+    return resp
+
+
+_a94_reported = set()
+
+
+@app.route('/ts-csp/report', methods=['POST'])
+def a94_csp_report():
+    """F7: the bridge reports an inline handler it could not match (a button that would not
+    work). Logged once per distinct shape per process; values were stripped in the browser."""
+    try:
+        data = request.get_json(silent=True, force=True) or {}
+        _clean = lambda v, n: ''.join(ch if ch.isprintable() else ' ' for ch in str(v))[:n]
+        shape = _clean(data.get('h', ''), 200)
+        violation = _clean(data.get('v', ''), 200)
+        page = _clean(data.get('p', ''), 100)
+        if shape and shape not in _a94_reported and len(_a94_reported) < 300:
+            _a94_reported.add(shape)
+            logger.warning(f"[A94 CSP] blocked inline handler not found in app source (page {page}): {shape}")
+        elif violation and ('v:' + violation) not in _a94_reported and len(_a94_reported) < 300:
+            _a94_reported.add('v:' + violation)
+            logger.warning(f"[A94 CSP] browser blocked something under the security policy (page {page}): {violation}")
+    except Exception:
+        pass
+    return '', 204
+
+
+def _a94_nonce():
+    n = getattr(_a94_g, 'csp_nonce', None)
+    if not n:
+        n = secrets.token_urlsafe(18)
+        _a94_g.csp_nonce = n
+    return n
+
+
+@app.context_processor
+def _a94_template_nonce():
+    # index.html's own CSP <meta> tag uses {{ csp_nonce }} so it matches the header.
+    return {'csp_nonce': _a94_nonce()}
+
+
+_A94_OPEN_RE = re.compile(r'<!--|<script\b', re.I)
+_A94_CLOSE_SCRIPT_RE = re.compile(r'</script\s*>', re.I)
+_A94_HAS_NONCE_RE = re.compile(r'\bnonce\s*=', re.I)
+
+
+def _a94_add_nonces(body, nonce):
+    """Add nonce="..." to every real <script> start tag. Skips HTML comments and never touches
+    script bodies. A94 audit 2: jump-scanner (C-level searches between tags) instead of one
+    lazy regex over the whole page: index.html (1.2 MB) went from ~39 ms to a few ms."""
+    out = []
+    pos = 0
+    n = len(body)
+    while pos < n:
+        m = _A94_OPEN_RE.search(body, pos)
+        if not m:
+            break
+        if m.group(0) == '<!--':
+            end = body.find('-->', m.end())
+            end = n if end < 0 else end + 3
+            out.append(body[pos:end])
+            pos = end
+            continue
+        tag_end = body.find('>', m.end())
+        if tag_end < 0:
+            break
+        attrs = body[m.end():tag_end]
+        out.append(body[pos:m.end()])
+        if not _A94_HAS_NONCE_RE.search(attrs):
+            out.append(' nonce="' + nonce + '"')
+        close = _A94_CLOSE_SCRIPT_RE.search(body, tag_end + 1)
+        end = n if not close else close.end()
+        out.append(body[m.end():end])
+        pos = end
+    out.append(body[pos:])
+    return ''.join(out)
+
+
+def _a94_nonce_html(response):
+    """Mark the server's own <script> tags with this request's nonce and load the handler
+    bridge first thing in <head>. Script bodies and HTML comments are passed through as-is.
+    Returns False only when an HTML page could not be prepared (caller then relaxes the CSP)."""
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' not in ctype:
+            return True
+        # A94 audit 2: an .html file served straight from disk (e.g. Flask's /static route) is
+        # sent as a pass-through file; read it so it gets nonces too. Partial (206), streamed or
+        # already-encoded HTML cannot be rewritten safely, so it gets the relaxed policy.
+        if response.headers.get('Content-Encoding') or response.status_code == 206:
+            return False
+        if response.direct_passthrough:
+            response.direct_passthrough = False
+            response.make_sequence()  # read the (small) file into memory so it can be rewritten
+        if response.is_streamed:
+            return False
+        body = response.get_data(as_text=True)
+        if '<script' not in body.lower() and not re.search(r'\son[a-z]+\s*=', body):
+            return True
+        nonce = _a94_nonce()
+
+        body = _a94_add_nonces(body, nonce)
+        assets = _a94_assets()
+        # F7: the bridge is embedded in the page (one inline script per chunk, each with the
+        # nonce) instead of separate /ts-csp/*.js requests. During a zero-downtime deploy the old
+        # and new instances overlap; a page from one could otherwise load chunks from the other
+        # and get a mismatched handler set. Separate <script> elements keep a faulty chunk isolated.
+        boot = ''.join('<script nonce="%s">%s</script>' % (nonce, assets[n][0])
+                       for n in assets['_order'] if assets[n][2])
+        # A94 audit 1: find the real <head>/<html> tag, never one quoted inside an HTML comment.
+        at = None
+        for tag in ('head', 'html'):
+            for m in re.finditer(r'<!--.*?-->|<' + tag + r'\b[^>]*>', body, re.S | re.I):
+                if not m.group(0).startswith('<!--'):
+                    at = m.end()
+                    break
+            if at is not None:
+                break
+        if at is not None:
+            body = body[:at] + boot + body[at:]
+        else:
+            body = boot + body
+        response.set_data(body)
+        return True
+    except Exception as e:
+        try:
+            logger.error(f"[A94 CSP] nonce injection failed, relaxed CSP for this response: {e}")
+        except Exception:
+            pass
+        return False
+
+
+# The A93 policy, used only for a response whose nonce injection failed (see above).
+_A94_FALLBACK_CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com "
+                     "https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; "
+                     "font-src 'self' https:; connect-src 'self' https://cdn.jsdelivr.net; object-src 'none'; "
+                     "base-uri 'self'; frame-ancestors 'self'")
+
+# Build the handler table at startup (not on the first visitor's request).
+try:
+    _a94_assets()
+except Exception:
+    pass
+
+
+def _a94_csp_header():
+    nonce = _a94_nonce()
+    # 'self' and the CDN hosts are only a fallback for very old browsers: every browser that
+    # understands 'strict-dynamic' ignores them and trusts nonce-carrying scripts only.
+    return ("default-src 'self'; "
+            "script-src 'nonce-" + nonce + "' 'strict-dynamic' 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+            "script-src-attr 'none'; "
+            "style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; "
+            "connect-src 'self' https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; "
+            "frame-ancestors 'self'")
+
+
+
+# =====================
+# A93: CSRF ORIGIN VERIFICATION (covers EVERY state-changing request)
+# =====================
+# The signed-token check (@require_csrf) protects the most sensitive endpoints, and the
+# SameSite=Lax session cookie blocks most cross-site form posts, but ~66 of the ~86
+# POST/PUT/DELETE routes had no explicit CSRF check. This adds the OWASP "verify origin with
+# standard headers" defence to ALL of them in one place, without touching any route:
+#   - A browser always sends Origin (or at least Referer) on a cross-site POST; if it names a
+#     host other than this site, the request is refused with 403 before the route runs.
+#   - Sec-Fetch-Site: cross-site (modern browsers) and Origin: null are refused too.
+#   - Requests with NO Origin/Referer (server-to-server: the Resend webhook, mail providers'
+#     one-click unsubscribe, health checks, curl) are not browser CSRF and are allowed.
+#   - OAuth callbacks are exempt: providers like Apple legitimately POST to them cross-site
+#     (response_mode=form_post), and they are protected by the OAuth state parameter instead.
+_A93_CSRF_EXEMPT_PREFIXES = ('/api/auth/oauth/', '/api/operator/inbound-email')
+_A93_UNSAFE_METHODS = ('POST', 'PUT', 'PATCH', 'DELETE')
+
+
+def _a93_trusted_hosts():
+    from urllib.parse import urlparse
+    hosts = {(request.host or '').lower()}
+    for u in (os.environ.get('APP_URL', 'https://therasocial.org'), 'https://therasocial.org',
+              'https://www.therasocial.org', 'https://socialsocial-72gn.onrender.com'):
+        try:
+            hosts.add(urlparse(u).netloc.lower())
+        except Exception:
+            pass
+    hosts.discard('')
+    return hosts
+
+
+@app.before_request
+def _a93_csrf_origin_check():
+    if request.method not in _A93_UNSAFE_METHODS:
+        return None
+    path = request.path or ''
+    if path.startswith(_A93_CSRF_EXEMPT_PREFIXES):
+        return None
+    from urllib.parse import urlparse
+    origin = request.headers.get('Origin')
+    referer = request.headers.get('Referer')
+    fetch_site = (request.headers.get('Sec-Fetch-Site') or '').lower()
+    blocked = None
+    if fetch_site == 'cross-site':
+        blocked = 'sec-fetch-site=cross-site'
+    elif origin is not None and origin.strip().lower() == 'null':
+        blocked = 'origin=null'
+    else:
+        source = origin or referer
+        if source:
+            try:
+                host = urlparse(source).netloc.lower()
+            except Exception:
+                host = ''
+            if host not in _a93_trusted_hosts():
+                blocked = 'foreign origin ' + (host or '?')
+    if blocked:
+        logger.warning(f"[A93 CSRF] Blocked {request.method} {path}: {blocked}")
+        return jsonify({'error': 'Cross-site request blocked'}), 403
+    return None
 
 # =====================
 # CSRF PROTECTION (FIX 5: Add CSRF token generation and validation)
@@ -2249,12 +3417,33 @@ def check_rate_limit(user_id, max_requests=100, window=60, endpoint=None):
 # B110: Extract real client IP behind reverse proxy (Render, nginx, etc.)
 # X-Forwarded-For format: "client, proxy1, proxy2" — first entry is the real client.
 # Falls back to request.remote_addr if header is absent (direct connection).
+_f7_cf_warned_at = 0.0
+
+
 def _get_client_ip():
-    forwarded = request.headers.get('X-Forwarded-For', '')
-    if forwarded:
-        # First IP in the chain is the original client
-        return forwarded.split(',')[0].strip()
-    return request.remote_addr
+    # F7: the FIRST X-Forwarded-For entry is whatever the client sent, so rate limits keyed on it
+    # could be bypassed by sending a new made-up IP each time. Use the same logic as
+    # security.get_client_ip(): Cloudflare's CF-Connecting-IP when the request really came from a
+    # Cloudflare edge, otherwise the right-most entry (added by the hosting proxy).
+    try:
+        from security import get_client_ip as _sec_client_ip
+        ip = _sec_client_ip()
+        # F7: if Cloudflare's visitor header is present but was not trusted, the connecting
+        # address is outside the Cloudflare ranges in security.py (Cloudflare added a range, or
+        # someone is calling the origin directly with a made-up header). Log it at most hourly so
+        # an outdated list - which would make visitors share rate-limit buckets - gets noticed.
+        cf = (request.headers.get('CF-Connecting-IP') or '').strip()
+        if cf and ip != cf:
+            global _f7_cf_warned_at
+            now = time.time()
+            if now - _f7_cf_warned_at > 3600:
+                _f7_cf_warned_at = now
+                logger.warning("[F7 CLIENT IP] CF-Connecting-IP present but the connecting address is not a "
+                               "known Cloudflare range; check https://www.cloudflare.com/ips/ against security.py")
+        return ip
+    except Exception:
+        forwarded = [p.strip() for p in (request.headers.get('X-Forwarded-For') or '').split(',') if p.strip()]
+        return forwarded[-1] if forwarded else request.remote_addr
 
 
 def rate_limit_endpoint(max_requests=100, window=60, endpoint_name=None):
@@ -2294,6 +3483,29 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('thera_social')
+
+
+# F7 (privacy): mask email addresses in every log line from the app's loggers. 66 log calls
+# included full addresses (send confirmations, cron, support, operator setup); hosting logs
+# are kept and readable by more people than the database. "jane.doe@gmail.com" is logged as
+# "ja***@gmail.com" (enough to debug delivery by domain, not enough to identify someone).
+class _F7RedactEmailsFilter(logging.Filter):
+    _EMAIL_RE = re.compile(r'([A-Za-z0-9._%+-]{1,2})[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})')
+
+    def filter(self, record):
+        try:
+            msg = record.getMessage()
+            red = self._EMAIL_RE.sub(r'\1***@\2', msg)
+            if red != msg:
+                record.msg = red
+                record.args = ()
+        except Exception:
+            pass
+        return True
+
+
+logger.addFilter(_F7RedactEmailsFilter())
+app.logger.addFilter(_F7RedactEmailsFilter())
 
 # Email configuration - using SMTP with Resend.com
 # NOTE: Using standard SMTP library, compatible with Resend
@@ -2890,7 +4102,7 @@ def translate_alert_content(title, content, user_language='en'):
         template = accepted_content_translations.get(user_language, accepted_content_translations['en'])
         translated_content = template.replace('{username}', username)
     
-    logger.info(f"[PJ6003] Translated notification - title: '{title}' -> '{translated_title}', content: '{content}' -> '{translated_content}'")
+    logger.info("[PJ6003] Translated notification")  # F7: notification title/content no longer logged
     
     return translated_title, translated_content
 
@@ -3407,7 +4619,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'why_received': f'You are receiving this because you set up a trigger alert for {watched_username}.',
                 'intro': f"Here is an update about {watched_username}'s recent activity:",
                 'param_line': '{param} has been at low levels for {days} consecutive days ({date_range})',
-                'no_checkin_line': "hasn't checked in for {days} days — it may be worth checking how they are",
+                'no_checkin_line': "hasn't checked in for {days} days. It may be worth checking how they are",
                 'recommendation': 'It may be worth reaching out to check on them.',
                 'send_message': 'Send a message',
                 'view_details': 'View Details',
@@ -3427,7 +4639,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'why_received': f'את/ה מקבל/ת הודעה זו כי הגדרת התראת טריגר עבור {watched_username}.',
                 'intro': f"הנה עדכון על הפעילות האחרונה של {watched_username}:",
                 'param_line': '{param} היה ברמות נמוכות במשך {days} ימים רצופים ({date_range})',
-                'no_checkin_line': 'לא ביצע/ה צ׳ק-אין במשך {days} ימים — כדאי לבדוק איך הם',
+                'no_checkin_line': 'לא ביצע/ה צ׳ק-אין במשך {days} ימים. כדאי לבדוק איך הם',
                 'recommendation': 'אולי כדאי ליצור קשר כדי לבדוק את מצבם.',
                 'send_message': 'שלח/י הודעה',
                 'view_details': 'צפה בפרטים',
@@ -3447,7 +4659,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'why_received': f'تتلقى هذا الإشعار لأنك أعددت تنبيه مراقبة لـ {watched_username}.',
                 'intro': f"إليك تحديث عن النشاط الأخير لـ {watched_username}:",
                 'param_line': '{param} كان عند مستويات منخفضة لمدة {days} أيام متتالية ({date_range})',
-                'no_checkin_line': 'لم يسجل/تسجل الدخول منذ {days} أيام — قد يكون من المفيد التواصل معهم',
+                'no_checkin_line': 'لم يسجل/تسجل الدخول منذ {days} أيام. قد يكون من المفيد التواصل معهم',
                 'recommendation': 'قد يكون من المفيد التواصل للاطمئنان عليهم.',
                 'send_message': 'إرسال رسالة',
                 'view_details': 'عرض التفاصيل',
@@ -3467,7 +4679,7 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'why_received': f'Вы получили это уведомление, потому что настроили триггер оповещения для {watched_username}.',
                 'intro': f"Вот обновление о недавней активности {watched_username}:",
                 'param_line': '{param} был на низком уровне {days} дней подряд ({date_range})',
-                'no_checkin_line': 'не отмечался/отмечалась {days} дней — возможно, стоит проверить как дела',
+                'no_checkin_line': 'не отмечался/отмечалась {days} дней. Возможно, стоит проверить, как дела',
                 'recommendation': 'Возможно, стоит связаться и узнать, как дела.',
                 'send_message': 'Отправить сообщение',
                 'view_details': 'Подробнее',
@@ -3499,7 +4711,11 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
             p_range = (p.get('date_range') or '').strip()
             # T32: Use distinct message for no_checkin alerts
             if p_name == 'no_checkin':
-                line = t.get('no_checkin_line', "hasn't checked in for {days} days — you may want to reach out").replace('{days}', str(p_days))
+                line = t.get('no_checkin_line', "hasn't checked in for {days} days. You may want to reach out").replace('{days}', str(p_days))
+                # A92 audit (pre-existing): the bullet had no subject ("hasn't checked in for 3
+                # days..."); name the person, as the in-app alert already does. Escaped for HTML.
+                from markupsafe import escape as _a92_esc
+                line = str(_a92_esc(watched_username)) + ' ' + line
             else:
                 param_display = t.get(p_name, p_name)
                 if p_range:
@@ -7654,9 +8870,26 @@ def admin_required(f):
             return jsonify({'error': 'Authentication required'}), 401
 
         user = db.session.get(User, session['user_id'])
-        if not user or user.role != 'admin':
+        # F7: a deactivated admin loses access immediately (was only checked at login).
+        if not user or user.role != 'admin' or not getattr(user, 'is_active', True):
             return jsonify({'error': 'Admin privileges required'}), 403
 
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+# F7: system operators and admins only - NOT department operators (scoped professionals).
+# Used for platform-wide actions: verifying professionals, minting operator accounts, and the
+# shared support inbox.
+def system_operator_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        user = db.session.get(User, session['user_id'])
+        if not user or user.role not in ('system_operator', 'admin') or not getattr(user, 'is_active', True):
+            return jsonify({'error': 'System operator privileges required'}), 403
         return f(*args, **kwargs)
 
     return decorated_function
@@ -7672,6 +8905,8 @@ def operator_required(f):
         user = db.session.get(User, session['user_id'])
         if not user:
             return jsonify({'error': 'User not found'}), 401
+        if not getattr(user, 'is_active', True):  # F7: deactivated operators lose access at once
+            return jsonify({'error': 'Operator privileges required'}), 403
 
         # G27: Allow system_operator, admin, AND professionals with OperatorScope (dept operators)
         if user.role in ('system_operator', 'admin'):
@@ -7697,7 +8932,7 @@ def professional_required(f):
             return jsonify({'error': 'Authentication required'}), 401
 
         user = db.session.get(User, session['user_id'])
-        if not user or user.role != 'professional':
+        if not user or user.role != 'professional' or not getattr(user, 'is_active', True):  # F7: is_active
             return jsonify({'error': 'Professional account required'}), 403
 
         return f(*args, **kwargs)
@@ -7712,11 +8947,33 @@ def _is_active_professional_for(professional_user_id, client_user_id):
     Returns the ProfessionalClient row if active, else None."""
     if professional_user_id == client_user_id:
         return None
-    return ProfessionalClient.query.filter_by(
+    pc = ProfessionalClient.query.filter_by(
         professional_id=professional_user_id,
         client_id=client_user_id,
         status='active'
     ).first()
+    if pc is None:
+        return None
+    # F7 (access control): an approval used to grant access for as long as the row said
+    # 'active'. Access is now re-checked on every request and ends as soon as:
+    #   - the account is no longer a professional (role changed),
+    #   - the client turns "Allow Professional Access" off,
+    #   - either side blocks the other.
+    try:
+        prof = db.session.get(User, professional_user_id)
+        client = db.session.get(User, client_user_id)
+        if not prof or not client or prof.role != 'professional' or not getattr(prof, 'is_active', True):
+            return None
+        if not (getattr(client, 'allow_professional_access', False) or False):
+            return None
+        if BlockedUser.query.filter(
+                ((BlockedUser.blocker_id == client_user_id) & (BlockedUser.blocked_id == professional_user_id)) |
+                ((BlockedUser.blocker_id == professional_user_id) & (BlockedUser.blocked_id == client_user_id))).first():
+            return None
+    except Exception as _pc_err:
+        logger.warning(f"[F7 PROFESSIONAL ACCESS] check failed, denying: {_pc_err}")
+        return None
+    return pc
 
 
 # L170: Helper to determine the earliest date a professional can see for a client.
@@ -7833,6 +9090,42 @@ def _safe_back_url():
     return '/'
 
 
+# A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
+# parameters.html, circles.html and support.html).
+_A92_ASSET_VERSION = 'B205'
+
+
+def _a92_soften_dashes_in_html(html):
+    """A92: replace em/en dashes in an HTML page's visible text with natural punctuation.
+    Script, style, comments and tags are passed through untouched."""
+    import re as _re
+    parts = _re.split(r'(<script\b.*?</script>|<style\b.*?</style>|<!--.*?-->|<[^>]+>)',
+                      html, flags=_re.S | _re.I)
+    for i in range(0, len(parts), 2):            # even indexes are text between tags
+        seg = parts[i]
+        if '—' not in seg and '–' not in seg:
+            continue
+        if seg.strip() in ('—', '–'):
+            parts[i] = seg.replace('—', '·').replace('–', '·')
+            continue
+        seg = _re.sub(r'(\d)\s*[–—]\s*(\d)', r'\1-\2', seg)
+        # A92 audit: a dash at the edge of a text node only disappears at a BLOCK boundary
+        # (<p>— x, x —</li>). Next to an inline tag (<a>, <b>, <span>...) it joins two phrases,
+        # so it becomes a comma there instead of silently merging the words.
+        prev_tag = parts[i - 1] if i > 0 else ''
+        next_tag = parts[i + 1] if i + 1 < len(parts) else ''
+        block = r'^</?(p|div|li|ul|ol|h[1-6]|br|section|article|header|footer|td|th|tr|table|body|main|blockquote)\b'
+        lead = ' ' if not _re.match(block, prev_tag, _re.I) else ''
+        trail = ', ' if not _re.match(block, next_tag, _re.I) else ''
+        if _re.match(r'^\s*[—–]', seg):
+            seg = _re.sub(r'^(\s*)[—–]\s*', (r', ' if lead else r'\1'), seg)        # leading dash
+        if _re.search(r'[—–]\s*$', seg):
+            seg = _re.sub(r'\s*[—–](\s*)$', (trail.rstrip() + ' ' if trail else r'\1'), seg)  # trailing
+        seg = _re.sub(r'\s*[—–]\s*', ', ', seg)
+        parts[i] = _re.sub(r',\s*([,.;:!?])', r'\1', seg)
+    return ''.join(parts)
+
+
 def _render_page_with_back(template_name):
     """Render a page template, then force the #backLastPage anchor's href to the safe back URL
     computed above. Works no matter how old the deployed template's own JS is, because the
@@ -7851,6 +9144,16 @@ def _render_page_with_back(template_name):
 
     # Only the anchor carrying id="backLastPage" is touched (not the "Get Started" link).
     html = re.sub(r'<a\b[^>]*id="backLastPage"[^>]*>', _repl, html, count=1)
+    # A92 CACHE-BUST GUARD (additive): the standalone /about and /support templates have fallen
+    # out of ?v lockstep before (about.html sat at B196 while the app was on B199), which serves
+    # a stale cached i18n.js. Pin every /static/js/*.js reference on these two pages to the
+    # current asset version, including any reference that has no ?v at all.
+    html = re.sub(r'(/static/js/[\w.\-]+\.js)\?v=[\w.\-]*', r'\1?v=' + _A92_ASSET_VERSION, html)
+    html = re.sub(r'(src="/static/js/[\w.\-]+\.js)"', r'\1?v=' + _A92_ASSET_VERSION + '"', html)
+    # A92: the long dash reads as machine-written copy. On the static About page, convert it in
+    # visible text only (never inside script/style/comments/tags) to natural punctuation.
+    if template_name == 'about.html':
+        html = _a92_soften_dashes_in_html(html)
     # Visible deploy marker so the live version is easy to confirm via view-source.
     html = html.replace('</body>', '<!-- A43-rev5 back_url=' + back + ' -->\n</body>', 1)
     return html
@@ -8984,7 +10287,7 @@ def save_consent():
         if birth_year:
             try:
                 birth_year = int(birth_year)
-                if 1900 <= birth_year <= 2025:
+                if 1900 <= birth_year <= datetime.utcnow().year:  # F6: was hard-coded 2025
                     user.birth_year = birth_year
             except (ValueError, TypeError):
                 pass  # Ignore invalid birth year
@@ -9006,7 +10309,7 @@ def save_consent():
         # Update consent fields
         consent.email_updates = data.get('email_updates', False)
         consent.privacy_accepted = data.get('privacy_accepted', False)
-        consent.research_data = data.get('research_data', False)
+        consent.research_data = bool(data.get('research_data', False))  # F6: optional, unticked by default
         consent.team_declaration = data.get('team_declaration', False)
         consent.responsible_use = data.get('responsible_use', False)
         consent.waiver_claims = data.get('waiver_claims', False)
@@ -9017,7 +10320,9 @@ def save_consent():
         consent.consent_ip = request.remote_addr
         consent.consent_user_agent = request.user_agent.string[:500] if request.user_agent else None
         consent.marketing_consent = data.get('marketing_consent', False)
-        consent.analytics_consent = data.get('analytics_consent', True)  # Default true for basic analytics
+        # F6 (B205): optional consent defaults to NO when not sent (was True). The sign-up form
+        # also sent "|| true", so analytics was recorded as accepted even when unticked.
+        consent.analytics_consent = bool(data.get('analytics_consent', False))
         consent.third_party_sharing = data.get('third_party_sharing', False)
         consent.updated_at = datetime.utcnow()
 
@@ -9063,7 +10368,9 @@ def delete_account():
             return jsonify({'error': 'User not found'}), 404
 
         # Generate deletion confirmation token (reuse PasswordResetToken model)
-        deletion_token = generate_token()
+        # F7: 'del_' prefix marks the token's purpose. Both kinds share one table, so a deletion
+        # token used to work as a password-reset token and a reset token could confirm deletion.
+        deletion_token = 'del_' + generate_token()
         token_record = PasswordResetToken(
             user_id=user.id,
             token=deletion_token,
@@ -9149,6 +10456,8 @@ def confirm_delete_account():
 
         if not token:
             return jsonify({'error': 'Deletion token required'}), 400
+        if not str(token).startswith('del_'):  # F7: only deletion tokens confirm a deletion
+            return jsonify({'error': 'Invalid or expired deletion token'}), 400
 
         token_record = db.session.execute(
             select(PasswordResetToken).filter_by(token=token, used=False)
@@ -9165,7 +10474,9 @@ def confirm_delete_account():
             return jsonify({'error': 'User not found'}), 404
 
         logger.info(f"Confirming account deletion for user {user.id} ({user.username})")
-        log_audit('account_deleted', 'user', user.id, user.id, {'username': user.username})
+        # F6 (B205): the deletion record no longer stores the username, so the security log kept
+        # after deletion is not linked back to the person (user_id is cleared below as well).
+        log_audit('account_deleted', 'user', user.id, user.id, {})
 
         token_record.used = True
 
@@ -9449,12 +10760,15 @@ PRIVACY_REGIMES = {
 
 # Data retention periods (for transparency)
 DATA_RETENTION_PERIODS = {
-    'wellness_data': {'period': '7 years', 'reason': 'Clinical record standards'},
-    'messages': {'period': '7 years', 'reason': 'Communication record standards'},
-    'profile': {'period': 'Account lifetime + 2 years', 'reason': 'Service provision'},
-    'account': {'period': 'Until deletion request', 'reason': 'Service provision'},
-    'audit_logs': {'period': '7 years', 'reason': 'Legal compliance'},
-    'consent_records': {'period': '7 years', 'reason': 'Consent proof requirements'}
+    # F6 (B205): aligned with what the app actually does. Previously listed "7 years (clinical
+    # record standards)" for diary data and messages, but account deletion removes them at once
+    # and the platform keeps no clinical records.
+    'wellness_data': {'period': 'Until you delete your account', 'reason': 'Service provision'},
+    'messages': {'period': 'Until either person in the conversation deletes their account', 'reason': 'Service provision'},
+    'profile': {'period': 'Until you delete your account', 'reason': 'Service provision'},
+    'account': {'period': 'Until you delete your account', 'reason': 'Service provision'},
+    'audit_logs': {'period': 'Kept as security records; detached from your account when it is deleted', 'reason': 'Security and fraud prevention'},
+    'consent_records': {'period': 'Until you delete your account', 'reason': 'Proof of the choices you made'}
 }
 
 
@@ -9814,8 +11128,19 @@ def get_data_processing_info():
                 'legal_basis': 'Contract performance and consent',
                 'data_categories': ['mood', 'energy', 'sleep quality', 'physical activity', 'anxiety', 'social belonging', 'notes'],
                 'retention': DATA_RETENTION_PERIODS['wellness_data']['period'],
-                'recipients': ['You', 'Users you grant access to via circles'],
+                'recipients': ['You', 'Users you grant access to via circles',
+                               'Professionals you approve (only if you allow professional access)'],
                 'cross_border': False
+            },
+            {
+                # F6 (B205): previously undisclosed recipient.
+                'name': 'AI Weekly Summary',
+                'purpose': 'To write your personal weekly well-being summary when you view it',
+                'legal_basis': 'Consent',
+                'data_categories': ['the last 7 days of diary scores (mood, energy, sleep quality, physical activity, anxiety)', 'diary notes'],
+                'retention': 'Not stored by TheraSocial beyond the summary shown to you',
+                'recipients': ['AI provider (Anthropic), which generates the summary text'],
+                'cross_border': True
             },
             {
                 'name': 'Social Features',
@@ -9832,7 +11157,7 @@ def get_data_processing_info():
                 'legal_basis': 'Consent',
                 'data_categories': ['email', 'notification preferences'],
                 'retention': 'Until consent withdrawn',
-                'recipients': ['Email service provider'],
+                'recipients': ['Email service provider (Resend)'],
                 'cross_border': True,
                 'transfer_safeguards': 'Service provider complies with privacy standards'
             },
@@ -9844,6 +11169,18 @@ def get_data_processing_info():
                 'retention': DATA_RETENTION_PERIODS['audit_logs']['period'],
                 'recipients': ['Security team'],
                 'cross_border': False
+            },
+            {
+                # F6 (B205): service providers that process data on the platform's behalf.
+                'name': 'Hosting and Delivery',
+                'purpose': 'To run the platform and deliver pages to your browser',
+                'legal_basis': 'Contract performance',
+                'data_categories': ['all platform data (stored and processed by the host)', 'session data', 'IP address'],
+                'retention': 'As listed for each data type above',
+                'recipients': ['Render (application hosting and database)',
+                               'Redis session store (when configured)',
+                               'jsDelivr (serves the charting library; receives your IP address)'],
+                'cross_border': True
             }
         ]
         
@@ -9866,7 +11203,7 @@ def get_data_processing_info():
                 'rectification': 'Use profile settings or contact support',
                 'erasure': 'Use Delete Account feature',
                 'portability': 'Use Export Data feature (JSON format)',
-                'restriction': 'Use Restrict Processing feature',
+                'restriction': 'Contact support (see the Support page)',  # F6: there is no in-app button
                 'withdraw_consent': 'Use Privacy Settings'
             }
         }), 200
@@ -9905,7 +11242,7 @@ def rectify_user_data():
                 if field == 'birth_year':
                     try:
                         new_value = int(new_value)
-                        if not (1900 <= new_value <= 2025):
+                        if not (1900 <= new_value <= datetime.utcnow().year):  # F6: was 2025
                             continue
                     except (ValueError, TypeError):
                         continue
@@ -10245,6 +11582,8 @@ def reset_password():
 
         if not token or not new_password:
             return jsonify({'error': 'Token and new password required'}), 400
+        if str(token).startswith('del_'):  # F7: a deletion token is not a password-reset token
+            return jsonify({'error': 'Invalid or expired reset token'}), 400
 
         # Find token
         token_record = db.session.execute(
@@ -10621,6 +11960,7 @@ def get_user_language():
 
 
 @app.route('/api/admin/migrate-language', methods=['POST'])
+@admin_required  # F7: had no authentication at all ("Add authentication check here if needed")
 def migrate_language_column():
     """
     Migration endpoint to copy 'language' to 'preferred_language' if needed
@@ -10659,7 +11999,7 @@ def migrate_language_column():
         logger.error(f"Migration error: {e}")
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': 'Migration failed'  # F7: no raw exception text in the response
         }), 500
 
 
@@ -10737,7 +12077,7 @@ def profile():
             if user:
                 try:
                     birth_year = int(data['birth_year'])
-                    if 1900 <= birth_year <= 2025:
+                    if 1900 <= birth_year <= datetime.utcnow().year:  # F6: was hard-coded 2025
                         user.birth_year = birth_year
                 except (ValueError, TypeError):
                     pass
@@ -11074,7 +12414,7 @@ def get_user_circles(user_id):
                 user_info = {
                     'id': member_user.id,
                     'username': member_user.username,
-                    'email': member_user.email
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                 }
 
                 # Map to normalized circle type
@@ -11402,7 +12742,7 @@ def search_users():
                 user_data = {
                     'id': user.id,
                     'username': user.username,
-                    'email': user.email,  # Keep for backward compatibility but frontend won't display
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'display_name': user.username,
                     'bio': profile.bio if profile else None,
                     'occupation': profile.occupation if profile else None,
@@ -11423,7 +12763,7 @@ def search_users():
                 results.append({
                     'id': user.id,
                     'username': user.username,
-                    'email': user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'display_name': user.username,
                     'bio': None,
                     'occupation': None,
@@ -12120,21 +13460,22 @@ def circles():
             if not target_user:
                 return jsonify({'error': 'User not found'}), 404
 
-            circles_privacy = getattr(target_user, 'circles_privacy', 'public')
+            # F7: a missing setting counts as private (was treated as public).
+            circles_privacy = getattr(target_user, 'circles_privacy', None) or 'private'
 
             logger.info(
                 f"User {user_id} viewing circles of user {target_user_id} (privacy: {circles_privacy}, is_own: {is_viewing_own})")
 
-            # If viewing someone else's circles, check follow status
+            # If viewing someone else's circles, check the connection
             if not is_viewing_own:
-                is_following = db.session.execute(
-                    select(Follow).filter_by(
-                        follower_id=user_id,
-                        followed_id=target_user_id
-                    )
-                ).scalar_one_or_none()
-
-                if not is_following:
+                # F7 (access control): was "viewer follows target", which anyone can create. Now
+                # the target must have connected to the viewer (follows them or has them in a
+                # circle), and there must be no block either way.
+                connected = (
+                    Follow.query.filter_by(follower_id=target_user_id, followed_id=user_id).first() is not None
+                    or Circle.query.filter_by(user_id=target_user_id, circle_user_id=user_id).first() is not None
+                )
+                if not connected or _f7_blocked_either_way(target_user_id, user_id):
                     return jsonify({'error': 'Must be connected to user to view circles'}), 403
 
                 # If circles are private AND viewing someone else's, return empty
@@ -12147,11 +13488,8 @@ def circles():
                     })
 
                 # Determine viewer's circle level for this user
-                viewer_circle_stmt = select(Circle).filter(
-                    Circle.user_id == target_user_id,
-                    Circle.circle_user_id == user_id
-                )
-                viewer_circle = db.session.execute(viewer_circle_stmt).scalar_one_or_none()
+                # F7: scalar_one_or_none() raised (500) when the viewer was in several circles.
+                viewer_circle = _resolve_lowest_circle(target_user_id, user_id)
 
                 if viewer_circle:
                     # Map to standardized circle type
@@ -12207,7 +13545,7 @@ def circles():
                     return {
                         'id': user.id,
                         'username': user.username,
-                        'email': user.email,
+                        # F7 (privacy): other users' email addresses are no longer returned here.
                         'display_name': user.username,
                         'selected_city': user.selected_city or ''
                     }
@@ -12286,9 +13624,24 @@ def circles():
             if circle_type not in ['public', 'class_b', 'class_a']:
                 return jsonify({'error': 'Invalid circle type'}), 400
 
+            # F7: user_id must be a real integer id other than your own.
+            try:
+                circle_user_id = int(circle_user_id)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Invalid user'}), 400
+            if circle_user_id == user_id:
+                return jsonify({'error': 'You cannot add yourself to a circle'}), 400
+
             # Check if user exists
             if not db.session.get(User, circle_user_id):
                 return jsonify({'error': 'User not found'}), 404
+
+            # F7 (access control): adding someone to a circle also creates a follow, a follow
+            # request and an invite email. A block in either direction used to be ignored here,
+            # so a blocked user could keep re-creating the connection and emailing the person who
+            # blocked them. Same rule as /api/follow.
+            if _f7_blocked_either_way(user_id, circle_user_id):
+                return jsonify({'error': 'Unable to add this user'}), 403
 
             # Check if already in circle - SQLAlchemy 2.0 style
             existing_stmt = select(Circle).filter_by(
@@ -12811,7 +14164,7 @@ def get_circle_recommendations():
                 recommendations.append({
                     'id': mutual_user.id,
                     'username': mutual_user.username,
-                    'email': mutual_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'selected_city': mutual_user.selected_city,
                     'reason': reason,
                     'reason_key': 'circles.reason_mutual' if 'same city' not in reason else 'circles.reason_mutual_city'
@@ -12831,7 +14184,7 @@ def get_circle_recommendations():
                     recommendations.append({
                         'id': followed_user.id,
                         'username': followed_user.username,
-                        'email': followed_user.email,
+                        # F7 (privacy): other users' email addresses are no longer returned here.
                         'selected_city': followed_user.selected_city,
                         'reason': 'Same city',
                         'reason_key': 'circles.reason_same_city'
@@ -12851,7 +14204,7 @@ def get_circle_recommendations():
                     recommendations.append({
                         'id': followed_user.id,
                         'username': followed_user.username,
-                        'email': followed_user.email,
+                        # F7 (privacy): other users' email addresses are no longer returned here.
                         'selected_city': followed_user.selected_city,
                         'reason': 'Connected',
                         'reason_key': 'circles.reason_following'
@@ -12878,7 +14231,7 @@ def get_circle_recommendations():
                 recommendations.append({
                     'id': city_user.id,
                     'username': city_user.username,
-                    'email': city_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'selected_city': city_user.selected_city,
                     'reason': 'Same city',
                     'reason_key': 'circles.reason_same_city'
@@ -12892,11 +14245,9 @@ def get_circle_recommendations():
                 if len(recommendations) >= 20:
                     break
 
-                their_circles = db.session.execute(
-                    select(Circle.circle_user_id).filter_by(
-                        user_id=circle_user_id
-                    ).filter(Circle.circle_user_id != user_id)
-                ).scalars().all()
+                # F7 (privacy): only use a person's circle members as suggestions when that
+                # person has made their circles public and is not in a block with the viewer.
+                their_circles = _f7_public_circle_members(circle_user_id, user_id)
 
                 for potential_id in their_circles[:5]:
                     if len(recommendations) >= 20:
@@ -12916,7 +14267,7 @@ def get_circle_recommendations():
                         recommendations.append({
                             'id': potential_user.id,
                             'username': potential_user.username,
-                            'email': potential_user.email,
+                            # F7 (privacy): other users' email addresses are no longer returned here.
                             'selected_city': potential_user.selected_city,
                             'reason': reason,
                             'reason_key': 'circles.reason_friend_of_friend'
@@ -13135,6 +14486,14 @@ def get_hierarchical_parameters(view_user_id):
                 param_dict = param.to_dict(viewer_id=current_user_id, _notes_privacy=np_cache.get(param.id, 'private'), is_professional=True)
                 visible_params.append(param_dict)
             return jsonify({'parameters': visible_params})
+
+        # F7 (access control): there was no connection or block check here, so any user could
+        # read another user's full check-in calendar (dates and timestamps of every entry). Same
+        # gate as get_user_parameters: the target follows the viewer or has them in a circle.
+        if _f7_blocked_either_way(view_user_id, current_user_id) or not (
+                Follow.query.filter_by(follower_id=view_user_id, followed_id=current_user_id).first()
+                or Circle.query.filter_by(user_id=view_user_id, circle_user_id=current_user_id).first()):
+            return jsonify({'error': 'Must be connected with this user to view parameters'}), 403
 
         # T31: Check what circle current user is in for the viewed user
         # T800q: Use ALL circle memberships for non-hierarchical visibility
@@ -13517,6 +14876,39 @@ def save_feed_entry():
 # posts by someone who blocked them). This mirrors get_user_posts' gate: owner always allowed; a
 # viewer the owner has blocked is denied; a non-connection is denied; otherwise the post's
 # visibility must fall within the viewer's circle level.
+def _f7_blocked_either_way(a_id, b_id):
+    """F7: True if either user has blocked the other."""
+    return BlockedUser.query.filter(
+        ((BlockedUser.blocker_id == a_id) & (BlockedUser.blocked_id == b_id)) |
+        ((BlockedUser.blocker_id == b_id) & (BlockedUser.blocked_id == a_id))).first() is not None
+
+
+def _f7_public_circle_members(owner_id, viewer_id):
+    """F7 (privacy): members of owner_id's circles that viewer_id may learn about for
+    'friend of friend' suggestions. Empty unless the owner set circles_privacy to 'public' and
+    there is no block between owner and viewer; members in a block with the viewer are left out."""
+    try:
+        owner = db.session.get(User, owner_id)
+        if not owner or (owner.circles_privacy or 'private') != 'public':
+            return []
+        if _f7_blocked_either_way(owner_id, viewer_id):
+            return []
+        ids = db.session.execute(
+            select(Circle.circle_user_id).filter_by(user_id=owner_id).filter(Circle.circle_user_id != viewer_id)
+        ).scalars().all()
+        # One query for all of the viewer's blocks (not one query per member), so a large circle
+        # cannot turn a recommendations request into thousands of queries.
+        blocked = set()
+        for b_er, b_ed in db.session.execute(
+                select(BlockedUser.blocker_id, BlockedUser.blocked_id).filter(
+                    (BlockedUser.blocker_id == viewer_id) | (BlockedUser.blocked_id == viewer_id))).all():
+            blocked.add(b_ed if b_er == viewer_id else b_er)
+        return [i for i in ids if i not in blocked]
+    except Exception as _e:
+        logger.warning(f"[F7 RECS] circle lookup failed, skipping: {_e}")
+        return []
+
+
 def _can_access_post(post, viewer_id):
     if post is None:
         return False
@@ -14706,7 +16098,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
-                                    logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
+                                    logger.info("[TRIGGER PROCESS ASYNC] Creating alert")  # F7: alert text (another person's wellbeing) no longer logged
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
                                         title=f"Well-Being Alert for {watched_user.username}",
@@ -14756,7 +16148,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                     
                                     if not existing:
                                         content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
-                                        logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
+                                        logger.info("[TRIGGER PROCESS ASYNC] Creating alert")  # F7: alert text (another person's wellbeing) no longer logged
                                         alert = create_alert_no_email(
                                             user_id=watcher_id,
                                             title=f"Well-Being Alert for {watched_user.username}",
@@ -14796,7 +16188,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                                 
                                 if not existing:
                                     content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
-                                    logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
+                                    logger.info("[TRIGGER PROCESS ASYNC] Creating alert")  # F7: alert text (another person's wellbeing) no longer logged
                                     alert = create_alert_no_email(
                                         user_id=watcher_id,
                                         title=f"Well-Being Alert for {watched_user.username}",
@@ -14835,7 +16227,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                         
                         if not existing:
                             content = f"{watched_user.username}'s {param_name} has been at low levels for {len(streak_dates)} consecutive days {date_pattern}"
-                            logger.info(f"[TRIGGER PROCESS ASYNC] Creating alert: {content}")
+                            logger.info("[TRIGGER PROCESS ASYNC] Creating alert")  # F7: alert text (another person's wellbeing) no longer logged
                             alert = create_alert_no_email(
                                 user_id=watcher_id,
                                 title=f"Well-Being Alert for {watched_user.username}",
@@ -15777,7 +17169,7 @@ DAILY_GIFTS = [
         "en": "The part of you that worries is trying to protect you. You can thank it and still choose.",
         "he": "החלק בך שדואג מנסה להגן עליך. אפשר להודות לו ועדיין לבחור.",
         "ar": "الجزء القلِق فيك يحاول حمايتك. يمكنك أن تشكره وتختار مع ذلك.",
-        "ru": "Та часть тебя, что тревожится, пытается тебя защитить. Можно поблагодарить её — и всё же выбрать своё."}},
+        "ru": "Та часть тебя, что тревожится, пытается тебя защитить. Можно поблагодарить её и всё же выбрать своё."}},
     {"id": "g11", "text": {
         "en": "One steady breath is a decision. You get to make it again and again.",
         "he": "נשימה רגועה אחת היא החלטה. מותר לך לקבל אותה שוב ושוב.",
@@ -15790,7 +17182,7 @@ DAILY_GIFTS = [
         "ru": "Ты можешь быть в процессе и целостным человеком одновременно."}},
     {"id": "g13", "text": {
         "en": "Whatever today held, you met it. That counts.",
-        "he": "מה שלא היה היום — התמודדת איתו. וזה נחשב.",
+        "he": "מה שלא היה היום, התמודדת איתו. וזה נחשב.",
         "ar": "مهما حمل يومك، فقد واجهته. وهذا يُحتسب.",
         "ru": "Что бы ни принёс день, ты встретил его. И это важно."}},
     {"id": "g14", "text": {
@@ -15824,10 +17216,10 @@ DAILY_GIFTS = [
         "ar": "لست مضطرًا لكسب الغد. إنه لك بالفعل. استرح إليه.",
         "ru": "Завтра не нужно заслуживать. Оно уже твоё. Обопрись на него и отдохни."}},
     {"id": "g20", "text": {
-        "en": "The step you took today is small enough to repeat — and that's exactly its strength.",
-        "he": "הצעד שעשית היום קטן מספיק כדי לחזור עליו — וזו בדיוק עוצמתו.",
-        "ar": "الخطوة التي خطوتها اليوم صغيرة بما يكفي لتكرارها — وهنا تكمن قوّتها.",
-        "ru": "Шаг, что ты сделал сегодня, достаточно мал, чтобы повторить его, — в этом его сила."}},
+        "en": "The step you took today is small enough to repeat, and that's exactly its strength.",
+        "he": "הצעד שעשית היום קטן מספיק כדי לחזור עליו, וזו בדיוק עוצמתו.",
+        "ar": "الخطوة التي خطوتها اليوم صغيرة بما يكفي لتكرارها، وهنا تكمن قوّتها.",
+        "ru": "Шаг, что ты сделал сегодня, достаточно мал, чтобы повторить его, и в этом его сила."}},
     {"id": "g21", "text": {
         "en": "Being gentle with yourself tonight makes it easier to begin again tomorrow.",
         "he": "עדינות כלפי עצמך הערב תקל עליך להתחיל מחדש מחר.",
@@ -16352,7 +17744,7 @@ def mark_gift_opened():
 
 
 @app.route('/api/operator/points')
-@operator_required
+@system_operator_required  # F7: lists every user platform-wide (ignored department scope)
 def operator_points():
     """A16: operator view of every user's points balance, plus a schema self-check so a missing
     column/table is obvious at a glance (this is what silently zeroes rewards). Read-only."""
@@ -16495,7 +17887,7 @@ load();
 
 
 @app.route('/api/operator/points/backfill', methods=['POST'])
-@operator_required
+@system_operator_required  # F7: platform-wide write
 def operator_points_backfill():
     """A16: ONE-TIME (idempotent) grant of points for PAST completed check-ins, so existing users
     immediately show balances that reflect their history — points are otherwise only granted on a
@@ -17401,7 +18793,45 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
 
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 
-def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
+# A92 (house voice, additive): AI-written text (weekly summary, reflection prompt) is the
+# copy that most reads as "machine-written" to a new user, and the long dash is its tell.
+# (1) A short house-style note is appended to EVERY system prompt (one place, here).
+# (2) As a guarantee, any em/en dash that still comes back is converted to natural
+#     punctuation before the text reaches the user. Numeric ranges ("3–4") keep a hyphen.
+_A92_AI_STYLE_NOTE = (
+    "\n\nHouse style: write the way a warm, thoughtful person would, in plain natural "
+    "sentences. Never use em dashes or en dashes; use commas, colons or full stops instead. "
+    "Avoid hype and stock phrases (for example 'journey', 'delve', 'embark', 'unlock', "
+    "'empower', 'tapestry'), keep exclamation marks rare, and do not add emoji."
+)
+# A92 audit: Russian grammar REQUIRES the dash (тире) in "X — это Y" constructions, so the
+# Russian note only rules out English-style dashes, and the converter keeps the spaced тире.
+_A92_AI_STYLE_NOTE_RU = (
+    "\n\nHouse style: write the way a warm, thoughtful person would, in plain natural "
+    "sentences. Use a dash only where Russian grammar requires it (for example 'X — это Y'), "
+    "never as an English-style pause. Avoid hype and stock phrases, keep exclamation marks "
+    "rare, and do not add emoji."
+)
+
+
+def _a92_humanize_ai_text(text, language=None):
+    """A92: replace em/en dashes in model output with natural punctuation.
+    Russian keeps its grammatical spaced dash; only ranges and list/edge dashes are tidied."""
+    if not text:
+        return text
+    import re as _re
+    t = _re.sub(r'(\d)\s*[–—]\s*(\d)', r'\1-\2', text)      # 3–4 -> 3-4
+    t = _re.sub(r'(\w)–(\w)', r'\1-\2', t)                   # Mon–Fri -> Mon-Fri
+    t = _re.sub(r'^[ \t]*[—–][ \t]*', '', t, flags=_re.M)    # leading list dash
+    t = _re.sub(r'[ \t]*[—–][ \t]*$', '', t, flags=_re.M)    # trailing dash
+    if language == 'ru':
+        return t                                             # keep the grammatical тире
+    t = _re.sub(r'[ \t]*[—–][ \t]*', ', ', t)                # mid-sentence -> comma
+    t = _re.sub(r',\s*([,.;:!?])', r'\1', t)                           # tidy ", ." -> "."
+    return t
+
+
+def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500, language=None):
     """K4: Helper to call Anthropic API. Returns text response or None on failure.
     Enhanced with detailed logging for diagnosing preview deployment issues."""
     if not ANTHROPIC_API_KEY:
@@ -17420,7 +18850,7 @@ def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
             json={
                 'model': 'claude-haiku-4-5-20251001',
                 'max_tokens': max_tokens,
-                'system': system_prompt,
+                'system': (system_prompt or '') + (_A92_AI_STYLE_NOTE_RU if language == 'ru' else _A92_AI_STYLE_NOTE),  # A92 house voice
                 'messages': [{'role': 'user', 'content': user_prompt}]
             },
             timeout=30
@@ -17431,7 +18861,7 @@ def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500):
             for block in data.get('content', []):
                 if block.get('type') == 'text':
                     logger.info(f"[AI] SUCCESS — received {len(block['text'])} chars of AI text")
-                    return block['text']
+                    return _a92_humanize_ai_text(block['text'], language)  # A92: no long dashes
             logger.warning(f"[AI] 200 OK but no text block in response content")
         else:
             # Log the deny reason header from egress proxy if present
@@ -17485,10 +18915,10 @@ def ai_weekly_summary():
 
         if not params:
             fallback_msgs = {
-                'en': "You haven't checked in this week yet — once you do, your personalized weekly summary will appear here. It only takes a moment!",
-                'he': 'עדיין לא מילאת צ׳ק אין השבוע — ברגע שתעשה, הסיכום השבועי המותאם אישית שלך יופיע כאן. זה לוקח רק רגע!',
-                'ar': 'لم تسجل هذا الأسبوع بعد — بمجرد أن تفعل، سيظهر ملخصك الأسبوعي المخصص هنا. الأمر لا يستغرق سوى لحظة!',
-                'ru': 'Вы ещё не отмечались на этой неделе — как только это сделаете, здесь появится ваш персональный недельный итог. Это займёт всего минуту!'
+                'en': "You haven't checked in this week yet. Once you do, your personalized weekly summary will appear here. It only takes a moment!",
+                'he': 'עדיין לא מילאת צ׳ק אין השבוע. ברגע שתעשה, הסיכום השבועי המותאם אישית שלך יופיע כאן. זה לוקח רק רגע!',
+                'ar': 'لم تسجل هذا الأسبوع بعد. بمجرد أن تفعل، سيظهر ملخصك الأسبوعي المخصص هنا. الأمر لا يستغرق سوى لحظة!',
+                'ru': 'Вы ещё не отмечались на этой неделе. Как только это сделаете, здесь появится ваш персональный недельный итог. Это займёт всего минуту!'
             }
             return jsonify({'summary': fallback_msgs.get(user_language, fallback_msgs['en']), 'ai_generated': False})
 
@@ -17615,7 +19045,7 @@ def ai_weekly_summary():
             "Please provide a brief, personalized weekly summary."
         )
 
-        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=400)
+        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=400, language=user_language)
 
         if ai_text:
             return jsonify({
@@ -17786,7 +19216,7 @@ def ai_reflection_prompt():
             f"Generate one {chosen_style}-oriented reflection question."
         )
 
-        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=200)
+        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=200, language=user_language)
 
         if ai_text:
             return jsonify({'prompt': ai_text, 'ai_generated': True})
@@ -17866,19 +19296,19 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'mood': (3, 4), 'energy': (3, 4)},
         'messages': {
             'en': [
-                "You're radiating positive energy today — that's worth celebrating! What you're doing is clearly working for you.",
-                "High mood and high energy — that's a powerful combination. Today is a great day to tackle something meaningful."
+                "You're radiating positive energy today. That's worth celebrating! What you're doing is clearly working for you.",
+                "High mood and high energy: that's a powerful combination. Today is a great day to tackle something meaningful."
             ],
             'he': [
-                "את/ה מקרין/ה אנרגיה חיובית היום — שווה לחגוג את זה! מה שאת/ה עושה עובד.",
-                "מצב רוח גבוה ואנרגיה גבוהה — שילוב חזק. היום הוא יום מצוין להתמודד עם משהו משמעותי."
+                "את/ה מקרין/ה אנרגיה חיובית היום. שווה לחגוג את זה! מה שאת/ה עושה עובד.",
+                "מצב רוח גבוה ואנרגיה גבוהה: שילוב חזק. היום הוא יום מצוין להתמודד עם משהו משמעותי."
             ],
             'ar': [
-                "أنت تشع بطاقة إيجابية اليوم — هذا يستحق الاحتفال! ما تفعله يعمل بوضوح لصالحك.",
-                "مزاج عالي وطاقة عالية — مزيج قوي. اليوم يوم رائع لمواجهة شيء ذو معنى."
+                "أنت تشع بطاقة إيجابية اليوم. هذا يستحق الاحتفال! ما تفعله يعمل بوضوح لصالحك.",
+                "مزاج عالي وطاقة عالية: مزيج قوي. اليوم يوم رائع لمواجهة شيء ذو معنى."
             ],
             'ru': [
-                "Вы излучаете позитивную энергию сегодня — это стоит отметить! То, что вы делаете, явно работает.",
+                "Вы излучаете позитивную энергию сегодня. Это стоит отметить! То, что вы делаете, явно работает.",
                 "Хорошее настроение и высокая энергия — мощное сочетание. Сегодня отличный день для важных дел."
             ]
         }
@@ -17888,19 +19318,19 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'sleep_quality': (3, 4)},
         'messages': {
             'en': [
-                "Great sleep makes everything else easier — you gave yourself a real gift last night.",
+                "Great sleep makes everything else easier. You gave yourself a real gift last night.",
                 "Quality rest is the foundation of a good day, and you nailed it. Your body and mind will thank you."
             ],
             'he': [
-                "שינה טובה הופכת הכל לקל יותר — נתת לעצמך מתנה אמיתית אתמול בלילה.",
+                "שינה טובה הופכת הכל לקל יותר. נתת לעצמך מתנה אמיתית אתמול בלילה.",
                 "מנוחה איכותית היא הבסיס ליום טוב, ועשית את זה נהדר."
             ],
             'ar': [
-                "النوم الجيد يجعل كل شيء أسهل — لقد منحت نفسك هدية حقيقية الليلة الماضية.",
+                "النوم الجيد يجعل كل شيء أسهل. لقد منحت نفسك هدية حقيقية الليلة الماضية.",
                 "الراحة الجيدة هي أساس اليوم الجيد، وقد أتقنتها."
             ],
             'ru': [
-                "Хороший сон делает всё остальное легче — вы сделали себе настоящий подарок прошлой ночью.",
+                "Хороший сон делает всё остальное легче. Вы сделали себе настоящий подарок прошлой ночью.",
                 "Качественный отдых — основа хорошего дня, и у вас это отлично получилось."
             ]
         }
@@ -17910,15 +19340,15 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'physical_activity': (3, 4)},
         'messages': {
             'en': [
-                "Moving your body is one of the kindest things you can do for yourself — well done today.",
+                "Moving your body is one of the kindest things you can do for yourself. Well done today.",
                 "Physical activity is a natural mood booster. You're building something good for yourself, one day at a time."
             ],
             'he': [
-                "להזיז את הגוף זה אחד הדברים הטובים ביותר שאפשר לעשות בשביל עצמך — כל הכבוד.",
+                "להזיז את הגוף זה אחד הדברים הטובים ביותר שאפשר לעשות בשביל עצמך. כל הכבוד.",
                 "פעילות גופנית היא מעלה מצב רוח טבעית. את/ה בונה משהו טוב לעצמך."
             ],
             'ar': [
-                "تحريك جسمك من أفضل الأشياء التي يمكنك فعلها لنفسك — أحسنت اليوم.",
+                "تحريك جسمك من أفضل الأشياء التي يمكنك فعلها لنفسك. أحسنت اليوم.",
                 "النشاط البدني يرفع المعنويات بشكل طبيعي. أنت تبني شيئاً جيداً لنفسك."
             ],
             'ru': [
@@ -17954,20 +19384,20 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'energy': (1, 2)},
         'messages': {
             'en': [
-                "Low energy days are your body asking for gentleness. Listen to it — rest is productive too.",
+                "Low energy days are your body asking for gentleness. Listen to it. Rest is productive too.",
                 "Energy ebbs and flows. On days like this, even small wins count. You showed up, and that matters."
             ],
             'he': [
-                "ימים של אנרגיה נמוכה הם הגוף שלך מבקש עדינות. תקשיב לו — גם מנוחה היא פרודוקטיבית.",
+                "ימים של אנרגיה נמוכה הם הגוף שלך מבקש עדינות. תקשיב לו. גם מנוחה היא פרודוקטיבית.",
                 "האנרגיה עולה ויורדת. בימים כאלה, גם ניצחונות קטנים נחשבים. באת, וזה חשוב."
             ],
             'ar': [
-                "أيام الطاقة المنخفضة هي جسمك يطلب الرفق. استمع له — الراحة إنتاجية أيضاً.",
+                "أيام الطاقة المنخفضة هي جسمك يطلب الرفق. استمع له. الراحة إنتاجية أيضاً.",
                 "الطاقة تتقلب. في أيام كهذه، حتى الانتصارات الصغيرة مهمة. لقد حضرت، وهذا يعني الكثير."
             ],
             'ru': [
-                "Дни с низкой энергией — это тело просит мягкости. Послушайте его — отдых тоже продуктивен.",
-                "Энергия то растёт, то падает. В такие дни даже маленькие победы важны. Вы пришли — и это имеет значение."
+                "Дни с низкой энергией — это тело просит мягкости. Послушайте его: отдых тоже продуктивен.",
+                "Энергия то растёт, то падает. В такие дни даже маленькие победы важны. Вы пришли, и это имеет значение."
             ]
         }
     },
@@ -17999,19 +19429,19 @@ CHECKIN_FEEDBACK_BANK = [
         'messages': {
             'en': [
                 "A calm mind is a powerful mind. Whatever helped you find peace today, hold onto it.",
-                "Inner calm doesn't happen by accident — you're cultivating something valuable."
+                "Inner calm doesn't happen by accident. You're cultivating something valuable."
             ],
             'he': [
                 "מוח רגוע הוא מוח חזק. מה שעזר לך למצוא שלווה היום, תחזיק בזה.",
-                "שלווה פנימית לא קורית במקרה — את/ה מטפח/ת משהו יקר ערך."
+                "שלווה פנימית לא קורית במקרה. את/ה מטפח/ת משהו יקר ערך."
             ],
             'ar': [
                 "العقل الهادئ عقل قوي. مهما ساعدك في إيجاد السلام اليوم، تمسك به.",
-                "الهدوء الداخلي لا يحدث بالصدفة — أنت تزرع شيئاً ثميناً."
+                "الهدوء الداخلي لا يحدث بالصدفة. أنت تزرع شيئاً ثميناً."
             ],
             'ru': [
                 "Спокойный ум — сильный ум. Что бы ни помогло вам обрести покой сегодня, держитесь за это.",
-                "Внутреннее спокойствие не приходит случайно — вы взращиваете что-то ценное."
+                "Внутреннее спокойствие не приходит случайно. Вы взращиваете что-то ценное."
             ]
         }
     },
@@ -18042,19 +19472,19 @@ CHECKIN_FEEDBACK_BANK = [
         'conditions': {'trend': 'improving'},
         'messages': {
             'en': [
-                "Your numbers are trending up — that's not luck, that's you putting in the work.",
+                "Your numbers are trending up. That's not luck, that's you putting in the work.",
                 "An upward trend! Small daily choices are adding up. Keep going."
             ],
             'he': [
-                "המספרים שלך עולים — זה לא מזל, זה את/ה משקיע/ה מאמץ.",
+                "המספרים שלך עולים. זה לא מזל, זה את/ה משקיע/ה מאמץ.",
                 "מגמה עולה! בחירות יומיות קטנות מצטברות. המשיכ/י."
             ],
             'ar': [
-                "أرقامك في تحسن — هذا ليس حظاً، هذا أنت تبذل الجهد.",
+                "أرقامك في تحسن. هذا ليس حظاً، هذا أنت تبذل الجهد.",
                 "اتجاه تصاعدي! الخيارات اليومية الصغيرة تتراكم. استمر."
             ],
             'ru': [
-                "Ваши показатели растут — это не везение, это ваш труд.",
+                "Ваши показатели растут. Это не везение, это ваш труд.",
                 "Восходящий тренд! Маленькие ежедневные решения складываются. Продолжайте."
             ]
         }
@@ -20136,7 +21566,7 @@ def cleanup_trigger_privacy():
 # If you want an admin endpoint that cleans up ALL users' alerts at once:
 
 @app.route('/api/admin/cleanup-all-trigger-privacy', methods=['POST'])
-@login_required
+@admin_required  # F7: was @login_required (any user could run a platform-wide cleanup)
 def cleanup_all_trigger_privacy():
     """
     Clean up ALL trigger alerts across all users that violate privacy.
@@ -20264,7 +21694,7 @@ def cleanup_all_trigger_privacy():
 
 
 @app.route('/api/admin/cleanup-duplicate-triggers', methods=['POST'])
-@login_required
+@admin_required  # F7: was @login_required
 def cleanup_duplicate_triggers():
     """
     PJ6019: Clean up duplicate trigger rows that were created when users
@@ -20478,7 +21908,7 @@ def get_activity_dates():
 # =====================
 
 @app.route('/api/admin/users')
-@operator_required  # L270: Was @admin_required — system_operator needs this for Professional Verification + user management
+@system_operator_required  # F7: was @operator_required (department operators saw every user). L270: system operators keep access.
 def admin_get_users():
     """Get all users (admin only)"""
     try:
@@ -20594,7 +22024,7 @@ def admin_set_role():
 # L210: Admin/operator endpoint to verify/unverify a professional account
 # L250: Changed from @admin_required to @operator_required so system_operator can verify
 @app.route('/api/admin/verify-professional', methods=['POST'])
-@operator_required
+@system_operator_required  # F7: department operators could verify any professional, incl. themselves
 def admin_verify_professional():
     """L210: Set professional_verified flag on a user. Admin or system_operator can call this."""
     try:
@@ -21196,7 +22626,7 @@ def create_org_manager():
 
 # G27: Org manager creates dept operator (professional with group scope)
 @app.route('/api/operator/create-dept-operator', methods=['POST'])
-@operator_required
+@system_operator_required  # F7: org managers are system_operator; dept operators could mint more verified professionals
 @require_csrf
 def create_dept_operator():
     """G27: Organization manager creates a Department Operator (professional with group scope).
@@ -21319,17 +22749,24 @@ def invite_group_user():
         # Check if email already registered
         existing_user = db.session.execute(select(User).filter_by(email=email)).scalars().first()
         if existing_user:
-            # User exists — just add them to the group if not already a member
+            # F7 (consent): an existing account is no longer enrolled without being asked.
+            # Joining a group puts the person inside this operator's scope (broadcasts,
+            # deactivation, segment views), so they now get an invitation and decide themselves.
+            # The response no longer returns the account's user id or username either.
             existing_membership = ObjectiveGroupMembership.query.filter_by(
                 user_id=existing_user.id, group_id=group_id
             ).first()
-            if existing_membership:
-                return jsonify({'error': 'User is already a member of this group'}), 400
-            membership = ObjectiveGroupMembership(user_id=existing_user.id, group_id=group_id)
-            db.session.add(membership)
-            db.session.commit()
-            logger.info(f"[G27] Existing user {email} added to group {group_id}")
-            return jsonify({'success': True, 'message': 'Existing user added to group' + b45_capacity_note, 'user_id': existing_user.id, 'username': existing_user.username})
+            if not existing_membership:
+                db.session.add(Alert(
+                    user_id=existing_user.id,
+                    alert_type='info',
+                    alert_category='general',
+                    title='Group invitation',
+                    content=f'You have been invited to join the group "{group.name}". You can join it from the groups section if you wish.'
+                ))
+                db.session.commit()
+            logger.info(f"[G27] Invitation alert for existing account to group {group_id}")
+            return jsonify({'success': True, 'message': 'This person already has an account. They have been invited and can join the group themselves.' + b45_capacity_note})
 
         # Generate temporary password
         temp_password = secrets.token_urlsafe(12)
@@ -21372,6 +22809,7 @@ def invite_group_user():
         db.session.commit()
 
         # Send invite email via Resend (if configured)
+        email_sent = False  # F7
         resend_key = os.environ.get('RESEND_API_KEY', '')
         if resend_key:
             try:
@@ -21394,18 +22832,25 @@ def invite_group_user():
                         <p>Please log in at <a href="{base_url}">{base_url}</a> and change your password.</p>
                     '''
                 })
-                logger.info(f"[G27] Invite email sent to {email}")
+                logger.info(f"[G27] Invite email sent for new group member {new_user.id}")
+                email_sent = True
             except Exception as mail_err:
-                logger.warning(f"[G27] Failed to send invite email to {email}: {str(mail_err)}")
+                logger.warning(f"[G27] Failed to send invite email for user {new_user.id}: {str(mail_err)}")
         else:
-            logger.info(f"[G27] No RESEND_API_KEY — invite email not sent for {email}")
+            logger.info(f"[G27] No RESEND_API_KEY — invite email not sent for user {new_user.id}")
 
+        # F7 (access control): the temporary password is no longer returned to the operator, who
+        # could otherwise log in as this user later (many people never change a temp password
+        # and sign in by magic link instead). It goes only to the invitee by email; if that
+        # email could not be sent, the person can set their own password with "Forgot password".
         return jsonify({
             'success': True,
             'user_id': new_user.id,
             'username': username,
-            'temp_password': temp_password,  # Return so operator can share manually if email fails
-            'message': 'User created and added to group' + b45_capacity_note
+            'message': ('User created and added to group. Login details were emailed to them.'
+                        if email_sent else
+                        'User created and added to group, but the invite email could not be sent. '
+                        'Ask them to use "Forgot password" on the login page with this email address.') + b45_capacity_note
         })
 
     except Exception as e:
@@ -22068,12 +23513,51 @@ def operator_list_broadcasts():
         return jsonify({'error': 'Failed to list broadcasts'}), 500
 
 
+def _f7_verify_resend_webhook():
+    """F7: verify a Resend (Svix) webhook signature.
+
+    Resend signs each delivery with the endpoint's signing secret ('whsec_...', shown in the
+    Resend dashboard for the webhook). Signature = base64(HMAC-SHA256(secret, f"{svix-id}.
+    {svix-timestamp}.{raw body}")), sent in the 'svix-signature' header as 'v1,<sig>' entries.
+    Without RESEND_WEBHOOK_SECRET the webhook is refused in production (allowed in development).
+    """
+    import base64 as _b64
+    import hmac as _hmac
+    import hashlib as _hashlib
+    secret = os.environ.get('RESEND_WEBHOOK_SECRET', '').strip()
+    if not secret:
+        return not _f7_is_production()
+    msg_id = request.headers.get('svix-id', '')
+    ts = request.headers.get('svix-timestamp', '')
+    sig_header = request.headers.get('svix-signature', '')
+    if not (msg_id and ts and sig_header):
+        return False
+    try:
+        if abs(time.time() - int(ts)) > 300:  # reject replays older than 5 minutes
+            return False
+        key = _b64.b64decode(secret[6:] if secret.startswith('whsec_') else secret)
+    except Exception:
+        return False
+    body = request.get_data(cache=True)
+    expected = _b64.b64encode(_hmac.new(key, f"{msg_id}.{ts}.".encode('utf-8') + body, _hashlib.sha256).digest()).decode('ascii')
+    for part in sig_header.split():
+        version, _, sig = part.partition(',')
+        if version == 'v1' and _hmac.compare_digest(sig, expected):
+            return True
+    return False
+
+
 @app.route('/api/operator/inbound-email', methods=['POST'])
 def operator_inbound_email():
     """L100: Resend webhook endpoint for inbound emails.
     Receives email.received events from Resend and stores them for operator review.
     This endpoint is NOT behind operator_required — Resend POST webhooks are unauthenticated
-    but should be verified via webhook signature in production."""
+    but should be verified via webhook signature in production.
+    F7: the signature is now verified (set RESEND_WEBHOOK_SECRET); unsigned posts are refused in
+    production, so nobody can drop fake emails into the operator inbox."""
+    if not _f7_verify_resend_webhook():
+        logger.warning("[L100 INBOUND] Rejected webhook: missing or invalid signature")
+        return jsonify({'error': 'Invalid signature'}), 401
     try:
         data = request.get_json(silent=True)
         if not data:
@@ -22115,7 +23599,7 @@ def operator_inbound_email():
 
 
 @app.route('/api/operator/inbox')
-@operator_required
+@system_operator_required  # F7: the shared support inbox holds users' private emails
 def operator_inbox():
     """L100: List inbound emails for the operator inbox, with pagination and read filter."""
     try:
@@ -22146,7 +23630,7 @@ def operator_inbox():
 
 
 @app.route('/api/operator/inbox/<int:email_id>/read', methods=['PATCH'])
-@operator_required
+@system_operator_required  # F7
 def operator_mark_email_read(email_id):
     """L100: Mark an inbound email as read."""
     try:
@@ -22316,6 +23800,17 @@ def operator_unflag_user():
         target = db.session.get(User, target_user_id)
         if not target or target.role != 'user':
             return jsonify({'error': 'User not found'}), 404
+
+        # F7 (access control): same scope check as flag-user. A department operator could
+        # reactivate ANY account, including ones an admin had deactivated.
+        operator_user = db.session.get(User, session['user_id'])
+        scope_filters = _build_operator_scope_filter(operator_user)
+        if scope_filters:
+            scoped_q = User.query.filter(User.id == target_user_id)
+            for f in scope_filters:
+                scoped_q = scoped_q.filter(f)
+            if not scoped_q.first():
+                return jsonify({'error': 'User not in your scope'}), 403
 
         target.is_active = True
         db.session.commit()
@@ -22806,9 +24301,10 @@ def my_professionals():
 # =====================
 
 @app.route('/api/setup/sample-users', methods=['POST'])
+@admin_required  # F7: was open to anyone whenever FLASK_DEBUG=true (creates password123 accounts)
 def create_sample_users():
     """Create sample users for testing"""
-    if is_production:
+    if _f7_is_production():  # F7: also blocked on Render even if FLASK_DEBUG is set
         return jsonify({'error': 'Not available in production'}), 403
 
     try:
@@ -23275,7 +24771,7 @@ def get_following():
                     'id': followed_user.id,
                     'username': followed_user.username,
                     'display_name': getattr(followed_user, 'display_name', None) or followed_user.username,
-                    'email': followed_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'note': follow.follow_note,  # ADD THIS FIELD
                     'follow_trigger': getattr(follow, 'follow_trigger', False) or False,  # V2: alert tracking status
                     'follows_you': follows_back,  # VINTER2: whether this user follows you back
@@ -23429,7 +24925,7 @@ def get_followers():
                 followers.append({
                     'id': follower_user.id,
                     'username': follower_user.username,
-                    'email': follower_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'selected_city': follower_user.selected_city,
                     'created_at': follow.created_at.isoformat(),
                     'is_following_back': user.is_following(follower_user)
@@ -23500,6 +24996,13 @@ def block_user(user_id):
             requester_id=user_id, target_id=current_user_id, status='pending').delete(synchronize_session=False)
         severed['requests'] += FollowRequest.query.filter_by(
             requester_id=current_user_id, target_id=user_id, status='pending').delete(synchronize_session=False)
+        # F7 (access control): a block also ends any professional-client relationship between
+        # the two accounts (active or pending), in either direction.
+        ProfessionalClient.query.filter(
+            ((ProfessionalClient.professional_id == user_id) & (ProfessionalClient.client_id == current_user_id)) |
+            ((ProfessionalClient.professional_id == current_user_id) & (ProfessionalClient.client_id == user_id)),
+            ProfessionalClient.status.in_(['active', 'pending'])
+        ).update({'status': 'revoked', 'revoked_at': datetime.utcnow()}, synchronize_session=False)
 
         db.session.commit()
 
@@ -23590,7 +25093,7 @@ def get_blocked_users():
                 blocked_list.append({
                     'id': blocked_user.id,
                     'username': blocked_user.username,
-                    'email': blocked_user.email,
+                    # F7 (privacy): other users' email addresses are no longer returned here.
                     'blocked_at': block.created_at.isoformat() if block.created_at else None
                 })
         
@@ -23795,12 +25298,18 @@ def process_diary_reminders():
     cron_secret = os.environ.get('CRON_SECRET')
     if cron_secret:
         # Check header first, then query parameter
-        provided_secret = request.headers.get('X-Cron-Secret') or request.args.get('secret')
-        if provided_secret != cron_secret:
+        provided_secret = request.headers.get('X-Cron-Secret') or request.args.get('secret') or ''
+        # F7: constant-time comparison (was !=).
+        if not secrets.compare_digest(provided_secret.encode('utf-8'), cron_secret.encode('utf-8')):
             logger.warning(f"[DAILY REMINDER CRON] Unauthorized access attempt - invalid secret")
             return jsonify({'error': 'Unauthorized'}), 401
+    elif _f7_is_production():
+        # F7 (access control): without CRON_SECRET this endpoint used to run for ANYONE, letting a
+        # stranger trigger reminder emails to every user. In production it now refuses.
+        logger.error("[DAILY REMINDER CRON] CRON_SECRET is not set - refusing (set it in the host's environment)")
+        return jsonify({'error': 'Unauthorized'}), 401
     else:
-        logger.warning(f"[DAILY REMINDER CRON] CRON_SECRET not configured - endpoint is unprotected!")
+        logger.warning(f"[DAILY REMINDER CRON] CRON_SECRET not configured - endpoint is unprotected (development only)")
     
     try:
         logger.info(f"[DAILY REMINDER CRON] ========================================")
@@ -24628,7 +26137,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
                 # PJ817: Generate content with date pattern for ALL streak lengths
                 # T30: Handle no_checkin triggers with a distinct message
                 if parameter == 'no_checkin':
-                    content = f"{watched_username} hasn't checked in for {consecutive_days} days — you may want to reach out"
+                    content = f"{watched_username} hasn't checked in for {consecutive_days} days. You may want to reach out"
                 elif alert_data.get('dates') and len(alert_data['dates']) >= 1:
                     try:
                         from datetime import datetime as dt
@@ -25061,7 +26570,7 @@ def get_recommendations():
                     recommendations.append({
                         'id': city_user.id,
                         'username': city_user.username,
-                        'email': city_user.email,
+                        # F7 (privacy): other users' email addresses are no longer returned here.
                         'selected_city': city_user.selected_city,
                         'reason': 'Same city'
                     })
@@ -25078,11 +26587,9 @@ def get_recommendations():
                 if len(recommendations) >= 20:
                     break
 
-                their_circles = db.session.execute(
-                    select(Circle.circle_user_id).filter_by(
-                        user_id=circle_user_id
-                    ).filter(Circle.circle_user_id != user_id)
-                ).scalars().all()
+                # F7 (privacy): only use a person's circle members as suggestions when that
+                # person has made their circles public and is not in a block with the viewer.
+                their_circles = _f7_public_circle_members(circle_user_id, user_id)
 
                 for potential_id in their_circles[:5]:
                     if len(recommendations) >= 20:
@@ -25103,7 +26610,7 @@ def get_recommendations():
                         recommendations.append({
                             'id': potential_user.id,
                             'username': potential_user.username,
-                            'email': potential_user.email,
+                            # F7 (privacy): other users' email addresses are no longer returned here.
                             'selected_city': potential_user.selected_city,
                             'reason': reason
                         })
@@ -25864,8 +27371,14 @@ def get_user_feed(user_id, date_str):
         if not target_user:
             return jsonify({'error': 'User not found'}), 404
 
-        if user_id != current_user_id and not current_user.is_following(target_user):
-            return jsonify({'error': 'You must be connected to this user to view their feed'}), 403
+        # F7 (access control): the old gate was "viewer follows target", which any user can
+        # create alone, and 'private' posts fell through every visibility branch. Connection,
+        # block and visibility are now decided by the shared _can_access_post() helper (target
+        # follows viewer or viewer is in the target's circles; post visibility; fails closed).
+        if user_id != current_user_id:
+            if not (Follow.query.filter_by(follower_id=user_id, followed_id=current_user_id).first()
+                    or Circle.query.filter_by(user_id=user_id, circle_user_id=current_user_id).first()):
+                return jsonify({'error': 'You must be connected to this user to view their feed'}), 403
 
         post = Post.query.filter_by(user_id=user_id).filter(
             db.func.date(Post.created_at) == date_str
@@ -25874,31 +27387,8 @@ def get_user_feed(user_id, date_str):
         if not post:
             return jsonify({'content': '', 'date': date_str})
 
-        # Check circle permission if viewing another user's post
-        if user_id != current_user_id:
-            post_visibility = post.visibility if post.visibility else 'general'
-
-            if post_visibility == 'family':
-                # Must be in family circle
-                in_circle = Circle.query.filter_by(
-                    user_id=user_id,
-                    circle_user_id=current_user_id,
-                    circle_type='family'
-                ).first() is not None
-
-                if not in_circle:
-                    return jsonify({'error': 'This post is only visible to family members'}), 403
-
-            elif post_visibility == 'close_friends':
-                # Must be in family OR close_friends circle
-                in_circle = Circle.query.filter(
-                    Circle.user_id == user_id,
-                    Circle.circle_user_id == current_user_id,
-                    Circle.circle_type.in_(['family', 'close_friends'])
-                ).first() is not None
-
-                if not in_circle:
-                    return jsonify({'error': 'This post is only visible to close friends'}), 403
+        if user_id != current_user_id and not _can_access_post(post, current_user_id):
+            return jsonify({'error': 'This post is not visible to you'}), 403
 
         return jsonify({
             'content': post.content,
@@ -25929,8 +27419,15 @@ def get_user_parameters_by_date(user_id, date_str):
         pc_row = _is_active_professional_for(current_user_id, user_id) if user_id != current_user_id else None
         is_professional_viewer = pc_row is not None
 
-        if user_id != current_user_id and not is_professional_viewer and not current_user.is_following(target_user):
-            return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
+        # F7 (access control): was "viewer follows target" (one-sided, anyone can create it).
+        # Now the same rule as get_user_parameters: the TARGET follows the viewer, or the viewer
+        # is in one of the target's circles.
+        if user_id != current_user_id and not is_professional_viewer:
+            if BlockedUser.query.filter_by(blocker_id=user_id, blocked_id=current_user_id).first():
+                return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
+            if not (Follow.query.filter_by(follower_id=user_id, followed_id=current_user_id).first()
+                    or Circle.query.filter_by(user_id=user_id, circle_user_id=current_user_id).first()):
+                return jsonify({'error': 'You must be connected to this user to view their parameters'}), 403
 
         # L170: Professional date filter
         if is_professional_viewer:
@@ -25959,7 +27456,8 @@ def get_user_parameters_by_date(user_id, date_str):
 
         if params:
             # L170: Professional bypass — return all parameters
-            if is_professional_viewer:
+            # F7: the owner also sees everything (their own 'private' fields were hidden before).
+            if is_professional_viewer or user_id == current_user_id:
                 return jsonify({
                     'success': True,
                     'data': {
@@ -25985,7 +27483,8 @@ def get_user_parameters_by_date(user_id, date_str):
                         'physical_activity': params.physical_activity if check_param_visibility(params.physical_activity_privacy or 'private', circle_level, viewer_circles=viewer_circles) else None,
                         'anxiety': params.anxiety if check_param_visibility(params.anxiety_privacy or 'private', circle_level, viewer_circles=viewer_circles) else None
                     },
-                    'notes': params.notes or ''
+                    # F7 (privacy leak): notes were returned regardless of notes_privacy.
+                    'notes': (params.notes or '') if check_param_visibility(_get_notes_privacy(params.id) or 'private', circle_level, viewer_circles=viewer_circles) else None
                 }
             })
         else:
@@ -26210,6 +27709,21 @@ def create_trigger():
         trigger_value = data.get('value')
         consecutive_days = data.get('consecutive_days')
         
+        # F7 (access control): the watched user must exist, must not be yourself, must not be in a
+        # block with you, and you must be connected (you follow them or are in their circles),
+        # matching /api/parameters/triggers/<id>. Alerts were already gated on circles; this stops
+        # trigger rows being created on arbitrary accounts.
+        try:
+            watched_id = int(watched_id)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid user'}), 400
+        if watched_id == watcher_id or not db.session.get(User, watched_id):
+            return jsonify({'error': 'Invalid user'}), 400
+        if _f7_blocked_either_way(watcher_id, watched_id) or not (
+                Follow.query.filter_by(follower_id=watcher_id, followed_id=watched_id).first()
+                or Circle.query.filter_by(user_id=watched_id, circle_user_id=watcher_id).first()):
+            return jsonify({'error': 'You must be connected to this user to set a trigger'}), 403
+
         # PI502alt: Enforce minimum consecutive days
         if consecutive_days is None or consecutive_days == '' or consecutive_days == 0:
             consecutive_days = MINIMUM_TRIGGER_DAYS  # Default to minimum

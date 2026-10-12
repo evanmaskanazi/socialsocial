@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- TheraSocial Profile Version B205 (F6): cache-bust only (script tags had no ?v). -->
 <!-- TheraSocial Profile Version Lang -->
 <html lang="en">
 <head>
@@ -8,8 +9,10 @@
 </head>
 <body>
     <div id="profileContainer"></div>
-    <script src="/static/js/i18n.js"></script>
-    <script src="/static/js/profile.js"></script>
+    <!-- B205 (F6): both had NO ?v token, so browsers could keep serving a stale cached copy
+         (static files are cached for a week). Pinned in lockstep with the rest of the app. -->
+    <script src="/static/js/i18n.js?v=B205"></script>
+    <script src="/static/js/profile.js?v=B205"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Apply translations after content is loaded

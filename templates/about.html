@@ -1,4 +1,31 @@
 <!DOCTYPE html>
+<!-- TheraSocial About Version B205 (F6) -->
+<!-- B205 (F6): Cache-bust lockstep only. No markup/JS change.
+     CACHE-BUST: every live JS ?v bumped B204->B205 in lockstep (i18n.js and index changed); app.py
+     _A92_ASSET_VERSION = 'B205'.
+-->
+<!-- TheraSocial About Version B204 (A94) -->
+<!-- B204 (A94): fallback text: "full GDPR compliance" -> "data controls built around your GDPR
+     rights"; Our Values -> "Encrypted connections and your GDPR data rights keep your data yours".
+     CACHE-BUST: every live JS ?v bumped B203->B204 in lockstep (i18n.js changed); app.py
+     _A92_ASSET_VERSION = 'B204'.
+-->
+<!-- TheraSocial About Version B203 (A93) -->
+<!-- B203 (A93): "Our Values" fallback text: "End-to-end encryption" -> "Encrypted connections".
+     CACHE-BUST: every live JS ?v bumped B202->B203 in lockstep (i18n.js changed); app.py
+     _A92_ASSET_VERSION = 'B203'.
+-->
+<!-- TheraSocial About Version B202 (A92 round 2) -->
+<!-- B202 (A92 round 2): fixes from the live-page review. Additive; no JS or IDs changed.
+     (1) Long-dash cleanup in this page's built-in English text and meta description (the text
+         shown before translations apply, and in search/share previews). Same wording as
+         i18n.js; typographic quotes on “Bishvil HaChaim”.
+     (2) Additive <style id="ts-a92-luxe"> before the closing body tag: solid slate title
+         instead of faint gradient-clipped text; feature cards in a balanced 3 x 2 grid on
+         desktop (was 4 + 2); calm hovers (no 5% bounce / purple glow); slate buttons with
+         readable white text; pre-existing RTL fix for the gap between the two buttons.
+     (3) CACHE-BUST: i18n.js ?v bumped B199->B202 in lockstep with the app (app.py also pins it).
+     "Our Values" colons come from i18n.js B202 (titles had lost their colon). -->
 <!-- TheraSocial About Version B199 (A91) -->
 <!-- B199 (A91): (1) Added an additive "Respecting Other Members' Privacy" community-rule section
      (work-plan #9) before the Get Started / Back buttons — self-contained, no existing markup
@@ -31,7 +58,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About - TheraSocial</title>
     <!-- A60 SEO: public description + social-preview tags (page previously had none). -->
-    <meta name="description" content="About TheraSocial — a well-being-first platform for tracking your daily health and staying privately connected with the people you trust.">
+    <meta name="description" content="About TheraSocial: a well-being-first platform for tracking your daily health and staying privately connected with the people you trust.">
     <meta property="og:type" content="website">
     <meta property="og:title" content="About TheraSocial">
     <meta property="og:description" content="A well-being-first platform for tracking your daily health and staying privately connected with the people you trust.">
@@ -266,13 +293,13 @@
 
         <div class="content">
             <p data-i18n="about.intro">
-                TheraSocial is built around one core principle: your well-being comes first. We offer a thoughtful alternative to mainstream social networks — a platform designed to strengthen your personal resilience, health, and meaningful human connections rather than capture your time and attention.
+                TheraSocial is built around one core principle: your well-being comes first. We offer a thoughtful alternative to mainstream social networks: a platform designed to strengthen your personal resilience, health, and meaningful human connections rather than capture your time and attention.
             </p>
 
             <div class="mission-section">
                 <h2 style="color: #6B8BA4; margin-bottom: 20px;" data-i18n="about.mission_title">Our Mission</h2>
                 <p data-i18n="about.mission_text">
-                    We believe everyone deserves tools that support their quality of life — across sports, sleep, health, mood, and social connections. Our mission is to empower you with innovative features that cultivate trusted, safe, and effective relationships while protecting your personal data and privacy.
+                    We believe everyone deserves tools that support their quality of life across sports, sleep, health, mood, and social connections. Our mission is to empower you with innovative features that cultivate trusted, safe, and effective relationships while protecting your personal data and privacy.
                 </p>
             </div>
 
@@ -284,19 +311,19 @@
                 </p>
 
                 <p style="margin-bottom: 15px;" data-i18n="about.story_para1">
-                    The initial idea for TheraSocial was born at a meaningful hackathon hosted by the "Bishvil HaChaim" Association together with Reichman University — an event dedicated to advancing innovation in welfare and quality of life.
+                    The initial idea for TheraSocial was born at a meaningful hackathon hosted by the “Bishvil HaChaim” Association together with Reichman University, an event dedicated to advancing innovation in welfare and quality of life.
                 </p>
 
                 <p style="margin-bottom: 15px;" data-i18n="about.story_para2">
-                    We recognized that mainstream social networks are engineered to capture time and attention by leveraging the human need for connection — often leaving people feeling more isolated, not less. We set out to build something fundamentally different.
+                    We recognized that mainstream social networks are engineered to capture time and attention by leveraging the human need for connection, often leaving people feeling more isolated, not less. We set out to build something fundamentally different.
                 </p>
 
                 <p style="margin-bottom: 20px;" data-i18n="about.story_para3">
-                    TheraSocial is designed to strengthen the relationships you already have. Track what matters to you — sleep, exercise, mood, health — and stay connected to the people you care about through customizable trust circles and private messaging. Receive gentle alerts when someone close to you may need support. This is not another feed of curated highlights — it is a platform built for mutual care, authentic check-ins, and the meaningful human connections we all need to flourish.
+                    TheraSocial is designed to strengthen the relationships you already have. Track what matters to you (sleep, exercise, mood, health) and stay connected to the people you care about through customizable trust circles and private messaging. Receive gentle alerts when someone close to you may need support. This is not another feed of curated highlights. It is a platform built for mutual care, authentic check-ins, and the meaningful human connections we all need to flourish.
                 </p>
 
                 <p style="margin-bottom: 20px;" data-i18n="about.origin_details">
-                    The TheraSocial project originated at a social innovation hackathon organized by HaKaveret (The Hive) in partnership with the "Bishvil HaChaim" Association and Reichman University in 2025. Development began on July 1, 2025. Our headquarters are in Israel, and the platform officially launched on March 1, 2026.
+                    The TheraSocial project originated at a social innovation hackathon organized by HaKaveret (The Hive) in partnership with the “Bishvil HaChaim” Association and Reichman University in 2025. Development began on July 1, 2025. Our headquarters are in Israel, and the platform officially launched on March 1, 2026.
                 </p>
 
                 <p>
@@ -315,7 +342,7 @@
                     <div class="feature-icon">🛡️</div>
                     <div class="feature-title" data-i18n="about.privacy_title">Your Data, Your Control</div>
                     <p class="feature-desc" data-i18n="about.privacy_desc">
-                        Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and full GDPR compliance. You decide who sees what — always.
+                        Your information is protected with industry-standard encryption both in transit and at rest, CSRF protection, secure sessions, and data controls built around your GDPR rights. You decide who sees what, always.
                     </p>
                 </div>
 
@@ -331,7 +358,7 @@
                     <div class="feature-icon">💪</div>
                     <div class="feature-title" data-i18n="about.goals_title">Personal Empowerment</div>
                     <p class="feature-desc" data-i18n="about.goals_desc">
-                        Build personal resilience and flourish in every area of life — sports performance, sleep quality, health habits, mood awareness, and social connections.
+                        Build personal resilience and flourish in every area of life: sports performance, sleep quality, health habits, mood awareness, and social connections.
                     </p>
                 </div>
 
@@ -339,7 +366,7 @@
                     <div class="feature-icon">👨‍👩‍👧‍👦</div>
                     <div class="feature-title" data-i18n="about.communication_title">Support Your Real-Life Relationships</div>
                     <p class="feature-desc" data-i18n="about.communication_desc">
-                        TheraSocial is designed to complement — not replace — the close relationships you already have. Use private messaging and customizable trust circles to stay attuned to the people you see and care about every day.
+                        TheraSocial is designed to complement, not replace, the close relationships you already have. Use private messaging and customizable trust circles to stay attuned to the people you see and care about every day.
                     </p>
                 </div>
 
@@ -347,7 +374,7 @@
                     <div class="feature-icon">📅</div>
                     <div class="feature-title" data-i18n="about.checkin_title">Daily Check-ins</div>
                     <p class="feature-desc" data-i18n="about.checkin_desc">
-                        A quick daily check-in helps you understand your patterns in sleep, exercise, mood, and energy — building self-awareness one day at a time.
+                        A quick daily check-in helps you understand your patterns in sleep, exercise, mood, and energy, building self-awareness one day at a time.
                     </p>
                 </div>
 
@@ -363,7 +390,7 @@
             <h2 style="color: #6B8BA4; margin: 30px 0 20px;" data-i18n="about.values_title">Our Values</h2>
             <ul class="values-list">
                 <li><strong data-i18n="about.value1_title">Empowerment:</strong> <span data-i18n="about.value1_desc">We help you take charge of your well-being across every area of life</span></li>
-                <li><strong data-i18n="about.value2_title">Data Protection:</strong> <span data-i18n="about.value2_desc">End-to-end encryption and GDPR compliance ensure your data stays yours</span></li>
+                <li><strong data-i18n="about.value2_title">Data Protection:</strong> <span data-i18n="about.value2_desc">Encrypted connections and your GDPR data rights keep your data yours</span></li>
                 <li><strong data-i18n="about.value3_title">Innovation:</strong> <span data-i18n="about.value3_desc">Patent-protected features designed to cultivate meaningful human connection</span></li>
                 <li><strong data-i18n="about.value4_title">Accessibility:</strong> <span data-i18n="about.value4_desc">Available in multiple languages with support for every user, everywhere</span></li>
             </ul>
@@ -390,7 +417,7 @@
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B199"></script>
+    <script src="/static/js/i18n.js?v=B205"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read
@@ -441,5 +468,44 @@
             }
         });
     </script>
+    <!-- ============================================================================ -->
+    <!-- A92-LUXE (about): additive, presentation-only. Remove this block to revert.    -->
+    <!-- ============================================================================ -->
+    <style id="ts-a92-luxe">
+        /* A1 Solid deep-slate title (gradient-clipped text read faint and "template"). */
+        h1 {
+            background: none;
+            -webkit-background-clip: border-box;
+            background-clip: border-box;
+            -webkit-text-fill-color: currentColor;
+            color: #3D4852;
+            font-weight: 700;
+            margin-bottom: 0;
+        }
+        /* A2 Balanced feature grid: six cards as 3 x 2 on desktop, 2 x 3 on tablets
+              (auto-fit produced 4 + 2 with two orphan cards). Mobile keeps 1 column. */
+        @media (min-width: 1025px) { .features { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 769px) and (max-width: 1024px) { .features { grid-template-columns: repeat(2, 1fr); } }
+        /* A3 Calm hovers: small lift, soft neutral shadow, no 5% bounce or purple glow. */
+        .feature-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(61, 72, 82, 0.10); }
+        .back-link {
+            background: linear-gradient(135deg, #5A7A93 0%, #6B8BA4 100%);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .back-link:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(61, 72, 82, 0.14); filter: brightness(1.03); }
+        @media (prefers-reduced-motion: reduce) { .feature-card:hover, .back-link:hover { transform: none; } }
+        /* A4 Pre-existing RTL fix: the gap between "Get Started" and "Back" is an inline
+              margin-right, which sits on the wrong side in Hebrew/Arabic. */
+        [dir="rtl"] .back-link[style*="margin-right"] { margin-right: 0 !important; margin-left: 20px; }
+        @media (max-width: 768px) { [dir="rtl"] .back-link[style*="margin-right"] { margin-left: auto; } }
+        /* A5 Typography: balanced headings, no single-word last lines, optical tracking (LTR). */
+        h1, h2, h3, .feature-title { text-wrap: balance; }
+        p, li, .feature-desc { text-wrap: pretty; }
+        html:not([dir="rtl"]) h1 { letter-spacing: -0.02em; }
+        html:not([dir="rtl"]) h2 { letter-spacing: -0.015em; }
+        body { font-kerning: normal; }
+    </style>
+    <!-- ===================== END A92-LUXE ===================== -->
+
 </body>
 </html>

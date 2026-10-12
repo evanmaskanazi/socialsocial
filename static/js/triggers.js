@@ -1,3 +1,7 @@
+// Version B205 (F6): no content change; ?v bumped B204->B205 in lockstep.
+// Version B204 (A94): no content change; ?v bumped B203->B204 in lockstep. Checked against the
+//   new strict CSP: every inline handler this file builds is picked up by app.py's handler
+//   bridge (no eval, string timers or javascript: links here).
 // Complete Trigger Management System for TheraSocial
 // triggers.js - Full Implementation
 // Version Lang - Replaced all hardcoded English strings with i18n translation keys
