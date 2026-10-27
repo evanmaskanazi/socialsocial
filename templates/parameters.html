@@ -1,4 +1,22 @@
 <!DOCTYPE html>
+<!-- TheraSocial Parameters Version B209 (F12 rev 3) -->
+<!-- B209 (F12 rev 3): cache-bust lockstep only. "Private messaging" is now named "End-to-end encryption" (e2ee.js, i18n.js).
+     CACHE-BUST: every live JS ?v bumped B208->B209 in lockstep; app.py _A92_ASSET_VERSION = 'B209'. -->
+<!-- TheraSocial Parameters Version B208 (F12 rev 2) -->
+<!-- B208 (F12 rev 2): cache-bust lockstep only (e2ee.js changed: private messaging can be managed at any time).
+     Every live JS ?v bumped B207->B208; app.py _A92_ASSET_VERSION = 'B208'. -->
+<!-- TheraSocial Parameters Version B207 (F12) -->
+<!-- B207 (F12): Daily gift box: one additive link under the points total, "Choose a Dream Card with your points"
+     (/collection), so earned points have a visible use. 4 languages in the box's own STR map. Nothing else changed.
+     CACHE-BUST: every live JS ?v bumped B206->B207 in lockstep (i18n.js and e2ee.js changed; collection.js is NEW);
+     app.py _A92_ASSET_VERSION = 'B207'.
+-->
+<!-- TheraSocial Parameters Version B206 (F11) -->
+<!-- B206 (F11): Cache-bust lockstep, plus one script tag: e2ee.js is loaded here only so that this page's own logout
+     button also clears this device's private-messaging key. No other markup/JS change.
+     CACHE-BUST: every live JS ?v bumped B205->B206 in lockstep (e2ee.js is NEW; index and circles changed); app.py
+     _A92_ASSET_VERSION = 'B206'.
+-->
 <!-- TheraSocial Parameters Version B205 (F6) -->
 <!-- B205 (F6): Cache-bust lockstep only. No markup/JS change.
      CACHE-BUST: every live JS ?v bumped B204->B205 in lockstep (i18n.js and index changed); app.py
@@ -999,9 +1017,10 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B205"></script>
-    <script src="/static/js/parameters-social.js?v=B205"></script>
-    <script src="/static/js/feed-updates.js?v=B205"></script>
+    <script src="/static/js/i18n.js?v=B209"></script>
+    <script src="/static/js/e2ee.js?v=B209"></script>
+    <script src="/static/js/parameters-social.js?v=B209"></script>
+    <script src="/static/js/feed-updates.js?v=B209"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -1642,7 +1661,10 @@ Storage.prototype.setItem = function(key, value) {
             checkinReward: { en: 'check-in reward', he: 'על הצ׳ק־אין', ar: 'مكافأة تسجيل الحضور', ru: 'за отметку' },
             streakBonus: { en: 'streak bonus', he: 'בונוס התמדה', ar: 'مكافأة المواظبة', ru: 'бонус за серию' },
             totalPoints: { en: 'Your total: {n} points', he: 'סך הכול: {n} נקודות',
-                           ar: 'مجموعك: {n} نقطة', ru: 'Всего: {n} очков' }
+                           ar: 'مجموعك: {n} نقطة', ru: 'Всего: {n} очков' },
+            // B207 (F12): where the points can be used (Dream Cards prototype at /collection).
+            storeLink: { en: 'Choose a Dream Card with your points ✨', he: 'בחרו כרטיס חלום עם הנקודות שלכם ✨',
+                         ar: 'اختاروا بطاقة أحلام بنقاطكم ✨', ru: 'Выберите карточку мечты за свои очки ✨' }
         };
         var pick = function (map, lang) { return map[lang] || map.en; };
         var reduce = function () {
@@ -1740,6 +1762,11 @@ Storage.prototype.setItem = function(key, value) {
             reveal.appendChild(pointsMain);
             reveal.appendChild(pointsBreak);
             if (pointsTotal.textContent) reveal.appendChild(pointsTotal);
+            // B207 (F12): give the points a visible purpose right where they are earned.
+            var storeLink = document.createElement('a');
+            storeLink.href = '/collection'; storeLink.textContent = pick(STR.storeLink, L);
+            storeLink.style.cssText = 'display:inline-block;margin:2px 0 10px;color:#5A7A93;font-weight:600;text-decoration:underline;';
+            reveal.appendChild(storeLink);
             reveal.appendChild(rText);
             reveal.appendChild(footer); reveal.appendChild(closeBtn);
 

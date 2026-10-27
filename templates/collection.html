@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<!-- TheraSocial Dream Cards Version B209 (F12 rev 3) -->
+<!-- B209 (F12 rev 3): cache-bust lockstep only. "Private messaging" is now named "End-to-end encryption" (e2ee.js, i18n.js).
+     CACHE-BUST: every live JS ?v bumped B208->B209 in lockstep; app.py _A92_ASSET_VERSION = 'B209'. -->
+<!-- TheraSocial Dream Cards Version B208 (F12 rev 2): ?v bumped B207->B208 in lockstep (no other change). -->
+<!-- TheraSocial Dream Cards Version B207 (F12) -->
+<!-- B207 (F12): NEW PAGE (prototype). Members spend check-in points on collectible cards that stand
+     for wishes, interests and ambitions, then arrange them on their own shelves ("My World") and note
+     what each card means to them. Served by app.py at /collection (login required); data from
+     /api/collection, /api/collection/buy, /api/collection/arrange. All logic is in
+     /static/js/collection.js (no inline script or inline handlers, so the strict CSP needs nothing new).
+     CACHE-BUST: ?v=B209 in lockstep with the rest of the app; app.py _A92_ASSET_VERSION = 'B207'.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dream Cards - TheraSocial</title>
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#3D4852">
+    <style>
+        :root {
+            --slate: #3D4852; --primary: #5A7A93; --primary-soft: #6B8BA4; --sage: #9DB8A0;
+            --coral: #C17C74; --lilac: #B6A9C9; --sand: #F4F1EC; --line: #E5E5E3; --muted: #6B7280;
+            --gold: #C9A227;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: radial-gradient(1200px 600px at 10% -10%, #DCE6EE 0%, transparent 60%),
+                        radial-gradient(900px 500px at 110% 10%, #EDE7F3 0%, transparent 55%), var(--sand);
+            color: var(--slate); min-height: 100vh; font-kerning: normal;
+        }
+        .wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 60px; }
+        .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+        .back { color: var(--primary); text-decoration: none; font-weight: 600; font-size: 15px; }
+        .back:hover { text-decoration: underline; }
+        .spacer { flex: 1; }
+        .lang { padding: 6px 10px; border: 2px solid var(--primary-soft); border-radius: 8px; background: #fff; color: var(--primary); font-weight: 600; }
+        .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+        h1 { font-size: 2.1rem; letter-spacing: -0.02em; text-wrap: balance; }
+        [dir="rtl"] h1 { letter-spacing: 0; }
+        .sub { color: var(--muted); margin-top: 6px; max-width: 560px; line-height: 1.5; text-wrap: pretty; }
+        .balance { background: var(--slate); color: #fff; padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 1.05rem; white-space: nowrap; box-shadow: 0 6px 18px rgba(61,72,82,.18); }
+        .balance small { font-weight: 500; opacity: .8; margin-inline-start: 4px; }
+        .tabs { display: flex; gap: 8px; margin: 8px 0 16px; border-bottom: 1px solid var(--line); }
+        .tab { background: none; border: none; padding: 10px 14px; font-size: 1rem; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+        .tab[aria-selected="true"] { color: var(--slate); border-bottom-color: var(--primary); }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .chip { border: 1px solid var(--line); background: #fff; color: var(--slate); padding: 6px 12px; border-radius: 999px; cursor: pointer; font-size: .9rem; }
+        .chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .hint { background: #fff; border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; color: var(--muted); line-height: 1.5; }
+        .hint a { color: var(--primary); font-weight: 600; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 10px rgba(61,72,82,.08); display: flex; flex-direction: column; transition: transform .2s ease, box-shadow .2s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(61,72,82,.12); }
+        .art { position: relative; height: 128px; display: flex; align-items: center; justify-content: center; font-size: 64px; }
+        .art .cat { position: absolute; top: 10px; inset-inline-start: 10px; background: rgba(255,255,255,.85); color: var(--slate); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; letter-spacing: .02em; }
+        .c-luxury   { background: linear-gradient(135deg, #2F3A45 0%, #6B8BA4 100%); }
+        .c-sky      { background: linear-gradient(135deg, #24415C 0%, #8FB3D9 100%); }
+        .c-travel   { background: linear-gradient(135deg, #5C8A6B 0%, #C7D9CC 100%); }
+        .c-creative { background: linear-gradient(135deg, #8A6BA8 0%, #E3C7D9 100%); }
+        .c-learning { background: linear-gradient(135deg, #A87C4F 0%, #F0D9B5 100%); }
+        .c-giving   { background: linear-gradient(135deg, #C17C74 0%, #F2D3C9 100%); }
+        .v-aurora .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(64,224,208,.35), rgba(147,112,219,.35), rgba(255,182,193,.30)); mix-blend-mode: screen; }
+        .v-gold { box-shadow: 0 0 0 2px var(--gold), 0 8px 24px rgba(201,162,39,.25); }
+        .v-gold .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255,236,170,.55) 48%, transparent 66%); }
+        .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .name { font-weight: 700; font-size: 1.02rem; text-wrap: balance; }
+        .meta { color: var(--muted); font-size: .82rem; }
+        .vars { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+        .vbtn { flex: 1 1 auto; border: 1px solid var(--line); background: #fff; color: var(--slate); border-radius: 10px; padding: 7px 8px; font-size: .82rem; cursor: pointer; text-align: center; min-width: 64px; }
+        .vbtn.primary { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
+        .vbtn.confirm { background: var(--slate); border-color: var(--slate); color: #fff; font-weight: 700; }
+        .vbtn.owned { background: #EEF4EF; border-color: #CFE0D2; color: #3F6B4A; cursor: default; }
+        .vbtn:disabled { opacity: .55; cursor: not-allowed; }
+        .vbtn.owned:disabled { opacity: 1; cursor: default; }
+        .shelf { margin-bottom: 26px; }
+        .shelf h2 { font-size: 1.15rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .shelf h2 .count { color: var(--muted); font-weight: 500; font-size: .9rem; }
+        .note { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: .88rem; resize: vertical; min-height: 54px; color: var(--slate); }
+        .row { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+        .row select, .row input { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: .85rem; background: #fff; color: var(--slate); min-width: 0; flex: 1 1 0; width: 0; }
+        .row .mini { flex: none; }
+        .mini { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: .9rem; color: var(--slate); }
+        .mini:disabled { opacity: .4; cursor: default; }
+        .empty { text-align: center; padding: 50px 16px; color: var(--muted); background: #fff; border-radius: 16px; line-height: 1.6; }
+        .empty .big { font-size: 54px; margin-bottom: 8px; }
+        .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--slate); color: #fff; padding: 12px 18px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.2); z-index: 50; max-width: calc(100% - 32px); text-align: center; }
+        .toast.err { background: var(--coral); }
+        .loading { text-align: center; padding: 60px 0; color: var(--muted); }
+        @media (max-width: 520px) {
+            h1 { font-size: 1.6rem; }
+            .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+            .art { height: 96px; font-size: 46px; }
+            .body { padding: 10px; }
+            .vbtn { min-width: 0; padding: 6px 4px; font-size: .76rem; }
+            .row { flex-wrap: wrap; }
+            .row select, .row input { flex: 1 1 100%; width: auto; order: -1; }
+            .row .mini { flex: 1 1 0; }
+        }
+        @media (prefers-reduced-motion: reduce) { .card, .card:hover { transition: none; transform: none; } }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="top">
+            <a href="/" class="back" id="dcBack">← TheraSocial</a>
+            <span class="spacer"></span>
+            <select id="dcLang" class="lang" aria-label="Language">
+                <option value="en">English</option>
+                <option value="he">עברית</option>
+                <option value="ar">العربية</option>
+                <option value="ru">Русский</option>
+            </select>
+        </div>
+        <div class="hero">
+            <div>
+                <h1 id="dcTitle">Dream Cards</h1>
+                <p class="sub" id="dcSub"></p>
+            </div>
+            <div class="balance" id="dcBalance" aria-live="polite">…</div>
+        </div>
+        <div class="tabs" role="tablist">
+            <button class="tab" role="tab" id="dcTabStore" aria-selected="true"></button>
+            <button class="tab" role="tab" id="dcTabWorld" aria-selected="false"></button>
+        </div>
+        <div id="dcView"><div class="loading">…</div></div>
+    </div>
+    <script src="/static/js/i18n.js?v=B209"></script>
+    <script src="/static/js/collection.js?v=B209"></script>
+</body>
+</html>

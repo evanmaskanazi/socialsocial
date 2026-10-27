@@ -1,6 +1,59 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version F12 / B207 (E2EE review round 3, Hebrew wording, Dream Cards prototype; additive)
+#
+# F12:
+#   1. E2EE review round 3: no server change was needed; the fixes are in static/js/e2ee.js (B207).
+#   2. Hebrew wording: the five server-side Hebrew strings that used "רווחה" (two AI recommendation
+#      lines, the invite page title/description/join text) now use the same wording as i18n.js B207.
+#   3. NEW Dream Cards prototype (additive): table collection_cards (created by ensure_collection_schema(),
+#      ON DELETE CASCADE), page /collection (templates/collection.html + static/js/collection.js) and
+#      GET /api/collection, POST /api/collection/buy, POST /api/collection/arrange. Spending goes through
+#      the existing points_ledger (reason 'store_purchase', negative amount) and users.points with a
+#      race-safe conditional UPDATE, so users.points == SUM(points_ledger.amount) still holds. The data
+#      export includes the collection.
+#   4. PRE-EXISTING (found while adding 3): account deletion never removed daily_gift_log and
+#      points_ledger rows (FK to users.id, no cascade), so on Postgres deleting anyone who had earned
+#      check-in points failed with a foreign-key error. Both are now deleted (savepoints, same pattern
+#      as e2ee_keys), plus collection_cards.
+#   5. _A92_ASSET_VERSION = 'B207' (cache-bust lockstep; i18n.js and e2ee.js changed, collection.js new).
+#   6. F12 rev 2: _A92_ASSET_VERSION = 'B208' (e2ee.js: private messaging can be turned on, unlocked,
+#      re-keyed with a new passphrase or locked at any time from Settings or the Messages button). No server change.
+#   7. F12 rev 3: _A92_ASSET_VERSION = 'B209'. The feature is named "End-to-end encryption" (was "Private
+#      messaging"); the two /api/e2ee error texts say so too. Texts only.
+#
+# =====================================================================
+# TheraSocial app.py - Version F11 / B206 (end-to-end encrypted messages; additive)
+#
+# F11 (private messages are now end-to-end encrypted; encryption happens in the browser, the
+# server only stores and relays ciphertext):
+#   1. NEW static/js/e2ee.js (loaded by index.html, circles.html and parameters.html) wraps fetch for the message
+#      endpoints only. It encrypts on send, decrypts on read, and decrypts the message part of the
+#      data export. circles-messages.js / index.html message code is unchanged.
+#   2. New table e2ee_keys (created by ensure_e2ee_schema(): production never calls create_all() on an
+#      existing database; ON DELETE CASCADE so no user-deletion path can hit a foreign-key error): each member's PUBLIC key
+#      and their private key WRAPPED with their own messages passphrase (the server cannot open it).
+#      Routes: GET/POST /api/e2ee/key, GET /api/e2ee/pubkey/<id>.
+#   3. POST /api/messages: accepts "e2ee:v1:<iv>:<ciphertext>" payloads (flag e2ee=1). Ciphertext is
+#      stored as sent (no sanitising, no server-side moderation, larger length cap). Plain text is
+#      refused with e2ee_error=recipient_no_key / plaintext_refused. Rollout lever: env
+#      (round 3: transitional is now the DEFAULT; set TS_E2EE_MODE=required to refuse all plain text)
+#      TS_E2EE_MODE=transitional keeps accepting plain text until BOTH people have keys
+#      (default is now "transitional"; "required" never accepts plain text).
+#   4. Features that used to read message text on the server:
+#        - Crisis notice: the browser checks the wording before encrypting and sends only crisis=1;
+#          the existing support_notice / support_notice_key reply is unchanged.
+#        - Notification + email preview: cannot exist without reading the text. Alert.content is
+#          empty for encrypted messages; the title ("New message from X") and the email's
+#          "log in to view" line remain.
+#        - Data export: the export returns ciphertext; e2ee.js decrypts it in the browser so the
+#          downloaded file is readable (member must be unlocked).
+#   5. Account deletion also removes the member's e2ee_keys row (inside a savepoint, so a missing table can
+#      never block erasure). Posted public keys are checked to be real P-256 points and stored normalised.
+#   6. _A92_ASSET_VERSION = 'B206' (cache-bust lockstep; e2ee.js added, index.html and circles.html changed).
+#
+# =====================================================================
 # TheraSocial app.py - Version F7 / B205 (backend; no front-end change, cache-bust unchanged)
 #
 # F7 (security review: access control, sessions/tokens, logging):
@@ -6870,6 +6923,34 @@ class Message(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
 
+class E2EEKey(db.Model):
+    """F11: one row per member for end-to-end encrypted messages. BRAND-NEW table (created by
+    db.create_all(), no ALTER). public_key is a public ECDH P-256 JWK (JSON text). The private key
+    is stored only WRAPPED with a key derived from the member's messages passphrase, so the server
+    cannot read it."""
+    __tablename__ = 'e2ee_keys'
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', **{'ondelete': 'CASCADE'}), primary_key=True)
+    public_key = db.Column(db.Text, nullable=False)
+    wrapped_private_key = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class CollectionCard(db.Model):
+    """F12: one collected Dream Card (prototype store). BRAND-NEW table, created by
+    ensure_collection_schema() (no ALTER of any existing table). ON DELETE CASCADE."""
+    __tablename__ = 'collection_cards'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', **{'ondelete': 'CASCADE'}), index=True, nullable=False)
+    card_id = db.Column(db.String(40), nullable=False)
+    variant = db.Column(db.String(20), nullable=False, default='classic')
+    shelf = db.Column(db.String(40), default='')
+    position = db.Column(db.Integer, default=0)
+    note = db.Column(db.String(140), default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('user_id', 'card_id', 'variant', name='_collection_user_card_variant_uc'),)
+
+
 class SavedParameters(db.Model):
     __tablename__ = 'saved_parameters'
     id = db.Column(db.Integer, primary_key=True)
@@ -9092,7 +9173,7 @@ def _safe_back_url():
 
 # A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
 # parameters.html, circles.html and support.html).
-_A92_ASSET_VERSION = 'B205'
+_A92_ASSET_VERSION = 'B209'
 
 
 def _a92_soften_dashes_in_html(html):
@@ -9401,6 +9482,13 @@ def parameters_page():
     return render_template('parameters.html')
 
 
+@app.route('/collection')
+@login_required
+def collection_page():
+    """F12: Dream Cards prototype (store + personal collection). Self-contained page."""
+    return render_template('collection.html')
+
+
 # L60: Operator dashboard page route
 @app.route('/operator/dashboard')
 @login_required
@@ -9487,6 +9575,18 @@ def health_check():
         status['status'] = 'unhealthy'
         logger.error(f"Health check DB error: {e}")
 
+    # F11: end-to-end encryption deploy check (reported only; never makes the health check fail).
+    try:
+        _f11_js = os.path.join(app.static_folder or os.path.join(app.root_path, 'static'), 'js', 'e2ee.js')
+        status['e2ee'] = {
+            'mode': ((os.environ.get('TS_E2EE_MODE') or 'transitional').strip().lower() if (os.environ.get('TS_E2EE_MODE') or 'transitional').strip().lower() in ('transitional', 'required') else 'transitional (unrecognised value)'),
+            'client_script_present': os.path.isfile(_f11_js),
+            'keys_table': bool(ensure_e2ee_schema()) and 'e2ee_keys' in inspect(db.engine).get_table_names(),
+            'asset_version': _A92_ASSET_VERSION,
+        }
+    except Exception as _f11_e:
+        status['e2ee'] = {'error': str(_f11_e)[:120]}
+
     # Check Redis if configured
     try:
         if redis_client:
@@ -9506,7 +9606,6 @@ def health_check():
 
     # CHANGE 12: Add system load metrics
     try:
-        import os
         status['capacity']['load_average'] = os.getloadavg()[0] if hasattr(os, 'getloadavg') else 'N/A'
     except Exception:
         pass
@@ -10558,6 +10657,20 @@ def confirm_delete_account():
         db.session.execute(OperatorScope.__table__.delete().where(OperatorScope.operator_id == user.id))
         db.session.execute(OperatorBroadcast.__table__.delete().where(OperatorBroadcast.operator_id == user.id))
         db.session.execute(OperatorSettings.__table__.delete().where(OperatorSettings.operator_id == user.id))
+        try:  # F11: savepoint, so a missing e2ee_keys table can never block account erasure
+            with db.session.begin_nested():
+                db.session.execute(E2EEKey.__table__.delete().where(E2EEKey.user_id == user.id))
+        except Exception as _f11_err:
+            logger.warning(f"[F11 E2EE] could not clear e2ee_keys during deletion: {_f11_err}")
+        # F12 (pre-existing): daily_gift_log and points_ledger reference users.id with no cascade and were
+        # never removed here, so on Postgres deleting anyone who had earned check-in points failed with a
+        # foreign-key error. Same savepoint pattern as above; collection_cards (F12) is cleared too.
+        for _f12_model in (DailyGiftLog, PointsLedger, CollectionCard):
+            try:
+                with db.session.begin_nested():
+                    db.session.execute(_f12_model.__table__.delete().where(_f12_model.user_id == user.id))
+            except Exception as _f12_err:
+                logger.warning(f"[F12] could not clear {_f12_model.__tablename__} during deletion: {_f12_err}")
         # Objective groups the user CREATED (created_by is NOT NULL): detach child subgroups, remove
         # every membership of those groups, then delete the groups themselves.
         _created_group_ids = [g.id for g in ObjectiveGroup.query.filter_by(created_by=user.id).all()]
@@ -10705,6 +10818,14 @@ def export_user_data():
                 })
         except Exception as _exp_err:
             logger.warning(f"[EXPORT] partial data population for user {user_id}: {_exp_err}")
+        try:  # F12: Dream Card collection (prototype)
+            if ensure_collection_schema():
+                export_data['collection'] = [{'card_id': c.card_id, 'variant': c.variant, 'shelf': c.shelf,
+                                              'note': c.note, 'created_at': c.created_at.isoformat() if c.created_at else None}
+                                             for c in CollectionCard.query.filter_by(user_id=user_id).all()]
+        except Exception as _f12_exp:
+            db.session.rollback()
+            logger.warning(f"[F12 COLLECTION] export skipped: {_f12_exp}")
 
         # Audit log for data export
         log_audit('data_exported', 'user', user_id, user_id)
@@ -13206,7 +13327,9 @@ def messages():
             if not recipient_id or not content:
                 return jsonify({'error': 'Missing recipient or content'}), 400
             
-            if len(content) > MAX_MESSAGE_LENGTH:
+            # F11: an end-to-end encrypted payload is longer than its text (IV, tag, base64).
+            _f11_e2ee = bool(data.get('e2ee')) and _f11_is_e2ee_payload(content)
+            if len(content) > (_F11_E2EE_MAX_CHARS if _f11_e2ee else MAX_MESSAGE_LENGTH):
                 return jsonify({'error': f'Message too long. Maximum {MAX_MESSAGE_LENGTH} characters allowed.'}), 400
 
             # CHANGE 9: Validate recipient_id is an integer
@@ -13232,6 +13355,12 @@ def messages():
             if is_blocked_by_recipient:
                 return jsonify({'error': 'Unable to send message to this user', 'blocked': True}), 403
 
+            # F11: the server only stores ciphertext now. Plain text is refused (one rollout exception,
+            # see _f11_plaintext_refusal).
+            _f11_refusal = None if _f11_e2ee else _f11_plaintext_refusal(user_id, recipient_id)
+            if _f11_refusal:
+                return jsonify({'error': 'Secure messaging is required', 'e2ee_error': _f11_refusal}), 400
+
             # Check content
             # A26 FIX (wellbeing): a crisis disclosure must still REACH the person's support
             # network. Previously any message matching a crisis pattern ("I've been thinking
@@ -13240,7 +13369,7 @@ def messages():
             # their support person was the exact moment the product silently stopped them.
             # Now the message is delivered AND the sender is shown crisis resources alongside
             # the confirmation. Genuinely prohibited content is still blocked.
-            moderation = content_moderator.check_content(content)
+            moderation = {'safe': True} if _f11_e2ee else content_moderator.check_content(content)  # F11: ciphertext cannot be read here
             crisis_notice = None
             if not moderation.get('safe', True):
                 # ONLY 'prohibited' content is refused. The other two unsafe results —
@@ -13253,12 +13382,15 @@ def messages():
                 if moderation.get('type') == 'prohibited':
                     return jsonify({'error': moderation.get('message', 'Content not allowed')}), 400
                 crisis_notice = _A26_CRISIS_NOTICE_FALLBACK
+            if _f11_e2ee and data.get('crisis'):
+                # F11: the browser checked the wording before encrypting and sent only this yes/no flag.
+                crisis_notice = _A26_CRISIS_NOTICE_FALLBACK
 
             # Create message
             message = Message(
                 sender_id=user_id,
                 recipient_id=recipient_id,
-                content=sanitize_input(content)
+                content=content if _f11_e2ee else sanitize_input(content)
             )
             db.session.add(message)
 
@@ -13278,7 +13410,7 @@ def messages():
                     'key': 'alerts.new_message_from',
                     'params': {'username': sender_name}
                 }),
-                content=content[:100] + '...' if len(content) > 100 else content,
+                content=('' if _f11_e2ee else (content[:100] + '...' if len(content) > 100 else content)),  # F11: no preview of ciphertext
                 alert_type='info',
                 source_user_id=user_id,
                 alert_category='message'
@@ -13435,6 +13567,352 @@ def messages_unread_count():
     except Exception as e:
         logger.error(f"Unread count error: {str(e)}")
         return jsonify({'unread_count': 0})
+
+
+# =====================
+# F11 (B206): END-TO-END ENCRYPTED MESSAGES - helpers and key routes
+# =====================
+# The browser (static/js/e2ee.js) creates the key pair, encrypts and decrypts. The server only
+# validates the shape of what it stores and never sees a message's text or a member's private key.
+_f11_schema_ready = False
+_f11_schema_next_try = 0.0   # back off 60 s between failed attempts
+
+
+def ensure_e2ee_schema():
+    """F11: create the e2ee_keys table if it is missing. REQUIRED: on an existing database
+    init_database() never calls db.create_all(), so a new model needs an explicit ensure (same
+    pattern as PointsLedger in ensure_points_schema). Idempotent, non-fatal, cheap once done."""
+    global _f11_schema_ready, _f11_schema_next_try
+    if _f11_schema_ready:
+        return True
+    if time.time() < _f11_schema_next_try:
+        return False
+    try:
+        with app.app_context():
+            E2EEKey.__table__.create(bind=db.engine, checkfirst=True)
+        _f11_schema_ready = True
+        logger.info("[F11 E2EE] e2ee_keys table ensured")
+    except Exception as e:
+        logger.error(f"[F11 E2EE] Error ensuring e2ee_keys table: {e}")
+        _f11_schema_next_try = time.time() + 60
+    return _f11_schema_ready
+
+
+_F11_E2EE_RE = re.compile(r'^e2ee:v1:[A-Za-z0-9_-]{16}:[A-Za-z0-9_-]{22,}$')
+_F11_E2EE_MAX_CHARS = 30000   # 5000 characters of text can be ~20 kB in UTF-8, plus tag, base64
+
+
+def _f11_is_e2ee_payload(content):
+    return bool(content) and len(content) <= _F11_E2EE_MAX_CHARS and bool(_F11_E2EE_RE.match(content))
+
+
+def _f11_has_key(uid):
+    ensure_e2ee_schema()
+    try:
+        return db.session.get(E2EEKey, uid) is not None
+    except Exception as e:
+        # Fail CLOSED: on a database error treat the member as having a key, so plain text is refused
+        # rather than accepted. Roll back so the failed statement cannot poison the transaction.
+        logger.error(f"[F11 E2EE] key lookup error: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return True
+
+
+def _f11_plaintext_refusal(sender_id, recipient_id):
+    """Why a PLAIN-TEXT message must be refused (None = may be accepted).
+    TS_E2EE_MODE=transitional (DEFAULT, rollout): accept plain text until BOTH people have keys, so a
+    member whose contact has not set up private messaging yet can still be reached. Messages are
+    encrypted automatically as soon as both have keys, and plain text is then refused.
+    TS_E2EE_MODE=required: never accept plain text (set this once most members have set up keys)."""
+    mode = (os.environ.get('TS_E2EE_MODE') or 'transitional').strip().lower()
+    if mode not in ('transitional', 'required'):
+        logger.warning(f"[F11 E2EE] unknown TS_E2EE_MODE={mode!r}; using 'transitional'")
+        mode = 'transitional'
+    if mode == 'transitional':
+        return 'plaintext_refused' if (_f11_has_key(sender_id) and _f11_has_key(recipient_id)) else None
+    return 'plaintext_refused' if _f11_has_key(recipient_id) else 'recipient_no_key'
+
+
+@app.route('/api/e2ee/key', methods=['GET'])
+@login_required
+def f11_e2ee_get_key():
+    """The member's own public key + wrapped private key (only they can unlock it)."""
+    ensure_e2ee_schema()
+    try:
+        rec = db.session.get(E2EEKey, session['user_id'])
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[F11 E2EE] key read error: {e}")
+        return jsonify({'error': 'End-to-end encryption is temporarily unavailable', 'e2ee_error': 'unavailable'}), 503
+    resp = jsonify({'has_key': True, 'public_key': rec.public_key, 'wrapped_private_key': rec.wrapped_private_key}
+                   if rec else {'has_key': False})
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
+@app.route('/api/e2ee/key', methods=['POST'])
+@login_required
+@rate_limit_endpoint(max_requests=20, window=3600, endpoint_name='e2ee_key_set')
+def f11_e2ee_set_key():
+    """Create the member's key record. Replacing an existing one needs replace=true ("start over":
+    older encrypted messages become unreadable)."""
+    try:
+        ensure_e2ee_schema()
+        user_id = session['user_id']
+        data = request.get_json(silent=True) or {}
+        pub, wrapped = data.get('public_key'), data.get('wrapped_private_key')
+        if not isinstance(pub, str) or not isinstance(wrapped, str) or len(pub) > 600 or len(wrapped) > 4000:
+            return jsonify({'error': 'Invalid key data'}), 400
+        try:
+            pj, wj = json.loads(pub), json.loads(wrapped)
+        except ValueError:
+            return jsonify({'error': 'Invalid key data'}), 400
+        if not (isinstance(pj, dict) and pj.get('kty') == 'EC' and pj.get('crv') == 'P-256'
+                and isinstance(pj.get('x'), str) and isinstance(pj.get('y'), str)
+                and re.fullmatch(r'[A-Za-z0-9_-]{43}', pj['x']) and re.fullmatch(r'[A-Za-z0-9_-]{43}', pj['y'])):
+            return jsonify({'error': 'Invalid public key'}), 400
+        try:
+            # a malformed point would make every sender's browser throw; check it is a real P-256 point
+            import base64 as _f11_b64
+            from cryptography.hazmat.primitives.asymmetric import ec as _f11_ec
+            _pad = lambda v: _f11_b64.urlsafe_b64decode(v + '=')
+            _f11_nums = _f11_ec.EllipticCurvePublicNumbers(int.from_bytes(_pad(pj['x']), 'big'), int.from_bytes(_pad(pj['y']), 'big'),
+                                                           _f11_ec.SECP256R1())
+            try:
+                _f11_nums.public_key()
+            except TypeError:       # cryptography < 3.1 needs an explicit backend
+                from cryptography.hazmat.backends import default_backend as _f11_backend
+                _f11_nums.public_key(_f11_backend())
+        except ImportError:
+            pass
+        except Exception:
+            return jsonify({'error': 'Invalid public key'}), 400
+        pub = json.dumps({'kty': 'EC', 'crv': 'P-256', 'x': pj['x'], 'y': pj['y']}, separators=(',', ':'))
+        if not (isinstance(wj, dict) and wj.get('v') == 1 and isinstance(wj.get('i'), int)
+                and 100000 <= wj['i'] <= 10000000
+                and all(isinstance(wj.get(k), str) and 0 < len(wj[k]) <= 1000 for k in ('s', 'n', 'c'))):
+            return jsonify({'error': 'Invalid wrapped key'}), 400
+        rec = db.session.get(E2EEKey, user_id)
+        if rec and not data.get('replace'):
+            return jsonify({'error': 'Key already exists'}), 409
+        if rec:
+            rec.public_key, rec.wrapped_private_key, rec.updated_at = pub, wrapped, datetime.utcnow()
+        else:
+            db.session.add(E2EEKey(user_id=user_id, public_key=pub, wrapped_private_key=wrapped))
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"E2EE key save error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to save key'}), 500
+
+
+@app.route('/api/e2ee/pubkey/<int:target_id>', methods=['GET'])
+@login_required
+def f11_e2ee_pubkey(target_id):
+    """Another member's PUBLIC key (404 when they have not turned on private messaging yet)."""
+    ensure_e2ee_schema()
+    try:
+        rec = db.session.get(E2EEKey, target_id)
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[F11 E2EE] pubkey read error: {e}")
+        return jsonify({'error': 'End-to-end encryption is temporarily unavailable', 'e2ee_error': 'unavailable'}), 503
+    if not rec:
+        return jsonify({'has_key': False}), 404
+    resp = jsonify({'user_id': target_id, 'public_key': rec.public_key})
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
+# =====================
+# F12 (B207): DREAM CARDS - prototype store + personal collection ("My World")
+# =====================
+# Members spend check-in points on collectible cards that stand for wishes, interests and ambitions,
+# then arrange them on their own shelves and write what each card means to them. Additive only: one new
+# table (collection_cards); points are spent through the existing points_ledger (reason
+# 'store_purchase', negative amount) and the cached users.points, so the ledger invariant
+# users.points == SUM(points_ledger.amount) still holds. Nothing here changes how points are earned.
+_f12_schema_ready = False
+_f12_schema_next_try = 0.0
+
+# id: (emoji, category, price, {en, he, ar, ru})
+_F12_CARDS = [
+    ('sports_car', '🏎️', 'luxury', 140, {'en': 'Dream Sports Car', 'he': 'מכונית ספורט חלומית', 'ar': 'سيارة رياضية الأحلام', 'ru': 'Спорткар мечты'}),
+    ('mansion', '🏰', 'luxury', 200, {'en': 'Seaside Mansion', 'he': 'אחוזה על חוף הים', 'ar': 'قصر على البحر', 'ru': 'Особняк у моря'}),
+    ('yacht', '🛥️', 'luxury', 170, {'en': 'Private Yacht', 'he': 'יאכטה פרטית', 'ar': 'يخت خاص', 'ru': 'Личная яхта'}),
+    ('fighter_jet', '✈️', 'sky', 180, {'en': 'Fighter Jet', 'he': 'מטוס קרב', 'ar': 'طائرة مقاتلة', 'ru': 'Истребитель'}),
+    ('iron_dome', '🛡️', 'sky', 220, {'en': 'Iron Dome Battery', 'he': 'סוללת כיפת ברזל', 'ar': 'بطارية القبة الحديدية', 'ru': 'Батарея «Железный купол»'}),
+    ('space_trip', '🚀', 'sky', 250, {'en': 'Trip to Space', 'he': 'טיסה לחלל', 'ar': 'رحلة إلى الفضاء', 'ru': 'Полёт в космос'}),
+    ('world_trip', '🌍', 'travel', 90, {'en': 'Around the World', 'he': 'טיול מסביב לעולם', 'ar': 'رحلة حول العالم', 'ru': 'Кругосветное путешествие'}),
+    ('summit', '🏔️', 'travel', 70, {'en': 'Mountain Summit', 'he': 'פסגת הר', 'ar': 'قمة جبل', 'ru': 'Горная вершина'}),
+    ('northern_lights', '🌌', 'travel', 80, {'en': 'Northern Lights', 'he': 'הזוהר הצפוני', 'ar': 'الشفق القطبي', 'ru': 'Северное сияние'}),
+    ('album', '🎸', 'creative', 60, {'en': 'My Own Album', 'he': 'אלבום משלי', 'ar': 'ألبومي الخاص', 'ru': 'Мой альбом'}),
+    ('exhibition', '🖼️', 'creative', 65, {'en': 'Art Exhibition', 'he': 'תערוכת אמנות', 'ar': 'معرض فني', 'ru': 'Художественная выставка'}),
+    ('book', '📖', 'creative', 55, {'en': 'Published Book', 'he': 'ספר שיצא לאור', 'ar': 'كتاب منشور', 'ru': 'Изданная книга'}),
+    ('degree', '🎓', 'learning', 50, {'en': 'Dream Degree', 'he': 'התואר שחלמתי עליו', 'ar': 'شهادة الأحلام', 'ru': 'Диплом мечты'}),
+    ('new_language', '🗣️', 'learning', 40, {'en': 'A New Language', 'he': 'שפה חדשה', 'ar': 'لغة جديدة', 'ru': 'Новый язык'}),
+    ('chef', '🍳', 'learning', 45, {'en': 'Master Chef', 'he': 'שף מקצועי', 'ar': 'طاهٍ محترف', 'ru': 'Шеф-повар'}),
+    ('forest', '🌳', 'giving', 35, {'en': 'Plant a Forest', 'he': 'לנטוע יער', 'ar': 'زراعة غابة', 'ru': 'Посадить лес'}),
+    ('mentor', '🌟', 'giving', 30, {'en': 'Mentor Someone', 'he': 'להיות מנטור', 'ar': 'أن أكون مرشدًا', 'ru': 'Стать наставником'}),
+    ('volunteer', '🤝', 'giving', 30, {'en': 'Volunteer Hero', 'he': 'גיבור התנדבות', 'ar': 'بطل التطوع', 'ru': 'Герой-волонтёр'}),
+]
+_F12_CARD_BY_ID = {c[0]: c for c in _F12_CARDS}
+# Variations unlock once the classic card is in the member's world; they cost a fixed extra amount.
+_F12_VARIANTS = {'classic': 0, 'aurora': 25, 'gold': 40}
+
+
+def ensure_collection_schema():
+    """F12: create collection_cards if missing (same idempotent, non-fatal pattern as ensure_e2ee_schema)."""
+    global _f12_schema_ready, _f12_schema_next_try
+    if _f12_schema_ready:
+        return True
+    if time.time() < _f12_schema_next_try:
+        return False
+    try:
+        with app.app_context():
+            CollectionCard.__table__.create(bind=db.engine, checkfirst=True)
+        _f12_schema_ready = True
+        logger.info("[F12 COLLECTION] collection_cards table ensured")
+    except Exception as e:
+        if 'already exists' in str(e).lower():   # another worker created it at the same moment
+            _f12_schema_ready = True
+        else:
+            logger.error(f"[F12 COLLECTION] Error ensuring collection_cards table: {e}")
+            _f12_schema_next_try = time.time() + 60
+    return _f12_schema_ready
+
+
+def _f12_price(card, variant):
+    return int(card[3]) + int(_F12_VARIANTS[variant])
+
+
+def _f12_state(user_id):
+    """Balance, catalog, this member's cards, and how many members collected each card."""
+    u = db.session.get(User, user_id)
+    items = CollectionCard.query.filter_by(user_id=user_id).order_by(CollectionCard.shelf, CollectionCard.position, CollectionCard.id).all()
+    counts = dict(db.session.execute(
+        select(CollectionCard.card_id, func.count(func.distinct(CollectionCard.user_id))).group_by(CollectionCard.card_id)
+    ).all())
+    return {
+        'balance': int((u.points or 0) if u else 0),
+        'cards': [{'id': c[0], 'emoji': c[1], 'category': c[2], 'price': c[3], 'names': c[4],
+                   'variants': [{'id': v, 'price': _f12_price(c, v)} for v in _F12_VARIANTS],
+                   'collectors': int(counts.get(c[0], 0))} for c in _F12_CARDS],
+        'items': [{'id': i.id, 'card_id': i.card_id, 'variant': i.variant, 'shelf': i.shelf or '',
+                   'position': i.position or 0, 'note': i.note or ''} for i in items if i.card_id in _F12_CARD_BY_ID],
+    }
+
+
+def _f12_clean(v, n):
+    """Plain text only (the page always shows it with textContent, never as HTML): drop control
+    characters, trim, cap the length. Not HTML-escaped here, so '&' is not stored as '&amp;'."""
+    return re.sub(r'[\x00-\x09\x0b-\x1f\x7f]', '', str(v or '')).strip()[:n]   # line breaks (\n) kept for notes
+
+
+def _f12_unavailable():
+    return jsonify({'error': 'The card store is temporarily unavailable'}), 503
+
+
+@app.route('/api/collection', methods=['GET'])
+@login_required
+def f12_collection_get():
+    if not ensure_collection_schema():
+        return _f12_unavailable()
+    try:
+        resp = jsonify(_f12_state(session['user_id']))
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[F12 COLLECTION] read error: {e}")
+        return _f12_unavailable()
+
+
+@app.route('/api/collection/buy', methods=['POST'])
+@login_required
+@rate_limit_endpoint(max_requests=60, window=3600, endpoint_name='collection_buy')
+def f12_collection_buy():
+    if not ensure_collection_schema():
+        return _f12_unavailable()
+    user_id = session['user_id']
+    data = request.get_json(silent=True) or {}
+    card = _F12_CARD_BY_ID.get(str(data.get('card_id') or ''))
+    variant = str(data.get('variant') or 'classic')
+    if not card or variant not in _F12_VARIANTS:
+        return jsonify({'error': 'Unknown card'}), 400
+    try:
+        db.session.rollback()   # clean transaction (same precaution as the points award paths)
+        if CollectionCard.query.filter_by(user_id=user_id, card_id=card[0], variant=variant).first():
+            return jsonify({'error': 'Already in your collection', 'code': 'owned'}), 409
+        if variant != 'classic' and not CollectionCard.query.filter_by(user_id=user_id, card_id=card[0], variant='classic').first():
+            return jsonify({'error': 'Collect the classic card first', 'code': 'needs_classic'}), 400
+        price = _f12_price(card, variant)
+        # Race-safe spend: the balance only goes down if it covers the price at this instant.
+        res = db.session.execute(
+            update(User).where(User.id == user_id, func.coalesce(User.points, 0) >= price)
+            .values(points=func.coalesce(User.points, 0) - price)
+            .execution_options(synchronize_session=False))
+        if res.rowcount != 1:
+            db.session.rollback()
+            return jsonify({'error': 'Not enough points', 'code': 'not_enough'}), 400
+        db.session.add(PointsLedger(user_id=user_id, date=datetime.utcnow().strftime('%Y-%m-%d'),
+                                    amount=-price, reason='store_purchase'))
+        top = db.session.execute(select(func.coalesce(func.max(CollectionCard.position), -1))
+                                 .where(CollectionCard.user_id == user_id, CollectionCard.shelf == '')).scalar()
+        db.session.add(CollectionCard(user_id=user_id, card_id=card[0], variant=variant, shelf='', position=int(top) + 1))
+        db.session.commit()
+        return jsonify(dict(_f12_state(user_id), success=True))
+    except IntegrityError:
+        db.session.rollback()   # a double click raced the unique (user, card, variant) row: nothing was spent
+        return jsonify({'error': 'Already in your collection', 'code': 'owned'}), 409
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[F12 COLLECTION] buy error: {e}")
+        return jsonify({'error': 'Could not complete the purchase'}), 500
+
+
+@app.route('/api/collection/arrange', methods=['POST'])
+@login_required
+@rate_limit_endpoint(max_requests=1200, window=3600, endpoint_name='collection_arrange')
+def f12_collection_arrange():
+    """Save shelves, order and personal notes. Only the member's own cards can be changed."""
+    if not ensure_collection_schema():
+        return _f12_unavailable()
+    user_id = session['user_id']
+    data = request.get_json(silent=True) or {}
+    rows = data.get('items')
+    if not isinstance(rows, list) or len(rows) > 500:
+        return jsonify({'error': 'Invalid data'}), 400
+    try:
+        mine = {c.id: c for c in CollectionCard.query.filter_by(user_id=user_id).all()}
+        for r in rows:
+            if not isinstance(r, dict):
+                continue
+            try:
+                c = mine.get(int(r.get('id')))
+            except (TypeError, ValueError):
+                c = None
+            if not c:
+                continue
+            if 'shelf' in r:
+                c.shelf = _f12_clean(r.get('shelf'), 40).replace('\n', ' ')
+            if 'position' in r:
+                try:
+                    c.position = max(0, min(10000, int(r.get('position'))))
+                except (TypeError, ValueError):
+                    pass
+            if 'note' in r:
+                c.note = _f12_clean(r.get('note'), 140)
+        db.session.commit()
+        return jsonify(dict(_f12_state(user_id), success=True))
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[F12 COLLECTION] arrange error: {e}")
+        return jsonify({'error': 'Could not save your changes'}), 500
 
 
 # =====================
@@ -18672,13 +19150,13 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
             'logged_entries': 'כל הכבוד על מעקב במשך {days} ימים!',
             'logged_few': 'רשמת {days} רשומות. המשך/י לעקוב יומיומית לתובנות טובות יותר!',
             'mood_positive': 'מצב הרוח שלך היה חיובי באופן כללי. המשך/י כך!',
-            'mood_low': 'מצב הרוח שלך היה נמוך מהרגיל. שקול/י פעילויות שמשפרות את הרווחה שלך.',
+            'mood_low': 'מצב הרוח שלך היה נמוך מהרגיל. שקול/י פעילויות שמשפרות את ההרגשה שלך.',
             'energy_strong': 'רמות האנרגיה שלך חזקות!',
             'energy_low': 'זוהתה אנרגיה נמוכה. שקול/י לתעדף מנוחה או פעילות גופנית.',
             'sleep_great': 'איכות שינה מעולה!',
             'sleep_improve': 'איכות השינה שלך יכולה להשתפר. שקול/י היגיינת שינה טובה יותר.',
             'activity_excellent': 'רמות פעילות מצוינות!',
-            'activity_low': 'שקול/י להגביר את הפעילות הגופנית שלך לרווחה טובה יותר.',
+            'activity_low': 'שקול/י להגביר את הפעילות הגופנית שלך להרגשה טובה יותר.',
             'anxiety_high': 'רמות החרדה נראות מוגברות. שקול/י טכניקות הרגעה או שיחה עם מומחה.',
             'anxiety_good': 'ניהול חרדה טוב!',
             'belonging_strong': 'תחושת החיבור החברתי שלך הייתה חזקה בתקופה זו!',
@@ -26878,13 +27356,13 @@ def public_invite_page(username):
             },
             'he': {
                 'kicker': 'קיבלת הזמנה 👋',
-                'title': f'הצטרף/י למסע הרווחה של {safe_username}',
+                'title': f'הצטרף/י למסע האישי של {safe_username}',
                 'subtitle': 'צפה בהתקדמות שלו/ה ב-TheraSocial',
                 'reassurance': 'ההצטרפות חינמית · לוקח רק רגע · תמיד בשליטתך מה לשתף.',
                 'followers': 'חיבורים',
                 'following': 'מחובר/ת',
-                'description': f'{safe_username} עוקב/ת אחרי מסע הרווחה שלו/ה ורוצה לשתף אותך.',
-                'join_text': 'הצטרף/י ל-TheraSocial כדי לצפות בהתקדמות שלו/ה ולתמוך ביעדי הבריאות, הרווחה והשגשוג שלו/ה.',
+                'description': f'{safe_username} עוקב/ת אחרי המסע האישי שלו/ה ורוצה לשתף אותך.',
+                'join_text': 'הצטרף/י ל-TheraSocial כדי לצפות בהתקדמות שלו/ה ולתמוך ביעדי הבריאות, הצמיחה והשגשוג שלו/ה.',
                 'follow_btn': f'התחבר/י עם {safe_username}',
                 'dashboard_btn': 'עבור ללוח הבקרה',
                 'already_following': 'כבר מחובר/ת',
@@ -28012,6 +28490,10 @@ def _background_init():
         # fixes "box shows +15 but admin totals stay 0" even if the heavier init_database() below
         # has an issue. Idempotent no-op once the columns exist; logs [A16 POINTS/deploy] outcome.
         _a16_ensure_points_columns_now()
+        ensure_e2ee_schema()  # F11
+        ensure_collection_schema()  # F12
+        logger.info(f"[F11 E2EE] mode={(os.environ.get('TS_E2EE_MODE') or 'transitional')} table_ready={_f11_schema_ready} "
+                    f"script_present={os.path.isfile(os.path.join(app.static_folder or os.path.join(app.root_path, 'static'), 'js', 'e2ee.js'))}")
         init_database()
         with _init_lock:
             _init_complete = True
@@ -28025,6 +28507,8 @@ def _background_init():
 if __name__ == '__main__':
     # Initialize database
     _a16_ensure_points_columns_now()  # A16-9: guarantee reward columns on local/dev runs too
+    ensure_e2ee_schema()  # F11
+    ensure_collection_schema()  # F12
     init_database()
     migrate_circle_names()
     # data time

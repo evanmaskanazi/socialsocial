@@ -1,4 +1,27 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B209 (F12 rev 3) -->
+<!-- B209 (F12 rev 3): in-app Support copy of the FAQ "Is my data secure?" answer (built-in English) updated to the new end-to-end encryption wording. "Private messaging" is now named "End-to-end encryption" (e2ee.js, i18n.js).
+     CACHE-BUST: every live JS ?v bumped B208->B209 in lockstep; app.py _A92_ASSET_VERSION = 'B209'. -->
+<!-- TheraSocial Index Version B208 (F12 rev 2) -->
+<!-- B208 (F12 rev 2): one additive empty div, #tsE2EESettings, in Settings > Account after Change Password.
+     e2ee.js fills it with the Private messaging card and also places a status button under the Messages
+     heading. CACHE-BUST: every live JS ?v bumped B207->B208 in lockstep (e2ee.js changed); app.py
+     _A92_ASSET_VERSION = 'B208'.
+-->
+<!-- TheraSocial Index Version B207 (F12) -->
+<!-- B207 (F12): (1) Dream Cards prototype entry, additive: a signed-in-only navbar link (#navDreamCards, hidden on
+     phones), a plain-link item in the mobile More menu, and one line next to each existing Logout-button show/hide
+     so the link appears and disappears with it. No inline handler added. (2) Hebrew wording is in i18n.js.
+     CACHE-BUST: every live JS ?v bumped B206->B207 in lockstep (i18n.js and e2ee.js changed; collection.js is NEW);
+     app.py _A92_ASSET_VERSION = 'B207'.
+-->
+<!-- TheraSocial Index Version B206 (F11) -->
+<!-- B206 (F11): end-to-end encrypted messages. ONE additive line: a script tag for /static/js/e2ee.js (then served as v B206) right after the i18n.js one.
+     It wraps fetch for the message endpoints only (encrypt on send, decrypt on read and in the data export);
+     the message code in this page is unchanged. The key setup / unlock dialog is built by e2ee.js itself.
+     CACHE-BUST: every live JS ?v bumped B205->B206 in lockstep (e2ee.js is NEW; index and circles changed); app.py
+     _A92_ASSET_VERSION = 'B206'.
+-->
 <!-- TheraSocial Index Version B205 (F6) -->
 <!-- B205 (F6): consent and disclosure fixes. (1) Sign-up: analytics consent was always saved as
      "yes" ("|| true") and its box was pre-ticked; now unticked and saved as chosen. (2) De-identified
@@ -790,10 +813,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B205"></script>
+   <script src="/static/js/utilities.js?v=B209"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B205"></script>
-    <script src="/static/js/follow-requests.js?v=B205"></script>
+    <script src="/static/js/triggers.js?v=B209"></script>
+    <script src="/static/js/follow-requests.js?v=B209"></script>
 
 
     <style>
@@ -4981,6 +5004,10 @@
                         <span data-i18n="nav.support">Support</span>
                     </span>
                 </button>
+                <!-- B207 (F12): Dream Cards prototype entry. Shown together with the Logout button (signed in only);
+                     on phones it lives in the More menu instead (see the menu below). -->
+                <style>@media (max-width: 768px) { #navDreamCards { display: none !important; } }</style>
+                <a href="/collection" class="nav-link" id="navDreamCards" style="display: none; white-space: nowrap; margin: 0 6px; font-weight: 600;">✨ <span data-i18n="nav.dream_cards">Dream Cards</span></a>
                 <button class="btn btn-primary" id="tutorialBtn" style="display: none; width: auto; margin-left: 6px; margin-right: 6px; padding: 8px 14px; font-size: 0.9rem; border-radius: 10px;" onclick="startTutorial()">
                     <span style="display: flex; align-items: center; gap: 5px;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -5741,7 +5768,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq3_q">Is my data secure?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Messages are only ever shown to you and the person you write to, and once both of you have turned on end-to-end encryption they are also end-to-end encrypted, so not even TheraSocial can read them. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -5898,6 +5925,13 @@
                     <span class="mobile-more-icon">🔔</span>
                     <span class="mobile-more-label" data-i18n="alerts.title">Alerts</span>
                     <span class="mobile-more-badge" id="mobileMoreAlertsBadge" style="display: none;"></span>
+                </li>
+                <!-- B207 (F12): Dream Cards prototype (a plain link: no inline handler needed) -->
+                <li class="mobile-more-menu-item" style="padding: 0;">
+                    <a href="/collection" style="display: flex; align-items: center; width: 100%; padding: 15px 20px; color: inherit; text-decoration: none;">
+                        <span class="mobile-more-icon">✨</span>
+                        <span class="mobile-more-label" data-i18n="nav.dream_cards">Dream Cards</span>
+                    </a>
                 </li>
                 <li class="mobile-more-menu-divider"></li>
                 <!-- B70: Support in mobile menu for logged-in users -->
@@ -6848,6 +6882,9 @@
                                       <button class="btn btn-primary" style="width: auto; align-self: flex-start;" onclick="changePasswordFromSettings()" data-i18n="settings.update_password">Update Password</button>
                                   </div>
                               </div>
+
+                              <!-- B208 (F12 rev 2): End-to-end encryption (turn on / unlock / change passphrase / lock). Filled by e2ee.js. -->
+                              <div id="tsE2EESettings" class="settings-card" style="display: none; background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;"></div>
 
                               <!-- Export Your Data -->
                               <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
@@ -8230,7 +8267,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B205"></script>
+    <script src="/static/js/i18n.js?v=B209"></script>
+    <script src="/static/js/e2ee.js?v=B209"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8585,9 +8623,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B205"></script>
-   <script src="/static/js/circles-messages.js?v=B205"></script>
-<script src="/static/js/feed-updates.js?v=B205"></script>
+<script src="/static/js/parameters-social.js?v=B209"></script>
+   <script src="/static/js/circles-messages.js?v=B209"></script>
+<script src="/static/js/feed-updates.js?v=B209"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -9793,6 +9831,7 @@ async function loadUserCity() {
             document.getElementById('forgotPasswordContainer').style.display = 'none';
             document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('tutorialBtn').style.display = 'none';
+            var _f12dc = document.getElementById('navDreamCards'); if (_f12dc) _f12dc.style.display = 'none';   // B207 (F12)
             // I7 FIX: Clear login button loading state (belt-and-suspenders with success-path fix)
             const authBtn = document.getElementById('authSubmit');
             if (authBtn) authBtn.classList.remove('btn-loading');
@@ -10113,6 +10152,7 @@ document.addEventListener('DOMContentLoaded', checkCookieConsent);
     dashboard.classList.add('dashboard-entering');
     document.getElementById('logoutBtn').style.display = 'block';
     document.getElementById('tutorialBtn').style.display = 'block';
+    var _f12dc = document.getElementById('navDreamCards'); if (_f12dc) _f12dc.style.display = 'inline-block';   // B207 (F12)
 
     // T30b: Update short language code label for mobile
     if (typeof updateLangCodeLabel === 'function') updateLangCodeLabel();
