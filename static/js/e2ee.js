@@ -1,3 +1,8 @@
+// Version B209 (F12 rev 3): NAMING. The feature is now called "End-to-end encryption" (he הצפנה מקצה לקצה,
+//   ar التشفير من طرف إلى طرف, ru Сквозное шифрование) instead of "Private messaging", in every dialog, button,
+//   notice and the Settings card. Messages are always private between the two people; end-to-end encryption
+//   is presented as an added protection. The "not end-to-end encrypted" notices now say the message was still
+//   sent privately. Texts only: no behaviour change.
 // Version B208 (F12 rev 2): set up / unlock / manage private messaging at any time, not only when a prompt appears.
 //   * Settings > Account gets a "Private messaging" card (index.html has one empty placeholder div,
 //     #tsE2EESettings; this file fills it): Turn on / Unlock / Change passphrase / Lock on this device.
@@ -71,12 +76,12 @@
     // ------------------------------------------------------------------ texts (en/he/ar/ru)
     // Self-contained map (same approach as SUPPORT_MSGS on the support page) so i18n.js is untouched.
     var MSG = {
-        setup_title: { en: 'Set up private messaging', he: 'הגדרת הודעות פרטיות', ar: 'إعداد الرسائل الخاصة', ru: 'Настройка личных сообщений' },
+        setup_title: { en: 'Protect your messages with end-to-end encryption', he: 'הגנה על ההודעות שלכם בהצפנה מקצה לקצה', ar: 'احموا رسائلكم بالتشفير من طرف إلى طرف', ru: 'Защитите сообщения сквозным шифрованием' },
         setup_intro: {
-            en: 'Your messages are end-to-end encrypted: only you and the person you write to can read them, not even TheraSocial. Choose a messages passphrase. It unlocks your messages on each of your devices. We cannot recover it for you.',
-            he: 'ההודעות שלכם מוצפנות מקצה לקצה: רק אתם והאדם שאליו אתם כותבים יכולים לקרוא אותן, גם TheraSocial לא. בחרו ביטוי סיסמה להודעות. הוא פותח את ההודעות שלכם בכל אחד מהמכשירים שלכם. לא נוכל לשחזר אותו עבורכם.',
-            ar: 'رسائلكم مشفّرة من طرف إلى طرف: أنتم والشخص الذي تراسلونه فقط يمكنكم قراءتها، ولا يستطيع TheraSocial قراءتها أيضًا. اختاروا عبارة مرور للرسائل. تفتح رسائلكم على كل أجهزتكم. لا يمكننا استعادتها لكم.',
-            ru: 'Ваши сообщения защищены сквозным шифрованием: их можете прочитать только вы и ваш собеседник, даже TheraSocial не может. Придумайте парольную фразу для сообщений. Она открывает ваши сообщения на каждом устройстве. Мы не можем её восстановить.'
+            en: 'Your messages are always private between you and the person you write to. End-to-end encryption adds one more layer: the text is locked on your device, so not even TheraSocial can read it. Choose a messages passphrase. It unlocks your messages on each of your devices. We cannot recover it for you.',
+            he: 'ההודעות שלכם תמיד פרטיות ביניכם לבין האדם שאליו אתם כותבים. הצפנה מקצה לקצה מוסיפה שכבת הגנה נוספת: הטקסט ננעל במכשיר שלכם, כך שגם TheraSocial לא יכולה לקרוא אותו. בחרו ביטוי סיסמה להודעות. הוא פותח את ההודעות שלכם בכל אחד מהמכשירים שלכם. לא נוכל לשחזר אותו עבורכם.',
+            ar: 'رسائلكم خاصة دائمًا بينكم وبين من تراسلونه. يضيف التشفير من طرف إلى طرف طبقة حماية أخرى: يُقفَل النص على جهازكم فلا يستطيع حتى TheraSocial قراءته. اختاروا عبارة مرور للرسائل. تفتح رسائلكم على كل أجهزتكم. لا يمكننا استعادتها لكم.',
+            ru: 'Ваши сообщения всегда видны только вам и вашему собеседнику. Сквозное шифрование добавляет ещё один уровень защиты: текст шифруется на вашем устройстве, и даже TheraSocial не может его прочитать. Придумайте парольную фразу для сообщений. Она открывает ваши сообщения на каждом устройстве. Мы не можем её восстановить.'
         },
         unlock_title: { en: 'Unlock your messages', he: 'פתיחת ההודעות שלכם', ar: 'فتح رسائلكم', ru: 'Разблокировка сообщений' },
         unlock_intro: {
@@ -87,7 +92,7 @@
         },
         pass_label: { en: 'Messages passphrase', he: 'ביטוי סיסמה להודעות', ar: 'عبارة مرور الرسائل', ru: 'Парольная фраза для сообщений' },
         confirm_label: { en: 'Confirm passphrase', he: 'אימות ביטוי הסיסמה', ar: 'تأكيد عبارة المرور', ru: 'Повторите парольную фразу' },
-        btn_create: { en: 'Turn on private messaging', he: 'הפעלת הודעות פרטיות', ar: 'تفعيل الرسائل الخاصة', ru: 'Включить личные сообщения' },
+        btn_create: { en: 'Turn on end-to-end encryption', he: 'הפעלת הצפנה מקצה לקצה', ar: 'تفعيل التشفير من طرف إلى طرف', ru: 'Включить сквозное шифрование' },
         btn_unlock: { en: 'Unlock', he: 'פתיחה', ar: 'فتح', ru: 'Разблокировать' },
         btn_cancel: { en: 'Not now', he: 'לא עכשיו', ar: 'ليس الآن', ru: 'Не сейчас' },
         forgot: { en: 'Forgot your passphrase?', he: 'שכחתם את ביטוי הסיסמה?', ar: 'نسيتم عبارة المرور؟', ru: 'Забыли парольную фразу?' },
@@ -112,22 +117,22 @@
             ru: 'Сообщения остаются заблокированными, пока вы их не разблокируете, поэтому сообщение не отправлено.'
         },
         recipient_no_key: {
-            en: 'This person has not turned on private messaging yet, so a message cannot be sent to them securely.',
-            he: 'האדם הזה עדיין לא הפעיל הודעות פרטיות, ולכן אי אפשר לשלוח לו הודעה באופן מאובטח.',
-            ar: 'لم يفعّل هذا الشخص الرسائل الخاصة بعد، لذلك لا يمكن إرسال رسالة إليه بشكل آمن.',
-            ru: 'Этот человек ещё не включил личные сообщения, поэтому отправить ему сообщение безопасно нельзя.'
+            en: 'This person has not turned on end-to-end encryption yet, so an end-to-end encrypted message cannot be sent to them yet.',
+            he: 'האדם הזה עדיין לא הפעיל הצפנה מקצה לקצה, ולכן עדיין אי אפשר לשלוח לו הודעה מוצפנת מקצה לקצה.',
+            ar: 'لم يفعّل هذا الشخص التشفير من طرف إلى طرف بعد، لذلك لا يمكن بعد إرسال رسالة مشفّرة من طرف إلى طرف إليه.',
+            ru: 'Этот человек ещё не включил сквозное шифрование, поэтому зашифрованное сообщение ему пока отправить нельзя.'
         },
         plaintext_refused: {
-            en: 'Messages must be sent securely. Reload the page and try again.',
-            he: 'יש לשלוח הודעות באופן מאובטח. רעננו את הדף ונסו שוב.',
-            ar: 'يجب إرسال الرسائل بشكل آمن. أعيدوا تحميل الصفحة وحاولوا مرة أخرى.',
-            ru: 'Сообщения нужно отправлять безопасно. Обновите страницу и повторите попытку.'
+            en: 'This conversation uses end-to-end encryption. Reload the page and try again.',
+            he: 'השיחה הזו מוצפנת מקצה לקצה. רעננו את הדף ונסו שוב.',
+            ar: 'هذه المحادثة مشفّرة من طرف إلى طرف. أعيدوا تحميل الصفحة وحاولوا مرة أخرى.',
+            ru: 'Эта переписка защищена сквозным шифрованием. Обновите страницу и повторите попытку.'
         },
         err_exists: {
-            en: 'Private messaging is already set up for your account. Enter your passphrase to unlock it.',
-            he: 'הודעות פרטיות כבר הוגדרו בחשבון שלכם. הזינו את ביטוי הסיסמה כדי לפתוח.',
-            ar: 'تم إعداد الرسائل الخاصة لحسابكم بالفعل. أدخلوا عبارة المرور لفتحها.',
-            ru: 'Личные сообщения уже настроены для вашей учётной записи. Введите парольную фразу, чтобы разблокировать.'
+            en: 'End-to-end encryption is already set up for your account. Enter your passphrase to unlock it.',
+            he: 'הצפנה מקצה לקצה כבר הוגדרה בחשבון שלכם. הזינו את ביטוי הסיסמה כדי לפתוח.',
+            ar: 'تم إعداد التشفير من طرف إلى طرف لحسابكم بالفعل. أدخلوا عبارة المرور لفتحه.',
+            ru: 'Сквозное шифрование уже настроено для вашей учётной записи. Введите парольную фразу, чтобы разблокировать.'
         },
         export_locked: {
             en: 'Your messages were not unlocked, so they are still encrypted in this export.',
@@ -136,25 +141,25 @@
             ru: 'Сообщения не были разблокированы, поэтому в этом экспорте они остаются зашифрованными.'
         },
         notice_self: {
-            en: 'Private messaging is not turned on for you yet, so this message was not end-to-end encrypted.',
-            he: 'הודעות פרטיות עדיין לא הופעלו אצלך, ולכן הודעה זו לא הוצפנה מקצה לקצה.',
-            ar: 'الرسائل الخاصة غير مفعّلة لديك بعد، لذلك لم تُشفَّر هذه الرسالة من طرف إلى طرف.',
-            ru: 'Личные сообщения у вас ещё не включены, поэтому это сообщение не было зашифровано сквозным шифрованием.'
+            en: 'End-to-end encryption is not turned on for you yet. This message was sent privately, but not end-to-end encrypted.',
+            he: 'הצפנה מקצה לקצה עדיין לא הופעלה אצלך. ההודעה נשלחה באופן פרטי, אך ללא הצפנה מקצה לקצה.',
+            ar: 'لم يُفعَّل التشفير من طرف إلى طرف لديك بعد. أُرسلت الرسالة بشكل خاص، لكن دون تشفير من طرف إلى طرف.',
+            ru: 'Сквозное шифрование у вас ещё не включено. Сообщение отправлено приватно, но без сквозного шифрования.'
         },
         notice_locked: {
-            en: 'Your private messages are locked, so this message was not end-to-end encrypted.',
-            he: 'ההודעות הפרטיות שלך נעולות, ולכן הודעה זו לא הוצפנה מקצה לקצה.',
-            ar: 'رسائلك الخاصة مقفلة، لذلك لم تُشفَّر هذه الرسالة من طرف إلى طرف.',
-            ru: 'Ваши личные сообщения заблокированы, поэтому это сообщение не было зашифровано сквозным шифрованием.'
+            en: 'End-to-end encryption is locked on this device. This message was sent privately, but not end-to-end encrypted.',
+            he: 'ההצפנה מקצה לקצה נעולה במכשיר זה. ההודעה נשלחה באופן פרטי, אך ללא הצפנה מקצה לקצה.',
+            ar: 'التشفير من طرف إلى طرف مقفل على هذا الجهاز. أُرسلت الرسالة بشكل خاص، لكن دون تشفير من طرف إلى طرف.',
+            ru: 'Сквозное шифрование заблокировано на этом устройстве. Сообщение отправлено приватно, но без сквозного шифрования.'
         },
-        // F12 rev 2: managing private messaging at any time
-        settings_title: { en: 'Private messaging', he: 'הודעות פרטיות', ar: 'الرسائل الخاصة', ru: 'Личные сообщения' },
-        status_on: { en: 'On. Your messages are end-to-end encrypted and unlocked on this device.', he: 'פעיל. ההודעות שלכם מוצפנות מקצה לקצה ופתוחות במכשיר זה.', ar: 'مفعّلة. رسائلكم مشفّرة من طرف إلى طرف ومفتوحة على هذا الجهاز.', ru: 'Включено. Ваши сообщения защищены сквозным шифрованием и разблокированы на этом устройстве.' },
-        status_locked: { en: 'Set up, but locked on this device. Unlock with your messages passphrase to read and send.', he: 'מוגדר, אך נעול במכשיר זה. פתחו עם ביטוי הסיסמה להודעות כדי לקרוא ולשלוח.', ar: 'مُعدّة لكنها مقفلة على هذا الجهاز. افتحوها بعبارة مرور الرسائل للقراءة والإرسال.', ru: 'Настроено, но заблокировано на этом устройстве. Разблокируйте парольной фразой, чтобы читать и отправлять.' },
-        status_off: { en: 'Off. Turn it on so that only you and the people you write to can read your messages.', he: 'כבוי. הפעילו כדי שרק אתם והאנשים שאתם כותבים להם תוכלו לקרוא את ההודעות.', ar: 'غير مفعّلة. فعّلوها كي لا يقرأ رسائلكم سواكم ومن تراسلونهم.', ru: 'Выключено. Включите, чтобы ваши сообщения могли читать только вы и ваши собеседники.' },
-        pill_on: { en: '🔒 Private messaging: on', he: '🔒 הודעות פרטיות: פעיל', ar: '🔒 الرسائل الخاصة: مفعّلة', ru: '🔒 Личные сообщения: вкл.' },
-        pill_locked: { en: '🔓 Unlock private messages', he: '🔓 פתיחת ההודעות הפרטיות', ar: '🔓 فتح الرسائل الخاصة', ru: '🔓 Разблокировать сообщения' },
-        pill_off: { en: '🔓 Turn on private messaging', he: '🔓 הפעלת הודעות פרטיות', ar: '🔓 تفعيل الرسائل الخاصة', ru: '🔓 Включить личные сообщения' },
+        // F12 rev 2: managing end-to-end encryption at any time
+        settings_title: { en: 'End-to-end encryption', he: 'הצפנה מקצה לקצה', ar: 'التشفير من طرف إلى طرف', ru: 'Сквозное шифрование' },
+        status_on: { en: 'On. Your messages are end-to-end encrypted and unlocked on this device.', he: 'פעילה. ההודעות שלכם מוצפנות מקצה לקצה ופתוחות במכשיר זה.', ar: 'مفعّل. رسائلكم مشفّرة من طرف إلى طرف ومفتوحة على هذا الجهاز.', ru: 'Включено. Ваши сообщения защищены сквозным шифрованием и разблокированы на этом устройстве.' },
+        status_locked: { en: 'Set up, but locked on this device. Unlock with your messages passphrase to read and send.', he: 'מוגדרת, אך נעולה במכשיר זה. פתחו עם ביטוי הסיסמה להודעות כדי לקרוא ולשלוח.', ar: 'مُعدّ لكنه مقفل على هذا الجهاز. افتحوه بعبارة مرور الرسائل للقراءة والإرسال.', ru: 'Настроено, но заблокировано на этом устройстве. Разблокируйте парольной фразой, чтобы читать и отправлять.' },
+        status_off: { en: 'Off. Your messages are private between you and the people you write to. Turning this on adds end-to-end encryption, so not even TheraSocial can read them.', he: 'כבויה. ההודעות שלכם פרטיות ביניכם לבין האנשים שאתם כותבים להם. הפעלה מוסיפה הצפנה מקצה לקצה, כך שגם TheraSocial לא תוכל לקרוא אותן.', ar: 'غير مفعّل. رسائلكم خاصة بينكم وبين من تراسلونهم. تفعيله يضيف تشفيرًا من طرف إلى طرف فلا يستطيع حتى TheraSocial قراءتها.', ru: 'Выключено. Ваши сообщения видны только вам и вашим собеседникам. Включение добавит сквозное шифрование, и даже TheraSocial не сможет их прочитать.' },
+        pill_on: { en: '🔒 End-to-end encrypted', he: '🔒 מוצפן מקצה לקצה', ar: '🔒 مشفّر من طرف إلى طرف', ru: '🔒 Сквозное шифрование включено' },
+        pill_locked: { en: '🔓 Unlock end-to-end encryption', he: '🔓 פתיחת ההצפנה מקצה לקצה', ar: '🔓 فتح التشفير من طرف إلى طرف', ru: '🔓 Разблокировать сквозное шифрование' },
+        pill_off: { en: '🔓 Turn on end-to-end encryption', he: '🔓 הפעלת הצפנה מקצה לקצה', ar: '🔓 تفعيل التشفير من طرف إلى طرف', ru: '🔓 Включить сквозное шифрование' },
         btn_change_pass: { en: 'Change passphrase', he: 'שינוי ביטוי הסיסמה', ar: 'تغيير عبارة المرور', ru: 'Сменить парольную фразу' },
         btn_lock: { en: 'Lock on this device', he: 'נעילה במכשיר זה', ar: 'قفل على هذا الجهاز', ru: 'Заблокировать на этом устройстве' },
         btn_close: { en: 'Close', he: 'סגירה', ar: 'إغلاق', ru: 'Закрыть' },
@@ -164,14 +169,14 @@
         current_label: { en: 'Current passphrase', he: 'ביטוי הסיסמה הנוכחי', ar: 'عبارة المرور الحالية', ru: 'Текущая парольная фраза' },
         new_label: { en: 'New passphrase', he: 'ביטוי סיסמה חדש', ar: 'عبارة المرور الجديدة', ru: 'Новая парольная фраза' },
         changed_ok: { en: 'Your messages passphrase was changed.', he: 'ביטוי הסיסמה להודעות שונה.', ar: 'تم تغيير عبارة مرور الرسائل.', ru: 'Парольная фраза изменена.' },
-        locked_ok: { en: 'Private messages are now locked on this device.', he: 'ההודעות הפרטיות נעולות כעת במכשיר זה.', ar: 'الرسائل الخاصة مقفلة الآن على هذا الجهاز.', ru: 'Личные сообщения заблокированы на этом устройстве.' },
-        ready_ok: { en: 'Private messaging is on. Open a conversation to read it.', he: 'ההודעות הפרטיות פעילות. פתחו שיחה כדי לקרוא.', ar: 'الرسائل الخاصة مفعّلة. افتحوا محادثة لقراءتها.', ru: 'Личные сообщения включены. Откройте переписку, чтобы прочитать.' },
-        later_hint: { en: 'You can do this later in Settings › Account › Private messaging, or with the 🔓 button in Messages.', he: 'אפשר לעשות זאת גם מאוחר יותר בהגדרות › חשבון › הודעות פרטיות, או בכפתור 🔓 בהודעות.', ar: 'يمكنكم فعل ذلك لاحقًا من الإعدادات › الحساب › الرسائل الخاصة، أو بزر 🔓 في الرسائل.', ru: 'Это можно сделать позже: Настройки › Аккаунт › Личные сообщения или кнопкой 🔓 в Сообщениях.' },
+        locked_ok: { en: 'End-to-end encryption is now locked on this device.', he: 'ההצפנה מקצה לקצה נעולה כעת במכשיר זה.', ar: 'التشفير من طرف إلى طرف مقفل الآن على هذا الجهاز.', ru: 'Сквозное шифрование заблокировано на этом устройстве.' },
+        ready_ok: { en: 'End-to-end encryption is on. Open a conversation to read it.', he: 'ההצפנה מקצה לקצה פעילה. פתחו שיחה כדי לקרוא.', ar: 'التشفير من طرف إلى طرف مفعّل. افتحوا محادثة لقراءتها.', ru: 'Сквозное шифрование включено. Откройте переписку, чтобы прочитать.' },
+        later_hint: { en: 'You can do this later in Settings › Account › End-to-end encryption, or with the 🔓 button in Messages.', he: 'אפשר לעשות זאת גם מאוחר יותר בהגדרות › חשבון › הצפנה מקצה לקצה, או בכפתור 🔓 בהודעות.', ar: 'يمكنكم فعل ذلك لاحقًا من الإعدادات › الحساب › التشفير من طرف إلى طرف، أو بزر 🔓 في الرسائل.', ru: 'Это можно сделать позже: Настройки › Аккаунт › Сквозное шифрование или кнопкой 🔓 в Сообщениях.' },
         notice_plain: {
-            en: 'This person has not turned on private messaging yet, so this message was not end-to-end encrypted.',
-            he: 'האדם הזה עדיין לא הפעיל הודעות פרטיות, ולכן הודעה זו לא הוצפנה מקצה לקצה.',
-            ar: 'لم يفعّل هذا الشخص الرسائل الخاصة بعد، لذلك لم تُشفَّر هذه الرسالة من طرف إلى طرف.',
-            ru: 'Этот человек ещё не включил личные сообщения, поэтому это сообщение не было зашифровано сквозным шифрованием.'
+            en: 'This person has not turned on end-to-end encryption yet. This message was sent privately, but not end-to-end encrypted.',
+            he: 'האדם הזה עדיין לא הפעיל הצפנה מקצה לקצה. ההודעה נשלחה באופן פרטי, אך ללא הצפנה מקצה לקצה.',
+            ar: 'لم يفعّل هذا الشخص التشفير من طرف إلى طرف بعد. أُرسلت الرسالة بشكل خاص، لكن دون تشفير من طرف إلى طرف.',
+            ru: 'Этот человек ещё не включил сквозное шифрование. Сообщение отправлено приватно, но без сквозного шифрования.'
         }
     };
     function lang() {

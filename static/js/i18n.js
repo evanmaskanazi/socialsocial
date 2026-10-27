@@ -1,3 +1,7 @@
+// Version B209 (F12 rev 3): (referenced as ?v=B209). support.faq3_a (active block, 4 languages): end-to-end
+//   encryption is described as an added protection on messages that are always private between the two
+//   people ("Messages are only ever shown to you and the person you write to, and once both of you have
+//   turned on end-to-end encryption..."), replacing "members who have turned on private messaging".
 // Version B208 (F12 rev 2): no content change; ?v bumped B207->B208 in lockstep.
 // Version B207 (F12): (referenced as ?v=B207). HEBREW WORDING: every use of "רווחה" (54, which reads as
 //   welfare services / needing assistance) replaced with inviting, everyday wording, e.g. "מסע הרווחה" ->
@@ -7330,7 +7334,7 @@ if (typeof window !== 'undefined') {
         'support.faq2_q': 'What are Circles and how do they work?',
         'support.faq2_a': 'Circles let you organize your connections into trust levels: General (acquaintances), Close Friends, and Family. When you post in your feed or save diary entries, you choose which circle can see them. This gives you full control over your privacy. Share as much or as little as you want with each group.',
         'support.faq3_q': 'Is my data secure?',
-        'support.faq3_a': 'Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest, and private messages between members who have turned on private messaging are end-to-end encrypted, so only you and the person you are writing to can read them. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.',
+        'support.faq3_a': 'Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Messages are only ever shown to you and the person you write to, and once both of you have turned on end-to-end encryption they are also end-to-end encrypted, so not even TheraSocial can read them. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.',
         'settings.data_use_title': 'How your data is used',
         'settings.data_use_english': 'Details are shown in English.',
         'settings.data_use_purpose': 'Purpose',
@@ -7414,7 +7418,7 @@ if (typeof window !== 'undefined') {
         'support.faq2_q': 'מה הם מעגלים ואיך הם עובדים?',
         'support.faq2_a': 'מעגלים מאפשרים לך לארגן את הקשרים שלך לרמות אמון: כללי (מכרים), חברים קרובים ומשפחה. כשאתה מפרסם בפיד או שומר רשומות יומן, אתה בוחר איזה מעגל יכול לראות אותם. זה נותן לך שליטה מלאה על הפרטיות שלך.',
         'support.faq3_q': 'האם הנתונים שלי מאובטחים?',
-        'support.faq3_a': 'כן. אנו משתמשים בהצפנה תעשייתית להגנה על הנתונים שלך הן בהעברה (HTTPS/SSL) והן באחסון, והודעות פרטיות בין חברים שהפעילו הודעות פרטיות מוצפנות מקצה לקצה, כך שרק אתה והאדם שאליו אתה כותב יכולים לקרוא אותן. הפלטפורמה שלנו כוללת הגנת CSRF, ניהול סשנים מאובטח, כותרות מחמירות של מדיניות אבטחת תוכן (CSP) ובקרות נתונים שנבנו סביב זכויותיך לפי ה-GDPR. תוכל לצפות, לייצא או למחוק את הנתונים שלך בכל עת מההגדרות.',
+        'support.faq3_a': 'כן. אנו משתמשים בהצפנה תעשייתית להגנה על הנתונים שלך הן בהעברה (HTTPS/SSL) והן באחסון. הודעות מוצגות רק לך ולאדם שאליו אתה כותב, ולאחר ששניכם הפעלתם הצפנה מקצה לקצה הן גם מוצפנות מקצה לקצה, כך שאפילו TheraSocial לא יכולה לקרוא אותן. הפלטפורמה שלנו כוללת הגנת CSRF, ניהול סשנים מאובטח, כותרות מחמירות של מדיניות אבטחת תוכן (CSP) ובקרות נתונים שנבנו סביב זכויותיך לפי ה-GDPR. תוכל לצפות, לייצא או למחוק את הנתונים שלך בכל עת מההגדרות.',
         'settings.data_use_title': 'איך נעשה שימוש במידע שלך',
         'settings.data_use_english': 'הפרטים מוצגים באנגלית.',
         'settings.data_use_purpose': 'מטרה',
@@ -7504,7 +7508,7 @@ if (typeof window !== 'undefined') {
         'support.faq2_q': 'ما هي الدوائر وكيف تعمل؟',
         'support.faq2_a': 'تتيح لك الدوائر تنظيم علاقاتك في مستويات ثقة: عام (معارف)، أصدقاء مقربون، وعائلة. عند النشر في موجزك أو حفظ إدخالات المفكرة، تختار أي دائرة يمكنها رؤيتها. هذا يمنحك تحكماً كاملاً في خصوصيتك.',
         'support.faq3_q': 'هل بياناتي آمنة؟',
-        'support.faq3_a': 'نعم. نستخدم تشفيراً معيارياً صناعياً لحماية بياناتك أثناء النقل (HTTPS/SSL) وأثناء التخزين، والرسائل الخاصة بين الأعضاء الذين فعّلوا الرسائل الخاصة مشفّرة من طرف إلى طرف، بحيث لا يستطيع قراءتها سوى أنت والشخص الذي تراسله. تتضمن منصتنا حماية CSRF وإدارة جلسات آمنة ورؤوس صارمة لسياسة أمان المحتوى (CSP) وأدوات تحكم في البيانات مبنية حول حقوقك بموجب GDPR. يمكنك عرض بياناتك أو تصديرها أو حذفها في أي وقت من الإعدادات.',
+        'support.faq3_a': 'نعم. نستخدم تشفيراً معيارياً صناعياً لحماية بياناتك أثناء النقل (HTTPS/SSL) وأثناء التخزين. لا تُعرض الرسائل إلا لك وللشخص الذي تراسله، وبعد أن يفعّل كلاكما التشفير من طرف إلى طرف تصبح مشفّرة من طرف إلى طرف أيضاً، فلا يستطيع حتى TheraSocial قراءتها. تتضمن منصتنا حماية CSRF وإدارة جلسات آمنة ورؤوس صارمة لسياسة أمان المحتوى (CSP) وأدوات تحكم في البيانات مبنية حول حقوقك بموجب GDPR. يمكنك عرض بياناتك أو تصديرها أو حذفها في أي وقت من الإعدادات.',
         'settings.data_use_title': 'كيف تُستخدم بياناتك',
         'settings.data_use_english': 'تُعرض التفاصيل باللغة الإنجليزية.',
         'settings.data_use_purpose': 'الغرض',
@@ -7594,7 +7598,7 @@ if (typeof window !== 'undefined') {
         'support.faq2_q': 'Что такое Круги и как они работают?',
         'support.faq2_a': 'Круги позволяют организовать ваши связи по уровням доверия: Общий (знакомые), Близкие друзья и Семья. Когда вы публикуете в ленте или сохраняете записи дневника, вы выбираете, какой круг может их видеть. Это даёт вам полный контроль над конфиденциальностью.',
         'support.faq3_q': 'Мои данные в безопасности?',
-        'support.faq3_a': 'Да. Мы используем промышленное шифрование для защиты данных при передаче (HTTPS/SSL) и хранении, а личные сообщения между участниками, включившими личные сообщения, защищены сквозным шифрованием, поэтому прочитать их можете только вы и тот, кому вы пишете. Наша платформа включает защиту CSRF, безопасное управление сессиями, строгие заголовки политики безопасности контента (CSP) и инструменты управления данными, построенные вокруг ваших прав по GDPR. Вы можете просматривать, экспортировать или удалять свои данные в любое время в Настройках.',
+        'support.faq3_a': 'Да. Мы используем промышленное шифрование для защиты данных при передаче (HTTPS/SSL) и хранении. Сообщения видны только вам и вашему собеседнику, а после того как вы оба включите сквозное шифрование, они также защищены сквозным шифрованием, и даже TheraSocial не может их прочитать. Наша платформа включает защиту CSRF, безопасное управление сессиями, строгие заголовки политики безопасности контента (CSP) и инструменты управления данными, построенные вокруг ваших прав по GDPR. Вы можете просматривать, экспортировать или удалять свои данные в любое время в Настройках.',
         'settings.data_use_title': 'Как используются ваши данные',
         'settings.data_use_english': 'Подробности приведены на английском языке.',
         'settings.data_use_purpose': 'Цель',
