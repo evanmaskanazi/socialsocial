@@ -1,3 +1,14 @@
+// Version B208 (F12 rev 2): set up / unlock / manage private messaging at any time, not only when a prompt appears.
+//   * Settings > Account gets a "Private messaging" card (index.html has one empty placeholder div,
+//     #tsE2EESettings; this file fills it): Turn on / Unlock / Change passphrase / Lock on this device.
+//   * A small status button under the Messages heading (index.html) and in the Circles messages sidebar
+//     (circles page), placed by this file, opens the same actions.
+//   * Change passphrase: re-wraps the SAME private key with the new passphrase (current one required), so no
+//     message becomes unreadable and other devices stay unlocked.
+//   * Lock on this device: removes the key from this device only (useful on a shared computer).
+//   * The setup/unlock dialog says where to find this later, so "Not now" is never a dead end.
+//   No server change: Change passphrase uses the existing POST /api/e2ee/key with replace=true and the same
+//   public key.
 // Version B207 (F12): review round 3 fixes, all small and local to this file:
 //   1. A tab that unlocked BEFORE the passphrase was reset on another device kept the old key for up to
 //      5 minutes (new messages showed as "cannot be decrypted"). The server key record is now re-checked
@@ -136,6 +147,26 @@
             ar: 'رسائلك الخاصة مقفلة، لذلك لم تُشفَّر هذه الرسالة من طرف إلى طرف.',
             ru: 'Ваши личные сообщения заблокированы, поэтому это сообщение не было зашифровано сквозным шифрованием.'
         },
+        // F12 rev 2: managing private messaging at any time
+        settings_title: { en: 'Private messaging', he: 'הודעות פרטיות', ar: 'الرسائل الخاصة', ru: 'Личные сообщения' },
+        status_on: { en: 'On. Your messages are end-to-end encrypted and unlocked on this device.', he: 'פעיל. ההודעות שלכם מוצפנות מקצה לקצה ופתוחות במכשיר זה.', ar: 'مفعّلة. رسائلكم مشفّرة من طرف إلى طرف ومفتوحة على هذا الجهاز.', ru: 'Включено. Ваши сообщения защищены сквозным шифрованием и разблокированы на этом устройстве.' },
+        status_locked: { en: 'Set up, but locked on this device. Unlock with your messages passphrase to read and send.', he: 'מוגדר, אך נעול במכשיר זה. פתחו עם ביטוי הסיסמה להודעות כדי לקרוא ולשלוח.', ar: 'مُعدّة لكنها مقفلة على هذا الجهاز. افتحوها بعبارة مرور الرسائل للقراءة والإرسال.', ru: 'Настроено, но заблокировано на этом устройстве. Разблокируйте парольной фразой, чтобы читать и отправлять.' },
+        status_off: { en: 'Off. Turn it on so that only you and the people you write to can read your messages.', he: 'כבוי. הפעילו כדי שרק אתם והאנשים שאתם כותבים להם תוכלו לקרוא את ההודעות.', ar: 'غير مفعّلة. فعّلوها كي لا يقرأ رسائلكم سواكم ومن تراسلونهم.', ru: 'Выключено. Включите, чтобы ваши сообщения могли читать только вы и ваши собеседники.' },
+        pill_on: { en: '🔒 Private messaging: on', he: '🔒 הודעות פרטיות: פעיל', ar: '🔒 الرسائل الخاصة: مفعّلة', ru: '🔒 Личные сообщения: вкл.' },
+        pill_locked: { en: '🔓 Unlock private messages', he: '🔓 פתיחת ההודעות הפרטיות', ar: '🔓 فتح الرسائل الخاصة', ru: '🔓 Разблокировать сообщения' },
+        pill_off: { en: '🔓 Turn on private messaging', he: '🔓 הפעלת הודעות פרטיות', ar: '🔓 تفعيل الرسائل الخاصة', ru: '🔓 Включить личные сообщения' },
+        btn_change_pass: { en: 'Change passphrase', he: 'שינוי ביטוי הסיסמה', ar: 'تغيير عبارة المرور', ru: 'Сменить парольную фразу' },
+        btn_lock: { en: 'Lock on this device', he: 'נעילה במכשיר זה', ar: 'قفل على هذا الجهاز', ru: 'Заблокировать на этом устройстве' },
+        btn_close: { en: 'Close', he: 'סגירה', ar: 'إغلاق', ru: 'Закрыть' },
+        lock_hint: { en: 'Locking removes the key from this device only, for example on a shared computer. Your messages stay safe and open again with your passphrase.', he: 'נעילה מסירה את המפתח ממכשיר זה בלבד, למשל במחשב משותף. ההודעות נשארות שמורות ונפתחות שוב עם ביטוי הסיסמה.', ar: 'القفل يزيل المفتاح من هذا الجهاز فقط، مثلًا على حاسوب مشترك. تبقى رسائلكم آمنة وتُفتح مجددًا بعبارة المرور.', ru: 'Блокировка удаляет ключ только с этого устройства, например на общем компьютере. Сообщения остаются в безопасности и снова открываются парольной фразой.' },
+        change_title: { en: 'Change your messages passphrase', he: 'שינוי ביטוי הסיסמה להודעות', ar: 'تغيير عبارة مرور الرسائل', ru: 'Смена парольной фразы' },
+        change_intro: { en: 'Only the passphrase changes: all your messages stay readable, and your other devices stay unlocked. Use the new passphrase next time a device asks.', he: 'רק ביטוי הסיסמה משתנה: כל ההודעות נשארות קריאות, והמכשירים האחרים שלכם נשארים פתוחים. השתמשו בביטוי החדש בפעם הבאה שמכשיר יבקש.', ar: 'تتغيّر عبارة المرور فقط: تبقى كل رسائلكم مقروءة وتبقى أجهزتكم الأخرى مفتوحة. استخدموا العبارة الجديدة في المرة القادمة التي يطلبها جهاز.', ru: 'Меняется только парольная фраза: все сообщения остаются читаемыми, а другие устройства остаются разблокированными. Используйте новую фразу, когда устройство попросит.' },
+        current_label: { en: 'Current passphrase', he: 'ביטוי הסיסמה הנוכחי', ar: 'عبارة المرور الحالية', ru: 'Текущая парольная фраза' },
+        new_label: { en: 'New passphrase', he: 'ביטוי סיסמה חדש', ar: 'عبارة المرور الجديدة', ru: 'Новая парольная фраза' },
+        changed_ok: { en: 'Your messages passphrase was changed.', he: 'ביטוי הסיסמה להודעות שונה.', ar: 'تم تغيير عبارة مرور الرسائل.', ru: 'Парольная фраза изменена.' },
+        locked_ok: { en: 'Private messages are now locked on this device.', he: 'ההודעות הפרטיות נעולות כעת במכשיר זה.', ar: 'الرسائل الخاصة مقفلة الآن على هذا الجهاز.', ru: 'Личные сообщения заблокированы на этом устройстве.' },
+        ready_ok: { en: 'Private messaging is on. Open a conversation to read it.', he: 'ההודעות הפרטיות פעילות. פתחו שיחה כדי לקרוא.', ar: 'الرسائل الخاصة مفعّلة. افتحوا محادثة لقراءتها.', ru: 'Личные сообщения включены. Откройте переписку, чтобы прочитать.' },
+        later_hint: { en: 'You can do this later in Settings › Account › Private messaging, or with the 🔓 button in Messages.', he: 'אפשר לעשות זאת גם מאוחר יותר בהגדרות › חשבון › הודעות פרטיות, או בכפתור 🔓 בהודעות.', ar: 'يمكنكم فعل ذلك لاحقًا من الإعدادات › الحساب › الرسائل الخاصة، أو بزر 🔓 في الرسائل.', ru: 'Это можно сделать позже: Настройки › Аккаунт › Личные сообщения или кнопкой 🔓 в Сообщениях.' },
         notice_plain: {
             en: 'This person has not turned on private messaging yet, so this message was not end-to-end encrypted.',
             he: 'האדם הזה עדיין לא הפעיל הודעות פרטיות, ולכן הודעה זו לא הוצפנה מקצה לקצה.',
@@ -301,7 +332,37 @@
         await saveLocal(uid);
     }
 
-    // ------------------------------------------------------------------ dialog (setup / unlock)
+    // F12 rev 2: re-wrap the SAME private key with a new passphrase. The public key does not change, so no
+    // message becomes unreadable and other devices that are already unlocked stay unlocked.
+    async function changeKey(oldPass, newPass, uid) {
+        await getServerKey(true).catch(function () {});
+        var sk = S.server;
+        if (!sk || !sk.has_key) { var eg = new Error('no key'); eg.code = 'err_generic'; throw eg; }
+        var b = JSON.parse(sk.wrapped_private_key);
+        var wkOld = await passKey(oldPass, unb64u(b.s), b.i), priv;
+        try { priv = await subtle.unwrapKey('pkcs8', unb64u(b.c), wkOld, { name: 'AES-GCM', iv: unb64u(b.n) }, ECDH, true, ['deriveBits']); }
+        catch (_) { var e = new Error('wrong'); e.code = 'err_wrong'; throw e; }
+        var salt = rand(16), iv = rand(12);
+        var wk = await passKey(newPass, salt, ITER);
+        var wrapped = await subtle.wrapKey('pkcs8', priv, wk, { name: 'AES-GCM', iv: iv });
+        var blob = JSON.stringify({ v: 1, i: ITER, s: b64u(salt), n: b64u(iv), c: b64u(wrapped) });
+        var r = await prevFetch('/api/e2ee/key', {
+            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ public_key: sk.public_key, wrapped_private_key: blob, replace: true })
+        });
+        if (!r.ok) throw new Error('save failed');
+        S.priv = await subtle.unwrapKey('pkcs8', wrapped, wk, { name: 'AES-GCM', iv: iv }, ECDH, false, ['deriveBits']);
+        S.fp = fpOf(sk.public_key);
+        S.server = { has_key: true, public_key: sk.public_key, wrapped_private_key: blob }; S.serverT = Date.now();
+        await saveLocal(uid);
+    }
+    function runFor(uid) {
+        return function (mode, pass, replace, old) {
+            return mode === 'unlock' ? unlockKey(pass, uid) : mode === 'change' ? changeKey(old, pass, uid) : createKey(pass, replace, uid);
+        };
+    }
+
+    // ------------------------------------------------------------------ dialog (setup / unlock / change / manage)
     function el(tag, css, text) {
         var n = document.createElement(tag);
         if (css) n.style.cssText = css;
@@ -324,8 +385,23 @@
 
             function render() {
                 card.textContent = '';
-                var setup = mode === 'setup';
-                card.appendChild(el('h2', 'margin:0 0 10px;font-size:20px;color:#3D4852;', T(setup ? 'setup_title' : 'unlock_title')));
+                var setup = mode === 'setup', change = mode === 'change';
+                if (mode === 'manage') {           // F12 rev 2: already on and unlocked
+                    card.appendChild(el('h2', 'margin:0 0 10px;font-size:20px;color:#3D4852;', T('settings_title')));
+                    card.appendChild(el('p', 'margin:0 0 10px;line-height:1.5;', T('status_on')));
+                    card.appendChild(el('p', 'margin:0 0 16px;line-height:1.5;font-size:14px;color:#6B7280;', T('lock_hint')));
+                    var mr = el('div', 'display:flex;gap:10px;flex-wrap:wrap;');
+                    var bc = el('button', BTN + 'background:#5A7A93;color:#fff;', T('btn_change_pass')); bc.type = 'button';
+                    var bl = el('button', BTN + 'background:#edf2f7;color:#2d3748;', T('btn_lock')); bl.type = 'button';
+                    var bx = el('button', BTN + 'background:#edf2f7;color:#2d3748;', T('btn_close')); bx.type = 'button';
+                    bc.onclick = function () { mode = 'change'; render(); };
+                    bl.onclick = function () { if (cfg.lock) cfg.lock(); close('locked'); };
+                    bx.onclick = function () { close(null); };
+                    mr.appendChild(bc); mr.appendChild(bl); mr.appendChild(bx); card.appendChild(mr);
+                    setTimeout(function () { try { bc.focus(); } catch (_) {} }, 0);
+                    return;
+                }
+                card.appendChild(el('h2', 'margin:0 0 10px;font-size:20px;color:#3D4852;', T(setup ? 'setup_title' : change ? 'change_title' : 'unlock_title')));
                 if (resetting) {
                     card.appendChild(el('p', 'margin:0 0 16px;line-height:1.5;', T('reset_warn')));
                     var rr = el('div', 'display:flex;gap:10px;flex-wrap:wrap;');
@@ -336,39 +412,47 @@
                     rr.appendChild(go); rr.appendChild(back); card.appendChild(rr);
                     return;
                 }
-                card.appendChild(el('p', 'margin:0 0 14px;line-height:1.5;', T(setup ? 'setup_intro' : 'unlock_intro')));
+                card.appendChild(el('p', 'margin:0 0 14px;line-height:1.5;', T(setup ? 'setup_intro' : change ? 'change_intro' : 'unlock_intro')));
                 // F12: a hidden username so a password manager files this passphrase separately from the login password.
                 var un = el('input', 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;'); un.type = 'text'; un.tabIndex = -1;
                 un.autocomplete = 'username'; un.value = 'TheraSocial messages'; un.setAttribute('aria-hidden', 'true'); un.readOnly = true; card.appendChild(un);
-                var l1 = el('label', 'font-weight:600;font-size:14px;', T('pass_label'));
-                var i1 = el('input', INPUT); i1.type = 'password'; i1.autocomplete = setup ? 'new-password' : 'current-password';
+                var i0 = null;
+                if (change) {
+                    card.appendChild(el('label', 'font-weight:600;font-size:14px;', T('current_label')));
+                    i0 = el('input', INPUT); i0.type = 'password'; i0.autocomplete = 'current-password'; card.appendChild(i0);
+                }
+                var l1 = el('label', 'font-weight:600;font-size:14px;', T(change ? 'new_label' : 'pass_label'));
+                var i1 = el('input', INPUT); i1.type = 'password'; i1.autocomplete = (setup || change) ? 'new-password' : 'current-password';
                 card.appendChild(l1); card.appendChild(i1);
                 var i2 = null;
-                if (setup) {
+                if (setup || change) {
                     card.appendChild(el('label', 'font-weight:600;font-size:14px;', T('confirm_label')));
                     i2 = el('input', INPUT); i2.type = 'password'; i2.autocomplete = 'new-password'; card.appendChild(i2);
                 }
                 var err = el('div', 'color:#C17C74;min-height:20px;font-size:14px;margin-bottom:8px;'); err.setAttribute('role', 'alert'); card.appendChild(err);
                 var row = el('div', 'display:flex;gap:10px;flex-wrap:wrap;align-items:center;');
-                var ok = el('button', BTN + 'background:#5A7A93;color:#fff;', T(setup ? 'btn_create' : 'btn_unlock')); ok.type = 'button';
+                var okLabel = T(setup ? 'btn_create' : change ? 'btn_change_pass' : 'btn_unlock');
+                var ok = el('button', BTN + 'background:#5A7A93;color:#fff;', okLabel); ok.type = 'button';
                 var no = el('button', BTN + 'background:#edf2f7;color:#2d3748;', T('btn_cancel')); no.type = 'button';
                 row.appendChild(ok); row.appendChild(no); card.appendChild(row);
-                if (!setup) {
+                if (!change) card.appendChild(el('p', 'margin:12px 0 0;font-size:13px;line-height:1.45;color:#6B7280;', T('later_hint')));   // F12 rev 2
+                if (!setup && !change) {
                     var fg = el('button', 'margin-top:14px;background:none;border:none;color:#5A7A93;text-decoration:underline;cursor:pointer;font-size:14px;padding:0;', T('forgot')); fg.type = 'button';
                     fg.onclick = function () { resetting = true; render(); };
                     card.appendChild(fg);
                 }
                 function fail(k) { err.textContent = T(k); }
-                function busy(b) { ok.disabled = no.disabled = b; ok.textContent = b ? T('busy') : T(setup ? 'btn_create' : 'btn_unlock'); }
+                function busy(b) { ok.disabled = no.disabled = b; ok.textContent = b ? T('busy') : okLabel; }
                 async function submit() {
                     err.textContent = '';
                     var p1 = i1.value, p2 = i2 ? i2.value : null;
-                    if (setup) {
+                    if (change && !i0.value) return;
+                    if (setup || change) {
                         if (Array.from(p1).length < 10) return fail('err_short');
                         if (p1 !== p2) return fail('err_mismatch');
                     } else if (!p1) return;
                     busy(true);
-                    try { await cfg.run(mode, p1, replace); close(true); }
+                    try { await cfg.run(mode, p1, replace, i0 ? i0.value : null); close(change ? 'changed' : true); }
                     catch (e) {
                         busy(false);
                         if (e && e.switchTo) { mode = e.switchTo; replace = false; render(); var al = card.querySelector('[role=alert]'); if (al) al.textContent = T(e.code || 'err_generic'); }
@@ -377,8 +461,8 @@
                 }
                 ok.onclick = submit;
                 no.onclick = function () { close(false); };
-                [i1, i2].forEach(function (i) { if (i) i.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); submit(); } }); });
-                setTimeout(function () { try { i1.focus(); } catch (_) {} }, 0);
+                [i0, i1, i2].forEach(function (i) { if (i) i.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); submit(); } }); });
+                setTimeout(function () { try { (i0 || i1).focus(); } catch (_) {} }, 0);
             }
             render();
             document.body.appendChild(ov);
@@ -410,7 +494,7 @@
             if (needAsk && !needAsk(sk)) return false;
             var done = await dialog({
                 mode: sk.has_key ? 'unlock' : 'setup',
-                run: function (mode, pass, replace) { return mode === 'unlock' ? unlockKey(pass, uid) : createKey(pass, replace, uid); }
+                run: runFor(uid)
             });
             return !!(done && S.priv);
         })();
@@ -515,6 +599,131 @@
         return null;
     }
 
+    // ------------------------------------------------------------------ F12 rev 2: manage at any time
+    // Status from what this page already knows (no network): 'signed_out' | 'unknown' | 'off' | 'locked' | 'on'.
+    function statusNow() {
+        if (!S.uid) return 'signed_out';
+        if (!S.server) return 'unknown';
+        if (!S.server.has_key) return 'off';
+        return S.priv ? 'on' : 'locked';
+    }
+    function lockDevice() {
+        // Remove this device's key (memory + IndexedDB); keep who is signed in, so the controls stay visible.
+        S.priv = null; S.fp = null; pubCache = {}; pairCache = {};
+        idbOp('readwrite', function (st) { return st.delete('dev'); }).catch(function () {});
+        setDeclined(true);            // do not ask again in this tab until the member chooses to unlock
+    }
+    var managing = false;
+    async function manage() {
+        if (managing) return;
+        managing = true;
+        try {
+            setDeclined(false);
+            var ready = await safeReady(false);
+            var uid = S.uid;
+            if (!uid) return;
+            if (!ready) {
+                var t0 = Date.now();
+                ready = await safeReady(true);              // shows "Turn on" or "Unlock" as needed
+                if (ready) toast('ready_ok', 'success'); else if (S.dismissedAt >= t0) setDeclined(true);
+            } else {
+                var res = await dialog({ mode: 'manage', run: runFor(uid), lock: lockDevice });
+                if (res === 'changed') toast('changed_ok', 'success');
+                else if (res === 'locked') toast('locked_ok', 'info');
+            }
+        } finally { managing = false; refreshUI(); }
+    }
+    var PILL = 'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid #CFD8E3;background:#fff;color:#3D4852;font-size:13px;font-weight:600;cursor:pointer;line-height:1.3;';
+    function pillFor(host, css) {
+        var b = host.querySelector('#tsE2EEPill');
+        if (!b) {
+            b = document.createElement('button'); b.type = 'button'; b.id = 'tsE2EEPill';
+            b.addEventListener('click', manage);
+            host.appendChild(b);
+        }
+        b.style.cssText = PILL + css;
+        return b;
+    }
+    function refreshUI() {
+        try {
+            var st = statusNow();
+            var show = st === 'on' || st === 'locked' || st === 'off';
+            var sig = st + ':' + lang();
+            // Nothing changed and both places are already up to date: do not touch the page (the observer
+            // below would otherwise see our own edits and call this again).
+            var pOld = document.getElementById('tsE2EEPill'), cOld = document.getElementById('tsE2EESettings');
+            var needPill = document.querySelector('#messagesView > h2') || document.querySelector('.conversations-sidebar .sidebar-header');
+            if ((!needPill || (pOld && pOld.getAttribute('data-sig') === sig)) && (!cOld || cOld.getAttribute('data-sig') === sig)) {
+                if (st === 'unknown' || st === 'signed_out') primeStatus((cOld && cOld.offsetParent !== null) || (pOld && pOld.parentNode && pOld.parentNode.offsetParent !== null) || (needPill && needPill.offsetParent !== null));
+                return;
+            }
+            // 1. Messages heading (index.html) or the Circles messages sidebar header (circles-messages.js)
+            var h = document.querySelector('#messagesView > h2');
+            var host = null, css = '';
+            if (h) {
+                host = document.getElementById('tsE2EEPillRow');
+                if (!host) { host = document.createElement('div'); host.id = 'tsE2EEPillRow'; host.style.cssText = 'margin:-8px 0 14px;'; h.parentNode.insertBefore(host, h.nextSibling); }
+            } else {
+                host = document.querySelector('.conversations-sidebar .sidebar-header');
+                css = 'margin-top:8px;';
+            }
+            if (host) {
+                var b = pillFor(host, css);
+                b.setAttribute('data-sig', sig);
+                b.style.display = show ? 'inline-flex' : 'none';
+                if (st === 'on') { b.textContent = T('pill_on'); b.style.background = '#EEF4EF'; b.style.borderColor = '#CFE0D2'; b.style.color = '#3F6B4A'; }
+                else b.textContent = T(st === 'locked' ? 'pill_locked' : 'pill_off');
+            }
+            // 2. Settings > Account card (index.html placeholder #tsE2EESettings)
+            var card = document.getElementById('tsE2EESettings');
+            if (card) {
+                card.setAttribute('data-sig', sig);
+                card.style.display = show ? '' : 'none';
+                if (show) {
+                    card.textContent = '';
+                    card.setAttribute('dir', (lang() === 'he' || lang() === 'ar') ? 'rtl' : 'ltr');
+                    var t = document.createElement('h3'); t.style.cssText = 'color:var(--primary,#5A7A93);margin-bottom:12px;'; t.textContent = T('settings_title');
+                    var d = document.createElement('p'); d.style.cssText = 'color:#6B7280;margin-bottom:16px;line-height:1.5;'; d.textContent = T(st === 'on' ? 'status_on' : st === 'locked' ? 'status_locked' : 'status_off');
+                    var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+                    var main = document.createElement('button'); main.type = 'button'; main.className = 'btn btn-primary'; main.style.width = 'auto';
+                    main.textContent = st === 'on' ? T('btn_change_pass') : st === 'locked' ? T('btn_unlock') : T('btn_create');
+                    main.addEventListener('click', manage);
+                    row.appendChild(main);
+                    if (st === 'on') {
+                        var lk = document.createElement('button'); lk.type = 'button'; lk.className = 'btn btn-secondary'; lk.style.width = 'auto';
+                        lk.textContent = T('btn_lock');
+                        lk.addEventListener('click', function () { lockDevice(); toast('locked_ok', 'info'); refreshUI(); });
+                        row.appendChild(lk);
+                    }
+                    card.appendChild(t); card.appendChild(d); card.appendChild(row);
+                    if (st === 'on') { var hn = document.createElement('p'); hn.style.cssText = 'color:#6B7280;margin-top:12px;font-size:13px;line-height:1.45;'; hn.textContent = T('lock_hint'); card.appendChild(hn); }
+                }
+            }
+            // Status not known yet but one of the places is on screen: look it up once (no prompt).
+            var visible = (card && card.offsetParent !== null) || (host && host.offsetParent !== null);
+            if (st === 'unknown' || (st === 'signed_out' && visible)) primeStatus(visible);
+        } catch (_) {}
+    }
+    var primeAt = 0;
+    function primeStatus(visible) {
+        if (!visible || Date.now() - primeAt < 30000) return;
+        primeAt = Date.now();
+        safeReady(false).then(refreshUI, refreshUI);
+    }
+    var uiQueued = false;
+    function queueUI() { if (uiQueued) return; uiQueued = true; setTimeout(function () { uiQueued = false; refreshUI(); }, 150); }
+    function startUI() {
+        refreshUI();
+        try {
+            // Views are shown/re-rendered by the app at any time (the Circles messages panel is built by
+            // circles-messages.js); re-place the button and card when the page changes. Cheap: two lookups.
+            new MutationObserver(queueUI).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+        } catch (_) {}
+        window.addEventListener('languageChanged', queueUI);
+    }
+    window.__tsE2EE.manage = manage;
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startUI); else startUI();
+
     // ------------------------------------------------------------------ the fetch wrappers
     async function sendFlow(input, init, retried) {
         var body;
@@ -582,7 +791,7 @@
     }
     var noticed = {};   // F12: plain-text notice shown once per person per page
     function noticeOnce(key, partnerId) { if (noticed[key + ':' + partnerId]) return; noticed[key + ':' + partnerId] = 1; toast(key, 'warning'); }
-    function safeReady(allow, ask) { return ensureReady(allow, ask).catch(function () { return false; }); }
+    function safeReady(allow, ask) { return ensureReady(allow, ask).catch(function () { return false; }).then(function (v) { queueUI(); return v; }); }
     function blocked(text) {      // refused here instead of by the server (same wording the server used)
         if (typeof window.apiCall !== 'function') toastText(text, 'error');
         return jsonResp(400, { error: text });

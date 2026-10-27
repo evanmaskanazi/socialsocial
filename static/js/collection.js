@@ -1,3 +1,4 @@
+// Version B208 (F12 rev 2): no content change; ?v bumped B207->B208 in lockstep.
 // Version B207 (F12): NEW FILE. Dream Cards prototype: card store + personal collection ("My World").
 //   Loaded only by collection.html (after i18n.js, which supplies the language and the CSRF header).
 //   Talks to GET /api/collection, POST /api/collection/buy and POST /api/collection/arrange.

@@ -1,3 +1,4 @@
+// Version B208 (F12 rev 2): no content change; ?v bumped B207->B208 in lockstep.
 // Version B207 (F12): (referenced as ?v=B207). HEBREW WORDING: every use of "רווחה" (54, which reads as
 //   welfare services / needing assistance) replaced with inviting, everyday wording, e.g. "מסע הרווחה" ->
 //   "המסע האישי", "הרווחה שלך" -> "ההרגשה שלך" / "איכות החיים שלך", "התראת רווחה" -> "התראת אכפתיות",
