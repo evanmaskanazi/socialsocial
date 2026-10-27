@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B208 (F12 rev 2) -->
+<!-- B208 (F12 rev 2): one additive empty div, #tsE2EESettings, in Settings > Account after Change Password.
+     e2ee.js fills it with the Private messaging card and also places a status button under the Messages
+     heading. CACHE-BUST: every live JS ?v bumped B207->B208 in lockstep (e2ee.js changed); app.py
+     _A92_ASSET_VERSION = 'B208'.
+-->
 <!-- TheraSocial Index Version B207 (F12) -->
 <!-- B207 (F12): (1) Dream Cards prototype entry, additive: a signed-in-only navbar link (#navDreamCards, hidden on
      phones), a plain-link item in the mobile More menu, and one line next to each existing Logout-button show/hide
@@ -804,10 +810,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B207"></script>
+   <script src="/static/js/utilities.js?v=B208"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B207"></script>
-    <script src="/static/js/follow-requests.js?v=B207"></script>
+    <script src="/static/js/triggers.js?v=B208"></script>
+    <script src="/static/js/follow-requests.js?v=B208"></script>
 
 
     <style>
@@ -6874,6 +6880,9 @@
                                   </div>
                               </div>
 
+                              <!-- B208 (F12 rev 2): Private messaging (turn on / unlock / change passphrase / lock). Filled by e2ee.js. -->
+                              <div id="tsE2EESettings" class="settings-card" style="display: none; background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;"></div>
+
                               <!-- Export Your Data -->
                               <div class="settings-card" style="background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
                                   <h3 style="color: var(--primary); margin-bottom: 15px;" data-i18n="home.data_export">Export Your Data</h3>
@@ -8255,8 +8264,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B207"></script>
-    <script src="/static/js/e2ee.js?v=B207"></script>
+    <script src="/static/js/i18n.js?v=B208"></script>
+    <script src="/static/js/e2ee.js?v=B208"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8611,9 +8620,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B207"></script>
-   <script src="/static/js/circles-messages.js?v=B207"></script>
-<script src="/static/js/feed-updates.js?v=B207"></script>
+<script src="/static/js/parameters-social.js?v=B208"></script>
+   <script src="/static/js/circles-messages.js?v=B208"></script>
+<script src="/static/js/feed-updates.js?v=B208"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';

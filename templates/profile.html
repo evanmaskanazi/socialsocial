@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- TheraSocial Profile Version B208 (F12 rev 2) -->
+<!-- B208 (F12 rev 2): cache-bust lockstep only (e2ee.js changed: private messaging can be managed at any time).
+     Every live JS ?v bumped B207->B208; app.py _A92_ASSET_VERSION = 'B208'. -->
 <!-- TheraSocial Profile Version B207 (F12) -->
 <!-- B207 (F12): cache-bust lockstep only (script tags keep their ?v).
      CACHE-BUST: every live JS ?v bumped B206->B207 in lockstep (i18n.js and e2ee.js changed; collection.js is NEW);
@@ -21,8 +24,8 @@
     <div id="profileContainer"></div>
     <!-- B205 (F6): both had NO ?v token, so browsers could keep serving a stale cached copy
          (static files are cached for a week). Pinned in lockstep with the rest of the app. -->
-    <script src="/static/js/i18n.js?v=B207"></script>
-    <script src="/static/js/profile.js?v=B207"></script>
+    <script src="/static/js/i18n.js?v=B208"></script>
+    <script src="/static/js/profile.js?v=B208"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Apply translations after content is loaded

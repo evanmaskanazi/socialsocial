@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- TheraSocial Support Version B208 (F12 rev 2) -->
+<!-- B208 (F12 rev 2): cache-bust lockstep only (e2ee.js changed: private messaging can be managed at any time).
+     Every live JS ?v bumped B207->B208; app.py _A92_ASSET_VERSION = 'B208'. -->
 <!-- TheraSocial Support Version B207 (F12) -->
 <!-- B207 (F12): Cache-bust lockstep only. No markup/JS change (Hebrew wording comes from i18n.js).
      CACHE-BUST: every live JS ?v bumped B206->B207 in lockstep (i18n.js and e2ee.js changed; collection.js is NEW);
@@ -642,7 +645,7 @@
     <!-- A92 audit (pre-existing): removed a hard-coded Cloudflare email-decode script that had been
          saved into the template from a live page; Cloudflare injects its own copy when it needs one,
          and off Cloudflare the path 404s. The mailto links here are plain and need no decoding. -->
-    <script src="/static/js/i18n.js?v=B207"></script>
+    <script src="/static/js/i18n.js?v=B208"></script>
     <script>
         // A43 (rev6): BULLETPROOF back button. Every earlier revision ultimately trusted the
         // anchor's href (rev4 set href once at load and then did `if (validRet) return;` on
