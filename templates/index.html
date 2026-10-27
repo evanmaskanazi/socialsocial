@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B209 (F12 rev 3) -->
+<!-- B209 (F12 rev 3): in-app Support copy of the FAQ "Is my data secure?" answer (built-in English) updated to the new end-to-end encryption wording. "Private messaging" is now named "End-to-end encryption" (e2ee.js, i18n.js).
+     CACHE-BUST: every live JS ?v bumped B208->B209 in lockstep; app.py _A92_ASSET_VERSION = 'B209'. -->
 <!-- TheraSocial Index Version B208 (F12 rev 2) -->
 <!-- B208 (F12 rev 2): one additive empty div, #tsE2EESettings, in Settings > Account after Change Password.
      e2ee.js fills it with the Private messaging card and also places a status button under the Messages
@@ -810,10 +813,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B208"></script>
+   <script src="/static/js/utilities.js?v=B209"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B208"></script>
-    <script src="/static/js/follow-requests.js?v=B208"></script>
+    <script src="/static/js/triggers.js?v=B209"></script>
+    <script src="/static/js/follow-requests.js?v=B209"></script>
 
 
     <style>
@@ -5765,7 +5768,7 @@
 
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 8px;" data-i18n="support.faq3_q">Is my data secure?</h4>
-                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest, and private messages between members who have turned on private messaging are end-to-end encrypted, so only you and the person you are writing to can read them. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.</p>
+                    <p style="color: var(--gray);" data-i18n="support.faq3_a">Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Messages are only ever shown to you and the person you write to, and once both of you have turned on end-to-end encryption they are also end-to-end encrypted, so not even TheraSocial can read them. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.</p>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -6880,7 +6883,7 @@
                                   </div>
                               </div>
 
-                              <!-- B208 (F12 rev 2): Private messaging (turn on / unlock / change passphrase / lock). Filled by e2ee.js. -->
+                              <!-- B208 (F12 rev 2): End-to-end encryption (turn on / unlock / change passphrase / lock). Filled by e2ee.js. -->
                               <div id="tsE2EESettings" class="settings-card" style="display: none; background: var(--light); padding: 24px; border-radius: 16px; margin-bottom: 20px;"></div>
 
                               <!-- Export Your Data -->
@@ -8264,8 +8267,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B208"></script>
-    <script src="/static/js/e2ee.js?v=B208"></script>
+    <script src="/static/js/i18n.js?v=B209"></script>
+    <script src="/static/js/e2ee.js?v=B209"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8620,9 +8623,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B208"></script>
-   <script src="/static/js/circles-messages.js?v=B208"></script>
-<script src="/static/js/feed-updates.js?v=B208"></script>
+<script src="/static/js/parameters-social.js?v=B209"></script>
+   <script src="/static/js/circles-messages.js?v=B209"></script>
+<script src="/static/js/feed-updates.js?v=B209"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
