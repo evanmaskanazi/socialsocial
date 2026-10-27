@@ -18,6 +18,8 @@
 #      check-in points failed with a foreign-key error. Both are now deleted (savepoints, same pattern
 #      as e2ee_keys), plus collection_cards.
 #   5. _A92_ASSET_VERSION = 'B207' (cache-bust lockstep; i18n.js and e2ee.js changed, collection.js new).
+#   6. F12 rev 2: _A92_ASSET_VERSION = 'B208' (e2ee.js: private messaging can be turned on, unlocked,
+#      re-keyed with a new passphrase or locked at any time from Settings or the Messages button). No server change.
 #
 # =====================================================================
 # TheraSocial app.py - Version F11 / B206 (end-to-end encrypted messages; additive)
@@ -9169,7 +9171,7 @@ def _safe_back_url():
 
 # A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
 # parameters.html, circles.html and support.html).
-_A92_ASSET_VERSION = 'B207'
+_A92_ASSET_VERSION = 'B208'
 
 
 def _a92_soften_dashes_in_html(html):
