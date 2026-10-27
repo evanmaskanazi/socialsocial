@@ -1,4 +1,14 @@
 <!DOCTYPE html>
+<!-- TheraSocial Support Version B207 (F12) -->
+<!-- B207 (F12): Cache-bust lockstep only. No markup/JS change (Hebrew wording comes from i18n.js).
+     CACHE-BUST: every live JS ?v bumped B206->B207 in lockstep (i18n.js and e2ee.js changed; collection.js is NEW);
+     app.py _A92_ASSET_VERSION = 'B207'.
+-->
+<!-- TheraSocial Support Version B206 (F11) -->
+<!-- B206 (F11): Cache-bust lockstep only. No markup/JS change.
+     CACHE-BUST: every live JS ?v bumped B205->B206 in lockstep (e2ee.js is NEW; index and circles changed); app.py
+     _A92_ASSET_VERSION = 'B206'.
+-->
 <!-- TheraSocial Support Version B205 (F6) -->
 <!-- B205 (F6): Cache-bust lockstep only. No markup/JS change.
      CACHE-BUST: every live JS ?v bumped B204->B205 in lockstep (i18n.js and index changed); app.py
@@ -526,7 +536,7 @@
             <div class="faq-item">
                 <div class="faq-question" data-i18n="support.faq3_q">Is my data secure?</div>
                 <div class="faq-answer" data-i18n="support.faq3_a">
-                    Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.
+                    Yes. We use industry-standard encryption to protect your data both in transit (HTTPS/SSL) and at rest, and private messages between members who have turned on private messaging are end-to-end encrypted, so only you and the person you are writing to can read them. Our platform includes CSRF protection, secure session management, strict Content Security Policy headers, and data controls built around your GDPR rights. You can view, export, or delete your data at any time from your Settings.
                 </div>
             </div>
 
@@ -632,7 +642,7 @@
     <!-- A92 audit (pre-existing): removed a hard-coded Cloudflare email-decode script that had been
          saved into the template from a live page; Cloudflare injects its own copy when it needs one,
          and off Cloudflare the path 404s. The mailto links here are plain and need no decoding. -->
-    <script src="/static/js/i18n.js?v=B205"></script>
+    <script src="/static/js/i18n.js?v=B207"></script>
     <script>
         // A43 (rev6): BULLETPROOF back button. Every earlier revision ultimately trusted the
         // anchor's href (rev4 set href once at load and then did `if (validRet) return;` on
