@@ -20,6 +20,8 @@
 #   5. _A92_ASSET_VERSION = 'B207' (cache-bust lockstep; i18n.js and e2ee.js changed, collection.js new).
 #   6. F12 rev 2: _A92_ASSET_VERSION = 'B208' (e2ee.js: private messaging can be turned on, unlocked,
 #      re-keyed with a new passphrase or locked at any time from Settings or the Messages button). No server change.
+#   7. F12 rev 3: _A92_ASSET_VERSION = 'B209'. The feature is named "End-to-end encryption" (was "Private
+#      messaging"); the two /api/e2ee error texts say so too. Texts only.
 #
 # =====================================================================
 # TheraSocial app.py - Version F11 / B206 (end-to-end encrypted messages; additive)
@@ -9171,7 +9173,7 @@ def _safe_back_url():
 
 # A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
 # parameters.html, circles.html and support.html).
-_A92_ASSET_VERSION = 'B208'
+_A92_ASSET_VERSION = 'B209'
 
 
 def _a92_soften_dashes_in_html(html):
@@ -13644,7 +13646,7 @@ def f11_e2ee_get_key():
     except Exception as e:
         db.session.rollback()
         logger.error(f"[F11 E2EE] key read error: {e}")
-        return jsonify({'error': 'Private messaging is temporarily unavailable', 'e2ee_error': 'unavailable'}), 503
+        return jsonify({'error': 'End-to-end encryption is temporarily unavailable', 'e2ee_error': 'unavailable'}), 503
     resp = jsonify({'has_key': True, 'public_key': rec.public_key, 'wrapped_private_key': rec.wrapped_private_key}
                    if rec else {'has_key': False})
     resp.headers['Cache-Control'] = 'no-store'
@@ -13718,7 +13720,7 @@ def f11_e2ee_pubkey(target_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"[F11 E2EE] pubkey read error: {e}")
-        return jsonify({'error': 'Private messaging is temporarily unavailable', 'e2ee_error': 'unavailable'}), 503
+        return jsonify({'error': 'End-to-end encryption is temporarily unavailable', 'e2ee_error': 'unavailable'}), 503
     if not rec:
         return jsonify({'has_key': False}), 404
     resp = jsonify({'user_id': target_id, 'public_key': rec.public_key})
