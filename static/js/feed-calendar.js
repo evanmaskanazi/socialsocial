@@ -1,3 +1,6 @@
+// Version B214 (F18 rev 2): no content change (still not loaded by index, parameters, circles, profile or about).
+// Version B213 (F18): no content change. Note: no page currently loads this file (no <script> tag in index,
+//   parameters, circles or profile).
 // Version B199 (A91): No functional change. Cache-bust lockstep only — the HTML ?v refs to this
 //   file (feed-updates.js/feed-calendar) were bumped B198->B199 in sync with the app this round.
 // Feed Calendar System with Circle Name Mapping Support
