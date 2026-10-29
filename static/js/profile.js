@@ -1,3 +1,5 @@
+// Version B214 (F18 rev 2): no content change; ?v bumped B213->B214 in lockstep.
+// Version B213 (F18): no content change; ?v bumped B212->B213 in lockstep.
 // Version B205 (F6): renamed the local translation helper t -> _profT (clashed with i18n.js).
 // Profile Page JavaScript with Enhanced Fields, Modern Styling, and i18n support
 // Version Lang - Verified fully translated with t() calls

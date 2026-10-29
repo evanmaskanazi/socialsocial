@@ -1,3 +1,16 @@
+// Version B214 (F18 rev 2): no content change; ?v bumped B213->B214 in lockstep.
+// Version B213 (F18): (referenced as ?v=B213). No content change; ?v bumped B212->B213 in lockstep (new F18 alert
+//   keys live in index.html's ts-f18-alerts block).
+// Version B212 (F17): (referenced as ?v=B212). When the optional server idle logout ends a session (401 with
+//   X-TS-Idle-Timeout: 1), the page returns to the home/sign-in screen once instead of showing failed loads. Inert
+//   while TS_IDLE_TIMEOUT_MINUTES is unset (the server never sends that header). No key changed.
+// Version B211 (F16): (referenced as ?v=B211). Links to /privacy now open the notice in the language selected on the
+//   site (it previously followed only the browser's language). One small listener at the end of the file; no key changed.
+// Version B210 (F15): (referenced as ?v=B210). Additive only: one new block at the END of this file adds, in all 4
+//   languages, the keys for the new /privacy links (consent.privacy_notice_link, support.privacy_notice,
+//   about.privacy_notice_link, settings.data_use_contact, settings.data_use_full_notice), the Support-page helplines
+//   card (support.helplines_*), profile.back_home and consent.min_age_error; and appends "Helplines are listed on the
+//   Support page." to msg.crisis_support_notice (the A26 notice names no number). No existing key removed.
 // Version B209 (F12 rev 3): (referenced as ?v=B209). support.faq3_a (active block, 4 languages): end-to-end
 //   encryption is described as an added protection on messages that are always private between the two
 //   people ("Messages are only ever shown to you and the person you write to, and once both of you have
@@ -7638,4 +7651,131 @@ if (typeof window !== 'undefined') {
     if (t.he) Object.assign(t.he, he_ov);
     if (t.ar) Object.assign(t.ar, ar_ov);
     if (t.ru) Object.assign(t.ru, ru_ov);
+})();
+
+// === F15 (B210): privacy-notice links, helplines card, profile back link. Additive keys only. ===
+(function() {
+    if (!window.i18n || !window.i18n.translations) return;
+    var t = window.i18n.translations;
+    var add = {
+        en: {
+            'consent.privacy_notice_link': 'Read the Privacy Notice',
+            'consent.min_age_error': 'You are below the minimum age required to use TheraSocial.',
+            'settings.data_use_contact': 'Privacy contact',
+            'settings.data_use_full_notice': 'Read the full Privacy Notice',
+            'support.privacy_notice': 'Privacy Notice',
+            'about.privacy_notice_link': 'Read how TheraSocial handles your data in our Privacy Notice',
+            'profile.back_home': 'Back to Home',
+            'support.helplines_title': 'If You Need Support Now',
+            'support.helplines_intro': 'If you or someone you care about is in immediate danger, call emergency services right away.',
+            'support.helplines_emergency': 'Emergency in Israel:',
+            'support.helplines_ambulance': 'ambulance (Magen David Adom)',
+            'support.helplines_police': 'police',
+            'support.helplines_eran': 'Emotional first aid by phone, 24/7 in Hebrew. Arabic: extension 7 (limited hours).',
+            'support.helplines_sahar': 'Anonymous online chat support, in Hebrew and Arabic.',
+            'support.helplines_natal': 'Support for trauma related to war and terror.',
+            'support.helplines_abroad': 'Outside Israel:',
+            'support.helplines_us': 'In the United States, call or text 988.',
+            '_f15_crisis_append': 'Helplines are listed on the Support page.'
+        },
+        he: {
+            'consent.privacy_notice_link': 'לקריאת הודעת הפרטיות',
+            'consent.min_age_error': 'אינך עומד/ת בגיל המינימלי הנדרש לשימוש ב-TheraSocial.',
+            'settings.data_use_contact': 'פנייה בנושא פרטיות',
+            'settings.data_use_full_notice': 'לקריאת הודעת הפרטיות המלאה',
+            'support.privacy_notice': 'הודעת פרטיות',
+            'about.privacy_notice_link': 'כיצד TheraSocial מטפלת במידע שלך: לקריאת הודעת הפרטיות',
+            'profile.back_home': 'חזרה לדף הבית',
+            'support.helplines_title': 'אם את/ה זקוק/ה לתמיכה עכשיו',
+            'support.helplines_intro': 'אם את/ה או מישהו שיקר לך נמצאים בסכנה מיידית, יש להתקשר מיד לשירותי החירום.',
+            'support.helplines_emergency': 'חירום בישראל:',
+            'support.helplines_ambulance': 'מד"א (אמבולנס)',
+            'support.helplines_police': 'משטרה',
+            'support.helplines_eran': 'עזרה ראשונה נפשית בטלפון, 24/7 בעברית. בערבית: שלוחה 7 (בשעות מוגבלות).',
+            'support.helplines_sahar': "תמיכה אנונימית בצ'אט מקוון, בעברית ובערבית.",
+            'support.helplines_natal': 'תמיכה בטראומה על רקע מלחמה וטרור.',
+            'support.helplines_abroad': 'מחוץ לישראל:',
+            'support.helplines_us': 'בארצות הברית, ניתן להתקשר או לשלוח הודעה ל-988.',
+            '_f15_crisis_append': 'קווי סיוע מופיעים בדף התמיכה.'
+        },
+        ar: {
+            'consent.privacy_notice_link': 'اقرأ إشعار الخصوصية',
+            'consent.min_age_error': 'أنت دون الحد الأدنى للسن المطلوب لاستخدام TheraSocial.',
+            'settings.data_use_contact': 'جهة الاتصال بشأن الخصوصية',
+            'settings.data_use_full_notice': 'اقرأ إشعار الخصوصية الكامل',
+            'support.privacy_notice': 'إشعار الخصوصية',
+            'about.privacy_notice_link': 'اقرأ كيف يتعامل TheraSocial مع بياناتك في إشعار الخصوصية',
+            'profile.back_home': 'العودة إلى الصفحة الرئيسية',
+            'support.helplines_title': 'إذا كنت بحاجة إلى دعم الآن',
+            'support.helplines_intro': 'إذا كنت أنت أو شخص تهتم به في خطر فوري، اتصل بخدمات الطوارئ على الفور.',
+            'support.helplines_emergency': 'الطوارئ في إسرائيل:',
+            'support.helplines_ambulance': 'الإسعاف (نجمة داود الحمراء)',
+            'support.helplines_police': 'الشرطة',
+            'support.helplines_eran': 'إسعاف نفسي أولي عبر الهاتف، على مدار الساعة بالعبرية. بالعربية: التحويلة 7 (ساعات محدودة).',
+            'support.helplines_sahar': 'دعم مجهول الهوية عبر الدردشة على الإنترنت، بالعبرية والعربية.',
+            'support.helplines_natal': 'دعم للصدمات المرتبطة بالحرب والإرهاب.',
+            'support.helplines_abroad': 'خارج إسرائيل:',
+            'support.helplines_us': 'في الولايات المتحدة، اتصل أو أرسل رسالة نصية إلى 988.',
+            '_f15_crisis_append': 'خطوط المساعدة مدرجة في صفحة الدعم.'
+        },
+        ru: {
+            'consent.privacy_notice_link': 'Прочитать уведомление о конфиденциальности',
+            'consent.min_age_error': 'Вы не достигли минимального возраста, необходимого для использования TheraSocial.',
+            'settings.data_use_contact': 'Контакт по вопросам конфиденциальности',
+            'settings.data_use_full_notice': 'Прочитать полное уведомление о конфиденциальности',
+            'support.privacy_notice': 'Уведомление о конфиденциальности',
+            'about.privacy_notice_link': 'Как TheraSocial обращается с вашими данными: читайте в уведомлении о конфиденциальности',
+            'profile.back_home': 'На главную',
+            'support.helplines_title': 'Если вам нужна поддержка сейчас',
+            'support.helplines_intro': 'Если вам или близкому человеку угрожает непосредственная опасность, немедленно звоните в экстренные службы.',
+            'support.helplines_emergency': 'Экстренные службы в Израиле:',
+            'support.helplines_ambulance': 'скорая помощь (Маген Давид Адом)',
+            'support.helplines_police': 'полиция',
+            'support.helplines_eran': 'Эмоциональная первая помощь по телефону, круглосуточно на иврите. На арабском: добавочный 7 (ограниченные часы).',
+            'support.helplines_sahar': 'Анонимная поддержка в онлайн-чате на иврите и арабском.',
+            'support.helplines_natal': 'Поддержка при травме, связанной с войной и террором.',
+            'support.helplines_abroad': 'За пределами Израиля:',
+            'support.helplines_us': 'В США позвоните или отправьте SMS на номер 988.',
+            '_f15_crisis_append': 'Телефоны доверия указаны на странице поддержки.'
+        }
+    };
+    Object.keys(add).forEach(function (lang) {
+        if (!t[lang]) return;
+        var extra = add[lang]['_f15_crisis_append'];
+        delete add[lang]['_f15_crisis_append'];
+        Object.assign(t[lang], add[lang]);
+        var cur = t[lang]['msg.crisis_support_notice'];
+        if (cur && extra && cur.indexOf(extra) === -1) t[lang]['msg.crisis_support_notice'] = cur + ' ' + extra;
+    });
+})();
+
+// === F16 (B211): /privacy links follow the site language. A click handler (capture phase) instead of a one-time
+// rewrite, so links rendered later (Settings > "How your data is used") are covered too. Only the href changes. ===
+(function() {
+    document.addEventListener('click', function (e) {
+        try {
+            var a = e.target && e.target.closest ? e.target.closest('a[href^="/privacy"]') : null;
+            if (!a || !window.i18n || !window.i18n.getCurrentLanguage) return;
+            var lang = window.i18n.getCurrentLanguage();
+            if (['en', 'he', 'ar', 'ru'].indexOf(lang) !== -1) a.setAttribute('href', '/privacy?lang=' + lang);
+        } catch (_) {}
+    }, true);
+})();
+
+// === F17 (B212): return to sign-in after a server idle logout. Wraps fetch once; only reads a response header. ===
+(function() {
+    if (typeof window === 'undefined' || !window.fetch || window.__tsIdleWrapped) return;
+    window.__tsIdleWrapped = true;
+    var origFetch = window.fetch;
+    window.fetch = function () {
+        return origFetch.apply(this, arguments).then(function (r) {
+            try {
+                if (r && r.status === 401 && r.headers && r.headers.get('X-TS-Idle-Timeout') === '1' && !window.__tsIdleLeaving) {
+                    window.__tsIdleLeaving = true;
+                    window.location.assign('/');
+                }
+            } catch (_) {}
+            return r;
+        });
+    };
 })();
