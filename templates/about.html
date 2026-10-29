@@ -1,4 +1,21 @@
 <!DOCTYPE html>
+<!-- TheraSocial About Version B214 (F18 rev 2) -->
+<!-- B214 (F18 rev 2): cache-bust lockstep only (index.html and app.py changed). No markup/JS change on this page.
+     CACHE-BUST: every live JS ?v bumped B213->B214 in lockstep; app.py _A92_ASSET_VERSION = 'B214'. -->
+<!-- TheraSocial About Version B213 (F18) -->
+<!-- B213 (F18): cache-bust lockstep only (index.html and app.py changed: trigger alerts look forward only; alert wording). No markup/JS change on this page.
+     CACHE-BUST: every live JS ?v bumped B212->B213 in lockstep; app.py _A92_ASSET_VERSION = 'B213'. -->
+<!-- TheraSocial About Version B212 (F17) -->
+<!-- B212 (F17): cache-bust lockstep (i18n.js changed: return to sign-in after an optional server idle logout).
+     CACHE-BUST: every live JS ?v bumped B211->B212 in lockstep; app.py _A92_ASSET_VERSION = 'B212'. -->
+<!-- TheraSocial About Version B211 (F16) -->
+<!-- B211 (F16): cache-bust lockstep only (i18n.js changed: /privacy links follow the selected language). No markup/JS change.
+     CACHE-BUST: every live JS ?v bumped B210->B211 in lockstep; app.py _A92_ASSET_VERSION = 'B211'. -->
+<!-- TheraSocial About Version B210 (F15) -->
+<!-- B210 (F15): additive. (1) "Read our Privacy Notice" link (new public /privacy page, app.py F15) under
+     the Respecting Other Members' Privacy section. (2) Additive <style id="ts-f15-polish">: keyboard focus
+     rings, crisp text rendering. (3) theme-color meta.
+     CACHE-BUST: every live JS ?v bumped B209->B210 in lockstep; app.py _A92_ASSET_VERSION = 'B210'. -->
 <!-- TheraSocial About Version B209 (F12 rev 3) -->
 <!-- B209 (F12 rev 3): cache-bust lockstep only. "Private messaging" is now named "End-to-end encryption" (e2ee.js, i18n.js).
      CACHE-BUST: every live JS ?v bumped B208->B209 in lockstep; app.py _A92_ASSET_VERSION = 'B209'. -->
@@ -82,6 +99,7 @@
     <!-- FIX: Security meta tags -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="theme-color" content="#6B8BA4"> <!-- F15 -->
     <style>
         * {
             margin: 0;
@@ -422,6 +440,8 @@
                 <p style="font-weight: 600; color: #6B8BA4; margin-bottom: 0;" data-i18n="about.community_privacy_principle">
                     Access to another member's information comes with a responsibility to protect their privacy.
                 </p>
+                <!-- F15: link to the public privacy notice. -->
+                <p style="margin: 16px 0 0;"><a href="/privacy" class="ts15-notice-link" data-i18n="about.privacy_notice_link">Read how TheraSocial handles your data in our Privacy Notice</a></p>
             </div>
 
             <div style="text-align: center; margin-top: 40px;">
@@ -433,7 +453,7 @@
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B209"></script>
+    <script src="/static/js/i18n.js?v=B214"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read
@@ -522,6 +542,17 @@
         body { font-kerning: normal; }
     </style>
     <!-- ===================== END A92-LUXE ===================== -->
+
+    <!-- ===================== F15-POLISH (about): additive, presentation-only ===================== -->
+    <style id="ts-f15-polish">
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+        a, button, select { -webkit-tap-highlight-color: transparent; }
+        a:focus-visible, button:focus-visible, select:focus-visible {
+            outline: 3px solid rgba(90, 122, 147, 0.45); outline-offset: 2px; border-radius: 6px;
+        }
+        .ts15-notice-link { color: #5A7A93; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+    </style>
+    <!-- ===================== END F15-POLISH ===================== -->
 
 </body>
 </html>

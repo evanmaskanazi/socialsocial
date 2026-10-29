@@ -1,4 +1,35 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B214 (F18 rev 2) -->
+<!-- B214 (F18 rev 2): review of F18; fixes only, all inside the F18 blocks plus one date call.
+     (1) English alert text says "concerning level(s)" (was "low levels"), matching he/ar/ru; "low" was wrong for
+         Anxiety in anxiety mode, where high values are the concern.
+     (2) Russian "no check-in" alert uses "дн." so it is correct for every number (was "4 дней").
+     (3) Home-page alert dates follow the selected language (they followed the phone/browser language).
+     CACHE-BUST: every live JS ?v bumped B213->B214 in lockstep; app.py _A92_ASSET_VERSION = 'B214'. -->
+<!-- TheraSocial Index Version B213 (F18) -->
+<!-- B213 (F18): additive, alerts and trigger polish (trigger alerts now look forward only: app.py F18).
+     (1) <script id="ts-f18-alerts">: well-being alert text. One-day alerts read "for 1 day" (were "for 1 consecutive
+         days"); "(Oct 26 - Oct 26)" shows as one date; the date follows the selected language; he/ar/ru wording
+         agrees with every parameter name ("השלווה ... היה" was wrong); "no check-in for 1 day"; trigger lists show
+         "1 day". New keys live in this block; i18n.js is unchanged.
+     (2) <style id="ts-f18-alerts-css">: the alert close (×) sat over the title in Hebrew/Arabic (now on the left
+         there, with room reserved); the mobile Alerts/Notifications empty state showed "No alerts" twice.
+     (3) Trigger modal: a line saying alerts cover diary entries from now on.
+     (4) Three confirmation dialogs were English-only (remove trigger, block from search, final account deletion).
+     (5) Trigger list: the Remove button's gap is on the correct side in Hebrew/Arabic.
+     CACHE-BUST: every live JS ?v bumped B212->B213 in lockstep; app.py _A92_ASSET_VERSION = 'B213'. -->
+<!-- TheraSocial Index Version B212 (F17) -->
+<!-- B212 (F17): cache-bust lockstep (i18n.js changed: return to sign-in after an optional server idle logout).
+     CACHE-BUST: every live JS ?v bumped B211->B212 in lockstep; app.py _A92_ASSET_VERSION = 'B212'. -->
+<!-- TheraSocial Index Version B211 (F16) -->
+<!-- B211 (F16): cache-bust lockstep only (i18n.js changed: /privacy links follow the selected language). No markup/JS change.
+     CACHE-BUST: every live JS ?v bumped B210->B211 in lockstep; app.py _A92_ASSET_VERSION = 'B211'. -->
+<!-- TheraSocial Index Version B210 (F15) -->
+<!-- B210 (F15): (1) Sign-up consent box: "Read the Privacy Notice" link (new public /privacy page, app.py F15), opens in a new tab.
+     (2) Settings > Privacy Preferences > "How your data is used": also shows whether giving data is required, the privacy
+         contact address and a link to the full notice (fields added to /api/privacy/data-processing in app.py F15).
+     (3) submitConsent: a server error that carries error_key is shown translated (used by the optional TS_MIN_AGE check).
+     CACHE-BUST: every live JS ?v bumped B209->B210 in lockstep; app.py _A92_ASSET_VERSION = 'B210'. -->
 <!-- TheraSocial Index Version B209 (F12 rev 3) -->
 <!-- B209 (F12 rev 3): in-app Support copy of the FAQ "Is my data secure?" answer (built-in English) updated to the new end-to-end encryption wording. "Private messaging" is now named "End-to-end encryption" (e2ee.js, i18n.js).
      CACHE-BUST: every live JS ?v bumped B208->B209 in lockstep; app.py _A92_ASSET_VERSION = 'B209'. -->
@@ -813,10 +844,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B209"></script>
+   <script src="/static/js/utilities.js?v=B214"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B209"></script>
-    <script src="/static/js/follow-requests.js?v=B209"></script>
+    <script src="/static/js/triggers.js?v=B214"></script>
+    <script src="/static/js/follow-requests.js?v=B214"></script>
 
 
     <style>
@@ -5325,6 +5356,9 @@
                     <p data-i18n="consent.responsible">I will use this platform responsibly and respectfully</p>
                     <p data-i18n="consent.waiver">I understand and accept the terms of service</p>
                 </div>
+                <!-- F15: "the privacy policy" now points at a real page (app.py /privacy). New tab, so the
+                     sign-up step is not lost. -->
+                <p style="margin: 10px 0 0; font-size: 0.85rem;"><a href="/privacy" target="_blank" rel="noopener" style="color: #5A7A93; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;" data-i18n="consent.privacy_notice_link">Read the Privacy Notice</a></p>
             </div>
             <!-- Hidden checkboxes to maintain backend compatibility -->
             <input type="hidden" id="privacyAccepted">
@@ -8267,8 +8301,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B209"></script>
-    <script src="/static/js/e2ee.js?v=B209"></script>
+    <script src="/static/js/i18n.js?v=B214"></script>
+    <script src="/static/js/e2ee.js?v=B214"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8610,6 +8644,131 @@
     })();
     </script>
 
+    <!-- ===================== F18: alerts text + trigger keys (additive; remove this block to revert) ===================== -->
+    <script id="ts-f18-alerts">
+    (function() {
+        var f18Translations = {
+            en: {
+                'alerts.wellness_content': "{username}'s {param} has been at concerning levels for {days} consecutive days ({dateRange})",  // rev 2
+                'alerts.wellness_content_no_date': "{username}'s {param} has been at concerning levels for {days} consecutive days",  // rev 2
+                'alerts.wellness_content_one': "{username}'s {param} was at a concerning level for 1 day ({dateRange})",
+                'alerts.wellness_content_one_no_date': "{username}'s {param} was at a concerning level for 1 day",
+                'alerts.no_checkin_content_one': "{username} hasn't checked in for 1 day. You may want to reach out",
+                'trigger_days_format_one': '1 day',
+                'trigger_future_note': 'Alerts cover diary entries from now on. Earlier entries are not reported.',
+                'trigger_remove_confirm': 'Remove this trigger?',
+                'account.delete_final_confirm': 'Are you sure you want to permanently delete your account? This cannot be undone.'
+            },
+            he: {
+                'alerts.wellness_content': 'אצל {username} נרשמה רמה מדאיגה של {param} במשך {days} ימים רצופים ({dateRange})',
+                'alerts.wellness_content_no_date': 'אצל {username} נרשמה רמה מדאיגה של {param} במשך {days} ימים רצופים',
+                'alerts.wellness_content_one': 'אצל {username} נרשמה רמה מדאיגה של {param} במשך יום אחד ({dateRange})',
+                'alerts.wellness_content_one_no_date': 'אצל {username} נרשמה רמה מדאיגה של {param} במשך יום אחד',
+                'alerts.no_checkin_content_one': '{username} לא ביצע/ה צ׳ק-אין במשך יום אחד. כדאי לבדוק איך הם',
+                'trigger_days_format_one': 'יום אחד',
+                'trigger_future_note': 'ההתראות מתייחסות לעדכוני יומן מעכשיו והלאה. עדכונים קודמים לא ידווחו.',
+                'trigger_remove_confirm': 'להסיר את הטריגר הזה?',
+                'account.delete_final_confirm': 'האם למחוק את החשבון לצמיתות? לא ניתן לבטל פעולה זו.'
+            },
+            ar: {
+                'alerts.wellness_content': 'كان مستوى {param} لدى {username} مقلقاً لمدة {days} أيام متتالية ({dateRange})',
+                'alerts.wellness_content_no_date': 'كان مستوى {param} لدى {username} مقلقاً لمدة {days} أيام متتالية',
+                'alerts.wellness_content_one': 'كان مستوى {param} لدى {username} مقلقاً لمدة يوم واحد ({dateRange})',
+                'alerts.wellness_content_one_no_date': 'كان مستوى {param} لدى {username} مقلقاً لمدة يوم واحد',
+                'alerts.no_checkin_content_one': '{username} لم يسجل/تسجل الدخول منذ يوم واحد. قد ترغب في التواصل معهم',
+                'trigger_days_format_one': 'يوم واحد',
+                'trigger_future_note': 'تشمل التنبيهات إدخالات اليوميات من الآن فصاعداً. لن يتم الإبلاغ عن الإدخالات السابقة.',
+                'trigger_remove_confirm': 'إزالة هذا المحفز؟',
+                'account.delete_final_confirm': 'هل أنت متأكد أنك تريد حذف حسابك نهائياً؟ لا يمكن التراجع عن ذلك.'
+            },
+            ru: {
+                'alerts.wellness_content': 'У {username} показатель «{param}» был на тревожном уровне {days} дн. подряд ({dateRange})',
+                'alerts.wellness_content_no_date': 'У {username} показатель «{param}» был на тревожном уровне {days} дн. подряд',
+                'alerts.wellness_content_one': 'У {username} показатель «{param}» был на тревожном уровне 1 день ({dateRange})',
+                'alerts.wellness_content_one_no_date': 'У {username} показатель «{param}» был на тревожном уровне 1 день',
+                'alerts.no_checkin_content_one': '{username} не отмечался/отмечалась 1 день. Возможно, стоит связаться',
+                'alerts.no_checkin_content': '{username} не отмечался/отмечалась {days} дн. Возможно, стоит связаться',  // rev 2
+                'trigger_days_format_one': '1 день',
+                'trigger_future_note': 'Оповещения касаются записей дневника с этого момента. Более ранние записи не учитываются.',
+                'trigger_remove_confirm': 'Удалить этот триггер?',
+                'account.delete_final_confirm': 'Вы уверены, что хотите навсегда удалить аккаунт? Это действие нельзя отменить.'
+            }
+        };
+        function extendI18nF18() {
+            if (window.i18n && window.i18n.translations) {
+                Object.keys(f18Translations).forEach(function(lang) {
+                    if (!window.i18n.translations[lang]) window.i18n.translations[lang] = {};
+                    Object.assign(window.i18n.translations[lang], f18Translations[lang]);
+                });
+            }
+        }
+        extendI18nF18();
+        document.addEventListener('DOMContentLoaded', extendI18nF18);
+        window.addEventListener('load', extendI18nF18);
+
+        // Well-being alert text: one-day wording, one date instead of "(Oct 26 - Oct 26)", date in the UI language.
+        var orig = window._translateWellnessContent;
+        if (typeof orig !== 'function') return;
+        var MONTHS = {Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11};
+        function tr(key) {
+            var r = (window.i18n && window.i18n.translate) ? window.i18n.translate(key) : null;
+            return (r && r !== key) ? r : null;
+        }
+        function uiLang() {
+            try { return (window.i18n && window.i18n.getCurrentLanguage && window.i18n.getCurrentLanguage()) || 'en'; } catch (e) { return 'en'; }
+        }
+        function localDay(txt) {
+            var m = /^([A-Z][a-z]{2}) (\d{1,2})$/.exec(String(txt).trim());
+            var lang = uiLang();
+            if (!m || !(m[1] in MONTHS) || lang === 'en') return String(txt).trim();
+            var now = new Date();
+            var d = new Date(now.getFullYear(), MONTHS[m[1]], parseInt(m[2], 10));
+            if (d.getTime() - now.getTime() > 2 * 86400000) d.setFullYear(d.getFullYear() - 1);
+            try { return d.toLocaleDateString(lang, { month: 'short', day: 'numeric' }); } catch (e) { return String(txt).trim(); }
+        }
+        function localRange(range) {
+            var parts = String(range).split(' - ');
+            if (parts.length === 2 && parts[0].trim() === parts[1].trim()) parts = [parts[0]];
+            return parts.map(localDay).join(' - ');
+        }
+        window._translateWellnessContent = function(content) {
+            try {
+                if (typeof content === 'string' && window.i18n && window.i18n.translate) {
+                    var m = content.match(/^(.+?)'s (\w+) has been at (?:concerning|low) levels for (\d+) consecutive days?(?: \((.+)\))?$/);
+                    if (m) {
+                        var username = m[1], param = m[2], days = m[3], range = m[4] ? localRange(m[4]) : '';
+                        var paramKey = {
+                            'mood': 'params.mood', 'energy': 'params.energy', 'sleep_quality': 'params.sleep',
+                            'physical_activity': 'params.exercise', 'social_belonging': 'params.belonging',
+                            'anxiety': window.ANXIETY_DISPLAY_MODE === 'calm' ? 'params.calm' : 'params.anxiety'
+                        }[param] || ('params.' + param);
+                        var key = (days === '1' ? 'alerts.wellness_content_one' : 'alerts.wellness_content') + (range ? '' : '_no_date');
+                        var tpl = tr(key);
+                        if (tpl) {
+                            return tpl.replace('{username}', username).replace('{param}', tr(paramKey) || param)
+                                      .replace('{days}', days).replace('{dateRange}', range);
+                        }
+                    }
+                    var nc = content.match(/^(.+?) hasn't checked in for 1 days?/);
+                    if (nc && tr('alerts.no_checkin_content_one')) {
+                        return tr('alerts.no_checkin_content_one').replace('{username}', nc[1]);
+                    }
+                }
+            } catch (e) { /* fall through to the original translator */ }
+            return orig(content);
+        };
+    })();
+    </script>
+    <style id="ts-f18-alerts-css">
+        /* Close (×) sat on top of the title in Hebrew/Arabic: move it to the reading end and reserve its space. */
+        .alert-item { padding-inline-end: 30px; }
+        [dir="rtl"] .alert-item .alert-dismiss { right: auto !important; left: 8px !important; }
+        /* Mobile empty state: the list already shows "No alerts"; the second copy below it is hidden. */
+        #mobileAlertsList:not(:empty) + #mobileNoAlertsMessage,
+        #mobileNotificationsList:not(:empty) + #mobileNoNotificationsMessage { display: none !important; }
+    </style>
+    <!-- ===================== END F18 ===================== -->
+
     <!-- A92 audit (pre-existing): pinned. The unversioned URL silently follows the newest major
          release, so a future Chart.js 5 would break every chart without any deploy here. -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -8623,9 +8782,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B209"></script>
-   <script src="/static/js/circles-messages.js?v=B209"></script>
-<script src="/static/js/feed-updates.js?v=B209"></script>
+<script src="/static/js/parameters-social.js?v=B214"></script>
+   <script src="/static/js/circles-messages.js?v=B214"></script>
+<script src="/static/js/feed-updates.js?v=B214"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -10069,7 +10228,8 @@ async function submitConsent() {
             sessionStorage.removeItem('suggestedUsername');
             window.location.reload();
         } else {
-            document.getElementById('consentError').textContent = data.error;
+            // F15: translated when the server sends a key (e.g. consent.min_age_error).
+            document.getElementById('consentError').textContent = (data.error_key ? _t(data.error_key, data.error) : data.error);
             document.getElementById('consentError').style.display = 'block';
         }
     } catch (error) {
@@ -15440,7 +15600,7 @@ async function loadTriggers() {
 }
 
 async function deleteTrigger(triggerId) {
-    if (!confirm('Remove this trigger?')) return;
+    if (!confirm(_t('trigger_remove_confirm', 'Remove this trigger?'))) return;  // F18: was English-only
 
     try {
         const response = await fetch(`/api/triggers/${triggerId}`, {
@@ -15657,6 +15817,7 @@ async function showAddTriggerModalForUser(targetUserId, targetUsername) {
         <div class="modal-content" style="background: white; padding: 32px; border-radius: 16px; max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
             <h3 style="color: #4a6b5a; margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 600;">${window.i18n ? window.i18n.translate('trigger_modal_title').replace('{username}', targetUsername) : 'Add Trigger for ' + targetUsername}</h3>
             <p style="color: #6B7280; font-size: 0.85rem; margin: 0 0 20px 0; line-height: 1.4;">${window.i18n ? window.i18n.translate('trigger_modal_subtitle') : 'Configure when you\'d like to be notified about changes.'}</p>
+            <p class="ts-f18-trigger-note" style="color: #5A7A93; background: #EEF2F5; font-size: 0.8rem; margin: -10px 0 18px 0; padding: 8px 10px; border-radius: 8px; line-height: 1.4;">${_t('trigger_future_note', 'Alerts cover diary entries from now on. Earlier entries are not reported.')}</p>
             <div style="margin: 16px 0;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 0.9rem;">${window.i18n ? window.i18n.translate('trigger_parameter_label') : 'Parameter:'}</label>
                 <select id="triggerParameter" onchange="toggleNoCheckinFields()" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.9rem; background: #fafbfc; color: #374151;">
@@ -15814,7 +15975,7 @@ async function loadTriggersForUser(userId, username) {
             // T30: Handle no_checkin triggers with a distinct display
             if (trigger.parameter === 'no_checkin' || trigger.parameter_name === 'no_checkin') {
                 const noCheckinLabel = window.i18n ? window.i18n.t('trigger_parameter_no_checkin') : 'No Check-In';
-                const daysKey = 'trigger_days_format';
+                const daysKey = (+trigger.consecutive_days === 1) ? 'trigger_days_format_one' : 'trigger_days_format';  // F18
                 const daysText = trigger.consecutive_days ?
                     (window.i18n ? window.i18n.t(daysKey).replace('{count}', trigger.consecutive_days) : `${trigger.consecutive_days} days`)
                     : '';
@@ -15846,7 +16007,7 @@ async function loadTriggersForUser(userId, username) {
             const conditionText = window.i18n ? window.i18n.t(conditionKey) : condition;
 
             // Translate days
-            const daysKey = 'trigger_days_format';
+            const daysKey = (+trigger.consecutive_days === 1) ? 'trigger_days_format_one' : 'trigger_days_format';  // F18
             const daysText = trigger.consecutive_days ?
                 (window.i18n ? window.i18n.t(daysKey).replace('{count}', trigger.consecutive_days) : `${trigger.consecutive_days} days`)
                 : '';
@@ -15862,7 +16023,7 @@ async function loadTriggersForUser(userId, username) {
                     ${translateTrigger(trigger)}
                 </span>
                 <button class="btn" onclick="deleteTrigger(${trigger.id}); setTimeout(() => loadTriggersForUser(${userId}, '${_tsJsArg(username)}'), 500);"
-                        style="padding: 5px 12px; font-size: 0.8rem; background: #f5e6e6; color: #b44; border: 1px solid #e8c8c8; border-radius: 8px; cursor: pointer; font-weight: 500; white-space: nowrap; margin-left: 10px; transition: all 0.2s ease;">
+                        style="padding: 5px 12px; font-size: 0.8rem; background: #f5e6e6; color: #b44; border: 1px solid #e8c8c8; border-radius: 8px; cursor: pointer; font-weight: 500; white-space: nowrap; margin-inline-start: 10px; transition: all 0.2s ease;">
                     ${removeText}
                 </button>
             </div>
@@ -18324,7 +18485,7 @@ async function checkAndLoadTriggerAlerts() {
                 // Remove token from URL
                 window.history.replaceState({}, document.title, window.location.pathname);
                 // Ask final confirmation
-                if (confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) {
+                if (confirm(_t('account.delete_final_confirm', 'Are you sure you want to permanently delete your account? This cannot be undone.'))) {  // F18: was English-only
                     fetch('/api/user/confirm-delete-account', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -19076,7 +19237,7 @@ window.blockUserFromSearch = blockUserFromSearch;
 
 // PJ702: Block user from search with toggle functionality - updates button in place
 async function blockUserFromSearchToggle(userId, username) {
-    const confirmed = confirm(`Block ${username}?`);
+    const confirmed = confirm(_t('msg.confirm_block', 'Block {username}?').replace('{username}', username));  // F18: was English-only
     if (!confirmed) return;
     
     try {
@@ -22001,6 +22162,15 @@ window.loadSettingsConsentPreferences = loadSettingsConsentPreferences;
                 });
                 html += '</ul></div>';
             }
+            // F15: controller contact, whether giving data is required, and the full notice page.
+            const ctrl = d.data_controller || {};
+            if (ctrl.email || d.providing_data) {
+                html += '<div style="padding-top: 10px; border-top: 1px solid #eef0f2;">';
+                if (d.providing_data) html += '<p style="margin: 0 0 8px;">' + txt(d.providing_data) + '</p>';
+                if (ctrl.email) html += '<div><span style="color:#6B7280;">' + escapeHtml(lbl('settings.data_use_contact', 'Privacy contact')) + ':</span> <a href="mailto:' + encodeURIComponent(ctrl.email).replace(/%40/g, '@') + '" style="color: #5A7A93;">' + txt(ctrl.email) + '</a></div>';
+                html += '<div style="margin-top: 6px;"><a href="/privacy" target="_blank" rel="noopener" style="color: #5A7A93; font-weight: 600;">' + escapeHtml(lbl('settings.data_use_full_notice', 'Read the full Privacy Notice')) + '</a></div>';
+                html += '</div>';
+            }
             body.innerHTML = html;
         } catch (e) {
             panel.dataset.loaded = '';  // allow a retry on the next open
@@ -22735,7 +22905,7 @@ async function loadHomeAlerts() {
                 <div style="flex: 1; min-width: 0;">
                     ${showTitle ? `<div class="ts-a26-home-alert-title" style="font-size: 0.9rem; font-weight: 600; color: var(--dark); line-height: 1.35; margin-bottom: 2px;">${escapeHtml(titleText)}</div>` : ''}
                     <div style="font-size: ${showTitle ? '0.85rem' : '0.9rem'}; color: var(--dark); ${showTitle ? 'opacity: 0.82;' : ''} line-height: 1.4; overflow-wrap: anywhere;">${escapeHtml(displayText)}</div>
-                    <div style="font-size: 0.75rem; color: var(--gray); margin-top: 2px;">${alert.created_at ? new Date(alert.created_at).toLocaleDateString() : ''}</div>
+                    <div style="font-size: 0.75rem; color: var(--gray); margin-top: 2px;">${alert.created_at ? new Date(alert.created_at).toLocaleDateString((window.i18n && window.i18n.getCurrentLanguage && window.i18n.getCurrentLanguage()) || undefined) : ''}</div>
                 </div>
             </div>
         `}).join('');
