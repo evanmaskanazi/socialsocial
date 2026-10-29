@@ -1,6 +1,97 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version F18 rev 2 / B214 (review of F18; fixes only)
+#
+# F18 rev 2:
+#   1. _f18_params_since_armed: if the saved-time comparison ever fails (unexpected value), the date check still
+#      runs, so an old entry cannot slip through on that error (it previously skipped both checks).
+#   2. Well-being email lines say "concerning" instead of "low" in all four languages. "Low" was wrong for Anxiety
+#      in anxiety mode, where HIGH values are the concern, and did not match the in-app alert wording.
+#   3. Well-being email: "no check-in" reads "for 1 day" (was "for 1 days") in all four languages; the Russian
+#      plural line uses "дн." so it is correct for every number.
+#   4. _A92_ASSET_VERSION = 'B214' (cache-bust lockstep; index.html changed, every live ?v bumped).
+#
+# =====================================================================
+# TheraSocial app.py - Version F18 / B213 (trigger alerts look forward only; alert wording; additive)
+#
+# F18:
+#   1. Trigger alerts are about the future only. Reported: setting a new trigger immediately produced alerts for
+#      past days (e.g. Oct 19, 21, 24, 26). Every alert path (save-time sync + async, the 5-minute scheduler and
+#      the read-only /api/parameters/check-triggers) now only counts diary entries saved after the trigger was
+#      set (_f18_params_since_armed). "No check-in" triggers count days from when the trigger was set at the
+#      earliest (_f18_cap_days_since). A trigger that is re-activated, re-configured or given a newly ticked
+#      parameter starts again from that moment (created_at is the "armed at" time; no new column).
+#   2. check_duplicate_alert: a one-day streak is written "(Oct 26)" by the scheduler and "(Oct 26 - Oct 26)" by
+#      the save path; each form now also matches the other, so the same day cannot produce two alerts.
+#   3. Consolidated well-being email: one-day lines read "for 1 day (Oct 26)" instead of "for 1 consecutive
+#      days (Oct 26 - Oct 26)"; he/ar/ru lines are worded so the verb agrees with every parameter name; the
+#      list's bullet indent and accent border sit on the right in Hebrew/Arabic.
+#   4. _A92_ASSET_VERSION = 'B213' (cache-bust lockstep; index.html changed, every live ?v bumped).
+#
+# =====================================================================
+# TheraSocial app.py - Version F17 / B212 (review round 3 of F15; fixes only)
+#
+# F17:
+#   1. Optional idle logout (TS_IDLE_TIMEOUT_MINUTES, still off by default): the 401 it returns now carries
+#      X-TS-Idle-Timeout: 1, and i18n.js B212 sends the page back to the sign-in screen. Before, enabling it
+#      would have left an open page showing failed loads instead of asking the member to sign in.
+#   2. PRIVACY_REGIMES['israel']['access_log_retention_days'] follows TS_SECURITY_LOG_RETENTION_DAYS (was a
+#      fixed 730 that could disagree with the setting actually used by the cleanup job).
+#   3. _A92_ASSET_VERSION = 'B212' (cache-bust lockstep; i18n.js and profile.html changed).
+#
+# =====================================================================
+# TheraSocial app.py - Version F16 / B211 (review round of F15; fixes only)
+#
+# F16:
+#   1. /privacy: the per-purpose "Processed outside your country" line is shown only when it is true. The
+#      "No" lines contradicted the Hosting and Delivery entry (all data is stored by the host).
+#   2. Accuracy: the diary health-data note and the "How your data is protected" text (4 languages) said
+#      diary entries go only to "people you choose"; they now also name approved professionals and the AI
+#      weekly summary, matching the processing list.
+#   2b. PRE-EXISTING disclosure gap: the AI reflection prompt (/api/ai/reflection-prompt) also sends recent diary
+#      entries to the AI provider but was not listed; added as its own entry in /api/privacy/data-processing.
+#   3. Admin record of processing: "PBKDF2-SHA256 password hashing" corrected to Werkzeug salted hashing
+#      (the app hashes with generate_password_hash, not security.hash_password).
+#   4. Optional idle logout (off by default): an activity stamp is dropped when no one is signed in, so it
+#      can never carry over into a new sign-in.
+#   5. Optional minimum-age refusal: the session username is restored after the rollback.
+#   6. _A92_ASSET_VERSION = 'B211' (cache-bust lockstep; i18n.js changed: /privacy links follow the
+#      selected language).
+#
+# =====================================================================
+# TheraSocial app.py - Version F15 / B210 (privacy & compliance groundwork, helplines, UX polish; additive)
+#
+# F15 (GDPR / Israeli Privacy Protection Law / HIPAA-aligned intermediate steps; no route removed and
+# nothing that worked before behaves differently with the default environment):
+#   1. NEW public /privacy notice page, generated from /api/privacy/data-processing (one source of truth,
+#      headings in en/he/ar/ru). The sign-up consent text "I accept the privacy policy" now links to it;
+#      also linked from /about, /support and Settings. Added to sitemap.xml.
+#   2. /api/privacy/data-processing (additive fields): controller contact (TS_PRIVACY_EMAIL, default
+#      contact@bentsh.com; optional TS_CONTROLLER_NAME / TS_CONTROLLER_ADDRESS / TS_DPO_CONTACT /
+#      TS_EU_REPRESENTATIVE), right to object and to complain, stop-marketing, "providing data is not a
+#      legal duty" (Israeli PPL s.11), health-data flag on the diary activity, notice_version.
+#   3. Consent version is one setting: TS_CONSENT_VERSION (default '1.0', as before). /api/privacy/consents
+#      also returns current_version and needs_reconsent for a future re-consent prompt.
+#   4. Cache-Control: no-store on every /api/ response that sets none of its own.
+#   5. Health-data access log: viewing ANOTHER member's diary/progress through the five diary endpoints
+#      writes one 'health_data_access' audit row (viewer, owner, endpoint; no content), de-duplicated per
+#      10 minutes, on its own DB connection.
+#   6. Audit-log retention: security, access and consent entries kept 730 days (TS_SECURITY_LOG_RETENTION_DAYS;
+#      Israeli Data Security Regs keep access logs >= 2 years); all other entries keep the 90-day rule.
+#      Before F15 every audit entry, including login and consent records, was deleted after 90 days.
+#   7. /api/privacy/retention-info: wording corrected to what the app does (deletion is immediate on
+#      confirmation; "clinical record standards" removed, as F6 did for DATA_RETENTION_PERIODS).
+#   8. Optional, OFF by default: TS_IDLE_TIMEOUT_MINUTES (automatic logoff after inactivity; background
+#      polling does not count as activity) and TS_MIN_AGE (minimum age at sign-up).
+#   9. Admin-only: GET /api/admin/records-of-processing (draft GDPR Art. 30 record / Israeli database
+#      definition document, with the open items for counsel) and GET/POST /api/admin/security-incidents
+#      (incident register in audit_logs; no new table).
+#  10. PRIVACY_REGIMES['israel']: additive keys for Amendment 13, rights detail, breach reporting.
+#  11. _A92_ASSET_VERSION = 'B210' (cache-bust lockstep; i18n.js, index, support, about, profile changed).
+#   DEPLOY: no new environment variable is required.
+#
+# =====================================================================
 # TheraSocial app.py - Version F12 / B207 (E2EE review round 3, Hebrew wording, Dream Cards prototype; additive)
 #
 # F12:
@@ -4455,6 +4546,17 @@ def check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
                 Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%{date_pattern}%")
             ).first()
         
+        # F18: a one-day streak is "(Oct 26)" from the scheduler but "(Oct 26 - Oct 26)" from the save
+        # path; treat the two spellings as the same day so one day never yields two alerts.
+        if not existing and date_pattern:
+            _m = re.match(r'^\((\w{3} \d{2})(?: - (\w{3} \d{2}))?\)$', date_pattern.strip())
+            if _m and _m.group(2) in (None, _m.group(1)):
+                _day = _m.group(1)
+                _alt = f"({_day} - {_day})" if _m.group(2) is None else f"({_day})"
+                existing = base_query.filter(
+                    Alert.content.ilike(f"%{watched_username}'s {parameter}%{_alt}%")
+                ).first()
+        
         return existing
     except Exception as e:
         logger.warning(f"[DUPLICATE CHECK] Error checking duplicate: {e}")
@@ -4671,7 +4773,9 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'hello': 'Hello',
                 'why_received': f'You are receiving this because you set up a trigger alert for {watched_username}.',
                 'intro': f"Here is an update about {watched_username}'s recent activity:",
-                'param_line': '{param} has been at low levels for {days} consecutive days ({date_range})',
+                'param_line': '{param} has been at concerning levels for {days} consecutive days ({date_range})',  # F18 rev 2: was "low"
+                'param_line_one': '{param} was at a concerning level for 1 day ({date_range})',  # F18
+                'no_checkin_line_one': "hasn't checked in for 1 day. It may be worth checking how they are",  # F18 rev 2
                 'no_checkin_line': "hasn't checked in for {days} days. It may be worth checking how they are",
                 'recommendation': 'It may be worth reaching out to check on them.',
                 'send_message': 'Send a message',
@@ -4691,7 +4795,9 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'hello': 'שלום',
                 'why_received': f'את/ה מקבל/ת הודעה זו כי הגדרת התראת טריגר עבור {watched_username}.',
                 'intro': f"הנה עדכון על הפעילות האחרונה של {watched_username}:",
-                'param_line': '{param} היה ברמות נמוכות במשך {days} ימים רצופים ({date_range})',
+                'param_line': 'נרשמה רמה מדאיגה של {param} במשך {days} ימים רצופים ({date_range})',  # F18: verb agrees with every parameter
+                'param_line_one': 'נרשמה רמה מדאיגה של {param} במשך יום אחד ({date_range})',  # F18
+                'no_checkin_line_one': 'לא ביצע/ה צ׳ק-אין במשך יום אחד. כדאי לבדוק איך הם',  # F18 rev 2
                 'no_checkin_line': 'לא ביצע/ה צ׳ק-אין במשך {days} ימים. כדאי לבדוק איך הם',
                 'recommendation': 'אולי כדאי ליצור קשר כדי לבדוק את מצבם.',
                 'send_message': 'שלח/י הודעה',
@@ -4711,7 +4817,9 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'hello': 'مرحباً',
                 'why_received': f'تتلقى هذا الإشعار لأنك أعددت تنبيه مراقبة لـ {watched_username}.',
                 'intro': f"إليك تحديث عن النشاط الأخير لـ {watched_username}:",
-                'param_line': '{param} كان عند مستويات منخفضة لمدة {days} أيام متتالية ({date_range})',
+                'param_line': 'كان مستوى {param} مقلقاً لمدة {days} أيام متتالية ({date_range})',  # F18: agrees with every parameter
+                'param_line_one': 'كان مستوى {param} مقلقاً لمدة يوم واحد ({date_range})',  # F18
+                'no_checkin_line_one': 'لم يسجل/تسجل الدخول منذ يوم واحد. قد يكون من المفيد التواصل معهم',  # F18 rev 2
                 'no_checkin_line': 'لم يسجل/تسجل الدخول منذ {days} أيام. قد يكون من المفيد التواصل معهم',
                 'recommendation': 'قد يكون من المفيد التواصل للاطمئنان عليهم.',
                 'send_message': 'إرسال رسالة',
@@ -4731,8 +4839,10 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                 'hello': 'Здравствуйте',
                 'why_received': f'Вы получили это уведомление, потому что настроили триггер оповещения для {watched_username}.',
                 'intro': f"Вот обновление о недавней активности {watched_username}:",
-                'param_line': '{param} был на низком уровне {days} дней подряд ({date_range})',
-                'no_checkin_line': 'не отмечался/отмечалась {days} дней. Возможно, стоит проверить, как дела',
+                'param_line': 'Показатель «{param}» был на тревожном уровне {days} дн. подряд ({date_range})',  # F18: agrees with every parameter
+                'param_line_one': 'Показатель «{param}» был на тревожном уровне 1 день ({date_range})',  # F18
+                'no_checkin_line_one': 'не отмечался/отмечалась 1 день. Возможно, стоит проверить, как дела',  # F18 rev 2
+                'no_checkin_line': 'не отмечался/отмечалась {days} дн. Возможно, стоит проверить, как дела',  # F18 rev 2: correct for every number
                 'recommendation': 'Возможно, стоит связаться и узнать, как дела.',
                 'send_message': 'Отправить сообщение',
                 'view_details': 'Подробнее',
@@ -4764,19 +4874,24 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
             p_range = (p.get('date_range') or '').strip()
             # T32: Use distinct message for no_checkin alerts
             if p_name == 'no_checkin':
-                line = t.get('no_checkin_line', "hasn't checked in for {days} days. You may want to reach out").replace('{days}', str(p_days))
+                line = t.get('no_checkin_line_one' if str(p_days) == '1' else 'no_checkin_line', "hasn't checked in for {days} days. You may want to reach out").replace('{days}', str(p_days))  # F18 rev 2: one-day wording
                 # A92 audit (pre-existing): the bullet had no subject ("hasn't checked in for 3
                 # days..."); name the person, as the in-app alert already does. Escaped for HTML.
                 from markupsafe import escape as _a92_esc
                 line = str(_a92_esc(watched_username)) + ' ' + line
             else:
                 param_display = t.get(p_name, p_name)
+                # F18: one-day streaks: "Oct 26 - Oct 26" -> "Oct 26", and "for 1 day" instead of "1 consecutive days".
+                _f18_parts = [x.strip() for x in p_range.split(' - ')] if p_range else []
+                if len(_f18_parts) == 2 and _f18_parts[0] == _f18_parts[1]:
+                    p_range = _f18_parts[0]
+                _f18_line = t['param_line_one'] if (str(p_days) == '1' and t.get('param_line_one')) else t['param_line']
                 if p_range:
-                    line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p_days)).replace('{date_range}', p_range)
+                    line = _f18_line.replace('{param}', param_display).replace('{days}', str(p_days)).replace('{date_range}', p_range)
                 else:
                     # A8 audit: rare scheduler fallback content has no date range — omit the
                     # empty "()" instead of rendering "... for N consecutive days ()".
-                    line = t['param_line'].replace('{param}', param_display).replace('{days}', str(p_days)).replace('({date_range})', '').replace('{date_range}', '').rstrip()
+                    line = _f18_line.replace('{param}', param_display).replace('{days}', str(p_days)).replace('({date_range})', '').replace('{date_range}', '').rstrip()
             param_items.append(f'<li style="margin-bottom: 8px;">{line}</li>')
         
         params_html = '\n'.join(param_items)
@@ -4797,8 +4912,8 @@ def send_consolidated_wellness_alert_email(watcher_id, watched_username, trigger
                     <p style="color: #666; line-height: 1.6;">{t['hello']},</p>
                     <p style="color: #999; font-size: 13px; line-height: 1.5; margin-bottom: 4px;">{t['why_received']}</p>
                     <p style="color: #666; line-height: 1.6;">{t['intro']}</p>
-                    <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-                        <ul style="color: #856404; margin: 0; padding-left: 20px;">
+                    <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-{text_align}: 4px solid #ffc107;">
+                        <ul style="color: #856404; margin: 0; padding-{text_align}: 20px;">
                             {params_html}
                         </ul>
                     </div>
@@ -9173,7 +9288,49 @@ def _safe_back_url():
 
 # A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
 # parameters.html, circles.html and support.html).
-_A92_ASSET_VERSION = 'B209'
+_A92_ASSET_VERSION = 'B214'  # F18 rev 2: B213 -> B214; F18: B212 -> B213 in lockstep with every HTML ?v token (F17: B212, F16: B211, F15: B210)
+
+
+# =====================================================================
+# F15: compliance settings (GDPR / Israeli PPL / HIPAA-aligned groundwork). Every value can be
+# changed from the environment once legal review fixes it, without a code change. The defaults
+# keep today's behaviour exactly (no minimum age, no idle logout, consent version '1.0').
+# =====================================================================
+def _f15_env_int(name, default):
+    try:
+        v = int(str(os.environ.get(name, '')).strip() or default)
+        return v if v >= 0 else default
+    except (TypeError, ValueError):
+        return default
+
+
+_F15_CONSENT_VERSION = (os.environ.get('TS_CONSENT_VERSION') or '1.0').strip()[:20] or '1.0'
+_F15_GENERAL_LOG_DAYS = 90                                                  # unchanged rule
+_F15_SECURITY_LOG_DAYS = max(90, _f15_env_int('TS_SECURITY_LOG_RETENTION_DAYS', 730))
+_F15_IDLE_TIMEOUT_MINUTES = _f15_env_int('TS_IDLE_TIMEOUT_MINUTES', 0)      # 0 = off
+# Audit actions kept for _F15_SECURITY_LOG_DAYS instead of 90 days.
+_F15_LONG_RETENTION_ACTIONS = (
+    'health_data_access', 'security_incident', 'login_failed', 'login_blocked', 'login_success',
+    'csrf_validation_failed', 'account_deleted', 'data_exported', 'consent_saved', 'consent_updated',
+    'consent_withdrawn', 'processing_restricted', 'processing_restriction_lifted',
+)
+
+
+def _f15_min_age_setting():
+    """TS_MIN_AGE (e.g. 16): minimum age accepted at sign-up. Unset or 0 = no check (today)."""
+    return _f15_env_int('TS_MIN_AGE', 0)
+
+
+def _f15_controller_details():
+    """Controller identity for privacy notices. Only values that are set are returned."""
+    out = {'email': (os.environ.get('TS_PRIVACY_EMAIL') or 'contact@bentsh.com').strip(),
+           'support_page': '/support'}
+    for key, env in (('legal_name', 'TS_CONTROLLER_NAME'), ('address', 'TS_CONTROLLER_ADDRESS'),
+                     ('dpo', 'TS_DPO_CONTACT'), ('eu_representative', 'TS_EU_REPRESENTATIVE')):
+        val = (os.environ.get(env) or '').strip()
+        if val:
+            out[key] = val[:300]
+    return out
 
 
 def _a92_soften_dashes_in_html(html):
@@ -9278,7 +9435,7 @@ def robots_txt():
 def sitemap_xml():
     """List the public pages for search engines to consider."""
     base = request.url_root.rstrip('/')
-    public_paths = ['/', '/about', '/support']   # ONLY genuinely public pages
+    public_paths = ['/', '/about', '/support', '/privacy']   # ONLY genuinely public pages (F15: + /privacy)
     items = "".join(
         "<url><loc>{}{}</loc><changefreq>weekly</changefreq></url>".format(base, p)
         for p in public_paths
@@ -10390,6 +10547,15 @@ def save_consent():
                     user.birth_year = birth_year
             except (ValueError, TypeError):
                 pass  # Ignore invalid birth year
+            # F15: optional minimum age (GDPR Art. 8 / platform policy). OFF unless TS_MIN_AGE is set,
+            # so nothing changes until counsel fixes the age. Year-only data: someone who turns the
+            # minimum age this calendar year is accepted.
+            _f15_min_age = _f15_min_age_setting()
+            if _f15_min_age and isinstance(birth_year, int) and (datetime.utcnow().year - birth_year) < _f15_min_age:
+                db.session.rollback()  # nothing from this request is kept
+                session['username'] = user.username  # F16: undo the session copy of a username set above
+                return jsonify({'error': f'You must be at least {_f15_min_age} years old to use TheraSocial.',
+                                'error_key': 'consent.min_age_error', 'min_age': _f15_min_age}), 400
 
         # PL400: Set privacy region based on selected city
         if user.selected_city:
@@ -10415,7 +10581,7 @@ def save_consent():
         consent.consent_language = data.get('language', 'en')
         
         # PL400: GDPR compliance fields
-        consent.consent_version = '1.0'  # Update when T&C change
+        consent.consent_version = _F15_CONSENT_VERSION  # F15: one setting (TS_CONSENT_VERSION, default '1.0')
         consent.consent_ip = request.remote_addr
         consent.consent_user_agent = request.user_agent.string[:500] if request.user_agent else None
         consent.marketing_consent = data.get('marketing_consent', False)
@@ -10438,7 +10604,7 @@ def save_consent():
         action = 'granted' if is_new_consent else 'updated'
         log_consent_change(session['user_id'], 'all_consents', action, {
             'consents_given': {k: v for k, v in data.items() if k not in ['username', 'birth_year', 'language']},
-            'version': '1.0'
+            'version': _F15_CONSENT_VERSION
         })
         
         log_audit('consent_saved', 'user_consent', consent.id, session['user_id'], {
@@ -10859,7 +11025,14 @@ PRIVACY_REGIMES = {
         'rights': ['access', 'rectification', 'erasure'],
         'retention_disclosure': True,
         'consent_granular': True,
-        'breach_notification_hours': None  # No specific timeframe
+        'breach_notification_hours': None,  # No specific timeframe
+        # F15 (additive keys): Amendment 13 (in force 14 Aug 2025) and the Data Security Regulations 2017.
+        'amendment': 'Amendment 13 (in force 14 August 2025)',
+        'rights_detail': ['access (s.13)', 'correction or deletion (s.14)', 'removal from direct-mail lists (s.17F)',
+                          'withdraw optional consent'],
+        'breach_notification': 'Severe security incidents are reported to the Privacy Protection Authority immediately '
+                               '(Data Security Regulations 2017)',
+        'access_log_retention_days': _F15_SECURITY_LOG_DAYS  # F17: follows TS_SECURITY_LOG_RETENTION_DAYS
     },
     'us': {
         'name': 'US Privacy Standards',
@@ -10945,7 +11118,7 @@ def log_consent_change(user_id, consent_type, action, details=None):
             user_id=user_id,
             consent_type=consent_type,
             action=action,
-            consent_version='1.0',
+            consent_version=_F15_CONSENT_VERSION,
             ip_address=request.remote_addr if request else None,
             user_agent=request.user_agent.string[:500] if request and request.user_agent else None,
             details=details
@@ -11082,7 +11255,12 @@ def get_consent_details():
                 'version': consent.consent_version if consent else None,
                 'language': consent.consent_language if consent else None,
                 'granted_at': consent.created_at.isoformat() if consent and consent.created_at else None,
-                'last_updated': consent.updated_at.isoformat() if consent and consent.updated_at else None
+                'last_updated': consent.updated_at.isoformat() if consent and consent.updated_at else None,
+                # F15: when TS_CONSENT_VERSION is raised for new legal texts, members who accepted an
+                # older version show needs_reconsent=true (a re-consent prompt can key off this).
+                'current_version': _F15_CONSENT_VERSION,
+                'needs_reconsent': bool(consent and consent.privacy_accepted and
+                                        (consent.consent_version or '1.0') != _F15_CONSENT_VERSION)
             },
             'history': [{
                 'consent_type': h.consent_type,
@@ -11251,7 +11429,14 @@ def get_data_processing_info():
                 'retention': DATA_RETENTION_PERIODS['wellness_data']['period'],
                 'recipients': ['You', 'Users you grant access to via circles',
                                'Professionals you approve (only if you allow professional access)'],
-                'cross_border': False
+                'cross_border': False,
+                # F15: diary scores and notes can reveal health information (GDPR Art. 9 special
+                # category; "sensitive information" under the Israeli Privacy Protection Law).
+                'sensitive_data': True,
+                'sensitive_data_note': 'Diary entries can reveal health information. They are recorded only when you choose to. '
+                                       'Other members see them only through the circles you choose or a professional you '
+                                       'approve. The AI provider receives them only to write the AI weekly summary and reflection prompts '
+                                       'you open.'
             },
             {
                 # F6 (B205): previously undisclosed recipient.
@@ -11261,6 +11446,16 @@ def get_data_processing_info():
                 'data_categories': ['the last 7 days of diary scores (mood, energy, sleep quality, physical activity, anxiety)', 'diary notes'],
                 'retention': 'Not stored by TheraSocial beyond the summary shown to you',
                 'recipients': ['AI provider (Anthropic), which generates the summary text'],
+                'cross_border': True
+            },
+            {
+                # F16: previously undisclosed second AI feature (/api/ai/reflection-prompt, K6).
+                'name': 'AI Reflection Prompts',
+                'purpose': 'To suggest a personal reflection question when you open a reflection prompt in your diary',
+                'legal_basis': 'Consent',
+                'data_categories': ['your last 5 diary entries (scores and the start of your notes, including earlier reflection answers)'],
+                'retention': 'Not stored by TheraSocial beyond the prompt shown to you',
+                'recipients': ['AI provider (Anthropic), which generates the prompt text'],
                 'cross_border': True
             },
             {
@@ -11309,7 +11504,11 @@ def get_data_processing_info():
             'processing_activities': processing_activities,
             'data_controller': {
                 'name': 'TheraSocial Platform',
-                'contact': 'Via platform support'
+                'contact': 'Via platform support',
+                # F15: identity/contact details (GDPR Art. 13(1)(a); Israeli PPL s.11 as amended).
+                # The legal entity name and any DPO/EU representative are filled in via environment
+                # variables once counsel confirms them; nothing is shown for an unset value.
+                **_f15_controller_details()
             },
             'your_rights': [
                 'Right to access your data',
@@ -11317,7 +11516,9 @@ def get_data_processing_info():
                 'Right to delete your data',
                 'Right to data portability',
                 'Right to restrict processing',
-                'Right to withdraw consent'
+                'Right to withdraw consent',
+                'Right to object to processing',  # F15: GDPR Art. 21
+                'Right to lodge a complaint with a data protection authority'  # F15: GDPR Art. 13(2)(d)
             ],
             'how_to_exercise_rights': {
                 'access': 'Use Export Data feature',
@@ -11325,8 +11526,19 @@ def get_data_processing_info():
                 'erasure': 'Use Delete Account feature',
                 'portability': 'Use Export Data feature (JSON format)',
                 'restriction': 'Contact support (see the Support page)',  # F6: there is no in-app button
-                'withdraw_consent': 'Use Privacy Settings'
-            }
+                'withdraw_consent': 'Use Privacy Settings',
+                # F15 (additive):
+                'objection': 'Contact support (see the Support page)',
+                'stop_marketing': 'Untick marketing in Privacy Settings (it is off unless you turned it on)',
+                'complaint': 'In Israel: the Privacy Protection Authority (gov.il). In the EU/EEA: your national data protection authority'
+            },
+            # F15: Israeli PPL s.11 notice points: whether providing data is a legal duty, and the
+            # consequence of refusing (also GDPR Art. 13(2)(e)).
+            'providing_data': 'You are under no legal obligation to provide personal data. An email address and birth year '
+                              'are needed to create an account; everything else, including diary entries, is optional and only '
+                              'limits the features you can use if you leave it out.',
+            'notice_version': _F15_CONSENT_VERSION,
+            'privacy_notice_url': '/privacy'
         }), 200
         
     except Exception as e:
@@ -11517,12 +11729,15 @@ def get_retention_info():
     """
     return jsonify({
         'retention_periods': DATA_RETENTION_PERIODS,
+        # F15: wording matches what the app does (F6 fixed DATA_RETENTION_PERIODS but not these
+        # lines). Deletion runs at once when the emailed link is confirmed; no clinical records exist.
         'deletion_process': {
-            'account_deletion': 'Deletes all personal data within 30 days',
-            'backup_removal': 'Backups purged within 90 days',
-            'audit_logs': 'Anonymized, not deleted (legal requirement)'
+            'account_deletion': 'Your account and personal data are deleted as soon as you confirm the emailed deletion link',
+            'backup_removal': "Copies in the hosting provider's backups expire on the provider's backup schedule",
+            'audit_logs': 'Detached from your account (no longer linked to you); general entries are removed after '
+                          f'{_F15_GENERAL_LOG_DAYS} days, security and access records after {_F15_SECURITY_LOG_DAYS} days'
         },
-        'legal_basis': 'Retention periods based on clinical record standards and legal requirements'
+        'legal_basis': 'Service provision until you delete your account; security records for protection against misuse'
     }), 200
 
 
@@ -11641,6 +11856,391 @@ def set_privacy_region():
         logger.error(f"Error setting privacy region: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to set privacy region'}), 500
+
+
+# =============================================================================
+# F15: COMPLIANCE GROUNDWORK (additive; no existing route or behaviour changed)
+#
+#   1. Cache-Control: no-store on /api/ responses that set no Cache-Control of their own, so diary,
+#      message and profile JSON is never written to a browser or proxy disk cache
+#      (HIPAA 164.312(e) transmission security; GDPR Art. 32; Israeli Data Security Regs).
+#   2. Health-data access log: when a member views ANOTHER member's diary data through the five
+#      diary/progress endpoints, one 'health_data_access' audit row is written (viewer, owner,
+#      endpoint; no diary content). De-duplicated to one row per viewer/owner/endpoint per 10
+#      minutes. Written on its own connection so it can never commit or roll back the request's
+#      work. Kept 730 days (Israeli Data Security Regs: access logs at least two years).
+#   3. Optional idle logout (HIPAA 164.312(a)(2)(iii) automatic logoff): OFF unless
+#      TS_IDLE_TIMEOUT_MINUTES is set. Background polling does not count as activity.
+#   4. Public /privacy notice page, generated from /api/privacy/data-processing so the notice and the
+#      in-app "How your data is used" panel can never disagree. Headings in en/he/ar/ru.
+#   5. Admin-only GET /api/admin/records-of-processing (GDPR Art. 30 record / Israeli "database
+#      definition document" starting point) and GET/POST /api/admin/security-incidents (GDPR
+#      Art. 33(5) breach register; Israeli severe-incident reporting), stored in audit_logs, no new table.
+# =============================================================================
+
+@app.after_request
+def _f15_api_no_store(response):
+    try:
+        if request.path.startswith('/api/') and 'Cache-Control' not in response.headers:
+            response.headers['Cache-Control'] = 'no-store'
+            response.headers['Pragma'] = 'no-cache'
+    except Exception:
+        pass
+    return response
+
+
+_F15_HEALTH_RULES = {
+    '/api/users/<int:user_id>/parameters': 'user_id',
+    '/api/parameters/hierarchical/<int:view_user_id>': 'view_user_id',
+    '/api/users/<int:user_id>/progress': 'user_id',
+    '/api/parameters/user/<int:user_id>': 'user_id',
+    '/api/user/<int:user_id>/parameters/<date_str>': 'user_id',
+}
+_f15_access_seen = {}
+
+
+@app.after_request
+def _f15_health_access_log(response):
+    try:
+        if request.method != 'GET' or response.status_code != 200 or request.url_rule is None:
+            return response
+        rule = request.url_rule.rule
+        arg = _F15_HEALTH_RULES.get(rule)
+        if not arg:
+            return response
+        viewer = session.get('user_id')
+        owner = (request.view_args or {}).get(arg)
+        if not viewer or not owner or int(viewer) == int(owner):
+            return response
+        key = (int(viewer), int(owner), rule)
+        now = time.time()
+        if now - _f15_access_seen.get(key, 0) < 600:
+            return response
+        if len(_f15_access_seen) > 5000:
+            _f15_access_seen.clear()
+        _f15_access_seen[key] = now
+        try:
+            ip = _get_client_ip()
+        except Exception:
+            ip = request.remote_addr
+        with db.engine.begin() as conn:
+            conn.execute(AuditLog.__table__.insert().values(
+                user_id=int(viewer), action='health_data_access', resource_type='user',
+                resource_id=int(owner), details={'endpoint': rule},
+                ip_address=(ip or '')[:45],
+                user_agent=(request.user_agent.string[:500] if request.user_agent else None),
+                created_at=datetime.utcnow()))
+    except Exception as e:
+        try:
+            logger.warning(f"[F15 ACCESS LOG] not recorded: {type(e).__name__}")
+        except Exception:
+            pass
+    return response
+
+
+# Background polls (alerts, unread badges, session checks) must not keep an idle session alive.
+_F15_BACKGROUND_PATHS = ('/api/alerts', '/api/messages/unread_count', '/api/auth/session',
+                         '/api/parameters/check-triggers', '/api/follow-requests/received',
+                         '/api/circles', '/api/following')
+
+
+@app.before_request
+def _f15_idle_timeout():
+    if not _F15_IDLE_TIMEOUT_MINUTES:
+        return None
+    try:
+        path = request.path or ''
+        if 'user_id' not in session:
+            session.pop('_f15_seen', None)  # F16: no stale stamp can carry over into the next sign-in
+            return None
+        if path.startswith('/static') or path == '/healthz':
+            return None
+        now = int(time.time())
+        last = session.get('_f15_seen')
+        if last and now - int(last) > _F15_IDLE_TIMEOUT_MINUTES * 60:
+            session.clear()
+            if path.startswith('/api/'):
+                _r = jsonify({'error': 'Your session ended after a period of inactivity. Please sign in again.',
+                              'idle_timeout': True})
+                _r.headers['X-TS-Idle-Timeout'] = '1'  # F17: lets i18n.js send the page back to sign-in
+                return _r, 401
+            return None
+        background = request.method == 'GET' and path.startswith(_F15_BACKGROUND_PATHS)
+        if not background and (not last or now - int(last) >= 30):
+            session['_f15_seen'] = now
+        elif not last:
+            session['_f15_seen'] = now
+    except Exception:
+        pass
+    return None
+
+
+def _f15_processing_info():
+    """The same data /api/privacy/data-processing returns, without its login check."""
+    resp = get_data_processing_info.__wrapped__()
+    resp = resp[0] if isinstance(resp, tuple) else resp
+    return resp.get_json() or {}
+
+
+_F15_NOTICE_TEXT = {
+    'en': {
+        'title': 'Privacy Notice',
+        'intro': 'This notice explains what personal data TheraSocial collects, why, who can see it, how long it is kept, and how to use your rights. It describes how the platform works today.',
+        'who': 'Who is responsible for your data', 'contact': 'Contact for privacy questions and requests:',
+        'what': 'What we collect and why', 'english': 'Details are shown in English.',
+        'purpose': 'Purpose', 'basis': 'Legal basis', 'data': 'Data', 'shared': 'Shared with', 'kept': 'Kept',
+        'abroad': 'Processed outside your country', 'yes': 'Yes', 'no': 'No',
+        'sensitive': 'Health-related information', 'providing': 'Do you have to give us data?',
+        'rights': 'Your rights', 'complaint': 'Complaints',
+        'complaint_text': 'You can contact us first, and you can also complain to a data protection authority: in Israel, the Privacy Protection Authority; in the EU/EEA, the authority in your country.',
+        'security': 'How your data is protected',
+        'security_text': 'All connections use HTTPS. Messages are shown only to you and the person you write to, and once you both turn on end-to-end encryption they are end-to-end encrypted. Other members see your diary entries only through the circles you choose or a professional you approve. The platform uses CSRF protection, secure sessions and a strict Content Security Policy.',
+        'age': 'TheraSocial is not intended for people under {age}.',
+        'version': 'Notice version', 'home': 'Back to Home', 'support': 'Support', 'about': 'About',
+    },
+    'he': {
+        'title': 'הודעת פרטיות',
+        'intro': 'הודעה זו מסבירה איזה מידע אישי TheraSocial אוספת, לשם מה, מי יכול לראות אותו, כמה זמן הוא נשמר וכיצד ניתן לממש את זכויותיך. היא מתארת את אופן פעולת הפלטפורמה כיום.',
+        'who': 'מי אחראי למידע שלך', 'contact': 'פנייה בנושאי פרטיות ובקשות:',
+        'what': 'איזה מידע נאסף ולמה', 'english': 'הפרטים מוצגים באנגלית.',
+        'purpose': 'מטרה', 'basis': 'בסיס חוקי', 'data': 'מידע', 'shared': 'משותף עם', 'kept': 'נשמר',
+        'abroad': 'מעובד מחוץ לארצך', 'yes': 'כן', 'no': 'לא',
+        'sensitive': 'מידע הקשור לבריאות', 'providing': 'האם חובה למסור מידע?',
+        'rights': 'הזכויות שלך', 'complaint': 'תלונות',
+        'complaint_text': 'ניתן לפנות אלינו תחילה, וכן להגיש תלונה לרשות להגנת מידע: בישראל, הרשות להגנת הפרטיות; באיחוד האירופי, הרשות המוסמכת במדינתך.',
+        'security': 'כיצד המידע שלך מוגן',
+        'security_text': 'כל החיבורים מוצפנים (HTTPS). הודעות מוצגות רק לך ולאדם שאיתו את/ה מתכתב/ת, ולאחר ששניכם מפעילים הצפנה מקצה לקצה הן מוצפנות מקצה לקצה. חברים אחרים רואים את רשומות היומן שלך רק דרך המעגלים שבחרת או איש מקצוע שאישרת. הפלטפורמה משתמשת בהגנת CSRF, בסשנים מאובטחים ובמדיניות אבטחת תוכן (CSP) מחמירה.',
+        'age': 'TheraSocial אינה מיועדת לאנשים מתחת לגיל {age}.',
+        'version': 'גרסת ההודעה', 'home': 'חזרה לדף הבית', 'support': 'תמיכה', 'about': 'אודות',
+    },
+    'ar': {
+        'title': 'إشعار الخصوصية',
+        'intro': 'يوضح هذا الإشعار البيانات الشخصية التي يجمعها TheraSocial، ولماذا، ومن يمكنه رؤيتها، ومدة الاحتفاظ بها، وكيفية ممارسة حقوقك. وهو يصف طريقة عمل المنصة حاليًا.',
+        'who': 'الجهة المسؤولة عن بياناتك', 'contact': 'للتواصل بشأن أسئلة وطلبات الخصوصية:',
+        'what': 'ما الذي نجمعه ولماذا', 'english': 'تُعرض التفاصيل باللغة الإنجليزية.',
+        'purpose': 'الغرض', 'basis': 'الأساس القانوني', 'data': 'البيانات', 'shared': 'تتم مشاركتها مع', 'kept': 'مدة الاحتفاظ',
+        'abroad': 'تُعالج خارج بلدك', 'yes': 'نعم', 'no': 'لا',
+        'sensitive': 'معلومات متعلقة بالصحة', 'providing': 'هل يجب عليك تقديم بيانات؟',
+        'rights': 'حقوقك', 'complaint': 'الشكاوى',
+        'complaint_text': 'يمكنك التواصل معنا أولًا، كما يمكنك تقديم شكوى إلى سلطة حماية البيانات: في إسرائيل، سلطة حماية الخصوصية؛ وفي الاتحاد الأوروبي، السلطة المختصة في بلدك.',
+        'security': 'كيف نحمي بياناتك',
+        'security_text': 'جميع الاتصالات مشفّرة (HTTPS). تُعرض الرسائل لك وللشخص الذي تراسله فقط، وبعد أن يفعّل كلاكما التشفير التام بين الطرفين تصبح مشفّرة تشفيرًا تامًا. لا يرى الأعضاء الآخرون إدخالات يومياتك إلا من خلال الدوائر التي تختارها أو مختص توافق عليه. تستخدم المنصة حماية CSRF وجلسات آمنة وسياسة أمان محتوى (CSP) صارمة.',
+        'age': 'TheraSocial غير مخصص للأشخاص دون سن {age}.',
+        'version': 'إصدار الإشعار', 'home': 'العودة إلى الصفحة الرئيسية', 'support': 'الدعم', 'about': 'حول',
+    },
+    'ru': {
+        'title': 'Уведомление о конфиденциальности',
+        'intro': 'В этом уведомлении объясняется, какие персональные данные собирает TheraSocial, зачем, кто может их видеть, как долго они хранятся и как воспользоваться своими правами. Оно описывает, как платформа работает сейчас.',
+        'who': 'Кто отвечает за ваши данные', 'contact': 'Контакт по вопросам и запросам о конфиденциальности:',
+        'what': 'Что мы собираем и зачем', 'english': 'Подробности приведены на английском языке.',
+        'purpose': 'Цель', 'basis': 'Правовое основание', 'data': 'Данные', 'shared': 'Кому доступны', 'kept': 'Срок хранения',
+        'abroad': 'Обработка за пределами вашей страны', 'yes': 'Да', 'no': 'Нет',
+        'sensitive': 'Информация, связанная со здоровьем', 'providing': 'Обязаны ли вы предоставлять данные?',
+        'rights': 'Ваши права', 'complaint': 'Жалобы',
+        'complaint_text': 'Вы можете сначала обратиться к нам, а также подать жалобу в орган по защите данных: в Израиле в Управление по защите конфиденциальности, в ЕС/ЕЭЗ в орган вашей страны.',
+        'security': 'Как защищены ваши данные',
+        'security_text': 'Все соединения зашифрованы (HTTPS). Сообщения видны только вам и вашему собеседнику, а после того как вы оба включите сквозное шифрование, они шифруются сквозным шифрованием. Другие участники видят записи вашего дневника только через выбранные вами круги или одобренного вами специалиста. Платформа использует защиту от CSRF, защищённые сессии и строгую политику безопасности контента (CSP).',
+        'age': 'TheraSocial не предназначен для лиц младше {age} лет.',
+        'version': 'Версия уведомления', 'home': 'На главную', 'support': 'Поддержка', 'about': 'О нас',
+    },
+}
+
+
+def _f15_notice_lang():
+    lang = (request.args.get('lang') or '').strip().lower()[:2]
+    if lang in _F15_NOTICE_TEXT:
+        return lang
+    try:
+        if session.get('user_id'):
+            u = db.session.get(User, session['user_id'])
+            pl = ((getattr(u, 'preferred_language', None) or '')[:2]).lower()
+            if pl in _F15_NOTICE_TEXT:
+                return pl
+    except Exception:
+        pass
+    return request.accept_languages.best_match(list(_F15_NOTICE_TEXT.keys())) or 'en'
+
+
+@app.route('/privacy')
+def f15_privacy_notice():
+    """Public privacy notice (GDPR Art. 13; Israeli PPL s.11). No scripts on this page."""
+    from markupsafe import escape as _e
+    lang = _f15_notice_lang()
+    T = _F15_NOTICE_TEXT[lang]
+    info = _f15_processing_info()
+
+    def val(v):
+        return _e(', '.join(str(x) for x in v) if isinstance(v, (list, tuple)) else ('' if v is None else str(v)))
+
+    ctrl = info.get('data_controller') or {}
+    who = []
+    if ctrl.get('legal_name'):
+        who.append('<p><strong>%s</strong></p>' % _e(ctrl['legal_name']))
+    if ctrl.get('address'):
+        who.append('<p>%s</p>' % _e(ctrl['address']))
+    who.append('<p>%s <a href="mailto:%s">%s</a></p>' % (_e(T['contact']), _e(ctrl.get('email', '')), _e(ctrl.get('email', ''))))
+    for k, label in (('dpo', 'Data Protection Officer'), ('eu_representative', 'EU representative')):
+        if ctrl.get(k):
+            who.append('<p dir="auto">%s: %s</p>' % (label, _e(ctrl[k])))
+
+    acts = []
+    for a in info.get('processing_activities', []):
+        rows = ''.join('<div class="row"><span class="lbl">%s:</span> <span dir="ltr">%s</span></div>' % (_e(T[k]), val(a.get(f)))
+                       for k, f in (('purpose', 'purpose'), ('basis', 'legal_basis'), ('data', 'data_categories'),
+                                    ('shared', 'recipients'), ('kept', 'retention')))
+        # F16: shown only when true. A "No" line read as "your data never leaves your country", which the
+        # Hosting and Delivery entry (all data stored by the host, cross_border True) contradicts.
+        if a.get('cross_border'):
+            rows += '<div class="row"><span class="lbl">%s:</span> %s</div>' % (_e(T['abroad']), _e(T['yes']))
+        if a.get('sensitive_data_note'):
+            rows += '<div class="row note"><span class="lbl">%s:</span> <span dir="ltr">%s</span></div>' % (_e(T['sensitive']), val(a['sensitive_data_note']))
+        acts.append('<div class="act"><h3 dir="ltr">%s</h3>%s</div>' % (val(a.get('name')), rows))
+
+    how = info.get('how_to_exercise_rights') or {}
+    rights = ''.join('<li dir="ltr"><strong>%s:</strong> %s</li>' % (_e(k.replace('_', ' ').capitalize()), val(v)) for k, v in how.items())
+
+    min_age = _f15_min_age_setting()
+    age_p = ('<p>%s</p>' % _e(T['age'].format(age=min_age))) if min_age else ''
+    english_note = '' if lang == 'en' else '<p class="muted">%s</p>' % _e(T['english'])
+    rtl = lang in ('he', 'ar')
+    langs = ' · '.join('<a href="/privacy?lang=%s"%s><bdi>%s</bdi></a>' % (c, ' aria-current="page"' if c == lang else '', n)
+                       for c, n in (('en', 'English'), ('he', 'עברית'), ('ar', 'العربية'), ('ru', 'Русский')))
+
+    html = (
+        '<!DOCTYPE html><html lang="%(lang)s" dir="%(dir)s"><head><meta charset="UTF-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+        '<meta name="referrer" content="strict-origin-when-cross-origin">'
+        '<meta name="theme-color" content="#6B8BA4">'
+        '<title>%(title)s - TheraSocial</title>'
+        '<meta name="description" content="How TheraSocial collects, uses and protects your personal data, and how to use your privacy rights.">'
+        '<style>'
+        '*{box-sizing:border-box;margin:0;padding:0}'
+        'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,sans-serif;'
+        'background:linear-gradient(135deg,#6B8BA4 0%%,#B6A9C9 100%%);min-height:100vh;padding:20px;color:#333;'
+        'line-height:1.65;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-kerning:normal}'
+        '.container{max-width:880px;margin:0 auto;background:rgba(255,255,255,.96);border-radius:20px;padding:40px;'
+        'box-shadow:0 20px 60px rgba(0,0,0,.1)}'
+        '.langs{text-align:end;font-size:.9em;margin-bottom:18px}'
+        'h1{color:#3D4852;font-size:2.2em;margin-bottom:12px;text-wrap:balance}'
+        'h2{color:#5A7A93;font-size:1.3em;margin:30px 0 12px;text-wrap:balance}'
+        'h3{color:#3D4852;font-size:1.05em;margin-bottom:6px}'
+        'p,li{text-wrap:pretty;margin-bottom:8px}'
+        'a{color:#5A7A93;font-weight:600;overflow-wrap:break-word}'
+        'a:focus-visible{outline:3px solid rgba(90,122,147,.45);outline-offset:2px;border-radius:4px}'
+        '.intro{color:#555;font-size:1.08em}'
+        '.act{background:#f8f9fa;border-radius:14px;padding:16px 18px;margin:12px 0;border-inline-start:4px solid #6B8BA4}'
+        '.row{font-size:.95em;margin:3px 0}.lbl{color:#6B7280}.note{margin-top:6px}'
+        '.muted{color:#6B7280;font-size:.9em}'
+        'ul{padding-inline-start:20px}'
+        '.foot{margin-top:34px;padding-top:18px;border-top:1px solid #e5e7eb;display:flex;gap:16px;flex-wrap:wrap;'
+        'justify-content:space-between;align-items:center}'
+        '.btn{display:inline-block;padding:11px 26px;border-radius:25px;color:#fff;text-decoration:none;'
+        'background:linear-gradient(135deg,#5A7A93 0%%,#6B8BA4 100%%)}'
+        '@media (max-width:768px){body{padding:10px}.container{padding:22px 16px;border-radius:12px}h1{font-size:1.7em}}'
+        'html:not([dir="rtl"]) h1{letter-spacing:-.02em}'
+        '</style></head><body><main class="container">'
+        '<nav class="langs" aria-label="Language">%(langs)s</nav>'
+        '<h1>%(title)s</h1><p class="intro">%(intro)s</p>%(age)s'
+        '<h2>%(who_h)s</h2>%(who)s'
+        '<h2>%(what_h)s</h2>%(english)s%(acts)s'
+        '<h2>%(prov_h)s</h2><p dir="ltr">%(prov)s</p>'
+        '<h2>%(rights_h)s</h2><ul>%(rights)s</ul>'
+        '<h2>%(compl_h)s</h2><p>%(compl)s</p>'
+        '<h2>%(sec_h)s</h2><p>%(sec)s</p>'
+        '<div class="foot"><span class="muted">%(ver_l)s %(ver)s</span>'
+        '<span><a class="btn" href="/">%(home)s</a></span>'
+        '<span><a href="/support">%(support)s</a> · <a href="/about">%(about)s</a></span></div>'
+        '</main></body></html>'
+    ) % {
+        'lang': lang, 'dir': 'rtl' if rtl else 'ltr', 'title': _e(T['title']), 'intro': _e(T['intro']),
+        'age': age_p, 'langs': langs, 'who_h': _e(T['who']), 'who': ''.join(who), 'what_h': _e(T['what']),
+        'english': english_note, 'acts': ''.join(acts), 'prov_h': _e(T['providing']),
+        'prov': val(info.get('providing_data')), 'rights_h': _e(T['rights']), 'rights': rights,
+        'compl_h': _e(T['complaint']), 'compl': _e(T['complaint_text']), 'sec_h': _e(T['security']),
+        'sec': _e(T['security_text']), 'ver_l': _e(T['version']), 'ver': _e(info.get('notice_version', '')),
+        'home': _e(T['home']), 'support': _e(T['support']), 'about': _e(T['about']),
+    }
+    return Response(html, mimetype='text/html')
+
+
+@app.route('/api/admin/records-of-processing', methods=['GET'])
+@admin_required
+def f15_records_of_processing():
+    """GDPR Art. 30 record / Israeli 'database definition document' STARTING POINT for counsel.
+    Generated from the live disclosures so it stays in step with the app."""
+    info = _f15_processing_info()
+    return jsonify({
+        'generated_at': datetime.utcnow().isoformat() + 'Z',
+        'status': 'Draft generated from the application; to be reviewed and completed by legal counsel',
+        'controller': info.get('data_controller'),
+        'processing_activities': info.get('processing_activities'),
+        'retention': DATA_RETENTION_PERIODS,
+        'security_log_retention_days': _F15_SECURITY_LOG_DAYS,
+        'privacy_regimes': PRIVACY_REGIMES,
+        'technical_measures': [
+            'HTTPS with HSTS in production', 'Strict nonce-based Content Security Policy',
+            'CSRF origin check on every state-changing request, signed tokens on sensitive routes',
+            'HttpOnly, signed, SameSite=Lax session cookies (Secure in production)',
+            'Salted password hashing (Werkzeug generate_password_hash)',
+            'Optional end-to-end encryption of private messages (keys created in the browser)',
+            'Circle-based access control on diary data; professional access re-checked on every request',
+            'Cache-Control: no-store on API responses',
+            'Access log of diary views by other members (health_data_access, %d days)' % _F15_SECURITY_LOG_DAYS,
+            'Email addresses masked in application logs',
+            'Idle logout: %s' % (('%d minutes' % _F15_IDLE_TIMEOUT_MINUTES) if _F15_IDLE_TIMEOUT_MINUTES else 'off (TS_IDLE_TIMEOUT_MINUTES)'),
+        ],
+        'open_items_for_counsel': [
+            'Legal entity name, address, and whether a DPO / EU representative (GDPR Art. 27) is required',
+            'Processor agreements (GDPR Art. 28) with Render, Resend, Anthropic, the Redis provider and jsDelivr',
+            'Cross-border transfer mechanism for US-based processors (e.g. SCCs / EU-US Data Privacy Framework)',
+            'Data protection impact assessment for diary (health) data (GDPR Art. 35)',
+            'Explicit-consent wording for health data (GDPR Art. 9(2)(a)) and the minimum age (TS_MIN_AGE)',
+            'Israeli Data Security Regulations: security level, security procedure document, periodic audit',
+            'Whether HIPAA applies (covered entity / business associate via professional accounts) and BAAs',
+            'Final privacy policy and terms texts; raise TS_CONSENT_VERSION when they are published',
+        ],
+    }), 200
+
+
+@app.route('/api/admin/security-incidents', methods=['GET', 'POST'])
+@admin_required
+def f15_security_incidents():
+    """Internal breach/incident register (GDPR Art. 33(5); Israeli Data Security Regs 2017).
+    Every incident is recorded, including ones that turn out not to be reportable."""
+    if request.method == 'GET':
+        rows = AuditLog.query.filter_by(action='security_incident').order_by(desc(AuditLog.created_at)).limit(200).all()
+        return jsonify({'incidents': [{'id': r.id, 'recorded_at': r.created_at.isoformat() if r.created_at else None,
+                                       'recorded_by': r.user_id, **(r.details or {})} for r in rows]}), 200
+    data = request.get_json(silent=True) or {}
+    summary = sanitize_input(str(data.get('summary') or '').strip())[:2000]
+    if not summary:
+        return jsonify({'error': 'summary is required'}), 400
+    detected = str(data.get('detected_at') or datetime.utcnow().isoformat() + 'Z')[:40]
+    details = {
+        'summary': summary,
+        'detected_at': detected,
+        'data_types': sanitize_input(str(data.get('data_types') or ''))[:500],
+        'people_affected': sanitize_input(str(data.get('people_affected') or ''))[:100],
+        'severity': (str(data.get('severity') or 'unassessed').lower()[:20]),
+        'contained': bool(data.get('contained', False)),
+        'reported_to': sanitize_input(str(data.get('reported_to') or ''))[:300],
+        'actions': sanitize_input(str(data.get('actions') or ''))[:2000],
+    }
+    a = AuditLog(user_id=session.get('user_id'), action='security_incident', resource_type='security_incident',
+                 details=details, ip_address=(request.remote_addr or '')[:45])
+    db.session.add(a)
+    db.session.commit()
+    return jsonify({
+        'success': True, 'id': a.id, 'incident': details,
+        'deadlines': {
+            'gdpr': 'Notify the lead supervisory authority within 72 hours of becoming aware, unless the breach is '
+                    'unlikely to result in a risk to people; tell affected people without undue delay if the risk is high '
+                    '(Art. 33-34).',
+            'israel': 'Report a severe security incident to the Privacy Protection Authority immediately (Data Security '
+                      'Regulations 2017); the Authority may require notifying the people affected.',
+            'hipaa': 'Only if HIPAA applies: notify affected individuals without unreasonable delay and within 60 days.',
+        }
+    }), 201
 
 
 
@@ -16325,6 +16925,48 @@ def _a8_to_date(v):
     return None
 
 
+def _f18_params_since_armed(params, trigger):
+    """F18: a trigger only reports what happens AFTER it was set. Keeps the diary entries that were saved
+    at/after the trigger's created_at ("armed at") and are dated no earlier than that day (one day of slack for
+    members west of UTC). Rows with no saved timestamp are judged by their date alone. On any unexpected
+    value the entry is kept, so this can only ever remove history, never hide a new entry."""
+    armed = getattr(trigger, 'created_at', None)
+    if not armed or not params:
+        return params
+    try:
+        armed_day = armed.date() - timedelta(days=1)
+    except Exception:
+        return params
+    kept = []
+    for p in params:
+        try:
+            saved = getattr(p, 'updated_at', None) or getattr(p, 'created_at', None)
+            if saved is not None and saved < armed:
+                continue
+        except Exception:
+            pass  # F18 rev 2: fall through to the date check below instead of skipping it
+        try:
+            d = _a8_to_date(getattr(p, 'date', None))
+            if d is not None and d < armed_day:
+                continue
+        except Exception:
+            pass
+        kept.append(p)
+    return kept
+
+
+def _f18_cap_days_since(days_since, trigger, today):
+    """F18: "no check-in" days are counted from when the trigger was set at the earliest, so a new trigger
+    does not report a silence that started before it existed."""
+    armed = getattr(trigger, 'created_at', None)
+    try:
+        if armed and today:
+            return min(days_since, max((today - armed.date()).days, 0))
+    except Exception:
+        pass
+    return days_since
+
+
 def build_triggered_params_from_alerts(watcher_id, watched_user_id, watched_username):
     """
     A8: Build the consolidated-email parameter list from the watcher's CURRENT
@@ -16477,6 +17119,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
             SavedParameters.user_id == user_id,
             SavedParameters.date >= str(thirty_days_ago)  # PJ6008: Convert to string for comparison
         ).order_by(SavedParameters.date.asc()).all()
+        _f18_src_params = all_params  # F18: per-trigger view below (entries saved after the trigger was set)
         
         logger.info(f"[TRIGGER PROCESS ASYNC] Found {len(all_params)} parameter entries in last 30 days")
         
@@ -16493,6 +17136,7 @@ def process_parameter_triggers_async(user_id, param_snapshot):
             # PJ6008/PI502alt: Enforce minimum consecutive days using MINIMUM_TRIGGER_DAYS constant
             raw_consecutive_days = trigger.consecutive_days
             consecutive_days = max(raw_consecutive_days or MINIMUM_TRIGGER_DAYS, MINIMUM_TRIGGER_DAYS)  # Use configurable minimum
+            all_params = _f18_params_since_armed(_f18_src_params, trigger)  # F18: future only
             
             logger.info(f"[TRIGGER PROCESS ASYNC] Processing trigger for watcher {watcher_id}: raw_consecutive_days={raw_consecutive_days}, enforced={consecutive_days}")
             
@@ -16835,6 +17479,7 @@ def process_parameter_triggers(user_id, params):
             SavedParameters.user_id == user_id,
             SavedParameters.date >= thirty_days_ago
         ).order_by(SavedParameters.date.asc()).all()  # ASC for proper streak detection
+        _f18_src_params = all_params  # F18: per-trigger view below (entries saved after the trigger was set)
 
         logger.info(f"[TRIGGER PROCESS] Found {len(all_params)} parameter entries in last 30 days")
 
@@ -16843,6 +17488,7 @@ def process_parameter_triggers(user_id, params):
             watcher_id = trigger.watcher_id
             # PI502alt: Use MINIMUM_TRIGGER_DAYS constant
             consecutive_days = max(trigger.consecutive_days or MINIMUM_TRIGGER_DAYS, MINIMUM_TRIGGER_DAYS)
+            all_params = _f18_params_since_armed(_f18_src_params, trigger)  # F18: future only
             
             if consecutive_days < MINIMUM_TRIGGER_DAYS:
                 continue
@@ -17220,7 +17866,15 @@ def cleanup_old_data():
         # Clean up old audit logs
         try:
             audit_cutoff = now - timedelta(days=AUDIT_LOG_RETENTION_DAYS)
-            deleted = AuditLog.query.filter(AuditLog.created_at < audit_cutoff).delete()
+            # F15: security, access and consent records are kept longer (default 730 days; Israeli
+            # Data Security Regulations 2017 keep access logs for at least two years). Everything
+            # else keeps the 90-day rule. Set TS_SECURITY_LOG_RETENTION_DAYS to change it.
+            deleted = AuditLog.query.filter(AuditLog.created_at < audit_cutoff,
+                                            ~AuditLog.action.in_(_F15_LONG_RETENTION_ACTIONS)
+                                            ).delete(synchronize_session=False)
+            deleted += AuditLog.query.filter(
+                AuditLog.created_at < now - timedelta(days=_F15_SECURITY_LOG_DAYS),
+                AuditLog.action.in_(_F15_LONG_RETENTION_ACTIONS)).delete(synchronize_session=False)
             total_cleaned += deleted
             logger.info(f"[DATA RETENTION] Removed {deleted} old audit log entries")
         except Exception as e:
@@ -21338,11 +21992,17 @@ def set_parameter_triggers(user_id):
             )
             db.session.add(trigger)
 
+        # F18: a newly ticked parameter starts watching from now (no alerts about past days).
+        _f18_was_on = {k for k in ('mood_alert', 'energy_alert', 'sleep_alert', 'physical_alert', 'anxiety_alert')
+                       if getattr(trigger, k, False)}
         trigger.mood_alert = data.get('mood_alert', False)
         trigger.energy_alert = data.get('energy_alert', False)
         trigger.sleep_alert = data.get('sleep_alert', False)
         trigger.physical_alert = data.get('physical_alert', False)
         trigger.anxiety_alert = data.get('anxiety_alert', False)
+        if any(getattr(trigger, k, False) and k not in _f18_was_on
+               for k in ('mood_alert', 'energy_alert', 'sleep_alert', 'physical_alert', 'anxiety_alert')):
+            trigger.created_at = datetime.utcnow()
 
         db.session.commit()
         return jsonify({'success': True})
@@ -21492,6 +22152,7 @@ def check_parameter_triggers():
                     days_since = (today - _le_date).days if _le_date else 999
                 else:
                     days_since = 999
+                days_since = _f18_cap_days_since(days_since, trigger, today)  # F18: not before the trigger existed
 
                 if days_since >= consecutive_days:
                     pattern_key = (watched_user.username, 'no_checkin', today.isoformat(), str(days_since))
@@ -21514,6 +22175,7 @@ def check_parameter_triggers():
                     SavedParameters.date >= thirty_days_ago
                 ).order_by(SavedParameters.date.asc())
             ).scalars().all()
+            parameters = _f18_params_since_armed(parameters, trigger)  # F18: future only
 
             if len(parameters) < consecutive_days:
                 continue
@@ -26266,6 +26928,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
                     days_since = (today - _le_date).days if _le_date else 999
                 else:
                     days_since = 999
+                days_since = _f18_cap_days_since(days_since, trigger, today)  # F18: not before the trigger existed
 
                 if days_since >= consecutive_days:
                     pattern_key = (watched_user.username, 'no_checkin', today.isoformat(), str(days_since))
@@ -26288,6 +26951,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
                     SavedParameters.date >= thirty_days_ago
                 ).order_by(SavedParameters.date.asc())
             ).scalars().all()
+            parameters = _f18_params_since_armed(parameters, trigger)  # F18: future only
 
             if len(parameters) < consecutive_days:
                 continue
@@ -26416,6 +27080,7 @@ def run_background_trigger_check_for_watcher(watcher_id):
                         days_since = (today - _le_date).days if _le_date else 999
                     else:
                         days_since = 999
+                    days_since = _f18_cap_days_since(days_since, trigger, today)  # F18: not before the trigger existed
 
                     if days_since >= consecutive_days:
                         pattern_key = (watched_user.username, 'no_checkin', today.isoformat(), str(days_since))
@@ -28220,6 +28885,13 @@ def create_trigger():
         if existing_trigger:
             # Update existing trigger instead of creating duplicate
             logger.info(f"[TRIGGER UPDATE] Found existing trigger ID={existing_trigger.id}, updating consecutive_days from {existing_trigger.consecutive_days} to {consecutive_days}")
+            # F18: re-adding a removed trigger, or changing what it watches, starts again from now,
+            # so the member is not sent alerts about days before this setting existed.
+            if (not existing_trigger.is_active
+                    or existing_trigger.trigger_condition != trigger_condition
+                    or existing_trigger.trigger_value != trigger_value
+                    or existing_trigger.consecutive_days != consecutive_days):
+                existing_trigger.created_at = datetime.utcnow()
             existing_trigger.trigger_condition = trigger_condition
             existing_trigger.trigger_value = trigger_value
             existing_trigger.consecutive_days = consecutive_days
