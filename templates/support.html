@@ -1,4 +1,19 @@
 <!DOCTYPE html>
+<!-- TheraSocial Support Version B214 (F18 rev 2) -->
+<!-- B214 (F18 rev 2): cache-bust lockstep only (index.html and app.py changed: trigger alerts look forward only; alert wording). No markup/JS change on this page.
+     CACHE-BUST: every live JS ?v bumped B212->B214 in lockstep (this page skipped B213; app.py also pins it at serve time); app.py _A92_ASSET_VERSION = 'B214'. -->
+<!-- TheraSocial Support Version B212 (F17) -->
+<!-- B212 (F17): cache-bust lockstep (i18n.js changed: return to sign-in after an optional server idle logout).
+     CACHE-BUST: every live JS ?v bumped B211->B212 in lockstep; app.py _A92_ASSET_VERSION = 'B212'. -->
+<!-- TheraSocial Support Version B211 (F16) -->
+<!-- B211 (F16): cache-bust lockstep only (i18n.js changed: /privacy links follow the selected language). No markup/JS change.
+     CACHE-BUST: every live JS ?v bumped B210->B211 in lockstep; app.py _A92_ASSET_VERSION = 'B211'. -->
+<!-- TheraSocial Support Version B210 (F15) -->
+<!-- B210 (F15): additive. (1) New "If You Need Support Now" helplines card (#helplines): Israeli
+     emergency numbers, ERAN 1201, SAHAR, NATAL, findahelpline.com / 988; texts in i18n.js B210.
+     (2) "Privacy Notice" link in Quick Help (new public /privacy page in app.py F15).
+     (3) Additive <style id="ts-f15-polish">: keyboard focus rings, crisp text rendering, helpline styling.
+     CACHE-BUST: every live JS ?v bumped B209->B210 in lockstep; app.py _A92_ASSET_VERSION = 'B210'. -->
 <!-- TheraSocial Support Version B209 (F12 rev 3) -->
 <!-- B209 (F12 rev 3): FAQ "Is my data secure?" built-in English answer updated to the new end-to-end encryption wording (same text as i18n.js). "Private messaging" is now named "End-to-end encryption" (e2ee.js, i18n.js).
      CACHE-BUST: every live JS ?v bumped B208->B209 in lockstep; app.py _A92_ASSET_VERSION = 'B209'. -->
@@ -92,6 +107,7 @@
     <!-- FIX: Security meta tags -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="theme-color" content="#6B8BA4"> <!-- F15 -->
     <!-- A51: honest, additive SEO/social metadata (page previously had none). -->
     <meta name="description" content="TheraSocial Support Center. Contact us, browse answers to common questions, or send us a message.">
     <meta property="og:type" content="website">
@@ -513,11 +529,48 @@
                 <ul style="color: #666; line-height: 2; margin-left: 20px;">
                     <li><a href="#faq" style="color: #B6A9C9;" data-i18n="support.faq_link">Frequently Asked Questions</a></li>
                     <li><a href="/?tutorial=start" style="color: #B6A9C9;" data-i18n="support.video_tutorials">Video Tutorials</a></li>
+                    <!-- F15: the privacy notice now exists (app.py /privacy). -->
+                    <li><a href="/privacy" style="color: #B6A9C9;" data-i18n="support.privacy_notice">Privacy Notice</a></li>
                 </ul>
             </div>
             <!-- A41: "Resources" card removed — every link in it (Privacy Policy, Terms of
                  Service, Community Guidelines, Security Center, Blog) pointed to a route that
                  does not exist yet. Restore this card once those pages are built. -->
+
+            <!-- F15: helplines card (the A26 crisis notice says "crisis helplines are available in your
+                 area" and asked for region-appropriate helplines on this page). Numbers checked
+                 against the services' own published details, October 2026. Service names stay as
+                 written; descriptions come from i18n.js (support.helplines_*). -->
+            <div class="support-card" id="helplines">
+                <h2><span data-i18n="support.helplines_title">If You Need Support Now</span></h2>
+                <p style="color: #555; margin-bottom: 12px;" data-i18n="support.helplines_intro">If you or someone you care about is in immediate danger, call emergency services right away.</p>
+                <div class="contact-info">
+                    <strong data-i18n="support.helplines_emergency">Emergency in Israel:</strong>
+                    <a href="tel:101" dir="ltr">101</a> <span data-i18n="support.helplines_ambulance">ambulance (Magen David Adom)</span>
+                    &nbsp;·&nbsp; <a href="tel:100" dir="ltr">100</a> <span data-i18n="support.helplines_police">police</span>
+                </div>
+                <div class="contact-info">
+                    <strong>ERAN · <bdi>ער"ן</bdi></strong>
+                    <a href="tel:1201" dir="ltr">1201</a>
+                    <span style="display: block;" data-i18n="support.helplines_eran">Emotional first aid by phone, 24/7 in Hebrew. Arabic: extension 7 (limited hours).</span>
+                    <a href="https://www.eran.org.il" target="_blank" rel="noopener noreferrer">eran.org.il</a>
+                </div>
+                <div class="contact-info">
+                    <strong>SAHAR · <bdi>סה"ר</bdi></strong>
+                    <span style="display: block;" data-i18n="support.helplines_sahar">Anonymous online chat support, in Hebrew and Arabic.</span>
+                    <a href="https://sahar.org.il" target="_blank" rel="noopener noreferrer">sahar.org.il</a>
+                </div>
+                <div class="contact-info">
+                    <strong>NATAL · <bdi>נט"ל</bdi></strong>
+                    <a href="tel:1800363363" dir="ltr">1-800-363-363</a>
+                    <span style="display: block;" data-i18n="support.helplines_natal">Support for trauma related to war and terror.</span>
+                </div>
+                <div class="contact-info">
+                    <strong data-i18n="support.helplines_abroad">Outside Israel:</strong>
+                    <a href="https://findahelpline.com" target="_blank" rel="noopener noreferrer">findahelpline.com</a>
+                    <span style="display: block;" data-i18n="support.helplines_us">In the United States, call or text 988.</span>
+                </div>
+            </div>
         </div>
 
         <div class="faq-section" id="faq">
@@ -648,7 +701,7 @@
     <!-- A92 audit (pre-existing): removed a hard-coded Cloudflare email-decode script that had been
          saved into the template from a live page; Cloudflare injects its own copy when it needs one,
          and off Cloudflare the path 404s. The mailto links here are plain and need no decoding. -->
-    <script src="/static/js/i18n.js?v=B209"></script>
+    <script src="/static/js/i18n.js?v=B214"></script>
     <script>
         // A43 (rev6): BULLETPROOF back button. Every earlier revision ultimately trusted the
         // anchor's href (rev4 set href once at load and then did `if (validRet) return;` on
@@ -1057,6 +1110,20 @@
         body { font-kerning: normal; }
     </style>
     <!-- ===================== END A92-LUXE ===================== -->
+
+    <!-- ===================== F15-POLISH (support): additive, presentation-only ===================== -->
+    <style id="ts-f15-polish">
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+        a, button, select { -webkit-tap-highlight-color: transparent; }
+        a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+            outline: 3px solid rgba(90, 122, 147, 0.45); outline-offset: 2px; border-radius: 6px;
+        }
+        #helplines { border-inline-start: 4px solid #9DB8A0; }
+        #helplines a { color: #5A7A93 !important; font-weight: 600; }
+        #helplines a[href^="tel:"] { font-size: 1.1em; font-variant-numeric: tabular-nums; }
+        #helplines .contact-info strong { display: inline; margin-inline-end: 6px; }
+    </style>
+    <!-- ===================== END F15-POLISH ===================== -->
 
 </body>
 </html>
