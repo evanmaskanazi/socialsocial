@@ -1,6 +1,83 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version Rnd 6 / B220
+#   No server logic change. /about and /support were already public, so the Support page's new "Go To About"
+#   button works signed in and signed out. _A92_ASSET_VERSION = 'B220' (cache-bust lockstep; i18n.js changed).
+# =====================================================================
+# TheraSocial app.py - Version F21 rev 5 / B219
+# ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21 rev 4; fixed here; none critical).
+#   Server side: MINOR fix: /api/collection/arrange answered 500 (and dropped the whole batch) when a position was
+#   out of float range (1e400 -> inf -> OverflowError); it is now ignored like other bad positions.
+#   _A92_ASSET_VERSION = 'B219' (cache-bust lockstep).
+# =====================================================================
+# TheraSocial app.py - Version F21 rev 4 / B218
+# ROUND RESULT: RED (major defects found in review of F21 rev 3: the back-navigation feature; parked here, see index).
+#   Server side: tested against a real PostgreSQL 16 in this round (concurrent diary saves, concurrent messages,
+#   add-to-circle 400/409, duplicate-alert patterns, asset-version hook + gzip + nonce, manifest/icons): no defect.
+#   _A92_ASSET_VERSION = 'B218' (cache-bust lockstep).
+# =====================================================================
+# TheraSocial app.py - Version F21 rev 3 / B217 (review of F21 rev 2)
+# ROUND RESULT: ORANGE (moderately problematic issues found in review of F21 rev 2; fixed here; none critical).
+#   No server-side defect found in this round. _A92_ASSET_VERSION = 'B217' (cache-bust lockstep: index.html,
+#   parameters.html, parameters-social.js and collection.js changed). Fixes are listed in those files' headers.
+# =====================================================================
+# TheraSocial app.py - Version F21 rev 2 / B216 (review of F21)
+# ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical).
+#   1. Add to circle: only the circle's own unique constraint answers "User already in this circle" (400); any
+#      other clash in that commit (the follow row, when two circles were tapped quickly) answers 409 "Please try
+#      again in a moment" (F21 said "already in this circle" although the person was not added).
+#   2. Fallback home-screen icons are now exactly 180x180 / 192x192 / 512x512 (F21 served the 512 image for every
+#      size, which browsers can reject for installing).
+#   3. _A92_ASSET_VERSION = 'B216' (cache-bust lockstep: index, parameters, parameters-social.js,
+#      circles-messages.js and collection.js changed).
+#   Front-end fixes of this round are listed in each file's header (grep "F21 rev 2").
+# =====================================================================
+# TheraSocial app.py - Version F21 / B215 (additive; mobile + maintainability round; dormant-bug fixes)
+#
+# F21:
+#   1. One cache-bust safety net for EVERY page: _f21_pin_asset_versions (after_request) rewrites each
+#      /static/js/*.js?v= in any HTML response to _A92_ASSET_VERSION. collection.html had been left at ?v=B209.
+#   2. "Add to Home Screen": GET /manifest.webmanifest (shortcuts: Daily check-in, Dream Cards; en/he/ar/ru by
+#      Accept-Language) and GET /ts-icon-<180|192|512>.png. display "minimal-ui" and NO service worker on purpose.
+#   3. Dormant-bug fixes (each marked "F21" in place):
+#      - POST /api/messages: two sends at once could both insert today's Activity row; the loser was rolled back
+#        with a 500 after the recipient had been emailed. Savepoint + fallback.
+#      - POST /api/parameters: two saves for the same new day -> unique-constraint 500. Retried once.
+#      - Add to circle: a double tap returned "Failed to add to circle" (500) although the add worked -> 400
+#        "User already in this circle".
+#      - check_duplicate_alert: the LIKE pattern began with '%', so "joann's mood ..." suppressed ann's alert;
+#        '_'/'%' in usernames acted as wildcards; same calendar dates were suppressed forever (no year). Anchored,
+#        escaped, 300-day look-back in new_alerts_only mode.
+#   4. _A92_ASSET_VERSION = 'B215' (cache-bust lockstep; every live ?v bumped).
+#   NOT changed (needs a product decision, see the F21 delivery notes): saving a PAST diary day still earns
+#   check-in points (_award_checkin_points), unlike /api/gift/daily which refuses back-dated claims.
+#
+# ---------------------------------------------------------------------
+# MAINTAINER MAP (F21). This file is ~29k lines: navigate with grep, never with line numbers.
+#   Section banners:  grep -n "^# [A-Z][A-Z0-9 /:&()_.,'-]\{6,\}$" app.py
+#   Key anchors (grep for the quoted text):
+#     "_A92_ASSET_VERSION ="          cache-bust constant + the CACHE-BUST RULE (bump it for ANY js change)
+#     "def add_security_headers"      CSP header; "def _a94_nonce_html" adds nonces to every served <script>
+#     "def _a94_build_handler_table"  inline on*="..." handler bridge (only handler text found in source runs)
+#     "@app.after_request"            7+ hooks. Flask runs them in REVERSE registration order: the LAST
+#                                     registered runs FIRST; compress_response (gzip) is registered first, so
+#                                     it runs last. A new hook that edits the body must be registered after it.
+#     "# DATABASE MODELS"             all tables; unique constraints matter for races (see F21 fixes)
+#     "@app.route('/api/parameters'"  diary GET/POST;  "@app.route('/api/messages'"  messaging (+ e2ee)
+#     "@app.route('/api/collection"   Dream Cards;     "@app.route('/api/gift"       daily gift / points
+#     "def check_duplicate_alert"     alert de-duplication; "# PJ816: BACKGROUND TRIGGER SCHEDULER" alerts
+#     "_F15_"                         compliance settings from the environment (consent, idle logout, min age)
+#   Rules that have bitten before:
+#     - Dates: diary dates are the member's LOCAL calendar date as 'YYYY-MM-DD' strings sent by the browser;
+#       server timestamps are naive UTC (datetime.utcnow) and are sent WITHOUT 'Z'; the browser helper
+#       _tsToUTCDate (circles-messages.js) knows this.
+#     - Every except that follows a failed DB statement must db.session.rollback(), or the pooled connection
+#       stays in a failed transaction and breaks the next request.
+#     - Check-then-insert against a unique constraint races on double taps; catch IntegrityError (see F21).
+#     - User text in emails/HTML must be escaped; usernames may contain apostrophes and non-Latin letters (A26).
+# =====================================================================
+# =====================================================================
 # TheraSocial app.py - Version F18 rev 2 / B214 (review of F18; fixes only)
 #
 # F18 rev 2:
@@ -4519,6 +4596,13 @@ def check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
             Alert.user_id == watcher_id,
             Alert.alert_type == 'trigger'
         )
+        # F21 (dormant bugs): (1) the pattern began with '%', so for a watcher of both "joann" and "ann",
+        # "joann's mood ... (Oct 20 - Oct 22)" counted as ann's alert and ann's was never created (same for
+        # "jordan hasn't checked in" vs "dan"). Every producer writes the username FIRST, so the pattern is
+        # anchored now. (2) '_' and '%' in a username acted as LIKE wildcards; they are escaped. (3) dates have
+        # no year, so in new_alerts_only mode the same calendar days were suppressed forever; look back 300 days.
+        _f21_u = str(watched_username or '').replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        _f21_dp = str(date_pattern or '').replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
         
         # T32: no_checkin content uses a different format ("hasn't checked in for X days")
         # that doesn't match the standard "{username}'s {parameter}" pattern.
@@ -4526,24 +4610,26 @@ def check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
         if parameter == 'no_checkin':
             existing = base_query.filter(
                 Alert.created_at >= datetime.now() - timedelta(hours=24),
-                Alert.content.ilike(f"%{watched_username}%hasn't checked in%")
+                Alert.content.ilike(f"{_f21_u} hasn't checked in%", escape='\\')
             ).first()
             return existing
         
         # Add time constraint only in "daily_reminder" mode
         if ALERT_EMAIL_MODE == "daily_reminder":
             base_query = base_query.filter(Alert.created_at >= datetime.now() - timedelta(hours=24))
+        else:
+            base_query = base_query.filter(Alert.created_at >= datetime.now() - timedelta(days=300))   # F21 (3)
         
         # Check with original parameter name
         existing = base_query.filter(
-            Alert.content.ilike(f"%{watched_username}'s {parameter}%{date_pattern}%")
+            Alert.content.ilike(f"{_f21_u}'s {parameter}%{_f21_dp}%", escape='\\')
         ).first()
         
         # Also check with underscore version of parameter
         if not existing:
             param_with_underscore = parameter.replace(' ', '_')
             existing = base_query.filter(
-                Alert.content.ilike(f"%{watched_username}'s {param_with_underscore}%{date_pattern}%")
+                Alert.content.ilike(f"{_f21_u}'s {param_with_underscore}%{_f21_dp}%", escape='\\')
             ).first()
         
         # F18: a one-day streak is "(Oct 26)" from the scheduler but "(Oct 26 - Oct 26)" from the save
@@ -4554,7 +4640,7 @@ def check_duplicate_alert(watcher_id, watched_username, parameter, date_pattern)
                 _day = _m.group(1)
                 _alt = f"({_day} - {_day})" if _m.group(2) is None else f"({_day})"
                 existing = base_query.filter(
-                    Alert.content.ilike(f"%{watched_username}'s {parameter}%{_alt}%")
+                    Alert.content.ilike(f"{_f21_u}'s {parameter}%{_alt}%", escape='\\')   # F21: anchored + escaped
                 ).first()
         
         return existing
@@ -9288,7 +9374,286 @@ def _safe_back_url():
 
 # A92: current static asset version (keep in lockstep with the ?v= tokens in index.html,
 # parameters.html, circles.html and support.html).
-_A92_ASSET_VERSION = 'B214'  # F18 rev 2: B213 -> B214; F18: B212 -> B213 in lockstep with every HTML ?v token (F17: B212, F16: B211, F15: B210)
+# !!! CACHE-BUST RULE (read before shipping ANY change to a /static/js file) !!!
+#   1. Bump this constant (B218 -> B219 ...).
+#   2. Bump every ?v=Bxxx token in index/parameters/circles/collection/profile/support/about.html to the SAME value.
+#   3. Since F21 the _f21_pin_asset_versions hook below rewrites every /static/js/*.js?v= in every HTML
+#      response to this constant, so a page whose tokens were forgotten is still served the new JS.
+#      Step 1 is therefore the one that MUST happen; step 2 keeps the files honest for view-source checks.
+#   Check: GET /api/health -> e2ee.asset_version shows the live value. tools: ts_release_check.py.
+_A92_ASSET_VERSION = 'B220'  # Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
+
+
+# =====================================================================
+# F21 (B215): additive server block. Remove the whole block to revert (and set the constant above back).
+#   1. _f21_pin_asset_versions: the /about + /support cache-bust guard (A92) now covers EVERY HTML page
+#      (index, parameters, circles, collection, profile, privacy, invite). collection.html had fallen
+#      out of lockstep (it still asked for ?v=B209 while the app was on B214), so members could keep a
+#      week-old cached i18n.js / collection.js there. Works on bytes, before the CSP nonce hook and gzip.
+#      ORDER NOTE: Flask runs after_request hooks in REVERSE registration order. This hook is registered
+#      after add_security_headers (nonces) and compress_response (gzip), so it runs BEFORE both.
+#   2. "Add to Home Screen": GET /manifest.webmanifest and /ts-icon-<size>.png (public, no login).
+#      display is "minimal-ui" ON PURPOSE: iOS then opens the home-screen icon in normal Safari (with its
+#      back button), so nobody can get stuck in a chrome-less window; Android keeps back/reload controls.
+#      No service worker (nothing is cached offline, so this can never cause a stale-page problem).
+#      Icon source, first match wins: static/icons/ts-icon-<size>.png, else static/images/LogoNew.jfif
+#      resized with Pillow (installed with reportlab), else the small built-in fallback below.
+# =====================================================================
+from flask import make_response  # F21: not in the top-level flask import list
+_F21_JS_V_RE = re.compile(rb'(/static/js/[\w.\-]+\.js)\?v=[\w.\-]*')
+_F21_JS_NOV_RE = re.compile(rb'(src="/static/js/[\w.\-]+\.js)"')
+
+
+@app.after_request
+def _f21_pin_asset_versions(response):
+    try:
+        if response.direct_passthrough or response.is_streamed or response.status_code != 200:
+            return response
+        if 'text/html' not in (response.headers.get('Content-Type') or '').lower():
+            return response
+        if response.headers.get('Content-Encoding'):
+            return response
+        body = response.get_data()
+        if b'/static/js/' not in body:
+            return response
+        ver = _A92_ASSET_VERSION.encode('ascii')
+        new = _F21_JS_V_RE.sub(lambda m: m.group(1) + b'?v=' + ver, body)
+        new = _F21_JS_NOV_RE.sub(lambda m: m.group(1) + b'?v=' + ver + b'"', new)
+        if new != body:
+            response.set_data(new)
+    except Exception as _f21_e:
+        try:
+            logger.warning(f"[F21] asset version pin skipped: {_f21_e}")
+        except Exception:
+            pass
+    return response
+
+
+_F21_FALLBACK_ICON_B64 = (
+    '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'
+)
+# F21 rev 2: exact-size fallbacks (browsers reject an icon whose real size differs from the manifest's).
+_F21_FALLBACK_ICON_180_B64 = (
+    'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAMAAAAKE/YAAAAAwFBMVEX///////7//v7+/v7r7++iu6mbtp+etLOZtZ+Ys5+Wsp+V'
+    'sZ6UsJ6Tr56Srp6SrKWRrZ2QrJ2Pq52Oqp6MqZyLp5yJpZyIpJ2Ho5uFopuGo5iEoJuBn5qAnpp/nZp9m5l7mJl5lpl3lZh1k5hz'
+    'kphxkJdwjpdvjZdtjJZsi5ZripZqiZZph5VnhpVmhpZmhZVlhZVlhpFkhJVjg5Rkg5FjgpFigZRggJRggI9fgI5efpNdfZNcfJNb'
+    'e5NafIxaepPRYysXAAAK6ElEQVR42u2cC3ejuhHH6SKq5ra9dJfY2LwRD4PtZK93nTbuI/3+36ojkISc2EZgEodb/ntOTmxG0k+j'
+    'QQiNNtp/Ryhtgv4o6P+MUBP0h0H/e4SaoD8M+l8j1AT9YdD/HKEm6A+D/scINUFP0L876L+PUBP0BH0J+ucINUFP0Jegf4xQ44T+'
+    'bYSaoMcM/fiwfWS/bR8fHz8/9OP24cfz4eWlnpvgl+enh+3D94GhH4bUdvvzcFhFGGNUC2M3eT48PWy2QzajDYp8OCSAqx1JRzj4'
+    '+fJj8ymhAXlvYr3ilFSBI5y/fB8OW9sOpPXT3kQ1sPbK1XqFvTpsNgO1NRD05uHFRozvyNUNN8JPT+vPBF0+lxAYOo+NYz/rAtt+'
+    'WW8+DfSmdrOIBY1OG7iaQ+ov2RUdPz9sPgv0E3Wz8CfC7mZ/eDmA9vvIxkhgw8XVfgBqbXO11gdcU9WRmz8/7bebstJms9sftjad'
+    'Uxg2Wv1Wbq9t8XroEpiroKDI5v5pW5ZrqUdAvn+OxFAA9ffy5tAVM+PBT/v1CaJ1uTsELOgr6vW10OurtCmfG+bkGZx8UmWx2zFn'
+    'g125va7R9ZXQxc6sYoPODLuH1XnDsjzAs6emxvviltDlQ1rNw/ADvxTlRdvVcyqoD6vroMurtGEcMAPnbbarXU0NPbR3xTWtasUV'
+    'Wj1h7rvnXMF8y6g1tF9d0+410Kt1jHiUKkHkO1PnBfIbQee1o8FxW8US2YGXKMrbQK82ce03CFHV0V5tWYBc5eproHfMbfgpVy9j'
+    '17MNuio8Vr1V5GzqiEv1QtmOu3qX9265P3QGzzg20pl6qXxTuxrug1tA57XPNBSX+aqrq+FfsO5NreU9lZVB1baGdmmncuJO2GV9'
+    '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'
+)
+_F21_FALLBACK_ICON_192_B64 = (
+    'iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAMAAABlApw1AAAAwFBMVEX//////v7+/v7r8O+iu6mbtp+dtLCZtZ+ZtJ+Ys5+Wsp+V'
+    'sKSVsZ6UsJ6Srp6UrKuRrZ2QrJ2Pq52Oqp6MqZyLp5yJpZyHo5uFopuFo5eEoJuDoJuBn5p/nZp9m5l9m5V7mJl5lpl3lZh1k5hz'
+    'kph1k5RykZdxkJdykZNwjpdvjZdujJdtjJhtjJZsjJJripZqiZZph5VnhpVlhZVkhJVjg5RigZRhgJRggJRff5NefpNdfZNcfJNb'
+    'e5NZfI1aepMwQF8mAAALtklEQVR42u2cC3ujuBWGWaSql7RDdwkYA+JmY2PHwcZZu+O09f7/f1UBumDHF3HJOHQ4+zw7iX0E36tz'
+    'JARHQfmj56YMAI8G+G/PbQB4OMB/em4DwMMB/t1zGwAeDvDecxsAHg5w6Lkp33tuA8AA8NMD/Kvnpux7bgPAANAWYNdzGwAGgLYA'
+    'v/fc+g/w1nMbAP6PAbbbbVYY+aF3AETz9vD9/Vja98PvnwahbD/BNtv98X0fhBoqLcSb4/v72yb7hHN1D5Blu+POQQCoijAAkLY+'
+    '7rPsywNk2eGwQFS8So1BmPt3Ep0vC0C6N9vsDzYApfZKAJQSQwVomyN0GQgl69DWb3u7VK9csOJTgLL9ustzdgmw3i+gkK+emGAA'
+    '9j7bfEWAzeaISPdz9Zf6nyLsduuvB7De7aCQn/8PAKAVxmYk/iXAx/VXA1gfMKC9XHQyQIvVkT1BPm5XNgICgYyEQ1cEyqYTW+1z'
+    '/VQe0Tc/7LfZarUubbXJdofMzuPAQoGO627OrHSsv5C/3We59opDDrEjQVIVFiT0vvo6AFX9Ktrt1xe1rVdvBxvwIHQUg/YA6836'
+    'TegH+LBekY8u+JFPV7sMCYLd66Y9g7LuwLYs/xWYvb3c8nxdHzUOa7+t2p+7A4CXYylJLdLi9Y73cj9l7mCx/QoAqx1iVy10WN73'
+    'X24nlEABWQcAry3tZTNVaY+iw0KmxUIQoN2i7flbAyzfIFUDj5JqFjtTpUk0WS8fDLDcajwfpLUsdohBtw5Ba4AdG5JYHoBgs1bB'
+    'ZvlQABGAWum8zAJQ3OG0D4HSSQBIAm2XLzXazVkStQ6Bsmxji3WoKr8UAdgu6jWd0hCg3byVhHYAtCNJANaLpi1flouHASwWa5pB'
+    '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'
+)
+_f21_icon_cache = {}
+_F21_SHORTCUTS = {
+    'en': ('Daily check-in', 'Dream Cards'),
+    'he': ('צ׳ק־אין יומי', 'כרטיסי חלומות'),
+    'ar': ('تسجيل الحضور اليومي', 'بطاقات الأحلام'),
+    'ru': ('Ежедневная отметка', 'Карточки мечты'),
+}
+
+
+def _f21_icon_bytes(size):
+    if size in _f21_icon_cache:
+        return _f21_icon_cache[size]
+    data = None
+    static_root = app.static_folder or os.path.join(app.root_path, 'static')
+    try:
+        p = os.path.join(static_root, 'icons', 'ts-icon-%d.png' % size)
+        if os.path.isfile(p):
+            with open(p, 'rb') as fh:
+                data = fh.read()
+    except Exception:
+        data = None
+    if data is None:
+        try:
+            from PIL import Image as _F21Image
+            import io as _f21_io
+            src = os.path.join(static_root, 'images', 'LogoNew.jfif')
+            if os.path.isfile(src):
+                im = _F21Image.open(src).convert('RGB')
+                bg = im.getpixel((0, 0))                      # logo's own background colour
+                canvas = _F21Image.new('RGB', (size, size), bg)
+                inner = int(size * 0.82)
+                im.thumbnail((inner, inner))
+                canvas.paste(im, ((size - im.width) // 2, (size - im.height) // 2))
+                buf = _f21_io.BytesIO()
+                canvas.save(buf, 'PNG', optimize=True)
+                data = buf.getvalue()
+        except Exception as _f21_e:
+            logger.info(f"[F21] logo icon not generated ({_f21_e}); using the built-in icon")
+            data = None
+    if data is None:
+        import base64 as _f21_b64
+        data = _f21_b64.b64decode({180: _F21_FALLBACK_ICON_180_B64, 192: _F21_FALLBACK_ICON_192_B64}.get(size, _F21_FALLBACK_ICON_B64))
+    _f21_icon_cache[size] = data
+    return data
+
+
+@app.route('/ts-icon-<int:size>.png')
+def f21_app_icon(size):
+    if size not in (180, 192, 512):
+        return '', 404
+    resp = make_response(_f21_icon_bytes(size))
+    resp.headers['Content-Type'] = 'image/png'
+    resp.headers['Cache-Control'] = 'public, max-age=86400'
+    return resp
+
+
+@app.route('/manifest.webmanifest')
+def f21_manifest():
+    lang = 'en'
+    try:
+        al = (request.headers.get('Accept-Language') or '').lower()
+        first = al.split(',')[0].split(';')[0].strip()[:2]
+        if first in _F21_SHORTCUTS:
+            lang = first
+        if first == 'iw':
+            lang = 'he'
+    except Exception:
+        pass
+    checkin, cards = _F21_SHORTCUTS[lang]
+    manifest = {
+        'id': '/',
+        'name': 'TheraSocial',
+        'short_name': 'TheraSocial',
+        'lang': lang,
+        'dir': 'rtl' if lang in ('he', 'ar') else 'ltr',
+        'start_url': '/',
+        'scope': '/',
+        'display': 'minimal-ui',
+        'background_color': '#F4F1EC',
+        'theme_color': '#6B8BA4',
+        'icons': [
+            {'src': '/ts-icon-192.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
+            {'src': '/ts-icon-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'},
+        ],
+        'shortcuts': [
+            {'name': checkin, 'url': '/parameters', 'icons': [{'src': '/ts-icon-192.png', 'sizes': '192x192'}]},
+            {'name': cards, 'url': '/collection', 'icons': [{'src': '/ts-icon-192.png', 'sizes': '192x192'}]},
+        ],
+    }
+    resp = make_response(json.dumps(manifest, ensure_ascii=False))
+    resp.headers['Content-Type'] = 'application/manifest+json; charset=utf-8'
+    resp.headers['Cache-Control'] = 'public, max-age=3600'
+    resp.headers['Vary'] = 'Accept-Language'
+    return resp
+# ===================== END F21 server block =====================
 
 
 # =====================================================================
@@ -14030,10 +14395,19 @@ def messages():
             activity = db.session.execute(activity_stmt).scalar_one_or_none()
 
             if not activity:
-                activity = Activity(user_id=user_id, activity_date=today)
-                db.session.add(activity)
+                # F21 (dormant bug): two sends at once (double tap, or two quick first messages of the UTC day)
+                # both inserted today's Activity row; the second hit unique_user_activity_date, so its message
+                # was rolled back with a 500 AFTER the recipient had already been emailed about it. The insert
+                # now runs in a savepoint and falls back to the row the other request created.
+                try:
+                    with db.session.begin_nested():
+                        activity = Activity(user_id=user_id, activity_date=today)
+                        db.session.add(activity)
+                except IntegrityError:
+                    activity = db.session.execute(activity_stmt).scalar_one_or_none()
 
-            activity.message_count = (activity.message_count or 0) + 1
+            if activity is not None:
+                activity.message_count = (activity.message_count or 0) + 1
 
             db.session.commit()
 
@@ -14503,7 +14877,7 @@ def f12_collection_arrange():
             if 'position' in r:
                 try:
                     c.position = max(0, min(10000, int(r.get('position'))))
-                except (TypeError, ValueError):
+                except (TypeError, ValueError, OverflowError):   # F21 rev 5: 1e400 -> inf -> OverflowError was a 500
                     pass
             if 'note' in r:
                 c.note = _f12_clean(r.get('note'), 140)
@@ -14851,6 +15225,16 @@ def circles():
             logger.info(f"Added user {circle_user_id} to {circle_type} circle for user {user_id}")
             return jsonify({'success': True, 'message': 'User added to circle'})
 
+        except IntegrityError as e:
+            # F21 (dormant bug): a double tap on "Add to circle" made the second request hit a unique constraint
+            # and show "Failed to add to circle" although the first request had added the person.
+            # F21 rev 2: only the circle constraint means "already in this circle"; another clash (e.g. the follow
+            # row, when two different circles were tapped quickly) was rolled back, so ask to try again.
+            logger.info(f"Add to circle: duplicate request ({str(e)[:120]})")
+            db.session.rollback()
+            if '_user_circle_uc' in str(getattr(e, 'orig', e)):
+                return jsonify({'error': 'User already in this circle'}), 400
+            return jsonify({'error': 'Please try again in a moment'}), 409
         except Exception as e:
             logger.error(f"Add to circle error: {str(e)}")
             db.session.rollback()
@@ -16539,6 +16923,20 @@ def save_parameters():
     except Exception as e:
         logger.error(f"Error saving parameters: {str(e)}")
         db.session.rollback()
+        # F21 (dormant bug): two saves for the same NEW day (double tap, or the privacy dropdown's auto-save racing
+        # the Save button) both inserted a row; the second hit the (user_id, date) unique constraint and the member
+        # saw "Failed to save". Retry once: the row now exists, so the retry simply updates it.
+        try:
+            from flask import g as _f21_g
+            if isinstance(e, IntegrityError) and not getattr(_f21_g, '_f21_sp_retry', False):
+                _f21_g._f21_sp_retry = True
+                return save_parameters()
+        except Exception as _f21_retry_err:
+            logger.error(f"[F21] save_parameters retry failed: {_f21_retry_err}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
         return jsonify({'error': 'Failed to save parameters'}), 500
 
 

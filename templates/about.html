@@ -1,4 +1,22 @@
 <!DOCTYPE html>
+<!-- TheraSocial About Version B220 (Rnd 6) -->
+<!-- B220 (Rnd 6): Rnd 6: "Go To About" button added to the Support page (see support.html). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B219->B220 in lockstep (i18n.js changed); app.py _A92_ASSET_VERSION = 'B220'. -->
+<!-- TheraSocial About Version B219 (F21 rev 5) -->
+<!-- B219 (F21 rev 5): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21 rev 4; fixed here; none critical). MINOR: the back button's built-in text read "Back to Home" but it returns to the last page; now "Back to Last Page" (matches i18n btn.back). Cache-bust lockstep.
+     CACHE-BUST: every live JS ?v bumped B218->B219 in lockstep; app.py _A92_ASSET_VERSION = 'B219'. -->
+<!-- TheraSocial About Version B218 (F21 rev 4) -->
+<!-- B218 (F21 rev 4): ROUND RESULT: RED (major defects found in review of F21 rev 3: the back-navigation feature; parked here, see index). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B217->B218 in lockstep; app.py _A92_ASSET_VERSION = 'B218'. -->
+<!-- TheraSocial About Version B217 (F21 rev 3) -->
+<!-- B217 (F21 rev 3): ROUND RESULT: ORANGE (moderately problematic issues found in review of F21 rev 2; fixed here; none critical). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B216->B217 in lockstep; app.py _A92_ASSET_VERSION = 'B217'. -->
+<!-- TheraSocial About Version B216 (F21 rev 2) -->
+<!-- B216 (F21 rev 2): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B215->B216 in lockstep; app.py _A92_ASSET_VERSION = 'B216'. -->
+<!-- TheraSocial About Version B215 (F21) -->
+<!-- B215 (F21): cache-bust lockstep only. No markup/JS change on this page.
+     CACHE-BUST: every live JS ?v bumped B214->B215 in lockstep; app.py _A92_ASSET_VERSION = 'B215'. -->
 <!-- TheraSocial About Version B214 (F18 rev 2) -->
 <!-- B214 (F18 rev 2): cache-bust lockstep only (index.html and app.py changed). No markup/JS change on this page.
      CACHE-BUST: every live JS ?v bumped B213->B214 in lockstep; app.py _A92_ASSET_VERSION = 'B214'. -->
@@ -446,14 +464,14 @@
 
             <div style="text-align: center; margin-top: 40px;">
                 <a href="/" class="back-link" style="margin-right: 20px;" data-i18n="btn.getstarted">Get Started</a>
-                <a href="/" id="backLastPage" class="back-link" data-i18n="btn.back">Back to Home</a>
+                <a href="/" id="backLastPage" class="back-link" data-i18n="btn.back">Back to Last Page</a>
             </div>
 
 
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B214"></script>
+    <script src="/static/js/i18n.js?v=B220"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read

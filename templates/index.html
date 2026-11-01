@@ -1,4 +1,81 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B220 (Rnd 6) -->
+<!-- B220 (Rnd 6): Rnd 6: "Go To About" button added to the Support page (see support.html). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B219->B220 in lockstep (i18n.js changed); app.py _A92_ASSET_VERSION = 'B220'. -->
+<!-- TheraSocial Index Version B219 (F21 rev 5) -->
+<!-- B219 (F21 rev 5): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21 rev 4; fixed here; none critical).
+     MODERATE: the rev 4 sign-up double-tap guard (a) missed the CSRF-token fetch that runs BEFORE /api/auth/register
+         (a second tap 0.7-2 s later on a slow phone still sent a second sign-up -> "email already registered") and
+         (b) could block sign-up silently until reload if that request never settled. The handler now marks itself busy
+         for its whole run (window.__tsSignupBusyAt, cleared in finally) with a 20 s expiry; the fetch wrapper is gone.
+     MINOR: legacy saveParameters() (tracking view, currently unreachable) now checks apiCall's null result before "Saved".
+     Back navigation stays PARKED exactly as in rev 4 (verified: nothing touches history when off).
+     Other files: feed-updates.js (CIRCLE_EMOJIS ReferenceError on circles.html), circles-messages.js (text typed while
+     sending was wiped), collection.js (double note save), app.py (/api/collection/arrange 500 on position 1e400),
+     about.html (back button fallback label).
+     CACHE-BUST: every live JS ?v bumped B218->B219 in lockstep; app.py _A92_ASSET_VERSION = 'B219'. -->
+<!-- TheraSocial Index Version B218 (F21 rev 4) -->
+<!-- B218 (F21 rev 4): ROUND RESULT: RED (major defects found in review of F21 rev 3: the back-navigation feature; parked here, see index).
+     New review method this round: three adversarial reviewers that had to REPRODUCE failures (randomized action
+     sequences, slow/out-of-order network), not just read code.
+     (1) MAJOR: phone Back-button navigation (F21 item 1). 292 randomized sequences reproduced 9 failures, 2 major
+         (slow profile load or a forbidden profile lost / blocked the previous screen), plus dead Back presses after
+         logout and wrong screens after returning from /support or /parameters. It cannot be made reliable without a
+         router for this page, so it is PARKED: off by default, no history calls at all, Back behaves exactly as in
+         F20. Opt-in for development only: localStorage 'ts_f21_nav_on' = '1'.
+     (2) MODERATE: on iPhone a network failure could be followed by a false "success" for Add to circle and the Home
+         post save (two callers lacked the null check F21 gave five others). Fixed.
+     (3) MINOR: sign-up is also blocked while /api/auth/register is still in flight (not only for 700 ms).
+     Share button, unread count, Add to Home Screen and every F21 bug fix are unchanged.
+     CACHE-BUST: every live JS ?v bumped B217->B218 in lockstep; app.py _A92_ASSET_VERSION = 'B218'. -->
+<!-- TheraSocial Index Version B217 (F21 rev 3) -->
+<!-- B217 (F21 rev 3): ROUND RESULT: ORANGE (moderately problematic issues found in review of F21 rev 2; fixed here; none critical).
+     MODERATE: every More menu dismissed with the X or the backdrop left one Back press that did nothing (rev 2 replaced
+     the menu's entry with a copy of the screen). The copy is now marked (tsF21Dup) and Back steps over it.
+     CACHE-BUST: every live JS ?v bumped B216->B217 in lockstep; app.py _A92_ASSET_VERSION = 'B217'. -->
+<!-- TheraSocial Index Version B216 (F21 rev 2) -->
+<!-- B216 (F21 rev 2): review of F21. ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical).
+     (1) MODERATE, F21 regression: More menu > Support / Contact Us did nothing on phones (the back-navigation block
+         called history.back() while the tap's page load was starting, which cancels it). It now replaces the menu's
+         history entry instead.
+     (2) Back navigation: nested showView calls are recorded once, as the screen actually shown; an entry wiped by
+         replaceState({}) goes Home; a stale More-menu entry is replaced on start-up.
+     (3) Sign-in keeps its network retry (only other POSTs stopped retrying in F21). Sign-up double-tap window 700 ms.
+     (4) Reminder time: a 'UTC' answer from /api/city-timezone (no city set) no longer overrides the phone's zone.
+     CACHE-BUST: every live JS ?v bumped B215->B216 in lockstep; app.py _A92_ASSET_VERSION = 'B216'. -->
+<!-- TheraSocial Index Version B215 (F21) -->
+<!-- ==========================================================================================================
+     MAINTAINER MAP (F21). Read this before editing. index.html is ~25k lines; find things with grep, not line numbers.
+       * Version history: the comments below this box, newest first.
+       * <head>: CSP <meta> (must match app.py _a94_csp_header), manifest links, then the big <style> blocks.
+       * Markup: views are <div id="<name>View" class="view hidden"> (homeView, messagesView, inviteView,
+         settingsView ...). showView(name) in the main script switches them (grep "function showView").
+       * Main script: starts at "// API Configuration". apiCall() is the shared fetch helper: it returns null on
+         401 / 429 / offline (it already told the user), so callers must check the result before showing success.
+       * Later function declarations with the SAME NAME silently replace earlier ones (and ones in the /static/js
+         files loaded before them: formatMessageTime, showNotification, sendMessage, loadMessages ...). Before
+         editing a function, grep "function NAME" in this file AND in the js files to find the one that is live.
+       * Additive blocks near the end of the page, each removable on its own: A8-UX, A16, A26, A41, A51, A81, A91, A92-LUXE,
+         F18 alerts, F21. New work goes in a new block at the end with the same pattern.
+       * CSP: every <script> the server sends gets a nonce automatically (app.py _a94_nonce_html). Inline
+         on*="..." attributes only run if that exact handler text exists in a deployed source file; prefer
+         addEventListener in new code. Never use eval / new Function / string timers.
+       * CACHE-BUST: see app.py "CACHE-BUST RULE" next to _A92_ASSET_VERSION (app.py also pins ?v server-side).
+     ========================================================================================================== -->
+<!-- B215 (F21): additive; mobile UX + dormant-bug fixes. Every fix is marked "F21" in place (grep F21).
+     NEW script#ts-f21-index near the end of the page: (1) phone Back button / iPhone swipe-back moves between app
+     screens and closes the More menu instead of leaving the app; (2) "Share..." button on the Invite screen (phone
+     share sheet); (3) unread messages in the tab title and on the installed app icon; (4) sign-up double-tap guard.
+     <head>: Add to Home Screen links (manifest + apple-touch-icon; app.py serves them).
+     Fixes: messages screen could show one person's thread while replies went to another (slow network);
+     message times 2-3 h off in Israel (this file's formatMessageTime replaced the UTC-safe one); apiCall re-sent
+     POSTs after a dropped connection (duplicate messages/sign-ups) and missed Safari's "Load failed"; five saves
+     (profile, birth year, follow, follow with note, unfollow) said "success" after a 401/429/offline; reminder time
+     saved as UTC when the city lookup failed; failed consent change left the checkbox in the new state; data export
+     file name used the UTC date and the download could abort on iPhone; tapping a Home connection row did nothing;
+     invite SMS text was empty in iPhone Messages; Copy Link threw in Instagram/Facebook in-app browsers; unsent
+     message drafts survived logout (next account on the same phone saw them).
+     CACHE-BUST: every live JS ?v bumped B214->B215 in lockstep; app.py _A92_ASSET_VERSION = 'B215'. -->
 <!-- TheraSocial Index Version B214 (F18 rev 2) -->
 <!-- B214 (F18 rev 2): review of F18; fixes only, all inside the F18 blocks plus one date call.
      (1) English alert text says "concerning level(s)" (was "low levels"), matching he/ar/ru; "low" was wrong for
@@ -824,6 +901,10 @@
     <!-- A16 (Android): colour the Chrome/Android status & address bar to match the app. -->
     <meta name="theme-color" content="#6B8BA4" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#1F2937" media="(prefers-color-scheme: dark)">
+    <!-- F21: "Add to Home Screen" (app.py serves both; minimal-ui on purpose, no service worker) -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/ts-icon-180.png">
+    <meta name="apple-mobile-web-app-title" content="TheraSocial">
     <title>Thera Social - Human Network Infrastructure</title>
     <!-- A60 SEO: public description + social-preview tags for the home page (additive). -->
     <meta name="description" content="TheraSocial helps you track your daily well-being and share it privately with the people you trust.">
@@ -844,10 +925,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B214"></script>
+   <script src="/static/js/utilities.js?v=B220"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B214"></script>
-    <script src="/static/js/follow-requests.js?v=B214"></script>
+    <script src="/static/js/triggers.js?v=B220"></script>
+    <script src="/static/js/follow-requests.js?v=B220"></script>
 
 
     <style>
@@ -8301,8 +8382,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B214"></script>
-    <script src="/static/js/e2ee.js?v=B214"></script>
+    <script src="/static/js/i18n.js?v=B220"></script>
+    <script src="/static/js/e2ee.js?v=B220"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8782,9 +8863,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B214"></script>
-   <script src="/static/js/circles-messages.js?v=B214"></script>
-<script src="/static/js/feed-updates.js?v=B214"></script>
+<script src="/static/js/parameters-social.js?v=B220"></script>
+   <script src="/static/js/circles-messages.js?v=B220"></script>
+<script src="/static/js/feed-updates.js?v=B220"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -8816,7 +8897,10 @@
         }
 
         const now = new Date();
-        const msgTime = new Date(timestamp);
+        // F21 (dormant bug): this definition replaces circles-messages.js's (loaded earlier), which has the A41
+        // UTC fix. The server sends UTC times without "Z", so new Date() read them as LOCAL time: in Israel a
+        // new message said "Just now" for 2-3 hours. Use the same helper when it is loaded.
+        const msgTime = (typeof _tsToUTCDate === 'function') ? _tsToUTCDate(timestamp) : new Date(timestamp);
 
         if (isNaN(msgTime.getTime())) {
             return window.i18n && window.i18n.t ? window.i18n.t('messages.unknown_time') : 'Unknown time';
@@ -9155,9 +9239,13 @@ async function loadUserCity() {
                 return data;
             } catch (error) {
                 // CHANGE 3: Handle network errors gracefully
-                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                // F21 (dormant bugs): (a) POSTs were re-sent after a dropped connection, so a message, sign-up
+                // or follow the server HAD received could be duplicated; only reads are retried now.
+                // (b) Safari says "Load failed" and Firefox "NetworkError", so iPhones skipped this branch and
+                // showed the raw text; all three are recognised.
+                if (error.name === 'TypeError' && /Failed to fetch|Load failed|NetworkError|Network request failed/i.test(error.message || '')) {
                     console.error('Network error - server may be unavailable');
-                    if (retryCount < MAX_RETRIES) {
+                    if ((method === 'GET' || endpoint === '/auth/login') && retryCount < MAX_RETRIES) {   // F21 rev 2: sign-in is safe to repeat
                         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * 2));
                         return apiCall(endpoint, method, body, retryCount + 1);
                     }
@@ -9599,6 +9687,8 @@ async function loadUserCity() {
                 account_type: document.getElementById('signupProfessionalToggle')?.checked ? 'professional' : 'user'  // L210
             };
             
+            // F21 rev 5: busy from here (before apiCall's own CSRF-token fetch) until this handler ends (finally below).
+            window.__tsSignupBusyAt = Date.now();
             const response = await apiCall('/auth/register', 'POST', body);
 
             if (response && response.success) {
@@ -9628,7 +9718,7 @@ async function loadUserCity() {
         } catch (error) {
             console.error('Signup error:', error);
             showNotification(error.message || 'Registration failed. Please try again.', 'error');
-        }
+        } finally { window.__tsSignupBusyAt = 0; }   // F21 rev 5: also runs on the early consent-modal return
     });
 
   // Magic link signup function
@@ -9950,7 +10040,9 @@ async function loadUserCity() {
             const localKeysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && key.startsWith('user_') && !localKeysToKeep.includes(key)) {
+                // F21 (dormant privacy bug): unsent message drafts (circles-messages.js, msg_draft_<recipientId>)
+                // survived logout, so the next account signed in on the same phone saw them pre-filled.
+                if (key && (key.startsWith('user_') || key.startsWith('msg_draft_')) && !localKeysToKeep.includes(key)) {
                     localKeysToRemove.push(key);
                 }
             }
@@ -11484,6 +11576,16 @@ function copyUserInviteLink() {
     const linkInput = document.getElementById('userInviteLink');
     if (linkInput) {
         linkInput.select();
+        // F21 (dormant bug): navigator.clipboard is undefined in in-app browsers (Instagram, Facebook,
+        // some WhatsApp/Telegram link previews) and on older iOS, so the button threw a TypeError and did
+        // nothing. Fall back to the classic copy of the selected input.
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch (_) {}
+            showNotification(ok ? _t('msg.copied_clipboard', 'Invite link copied to clipboard! 📋')
+                                : _t('msg.copy_failed', 'Failed to copy link'), ok ? 'success' : 'error');
+            return;
+        }
         navigator.clipboard.writeText(linkInput.value).then(() => {
             showNotification(_t('msg.copied_clipboard', 'Invite link copied to clipboard! 📋'), 'success');
         }).catch(err => {
@@ -11508,7 +11610,9 @@ function shareViaSMS() {
     if (linkInput) {
         const link = linkInput.value;
         const message = encodeURIComponent(`Join me on my well-being journey! ${link}`);
-        window.location.href = `sms:?body=${message}`;
+        // F21 (dormant bug): "sms:?body=" leaves the text empty in iPhone Messages; "sms:?&body=" fills it on
+        // both iOS and Android.
+        window.location.href = `sms:?&body=${message}`;
     }
 }
 
@@ -12286,11 +12390,12 @@ document.addEventListener('click', function(e) {
             try {
                 const dateStr = _localDateStrOf(feedSelectedDate);
 
-                await apiCall('/posts', 'POST', {
+                // F21 rev 4: null = 401/429/offline (apiCall already told the member); was followed by "Saved successfully"
+                if (!(await apiCall('/posts', 'POST', {
                     content: content,
                     visibility: visibility,
                     date: dateStr
-                });
+                }))) return;
 
                 const visibilityDisplay = visibility.replace('_', ' ').toUpperCase();
                 showNotification(`Saved successfully as ${visibilityDisplay}!`, 'success');
@@ -12739,12 +12844,16 @@ async function updateDiaryReminderTime(timeValue) {
     try {
         // First get the user's timezone from their city
         console.log('[DIARY REMINDER] Fetching timezone for user city...');
+        // F21 (dormant bug, same as the A26 toggle fix): a failed/empty city lookup sent 'UTC', so a 21:00
+        // reminder arrived at 23:00 in Israel. Fall back to the phone's own timezone instead.
         let timezone = 'UTC';
+        try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (_) {}
         try {
             const tzResponse = await fetch('/api/city-timezone', { credentials: 'include' });
             if (tzResponse.ok) {
                 const tzData = await tzResponse.json();
-                timezone = tzData.timezone || 'UTC';
+                // rev 2: the server answers 'UTC' when no city is set or the lookup failed; keep the phone's zone then
+                if (tzData.timezone && tzData.timezone !== 'UTC') timezone = tzData.timezone;
                 console.log('[DIARY REMINDER] Got timezone from city:', timezone);
             }
         } catch (tzError) {
@@ -13061,7 +13170,7 @@ window.addEventListener('languageChanged', () => {
             };
 
             try {
-                await apiCall('/profile', 'PUT', profileData);
+                if (!(await apiCall('/profile', 'PUT', profileData))) return;   // F21: null = 401/429/offline (apiCall already told the user); was shown as success
                 showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ' successfully!', 'success');
             } catch (error) {
                 showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.error') : 'Error') + ': ' + error.message, 'error');
@@ -13182,7 +13291,7 @@ window.addEventListener('languageChanged', () => {
             }
             
             try {
-                await apiCall('/profile', 'PUT', { birth_year: birthYear });
+                if (!(await apiCall('/profile', 'PUT', { birth_year: birthYear }))) return;   // F21: null = 401/429/offline (apiCall already told the user); was shown as success
                 showNotification(t('profile.birth_year_updated') || 'Birth year updated successfully!', 'success');
             } catch (error) {
                 showNotification(t('msg.error') || 'Error' + ': ' + error.message, 'error');
@@ -14092,10 +14201,11 @@ function updateCircleDisplay(type, members) {
             if (!circleType) return;
 
             try {
-                await apiCall('/circles', 'POST', {
+                // F21 rev 4: null = 401/429/offline; was followed by "<name> added to ... circle!" although nothing was saved
+                if (!(await apiCall('/circles', 'POST', {
                     user_id: userId,
                     circle_type: circleType
-                });
+                }))) return;
 
                 const circleLabels = {
     'general': '🌍 General',
@@ -14322,6 +14432,9 @@ const youText = window.i18n && window.i18n.t ? window.i18n.t('messages.you') : '
         const response = await apiCall(`/messages?recipient_id=${userId}`);
         console.log('Messages response:', response);
         if (!response) return;
+        // F21 (dormant bug): tapping A then B on a slow network let A's late reply fill the screen under B's
+        // name, and a reply typed there went to B. Ignore a reply for a conversation that is no longer open.
+        if (!currentRecipient || currentRecipient.id !== userId) return;
 
         const container = document.getElementById('messagesList');
        const noMessagesText = window.i18n && window.i18n.t ? window.i18n.t('messages.no_messages') : 'No messages yet. Start the conversation!';
@@ -14745,7 +14858,7 @@ function clearParameterDisplays() {
     };
 
     try {
-        await apiCall('/parameters/save', 'POST', parameters);
+        if (!(await apiCall('/parameters/save', 'POST', parameters))) return;   // F21 rev 5: null = 401/429/offline
         showNotification((window.i18n && window.i18n.t ? window.i18n.t('msg.saved') : 'Saved') + ` for ${dateStr}`, 'success');
 
         // Reload calendar to show saved dates
@@ -18443,11 +18556,14 @@ async function checkAndLoadTriggerAlerts() {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `therasocial_data_export_${new Date().toISOString().split('T')[0]}.json`;
+                // F21 (dormant bugs): local date in the file name (toISOString gave yesterday's date after
+                // midnight in Israel), and the link is freed a moment later: freeing it in the same tick can
+                // abort the download in Safari/WebKit (iPhone, iPad).
+                a.download = `therasocial_data_export_${(typeof _localDateStr === 'function') ? _localDateStr() : new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                setTimeout(() => URL.revokeObjectURL(url), 1500);
                 
                 showNotification(_t('msg.export_success', 'Your data has been exported successfully!'), 'success');
             } catch (error) {
@@ -19133,7 +19249,7 @@ async function searchUsersToFollowInstant(query) {
 // FIX #6: Helper function to follow user from search results
 async function followUserFromSearch(userId) {
     try {
-        await apiCall(`/follow/${userId}`, 'POST', {});
+        if (!(await apiCall(`/follow/${userId}`, 'POST', {}))) return;   // F21: null = 401/429/offline (apiCall already told the user); was shown as success
         showNotification(_t('msg.followed_success', 'Successfully followed user'), 'success');
         
         // Clear search and reload following
@@ -19158,7 +19274,7 @@ async function followUserWithNoteFromSearch(userId, username) {
     const note = prompt(_t('connections.add_note_optional', 'Add a note (optional):'));
     if (note !== null) {
         try {
-            await apiCall(`/follow/${userId}`, 'POST', { note: note });
+            if (!(await apiCall(`/follow/${userId}`, 'POST', { note: note }))) return;   // F21: null = 401/429/offline (apiCall already told the user); was shown as success
             showNotification(_t('msg.followed_with_note', 'Successfully followed user with note'), 'success');
             
             // Clear search and reload following
@@ -19182,7 +19298,7 @@ async function followUserWithNoteFromSearch(userId, username) {
 // PJ706: Helper function to unfollow user from search results
 async function unfollowUserFromSearch(userId) {
     try {
-        await apiCall(`/unfollow/${userId}`, 'POST', {});
+        if (!(await apiCall(`/unfollow/${userId}`, 'POST', {}))) return;   // F21: null = 401/429/offline (apiCall already told the user); was shown as success
         showNotification(_t('msg.unfollow_success', 'Connection removed successfully'), 'success');
         
         // Clear search and reload following
@@ -22116,11 +22232,18 @@ async function updateOptionalConsent(field, value) {
             showNotification(_t('msg.preferences_saved', 'Preference updated successfully'), 'success');
         } else {
             showNotification(_t('msg.preferences_failed', 'Failed to update preference'), 'error');
+            _f21ResyncConsents();
         }
     } catch (error) {
         console.error('[CLEAN] Error updating consent:', error);
         showNotification(_t('msg.preferences_failed', 'Failed to update preference'), 'error');
+        _f21ResyncConsents();
     }
+}
+// F21 (dormant bug): after a FAILED consent change the checkbox kept its new state, so the screen said
+// "not shared" while the server still had consent. Re-read the real values from the server.
+function _f21ResyncConsents() {
+    try { if (typeof loadSettingsConsentPreferences === 'function') loadSettingsConsentPreferences(); } catch (_) {}
 }
 window.updateOptionalConsent = updateOptionalConsent;
 window.loadSettingsConsentPreferences = loadSettingsConsentPreferences;
@@ -22689,7 +22812,7 @@ async function loadConnectionStatusList() {
                 } catch(e) {}
             }
 
-            return '<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light, #f9fafb); border-radius: 12px; cursor: pointer;" onclick="if(typeof showConnectionInfo===\'function\') showConnectionInfo(' + (conn.id || 0) + ')">' +
+            return '<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light, #f9fafb); border-radius: 12px; cursor: pointer;" onclick="viewUserProfileFromHome(' + (conn.id || 0) + ')">' + /* F21 (dormant bug): showConnectionInfo never existed, so tapping the row (not the name) did nothing */
                 '<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">' + avatar + '</div>' +
                 '<div style="flex: 1; min-width: 0;">' +
                 '<div style="font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><a href="#" onclick="event.stopPropagation(); viewUserProfileFromHome(' + (conn.id || 0) + '); return false;" style="color: var(--dark); text-decoration: none;" onmouseover="this.style.color=\'var(--primary)\'; this.style.textDecoration=\'underline\';" onmouseout="this.style.color=\'var(--dark)\'; this.style.textDecoration=\'none\';">' + name + '</a></div>' +
@@ -25095,6 +25218,232 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
         #circlesContainer label[for="languageSelect"] { color: rgba(255, 255, 255, 0.9) !important; }
     </style>
     <!-- ===================== END A92-LUXE ===================== -->
+
+    <!-- ===================== F21 (B215): mobile navigation, sharing, unread count (additive; remove this block to revert) ===================== -->
+    <!-- MAINTAINER NOTE: wrapper-style only; no existing function body is edited by this block.
+         1 Phone Back button / iPhone swipe-back steps back through app screens and closes the mobile More menu,
+           instead of leaving TheraSocial. Wraps window.showView. A history entry is added ONLY when showView follows a
+           real tap/click/key (within 1.5 s), so start-up and programmatic calls never fill the history. The URL is
+           never changed (state object only). Kill switch for support: localStorage.setItem('ts_f21_nav_off', '1').
+         2 "Share..." button on the Invite screen (navigator.share opens the phone's own share sheet: WhatsApp,
+           Telegram, Signal, Messages, Instagram...). Only shown where the browser supports it.
+         3 Unread messages in the tab title "(2) ..." and, where supported, on the installed app icon
+           (navigator.setAppBadge). Reads #messagesNavBadge, which updateMessagesBadge() already fills: no new request.
+         4 Sign-up double-tap guard (two /auth/register requests -> "email already registered" over the consent box). -->
+    <script id="ts-f21-index">
+    (function () {
+        'use strict';
+        function lang() {
+            try { var l = window.i18n && window.i18n.getCurrentLanguage && window.i18n.getCurrentLanguage(); if (l) return l; } catch (_) {}
+            try { return localStorage.getItem('selectedLanguage') || 'en'; } catch (_) { return 'en'; }
+        }
+        var STR = {
+            share:      { en: 'Share…', he: 'שיתוף…', ar: 'مشاركة…', ru: 'Поделиться…' },
+            share_text: { en: 'Join me on my well-being journey on TheraSocial!', he: 'הצטרפו אליי למסע הבריאות והאיזון שלי ב־TheraSocial!',
+                          ar: 'انضموا إليّ في رحلتي نحو الرفاهية على TheraSocial!', ru: 'Присоединяйтесь к моему пути к благополучию в TheraSocial!' }
+        };
+        function S(k) { var m = STR[k]; return (m && (m[lang()] || m.en)) || k; }
+        function loggedIn() { var d = document.getElementById('dashboard'); return !!d && d.style.display !== 'none'; }
+
+        // ---------------------------------------------------------------- 1. back navigation
+        var lastInput = 0, restoring = false, swallowPop = false, lastView = null, lastUid = null;
+        var curSt = null;   // rev 3: the history state of the entry we are on (to recognise a dismissed-menu copy)
+        ['pointerdown', 'touchstart', 'keydown', 'click'].forEach(function (ev) {
+            document.addEventListener(ev, function () { lastInput = Date.now(); }, { capture: true, passive: true });
+        });
+        // F21 rev 4: back navigation is OFF by default. A randomized stress test of rev 3 (292 sequences) reproduced
+        // 9 failures, 2 major: after a slow profile load (> 1.5 s) or a profile the member may not see (403 ->
+        // connections), Back skipped or lost screens; also dead Back presses after logout, the wrong screen after
+        // returning from /support or /parameters, previous-session screens after re-login. Making it reliable needs a
+        // real router for this page (invasive), so the feature is parked and Back behaves exactly as in F20.
+        // Opt in for development only: localStorage.setItem('ts_f21_nav_on', '1'). Known issues listed above must be
+        // fixed before turning it on for members.
+        function navOff() { try { return localStorage.getItem('ts_f21_nav_on') !== '1'; } catch (_) { return true; } }
+        function moreMenu() { return document.getElementById('mobileMoreMenu'); }
+        function moreMenuOpen() { var m = moreMenu(); return !!m && !m.classList.contains('hidden'); }
+        function curState() { return (history.state && typeof history.state === 'object') ? history.state : null; }
+
+        function wrapShowView() {
+            var orig = window.showView;
+            if (typeof orig !== 'function' || orig.__tsF21) return;
+            if (lastView === null) {          // remember the screen we start on, so the first tap can go back to it
+                try {
+                    var vis = document.querySelector('.view:not(.hidden)');
+                    if (vis && /View$/.test(vis.id || '')) {
+                        lastView = vis.id.slice(0, -4);
+                        var cs0 = curState();
+                        // rev 2: also replace a stale More-menu entry (member left via a menu link and came back)
+                        if (!cs0 || (cs0.tsF21Menu && !moreMenuOpen())) history.replaceState({ tsF21View: lastView, tsF21Uid: null }, '', location.href);
+                    }
+                } catch (_) {}
+            }
+            var depth = 0;
+            var wrapped = function (viewName, resetContext) {
+                var result;
+                depth++;
+                try { result = orig.apply(this, arguments); } finally { depth--; }
+                try {
+                    if (depth > 0) return result;     // rev 2: showView can call itself; record the outer call only
+                    if (restoring || navOff() || typeof viewName !== 'string') return result;
+                    // rev 2: record the screen actually shown (a nested call may have shown a different one)
+                    try {
+                        var shown = document.querySelector('.view:not(.hidden)');
+                        if (shown && /View$/.test(shown.id || '')) viewName = shown.id.slice(0, -4);
+                    } catch (_) {}
+                    if (viewName === 'tracking' || viewName === 'parameters') return result;   // these load /parameters
+                    var uid = null;
+                    try { if (resetContext === false && typeof viewingUserId !== 'undefined') uid = viewingUserId; } catch (_) {}
+                    var st = { tsF21View: viewName, tsF21Uid: uid };
+                    var same = (viewName === lastView && uid === lastUid);
+                    var cs = curState();
+                    if (!same && lastView !== null && Date.now() - lastInput < 1500 && !(cs && cs.tsF21Menu)) {
+                        history.pushState(st, '', location.href);
+                    } else {
+                        history.replaceState(st, '', location.href);   // also replaces a More-menu entry
+                    }
+                    curSt = st;
+                    lastView = viewName; lastUid = uid;
+                } catch (_) {}
+                return result;
+            };
+            wrapped.__tsF21 = true;
+            window.showView = wrapped;
+        }
+
+        // The More menu gets its own entry while open, so Back closes it and stays on the screen.
+        function watchMoreMenu() {
+            var m = moreMenu();
+            if (!m || !window.MutationObserver) return;
+            var wasOpen = moreMenuOpen();
+            new MutationObserver(function () {
+                var open = moreMenuOpen();
+                if (open === wasOpen) return;
+                wasOpen = open;
+                try {
+                    if (navOff() || !loggedIn()) return;
+                    var cs = curState();
+                    if (open) {
+                        curSt = { tsF21Menu: true, tsF21View: lastView, tsF21Uid: lastUid };
+                        history.pushState(curSt, '', location.href);
+                    } else if (cs && cs.tsF21Menu) {
+                        // closed by a tap. rev 2: REPLACE the menu entry instead of history.back(): a back() here
+                        // cancelled a page load started by the same tap (More > Support / Contact Us did nothing).
+                        // rev 3: mark it as a copy (tsF21Dup) so Back steps over it instead of doing nothing once
+                        curSt = { tsF21View: lastView, tsF21Uid: lastUid, tsF21Dup: true };
+                        history.replaceState(curSt, '', location.href);
+                    }
+                } catch (_) {}
+            }).observe(m, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        window.addEventListener('popstate', function (e) {
+            if (navOff()) return;   // rev 4: parked
+            if (swallowPop) { swallowPop = false; return; }
+            var wasDup = !!(curSt && curSt.tsF21Dup);   // rev 3: leaving a dismissed-menu copy
+            curSt = e.state;
+            try {
+                if (navOff()) return;
+                if (moreMenuOpen() && typeof closeMobileMoreMenu === 'function') closeMobileMoreMenu();
+                var st = e.state;
+                // rev 2: an entry whose state was wiped by replaceState({}) (e.g. after ?view=profile links) goes Home
+                if (st && typeof st === 'object' && !st.tsF21View && !st.tsF21Menu && loggedIn() && lastView !== 'home') {
+                    st = { tsF21View: 'home', tsF21Uid: null };
+                }
+                if (!st || !st.tsF21View || !loggedIn()) return;
+                var uid = (st.tsF21Uid === undefined) ? null : st.tsF21Uid;
+                if (st.tsF21View === lastView && uid === lastUid) {
+                    if (wasDup) history.back();   // rev 3: same screen behind a dismissed-menu copy: go one further
+                    return;
+                }
+                restoring = true;
+                try {
+                    if (uid !== null) {
+                        try { viewingUserId = uid; window.viewingUserId = uid; } catch (_) {}
+                        window.showView(st.tsF21View, false);
+                    } else {
+                        window.showView(st.tsF21View);
+                    }
+                } finally { restoring = false; }
+                lastView = st.tsF21View; lastUid = uid;
+            } catch (_) { restoring = false; }
+        });
+
+        // ---------------------------------------------------------------- 2. native share sheet
+        function addShareButton() {
+            if (!navigator.share) return;
+            var wrap = document.querySelector('#inviteView .share-buttons');
+            if (!wrap || wrap.querySelector('.ts-f21-share')) return;
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn btn-primary ts-f21-share';
+            b.textContent = S('share');
+            b.addEventListener('click', function () {
+                var input = document.getElementById('userInviteLink');
+                var link = input && input.value;
+                if (!link) return;
+                navigator.share({ title: 'TheraSocial', text: S('share_text'), url: link }).catch(function () {});
+            });
+            wrap.insertBefore(b, wrap.firstChild);
+        }
+        window.addEventListener('languageChanged', function () {
+            var b = document.querySelector('.ts-f21-share'); if (b) b.textContent = S('share');
+        });
+
+        // ---------------------------------------------------------------- 3. unread count in title / app icon
+        var lastBadge = -1;
+        function syncUnread() {
+            var n = 0;
+            var b = document.getElementById('messagesNavBadge');
+            if (b && b.style.display !== 'none' && loggedIn()) {
+                n = parseInt(b.textContent, 10) || 0;
+                if (/\+/.test(b.textContent)) n = 99;
+            }
+            var base = document.title.replace(/^\(\d+\+?\)\s/, '');
+            var want = n > 0 ? '(' + (n >= 99 ? '99+' : n) + ') ' + base : base;
+            if (document.title !== want) document.title = want;
+            if (n !== lastBadge) {
+                lastBadge = n;
+                try {
+                    if (n > 0 && navigator.setAppBadge) navigator.setAppBadge(n).catch(function () {});
+                    else if (n === 0 && navigator.clearAppBadge) navigator.clearAppBadge().catch(function () {});
+                } catch (_) {}
+            }
+        }
+        function watchUnread() {
+            if (!window.MutationObserver) return;
+            var mo = new MutationObserver(syncUnread);
+            var b = document.getElementById('messagesNavBadge');
+            if (b) mo.observe(b, { attributes: true, attributeFilter: ['style'], childList: true, characterData: true, subtree: true });
+            var d = document.getElementById('dashboard');
+            if (d) mo.observe(d, { attributes: true, attributeFilter: ['style'] });
+            syncUnread();
+        }
+
+        // ---------------------------------------------------------------- 4. sign-up double tap
+        var signupAt = 0;
+        document.addEventListener('submit', function (e) {
+            if (!e.target || e.target.id !== 'signupForm') return;
+            var now = Date.now();
+            // rev 2: 700 ms window; rev 4: also blocked while a /api/auth/register request is still on its way
+            // (it can take 1-2 s on a phone, and a second tap then produced "email already registered").
+            // rev 5: busy for the WHOLE sign-up run (CSRF fetch, register, session/consent checks), set by the
+            // handler itself; expires after 20 s so a request that never settles cannot block sign-up for good.
+            var busyAt = window.__tsSignupBusyAt || 0;
+            if ((busyAt && now - busyAt < 20000) || now - signupAt < 700) { e.preventDefault(); e.stopPropagation(); return; }
+            signupAt = now;
+        }, true);
+        // rev 5: the rev 4 fetch wrapper around /api/auth/register is removed (it missed the CSRF-token fetch before
+        // the request and could block sign-up forever if the request never settled); see __tsSignupBusyAt.
+
+        function init() {
+            if (!navOff()) { wrapShowView(); watchMoreMenu(); }   // rev 4: parked (see navOff); nothing touches history when off
+            addShareButton(); watchUnread();
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+        window.addEventListener('load', function () { if (!navOff()) wrapShowView(); });   // in case a later script replaced showView
+    })();
+    </script>
+    <!-- ===================== END F21 ===================== -->
 
 </body>
 
