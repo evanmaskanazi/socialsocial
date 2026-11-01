@@ -1,4 +1,40 @@
 <!DOCTYPE html>
+<!-- TheraSocial Parameters Version B220 (Rnd 6) -->
+<!-- B220 (Rnd 6): Rnd 6: "Go To About" button added to the Support page (see support.html). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B219->B220 in lockstep (i18n.js changed); app.py _A92_ASSET_VERSION = 'B220'. -->
+<!-- TheraSocial Parameters Version B219 (F21 rev 5) -->
+<!-- B219 (F21 rev 5): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21 rev 4; fixed here; none critical). Cache-bust lockstep (feed-updates.js changed). Drafts stay parked.
+     CACHE-BUST: every live JS ?v bumped B218->B219 in lockstep; app.py _A92_ASSET_VERSION = 'B219'. -->
+<!-- TheraSocial Parameters Version B218 (F21 rev 4) -->
+<!-- B218 (F21 rev 4): ROUND RESULT: RED (major defects found in review of F21 rev 3: the back-navigation feature; parked here, see index).
+     MAJOR (this page): the unsaved-note draft (F21 item 6) failed a randomized slow/out-of-order network test
+     (5 failures, 3 major, including restoring a draft over a note changed elsewhere). It is PARKED (DRAFTS_ON = false
+     in script#ts-f21-diary): Notes behave exactly as in F20, and drafts left by earlier F21 versions are removed at
+     start-up. Guided check-in scroll, offline save message and logout cleanup are unchanged.
+     CACHE-BUST: every live JS ?v bumped B217->B218 in lockstep; app.py _A92_ASSET_VERSION = 'B218'. -->
+<!-- TheraSocial Parameters Version B217 (F21 rev 3) -->
+<!-- B217 (F21 rev 3): ROUND RESULT: ORANGE (moderately problematic issues found in review of F21 rev 2; fixed here; none critical).
+     MAJOR per the independent review (the worst finding of this round): on a slow connection rev 2 could DELETE the
+     unsaved-note draft (it compared before the member id or today's saved note had arrived), losing the text the
+     feature exists to keep. Rewritten: nothing is compared until the day's saved note has loaded (new
+     TSF21Diary.loaded hook) and the member id is known; a draft is deleted only when it belongs to another member;
+     if the saved note changed elsewhere it is simply not restored. MODERATE: typing after a save used the
+     pre-save note as the base, so a reload dropped the new text; onSaved now records the saved note.
+     CACHE-BUST: every live JS ?v bumped B216->B217 in lockstep; app.py _A92_ASSET_VERSION = 'B217'. -->
+<!-- TheraSocial Parameters Version B216 (F21 rev 2) -->
+<!-- B216 (F21 rev 2): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical).
+     MODERATE (privacy): the unsaved-note draft was keyed by date only, so after an idle/expired logout another member
+     signing in on the same tab could get it back in their own diary. Drafts now carry the member id and are only
+     restored for that member. A draft is also dropped when the saved note changed elsewhere (e.g. saved from Home).
+     CACHE-BUST: every live JS ?v bumped B215->B216 in lockstep; app.py _A92_ASSET_VERSION = 'B216'. -->
+<!-- TheraSocial Parameters Version B215 (F21) -->
+<!-- B215 (F21): additive. NEW script#ts-f21-diary near the end of the page: guided check-in on phones (next unanswered
+     question glides into view), unsaved Notes kept through a phone reloading the tab, a clear offline message when
+     Save fails for lack of connection, and logout from this page clears this tab's diary cache + message drafts.
+     <head>: Add to Home Screen links. Diary fixes are in parameters-social.js (see its header).
+     MAINTAINER NOTE: the diary UI itself is rendered by parameters-social.js (initializeParameters); this file holds
+     the page shell, the gift box (ts-gift-*), and the additive A8/A16/A41/A51/A92/F21 blocks near the end of the page.
+     CACHE-BUST: every live JS ?v bumped B214->B215 in lockstep; app.py _A92_ASSET_VERSION = 'B215'. -->
 <!-- TheraSocial Parameters Version B214 (F18 rev 2) -->
 <!-- B214 (F18 rev 2): cache-bust lockstep only (index.html and app.py changed). No markup/JS change on this page.
      CACHE-BUST: every live JS ?v bumped B213->B214 in lockstep; app.py _A92_ASSET_VERSION = 'B214'. -->
@@ -168,6 +204,10 @@
     <!-- A16 (Android): colour the Chrome/Android status & address bar to match the app. -->
     <meta name="theme-color" content="#6B8BA4" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#1F2937" media="(prefers-color-scheme: dark)">
+    <!-- F21: "Add to Home Screen" (app.py serves both; minimal-ui on purpose, no service worker) -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/ts-icon-180.png">
+    <meta name="apple-mobile-web-app-title" content="TheraSocial">
     <title>Diary - TheraSocial</title>
     <!-- FIX: Security meta tags -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -1032,10 +1072,10 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B214"></script>
-    <script src="/static/js/e2ee.js?v=B214"></script>
-    <script src="/static/js/parameters-social.js?v=B214"></script>
-    <script src="/static/js/feed-updates.js?v=B214"></script>
+    <script src="/static/js/i18n.js?v=B220"></script>
+    <script src="/static/js/e2ee.js?v=B220"></script>
+    <script src="/static/js/parameters-social.js?v=B220"></script>
+    <script src="/static/js/feed-updates.js?v=B220"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -2228,6 +2268,186 @@ Storage.prototype.setItem = function(key, value) {
         #circlesContainer label[for="languageSelect"] { color: rgba(255, 255, 255, 0.9) !important; }
     </style>
     <!-- ===================== END A92-LUXE ===================== -->
+
+    <!-- ===================== F21 (B215): diary check-in on phones (additive; remove this block to revert) ===================== -->
+    <!-- MAINTAINER NOTE: parameters-social.js calls TSF21Diary.onSaved(dateStr) after a successful save and
+         TSF21Diary.isNetworkError/offlineText in its save catch; both calls are guarded, so deleting this block is safe.
+         1 Guided check-in (phones <= 768px): after a FIRST answer in a category, the next unanswered category glides
+           into view; after the last one, the Notes + Save area does. Changing an earlier answer never scrolls.
+           Honours "reduce motion".
+         2 Unsaved note kept: the Notes text is kept in sessionStorage (this tab only, key ts_f21_note_<date>) while
+           typing, so iOS/Android reloading a backgrounded tab no longer loses it; restored for that date, cleared on
+           a successful save and on logout.
+         3 Offline save: a dropped connection now says so in the member's language (was "Failed to fetch").
+         4 Logout from this page also clears this tab's diary cache and unsent message drafts (index.html already did
+           the sessionStorage part; this page's logout button did not). -->
+    <script id="ts-f21-diary">
+    (function () {
+        'use strict';
+        var NOTE_KEY = 'ts_f21_note_';
+        var T = {
+            offline: { en: "You're offline, so this entry isn't saved yet. It's still on screen: tap Save again once you're back online.",
+                       he: 'אין חיבור לאינטרנט, ולכן הרישום עדיין לא נשמר. הוא נשאר על המסך: הקישו שוב על שמירה כשהחיבור יחזור.',
+                       ar: 'لا يوجد اتصال بالإنترنت، لذلك لم يُحفظ هذا الإدخال بعد. ما زال على الشاشة: اضغطوا حفظ مرة أخرى عند عودة الاتصال.',
+                       ru: 'Нет подключения к интернету, поэтому запись ещё не сохранена. Она осталась на экране: нажмите «Сохранить» снова, когда связь вернётся.' },
+            restored: { en: 'Your unsaved note is back.', he: 'ההערה שלא נשמרה חזרה.', ar: 'عادت ملاحظتك غير المحفوظة.', ru: 'Несохранённая заметка восстановлена.' }
+        };
+        function lang() {
+            try { var l = window.i18n && window.i18n.getCurrentLanguage && window.i18n.getCurrentLanguage(); if (l) return l; } catch (_) {}
+            try { return localStorage.getItem('selectedLanguage') || 'en'; } catch (_) { return 'en'; }
+        }
+        function tr(k) { var m = T[k]; return (m && (m[lang()] || m.en)) || ''; }
+        function curDate() { try { return formatDate(currentDate); } catch (_) { return null; } }   // parameters-social.js globals
+        function ssGet(k) { try { return sessionStorage.getItem(k); } catch (_) { return null; } }
+        function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (_) {} }
+        function ssDel(k) { try { sessionStorage.removeItem(k); } catch (_) {} }
+
+        window.TSF21Diary = {
+            onSaved: function (dateStr, notes) {
+                if (!dateStr) return;
+                ssDel(NOTE_KEY + dateStr);
+                lastLoaded[dateStr] = (typeof notes === 'string') ? notes : ((document.getElementById('notesInput') || {}).value || '');   // rev 3
+            },
+            // rev 3: called by parameters-social.js when the start-up load of today has filled the form.
+            loaded: function (dateStr) {
+                if (!dateStr || dateStr !== curDate()) return;
+                lastLoaded[dateStr] = (document.getElementById('notesInput') || {}).value || '';
+                restoreNote();
+            },
+            isNetworkError: function (e) {
+                if (navigator.onLine === false) return true;
+                return !!e && e.name === 'TypeError' && /fetch|Load failed|NetworkError|network/i.test(String(e.message || ''));
+            },
+            offlineText: function () { return tr('offline'); }
+        };
+
+        // ---- 2. unsaved note
+        // Draft = {u: member id, s: the SAVED note when typing began, t: text}, in sessionStorage per date.
+        // rev 3 rules (rev 2 could delete a draft on a slow connection):
+        //   * nothing is compared until the server's note for that day has actually loaded (lastLoaded[d] set by
+        //     TSF21Diary.loaded() from parameters-social.js, by the loadParameters wrapper, or by onSaved);
+        //   * nothing is decided until the member id is known; a draft is DELETED only when it belongs to a
+        //     different member (privacy); if the saved note changed elsewhere the draft is just not restored.
+        var uid = null, lastLoaded = {};
+        // F21 rev 4: the unsaved-note draft is PARKED (off). A randomized timing test of rev 3 (slow / out-of-order
+        // replies) reproduced 5 failures, 3 major: text typed before the session or the day's note had loaded was
+        // dropped or never restored, and a draft could be restored OVER a note changed elsewhere. Notes behave exactly
+        // as in F20. Drafts written by earlier F21 versions are removed at start-up. Do not switch this on without a
+        // design that never derives the base note from the form and a passing randomized timing test.
+        var DRAFTS_ON = false;
+        function readDraft(d) { try { var o = JSON.parse(ssGet(NOTE_KEY + d) || 'null'); return (o && typeof o === 'object') ? o : null; } catch (_) { return null; } }
+        document.addEventListener('input', function (e) {
+            var el = e.target;
+            if (!DRAFTS_ON || !el || el.id !== 'notesInput') return;   // rev 4: parked
+            var d = curDate(); if (!d || !uid) return;
+            if (!el.value) { ssDel(NOTE_KEY + d); return; }
+            var prev = readDraft(d);
+            var base = (lastLoaded[d] !== undefined) ? lastLoaded[d] : ((prev && prev.u === uid) ? prev.s : null);
+            ssSet(NOTE_KEY + d, JSON.stringify({ u: uid, s: base, t: el.value }));
+        });
+        function restoreNote() {
+            if (!DRAFTS_ON) return;   // rev 4: parked
+            var el = document.getElementById('notesInput'), d = curDate();
+            if (!el || !d || !uid || lastLoaded[d] === undefined || document.activeElement === el) return;
+            var draft = readDraft(d);
+            if (!draft || draft.t === el.value) return;
+            if (draft.u !== uid) { ssDel(NOTE_KEY + d); return; }          // another member's draft: remove it
+            if (draft.s !== null && draft.s !== undefined && draft.s !== lastLoaded[d]) return;   // saved note changed
+            el.value = draft.t;
+            try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}   // lets auto-grow resize it
+            if (typeof window.showMessage === 'function') window.showMessage(tr('restored'), 'info', 3500);
+        }
+        function wrapLoad() {
+            var orig = window.loadParameters;
+            if (typeof orig !== 'function' || orig.__tsF21) return;
+            var w = async function () {
+                var d0 = curDate();
+                var r = await orig.apply(this, arguments);
+                // rev 3: only when the day that was asked for is still selected (a late reply for another day is ignored
+                // by loadParameters itself, so the form would not hold that day's saved note)
+                if (d0 && curDate() === d0) {
+                    lastLoaded[d0] = (document.getElementById('notesInput') || {}).value || '';
+                    restoreNote();
+                }
+                return r;
+            };
+            w.__tsF21 = true;
+            window.loadParameters = w;
+        }
+
+        // ---- 1. guided check-in
+        var reduce = false;
+        try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+        var wasAnswered = false;
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest && e.target.closest('.rating-button');
+            if (!btn) return;
+            var item = btn.closest('.parameter-item');
+            wasAnswered = !!(item && item.querySelector('.rating-button.selected'));
+        }, true);
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest && e.target.closest('.rating-button');
+            if (!btn || wasAnswered || window.innerWidth > 768) return;
+            var item = btn.closest('.parameter-item');
+            if (!item) return;
+            setTimeout(function () {
+                var next = null, n = item.nextElementSibling;
+                while (n) {
+                    if (n.classList && n.classList.contains('parameter-item') && !n.querySelector('.rating-button.selected')) { next = n; break; }
+                    n = n.nextElementSibling;
+                }
+                var target = next || document.querySelector('.notes-section');
+                if (!target) return;
+                var r = target.getBoundingClientRect();
+                var vh = window.innerHeight || document.documentElement.clientHeight;
+                if (r.top >= 70 && r.bottom <= vh - 20) return;             // already fully in view
+                target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: next ? 'center' : 'start' });
+            }, 280);
+        });
+
+        // ---- 4. logout from this page
+        document.addEventListener('click', function (e) {
+            var b = e.target && e.target.closest && e.target.closest('.diary-header-btn.logout');
+            if (!b) return;
+            try {
+                var keep = ['selectedLanguage'], rm = [], i;
+                for (i = 0; i < sessionStorage.length; i++) { var k = sessionStorage.key(i); if (keep.indexOf(k) === -1) rm.push(k); }
+                rm.forEach(function (k) { sessionStorage.removeItem(k); });
+            } catch (_) {}
+            try {
+                var rl = [];
+                for (var j = 0; j < localStorage.length; j++) { var lk = localStorage.key(j); if (lk && (lk.indexOf('msg_draft_') === 0 || lk.indexOf('user_') === 0)) rl.push(lk); }
+                rl.forEach(function (k) { localStorage.removeItem(k); });
+            } catch (_) {}
+        }, true);
+
+        function fetchUid() {
+            try {
+                fetch('/api/auth/session', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (d) { if (d && d.user && d.user.id != null) { uid = String(d.user.id); restoreNote(); } })
+                    .catch(function () {});
+            } catch (_) {}
+        }
+
+        function init() {
+            if (!DRAFTS_ON) {   // rev 4: parked; clear drafts left by F21 rev 1-3 so none can ever be restored
+                try {
+                    var old = [];
+                    for (var i = 0; i < sessionStorage.length; i++) { var k = sessionStorage.key(i); if (k && k.indexOf(NOTE_KEY) === 0) old.push(k); }
+                    old.forEach(function (k) { sessionStorage.removeItem(k); });
+                } catch (_) {}
+                return;
+            }
+            fetchUid();
+            wrapLoad();
+            setTimeout(restoreNote, 1500);   // after the start-up auto-load of today (parameters-social.js)
+            setTimeout(restoreNote, 3500);   // rev 2: again, in case the session / today's entry answered slowly
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+    })();
+    </script>
+    <!-- ===================== END F21 ===================== -->
 
 </body>
 </html>

@@ -1,4 +1,26 @@
 <!DOCTYPE html>
+<!-- TheraSocial Support Version B220 (Rnd 6) -->
+<!-- B220 (Rnd 6): new "Go To About" button beside "Back to Last Page" (bottom of the page), in English, Hebrew,
+     Arabic and Russian (i18n.js key btn.go_about). It opens /about, which is public, so it works before sign-in and
+     after. The link carries ?ret= so About's "Back to Last Page" comes back here, and this page still remembers
+     where the member originally came from (no About <-> Support loop). Back button's built-in text now
+     "Back to Last Page" (matches btn.back).
+     CACHE-BUST: every live JS ?v bumped B219->B220 in lockstep (i18n.js changed); app.py _A92_ASSET_VERSION = 'B220'. -->
+<!-- TheraSocial Support Version B219 (F21 rev 5) -->
+<!-- B219 (F21 rev 5): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21 rev 4; fixed here; none critical). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B218->B219 in lockstep; app.py _A92_ASSET_VERSION = 'B219'. -->
+<!-- TheraSocial Support Version B218 (F21 rev 4) -->
+<!-- B218 (F21 rev 4): ROUND RESULT: RED (major defects found in review of F21 rev 3: the back-navigation feature; parked here, see index). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B217->B218 in lockstep; app.py _A92_ASSET_VERSION = 'B218'. -->
+<!-- TheraSocial Support Version B217 (F21 rev 3) -->
+<!-- B217 (F21 rev 3): ROUND RESULT: ORANGE (moderately problematic issues found in review of F21 rev 2; fixed here; none critical). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B216->B217 in lockstep; app.py _A92_ASSET_VERSION = 'B217'. -->
+<!-- TheraSocial Support Version B216 (F21 rev 2) -->
+<!-- B216 (F21 rev 2): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B215->B216 in lockstep; app.py _A92_ASSET_VERSION = 'B216'. -->
+<!-- TheraSocial Support Version B215 (F21) -->
+<!-- B215 (F21): cache-bust lockstep only. No markup/JS change on this page.
+     CACHE-BUST: every live JS ?v bumped B214->B215 in lockstep; app.py _A92_ASSET_VERSION = 'B215'. -->
 <!-- TheraSocial Support Version B214 (F18 rev 2) -->
 <!-- B214 (F18 rev 2): cache-bust lockstep only (index.html and app.py changed: trigger alerts look forward only; alert wording). No markup/JS change on this page.
      CACHE-BUST: every live JS ?v bumped B212->B214 in lockstep (this page skipped B213; app.py also pins it at serve time); app.py _A92_ASSET_VERSION = 'B214'. -->
@@ -321,6 +343,8 @@
         .back-link:hover {
             transform: scale(1.05);
         }
+        /* Rnd 6: gap between "Back to Last Page" and "Go To About" (logical side, so it is right in Hebrew/Arabic too) */
+        .back-link.ts-go-about { margin-inline-start: 16px; }
 
         /* FIX 1: Toast notification styles */
         .toast-container {
@@ -447,6 +471,7 @@
                 text-align: center;
                 margin: 20px auto;
             }
+            .back-link.ts-go-about { margin: 12px auto 20px; }   /* Rnd 6: stacked under Back on phones */
         }
 
         @media (max-width: 480px) {
@@ -694,14 +719,18 @@
         </div>
 
         <center>
-            <a href="/" id="backLastPage" class="back-link" data-i18n="btn.back">Back to Home</a>
+            <a href="/" id="backLastPage" class="back-link" data-i18n="btn.back">Back to Last Page</a>
+            <!-- Rnd 6: "Go To About" (works signed in and signed out; /about is a public page). Its href carries a
+                 ?ret= back to this page, which itself keeps this page's own return path, so About's back button
+                 returns here and this page's back button still returns where the member came from. -->
+            <a href="/about?ret=%2Fsupport%3Fret%3D%252F" id="goToAbout" class="back-link ts-go-about" data-i18n="btn.go_about">Go To About</a>
         </center>
     </div>
 
     <!-- A92 audit (pre-existing): removed a hard-coded Cloudflare email-decode script that had been
          saved into the template from a live page; Cloudflare injects its own copy when it needs one,
          and off Cloudflare the path 404s. The mailto links here are plain and need no decoding. -->
-    <script src="/static/js/i18n.js?v=B214"></script>
+    <script src="/static/js/i18n.js?v=B220"></script>
     <script>
         // A43 (rev6): BULLETPROOF back button. Every earlier revision ultimately trusted the
         // anchor's href (rev4 set href once at load and then did `if (validRet) return;` on
@@ -748,6 +777,37 @@
                 }
                 // else: nothing to go back to — allow the href="/" default.
             }, true);  // capture phase: run before any other click handler
+        })();
+
+        // Rnd 6: "Go To About". /about?ret=<this page, including its own return path>.
+        (function () {
+            var go = document.getElementById('goToAbout');
+            if (!go) return;
+            function ownReturn() {
+                var ret = null;
+                try { ret = new URLSearchParams(window.location.search).get('ret'); } catch (_) {}
+                if (ret && ret.charAt(0) === '/' && ret.charAt(1) !== '/') return ret;
+                var ref = document.referrer || '';
+                if (ref && ref.indexOf(window.location.origin + '/') === 0) {
+                    var p = ref.slice(window.location.origin.length);
+                    // never point back at About or Support themselves (that would loop between the two pages)
+                    if (!/^\/(about|support)(?:[?#]|$)/.test(p)) return p;
+                }
+                return null;
+            }
+            function target() {
+                var own = ownReturn();
+                // always an explicit return ('/' when there is none), so Support's back never bounces to About
+                var here = '/support?ret=' + encodeURIComponent(own || '/');
+                return '/about?ret=' + encodeURIComponent(here);
+            }
+            try { go.setAttribute('href', target()); } catch (_) {}
+            go.addEventListener('click', function (e) {
+                var t = target();
+                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) { go.setAttribute('href', t); return; }
+                e.preventDefault();
+                window.location.assign(t);
+            });
         })();
 
         // A52 (translation fix): the toast + inline validation messages below were hardcoded

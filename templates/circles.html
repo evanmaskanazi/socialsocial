@@ -1,4 +1,24 @@
 <!DOCTYPE html>
+<!-- TheraSocial Circles Version B220 (Rnd 6) -->
+<!-- B220 (Rnd 6): Rnd 6: "Go To About" button added to the Support page (see support.html). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B219->B220 in lockstep (i18n.js changed); app.py _A92_ASSET_VERSION = 'B220'. -->
+<!-- TheraSocial Circles Version B219 (F21 rev 5) -->
+<!-- B219 (F21 rev 5): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21 rev 4; fixed here; none critical). Cache-bust lockstep (circles-messages.js and feed-updates.js changed).
+     CACHE-BUST: every live JS ?v bumped B218->B219 in lockstep; app.py _A92_ASSET_VERSION = 'B219'. -->
+<!-- TheraSocial Circles Version B218 (F21 rev 4) -->
+<!-- B218 (F21 rev 4): ROUND RESULT: RED (major defects found in review of F21 rev 3: the back-navigation feature; parked here, see index). Cache-bust lockstep (circles-messages.js changed).
+     CACHE-BUST: every live JS ?v bumped B217->B218 in lockstep; app.py _A92_ASSET_VERSION = 'B218'. -->
+<!-- TheraSocial Circles Version B217 (F21 rev 3) -->
+<!-- B217 (F21 rev 3): ROUND RESULT: ORANGE (moderately problematic issues found in review of F21 rev 2; fixed here; none critical). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B216->B217 in lockstep; app.py _A92_ASSET_VERSION = 'B217'. -->
+<!-- TheraSocial Circles Version B216 (F21 rev 2) -->
+<!-- B216 (F21 rev 2): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B215->B216 in lockstep; app.py _A92_ASSET_VERSION = 'B216'. -->
+<!-- TheraSocial Circles Version B215 (F21) -->
+<!-- B215 (F21): (1) "Following" check asks for up to 100 entries (the server's default page is 50, so a member who
+     follows more people saw "Follow" instead of "Unfollow" on some profiles). (2) Add to Home Screen links.
+     Messaging fixes for this page are in circles-messages.js (see its header).
+     CACHE-BUST: every live JS ?v bumped B214->B215 in lockstep; app.py _A92_ASSET_VERSION = 'B215'. -->
 <!-- TheraSocial Circles Version B214 (F18 rev 2) -->
 <!-- B214 (F18 rev 2): cache-bust lockstep only (index.html and app.py changed). No markup/JS change on this page.
      CACHE-BUST: every live JS ?v bumped B213->B214 in lockstep; app.py _A92_ASSET_VERSION = 'B214'. -->
@@ -166,6 +186,10 @@
     <!-- A16 (Android): colour the Chrome/Android status & address bar to match the app. -->
     <meta name="theme-color" content="#6B8BA4" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#1F2937" media="(prefers-color-scheme: dark)">
+    <!-- F21: "Add to Home Screen" (app.py serves both; minimal-ui on purpose, no service worker) -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/ts-icon-180.png">
+    <meta name="apple-mobile-web-app-title" content="TheraSocial">
     <title>Circles - TheraSocial</title>
     <style>
         body {
@@ -240,10 +264,10 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B214"></script>
-    <script src="/static/js/e2ee.js?v=B214"></script>
-    <script src="/static/js/circles-messages.js?v=B214"></script>
-    <script src="/static/js/feed-updates.js?v=B214"></script>
+    <script src="/static/js/i18n.js?v=B220"></script>
+    <script src="/static/js/e2ee.js?v=B220"></script>
+    <script src="/static/js/circles-messages.js?v=B220"></script>
+    <script src="/static/js/feed-updates.js?v=B220"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
@@ -521,7 +545,7 @@ try {
                 // Check if following
                 let isFollowing = false;
                 try {
-                    const followingResponse = await fetch('/api/following', { credentials: 'include' });
+                    const followingResponse = await fetch('/api/following?per_page=100', { credentials: 'include' });   // F21: default page is 50
                     if (followingResponse.ok) {
                         const followingData = await followingResponse.json();
                         // A21 (dormant-bug fix): coerce both sides (userId is parseInt'd above).

@@ -1,4 +1,28 @@
 <!DOCTYPE html>
+<!-- TheraSocial Dream Cards Version B220 (Rnd 6) -->
+<!-- B220 (Rnd 6): Rnd 6: "Go To About" button added to the Support page (see support.html). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B219->B220 in lockstep (i18n.js changed); app.py _A92_ASSET_VERSION = 'B220'. -->
+<!-- TheraSocial Dream Cards Version B219 (F21 rev 5) -->
+<!-- B219 (F21 rev 5): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21 rev 4; fixed here; none critical). Cache-bust lockstep (collection.js changed).
+     CACHE-BUST: every live JS ?v bumped B218->B219 in lockstep; app.py _A92_ASSET_VERSION = 'B219'. -->
+<!-- TheraSocial Dream Cards Version B218 (F21 rev 4) -->
+<!-- B218 (F21 rev 4): ROUND RESULT: RED (major defects found in review of F21 rev 3: the back-navigation feature; parked here, see index). Cache-bust lockstep only on this page.
+     CACHE-BUST: every live JS ?v bumped B217->B218 in lockstep; app.py _A92_ASSET_VERSION = 'B218'. -->
+<!-- TheraSocial Dream Cards Version B217 (F21 rev 3) -->
+<!-- B217 (F21 rev 3): ROUND RESULT: ORANGE (moderately problematic issues found in review of F21 rev 2; fixed here; none critical). Cache-bust lockstep (collection.js changed).
+     CACHE-BUST: every live JS ?v bumped B216->B217 in lockstep; app.py _A92_ASSET_VERSION = 'B217'. -->
+<!-- TheraSocial Dream Cards Version B216 (F21 rev 2) -->
+<!-- B216 (F21 rev 2): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical). Cache-bust lockstep (collection.js changed).
+     CACHE-BUST: every live JS ?v bumped B215->B216 in lockstep; app.py _A92_ASSET_VERSION = 'B216'. -->
+<!-- TheraSocial Dream Cards Version B215 (F21) -->
+<!-- B215 (F21): additive. (1) CACHE-BUST FIX: this page was still asking for ?v=B209 while the app was on B214
+     (it had been left out of the lockstep bumps since F12 rev 3), so phones could keep a week-old i18n.js /
+     collection.js. Now ?v=B215, and app.py F21 pins every page's /static/js ?v server-side as a safety net.
+     (2) style#ts-f21-cards: phone fit (no iPhone zoom when typing a note or shelf name, notch / home-bar
+     safe areas, 44px touch targets) and dark mode when the member turned it on in the app (body.dark-mode,
+     set by collection.js from the same 'therasocial_dark_mode' setting the other pages use).
+     (3) viewport-fit=cover so the safe-area insets above are reported. (4) Add to Home Screen links.
+     CACHE-BUST: every live JS ?v bumped to B215 in lockstep; app.py _A92_ASSET_VERSION = 'B215'. -->
 <!-- TheraSocial Dream Cards Version B209 (F12 rev 3) -->
 <!-- B209 (F12 rev 3): cache-bust lockstep only. "Private messaging" is now named "End-to-end encryption" (e2ee.js, i18n.js).
      CACHE-BUST: every live JS ?v bumped B208->B209 in lockstep; app.py _A92_ASSET_VERSION = 'B209'. -->
@@ -14,10 +38,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Dream Cards - TheraSocial</title>
     <meta name="robots" content="noindex">
     <meta name="theme-color" content="#3D4852">
+    <!-- F21: "Add to Home Screen" (app.py serves both) -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/ts-icon-180.png">
     <style>
         :root {
             --slate: #3D4852; --primary: #5A7A93; --primary-soft: #6B8BA4; --sage: #9DB8A0;
@@ -101,6 +128,38 @@
         }
         @media (prefers-reduced-motion: reduce) { .card, .card:hover { transition: none; transform: none; } }
     </style>
+    <style id="ts-f21-cards">
+        /* F21 (1) iOS Safari zooms the page into any field whose text is under 16px and leaves it zoomed. */
+        @media (max-width: 520px) { .note, .row select, .row input, .lang { font-size: 16px; } .note { min-height: 76px; } }
+        /* F21 (2) Notch / rounded corners / home bar (needs viewport-fit=cover in the meta above). */
+        .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+                padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+        .toast { bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+        /* F21 (3) Finger-sized targets on touch screens (Apple/Google guidance: about 44px). */
+        @media (pointer: coarse) {
+            .tab, .chip, .vbtn, .mini, .row select, .row input, .lang { min-height: 44px; }
+            .back { display: inline-block; padding: 10px 0; }
+        }
+        a, button, select { -webkit-tap-highlight-color: transparent; }
+        button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible {
+            outline: 3px solid rgba(90, 122, 147, 0.45); outline-offset: 2px; }
+        /* F21 (4) Dark mode (body.dark-mode is set by collection.js from the app's own dark-mode setting). */
+        body.dark-mode { background: radial-gradient(1200px 600px at 10% -10%, #1E293B 0%, transparent 60%), #0F172A; color: #E5E7EB; }
+        body.dark-mode .card, body.dark-mode .hint, body.dark-mode .empty, body.dark-mode .chip, body.dark-mode .vbtn,
+        body.dark-mode .mini, body.dark-mode .note, body.dark-mode .row select, body.dark-mode .row input, body.dark-mode .lang {
+            background: #1F2937; color: #E5E7EB; border-color: #374151; }
+        body.dark-mode .sub, body.dark-mode .meta, body.dark-mode .tab, body.dark-mode .shelf h2 .count,
+        body.dark-mode .loading, body.dark-mode .hint { color: #9CA3AF; }
+        body.dark-mode .tabs { border-bottom-color: #374151; }
+        body.dark-mode .tab[aria-selected="true"] { color: #F3F4F6; }
+        body.dark-mode .back, body.dark-mode .hint a { color: #A9C1D6; }
+        body.dark-mode .balance { background: #334155; }
+        body.dark-mode .art .cat { background: rgba(17, 24, 39, .78); color: #F3F4F6; }
+        body.dark-mode .chip[aria-pressed="true"], body.dark-mode .vbtn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+        body.dark-mode .vbtn.confirm { background: #E5E7EB; border-color: #E5E7EB; color: #111827; }
+        body.dark-mode .vbtn.owned { background: #1E3A2B; border-color: #2F5D43; color: #B7E4C7; }
+        body.dark-mode .card { box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+    </style>
 </head>
 <body>
     <div class="wrap">
@@ -127,7 +186,7 @@
         </div>
         <div id="dcView"><div class="loading">…</div></div>
     </div>
-    <script src="/static/js/i18n.js?v=B209"></script>
-    <script src="/static/js/collection.js?v=B209"></script>
+    <script src="/static/js/i18n.js?v=B220"></script>
+    <script src="/static/js/collection.js?v=B220"></script>
 </body>
 </html>
