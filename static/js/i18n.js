@@ -1,3 +1,21 @@
+// Version B220 (Rnd 6): new key btn.go_about (en/he/ar/ru) for the Support page's "Go To About" button.
+// Version B219 (F21 rev 5): no content change; ?v bumped B218->B219 in lockstep.
+// Version B218 (F21 rev 4): no content change; ?v bumped B217->B218 in lockstep.
+// Version B217 (F21 rev 3): no content change; ?v bumped B216->B217 in lockstep.
+// Version B216 (F21 rev 2): no content change; ?v bumped B215->B216 in lockstep.
+// Version B215 (F21): no content change; ?v bumped B214->B215 in lockstep.
+// MAINTAINER MAP (read before changing ANY text):
+//   * Structure: A41 CSRF fetch wrapper (top) -> const translations = { en: {...}, he: {...}, ar: {...}, ru: {...} }
+//     -> getCurrentLanguage / setLanguage / translate / t / applyLanguage -> several "override" blocks at the END
+//     of the file (en_ov / he_ov ..., F15 'add', etc.) -> F16 /privacy link language -> F17 idle-logout wrapper.
+//   * WHICH VALUE IS LIVE: about 50 keys appear TWICE inside each language object; in a JS object literal the LAST
+//     one wins. The override blocks at the bottom win over both. So editing the first occurrence of a key often
+//     changes nothing on screen. Find the live one with:  python3 ts_release_check.py --i18n-key some.key
+//   * New keys: add them to all four languages (en, he, ar, ru). A missing key shows the English text, or the raw
+//     key if English is missing too. Hebrew/Arabic pages are dir="rtl".
+//   * Pages call t(key, 'English fallback') or translate(key); data-i18n="key" attributes are filled by
+//     applyLanguage(). Self-contained pages (collection.js, e2ee.js, the F21 blocks) keep their own small
+//     4-language maps instead of adding keys here.
 // Version B214 (F18 rev 2): no content change; ?v bumped B213->B214 in lockstep.
 // Version B213 (F18): (referenced as ?v=B213). No content change; ?v bumped B212->B213 in lockstep (new F18 alert
 //   keys live in index.html's ts-f18-alerts block).
@@ -912,6 +930,7 @@ const translations = {
     'about.value4_desc': 'Making mental health tools available to everyone, everywhere',
     'btn.getstarted': 'Get Started',
     'btn.back': 'Back to Last Page',
+    'btn.go_about': 'Go To About',
     'circles.title': 'My Circles',
             'circles.search_placeholder': 'Search users to add to circles...',
             'circles.public': 'General 🌍',
@@ -2675,6 +2694,7 @@ const translations = {
     'about.value4_desc': 'הפיכת כלים לחיים טובים לזמינים לכולם, בכל מקום',
     'btn.getstarted': 'התחל',
     'btn.back': 'חזרה לעמוד הקודם',
+    'btn.go_about': 'מעבר לדף אודות',
     'menu.home': 'בית',
 
 'home.title': 'בית',
@@ -4533,6 +4553,7 @@ const translations = {
     'about.value4_desc': 'جعل أدوات الصحة النفسية متاحة للجميع في كل مكان',
     'btn.getstarted': 'ابدأ',
     'btn.back': 'العودة إلى الصفحة السابقة',
+    'btn.go_about': 'الانتقال إلى صفحة «حول»',
 
 
         // Authentication
@@ -6235,6 +6256,7 @@ const translations = {
     'about.value4_desc': 'Делаем инструменты благополучия доступными для всех и везде',
     'btn.getstarted': 'Начать',
     'btn.back': 'Вернуться на предыдущую страницу',
+    'btn.go_about': 'Перейти на страницу «О нас»',
 
         // Authentication
         'auth.welcome': 'Добро пожаловать в TheraSocial',

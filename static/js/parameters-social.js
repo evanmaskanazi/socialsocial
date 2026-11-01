@@ -1,3 +1,31 @@
+// Version B220 (Rnd 6): no content change; ?v bumped B219->B220 in lockstep.
+// Version B219 (F21 rev 5): no content change; ?v bumped B218->B219 in lockstep.
+// Version B218 (F21 rev 4): no content change; ?v bumped B217->B218 in lockstep. (The TSF21Diary draft hooks stay;
+//   the draft feature itself is parked in parameters.html.)
+// Version B217 (F21 rev 3): ROUND RESULT: ORANGE (moderately problematic issues found in review of F21 rev 2; fixed here; none critical). Two guarded hook lines for the diary-draft block:
+//   TSF21Diary.loaded(todayStr) after the start-up load of today, and onSaved(dateStr, notes) now passes the notes.
+// Version B216 (F21 rev 2): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical). The start-up load of today, when the member has already
+//   tapped another day, still skips today's ratings/notes but now loads privacy unless that day loaded its own.
+// Version B215 (F21): dormant-bug fixes, each marked "F21" in place (grep F21):
+//   * loadParameters + the start-up load of today: a late reply for a day the member already left could fill
+//     the form, and Save then wrote it onto the newly selected day (slow connections).
+//   * Changing month moved the SAVE date to the 1st while the form still showed the old day's ratings; month
+//     buttons now select a real date (today in the current month) through selectDate().
+//   * Opening an EMPTY day gave it a green "saved" dot (server answers empty days with zeros), and Save then
+//     accepted an all-zero entry. Only real data is marked; Save needs at least one 1-4 rating.
+//   * Today's dot vanished east of UTC (new Date('YYYY-MM-DD') is UTC midnight).
+//   * Save errors from the server ({error: ...}, e.g. notes over 2000) showed "Unknown error"; notes box now has
+//     maxlength="2000". A dropped connection gets a clear localized message (text in parameters.html F21 block).
+//   * Following check asks for 100 entries (server default page is 50).
+//   Two guarded hook lines call window.TSF21Diary (parameters.html #ts-f21-diary).
+// MAINTAINER MAP (this file is loaded by parameters.html AND index.html; index.html declares some functions with
+//   the same names later, which then win ON INDEX ONLY):
+//   state: currentDate / selectedRatings / datesWithData (top) -> PARAMETER_CATEGORIES (the 6 questions, 1-4 scale,
+//   anxiety reversed + anxietyToDisplay/anxietyToStorage) -> initializeParameters() builds the whole diary UI ->
+//   calendar: updateCalendar / checkMonthData / selectDate / previousMonth / nextMonth -> saveParameters() POST
+//   /api/parameters -> loadParameters() GET /api/parameters?date= -> invite CTA -> AI reflection -> triggers ->
+//   TSDiaryReminder module (bottom). Dates are LOCAL "YYYY-MM-DD" strings from formatDate(); never use
+//   toISOString() for a calendar date (it is UTC).
 // Version B214 (F18 rev 2): no content change; ?v bumped B213->B214 in lockstep.
 // Version B213 (F18): no content change; ?v bumped B212->B213 in lockstep.
 // Version B205 (F6): no content change; ?v bumped B204->B205 in lockstep.
@@ -1398,7 +1426,7 @@ function initializeParameters() {
                             -->
                         </div>
                     </div>
-                    <textarea id="notesInput"
+                    <textarea id="notesInput" maxlength="2000"
                               data-i18n-placeholder="parameters.notes_placeholder"
                               placeholder="Additional thoughts for today..."></textarea>
                 </div>
@@ -1457,6 +1485,11 @@ function initializeParameters() {
             const response = await fetch(`/api/parameters?date=${todayStr}`);
             if (response.ok) {
                 const result = await response.json();
+                // F21 (dormant bug): if the member already tapped another day, don't paint today's ratings/notes over
+                // it. F21 rev 2: privacy is still loaded (it applies to all days, T40) unless that other day already
+                // loaded its own; the first F21 version skipped privacy too.
+                const _f21StillToday = formatDate(currentDate) === todayStr;
+                if (!_f21StillToday && window._privacyLoadedFromServer) return;
                 if (result.success && result.data) {
                     console.log('Auto-loaded today\'s parameters:', result.data);
                     
@@ -1485,7 +1518,7 @@ function initializeParameters() {
                         if (autoNotesSel) autoNotesSel.value = autoNotesPrivacy;
                         window._privacyLoadedFromServer = true;  // B7
                         // Also load ratings if they exist
-                        if (result.data.parameters) {
+                        if (_f21StillToday && result.data.parameters) {   // F21 rev 2
                             Object.keys(result.data.parameters).forEach(categoryId => {
                                 let value = result.data.parameters[categoryId];
                                 // T9b: Convert anxiety from storage to display value
@@ -1500,7 +1533,7 @@ function initializeParameters() {
                         
                         // Load notes
                         const notesInput = document.getElementById('notesInput');
-                        if (notesInput && result.data.notes) {
+                        if (_f21StillToday && notesInput && result.data.notes) {   // F21 rev 2
                             notesInput.value = result.data.notes;
                         }
                     } else {
@@ -1509,6 +1542,9 @@ function initializeParameters() {
                         await loadMostRecentPrivacySettings();
                     }
                     
+                    // F21 rev 3: tell the diary-draft block (parameters.html) that today's saved note is now in the form.
+                    try { if (_f21StillToday && window.TSF21Diary && typeof window.TSF21Diary.loaded === 'function') window.TSF21Diary.loaded(todayStr); } catch (_) {}
+
                     // Apply emojis to reflect loaded privacy
                     applyEmojisToPrivacySelectors();
                 }
@@ -2662,8 +2698,9 @@ async function checkMonthData(year, month) {
                     const dayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
                     if (dayElement && !dayElement.querySelector('.data-indicator')) {
                         // Check if this is not a future date
-                        const cellDate = new Date(dateStr);
-                        if (cellDate <= today) {
+                        // F21 (dormant bug): new Date('YYYY-MM-DD') is UTC midnight = 02:00/03:00 in Israel, which is
+                        // "after" local midnight, so TODAY's dot vanished east of UTC. Compare the date strings instead.
+                        if (dateStr <= formatDate(today)) {
                             dayElement.style.position = 'relative';
                             const dot = document.createElement('span');
                             dot.className = 'data-indicator';
@@ -2959,12 +2996,10 @@ function previousMonth() {
     // skipping the month the user asked for.
     currentDate.setDate(1);
     currentDate.setMonth(currentDate.getMonth() - 1);
-    updateCalendar();
-
-    // Refresh dates for new month
-    if (typeof fetchAllParameterDates === 'function') {
-        fetchAllParameterDates();
-    }
+    // F21 (dormant bug): changing month moved the SAVE date to the 1st while the form still showed the
+    // previous day's ratings, so Save wrote them onto the 1st. Select the new date properly (today when the
+    // month is the current one); selectDate() clears the form, loads that day and refreshes the dots.
+    _f21SelectAfterMonthChange();
 }
 
 function nextMonth() {
@@ -2989,12 +3024,16 @@ function nextMonth() {
     // day 29–31 current date can't roll past a shorter target month and skip it.
     currentDate.setDate(1);
     currentDate.setMonth(currentDate.getMonth() + 1);
-    updateCalendar();
+    _f21SelectAfterMonthChange();   // F21: see previousMonth()
+}
 
-    // Refresh dates for new month
-    if (typeof fetchAllParameterDates === 'function') {
-        fetchAllParameterDates();
+// F21: shared by previousMonth/nextMonth.
+function _f21SelectAfterMonthChange() {
+    const t = new Date();
+    if (currentDate.getFullYear() === t.getFullYear() && currentDate.getMonth() === t.getMonth()) {
+        currentDate = t;
     }
+    selectDate(new Date(currentDate));
 }
 
 // Rating selection
@@ -3022,7 +3061,9 @@ async function saveParameters() {
     saveParameterState(dateStr);
 
     // Validate that at least one rating is selected
-    if (Object.keys(selectedRatings).length === 0) {
+    // F21 (dormant bug): after opening an empty day selectedRatings holds {mood: 0, ...} (server zeros), so the
+    // old keys-length test passed and an EMPTY entry was saved. A rating counts only if it is 1-4.
+    if (!Object.values(selectedRatings).some(v => Number(v) >= 1 && Number(v) <= 4)) {
         window.showMessage(pt('error.saving') + ': ' + (pt('params.select_rating') || 'Please select at least one rating'), 'error');
         return;
     }
@@ -3079,6 +3120,9 @@ async function saveParameters() {
                 window.TSDiaryReminder.onCheckinSaved();
             }
 
+            // F21: the diary page's F21 block (parameters.html, #ts-f21-diary) forgets the unsaved-note draft.
+            try { if (window.TSF21Diary && typeof window.TSF21Diary.onSaved === 'function') window.TSF21Diary.onSaved(dateStr, notes); } catch (_) {}   // rev 3: + notes
+
              // Show invite CTA after successful save
             showInviteCTA();
 
@@ -3108,11 +3152,18 @@ async function saveParameters() {
                 }
             }, 200);
         } else {
-            window.showMessage(pt('error.saving') + ': ' + (result.message || 'Unknown error'), 'error');
+            // F21: the server sends {error: ...} (e.g. "Notes too long"), not {message}; show it instead of "Unknown error".
+            window.showMessage(pt('error.saving') + ': ' + (result.message || result.error || 'Unknown error'), 'error');
         }
     } catch (error) {
         console.error('Save error:', error);
+        // F21: a dropped connection said "Error saving: Failed to fetch" / "Load failed". Say what happened in
+        // the member's language instead (text lives in parameters.html #ts-f21-diary); other errors unchanged.
+        if (window.TSF21Diary && window.TSF21Diary.isNetworkError && window.TSF21Diary.isNetworkError(error)) {
+            window.showMessage(window.TSF21Diary.offlineText(), 'error', 9000);
+        } else {
         window.showMessage(pt('error.saving') + ': ' + error.message, 'error');
+        }
     }
 }
 
@@ -3145,6 +3196,9 @@ async function loadParameters(showMsg = true) {
         }
 
         const result = await response.json();
+        // F21 (dormant bug): on a slow connection, tapping day 10 then day 11 could let day 10's late reply
+        // fill the form while day 11 is selected, and Save then wrote day 10's values onto day 11.
+        if (dateStr !== formatDate(currentDate)) return;
 
      if (result.success && result.data) {
             // Load ratings
@@ -3218,13 +3272,17 @@ async function loadParameters(showMsg = true) {
 };
 sessionStorage.setItem(`parameters_${dateStr}`, JSON.stringify(state));
 
+            // F21 (dormant bug): the server answers an EMPTY day with success + all zeros, so merely opening
+            // an empty past day used to give it a green "saved" dot. Only days with real data are marked now.
+            if (hasRealData) {
             // Add this date to our tracking set
             datesWithData.add(dateStr);
             localStorage.setItem('savedParameterDates', JSON.stringify([...datesWithData]));
+            }
 
             // Mark current date as having data
             const currentDayElement = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
-            if (currentDayElement && !currentDayElement.querySelector('.data-indicator')) {
+            if (hasRealData && currentDayElement && !currentDayElement.querySelector('.data-indicator')) {
                 currentDayElement.style.position = 'relative';
                 const dot = document.createElement('span');
                 dot.className = 'data-indicator';
@@ -3943,7 +4001,7 @@ function displayUserParameters(data, userId, username) {
     const currentUserId = parseInt(localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     if (userId && userId !== currentUserId) {
         // Check if we follow this user
-        fetch('/api/following')
+        fetch('/api/following?per_page=100')   // F21: server default page is 50
             .then(response => response.json())
             .then(followingData => {
                 const isFollowing = followingData.following?.some(u => u.id === userId);

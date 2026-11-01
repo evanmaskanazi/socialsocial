@@ -1,3 +1,9 @@
+// Version B220 (Rnd 6): no content change; ?v bumped B219->B220 in lockstep.
+// Version B219 (F21 rev 5): MINOR fix: CIRCLE_EMOJIS guard (ReferenceError on circles.html, see below).
+// Version B218 (F21 rev 4): no content change; ?v bumped B217->B218 in lockstep.
+// Version B217 (F21 rev 3): no content change; ?v bumped B216->B217 in lockstep.
+// Version B216 (F21 rev 2): no content change; ?v bumped B215->B216 in lockstep.
+// Version B215 (F21): no content change; ?v bumped B214->B215 in lockstep.
 // Version B214 (F18 rev 2): no content change; ?v bumped B213->B214 in lockstep.
 // Version B213 (F18): no content change; ?v bumped B212->B213 in lockstep.
 // Version B205 (F6): no content change; ?v bumped B204->B205 in lockstep.
@@ -14,7 +20,9 @@
     'use strict';
     
     // Direct reference to existing CIRCLE_EMOJIS (from circles-messages.js)
-    var emojis = CIRCLE_EMOJIS;
+    // F21 rev 5: circles.html loads this file WITHOUT parameters-social.js (the only file that declares
+    //   CIRCLE_EMOJIS), so this line threw a ReferenceError there and none of this file ran. Guarded.
+    var emojis = (typeof CIRCLE_EMOJIS !== 'undefined' && CIRCLE_EMOJIS) ? CIRCLE_EMOJIS : {};
 
     function getDisplayName(internalName) {
         return internalName;

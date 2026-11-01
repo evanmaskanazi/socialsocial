@@ -1,3 +1,18 @@
+// Version B220 (Rnd 6): no content change; ?v bumped B219->B220 in lockstep.
+// Version B219 (F21 rev 5): MINOR: a note already saved by the leave-page flush is not saved a second time on blur.
+// Version B218 (F21 rev 4): no content change; ?v bumped B217->B218 in lockstep.
+// Version B217 (F21 rev 3): ROUND RESULT: ORANGE (moderately problematic issues found in review of F21 rev 2; fixed here; none critical). MINOR: the closing note save waited for a CSRF token first,
+//   so a closing page could still drop it; a token is now fetched ahead (on load and on return) for that save only.
+// Version B216 (F21 rev 2): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical). The note flush on leaving uses fetch keepalive, so the
+//   save is not cancelled when the page closes.
+// Version B215 (F21): additive. (1) A note typed on a card is also saved when the member leaves the page or
+//   switches apps (the 'change' event never fires then on iOS/Android, so the text was lost). (2) Points
+//   and collector counts refresh when the member comes back after 30 s or more (e.g. after today's check-in in
+//   another tab), unless something is still being typed. (3) Dark mode follows the app's own setting
+//   ('therasocial_dark_mode', the same key index/parameters use); the styles are in collection.html.
+//   ?v bumped to B215 (collection.html had been left at B209).
+// MAINTAINER MAP: MSG (texts, 4 languages) -> api()/state S -> renderStore / renderWorld -> init(). All member
+//   text goes through textContent, never innerHTML; keep it that way.
 // Version B209 (F12 rev 3): no content change; ?v bumped B208->B209 in lockstep.
 // Version B208 (F12 rev 2): no content change; ?v bumped B207->B208 in lockstep.
 // Version B207 (F12): NEW FILE. Dream Cards prototype: card store + personal collection ("My World").
@@ -78,8 +93,12 @@
         clearTimeout(toastTimer); toastTimer = setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3200);
     }
 
-    function api(url, body) {
+    function api(url, body, keepalive) {
         var opt = { credentials: 'include', headers: { 'Content-Type': 'application/json' } };
+        if (keepalive) opt.keepalive = true;   // F21 rev 2: lets a save started while the page closes finish
+        // F21 rev 3: with a token already in hand, i18n.js's CSRF wrapper sends this straight away instead of first
+        // fetching a token (which a closing page never waits for). Used for the closing save only.
+        if (keepalive && F21_CSRF) opt.headers['X-CSRF-Token'] = F21_CSRF;
         if (body) { opt.method = 'POST'; opt.body = JSON.stringify(body); }
         return fetch(url, opt).then(function (r) {
             if (r.status === 401) { window.location.href = '/'; throw new Error('auth'); }
@@ -196,8 +215,8 @@
         }).catch(function (e) { if (e && e.message !== 'auth') toast(T('err'), true); });
     }
     // A note save only updates the data and shows a toast: no re-render, so typing in another card is never wiped.
-    function saveNote(it, text) {
-        return api('/api/collection/arrange', { items: [{ id: it.id, note: text }] }).then(function (d) {
+    function saveNote(it, text, keepalive) {
+        return api('/api/collection/arrange', { items: [{ id: it.id, note: text }] }, keepalive).then(function (d) {
             if (d.__status === 200 && d.items) { S.data.items.forEach(function (i) { if (i.id === it.id) i.note = text.trim().slice(0, 140); }); S.data.balance = d.balance; toast(T('saved')); }
             else toast(T('err'), true);
         }).catch(function (e) { if (e && e.message !== 'auth') toast(T('err'), true); });
@@ -232,7 +251,8 @@
 
                 var note = el('textarea', 'note'); note.maxLength = 140; note.dir = 'auto'; note.value = it.note || ''; note.placeholder = T('note_ph');
                 note.setAttribute('aria-label', T('note_ph'));
-                note.addEventListener('change', function () { saveNote(it, note.value); });
+                note.addEventListener('change', function () { delete F21_PENDING[it.id]; if (note.value.trim().slice(0, 140) !== (it.note || '')) saveNote(it, note.value); });   // rev 5: no repeat save after a flush
+                note.addEventListener('input', function () { F21_PENDING[it.id] = { it: it, el: note }; });   // F21
                 body.appendChild(note);
 
                 var row = el('div', 'row');
@@ -285,7 +305,41 @@
         }).catch(function (e) { if (e && e.message !== 'auth') { $('dcView').textContent = ''; $('dcView').appendChild(el('div', 'empty', T('err'))); } });
     }
 
+    // F21: notes typed but not yet "changed" (no blur happened), flushed when the page is hidden.
+    var F21_PENDING = {};
+    var F21_CSRF = null;   // rev 3
+    function f21FetchToken() {
+        try {
+            fetch('/api/csrf-token', { credentials: 'include' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) { if (d && d.csrf_token) F21_CSRF = d.csrf_token; })
+                .catch(function () {});
+        } catch (_) {}
+    }
+    var f21HiddenAt = 0;
+    function f21FlushNotes() {
+        Object.keys(F21_PENDING).forEach(function (id) {
+            var p = F21_PENDING[id]; delete F21_PENDING[id];
+            if (p && p.el && (p.el.value || '') !== (p.it.note || '')) saveNote(p.it, p.el.value, true);
+        });
+    }
+    function f21Init() {
+        try { if (localStorage.getItem('therasocial_dark_mode') === 'true') document.body.classList.add('dark-mode'); } catch (_) {}
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') { f21HiddenAt = Date.now(); f21FlushNotes(); return; }
+            f21FetchToken();   // rev 3: fresh token each time the member comes back
+            if (!f21HiddenAt || Date.now() - f21HiddenAt < 30000 || S.busy || !S.data) return;
+            var a = document.activeElement;
+            if (a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT')) return;
+            if (Object.keys(F21_PENDING).length) return;
+            load();
+        });
+        window.addEventListener('pagehide', f21FlushNotes);
+        f21FetchToken();   // rev 3
+    }
+
     function init() {
+        f21Init();   // F21
         $('dcTabStore').addEventListener('click', function () { setTab('store'); });
         $('dcTabWorld').addEventListener('click', function () { setTab('world'); });
         $('dcLang').addEventListener('change', function () {

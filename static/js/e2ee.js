@@ -1,3 +1,12 @@
+// Version B220 (Rnd 6): no content change; ?v bumped B219->B220 in lockstep.
+// Version B219 (F21 rev 5): no content change; ?v bumped B218->B219 in lockstep.
+// Version B218 (F21 rev 4): no content change; ?v bumped B217->B218 in lockstep.
+// Version B217 (F21 rev 3): no content change; ?v bumped B216->B217 in lockstep.
+// Version B216 (F21 rev 2): no content change; ?v bumped B215->B216 in lockstep.
+// Version B215 (F21): no content change; ?v bumped B214->B215 in lockstep.
+// MAINTAINER NOTE: this file wraps window.fetch for /api/messages (send = encrypt, read = decrypt), the
+//   conversations list and the data export, and clears the device key on POST /api/auth/logout. Any new code that
+//   reads or sends message bodies should go through fetch on those same URLs so it stays covered.
 // Version B209 (F12 rev 3): NAMING. The feature is now called "End-to-end encryption" (he הצפנה מקצה לקצה,
 //   ar التشفير من طرف إلى طرف, ru Сквозное шифрование) instead of "Private messaging", in every dialog, button,
 //   notice and the Settings card. Messages are always private between the two people; end-to-end encryption

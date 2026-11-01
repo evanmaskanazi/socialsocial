@@ -1,3 +1,23 @@
+// Version B220 (Rnd 6): no content change; ?v bumped B219->B220 in lockstep.
+// Version B219 (F21 rev 5): MINOR: text typed while a message is still sending is no longer wiped (nor its draft).
+// Version B218 (F21 rev 4): ROUND RESULT: RED (major defects found in review of F21 rev 3: the back-navigation feature; parked here, see index). MINOR (privacy): message drafts are now keyed by member + recipient
+//   ('msg_draft_<me>_<recipient>'), so an idle/expired logout no longer leaves them to the next account on the phone.
+// Version B217 (F21 rev 3): no content change; ?v bumped B216->B217 in lockstep.
+// Version B216 (F21 rev 2): ROUND RESULT: YELLOW (a small set of moderate issues found in review of F21; fixed here; none critical). Messages merged from the open thread are marked read
+//   (the unread badge could come back on the chat just opened).
+// Version B215 (F21): dormant-bug fixes, each marked "F21" in place (grep F21):
+//   * showNotification (the live one on the Circles page, see the note there): every notice was red and gone in
+//     3 s, including the crisis-support notice; now coloured by type, info stays 12 s, tap to close.
+//   * sendMessage: double tap sent the message twice; switching chats mid-send wiped the other chat's draft.
+//   * selectConversation: unread badge now clears locally; the open thread is fetched on its own and merged, so
+//     threads beyond the newest 50+50 messages are complete.
+//   * Following list asks for 100 entries (server default page is 50).
+// MAINTAINER MAP: loaded by circles.html AND index.html (index.html's own functions with the same names, declared
+//   later, win on index). Sections: toast polyfill -> formatMessageTime/_tsToUTCDate (server times are UTC without
+//   "Z") -> CIRCLES MANAGEMENT -> MESSAGES SYSTEM (loadMessages, selectConversation, sendMessage, drafts in
+//   localStorage 'msg_draft_<recipientId>', cleared at logout by index.html/parameters.html) -> CIRCLES PRIVACY ->
+//   FOLLOWING. Message bodies are decrypted/encrypted transparently by e2ee.js (it wraps fetch for /api/messages).
+//   Always escapeHtml() member text that goes into innerHTML.
 // Version B214 (F18 rev 2): no content change; ?v bumped B213->B214 in lockstep.
 // Version B213 (F18): no content change; ?v bumped B212->B213 in lockstep.
 // Version B205 (F6): no content change; ?v bumped B204->B205 in lockstep.
@@ -2179,7 +2199,7 @@ function selectConversation(recipientId, recipientName) {
     // C15: Restore draft for this recipient
     if (inputEl) {
         try {
-            const draft = localStorage.getItem('msg_draft_' + recipientId);
+            const draft = localStorage.getItem(_f21DraftKey(recipientId));
             inputEl.value = draft || '';
         } catch (e) { /* localStorage unavailable */ }
     }
@@ -2189,9 +2209,31 @@ function selectConversation(recipientId, recipientName) {
 
     // Mark messages as read
     markMessagesAsRead(recipientId);
+    // F21 (dormant bug): the server was told, but the local copy was not, so the unread badge stayed on
+    // the conversation that was just opened until the page was reloaded.
+    (messagesData.received || []).forEach(m => { if (m && m.sender && m.sender.id === recipientId) m.is_read = true; });
 
     // Update active state
     updateConversationsList();
+
+    // F21 (dormant bug): loadMessages() gets only the newest 50 sent + 50 received across ALL contacts, so
+    // past ~50 messages a thread showed only part of its history (and could look one-sided). Fetch this
+    // thread on its own (e2ee.js decrypts this endpoint too) and merge anything missing.
+    fetch('/api/messages?recipient_id=' + encodeURIComponent(recipientId), { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+            if (!d || !Array.isArray(d.messages) || !currentRecipient || currentRecipient.id !== recipientId) return;
+            const ids = new Set([...(messagesData.sent || []), ...(messagesData.received || [])].map(m => m && m.id));
+            let added = 0;
+            d.messages.forEach(m => {
+                if (!m || !m.sender || ids.has(m.id)) return;
+                if (m.sender.id === recipientId) m.is_read = true;   // rev 2: this thread is open, so it has been read
+                (m.sender.id === currentUserId ? messagesData.sent : messagesData.received).push(m);
+                added++;
+            });
+            if (added) displayConversationMessages(recipientId);
+        })
+        .catch(() => {});
 }
 
 function displayConversationMessages(recipientId) {
@@ -2239,6 +2281,13 @@ function displayConversationMessages(recipientId) {
     }
 }
 
+// F21 rev 4 (privacy): message drafts are keyed by the signed-in member as well as the recipient
+// ('msg_draft_<me>_<recipient>'), so after an idle/expired logout the next account on the same phone never gets
+// the previous member's unsent text. Logout still removes every 'msg_draft_' key.
+function _f21DraftKey(recipientId) {
+    return 'msg_draft_' + (currentUserId == null ? 'anon' : String(currentUserId)) + '_' + recipientId;
+}
+
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     if (!input) return;
@@ -2249,6 +2298,12 @@ async function sendMessage() {
         console.error('No content or recipient');
         return;
     }
+
+    // F21 (dormant bug): a double tap (or Enter + tap) posted the same message twice; and switching chats
+    // while a send was in flight cleared the OTHER chat's restored draft. Guard + remember who we sent to.
+    if (sendMessage._busy) return;
+    sendMessage._busy = true;
+    const _f21Rid = currentRecipient.id;
 
     try {
         const response = await fetch('/api/messages', {
@@ -2282,11 +2337,13 @@ async function sendMessage() {
             }
         } catch (e) { /* body already consumed or not JSON - delivery still succeeded */ }
 
-        input.value = '';
+        // F21 rev 5: text typed while the send was in flight is kept (box cleared only if it still holds what was sent)
+        const _f21Same = input.value.trim() === content;
+        if (currentRecipient && currentRecipient.id === _f21Rid && _f21Same) input.value = '';   // F21: see the guard above
 
-        // C15: Clear draft after successful send
-        if (currentRecipient && currentRecipient.id) {
-            try { localStorage.removeItem('msg_draft_' + currentRecipient.id); } catch (e) {}
+        // C15: Clear draft after successful send (rev 5: not when a newer draft was typed meanwhile)
+        if (_f21Rid && (_f21Same || !currentRecipient || currentRecipient.id !== _f21Rid)) {
+            try { localStorage.removeItem(_f21DraftKey(_f21Rid)); } catch (e) {}
         }
 
         // Reload messages
@@ -2299,6 +2356,8 @@ async function sendMessage() {
     } catch (error) {
         console.error('Error sending message:', error);
         showNotification(t('error.sending_message', 'Error sending message'), 'error');
+    } finally {
+        sendMessage._busy = false;   // F21
     }
 }
 
@@ -2321,7 +2380,7 @@ function showNotification(message, type = 'info') {
         top: 20px;
         right: 20px;
         padding: 15px 25px;
-        background: ${type === 'success' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#ff6b6b'};
+        background: ${({ success: '#9DB8A0', error: '#C17C74', warning: '#D4A574' })[type] || '#6B8BA4'};
         color: white;
         border-radius: 10px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
@@ -2329,9 +2388,14 @@ function showNotification(message, type = 'info') {
         animation: slideIn 0.3s ease;
     `;
     notification.textContent = message;
+    // F21 (dormant bug): this top-level declaration is hoisted, so the toast polyfill near the top of this file
+    // (and circles.html's) never installs; on the Circles page EVERY notice, including the A26 crisis-support
+    // notice ('info'), showed as a red error and vanished after 3 s. Colour by type; info stays 12 s; tap closes.
+    notification.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    notification.addEventListener('click', () => notification.remove());
     document.body.appendChild(notification);
 
-    setTimeout(() => notification.remove(), 3000);
+    setTimeout(() => notification.remove(), type === 'info' ? 12000 : 3000);
 }
 
 // ============================================================
@@ -2449,9 +2513,9 @@ if (window.i18n && window.i18n.applyLanguage) {
                 try {
                     const val = messageInput.value;
                     if (val) {
-                        localStorage.setItem('msg_draft_' + currentRecipient.id, val);
+                        localStorage.setItem(_f21DraftKey(currentRecipient.id), val);
                     } else {
-                        localStorage.removeItem('msg_draft_' + currentRecipient.id);
+                        localStorage.removeItem(_f21DraftKey(currentRecipient.id));
                     }
                 } catch (e) { /* localStorage unavailable */ }
             }
@@ -2478,7 +2542,7 @@ function updateFollowingSection() {
     const followingSection = document.getElementById('followingSection');
     if (!followingSection) return;
 
-    fetch('/api/following')
+    fetch('/api/following?per_page=100')   // F21: server default is 50; members following more were cut off
         .then(response => response.json())
         .then(data => {
             let html = '<h2 data-i18n="following.title">Following</h2>';
