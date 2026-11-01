@@ -1,4 +1,41 @@
 """
+Security module for Thera Social  -  Version Rnd 6 (B220)  =  F6/F8 code + current maintainer notes
+
+Rnd 6 (B220): this file is the F6 (securityF8.py) CODE, unchanged. The F21 rev 4 / rev 5 / first Rnd 6 copies were
+  built on an older A26 copy (the same code as securityO.py), so the F6 fixes below were missing from them.
+  Restored here; nothing from securityO.py is lost (every securityO.py fix is also in F6).
+
+MAINTAINER NOTES (read before editing):
+  * app.py imports from here: sanitize_input, validate_email, validate_username, validate_password_strength,
+    encrypt_field, decrypt_field, generate_token, rate_limit, content_moderator; and (app.py _get_client_ip, F7)
+    get_client_ip, which this file provides again. app.py does not call encrypt_field/decrypt_field, the JWT
+    helpers or init_security today.
+  * The LIVE Content-Security-Policy and security headers come from app.py add_security_headers /
+    _a94_csp_header, NOT from SecurityManager.get_security_headers below (that one is not used).
+  * content_moderator.check_content gates plain-text private messages; first-person disclosures must be
+    delivered (see the A26 notes below). With end-to-end encryption on, the server cannot read messages and
+    the browser sends only a crisis yes/no flag (app.py F11).
+  * _CLOUDFLARE_NETWORKS must match https://www.cloudflare.com/ips/ (app.py logs a warning hourly if a
+    CF-Connecting-IP arrives from an address outside it).
+
+Security module for Thera Social  -  Version F6 (B205)
+
+F6 changes (security audit of this file):
+  1. rate_limit() keyed every visitor by request.remote_addr. Behind Render's proxy (and
+     Cloudflare) that is the PROXY's address, so all users shared one bucket: e.g. 10 logins
+     per 15 minutes for the whole site, 5 password resets per hour. It now uses
+     get_client_ip(): Cloudflare's CF-Connecting-IP when the request really came through a
+     Cloudflare edge, otherwise the address the hosting proxy appended to X-Forwarded-For
+     (the right-most entry, which a client cannot forge).
+  2. RateLimiter drops idle entries, so keying by real client IPs cannot grow memory forever.
+  3. No built-in default keys: get_fernet_cipher / SecurityManager no longer fall back to the
+     publicly known 'default-password' / 'default-encryption-key', and the JWT helpers no
+     longer fall back to 'default-key'. Without a configured key they refuse (logged) instead
+     of "encrypting" with a key anyone can read in this file. (None of these are called by
+     app.py today; this stops a future caller from silently using a public key.)
+  4. get_security_headers() no longer returns its own (non-strict) CSP; app.py's strict
+     policy is the single authority.
+
 Security module for Thera Social  -  Version A26 (B175)
 
 A26 changes (all additive or widening; nothing that validated before stops validating):
@@ -35,6 +72,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 import base64
+import ipaddress
 import bleach
 import jwt
 from functools import wraps
@@ -62,7 +100,10 @@ class SecurityManager:
         """Initialize security with Flask app"""
         self.app = app
         self.redis = redis_client
-        self.secret_key = app.config.get('SECRET_KEY', 'dev-key-change-in-production')
+        # F6: no built-in fallback secret (was 'dev-key-change-in-production').
+        self.secret_key = app.config.get('SECRET_KEY') or os.environ.get('SECRET_KEY')
+        if not self.secret_key:
+            raise RuntimeError('SECRET_KEY is not configured; refusing to derive keys from a default.')
         self.cipher_suite = self._init_cipher()
         
         # Generate encryption key from secret
@@ -78,39 +119,8 @@ class SecurityManager:
         self.fernet = Fernet(key)
     
     def _init_cipher(self):
-        """Initialize encryption cipher"""
-        encryption_key = os.environ.get('ENCRYPTION_KEY')
-        
-        if encryption_key and len(encryption_key) == 44:
-            # Valid Fernet key provided
-            try:
-                if isinstance(encryption_key, str):
-                    key = encryption_key.encode()
-                else:
-                    key = encryption_key
-                return Fernet(key)
-            except Exception:
-                pass
-        
-        # Fall back to deriving a key
-        password = encryption_key or os.environ.get('ENCRYPTION_PASSWORD', 'default-password')
-        if isinstance(password, str):
-            password = password.encode()
-        
-        salt = os.environ.get('ENCRYPTION_SALT', 'default-salt')
-        if isinstance(salt, str):
-            salt = salt.encode()
-        
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=100000,
-            backend=default_backend()
-        )
-        
-        key = base64.urlsafe_b64encode(kdf.derive(password))
-        return Fernet(key)
+        """Initialize encryption cipher (F6: same rules as get_fernet_cipher, no default key)."""
+        return get_fernet_cipher()
     
     def validate_request(self, request):
         """Validate incoming request for security threats"""
@@ -172,12 +182,13 @@ class SecurityManager:
         return items
     
     def get_security_headers(self):
-        """Get security headers for response"""
+        """Get security headers for response.
+        F6: no Content-Security-Policy here - app.py sends the strict, nonce-based policy and is
+        the single authority (this helper's old policy allowed 'unsafe-inline')."""
         return {
             'X-Content-Type-Options': 'nosniff',
             'X-Frame-Options': 'DENY',
             'X-XSS-Protection': '1; mode=block',
-            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
             'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
             'Referrer-Policy': 'strict-origin-when-cross-origin'
         }
@@ -381,8 +392,13 @@ def get_fernet_cipher():
         except Exception:
             pass
     
-    # Fall back to deriving a key from password
-    password = encryption_key or os.environ.get('ENCRYPTION_PASSWORD', 'default-encryption-key')
+    # Fall back to deriving a key from a configured password.
+    # F6: there is no built-in default any more (was 'default-encryption-key', which anyone can
+    # read in this file). Without ENCRYPTION_KEY or ENCRYPTION_PASSWORD this raises, and
+    # encrypt_field/decrypt_field log the error and return None instead of using a public key.
+    password = encryption_key or os.environ.get('ENCRYPTION_PASSWORD')
+    if not password:
+        raise RuntimeError('ENCRYPTION_KEY / ENCRYPTION_PASSWORD is not configured')
     if isinstance(password, str):
         password = password.encode()
     
@@ -841,7 +857,10 @@ def generate_jwt_token(user_id, expiry_hours=24):
         'iat': datetime.utcnow()
     }
     
-    secret_key = security_manager.secret_key or os.environ.get('SECRET_KEY', 'default-key')
+    # F6: no 'default-key' fallback.
+    secret_key = security_manager.secret_key or os.environ.get('SECRET_KEY')
+    if not secret_key:
+        raise RuntimeError('SECRET_KEY is not configured; refusing to sign tokens with a default')
     
     token = jwt.encode(
         payload,
@@ -854,7 +873,9 @@ def generate_jwt_token(user_id, expiry_hours=24):
 def verify_jwt_token(token):
     """Verify and decode JWT token"""
     try:
-        secret_key = security_manager.secret_key or os.environ.get('SECRET_KEY', 'default-key')
+        secret_key = security_manager.secret_key or os.environ.get('SECRET_KEY')  # F6: no default
+        if not secret_key:
+            return None
         
         payload = jwt.decode(
             token,
@@ -903,16 +924,71 @@ def secure_filename(filename):
         return f"{name[:50]}.{ext[:10]}"
     return filename[:60]
 
+# F6: Cloudflare's published edge ranges (https://www.cloudflare.com/ips/). CF-Connecting-IP is
+# trusted only when the connection to the hosting proxy came from one of these, because
+# anyone who reaches the origin directly could otherwise send a made-up CF-Connecting-IP.
+_CLOUDFLARE_NETWORKS = tuple(ipaddress.ip_network(n) for n in (
+    '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+    '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+    '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+    '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+    '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32',
+    '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+))
+
+
+def _is_cloudflare(ip):
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(addr in net for net in _CLOUDFLARE_NETWORKS)
+
+
+def get_client_ip():
+    """F6: the visitor's real IP behind Render's proxy and Cloudflare.
+
+    request.remote_addr is the hosting proxy. The hosting proxy APPENDS the address that
+    connected to it to X-Forwarded-For, so the right-most entry cannot be forged by the client
+    (the left-most can: it is whatever the client sent). When that connecting address is a
+    Cloudflare edge, the visitor is in CF-Connecting-IP.
+    """
+    try:
+        chain = [p.strip() for p in (request.headers.get('X-Forwarded-For') or '').split(',') if p.strip()]
+        peer = chain[-1] if chain else (request.remote_addr or '')
+        cf_ip = (request.headers.get('CF-Connecting-IP') or '').strip()
+        if cf_ip and _is_cloudflare(peer):
+            try:
+                ipaddress.ip_address(cf_ip)  # must be a real address
+                return cf_ip
+            except ValueError:
+                pass
+        return peer or 'unknown'
+    except Exception:
+        return request.remote_addr or 'unknown'
+
+
 class RateLimiter:
     """Simple rate limiter for API endpoints"""
     
     def __init__(self):
         self.attempts = {}
+        self._checks = 0
+    
+    def _purge_idle(self, now):
+        """F6: drop identifiers with no attempt in the last 24 hours (memory stays bounded now
+        that keys are real client IPs instead of a handful of proxy addresses)."""
+        cutoff = now - timedelta(hours=24)
+        for ident in [k for k, v in self.attempts.items() if not v or v[-1] < cutoff]:
+            del self.attempts[ident]
     
     def check_rate_limit(self, identifier, max_attempts=5, window_minutes=15):
         """Check if rate limit is exceeded"""
         now = datetime.utcnow()
         window_start = now - timedelta(minutes=window_minutes)
+        self._checks += 1
+        if self._checks % 500 == 0:
+            self._purge_idle(now)
         
         # Clean old attempts
         if identifier in self.attempts:
@@ -944,7 +1020,9 @@ def rate_limit(max_attempts=5, window_minutes=15):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            identifier = request.remote_addr
+            # F6: was request.remote_addr (the proxy, shared by every visitor). Keyed per route
+            # too, so a burst on one endpoint does not consume another endpoint's allowance.
+            identifier = f"{f.__name__}:{get_client_ip()}"
             
             if not rate_limiter.check_rate_limit(identifier, max_attempts, window_minutes):
                 return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
@@ -1140,6 +1218,7 @@ __all__ = [
     'RateLimiter',
     'rate_limiter',
     'rate_limit',
+    'get_client_ip',
     'ContentModerator',
     'content_moderator',
     'IPSecurityManager'
