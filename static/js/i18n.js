@@ -1,3 +1,6 @@
+// Version B222 (A32): no content change; ?v bumped B221->B222 in lockstep.
+// Version B221 (A31): support.hours_detail reworded in all 4 languages ("Usually responds Mon–Fri, 9 AM–5 PM EST.");
+//   new block at the END adds support.helplines_title_more and home.connections_daily (en/he/ar/ru). No key removed.
 // Version B220 (Rnd 6): new key btn.go_about (en/he/ar/ru) for the Support page's "Go To About" button.
 // Version B219 (F21 rev 5): no content change; ?v bumped B218->B219 in lockstep.
 // Version B218 (F21 rev 4): no content change; ?v bumped B217->B218 in lockstep.
@@ -635,7 +638,7 @@ const translations = {
     'support.email': 'Email',
     'support.phone': 'Phone',
     'support.hours': 'Hours',
-    'support.hours_detail': 'Monday-Friday, 9:00 AM - 5:00 PM EST',
+    'support.hours_detail': 'Usually responds Mon–Fri, 9 AM–5 PM EST.',
     'support.quick_help': 'Quick Help',
     'support.faq_link': 'Frequently Asked Questions',
     'support.help_center': 'Help Center',
@@ -2608,7 +2611,7 @@ const translations = {
     'support.email': 'דוא"ל',
     'support.phone': 'טלפון',
     'support.hours': 'שעות',
-    'support.hours_detail': 'שני-שישי, 9:00-17:00 EST',
+    'support.hours_detail': 'בדרך כלל עונים בימים שני–שישי, \u20669:00–17:00 EST\u2069.',   // A31: LTR-isolated so RTL does not flip the range
     'support.quick_help': 'עזרה מהירה',
     'support.faq_link': 'שאלות נפוצות',
     'support.help_center': 'מרכז עזרה',
@@ -4492,7 +4495,7 @@ const translations = {
     'support.email': 'البريد الإلكتروني',
     'support.phone': 'الهاتف',
     'support.hours': 'الساعات',
-    'support.hours_detail': 'الإثنين-الجمعة، 9:00 صباحًا - 5:00 مساءً EST',
+    'support.hours_detail': 'نردّ عادةً من الإثنين إلى الجمعة، 9 صباحًا–5 مساءً EST.',
     'support.quick_help': 'مساعدة سريعة',
     'support.faq_link': 'الأسئلة الشائعة',
     'support.help_center': 'مركز المساعدة',
@@ -5553,7 +5556,7 @@ const translations = {
     'support.email': 'Электронная почта',
     'support.phone': 'Телефон',
     'support.hours': 'Часы работы',
-    'support.hours_detail': 'Понедельник-Пятница, 9:00 - 17:00 EST',
+    'support.hours_detail': 'Обычно отвечаем пн–пт, 9:00–17:00 EST.',
 
     // Invite alerts
     'invite.alert_title': 'Новое приглашение',
@@ -7800,4 +7803,22 @@ if (typeof window !== 'undefined') {
             return r;
         });
     };
+})();
+
+// === A31 (B221): Support-page helplines heading (card now at the bottom of the page) and the merged Home list
+// heading ("Friends' Daily Updates" + "My Connections Status" are one list now). Additive keys only. ===
+(function() {
+    if (!window.i18n || !window.i18n.translations) return;
+    var t = window.i18n.translations;
+    var add = {
+        en: { 'support.helplines_title_more': 'For emergencies, or if additional help is needed',
+              'home.connections_daily': "My Connections' Daily Updates" },
+        he: { 'support.helplines_title_more': 'למקרי חירום, או אם נדרשת עזרה נוספת',
+              'home.connections_daily': 'העדכונים היומיים של החיבורים שלי' },
+        ar: { 'support.helplines_title_more': 'لحالات الطوارئ، أو إذا كنت بحاجة إلى مساعدة إضافية',
+              'home.connections_daily': 'التحديثات اليومية لاتصالاتي' },
+        ru: { 'support.helplines_title_more': 'На случай экстренной ситуации или если нужна дополнительная помощь',
+              'home.connections_daily': 'Ежедневные обновления моих контактов' }
+    };
+    Object.keys(add).forEach(function (lang) { if (t[lang]) Object.assign(t[lang], add[lang]); });
 })();
