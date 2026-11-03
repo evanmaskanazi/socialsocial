@@ -1,4 +1,15 @@
 <!DOCTYPE html>
+<!-- TheraSocial Index Version B222 (A32) -->
+<!-- B222 (A32): ROUND RESULT: YELLOW (a small set of moderate issues found in review of A31; fixed here; none critical).
+     MODERATE: a Home reload asked for during a scroll-page load (e.g. after changing language) was dropped, so the list
+         kept the old language/data; only a reload already under way now absorbs another one.
+     MINOR: a refresh jumped the list back to the top (scroll was restored before the rows existed); if the first load
+         failed the list kept saying "No connections yet." (now a "Try again" line); message drafts are never saved or
+         restored while the signed-in member is not yet known (shared-device safety). Server side: see app.py A32.
+     CACHE-BUST: every live JS ?v bumped B221->B222 in lockstep; app.py _A92_ASSET_VERSION = 'B222'. -->
+<!-- TheraSocial Index Version B221 (A31) -->
+<!-- B221 (A31): A31: Home: "Friends' Daily Updates" and "My Connections Status" merged into one list (#connectionStatusList, heading home.connections_daily) that loads more rows as you scroll (GET /api/connections-status), with a Nod button per connection (dialog: ready-made reminder + optional personal note + Send; sent as a normal private message, so end-to-end encryption applies). Mobile: "Send" keyboard key on the message field, per-conversation drafts, refresh of the open conversation / Home on return to the app. In-app Support Hours fallback text updated. All in style#ts-a31-home + script#ts-a31-home-script (end of body); two old loaders marked "A31: superseded".
+     CACHE-BUST: every live JS ?v bumped B220->B221 in lockstep (i18n.js and index.html changed); app.py _A92_ASSET_VERSION = 'B221'. -->
 <!-- TheraSocial Index Version B220 (Rnd 6) -->
 <!-- B220 (Rnd 6): Rnd 6: "Go To About" button added to the Support page (see support.html). Cache-bust lockstep only on this page.
      CACHE-BUST: every live JS ?v bumped B219->B220 in lockstep (i18n.js changed); app.py _A92_ASSET_VERSION = 'B220'. -->
@@ -925,10 +936,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B220"></script>
+   <script src="/static/js/utilities.js?v=B222"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B220"></script>
-    <script src="/static/js/follow-requests.js?v=B220"></script>
+    <script src="/static/js/triggers.js?v=B222"></script>
+    <script src="/static/js/follow-requests.js?v=B222"></script>
 
 
     <style>
@@ -5851,7 +5862,7 @@
                     </div>
                     <div style="background: var(--white); padding: 12px; border-radius: 10px;">
                         <strong style="color: var(--primary); display: block; margin-bottom: 4px;" data-i18n="support.hours">Hours:</strong>
-                        <span data-i18n="support.hours_detail">Monday-Friday<br>9:00 AM - 5:00 PM EST</span>
+                        <span data-i18n="support.hours_detail">Usually responds Mon–Fri, 9 AM–5 PM EST.</span>
                     </div>
                 </div>
                 <div style="background: var(--light); padding: 25px; border-radius: 15px;">
@@ -6185,7 +6196,7 @@
                   </div>
 
                   <!-- V2: Friends' Daily Updates (replaces showing all posts) -->
-                  <div id="friendsUpdatesSection" style="margin-bottom: 16px;">
+                  <div id="friendsUpdatesSection" style="margin-bottom: 16px; display: none !important;"><!-- A31: merged into #connectionStatusList below (see ts-a31-home) -->
                       <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="home.friends_updates">Friends' Daily Updates</h3>
                       <div id="friendsUpdatesList" style="display: flex; flex-direction: column; gap: 12px;">
                           <p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_updates">No updates from your connections yet today.</p>
@@ -6194,7 +6205,7 @@
 
                   <!-- HS-4: My Connections Status List -->
                   <div id="connectionStatusSection" style="margin-bottom: 16px;">
-                      <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="home.connection_status">My Connections Status</h3>
+                      <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;" data-i18n="home.connections_daily">My Connections' Daily Updates</h3>
                       <div id="connectionStatusList" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
                           <p style="color: var(--gray); text-align: center; padding: 20px;" data-i18n="home.no_connections">No connections yet.</p>
                       </div>
@@ -8382,8 +8393,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B220"></script>
-    <script src="/static/js/e2ee.js?v=B220"></script>
+    <script src="/static/js/i18n.js?v=B222"></script>
+    <script src="/static/js/e2ee.js?v=B222"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8863,9 +8874,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B220"></script>
-   <script src="/static/js/circles-messages.js?v=B220"></script>
-<script src="/static/js/feed-updates.js?v=B220"></script>
+<script src="/static/js/parameters-social.js?v=B222"></script>
+   <script src="/static/js/circles-messages.js?v=B222"></script>
+<script src="/static/js/feed-updates.js?v=B222"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -22754,6 +22765,7 @@ async function saveParamQuickSet(paramKey, value) {
     }
 }
 
+// A31: superseded by window.loadConnectionStatusList / window.loadFriendsUpdates in script#ts-a31-home-script (kept for reference).
 // HS-4: Connection status list - shows all connections with activity indicators
 async function loadConnectionStatusList() {
     try {
@@ -22831,6 +22843,7 @@ async function loadConnectionStatusList() {
     }
 }
 
+// A31: superseded by window.loadConnectionStatusList / window.loadFriendsUpdates in script#ts-a31-home-script (kept for reference).
 // VINTER2: Friends daily updates - uses dedicated backend endpoint
 // Replaces the old N+1 approach that only checked first 10 users
 async function loadFriendsUpdates() {
@@ -25444,6 +25457,429 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
     })();
     </script>
     <!-- ===================== END F21 ===================== -->
+
+    <!-- ===================== A31 (B221): Home "Connections & Daily Updates" + Nod, and mobile improvements ===================== -->
+    <!-- Additive. Task 2/3: the two Home lists ("Friends' Daily Updates", "My Connections Status") are one list in
+         #connectionStatusList, filled from GET /api/connections-status (app.py A31) page by page as the member scrolls.
+         Each row has a Nod button: a short dialog with a ready-made reminder, an optional personal note and Send. The nod
+         goes through the existing messages path (apiCall('/messages', 'POST') -> e2ee.js encrypts it when both people
+         have end-to-end encryption on; the server's usual "new message" alert tells the recipient). No new message route.
+         Overrides: window.loadConnectionStatusList (now this list) and window.loadFriendsUpdates (now a no-op; its
+         section is hidden in the markup). Everything member-written is shown with textContent, never innerHTML.
+         Improvements 1-4 (mobile) are the second IIFE below; improvement 5 (dark mode) is in support.html/about.html. -->
+    <style id="ts-a31-home">
+        #connectionStatusList { max-height: min(440px, 62vh) !important; overscroll-behavior: contain; }
+        #connectionStatusList > .ts31-row { cursor: pointer; align-items: center; }
+        .ts31-av { position: relative; width: 40px; height: 40px; border-radius: 50%; background: var(--primary, #6B8BA4); color: #fff;
+                   display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+        .ts31-dot { position: absolute; inset-inline-end: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%;
+                    border: 2px solid var(--light, #f9fafb); }
+        .ts31-txt { flex: 1; min-width: 0; }
+        .ts31-name { font-weight: 600; color: var(--dark, #3D4852); background: none; border: 0; padding: 0; font: inherit;
+                     font-weight: 600; cursor: pointer; text-align: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        .ts31-name:hover { color: var(--primary, #6B8BA4); text-decoration: underline; }
+        .ts31-st { font-size: 0.8rem; color: var(--gray, #6B7280); margin-top: 2px; }
+        .ts31-st .ts31-when { font-weight: 600; color: var(--primary, #5A7A93); margin-inline-end: 6px; white-space: nowrap; }
+        .ts31-st.ts31-none { font-style: italic; opacity: 0.85; }
+        .ts31-nod { flex-shrink: 0; border: 1.5px solid rgba(107,139,164,0.45); background: #fff; color: #5A7A93; border-radius: 999px;
+                    padding: 6px 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer; min-height: 36px; white-space: nowrap; }
+        .ts31-nod:hover { background: #EEF2F5; }
+        .ts31-nod.ts31-done { background: #EEF4EF; border-color: #CFE0D2; color: #3F6B4A; }
+        @media (pointer: coarse) { .ts31-nod { min-height: 44px; min-width: 44px; } }
+        #connectionStatusList > p.ts31-more { text-align: center; color: var(--gray, #6B7280); font-size: 0.8rem; margin: 6px 0 2px; min-height: 1px; }
+        #connectionStatusList > p.ts31-more button { border: 0; background: none; color: #5A7A93; font-weight: 600; cursor: pointer; padding: 10px; }
+        /* z-index 9999 (appended last, so above the cookie banner) and under the toasts (10000): an apiCall rate-limit/offline notice stays visible. */
+        .ts31-ov { position: fixed; inset: 0; background: rgba(30,40,50,.5); z-index: 9999; display: flex; align-items: center;
+                   justify-content: center; padding: 16px; }
+        html.ts31-open #ts-a8-totop { display: none !important; }   /* the floating scroll-to-top button sits above everything */
+        .ts31-dlg { background: #fff; color: #3D4852; width: 100%; max-width: 460px; border-radius: 18px; padding: 20px 20px 16px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,.25); max-height: calc(100dvh - 32px); overflow-y: auto; outline: none; }
+        .ts31-dlg h3 { margin: 0 0 12px; font-size: 1.1rem; color: #3D4852; }
+        .ts31-dlg label, .ts31-lbl { display: block; font-size: 0.8rem; font-weight: 600; color: #5A7A93; margin: 10px 0 6px; }
+        .ts31-pre { background: #F4F6F8; border-radius: 12px; padding: 12px; line-height: 1.5; font-size: 0.95rem; white-space: pre-wrap; }
+        .ts31-dlg textarea { width: 100%; box-sizing: border-box; min-height: 84px; border: 1.5px solid #D9E1E8; border-radius: 12px;
+                             padding: 10px 12px; font: inherit; font-size: 16px; resize: vertical; color: inherit; background: #fff; }
+        .ts31-dlg textarea:focus { outline: none; border-color: #6B8BA4; box-shadow: 0 0 0 3px rgba(107,139,164,.18); }
+        .ts31-small { font-size: 0.78rem; color: #6B7280; margin-top: 10px; line-height: 1.45; }
+        .ts31-err { color: #B4534A; font-size: 0.85rem; margin-top: 8px; min-height: 1em; }
+        .ts31-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+        .ts31-btns button { border-radius: 12px; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; cursor: pointer; min-height: 44px; }
+        .ts31-cancel { background: #fff; color: #5A7A93; border: 1.5px solid #D9E1E8; }
+        .ts31-send { background: linear-gradient(135deg, #5A7A93 0%, #6B8BA4 100%); color: #fff; border: 0; }
+        .ts31-send:disabled { opacity: .6; cursor: default; }
+        @media (max-width: 600px) {
+            .ts31-ov { align-items: flex-end; padding: 0; }
+            .ts31-dlg { max-width: none; border-radius: 18px 18px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+                        max-height: calc(100dvh - 24px); }
+            .ts31-btns button { flex: 1; }
+        }
+        .dark-mode .ts31-name { color: #E5E7EB; }
+        .dark-mode .ts31-st .ts31-when { color: #A9C1D6; }
+        .dark-mode .ts31-nod { background: #1F2937; color: #A9C1D6; border-color: #374151; }
+        .dark-mode .ts31-nod.ts31-done { background: #1E3A2B; border-color: #2F5D43; color: #B7E4C7; }
+        .dark-mode .ts31-dlg { background: #1F2937; color: #E5E7EB; }
+        .dark-mode .ts31-dlg h3 { color: #F3F4F6; }
+        .dark-mode .ts31-dlg label, .dark-mode .ts31-lbl { color: #A9C1D6; }
+        .dark-mode .ts31-pre { background: #111827; }
+        .dark-mode .ts31-dlg textarea { background: #111827; border-color: #374151; }
+        .dark-mode .ts31-cancel { background: #1F2937; color: #A9C1D6; border-color: #374151; }
+        .dark-mode .ts31-small { color: #9CA3AF; }
+        .dark-mode .ts31-dot { border-color: #2D3748; }
+    </style>
+    <script id="ts-a31-home-script">
+    (function () {
+        'use strict';
+        if (window.__tsA31Home) return; window.__tsA31Home = true;
+
+        var M = {
+            nod:       { en: 'Nod', he: 'נדנוד', ar: 'تحية', ru: 'Напомнить' },
+            title:     { en: 'Send a nod to {name}', he: 'שליחת נדנוד אל {name}', ar: 'إرسال تحية إلى {name}', ru: 'Напоминание для {name}' },
+            msg_label: { en: 'Message', he: 'ההודעה', ar: 'الرسالة', ru: 'Сообщение' },
+            pre:       { en: 'Hi {name}! 👋 A friendly nod from me. I was thinking of you. If you have a moment today, I would love to see your Daily update.',
+                         he: 'היי {name}! 👋 נדנוד ידידותי ממני. חשבתי עליך. אם יש לך רגע היום, אשמח לראות את העדכון היומי שלך.',
+                         ar: 'مرحبًا {name}! 👋 تحية ودية مني. كنت أفكر فيك. إذا كان لديك لحظة اليوم، يسعدني أن أرى تحديثك اليومي.',
+                         ru: 'Привет, {name}! 👋 Просто дружеское напоминание. Я думаю о тебе. Если найдётся минутка сегодня, буду рад(а) увидеть твоё ежедневное обновление.' },
+            note_label:{ en: 'Add a personal note (optional)', he: 'הוספת מילים אישיות (לא חובה)', ar: 'أضف ملاحظة شخصية (اختياري)', ru: 'Добавьте личные слова (необязательно)' },
+            note_ph:   { en: 'Write something of your own…', he: 'כתבו משהו משלכם…', ar: 'اكتب شيئًا من عندك…', ru: 'Напишите что-нибудь от себя…' },
+            privacy:   { en: 'Sent as a private message in your conversation with {name}. If you have both turned on end-to-end encryption, it is end-to-end encrypted too.',
+                         he: 'נשלח כהודעה פרטית בשיחה שלך עם {name}. אם שניכם הפעלתם הצפנה מקצה לקצה, ההודעה מוצפנת גם כך.',
+                         ar: 'تُرسل كرسالة خاصة في محادثتك مع {name}. إذا فعّلتما كلاكما التشفير من طرف إلى طرف، فهي مشفّرة كذلك.',
+                         ru: 'Отправляется личным сообщением в вашем чате с {name}. Если вы оба включили сквозное шифрование, оно также зашифровано.' },
+            already:   { en: 'You already sent {name} a nod today.', he: 'כבר שלחת היום נדנוד אל {name}.', ar: 'لقد أرسلت تحية إلى {name} اليوم بالفعل.', ru: 'Сегодня вы уже отправили напоминание для {name}.' },
+            send:      { en: 'Send nod', he: 'שליחה', ar: 'إرسال', ru: 'Отправить' },
+            cancel:    { en: 'Cancel', he: 'ביטול', ar: 'إلغاء', ru: 'Отмена' },
+            sent:      { en: 'Nod sent to {name} 👋', he: 'הנדנוד נשלח אל {name} 👋', ar: 'تم إرسال التحية إلى {name} 👋', ru: 'Напоминание для {name} отправлено 👋' },
+            nodded:    { en: 'Nod sent today', he: 'נדנוד נשלח היום', ar: 'أُرسلت تحية اليوم', ru: 'Напоминание отправлено сегодня' },
+            none:      { en: 'No Daily update to show yet', he: 'עדיין אין עדכון יומי להצגה', ar: 'لا يوجد تحديث يومي لعرضه بعد', ru: 'Пока нет ежедневного обновления для показа' },
+            today:     { en: 'Today', he: 'היום', ar: 'اليوم', ru: 'Сегодня' },
+            yesterday: { en: 'Yesterday', he: 'אתמול', ar: 'أمس', ru: 'Вчера' },
+            days_ago:  { en: '{n} days ago', he: 'לפני {n} ימים', ar: 'منذ {n} أيام', ru: '{n} дн. назад' },
+            load_err:  { en: 'Could not load your connections.', he: 'לא הצלחנו לטעון את החיבורים.', ar: 'تعذّر تحميل اتصالاتك.', ru: 'Не удалось загрузить контакты.' },
+            retry:     { en: 'Try again', he: 'לנסות שוב', ar: 'حاول مرة أخرى', ru: 'Повторить' },
+            more:      { en: 'Show more', he: 'הצגת עוד', ar: 'عرض المزيد', ru: 'Показать ещё' },
+            err:       { en: 'Something went wrong. Please try again.', he: 'משהו השתבש. נסו שוב.', ar: 'حدث خطأ ما. حاولوا مرة أخرى.', ru: 'Что-то пошло не так. Попробуйте ещё раз.' }
+        };
+        function lang() {
+            try { var l = window.i18n && window.i18n.getCurrentLanguage && window.i18n.getCurrentLanguage(); if (l && M.nod[l]) return l; } catch (_) {}
+            return 'en';
+        }
+        function T(k, name, n) {
+            var m = M[k], s = m ? (m[lang()] || m.en) : k;
+            if (name !== undefined) s = s.split('{name}').join(name);
+            if (n !== undefined) s = s.split('{n}').join(String(n));
+            return s;
+        }
+        function tt(key, fallback) {   // same helper the original Home lists used
+            try { var r = window.i18n && window.i18n.translate ? window.i18n.translate(key) : null; return (r && r !== key) ? r : fallback; } catch (_) { return fallback; }
+        }
+        function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
+        function myId() { try { return (typeof currentUser !== 'undefined' && currentUser && currentUser.id) || 0; } catch (_) { return 0; } }
+        function localDay(d) { d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+        function nodKey(id) { return 'ts_a31_nod:' + myId() + ':' + id; }
+        function noddedToday(id) { try { return localStorage.getItem(nodKey(id)) === localDay(); } catch (_) { return false; } }
+        function notify(text, type) { try { if (typeof showNotification === 'function') showNotification(text, type); } catch (_) {} }
+
+        // ---- status text -------------------------------------------------------------------------------------------
+        var EMO = { 4: '😊', 3: '🙂', 2: '😐', 1: '😔' };
+        function paramLabel(p) {
+            var L = { mood: tt('params.mood', 'Mood'), energy: tt('params.energy', 'Energy'), sleep_quality: tt('params.sleep', 'Sleep'),
+                      physical_activity: tt('params.exercise', 'Exercise'),
+                      anxiety: window.ANXIETY_DISPLAY_MODE === 'calm' ? tt('params.calm', 'Calmness') : tt('params.anxiety', 'Anxiety'),
+                      social_belonging: tt('parameters.social_belonging', 'Belonging') };
+            var s = L[p] || p;
+            return s.charAt(0).toUpperCase() + s.slice(1);   // some English/Russian labels are stored lower-case
+        }
+        function whenText(iso) {
+            var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); if (!m) return '';
+            var d = new Date(+m[1], +m[2] - 1, +m[3]);              // a calendar day: read it as LOCAL, never as UTC
+            var t0 = new Date(); t0.setHours(0, 0, 0, 0);
+            var diff = Math.round((t0 - d) / 86400000);
+            if (diff <= 0) return T('today');
+            if (diff === 1) return T('yesterday');
+            if (diff < 7) return T('days_ago', undefined, diff);
+            try { return d.toLocaleDateString(lang(), { month: 'short', day: 'numeric' }); } catch (_) { return iso; }
+        }
+        function presence(iso) {   // same thresholds and keys as the original "My Connections Status" list
+            var dot = '#9CA3AF', txt = tt('home.status_offline', 'Offline');
+            if (iso) {
+                var diff = (Date.now() - new Date(iso).getTime()) / 60000;
+                if (diff < 15) { dot = '#10B981'; txt = tt('home.status_active', 'Active now'); }
+                else if (diff < 60) { dot = '#F59E0B'; txt = Math.round(diff) + tt('home.status_min_ago', 'm ago'); }
+                else if (diff < 1440) { dot = '#F59E0B'; txt = Math.round(diff / 60) + tt('home.status_hr_ago', 'h ago'); }
+                else txt = Math.round(diff / 1440) + tt('home.status_day_ago', 'd ago');
+            }
+            return { dot: dot, txt: txt };
+        }
+        function openProfile(id) { try { if (typeof viewUserProfileFromHome === 'function') viewUserProfileFromHome(id); } catch (_) {} }
+
+        // ---- one row ---------------------------------------------------------------------------------------------------
+        function nodButton(btn, item) {
+            var done = noddedToday(item.id), name = item.display_name || item.username;
+            btn.className = 'ts31-nod' + (done ? ' ts31-done' : '');
+            btn.textContent = done ? '👋 ✓' : '👋 ' + T('nod');
+            btn.setAttribute('aria-label', done ? T('nodded') + ' · ' + T('title', name) : T('title', name));
+            btn.title = done ? T('nodded') : T('title', name);
+        }
+        function row(item) {
+            var name = item.display_name || item.username || 'User';
+            var r = el('div', 'ts31-row');
+            r.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light, #f9fafb); border-radius: 12px;';
+            r.setAttribute('data-user-id', String(item.id));
+            var av = el('div', 'ts31-av', name.charAt(0).toUpperCase());
+            var pr = presence(item.last_active);
+            var dot = el('span', 'ts31-dot'); dot.style.background = pr.dot; dot.title = pr.txt; dot.setAttribute('aria-hidden', 'true');
+            av.appendChild(dot);
+            var tx = el('div', 'ts31-txt');
+            var nm = el('button', 'ts31-name', name); nm.type = 'button'; nm.dir = 'auto';
+            nm.setAttribute('aria-label', name + ' · ' + pr.txt);
+            nm.addEventListener('click', function (e) { e.stopPropagation(); openProfile(item.id); });
+            tx.appendChild(nm);
+            var st;
+            if (item.update && item.update.params && item.update.params.length) {
+                st = el('div', 'ts31-st');
+                st.appendChild(el('span', 'ts31-when', whenText(item.update.date)));
+                st.appendChild(document.createTextNode(item.update.params.map(function (p) {
+                    return paramLabel(p.parameter_name) + ': ' + (EMO[p.value] || p.value);
+                }).join(' · ')));
+            } else {
+                st = el('div', 'ts31-st ts31-none', T('none'));
+            }
+            tx.appendChild(st);
+            var nb = el('button'); nb.type = 'button'; nodButton(nb, item);
+            nb.addEventListener('click', function (e) { e.stopPropagation(); openNod(item, nb); });
+            r.appendChild(av); r.appendChild(tx); r.appendChild(nb);
+            r.addEventListener('click', function () { openProfile(item.id); });
+            return r;
+        }
+
+        // ---- list: paged, more rows load as the member scrolls ----------------------------------------------------------
+        var LIMIT = 20;
+        var S = { gen: 0, next: 0, busy: false, busyReset: false, startedAt: 0, io: null, tail: null };
+        function listEl() { return document.getElementById('connectionStatusList'); }
+        function setTail(list, mode) {   // mode: 'sentinel' | 'button' | null (a <p>, so the "> div" row styles never touch it)
+            if (S.tail && S.tail.parentNode) S.tail.parentNode.removeChild(S.tail);
+            S.tail = null;
+            if (S.io) { try { S.io.disconnect(); } catch (_) {} S.io = null; }
+            if (!mode) return;
+            var p = el('p', 'ts31-more');
+            if (mode === 'retry' || mode === 'button' || !('IntersectionObserver' in window)) {
+                if (mode === 'retry') p.appendChild(document.createTextNode(T('load_err') + ' '));
+                var b = el('button', null, T(mode === 'retry' ? 'retry' : 'more')); b.type = 'button';
+                b.addEventListener('click', function () { loadPage(mode === 'retry' && !list.querySelector('.ts31-row')); });
+                p.appendChild(b);
+            } else {
+                S.io = new IntersectionObserver(function (es) {
+                    for (var i = 0; i < es.length; i++) if (es[i].isIntersecting) { loadPage(false); break; }
+                }, { root: list, rootMargin: '0px 0px 160px 0px' });
+                S.io.observe(p);
+            }
+            list.appendChild(p); S.tail = p;
+        }
+        function loadPage(reset) {
+            var list = listEl(); if (!list) return Promise.resolve();
+            if (reset) {
+                // Home fires several loads at once; A32: only a reset already under way absorbs another reset
+                // (a reset during a scroll-page load, e.g. after a language change, used to be dropped).
+                if (S.busy && S.busyReset && Date.now() - S.startedAt < 800) return Promise.resolve();
+                S.gen++; S.next = 0; S.busy = false;
+            }
+            if (S.busy || S.next === null) return Promise.resolve();
+            S.busy = true; S.busyReset = !!reset; S.startedAt = Date.now();
+            var gen = S.gen, offset = S.next, keep = list.scrollTop;
+            return fetch('/api/connections-status?offset=' + offset + '&limit=' + LIMIT, { credentials: 'include' })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('http ' + r.status)); })
+                .then(function (d) {
+                    if (gen !== S.gen) return;                                   // a newer reload started meanwhile
+                    S.busy = false;
+                    var items = (d && d.items) || [];
+                    if (offset === 0) {
+                        setTail(list, null);
+                        list.textContent = '';
+                        if (!items.length) {
+                            var p = el('p', null, tt('home.no_connections', 'No connections yet.'));
+                            p.style.cssText = 'color: var(--gray); text-align: center; padding: 20px;';
+                            p.setAttribute('data-i18n', 'home.no_connections');
+                            list.appendChild(p); S.next = null; return;
+                        }
+                    } else if (S.tail && S.tail.parentNode) S.tail.parentNode.removeChild(S.tail);
+                    var frag = document.createDocumentFragment();
+                    items.forEach(function (it) { frag.appendChild(row(it)); });
+                    list.appendChild(frag);
+                    S.next = (d && typeof d.next_offset === 'number') ? d.next_offset : null;
+                    setTail(list, S.next === null ? null : 'sentinel');
+                    if (offset === 0 && keep) list.scrollTop = keep;   // A32: a refresh keeps the member's place (was set before the rows existed)
+                })
+                .catch(function (e) {
+                    if (gen !== S.gen) return;
+                    S.busy = false;
+                    console.error('[A31] connections list:', e);
+                    if (offset > 0) setTail(list, 'button');                     // keep what is shown; offer a retry
+                    else if (!list.querySelector('.ts31-row')) {                  // A32: first load failed: no longer
+                        list.textContent = ''; setTail(list, 'retry');            // leaves "No connections yet." showing
+                    }
+                });
+        }
+
+        // ---- the Nod dialog ---------------------------------------------------------------------------------------------
+        var open = null;
+        function closeNod() {
+            if (!open) return;
+            var o = open; open = null;
+            document.removeEventListener('keydown', o.onKey, true);
+            if (o.ov.parentNode) o.ov.parentNode.removeChild(o.ov);
+            document.documentElement.style.overflow = o.prevOverflow;
+            document.documentElement.classList.remove('ts31-open');
+            try { if (o.opener && document.contains(o.opener)) o.opener.focus(); } catch (_) {}
+        }
+        function openNod(item, opener) {
+            closeNod();
+            var name = item.display_name || item.username || 'User';
+            var ov = el('div', 'ts31-ov');
+            var dlg = el('div', 'ts31-dlg'); dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true'); dlg.tabIndex = -1;
+            var h = el('h3', null, T('title', name)); h.id = 'ts31NodTitle'; dlg.setAttribute('aria-labelledby', h.id);
+            dlg.appendChild(h);
+            dlg.appendChild(el('div', 'ts31-lbl', T('msg_label')));
+            var preText = T('pre', name);
+            var pre = el('div', 'ts31-pre', preText); pre.dir = 'auto'; dlg.appendChild(pre);
+            var lb = el('label', null, T('note_label')); lb.htmlFor = 'ts31NodNote'; dlg.appendChild(lb);
+            var ta = el('textarea'); ta.id = 'ts31NodNote'; ta.rows = 3; ta.maxLength = 1000; ta.dir = 'auto'; ta.placeholder = T('note_ph');
+            ta.setAttribute('enterkeyhint', 'enter');
+            dlg.appendChild(ta);
+            if (noddedToday(item.id)) dlg.appendChild(el('div', 'ts31-small', T('already', name)));
+            dlg.appendChild(el('div', 'ts31-small', T('privacy', name)));
+            var err = el('div', 'ts31-err'); err.setAttribute('role', 'alert'); dlg.appendChild(err);
+            var btns = el('div', 'ts31-btns');
+            var cancel = el('button', 'ts31-cancel', T('cancel')); cancel.type = 'button';
+            var send = el('button', 'ts31-send', T('send')); send.type = 'button';
+            btns.appendChild(cancel); btns.appendChild(send); dlg.appendChild(btns);
+            ov.appendChild(dlg);
+            ov.addEventListener('click', function (e) { if (e.target === ov && !send.disabled) closeNod(); });
+            cancel.addEventListener('click', function () { if (!send.disabled) closeNod(); });
+            var onKey = function (e) {
+                if (e.key === 'Escape' && !send.disabled) { e.preventDefault(); closeNod(); return; }
+                if (e.key === 'Tab') {                                            // keep keyboard focus inside the dialog
+                    var f = [ta, cancel, send].filter(function (x) { return !x.disabled; });
+                    var i = f.indexOf(document.activeElement);
+                    if (e.shiftKey && (i <= 0)) { e.preventDefault(); f[f.length - 1].focus(); }
+                    else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+                }
+            };
+            send.addEventListener('click', function () {
+                if (send.disabled) return;
+                var note = ta.value.trim();
+                var content = note ? preText + '\n\n' + note : preText;
+                send.disabled = true; cancel.disabled = true; send.textContent = '…'; err.textContent = '';
+                var done = function (resp) {
+                    if (resp && resp.success) {
+                        try { localStorage.setItem(nodKey(item.id), localDay()); } catch (_) {}
+                        if (opener) nodButton(opener, item);
+                        closeNod();
+                        notify(T('sent', name), 'success');
+                        try { if (navigator.vibrate) navigator.vibrate(8); } catch (_) {}
+                        if (resp.support_notice) notify(tt(resp.support_notice_key || 'msg.crisis_support_notice', resp.support_notice), 'info');
+                        return;
+                    }
+                    fail(resp && resp.error ? new Error(resp.error) : null);
+                };
+                var fail = function (e) {
+                    send.disabled = false; cancel.disabled = false; send.textContent = T('send');
+                    var m = e && e.message;
+                    if (m === 'Unable to send message to this user') m = tt('msg.blocked_send_message', m);
+                    err.textContent = m || T('err');
+                };
+                try {
+                    var p = (typeof apiCall === 'function')
+                        ? apiCall('/messages', 'POST', { recipient_id: item.id, content: content })   // same path as the Messages tab
+                        : fetch('/api/messages', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                                                   body: JSON.stringify({ recipient_id: item.id, content: content }) })
+                              .then(function (r) { return r.json().catch(function () { return {}; }); });
+                    Promise.resolve(p).then(function (resp) {
+                        if (resp === null) { send.disabled = false; cancel.disabled = false; send.textContent = T('send'); return; }   // apiCall already told the member (rate limit / offline / signed out)
+                        done(resp);
+                    }, fail);
+                } catch (e) { fail(e); }
+            });
+            open = { ov: ov, onKey: onKey, opener: opener, prevOverflow: document.documentElement.style.overflow };
+            document.documentElement.style.overflow = 'hidden';
+            document.documentElement.classList.add('ts31-open');
+            document.addEventListener('keydown', onKey, true);
+            document.body.appendChild(ov);
+            try { dlg.focus({ preventScroll: true }); } catch (_) { dlg.focus(); }   // no keyboard pops up on phones until the note is tapped
+        }
+
+        // ---- wire into the existing Home loader ----------------------------------------------------------------------
+        // loadV2HomeFeatures() calls both functions by name; global function names resolve through window, so these
+        // two assignments are all the wiring needed. The originals stay in the file (marked "A31: superseded").
+        window.loadConnectionStatusList = function () { return loadPage(true); };
+        window.loadFriendsUpdates = function () { return Promise.resolve(); };
+        window.__tsA31ReloadConnections = function () { return loadPage(true); };
+        window.addEventListener('languageChanged', function () { if (listEl() && listEl().querySelector('.ts31-row')) loadPage(true); });
+    })();
+
+    // ---- A31 mobile improvements 1-4 (additive; each guarded, each independent) ----------------------------------------
+    (function () {
+        'use strict';
+        if (window.__tsA31Mobile) return; window.__tsA31Mobile = true;
+        function me() { try { return (typeof currentUser !== 'undefined' && currentUser && currentUser.id) || 0; } catch (_) { return 0; } }
+        function rcpt() { try { return (typeof currentRecipient !== 'undefined' && currentRecipient) || null; } catch (_) { return null; } }
+        function shown(id) { var v = document.getElementById(id); return !!(v && !v.classList.contains('hidden') && v.offsetParent !== null); }
+
+        // (2) An unsent message is kept per conversation (this tab only, sessionStorage) and comes back if the phone
+        //     reloads the page after an app switch. Opening another conversation shows THAT conversation's draft, so a
+        //     half-typed text can no longer be sent to the wrong person.
+        function draftKey(id) { return 'ts_a31_draft:' + me() + ':' + id; }
+        function saveDraft(input, id) {
+            if (!input || !id || !me()) return;   // A32: never under an unknown member (shared-device safety)
+            try { var v = input.value; if (v && v.trim()) sessionStorage.setItem(draftKey(id), v); else sessionStorage.removeItem(draftKey(id)); } catch (_) {}
+        }
+        function initDrafts() {
+            var input = document.getElementById('messageInput'), header = document.getElementById('chatHeader');
+            if (!input || !header || input.__tsA31) return; input.__tsA31 = true;
+            // (1) Phone keyboards show a "Send" key on the message field (Enter already sends here).
+            input.setAttribute('enterkeyhint', 'send');
+            var lastId = null;
+            input.addEventListener('input', function () { var r = rcpt(); if (r) saveDraft(input, r.id); });
+            var afterSend = function () { setTimeout(function () { var r = rcpt(); if (r && !input.value) { try { sessionStorage.removeItem(draftKey(r.id)); } catch (_) {} } }, 0); };
+            input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) afterSend(); });
+            var btn = document.getElementById('sendMessageBtn'); if (btn) btn.addEventListener('click', afterSend);
+            new MutationObserver(function () {            // loadMessages() rewrites the header when a conversation opens
+                var r = rcpt(); if (!r || r.id === lastId) return;
+                if (lastId !== null) saveDraft(input, lastId);
+                lastId = r.id;
+                var d = null; try { if (me()) d = sessionStorage.getItem(draftKey(r.id)); } catch (_) {}
+                input.value = d || '';
+            }).observe(header, { childList: true, characterData: true, subtree: true });
+            document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') { var r = rcpt(); if (r) saveDraft(input, r.id); } });
+        }
+
+        // (3) + (4) Coming back to the app after a while refreshes what is on screen: the open conversation (new replies
+        //     appear without re-opening it) and Home (summary and the connections list). Alerts already refresh themselves.
+        var hiddenAt = 0;
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+            var away = hiddenAt ? Date.now() - hiddenAt : 0; hiddenAt = 0;
+            var dash = document.getElementById('dashboard');
+            if (!away || !dash || dash.style.display === 'none' || !me()) return;
+            var a = document.activeElement;
+            var typing = a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.id !== 'messageInput'));
+            try {
+                if (away >= 20000 && shown('messagesView')) {
+                    var r = rcpt(), mc = document.querySelector('.messages-container');
+                    var busy = false; try { busy = (typeof isMessageSending !== 'undefined') && isMessageSending; } catch (_) {}
+                    if (r && !busy && typeof loadMessages === 'function' && (window.innerWidth > 768 || (mc && mc.classList.contains('mobile-chat-active'))))
+                        loadMessages(r.id, r.username);
+                } else if (away >= 60000 && shown('homeView') && !typing && !document.querySelector('.ts31-ov')) {
+                    if (typeof loadHomeSummary === 'function') loadHomeSummary();
+                    if (window.__tsA31ReloadConnections) window.__tsA31ReloadConnections();
+                }
+            } catch (e) { console.error('[A31] refresh on return:', e); }
+        });
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDrafts); else initDrafts();
+        window.addEventListener('load', initDrafts);
+    })();
+    </script>
+    <!-- ===================== END A31 ===================== -->
 
 </body>
 

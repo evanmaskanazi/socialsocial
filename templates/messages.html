@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!-- TheraSocial Messages Version B222 (A32) -->
+<!-- B222 (A32): A32: cache-bust lockstep only on this page (app.py and index.html changed).
+     CACHE-BUST: every live JS ?v bumped B221->B222 in lockstep; app.py _A92_ASSET_VERSION = 'B222'. -->
+<!-- TheraSocial Messages Version B221 (A31) -->
+<!-- B221 (A31): A31: CACHE-BUST FIX: this page was still asking for ?v=B205 (left out of every lockstep bump since F6); now B221 like every other page.
+     CACHE-BUST: every live JS ?v bumped B220->B221 in lockstep (i18n.js and index.html changed); app.py _A92_ASSET_VERSION = 'B221'. -->
 <!-- TheraSocial Messages Version B205 (F6): cache-bust only (stale ?v=B180 -> B205). -->
 <!-- TheraSocial Messages Version P305 Lang -->
 <!-- P305: Visual design overhaul - new calming color palette -->
@@ -85,8 +91,8 @@
     <!-- B205 (F6): both bumped B180 -> B205 in lockstep with the rest of the app. At B180 this
          page could keep serving a cached circles-messages.js without the B204 escaping fixes
          (escapeHtml now escapes quotes) and an i18n.js without the current wording. -->
-    <script src="/static/js/i18n.js?v=B205"></script>
-    <script src="/static/js/circles-messages.js?v=B205"></script>
+    <script src="/static/js/i18n.js?v=B222"></script>
+    <script src="/static/js/circles-messages.js?v=B222"></script>
     <script>
         // Wait for i18n to be fully loaded
         function waitForI18n() {

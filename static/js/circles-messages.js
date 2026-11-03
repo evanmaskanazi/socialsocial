@@ -1,3 +1,5 @@
+// Version B222 (A32): no content change; ?v bumped B221->B222 in lockstep.
+// Version B221 (A31): the message field asks phone keyboards for a "Send" key (enterkeyhint="send"; Enter already sends). ?v bumped B220->B221 in lockstep.
 // Version B220 (Rnd 6): no content change; ?v bumped B219->B220 in lockstep.
 // Version B219 (F21 rev 5): MINOR: text typed while a message is still sending is no longer wiped (nor its draft).
 // Version B218 (F21 rev 4): ROUND RESULT: RED (major defects found in review of F21 rev 3: the back-navigation feature; parked here, see index). MINOR (privacy): message drafts are now keyed by member + recipient
@@ -2034,7 +2036,7 @@ const messagesHTML = `
         </div>
 
         <div class="message-input-area">
-            <input type="text" class="message-input" id="messageInput" data-i18n="messages.type_message" placeholder="Type a message..." disabled>
+            <input type="text" class="message-input" id="messageInput" data-i18n="messages.type_message" placeholder="Type a message..." enterkeyhint="send" disabled>
             <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled data-i18n="messages.send">Send</button>
         </div>
     </div>

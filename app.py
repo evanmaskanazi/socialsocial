@@ -1,6 +1,21 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version A32 / B222 (review of A31)
+# ROUND RESULT: YELLOW (a small set of moderate issues found in review of A31; fixed here; none critical).
+#   1. MODERATE: GET /api/connections-status ran 2-3 queries per connection and repeated ALL of them for every
+#      20-row page (200 connections, 10 pages -> ~6,000 queries while scrolling). Now 4 queries per request, same
+#      privacy rule (verified against /api/friends-updates on the same data).
+#   2. _A92_ASSET_VERSION = 'B222' (cache-bust lockstep; index.html changed).
+# =====================================================================
+# TheraSocial app.py - Version A31 / B221
+#   1. NEW GET /api/connections-status (additive, grep "A31: merged Home list"): one paged list of the member's
+#      connections for Home, each with the status/date of their latest Daily update when (and only when) the
+#      circle rules already let this member see it, else update = null. Same privacy rule as /api/friends-updates.
+#   2. No other server change. The Home "Nod" is sent through the existing POST /api/messages (so end-to-end
+#      encryption and the recipient's existing "new message" alert apply unchanged); no new message route.
+#   3. _A92_ASSET_VERSION = 'B221' (cache-bust lockstep; i18n.js and index.html changed).
+# =====================================================================
 # TheraSocial app.py - Version Rnd 6 / B220
 #   No server logic change. /about and /support were already public, so the Support page's new "Go To About"
 #   button works signed in and signed out. _A92_ASSET_VERSION = 'B220' (cache-bust lockstep; i18n.js changed).
@@ -9381,7 +9396,7 @@ def _safe_back_url():
 #      response to this constant, so a page whose tokens were forgotten is still served the new JS.
 #      Step 1 is therefore the one that MUST happen; step 2 keeps the files honest for view-source checks.
 #   Check: GET /api/health -> e2ee.asset_version shows the live value. tools: ts_release_check.py.
-_A92_ASSET_VERSION = 'B220'  # Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
+_A92_ASSET_VERSION = 'B222'  # A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
 
 
 # =====================================================================
@@ -26265,6 +26280,100 @@ def get_friends_updates():
         db.session.rollback()
         logger.error(f"Friends updates error: {str(e)}")
         return jsonify({'error': 'Failed to load friends updates'}), 500
+
+
+# A31: merged Home list ("Friends' Daily Updates" + "My Connections Status" -> one list), paged for infinite scroll.
+# Additive; /api/friends-updates and /api/following are unchanged. Privacy is the SAME rule as /api/friends-updates:
+#   * a connection's Daily update is shown only when the viewer is in at least one of that connection's circles
+#     (T25) AND at least one parameter of their latest diary row is visible to those circles (check_param_visibility,
+#     same NULL-privacy default as the feed, see the A21 note there);
+#   * otherwise the row carries update = null and the page shows a neutral "no update to show yet". Nothing else
+#     about the diary (not even the date of the latest row) is returned, so a status is never revealed or implied
+#     outside the circle rules. last_active is the same value /api/following already returns to this viewer.
+# Order: rows with a visible update first, newest date first (ties by name); then the rest alphabetically.
+@app.route('/api/connections-status')
+@login_required
+@rate_limit_endpoint(max_requests=60, window=60)
+def a31_connections_status():
+    try:
+        user_id = session.get('user_id')
+        offset = max(0, request.args.get('offset', 0, type=int) or 0)
+        limit = max(1, min(request.args.get('limit', 20, type=int) or 20, 50))
+        follows = db.session.execute(
+            select(Follow).filter_by(follower_id=user_id)
+        ).scalars().all()
+        privacy_map = {
+            'mood': 'mood_privacy', 'energy': 'energy_privacy',
+            'sleep_quality': 'sleep_quality_privacy',
+            'physical_activity': 'physical_activity_privacy',
+            'anxiety': 'anxiety_privacy',
+            'social_belonging': 'social_belonging_privacy'
+        }
+        # A32: batched (4 queries in total instead of 2-3 per connection, repeated for every page). Same rule as
+        # _get_all_viewer_circle_types + check_param_visibility; the mapping below is that helper's mapping.
+        ids = [f.followed_id for f in follows]
+        users = {u.id: u for u in User.query.filter(User.id.in_(ids)).all()} if ids else {}
+        type_mapping = {
+            'public': 'public', 'general': 'public',
+            'class_b': 'class_b', 'close_friends': 'class_b',
+            'class_a': 'class_a', 'family': 'class_a'
+        }
+        circles_by_owner = {}
+        if ids:
+            for c in Circle.query.filter(Circle.user_id.in_(ids), Circle.circle_user_id == user_id).all():
+                circles_by_owner.setdefault(c.user_id, set()).add(type_mapping.get(c.circle_type, c.circle_type))
+        owners = [i for i in ids if circles_by_owner.get(i)]   # T25: outside every circle the diary is not even read
+        latest_by_owner = {}
+        if owners:
+            newest = db.session.query(SavedParameters.user_id, func.max(SavedParameters.date).label('d')) \
+                .filter(SavedParameters.user_id.in_(owners)).group_by(SavedParameters.user_id).subquery()
+            for sp in SavedParameters.query.join(newest, and_(SavedParameters.user_id == newest.c.user_id,
+                                                               SavedParameters.date == newest.c.d)).all():
+                latest_by_owner[sp.user_id] = sp   # (user_id, date) is unique, so one row per owner
+        rows = []
+        for follow in follows:
+            other = users.get(follow.followed_id)
+            if not other:
+                continue
+            update = None
+            viewer_circles = circles_by_owner.get(other.id) or set()
+            latest = latest_by_owner.get(other.id) if viewer_circles else None
+            if latest:
+                visible = []
+                for name in ['mood', 'energy', 'sleep_quality', 'physical_activity', 'anxiety', 'social_belonging']:
+                    value = getattr(latest, name, None)
+                    if value:
+                        privacy = getattr(latest, privacy_map[name], 'public') or 'public'
+                        if check_param_visibility(privacy, 'none', viewer_circles=viewer_circles):
+                            visible.append({'parameter_name': name, 'value': value})
+                if visible:
+                    d = latest.date
+                    update = {'date': d.isoformat() if hasattr(d, 'isoformat') else str(d), 'params': visible}
+            rows.append({
+                'id': other.id,
+                'username': other.username,
+                'display_name': getattr(other, 'display_name', None) or other.username,
+                'last_active': other.last_login.isoformat() if other.last_login else None,
+                'update': update
+            })
+        def _name(r):
+            return (r['display_name'] or r['username'] or '').casefold()
+        with_update = sorted([r for r in rows if r['update']], key=_name)
+        with_update.sort(key=lambda r: r['update']['date'], reverse=True)   # stable: same date keeps name order
+        without = sorted([r for r in rows if not r['update']], key=_name)
+        ordered = with_update + without
+        page = ordered[offset:offset + limit]
+        nxt = offset + len(page)
+        return jsonify({
+            'items': page,
+            'total': len(ordered),
+            'with_update': len(with_update),
+            'next_offset': nxt if nxt < len(ordered) else None
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[A31] connections status error: {str(e)}")
+        return jsonify({'error': 'Failed to load connections'}), 500
 
 
 @app.route('/api/following')
