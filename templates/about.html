@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!-- TheraSocial About Version B222 (A32) -->
+<!-- B222 (A32): A32: cache-bust lockstep only on this page (app.py and index.html changed).
+     CACHE-BUST: every live JS ?v bumped B221->B222 in lockstep; app.py _A92_ASSET_VERSION = 'B222'. -->
+<!-- TheraSocial About Version B221 (A31) -->
+<!-- B221 (A31): A31: page follows the app's dark-mode setting (style#ts-a31-about). Cache-bust lockstep.
+     CACHE-BUST: every live JS ?v bumped B220->B221 in lockstep (i18n.js and index.html changed); app.py _A92_ASSET_VERSION = 'B221'. -->
 <!-- TheraSocial About Version B220 (Rnd 6) -->
 <!-- B220 (Rnd 6): Rnd 6: "Go To About" button added to the Support page (see support.html). Cache-bust lockstep only on this page.
      CACHE-BUST: every live JS ?v bumped B219->B220 in lockstep (i18n.js changed); app.py _A92_ASSET_VERSION = 'B220'. -->
@@ -328,6 +334,8 @@
     </style>
 </head>
 <body>
+    <!-- A31 (improvement 5): follow the app's dark-mode setting, same one-liner as circles/parameters/messages. -->
+    <script>try{if(localStorage.getItem('therasocial_dark_mode')==='true')document.body.classList.add('dark-mode');}catch(e){}</script>
     <div class="container">
         <div class="header">
             <h1 data-i18n="about.title">About TheraSocial</h1>
@@ -471,7 +479,7 @@
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B220"></script>
+    <script src="/static/js/i18n.js?v=B222"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read
@@ -571,6 +579,21 @@
         .ts15-notice-link { color: #5A7A93; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
     </style>
     <!-- ===================== END F15-POLISH ===================== -->
+
+    <!-- ===================== A31 (about): additive, presentation-only ===================== -->
+    <style id="ts-a31-about">
+        /* Improvement 5: follow the app's own dark-mode setting (body.dark-mode, set at the top of <body>). */
+        body.dark-mode { background: linear-gradient(135deg, #2D3748 0%, #1F2937 100%); }
+        body.dark-mode .container { background: rgba(31, 41, 55, 0.96); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+        body.dark-mode h1 { color: #E5E7EB; }
+        body.dark-mode .subtitle, body.dark-mode .content, body.dark-mode .feature-desc, body.dark-mode .values-list { color: #C5CBD3; }
+        body.dark-mode .mission-section { background: #1F2937; border-color: #A9C1D6 !important; }
+        body.dark-mode .feature-card { background: linear-gradient(135deg, #273444 0%, #2F3B4C 100%); }
+        body.dark-mode .feature-title, body.dark-mode h2, body.dark-mode .mission-section a,
+        body.dark-mode .mission-section p[style*="font-weight: 600"], body.dark-mode .ts15-notice-link { color: #A9C1D6 !important; }
+        body.dark-mode .language-selector { background: #111827; color: #E5E7EB; border-color: #374151; }
+    </style>
+    <!-- ===================== END A31 ===================== -->
 
 </body>
 </html>
