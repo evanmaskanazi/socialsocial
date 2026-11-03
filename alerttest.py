@@ -1,8 +1,6 @@
 # In Render shell or local Python environment:
 
 
-
-
 # python
 
 
