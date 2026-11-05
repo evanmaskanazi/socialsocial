@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B226 (A51 rev 4) -->
+<!-- B226 (A51 rev 4): cache-bust lockstep. This round hardens app.py so its back-nav marker can never split a
+     comment again, adds a pre-ship comment-safety check (tools/ts_html_comment_safety_check.py), and makes the
+     e2ee "Don't remind me again" preference per-member. CACHE-BUST: every live JS ?v bumped B225 to B226 in
+     lockstep; app.py _A92_ASSET_VERSION = 'B226'. -->
 <!-- B225 (A51 rev 3) HOTFIX: top-comment wording no longer contains the literal closing-body-tag string. app.py injects its A43 back-nav marker at the first occurrence of that string (app.py line ~9812); having it in a comment split the comment and spilled its tail onto the page. All comment text is now tag-free. No markup, CSS, JS or cache version changed. -->
 <!-- TheraSocial Version B225 (A51 rev 3) -->
 <!-- B225 (A51 rev 3) — ROUND RESULT: GREEN ✓ (review of A51 rev 2 found no moderate/critical issues; only a minor edge-case hardened). -->
@@ -492,7 +497,7 @@
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B225"></script>
+    <script src="/static/js/i18n.js?v=B226"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read
