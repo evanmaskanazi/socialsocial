@@ -1,3 +1,10 @@
+// Version B227 (A51 rev 5): FIX — the rev-4 per-member "don't remind me again" did not actually stop the prompt.
+//   Root cause: readFlow/sendFlow compute allowPrompt from S.declined BEFORE ensureReady runs getMe(), so on the
+//   first read after login S.declined was still its stale init value and the prompt fired before the per-member
+//   flag was re-applied. The authoritative gate now lives INSIDE ensureReady, right after getMe() resolves the
+//   member id: `if (!managing && getNever(uid)) return false;` — it reads the per-member flag fresh, so logout/
+//   login no longer re-shows the prompt, Settings/pill (managing) still prompts on demand, and a different member
+//   on the same browser is unaffected. ?v bumped B226->B227 in lockstep.
 // Version B226 (A51 rev 4): the "Don't remind me again" preference is now PER-USER (keyed by member id) and is
 //   re-applied on (re)login, so it persists across logout/login for that member and never carries over to a
 //   different member on the same browser. Previously it was device-global and the in-memory flag was reset on
@@ -555,6 +562,10 @@
             }
             if (S.priv) return true;
             if (!allowPrompt || !sk) return false;
+            // A51 rev 5: the authoritative "don't remind me again" gate. It MUST live here, after getMe() has
+            // resolved the member id, because the callers compute allowPrompt from the stale S.declined BEFORE
+            // this runs. Reads the per-member flag fresh from storage; manage() (managing=true) still prompts.
+            if (!managing && getNever(uid)) return false;
             if (!sk.has_key && sk !== S.server) return false;
             if (needAsk && !needAsk(sk)) return false;
             var done = await dialog({
