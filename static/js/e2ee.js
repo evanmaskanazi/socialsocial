@@ -577,7 +577,7 @@
             var done = await dialog({
                 mode: sk.has_key ? 'unlock' : 'setup',
                 run: runFor(uid),
-                offerNever: !managing   // A51: show "Don't remind me again" for the automatic prompt, not when opened from Settings
+                offerNever: true   // B56 (A55 fix): show "Don't remind me again" on every prompt, including the pill/Settings (manage) one — previously !managing, so the manage dialog had no checkbox and could never persist the flag
             });
             return !!(done && S.priv);
         })();
@@ -708,7 +708,7 @@
             if (!ready) {
                 var t0 = Date.now();
                 ready = await safeReady(true);              // shows "Turn on" or "Unlock" as needed
-                if (ready) toast('ready_ok', 'success'); else if (S.dismissedAt >= t0) setDeclined(true);
+                if (ready) toast('ready_ok', 'success'); else if (S.dismissedAt >= t0) { setNever(true); setDeclined(true); }   // B56: persist on this device, not just the session
             } else {
                 var res = await dialog({ mode: 'manage', run: runFor(uid), lock: lockDevice });
                 if (res === 'changed') toast('changed_ok', 'success');
@@ -820,7 +820,7 @@
         var tStart = Date.now();
         // Ask again only if this member has a key to unlock (needed to encrypt) or has not declined setting one up.
         var ready = await safeReady(true, function (sk) { return sk.has_key || !S.declined; });
-        if (ready) setDeclined(false); else if (S.dismissedAt >= tStart) setDeclined(true);
+        if (ready) setDeclined(false); else if (S.dismissedAt >= tStart) { setNever(true); setDeclined(true); }   // B56: persist on this device, not just the session
         if (!ready) {
             // Not unlocked/set up. Let the server decide: while rolling out (transitional) it accepts plain text
             // unless BOTH members have keys; otherwise it refuses and the member is told why.
@@ -924,7 +924,7 @@
                 // (so others can message them securely). Never nag again after "Not now".
                 var tAsk = Date.now();
                 var ready = await safeReady(!S.declined, function (sk) { return cipher || !sk.has_key; });
-                if (!ready && !S.priv && !S.declined && S.dismissedAt >= tAsk) setDeclined(true);   // only when a dialog was actually dismissed
+                if (!ready && !S.priv && !S.declined && S.dismissedAt >= tAsk) { setNever(true); setDeclined(true); }   // B56: persist on this device (localStorage), not just the session — only when a dialog was actually dismissed
                 if (!cipher) return resp;
             }
         } catch (_) { return resp; }
