@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version A51 rev 6 / B228
+#   Cache-bust lockstep only. Client fix: the e2ee "Don't remind me again" flag is now device-global (no member-id
+#   dependency), because the earlier per-member key relied on getMe()/api/user/profile, which returns 401 here, so
+#   the flag never got written. See e2ee.js header. _A92_ASSET_VERSION = 'B228' (every live /static/js ?v B227->B228).
+# =====================================================================
+# =====================================================================
 # TheraSocial app.py - Version A51 rev 5 / B227
 #   Cache-bust lockstep only (no server logic changed). The client fix this round: the e2ee "Don't remind me
 #   again" preference now actually suppresses the prompt across logout/login (the rev-4 gate ran too late; it is
@@ -9453,7 +9459,7 @@ def _safe_back_url():
 #      response to this constant, so a page whose tokens were forgotten is still served the new JS.
 #      Step 1 is therefore the one that MUST happen; step 2 keeps the files honest for view-source checks.
 #   Check: GET /api/health -> e2ee.asset_version shows the live value. tools: ts_release_check.py.
-_A92_ASSET_VERSION = 'B227'  # A51 rev 5: B226 -> B227; A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
+_A92_ASSET_VERSION = 'B228'  # A51 rev 6: B227 -> B228; A51 rev 5: B226 -> B227; A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
 
 
 # =====================================================================
