@@ -5,10 +5,10 @@
 <!-- TheraSocial Profile Version B224 (A51 rev 2) -->
 <!-- B224 (A51 rev 2) — ROUND RESULT: ORANGE (self-review of A51 found moderately problematic, non-critical issues; fixed here). -->
 <!-- B224 (A51 rev 2): the shared mobile-UX block (style#ts-f50-ux) 44px rule now targets action-button classes
-     only (was bare <button>). No other change on this page.
+     only (was a bare button element). No other change on this page.
      CACHE-BUST: every live JS ?v bumped B223->B224 in lockstep; app.py _A92_ASSET_VERSION = 'B224'. -->
 <!-- TheraSocial Profile Version B223 (A51 / F50 batch) -->
-<!-- B223 (A51): added the shared, self-contained mobile-UX block (style#ts-f50-ux) before </body>. No existing
+<!-- B223 (A51): added the shared, self-contained mobile-UX block (style#ts-f50-ux) before the closing body tag. No existing
      markup, IDs or profile.js logic changed.
      CACHE-BUST: every live JS ?v bumped B222->B223 in lockstep; app.py _A92_ASSET_VERSION = 'B223'. -->
 <!-- TheraSocial Profile Version B222 (A32) -->
@@ -134,7 +134,7 @@
     <!-- ===================== F50 UX (A51 batch): cross-platform mobile polish — additive, presentation-only =====
          Eight small refinements in the spirit of the design-review finish work, for iPhone/Android/Galaxy and the
          rest. Each is feature-detected or degrades gracefully; nothing changes layout structure, markup or logic.
-         Remove this <style> to revert. -->
+         Remove this style block to revert. -->
     <style id="ts-f50-ux">
       /* (1) Brand-match native controls (checkboxes, radios, toggles, range, date/time) vs. the OS blue/green. */
       input, select, textarea, button { accent-color: #5A7A93; }

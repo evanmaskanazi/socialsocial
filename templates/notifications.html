@@ -5,21 +5,21 @@
 <!-- TheraSocial Notification Settings Version B224 (A51 rev 2) -->
 <!-- B224 (A51 rev 2) — ROUND RESULT: ORANGE (self-review of A51 found moderately problematic, non-critical issues; fixed here). -->
 <!-- B224 (A51 rev 2): removed the A51 .switch sizing tweak (it assumed style.css dimensions and risked misaligning
-     the toggle slider); the <head> mobile meta and the shared mobile-UX block (style#ts-f50-ux, 44px now scoped to
+     the toggle slider); the page-head mobile meta and the shared mobile-UX block (style#ts-f50-ux, 44px now scoped to
      action-button classes) remain. No other change.
      CACHE-BUST: served JS is pinned server-side by _f21_pin_asset_versions; app.py _A92_ASSET_VERSION = 'B224'. -->
 <!-- TheraSocial Notification Settings Version B223 (A51 / F50 batch) -->
-<!-- B223 (A51): this page lagged the rest on mobile; brought to the app's baseline. <head> gains viewport-fit=
+<!-- B223 (A51): this page lagged the rest on mobile; brought to the app's baseline. the page head gains viewport-fit=
      cover, a theme-color and color-scheme (so the daily-reminder time picker and selects stay legible) plus a
      touch-area tweak for the toggle switches; the shared mobile-UX block (style#ts-f50-ux) is added before
-     </body>. No existing markup, IDs or notification logic changed.
+     the closing body tag. No existing markup, IDs or notification logic changed.
      CACHE-BUST: served JS is pinned server-side by _f21_pin_asset_versions; app.py _A92_ASSET_VERSION = 'B223'. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- F50 (A51 batch): this page carried no mobile meta; brought to the app's baseline. It also receives the
-         shared ts-f50-ux mobile-UX block before </body>. -->
+         shared ts-f50-ux mobile-UX block before the closing body tag. -->
     <meta name="theme-color" content="#6B8BA4">
     <meta name="color-scheme" content="light">
     <title>Notification Settings - TheraSocial</title>
@@ -358,7 +358,7 @@
     <!-- ===================== F50 UX (A51 batch): cross-platform mobile polish — additive, presentation-only =====
          Eight small refinements in the spirit of the design-review finish work, for iPhone/Android/Galaxy and the
          rest. Each is feature-detected or degrades gracefully; nothing changes layout structure, markup or logic.
-         Remove this <style> to revert. -->
+         Remove this style block to revert. -->
     <style id="ts-f50-ux">
       /* (1) Brand-match native controls (checkboxes, radios, toggles, range, date/time) vs. the OS blue/green. */
       input, select, textarea, button { accent-color: #5A7A93; }

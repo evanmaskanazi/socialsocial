@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- TheraSocial Version B225 (A51 rev 3) -->
 <!-- B225 (A51 rev 3) — ROUND RESULT: GREEN ✓ (review of A51 rev 2 found no moderate/critical issues; only a minor edge-case hardened). -->
-<!-- B225 (A51 rev 3): the <=360px rating row now flexes so it can never overflow (parameters-social.js); otherwise cache-bust only. app.py _A92_ASSET_VERSION = 'B225'. -->
+<!-- B225 (A51 rev 3): the 360px-and-under rating row now flexes so it can never overflow (parameters-social.js); otherwise cache-bust only. app.py _A92_ASSET_VERSION = 'B225'. -->
 <!-- TheraSocial Parameters Version B224 (A51 rev 2) -->
 <!-- B224 (A51 rev 2) — ROUND RESULT: ORANGE (self-review of A51 found moderately problematic, non-critical issues; fixed here). -->
 <!-- B224 (A51 rev 2): the A51 diary-symmetry CSS (in parameters-social.js) was rescoped to #parametersContainer and
@@ -12,7 +12,7 @@
 <!-- TheraSocial Parameters Version B223 (A51 / F50 batch) -->
 <!-- B223 (A51): Diary rating-row symmetry fix lives in parameters-social.js (reserved endpoint-anchor slots so
      boxes 1-4 line up across every row; universal low->high anchor emojis; steadier label/info/privacy cluster).
-     This page adds the shared, self-contained mobile-UX block (style#ts-f50-ux) before </body> — namespaced so it
+     This page adds the shared, self-contained mobile-UX block (style#ts-f50-ux) before the closing body tag — namespaced so it
      sits alongside the earlier ts-a41-ux / ts-a51-ux blocks, not replacing them.
      CACHE-BUST: every live JS ?v bumped B222->B223 in lockstep; app.py _A92_ASSET_VERSION = 'B223'. -->
 <!-- TheraSocial Parameters Version B222 (A32) -->
@@ -143,7 +143,7 @@
 <!-- B185 (A41): CACHE-BUST resync — all JS ?v bumped to B185 in lockstep with index/circles
   (i18n.js changed this round: cross-language completeness fixes). The prior round left the live
   refs at ?v=B180 while this header read B175 — resynced so the ?v token and the header match.
-  Added the shared, self-contained A41-UX block before </body> (10 additive mobile UX items,
+  Added the shared, self-contained A41-UX block before the closing body tag (10 additive mobile UX items,
   namespaced ts-a41-*, guarded/feature-detected). No existing markup, IDs or parameters logic changed. -->
 <!-- TheraSocial Parameters Version B175 (A26) -->
 <!-- B175 (A26): Cache-bust sync - all JS ?v bumped B170->B175 in lockstep with index/circles
@@ -168,7 +168,7 @@
   B160). A16 changes here: the GIFT BOX now shows the check-in REWARD as its main content —
   "+15 points" (or "+20" with the +5 streak/consistency bonus) shown large, with the curated
   reflection kept below in smaller text as a gentle addition. Points/bonus/streak/total come
-  from /api/gift/daily. Added an additive A16-ANDROID CSS block before </body> + theme-color
+  from /api/gift/daily. Added an additive A16-ANDROID CSS block before the closing body tag + theme-color
   meta. No existing gift/diary logic changed. -->
 <!-- B150 (A12 metrics): GIFT BOX open-rate — the inline module now POSTs /api/gift/opened
   (fire-and-forget) when the box is actually tapped, so open_rate = opens ÷ reveals is
@@ -183,7 +183,7 @@
   written to the session cache in loadParameters() — it was silently dropped on cache-restore
   even though saveParameterState wrote it and restoreParameterState read it. All JS ?v B140→B145. -->
 <!-- B140 (A12): Cache-bust sync — all JS bumped B135→B140. Added self-contained GIFT BOX
-  block before </body> (window.TSGiftBox): a once-per-day reward, contingent on completing
+  block before the closing body tag (window.TSGiftBox): a once-per-day reward, contingent on completing
   the daily report, that reveals one curated reflection with a single calm animation and then
   ends the session (no streaks). parameters-social.js gains ONE additive call on save-success.
   No existing markup, IDs, or diary logic changed. -->
@@ -2476,7 +2476,7 @@ Storage.prototype.setItem = function(key, value) {
          Eight small refinements in the spirit of the design-review finish work, for iPhone/Android/Galaxy and the
          rest. Each is feature-detected or degrades gracefully; nothing changes layout structure, markup or logic.
          Namespaced ts-f50-ux to sit alongside (not clash with) the earlier ts-a41-ux / ts-a51-ux blocks.
-         Remove this <style> to revert. -->
+         Remove this style block to revert. -->
     <style id="ts-f50-ux">
       /* (1) Brand-match native controls (checkboxes, radios, toggles, range, date/time) vs. the OS blue/green. */
       input, select, textarea, button { accent-color: #5A7A93; }

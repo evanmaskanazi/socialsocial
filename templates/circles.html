@@ -5,10 +5,10 @@
 <!-- TheraSocial Circles Version B224 (A51 rev 2) -->
 <!-- B224 (A51 rev 2) — ROUND RESULT: ORANGE (self-review of A51 found moderately problematic, non-critical issues; fixed here). -->
 <!-- B224 (A51 rev 2): the shared mobile-UX block (style#ts-f50-ux) 44px rule now targets action-button classes
-     only (was bare <button>, which could stretch small square controls). No other change on this page.
+     only (was a bare button element, which could stretch small square controls). No other change on this page.
      CACHE-BUST: every live JS ?v bumped B223->B224 in lockstep; app.py _A92_ASSET_VERSION = 'B224'. -->
 <!-- TheraSocial Circles Version B223 (A51 / F50 batch) -->
-<!-- B223 (A51): added the shared, self-contained mobile-UX block (style#ts-f50-ux) before </body>, namespaced to
+<!-- B223 (A51): added the shared, self-contained mobile-UX block (style#ts-f50-ux) before the closing body tag, namespaced to
      sit alongside the earlier ts-a41-ux / ts-a51-ux blocks. No existing markup, IDs or circles logic changed.
      CACHE-BUST: every live JS ?v bumped B222->B223 in lockstep; app.py _A92_ASSET_VERSION = 'B223'. -->
 <!-- TheraSocial Circles Version B222 (A32) -->
@@ -125,7 +125,7 @@
 <!-- B185 (A41): CACHE-BUST resync — all JS ?v bumped to B185 in lockstep with index/parameters
   (i18n.js changed this round: cross-language completeness fixes). The prior round left the live
   refs at ?v=B180 while this header read B175 — resynced so the ?v token and the header match.
-  Added the shared, self-contained A41-UX block before </body> (10 additive mobile UX items,
+  Added the shared, self-contained A41-UX block before the closing body tag (10 additive mobile UX items,
   namespaced ts-a41-*, guarded/feature-detected). No existing markup, IDs or circles logic changed. -->
 <!-- TheraSocial Circles Version B175 (A26) -->
 <!-- B175 (A26): Cache-bust sync - all JS ?v bumped B170->B175 in lockstep with index/parameters
@@ -146,7 +146,7 @@
 <!-- TheraSocial Circles Version B160 (A16) -->
 <!-- B160 (A16): Cache-bust sync — all JS ?v bumped B145→B160 to stay in lockstep with index
   and parameters (i18n.js / circles-messages.js changed this round). Added an additive
-  A16-ANDROID CSS block before </body> + theme-color meta. No functional/JS changes in this
+  A16-ANDROID CSS block before the closing body tag + theme-color meta. No functional/JS changes in this
   file. -->
 <!-- TheraSocial Circles Version B145 (A12 audit) -->
 <!-- B145 (A12 audit): Cache-bust sync — all JS ?v bumped B140→B145 to stay in lockstep with
@@ -1497,7 +1497,7 @@ try {
          Eight small refinements in the spirit of the design-review finish work, for iPhone/Android/Galaxy and the
          rest. Each is feature-detected or degrades gracefully; nothing changes layout structure, markup or logic.
          Namespaced ts-f50-ux to sit alongside (not clash with) the earlier ts-a41-ux / ts-a51-ux blocks.
-         Remove this <style> to revert. -->
+         Remove this style block to revert. -->
     <style id="ts-f50-ux">
       /* (1) Brand-match native controls (checkboxes, radios, toggles, range, date/time) vs. the OS blue/green. */
       input, select, textarea, button { accent-color: #5A7A93; }
