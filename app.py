@@ -1,6 +1,20 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version A51 rev 4 / B226
+#   1. HARDENING (the back-nav marker inject on /about and /support): the A43 deploy marker is now inserted
+#      before the LAST closing body tag (via rfind), never the first. A closing-body-tag string sitting inside
+#      an HTML comment earlier in the page used to catch the old replace(..., 1) and split that comment, spilling
+#      its tail onto the page. The real closing tag is always last, so this is injection-safe even if a comment
+#      ever contains that string again. (grep "A51 rev 4 HARDENING".)
+#   2. A new pre-ship guard ships alongside: tools/ts_html_comment_safety_check.py fails the build if any template
+#      has a comment containing a naive-replace target (closing body/html tag) or if any comment text would render
+#      as visible page data. Run it before every deploy.
+#   3. Client: the e2ee "Don't remind me again" preference is now per-member (e2ee.js), so it persists across
+#      logout/login and never carries to another member on the same browser.
+#   _A92_ASSET_VERSION = 'B226' (cache-bust lockstep; every live /static/js ?v bumped B225 -> B226).
+# =====================================================================
+# =====================================================================
 # TheraSocial app.py - Version A51 rev 3 / B225 — ROUND RESULT: GREEN
 #   Review of A51 rev 2 found no moderate or critical issues. The rev-2 #parametersContainer scoping was verified
 #   safe: the home page's .parameter-card is a block element, so the diary flex rules are inert on it. One minor
@@ -9432,7 +9446,7 @@ def _safe_back_url():
 #      response to this constant, so a page whose tokens were forgotten is still served the new JS.
 #      Step 1 is therefore the one that MUST happen; step 2 keeps the files honest for view-source checks.
 #   Check: GET /api/health -> e2ee.asset_version shows the live value. tools: ts_release_check.py.
-_A92_ASSET_VERSION = 'B225'  # A51 rev 3 (GREEN): B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
+_A92_ASSET_VERSION = 'B226'  # A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
 
 
 # =====================================================================
@@ -9809,7 +9823,14 @@ def _render_page_with_back(template_name):
     if template_name == 'about.html':
         html = _a92_soften_dashes_in_html(html)
     # Visible deploy marker so the live version is easy to confirm via view-source.
-    html = html.replace('</body>', '<!-- A43-rev5 back_url=' + back + ' -->\n</body>', 1)
+    # A51 rev 4 HARDENING: inject before the LAST </body> (the real closing tag), never the first.
+    # A </body> string inside an HTML comment earlier in the page used to catch this naive
+    # replace(..., 1), splitting that comment and spilling its tail onto the page as visible text.
+    # The real closing tag is always the last </body> (after any comment), so rfind() is safe.
+    _a51_marker = '<!-- A43-rev5 back_url=' + back + ' -->\n'
+    _a51_i = html.rfind('</body>')
+    if _a51_i != -1:
+        html = html[:_a51_i] + _a51_marker + html[_a51_i:]
     return html
 
 
