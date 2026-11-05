@@ -1,3 +1,6 @@
+// Version B225 (A51 rev 3 — ROUND RESULT: GREEN): no content change; ?v bumped B224->B225 in lockstep.
+// Version B224 (A51 rev 2 — ROUND RESULT: ORANGE): no content change; ?v bumped B223->B224 in lockstep.
+// Version B223 (A51): no content change; ?v bumped B222->B223 in lockstep (F50-batch refresh).
 // Version B222 (A32): no content change; ?v bumped B221->B222 in lockstep.
 // Version B221 (A31): support.hours_detail reworded in all 4 languages ("Usually responds Mon–Fri, 9 AM–5 PM EST.");
 //   new block at the END adds support.helplines_title_more and home.connections_daily (en/he/ar/ru). No key removed.

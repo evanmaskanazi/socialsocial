@@ -1,3 +1,15 @@
+// Version B225 (A51 rev 3 — ROUND RESULT: GREEN): no content change; ?v bumped B224->B225 in lockstep.
+// Version B224 (A51 rev 2 — ROUND RESULT: ORANGE): minor polish from the A51 self-review — the automatic e2ee
+//   prompt no longer shows two near-identical "it's in Settings" lines. When the "Don't remind me again" checkbox
+//   and its "always in Settings" reassurance are shown, the detailed later_hint is suppressed (it still appears on
+//   the manual prompt). No behaviour change. ?v bumped B223->B224 in lockstep.
+// Version B223 (A51): added "Don't remind me again" to the AUTOMATIC end-to-end-encryption setup/unlock prompt,
+//   with a "You can always turn this on later from the Settings menu" reassurance (he: "תמיד אפשר להחיל תכונה זו
+//   דרך תפריט ההגדרות"). Checking it and dismissing persists localStorage ts_e2ee_never_prompt, which silences the
+//   automatic prompt across sessions on this device/browser (folded into getDeclined()). Opening e2ee from Settings or the 🔓
+//   pill still prompts and clears the flag once set up/unlocked (saveLocal). The checkbox appears only on the
+//   automatic prompt, never when the member opened the dialog themselves. Additive: no crypto, server or
+//   message-flow change. ?v bumped B222->B223 in lockstep.
 // Version B222 (A32): no content change; ?v bumped B221->B222 in lockstep.
 // Version B221 (A31): no content change; ?v bumped B220->B221 in lockstep.
 // Version B220 (Rnd 6): no content change; ?v bumped B219->B220 in lockstep.
@@ -188,7 +200,10 @@
             he: 'האדם הזה עדיין לא הפעיל הצפנה מקצה לקצה. ההודעה נשלחה באופן פרטי, אך ללא הצפנה מקצה לקצה.',
             ar: 'لم يفعّل هذا الشخص التشفير من طرف إلى طرف بعد. أُرسلت الرسالة بشكل خاص، لكن دون تشفير من طرف إلى طرف.',
             ru: 'Этот человек ещё не включил сквозное шифрование. Сообщение отправлено приватно, но без сквозного шифрования.'
-        }
+        },
+        // A51: silence the automatic prompt for good, with a reassurance that e2ee can still be enabled later.
+        dont_remind: { en: "Don't remind me again", he: 'אל תזכיר לי שוב', ar: 'لا تذكّرني مرة أخرى', ru: 'Больше не напоминать' },
+        always_in_settings: { en: 'You can always turn this on later from the Settings menu.', he: 'תמיד אפשר להחיל תכונה זו דרך תפריט ההגדרות', ar: 'يمكنكم دائمًا تفعيل هذه الميزة لاحقًا من قائمة الإعدادات.', ru: 'Эту функцию всегда можно включить позже в меню настроек.' }
     };
     function lang() {
         try { if (window.i18n && window.i18n.getCurrentLanguage) { var l = window.i18n.getCurrentLanguage(); if (l) return l; } } catch (_) {}
@@ -232,7 +247,11 @@
     }
 
     // ------------------------------------------------------------------ state
-    function getDeclined() { try { return sessionStorage.getItem('ts_e2ee_declined') === '1'; } catch (_) { return false; } }
+    // A51: a persistent "never prompt me again" flag (localStorage; survives sessions and devices), separate
+    // from the per-tab "declined" flag. getDeclined() treats either one as "do not auto-prompt".
+    function getNever() { try { return localStorage.getItem('ts_e2ee_never_prompt') === '1'; } catch (_) { return false; } }
+    function setNever(v) { try { if (v) localStorage.setItem('ts_e2ee_never_prompt', '1'); else localStorage.removeItem('ts_e2ee_never_prompt'); } catch (_) {} }
+    function getDeclined() { try { if (sessionStorage.getItem('ts_e2ee_declined') === '1') return true; } catch (_) {} return getNever(); }
     function setDeclined(v) {
         S.declined = !!v;
         try { if (v) sessionStorage.setItem('ts_e2ee_declined', '1'); else sessionStorage.removeItem('ts_e2ee_declined'); } catch (_) {}
@@ -294,6 +313,7 @@
         }).catch(function () {});
     }
     function saveLocal(uid) {
+        setNever(false);   // A51: the member just turned on / unlocked e2ee on this device, so clear "never prompt"
         return idbOp('readwrite', function (st) { return st.put({ uid: uid, priv: S.priv, fp: S.fp }, 'dev'); }).catch(function () {});
     }
     function clearLocal() {
@@ -393,7 +413,11 @@
             ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('dir', rtl ? 'rtl' : 'ltr');
             var card = el('div', 'background:#fff;color:#2d3748;max-width:440px;width:100%;border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-height:92vh;overflow:auto;');
             ov.appendChild(card);
-            function close(v) { if (v === false) S.dismissedAt = Date.now(); document.removeEventListener('keydown', onKey, true); if (ov.parentNode) ov.parentNode.removeChild(ov); resolve(v); }
+            var neverChk = null;   // A51: the "Don't remind me again" checkbox, present only when the auto-prompt offers it
+            function close(v) {
+                if (v === false) { S.dismissedAt = Date.now(); if (neverChk && neverChk.checked) { setNever(true); setDeclined(true); } }
+                document.removeEventListener('keydown', onKey, true); if (ov.parentNode) ov.parentNode.removeChild(ov); resolve(v);
+            }
             function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); close(false); } }
             document.addEventListener('keydown', onKey, true);
             var INPUT = 'width:100%;box-sizing:border-box;padding:10px 12px;margin:4px 0 12px;border:2px solid #cbd5e0;border-radius:8px;font-size:16px;background:#fff;color:#2d3748;';
@@ -401,6 +425,7 @@
 
             function render() {
                 card.textContent = '';
+                neverChk = null;   // A51: reset each render; set only when this view shows the checkbox
                 var setup = mode === 'setup', change = mode === 'change';
                 if (mode === 'manage') {           // F12 rev 2: already on and unlocked
                     card.appendChild(el('h2', 'margin:0 0 10px;font-size:20px;color:#3D4852;', T('settings_title')));
@@ -451,7 +476,21 @@
                 var ok = el('button', BTN + 'background:#5A7A93;color:#fff;', okLabel); ok.type = 'button';
                 var no = el('button', BTN + 'background:#edf2f7;color:#2d3748;', T('btn_cancel')); no.type = 'button';
                 row.appendChild(ok); row.appendChild(no); card.appendChild(row);
-                if (!change) card.appendChild(el('p', 'margin:12px 0 0;font-size:13px;line-height:1.45;color:#6B7280;', T('later_hint')));   // F12 rev 2
+                // A51: on the AUTOMATIC prompt only, offer to silence it for good, with the reassurance that
+                // end-to-end encryption can still be turned on later from Settings.
+                var offerNv = cfg.offerNever && (setup || mode === 'unlock');   // A51 rev 2
+                if (offerNv) {
+                    var nv = el('label', 'display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;color:#3D4852;cursor:pointer;');
+                    neverChk = el('input'); neverChk.type = 'checkbox';
+                    neverChk.style.cssText = 'width:16px;height:16px;flex:0 0 auto;margin:0;accent-color:#5A7A93;';
+                    nv.appendChild(neverChk); nv.appendChild(el('span', null, T('dont_remind')));
+                    card.appendChild(nv);
+                    card.appendChild(el('p', 'margin:6px 0 0;font-size:13px;line-height:1.45;color:#6B7280;', T('always_in_settings')));
+                }
+                // A51 rev 2: the "always in Settings" reassurance shown with the checkbox already covers this, so
+                // the auto-prompt shows one settings pointer instead of two; the detailed later_hint still appears
+                // on the manual prompt and when the checkbox isn't offered.
+                if (!change && !offerNv) card.appendChild(el('p', 'margin:12px 0 0;font-size:13px;line-height:1.45;color:#6B7280;', T('later_hint')));   // F12 rev 2
                 if (!setup && !change) {
                     var fg = el('button', 'margin-top:14px;background:none;border:none;color:#5A7A93;text-decoration:underline;cursor:pointer;font-size:14px;padding:0;', T('forgot')); fg.type = 'button';
                     fg.onclick = function () { resetting = true; render(); };
@@ -510,7 +549,8 @@
             if (needAsk && !needAsk(sk)) return false;
             var done = await dialog({
                 mode: sk.has_key ? 'unlock' : 'setup',
-                run: runFor(uid)
+                run: runFor(uid),
+                offerNever: !managing   // A51: show "Don't remind me again" for the automatic prompt, not when opened from Settings
             });
             return !!(done && S.priv);
         })();
