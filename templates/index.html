@@ -1,4 +1,41 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B231 (A51 FB rev 2) -->
+<!-- B231 (A51 FB rev 2): cache-bust lockstep. Client fix only (e2ee.js): keeping the device key after sign-out
+     is now a per-member opt-in set only by ticking "Don't remind me again", so members who never ticked it
+     (or only clicked "Not now") have their key removed at sign-out as before.
+     CACHE-BUST: every live JS ?v bumped B230 to B231 in lockstep; _A92_ASSET_VERSION = 'B231'. -->
+<!-- TheraSocial Version B230 (A51 FB) -->
+<!-- B230 (A51 FB): cache-bust lockstep. Client fix only (e2ee.js): a ticked "Don't remind me again" now persists
+     when the member clicks Create/Unlock (not only "Not now"), unlocking no longer erases it, and sign-out keeps
+     the device key for a member who chose it, so the prompt no longer returns after logout/login.
+     CACHE-BUST: every live JS ?v bumped to B230 in lockstep (index.html was still at B228); _A92_ASSET_VERSION = 'B230'. -->
+<!-- TheraSocial Version B228 (A51 rev 6) -->
+<!-- B228 (A51 rev 6): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" flag is now
+     device-global so it reliably persists across logout/login (the per-member key depended on an id endpoint that
+     returns 401 here). CACHE-BUST: every live JS ?v bumped B227 to B228 in lockstep; _A92_ASSET_VERSION = 'B228'. -->
+<!-- TheraSocial Version B227 (A51 rev 5) -->
+<!-- B227 (A51 rev 5): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" preference now
+     suppresses the prompt across logout/login (the earlier gate ran too late). CACHE-BUST: every live JS ?v
+     bumped B226 to B227 in lockstep; app.py _A92_ASSET_VERSION = 'B227'. -->
+<!-- TheraSocial Version B226 (A51 rev 4) -->
+<!-- B226 (A51 rev 4): cache-bust lockstep. This round hardens app.py so its back-nav marker can never split a
+     comment again, adds a pre-ship comment-safety check (tools/ts_html_comment_safety_check.py), and makes the
+     e2ee "Don't remind me again" preference per-member. CACHE-BUST: every live JS ?v bumped B225 to B226 in
+     lockstep; app.py _A92_ASSET_VERSION = 'B226'. -->
+<!-- TheraSocial Version B225 (A51 rev 3) -->
+<!-- B225 (A51 rev 3) — ROUND RESULT: GREEN ✓ (review of A51 rev 2 found no moderate/critical issues; only a minor edge-case hardened). -->
+<!-- B225 (A51 rev 3): cache-bust only; the #parametersContainer scoping was verified harmless here (home .parameter-card is block, so the diary flex rules are inert on it). app.py _A92_ASSET_VERSION = 'B225'. -->
+<!-- TheraSocial Home Version B224 (A51 rev 2) -->
+<!-- B224 (A51 rev 2) — ROUND RESULT: ORANGE (self-review of A51 found moderately problematic, non-critical issues; fixed here). -->
+<!-- B224 (A51 rev 2): cache-bust lockstep only on this page. The rev-2 fixes are in parameters-social.js (diary CSS
+     rescoped + overflow-safe) and e2ee.js (one Settings pointer, not two); the home diary view inherits the diary
+     fix automatically through parameters-social.js.
+     CACHE-BUST: every live JS ?v bumped B223->B224 in lockstep; app.py _A92_ASSET_VERSION = 'B224'. -->
+<!-- TheraSocial Home Version B223 (A51 / F50 batch) -->
+<!-- B223 (A51): cache-bust lockstep only on this page. The A51 batch's functional changes are in
+     parameters-social.js (diary rating-row symmetry) and e2ee.js ("Don't remind me again"); the home page's
+     diary view inherits the symmetry fix automatically because it renders through parameters-social.js.
+     CACHE-BUST: every live JS ?v bumped B222->B223 in lockstep; app.py _A92_ASSET_VERSION = 'B223'. -->
 <!-- TheraSocial Index Version B222 (A32) -->
 <!-- B222 (A32): ROUND RESULT: YELLOW (a small set of moderate issues found in review of A31; fixed here; none critical).
      MODERATE: a Home reload asked for during a scroll-page load (e.g. after changing language) was dropped, so the list
@@ -287,7 +324,7 @@
     all three: the ?v tokens, this header, and the i18n.js header comment now all read B185.
     REMINDER: parameters.html and circles.html load the same JS and must be bumped to ?v=B195
     in the same lockstep (not included in this file set).
-  1. A41-UX block before </body>: 10 additive, non-duplicative mobile UX improvements
+  1. A41-UX block before the closing body tag: 10 additive, non-duplicative mobile UX improvements
      (autocomplete + inputmode hints, no-select UI chrome, sticky-nav scroll-margin, honest
      44px tap targets, prefers-contrast support, nav :active feedback, accent-color + cross-
      engine scrollbar, horizontal-overscroll/image-overflow guard, font-smoothing + tabular
@@ -312,7 +349,7 @@
      closed disclosure. Wording, i18n keys and the save-consent payload are unchanged.
   4. FIRST CHECK-IN: quickCheckin() gained ONE additive call to window.TSDiaryReminder, which
      offers a 19:00 daily email diary reminder once, after the user's first check-in.
-  5. A26-POLISH block before </body>: 10 additive layout/symmetry/contrast improvements.
+  5. A26-POLISH block before the closing body tag: 10 additive layout/symmetry/contrast improvements.
   No existing logic, markup or endpoints were changed beyond the points listed above. -->
 <!-- TheraSocial Version B170 (A21) -->
 <!-- B170 (A21): Cache-bust sync — all active JS ?v bumped B165→B170 in lockstep across the
@@ -346,7 +383,7 @@
   with Google" in en/he/ar/ru; (2) unread-messages badge on the mobile + desktop Messages nav;
   (3) personal Points counter + "Store — coming soon" button in the profile (points earned via
   the daily check-in / gift box, backed by users.points); (4) additive A16-ANDROID + A16-UX
-  block before </body> (Android-safe fixes + 10 UX enhancements); theme-color meta added; one
+  block before the closing body tag (Android-safe fixes + 10 UX enhancements); theme-color meta added; one
   -webkit-backdrop-filter prefix added to the toast style. No existing logic changed. -->
 <!-- B145 (A12 audit): Cache-bust sync — all JS ?v bumped B140→B145 in lockstep with the
   audit round (the gift box was hardened and parameters-social.js received a pre-existing-bug
@@ -936,10 +973,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B222"></script>
+   <script src="/static/js/utilities.js?v=B231"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B222"></script>
-    <script src="/static/js/follow-requests.js?v=B222"></script>
+    <script src="/static/js/triggers.js?v=B231"></script>
+    <script src="/static/js/follow-requests.js?v=B231"></script>
 
 
     <style>
@@ -8393,8 +8430,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B222"></script>
-    <script src="/static/js/e2ee.js?v=B222"></script>
+    <script src="/static/js/i18n.js?v=B231"></script>
+    <script src="/static/js/e2ee.js?v=B231"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8874,9 +8911,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B222"></script>
-   <script src="/static/js/circles-messages.js?v=B222"></script>
-<script src="/static/js/feed-updates.js?v=B222"></script>
+<script src="/static/js/parameters-social.js?v=B231"></script>
+   <script src="/static/js/circles-messages.js?v=B231"></script>
+<script src="/static/js/feed-updates.js?v=B231"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';

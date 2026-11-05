@@ -1,4 +1,29 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B228 (A51 rev 6) -->
+<!-- B228 (A51 rev 6): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" flag is now
+     device-global so it reliably persists across logout/login (the per-member key depended on an id endpoint that
+     returns 401 here). CACHE-BUST: every live JS ?v bumped B227 to B228 in lockstep; _A92_ASSET_VERSION = 'B228'. -->
+<!-- TheraSocial Version B227 (A51 rev 5) -->
+<!-- B227 (A51 rev 5): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" preference now
+     suppresses the prompt across logout/login (the earlier gate ran too late). CACHE-BUST: every live JS ?v
+     bumped B226 to B227 in lockstep; app.py _A92_ASSET_VERSION = 'B227'. -->
+<!-- TheraSocial Version B226 (A51 rev 4) -->
+<!-- B226 (A51 rev 4): cache-bust lockstep. This round hardens app.py so its back-nav marker can never split a
+     comment again, adds a pre-ship comment-safety check (tools/ts_html_comment_safety_check.py), and makes the
+     e2ee "Don't remind me again" preference per-member. CACHE-BUST: every live JS ?v bumped B225 to B226 in
+     lockstep; app.py _A92_ASSET_VERSION = 'B226'. -->
+<!-- TheraSocial Version B225 (A51 rev 3) -->
+<!-- B225 (A51 rev 3) — ROUND RESULT: GREEN ✓ (review of A51 rev 2 found no moderate/critical issues; only a minor edge-case hardened). -->
+<!-- B225 (A51 rev 3): cache-bust lockstep only on this page. app.py _A92_ASSET_VERSION = 'B225'. -->
+<!-- TheraSocial Profile Version B224 (A51 rev 2) -->
+<!-- B224 (A51 rev 2) — ROUND RESULT: ORANGE (self-review of A51 found moderately problematic, non-critical issues; fixed here). -->
+<!-- B224 (A51 rev 2): the shared mobile-UX block (style#ts-f50-ux) 44px rule now targets action-button classes
+     only (was a bare button element). No other change on this page.
+     CACHE-BUST: every live JS ?v bumped B223->B224 in lockstep; app.py _A92_ASSET_VERSION = 'B224'. -->
+<!-- TheraSocial Profile Version B223 (A51 / F50 batch) -->
+<!-- B223 (A51): added the shared, self-contained mobile-UX block (style#ts-f50-ux) before the closing body tag. No existing
+     markup, IDs or profile.js logic changed.
+     CACHE-BUST: every live JS ?v bumped B222->B223 in lockstep; app.py _A92_ASSET_VERSION = 'B223'. -->
 <!-- TheraSocial Profile Version B222 (A32) -->
 <!-- B222 (A32): A32: cache-bust lockstep only on this page (app.py and index.html changed).
      CACHE-BUST: every live JS ?v bumped B221->B222 in lockstep; app.py _A92_ASSET_VERSION = 'B222'. -->
@@ -105,8 +130,8 @@
     <div id="profileContainer"></div>
     <!-- B205 (F6): both had NO ?v token, so browsers could keep serving a stale cached copy
          (static files are cached for a week). Pinned in lockstep with the rest of the app. -->
-    <script src="/static/js/i18n.js?v=B222"></script>
-    <script src="/static/js/profile.js?v=B222"></script>
+    <script src="/static/js/i18n.js?v=B228"></script>
+    <script src="/static/js/profile.js?v=B228"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Apply translations after content is loaded
@@ -118,5 +143,38 @@
             });
         });
     </script>
+
+    <!-- ===================== F50 UX (A51 batch): cross-platform mobile polish — additive, presentation-only =====
+         Eight small refinements in the spirit of the design-review finish work, for iPhone/Android/Galaxy and the
+         rest. Each is feature-detected or degrades gracefully; nothing changes layout structure, markup or logic.
+         Remove this style block to revert. -->
+    <style id="ts-f50-ux">
+      /* (1) Brand-match native controls (checkboxes, radios, toggles, range, date/time) vs. the OS blue/green. */
+      input, select, textarea, button { accent-color: #5A7A93; }
+      /* (2) Ragged last lines -> balanced headings and tidy paragraphs (silent no-op where unsupported). */
+      h1, h2, h3, .feature-title, .parameter-name { text-wrap: balance; }
+      p, li, .feature-desc, .parameter-description { text-wrap: pretty; }
+      /* (3) Tactile press feedback on touch for a native-app feel. */
+      @media (hover: none) and (pointer: coarse) {
+        button:active, .btn:active, a.btn:active, .back-link:active, [role="button"]:active { transform: scale(0.985); }
+      }
+      /* (4) Respect reduced-motion: stop infinite spin/pulse/rotate and heavy transitions. */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+                                 transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+      }
+      /* (5) Consistent keyboard / switch focus ring (brand slate) for accessibility. */
+      a:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,
+      [role="button"]:focus-visible { outline: 3px solid rgba(90,122,147,0.45); outline-offset: 2px; border-radius: 6px; }
+      /* (6) Snappier, cleaner taps: no 300ms delay, no grey tap-flash, no accidental selection on controls. */
+      a, button, .btn, [role="button"], select { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+      button, .btn, [role="button"] { -webkit-user-select: none; user-select: none; }
+      /* (7) Stop iOS auto-inflating text in landscape; keep fields >=16px so focusing them never zooms. */
+      html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+      @media (max-width: 768px) { input, select, textarea { font-size: 16px; } }
+      /* (8) Comfortable >=44px tap targets (Apple HIG / Material) on small controls. */
+      @media (max-width: 768px) { .btn, .btn-primary, .btn-secondary, .back-link, .cta-button, .submit-btn, .language-selector { min-height: 44px; } }
+    </style>
+    <!-- ===================== END F50 UX ===================== -->
 </body>
 </html>

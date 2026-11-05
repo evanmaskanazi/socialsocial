@@ -1,4 +1,33 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B228 (A51 rev 6) -->
+<!-- B228 (A51 rev 6): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" flag is now
+     device-global so it reliably persists across logout/login (the per-member key depended on an id endpoint that
+     returns 401 here). CACHE-BUST: every live JS ?v bumped B227 to B228 in lockstep; _A92_ASSET_VERSION = 'B228'. -->
+<!-- TheraSocial Version B227 (A51 rev 5) -->
+<!-- B227 (A51 rev 5): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" preference now
+     suppresses the prompt across logout/login (the earlier gate ran too late). CACHE-BUST: every live JS ?v
+     bumped B226 to B227 in lockstep; app.py _A92_ASSET_VERSION = 'B227'. -->
+<!-- TheraSocial Version B226 (A51 rev 4) -->
+<!-- B226 (A51 rev 4): cache-bust lockstep. This round hardens app.py so its back-nav marker can never split a
+     comment again, adds a pre-ship comment-safety check (tools/ts_html_comment_safety_check.py), and makes the
+     e2ee "Don't remind me again" preference per-member. CACHE-BUST: every live JS ?v bumped B225 to B226 in
+     lockstep; app.py _A92_ASSET_VERSION = 'B226'. -->
+<!-- TheraSocial Version B225 (A51 rev 3) -->
+<!-- B225 (A51 rev 3) — ROUND RESULT: GREEN ✓ (review of A51 rev 2 found no moderate/critical issues; only a minor edge-case hardened). -->
+<!-- B225 (A51 rev 3): the 360px-and-under rating row now flexes so it can never overflow (parameters-social.js); otherwise cache-bust only. app.py _A92_ASSET_VERSION = 'B225'. -->
+<!-- TheraSocial Parameters Version B224 (A51 rev 2) -->
+<!-- B224 (A51 rev 2) — ROUND RESULT: ORANGE (self-review of A51 found moderately problematic, non-critical issues; fixed here). -->
+<!-- B224 (A51 rev 2): the A51 diary-symmetry CSS (in parameters-social.js) was rescoped to #parametersContainer and
+     the metric name made shrink/wrap so it can't overflow on narrow phones. On THIS page the shared mobile-UX block
+     (style#ts-f50-ux) no longer applies min-height:44px to bare <button> (that had stretched the small square
+     ◀/▶ date-nav and ✕ close buttons); it now targets action-button classes only.
+     CACHE-BUST: every live JS ?v bumped B223->B224 in lockstep; app.py _A92_ASSET_VERSION = 'B224'. -->
+<!-- TheraSocial Parameters Version B223 (A51 / F50 batch) -->
+<!-- B223 (A51): Diary rating-row symmetry fix lives in parameters-social.js (reserved endpoint-anchor slots so
+     boxes 1-4 line up across every row; universal low->high anchor emojis; steadier label/info/privacy cluster).
+     This page adds the shared, self-contained mobile-UX block (style#ts-f50-ux) before the closing body tag — namespaced so it
+     sits alongside the earlier ts-a41-ux / ts-a51-ux blocks, not replacing them.
+     CACHE-BUST: every live JS ?v bumped B222->B223 in lockstep; app.py _A92_ASSET_VERSION = 'B223'. -->
 <!-- TheraSocial Parameters Version B222 (A32) -->
 <!-- B222 (A32): A32: cache-bust lockstep only on this page (app.py and index.html changed).
      CACHE-BUST: every live JS ?v bumped B221->B222 in lockstep; app.py _A92_ASSET_VERSION = 'B222'. -->
@@ -127,7 +156,7 @@
 <!-- B185 (A41): CACHE-BUST resync — all JS ?v bumped to B185 in lockstep with index/circles
   (i18n.js changed this round: cross-language completeness fixes). The prior round left the live
   refs at ?v=B180 while this header read B175 — resynced so the ?v token and the header match.
-  Added the shared, self-contained A41-UX block before </body> (10 additive mobile UX items,
+  Added the shared, self-contained A41-UX block before the closing body tag (10 additive mobile UX items,
   namespaced ts-a41-*, guarded/feature-detected). No existing markup, IDs or parameters logic changed. -->
 <!-- TheraSocial Parameters Version B175 (A26) -->
 <!-- B175 (A26): Cache-bust sync - all JS ?v bumped B170->B175 in lockstep with index/circles
@@ -152,7 +181,7 @@
   B160). A16 changes here: the GIFT BOX now shows the check-in REWARD as its main content —
   "+15 points" (or "+20" with the +5 streak/consistency bonus) shown large, with the curated
   reflection kept below in smaller text as a gentle addition. Points/bonus/streak/total come
-  from /api/gift/daily. Added an additive A16-ANDROID CSS block before </body> + theme-color
+  from /api/gift/daily. Added an additive A16-ANDROID CSS block before the closing body tag + theme-color
   meta. No existing gift/diary logic changed. -->
 <!-- B150 (A12 metrics): GIFT BOX open-rate — the inline module now POSTs /api/gift/opened
   (fire-and-forget) when the box is actually tapped, so open_rate = opens ÷ reveals is
@@ -167,7 +196,7 @@
   written to the session cache in loadParameters() — it was silently dropped on cache-restore
   even though saveParameterState wrote it and restoreParameterState read it. All JS ?v B140→B145. -->
 <!-- B140 (A12): Cache-bust sync — all JS bumped B135→B140. Added self-contained GIFT BOX
-  block before </body> (window.TSGiftBox): a once-per-day reward, contingent on completing
+  block before the closing body tag (window.TSGiftBox): a once-per-day reward, contingent on completing
   the daily report, that reveals one curated reflection with a single calm animation and then
   ends the session (no streaks). parameters-social.js gains ONE additive call on save-success.
   No existing markup, IDs, or diary logic changed. -->
@@ -1078,10 +1107,10 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B222"></script>
-    <script src="/static/js/e2ee.js?v=B222"></script>
-    <script src="/static/js/parameters-social.js?v=B222"></script>
-    <script src="/static/js/feed-updates.js?v=B222"></script>
+    <script src="/static/js/i18n.js?v=B228"></script>
+    <script src="/static/js/e2ee.js?v=B228"></script>
+    <script src="/static/js/parameters-social.js?v=B228"></script>
+    <script src="/static/js/feed-updates.js?v=B228"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -2455,5 +2484,39 @@ Storage.prototype.setItem = function(key, value) {
     </script>
     <!-- ===================== END F21 ===================== -->
 
+
+    <!-- ===================== F50 UX (A51 batch): cross-platform mobile polish — additive, presentation-only =====
+         Eight small refinements in the spirit of the design-review finish work, for iPhone/Android/Galaxy and the
+         rest. Each is feature-detected or degrades gracefully; nothing changes layout structure, markup or logic.
+         Namespaced ts-f50-ux to sit alongside (not clash with) the earlier ts-a41-ux / ts-a51-ux blocks.
+         Remove this style block to revert. -->
+    <style id="ts-f50-ux">
+      /* (1) Brand-match native controls (checkboxes, radios, toggles, range, date/time) vs. the OS blue/green. */
+      input, select, textarea, button { accent-color: #5A7A93; }
+      /* (2) Ragged last lines -> balanced headings and tidy paragraphs (silent no-op where unsupported). */
+      h1, h2, h3, .feature-title, .parameter-name { text-wrap: balance; }
+      p, li, .feature-desc, .parameter-description { text-wrap: pretty; }
+      /* (3) Tactile press feedback on touch for a native-app feel. */
+      @media (hover: none) and (pointer: coarse) {
+        button:active, .btn:active, a.btn:active, .back-link:active, [role="button"]:active { transform: scale(0.985); }
+      }
+      /* (4) Respect reduced-motion: stop infinite spin/pulse/rotate and heavy transitions. */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+                                 transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+      }
+      /* (5) Consistent keyboard / switch focus ring (brand slate) for accessibility. */
+      a:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,
+      [role="button"]:focus-visible { outline: 3px solid rgba(90,122,147,0.45); outline-offset: 2px; border-radius: 6px; }
+      /* (6) Snappier, cleaner taps: no 300ms delay, no grey tap-flash, no accidental selection on controls. */
+      a, button, .btn, [role="button"], select { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+      button, .btn, [role="button"] { -webkit-user-select: none; user-select: none; }
+      /* (7) Stop iOS auto-inflating text in landscape; keep fields >=16px so focusing them never zooms. */
+      html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+      @media (max-width: 768px) { input, select, textarea { font-size: 16px; } }
+      /* (8) Comfortable >=44px tap targets (Apple HIG / Material) on small controls. */
+      @media (max-width: 768px) { .btn, .btn-primary, .btn-secondary, .back-link, .cta-button, .submit-btn, .language-selector { min-height: 44px; } }
+    </style>
+    <!-- ===================== END F50 UX ===================== -->
 </body>
 </html>

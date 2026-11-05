@@ -1,3 +1,49 @@
+// Version B231 (A51 FB rev 2): (3) is now a separate PER-MEMBER opt-in (ts_e2ee_keep_device_<id>), written only
+//   when that member ticks the box. Keying it to the device-global never flag kept the key for members who never
+//   opted in (a plain "Not now" also sets that flag since B56, and it is shared by everyone on the browser).
+//   "Lock on this device" clears the opt-in. ?v B230->B231.
+// Version B230 (A51 FB): FIX (verified root cause) — "Don't remind me again" came back after every logout/login.
+//   Reproduced in real Chrome against a mock backend with real WebCrypto: ticking the box and then clicking
+//   Create / Unlock (instead of "Not now") never wrote ts_e2ee_never_prompt, because dialog close() read the box
+//   ONLY when v === false; and saveLocal() (run on every Create/Unlock) actively REMOVED the flag. Sign-out then
+//   deleted this device's key, so the next login showed the unlock prompt again — every time.
+//   Three changes: (1) close() honours the ticked box on Create/Unlock as well as on "Not now"/Esc;
+//   (2) saveLocal() no longer clears the flag (unlocking is not a revocation of the member's choice);
+//   (3) sign-out keeps this device's key only when the member chose "Don't remind me again" (logoutLocal), so
+//   signing back in needs no passphrase. The key stays bound to the member id (loadLocal checks rec.uid), so a
+//   different member on the same browser cannot use it; "Lock on this device" still removes it. ?v B229->B230.
+// Version B228 (A51 rev 6): FIX (real root cause) — "Don't remind me again" never persisted because rev-4/5 keyed
+//   the flag by a member id obtained from getMe() (/api/user/profile), and on this deployment that endpoint
+//   returns 401, so S.uid was null at dismiss time and setNever(uid,...) silently no-op'd (if (!uid) return) —
+//   localStorage.getItem('ts_e2ee_never_prompt_<id>') was null. The flag is now DEVICE-GLOBAL with no uid
+//   dependency: setNever(true) always writes 'ts_e2ee_never_prompt', getNever() reads it, and the ensureReady gate
+//   checks it fresh. Survives logout/login; trade-off is per-browser rather than per-account. ?v B227->B228.
+// Version B227 (A51 rev 5): FIX — the rev-4 per-member "don't remind me again" did not actually stop the prompt.
+//   Root cause: readFlow/sendFlow compute allowPrompt from S.declined BEFORE ensureReady runs getMe(), so on the
+//   first read after login S.declined was still its stale init value and the prompt fired before the per-member
+//   flag was re-applied. The authoritative gate now lives INSIDE ensureReady, right after getMe() resolves the
+//   member id: `if (!managing && getNever(uid)) return false;` — it reads the per-member flag fresh, so logout/
+//   login no longer re-shows the prompt, Settings/pill (managing) still prompts on demand, and a different member
+//   on the same browser is unaffected. ?v bumped B226->B227 in lockstep.
+// Version B226 (A51 rev 4): the "Don't remind me again" preference is now PER-USER (keyed by member id) and is
+//   re-applied on (re)login, so it persists across logout/login for that member and never carries over to a
+//   different member on the same browser. Previously it was device-global and the in-memory flag was reset on
+//   login, so the prompt reappeared after logging out and back in. Changes: neverKey(uid)/getNever(uid)/
+//   setNever(uid,v); getDeclined(uid); getMe() sets S.declined = getDeclined(id) once the member id is known;
+//   saveLocal and the dialog's "never" checkbox pass the uid. No crypto/server/message-flow change.
+//   ?v bumped B225->B226 in lockstep.
+// Version B225 (A51 rev 3 — ROUND RESULT: GREEN): no content change; ?v bumped B224->B225 in lockstep.
+// Version B224 (A51 rev 2 — ROUND RESULT: ORANGE): minor polish from the A51 self-review — the automatic e2ee
+//   prompt no longer shows two near-identical "it's in Settings" lines. When the "Don't remind me again" checkbox
+//   and its "always in Settings" reassurance are shown, the detailed later_hint is suppressed (it still appears on
+//   the manual prompt). No behaviour change. ?v bumped B223->B224 in lockstep.
+// Version B223 (A51): added "Don't remind me again" to the AUTOMATIC end-to-end-encryption setup/unlock prompt,
+//   with a "You can always turn this on later from the Settings menu" reassurance (he: "תמיד אפשר להחיל תכונה זו
+//   דרך תפריט ההגדרות"). Checking it and dismissing persists localStorage ts_e2ee_never_prompt, which silences the
+//   automatic prompt across sessions on this device/browser (folded into getDeclined()). Opening e2ee from Settings or the 🔓
+//   pill still prompts and clears the flag once set up/unlocked (saveLocal). The checkbox appears only on the
+//   automatic prompt, never when the member opened the dialog themselves. Additive: no crypto, server or
+//   message-flow change. ?v bumped B222->B223 in lockstep.
 // Version B222 (A32): no content change; ?v bumped B221->B222 in lockstep.
 // Version B221 (A31): no content change; ?v bumped B220->B221 in lockstep.
 // Version B220 (Rnd 6): no content change; ?v bumped B219->B220 in lockstep.
@@ -188,7 +234,10 @@
             he: 'האדם הזה עדיין לא הפעיל הצפנה מקצה לקצה. ההודעה נשלחה באופן פרטי, אך ללא הצפנה מקצה לקצה.',
             ar: 'لم يفعّل هذا الشخص التشفير من طرف إلى طرف بعد. أُرسلت الرسالة بشكل خاص، لكن دون تشفير من طرف إلى طرف.',
             ru: 'Этот человек ещё не включил сквозное шифрование. Сообщение отправлено приватно, но без сквозного шифрования.'
-        }
+        },
+        // A51: silence the automatic prompt for good, with a reassurance that e2ee can still be enabled later.
+        dont_remind: { en: "Don't remind me again", he: 'אל תזכיר לי שוב', ar: 'لا تذكّرني مرة أخرى', ru: 'Больше не напоминать' },
+        always_in_settings: { en: 'You can always turn this on later from the Settings menu.', he: 'תמיד אפשר להחיל תכונה זו דרך תפריט ההגדרות', ar: 'يمكنكم دائمًا تفعيل هذه الميزة لاحقًا من قائمة الإعدادات.', ru: 'Эту функцию всегда можно включить позже в меню настроек.' }
     };
     function lang() {
         try { if (window.i18n && window.i18n.getCurrentLanguage) { var l = window.i18n.getCurrentLanguage(); if (l) return l; } } catch (_) {}
@@ -232,7 +281,14 @@
     }
 
     // ------------------------------------------------------------------ state
-    function getDeclined() { try { return sessionStorage.getItem('ts_e2ee_declined') === '1'; } catch (_) { return false; } }
+    // A51 rev 6: the "never prompt me again" flag is a DEVICE-GLOBAL localStorage key with NO dependency on a
+    // member id. The rev-4/5 per-member keying required a uid from getMe() (/api/user/profile), which on this
+    // deployment returns 401, so setNever(uid,...) silently no-op'd and the flag was never written. This version
+    // always writes/reads the same key, so it cannot fail for that reason. It survives logout/login; the trade-off
+    // is that it is per-browser, not per-account (a different member on the same browser inherits it).
+    function getNever() { try { return localStorage.getItem('ts_e2ee_never_prompt') === '1'; } catch (_) { return false; } }
+    function setNever(v) { try { if (v) localStorage.setItem('ts_e2ee_never_prompt', '1'); else localStorage.removeItem('ts_e2ee_never_prompt'); } catch (_) {} }
+    function getDeclined() { try { if (sessionStorage.getItem('ts_e2ee_declined') === '1') return true; } catch (_) {} return getNever(); }
     function setDeclined(v) {
         S.declined = !!v;
         try { if (v) sessionStorage.setItem('ts_e2ee_declined', '1'); else sessionStorage.removeItem('ts_e2ee_declined'); } catch (_) {}
@@ -294,11 +350,28 @@
         }).catch(function () {});
     }
     function saveLocal(uid) {
+        // FB: no longer clears "never prompt" here. Unlocking is not a revocation of the member's explicit
+        // "Don't remind me again" choice; clearing it here (rev 6) re-armed the prompt for the next login.
         return idbOp('readwrite', function (st) { return st.put({ uid: uid, priv: S.priv, fp: S.fp }, 'dev'); }).catch(function () {});
     }
     function clearLocal() {
         resetMemory();
         return idbOp('readwrite', function (st) { return st.delete('dev'); }).catch(function () {});
+    }
+    // FB: on sign-out. A member who chose "Don't remind me again" keeps this device's key, so signing back in
+    // does not demand the passphrase again (that demand WAS the reminder). The stored key is tied to the member
+    // id (loadLocal checks rec.uid), so a different member signing in on this browser can never use it, and
+    // "Lock on this device" still removes it on demand. Without the choice, sign-out removes it exactly as before.
+    // FB rev 2: keeping the key is a separate, PER-MEMBER opt-in, written ONLY when that member ticks the box.
+    // The device-global never flag cannot be used for this: it is also set by a plain "Not now" (B56) and is
+    // shared by every member on the browser (rev 6), which kept keys for members who never opted in.
+    // The member id is always known here: ensureReady returns before any dialog when getMe() has no id.
+    function keepKeyName(uid) { return 'ts_e2ee_keep_device_' + uid; }
+    function getKeep(uid) { try { return !!uid && localStorage.getItem(keepKeyName(uid)) === '1'; } catch (_) { return false; } }
+    function setKeep(uid, v) { try { if (!uid) return; if (v) localStorage.setItem(keepKeyName(uid), '1'); else localStorage.removeItem(keepKeyName(uid)); } catch (_) {} }
+    function logoutLocal() {
+        if (getKeep(S.uid)) { resetMemory(); return Promise.resolve(); }
+        return clearLocal();
     }
 
     // ------------------------------------------------------------------ key creation / unlock
@@ -393,7 +466,15 @@
             ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('dir', rtl ? 'rtl' : 'ltr');
             var card = el('div', 'background:#fff;color:#2d3748;max-width:440px;width:100%;border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-height:92vh;overflow:auto;');
             ov.appendChild(card);
-            function close(v) { if (v === false) S.dismissedAt = Date.now(); document.removeEventListener('keydown', onKey, true); if (ov.parentNode) ov.parentNode.removeChild(ov); resolve(v); }
+            var neverChk = null;   // A51: the "Don't remind me again" checkbox, present only when the auto-prompt offers it
+            function close(v) {
+                // FB: the ticked box is honoured however the dialog closes. Before, it was read ONLY on "Not now"/Esc
+                // (v === false); ticking it and then clicking Create/Unlock (v === true) silently dropped it, so the
+                // flag was never written and the prompt came back after every logout/login.
+                if (neverChk && neverChk.checked && v !== null) { setNever(true); setKeep(S.uid, true); }
+                if (v === false) { S.dismissedAt = Date.now(); if (neverChk && neverChk.checked) setDeclined(true); }
+                document.removeEventListener('keydown', onKey, true); if (ov.parentNode) ov.parentNode.removeChild(ov); resolve(v);
+            }
             function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); close(false); } }
             document.addEventListener('keydown', onKey, true);
             var INPUT = 'width:100%;box-sizing:border-box;padding:10px 12px;margin:4px 0 12px;border:2px solid #cbd5e0;border-radius:8px;font-size:16px;background:#fff;color:#2d3748;';
@@ -401,6 +482,7 @@
 
             function render() {
                 card.textContent = '';
+                neverChk = null;   // A51: reset each render; set only when this view shows the checkbox
                 var setup = mode === 'setup', change = mode === 'change';
                 if (mode === 'manage') {           // F12 rev 2: already on and unlocked
                     card.appendChild(el('h2', 'margin:0 0 10px;font-size:20px;color:#3D4852;', T('settings_title')));
@@ -451,7 +533,21 @@
                 var ok = el('button', BTN + 'background:#5A7A93;color:#fff;', okLabel); ok.type = 'button';
                 var no = el('button', BTN + 'background:#edf2f7;color:#2d3748;', T('btn_cancel')); no.type = 'button';
                 row.appendChild(ok); row.appendChild(no); card.appendChild(row);
-                if (!change) card.appendChild(el('p', 'margin:12px 0 0;font-size:13px;line-height:1.45;color:#6B7280;', T('later_hint')));   // F12 rev 2
+                // A51: on the AUTOMATIC prompt only, offer to silence it for good, with the reassurance that
+                // end-to-end encryption can still be turned on later from Settings.
+                var offerNv = cfg.offerNever && (setup || mode === 'unlock');   // A51 rev 2
+                if (offerNv) {
+                    var nv = el('label', 'display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;color:#3D4852;cursor:pointer;');
+                    neverChk = el('input'); neverChk.type = 'checkbox';
+                    neverChk.style.cssText = 'width:16px;height:16px;flex:0 0 auto;margin:0;accent-color:#5A7A93;';
+                    nv.appendChild(neverChk); nv.appendChild(el('span', null, T('dont_remind')));
+                    card.appendChild(nv);
+                    card.appendChild(el('p', 'margin:6px 0 0;font-size:13px;line-height:1.45;color:#6B7280;', T('always_in_settings')));
+                }
+                // A51 rev 2: the "always in Settings" reassurance shown with the checkbox already covers this, so
+                // the auto-prompt shows one settings pointer instead of two; the detailed later_hint still appears
+                // on the manual prompt and when the checkbox isn't offered.
+                if (!change && !offerNv) card.appendChild(el('p', 'margin:12px 0 0;font-size:13px;line-height:1.45;color:#6B7280;', T('later_hint')));   // F12 rev 2
                 if (!setup && !change) {
                     var fg = el('button', 'margin-top:14px;background:none;border:none;color:#5A7A93;text-decoration:underline;cursor:pointer;font-size:14px;padding:0;', T('forgot')); fg.type = 'button';
                     fg.onclick = function () { resetting = true; render(); };
@@ -506,11 +602,16 @@
             }
             if (S.priv) return true;
             if (!allowPrompt || !sk) return false;
+            // A51 rev 5: the authoritative "don't remind me again" gate. It MUST live here, after getMe() has
+            // resolved the member id, because the callers compute allowPrompt from the stale S.declined BEFORE
+            // this runs. Reads the per-member flag fresh from storage; manage() (managing=true) still prompts.
+            if (!managing && getNever()) return false;
             if (!sk.has_key && sk !== S.server) return false;
             if (needAsk && !needAsk(sk)) return false;
             var done = await dialog({
                 mode: sk.has_key ? 'unlock' : 'setup',
-                run: runFor(uid)
+                run: runFor(uid),
+                offerNever: true   // B56 (A55 fix): show "Don't remind me again" on every prompt, including the pill/Settings (manage) one — previously !managing, so the manage dialog had no checkbox and could never persist the flag
             });
             return !!(done && S.priv);
         })();
@@ -627,7 +728,8 @@
         // Remove this device's key (memory + IndexedDB); keep who is signed in, so the controls stay visible.
         S.priv = null; S.fp = null; pubCache = {}; pairCache = {};
         idbOp('readwrite', function (st) { return st.delete('dev'); }).catch(function () {});
-        setDeclined(true);            // do not ask again in this tab until the member chooses to unlock
+        setKeep(S.uid, false);        // FB rev 2: an explicit lock also ends "keep this device unlocked" for this member
+        setDeclined(true);           // do not ask again in this tab until the member chooses to unlock
     }
     var managing = false;
     async function manage() {
@@ -641,7 +743,7 @@
             if (!ready) {
                 var t0 = Date.now();
                 ready = await safeReady(true);              // shows "Turn on" or "Unlock" as needed
-                if (ready) toast('ready_ok', 'success'); else if (S.dismissedAt >= t0) setDeclined(true);
+                if (ready) toast('ready_ok', 'success'); else if (S.dismissedAt >= t0) { setNever(true); setDeclined(true); }   // B56: persist on this device, not just the session
             } else {
                 var res = await dialog({ mode: 'manage', run: runFor(uid), lock: lockDevice });
                 if (res === 'changed') toast('changed_ok', 'success');
@@ -753,7 +855,7 @@
         var tStart = Date.now();
         // Ask again only if this member has a key to unlock (needed to encrypt) or has not declined setting one up.
         var ready = await safeReady(true, function (sk) { return sk.has_key || !S.declined; });
-        if (ready) setDeclined(false); else if (S.dismissedAt >= tStart) setDeclined(true);
+        if (ready) setDeclined(false); else if (S.dismissedAt >= tStart) { setNever(true); setDeclined(true); }   // B56: persist on this device, not just the session
         if (!ready) {
             // Not unlocked/set up. Let the server decide: while rolling out (transitional) it accepts plain text
             // unless BOTH members have keys; otherwise it refuses and the member is told why.
@@ -857,7 +959,7 @@
                 // (so others can message them securely). Never nag again after "Not now".
                 var tAsk = Date.now();
                 var ready = await safeReady(!S.declined, function (sk) { return cipher || !sk.has_key; });
-                if (!ready && !S.priv && !S.declined && S.dismissedAt >= tAsk) setDeclined(true);   // only when a dialog was actually dismissed
+                if (!ready && !S.priv && !S.declined && S.dismissedAt >= tAsk) { setNever(true); setDeclined(true); }   // B56: persist on this device (localStorage), not just the session — only when a dialog was actually dismissed
                 if (!cipher) return resp;
             }
         } catch (_) { return resp; }
@@ -897,7 +999,7 @@
             if (p === '/api/user/export-data' && method === 'GET') return readFlow(input, init, 'export', u);
             if (method === 'POST' && p.indexOf('/api/auth/') === 0 && p !== '/api/auth/logout') S.uidT = 0;   // F12: sign-in may change who is signed in
             if (p === '/api/auth/logout' && method === 'POST') {
-                return Promise.race([clearLocal(), new Promise(function (r) { setTimeout(r, 500); })]).then(function () { return prevFetch(input, init); });
+                return Promise.race([logoutLocal(), new Promise(function (r) { setTimeout(r, 500); })]).then(function () { return prevFetch(input, init); });
             }
             if (method === 'POST' && p.indexOf('/api/auth/') === 0) return prevFetch(input, init).then(function (r) { S.uidT = 0; return r; });   // F12: and again once the sign-in has completed
         } catch (_) { /* fall through to the untouched request */ }

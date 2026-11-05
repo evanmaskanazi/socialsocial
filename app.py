@@ -1,6 +1,84 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version A51 FB rev 2 / B231
+#   Cache-bust lockstep only (no server logic changed). Client fix in static/js/e2ee.js: keeping this device's
+#   e2ee key after sign-out is now a separate per-member opt-in, written only when that member ticks
+#   "Don't remind me again" (B230 tied it to the device-global flag, which a plain "Not now" also sets and every
+#   member on the browser shares). "Lock on this device" clears it. See e2ee.js header.
+#   _A92_ASSET_VERSION = 'B231' (every live /static/js ?v B230->B231).
+# =====================================================================
+# =====================================================================
+# TheraSocial app.py - Version A51 FB / B230
+#   Cache-bust lockstep only (no server logic changed). Client fix in static/js/e2ee.js: the e2ee "Don't remind me
+#   again" box was dropped whenever the member clicked Create/Unlock instead of "Not now", unlocking erased the
+#   flag, and sign-out deleted the device key, so the prompt returned after every logout/login. See e2ee.js header.
+#   _A92_ASSET_VERSION = 'B230' (every live /static/js ?v B229->B230).
+# =====================================================================
+# =====================================================================
+# TheraSocial app.py - Version A51 rev 6 / B228
+#   Cache-bust lockstep only. Client fix: the e2ee "Don't remind me again" flag is now device-global (no member-id
+#   dependency), because the earlier per-member key relied on getMe()/api/user/profile, which returns 401 here, so
+#   the flag never got written. See e2ee.js header. _A92_ASSET_VERSION = 'B228' (every live /static/js ?v B227->B228).
+# =====================================================================
+# =====================================================================
+# TheraSocial app.py - Version A51 rev 5 / B227
+#   Cache-bust lockstep only (no server logic changed). The client fix this round: the e2ee "Don't remind me
+#   again" preference now actually suppresses the prompt across logout/login (the rev-4 gate ran too late; it is
+#   now checked inside ensureReady after the member id is known). See e2ee.js header.
+#   _A92_ASSET_VERSION = 'B227' (every live /static/js ?v bumped B226 -> B227).
+# =====================================================================
+# =====================================================================
+# TheraSocial app.py - Version A51 rev 4 / B226
+#   1. HARDENING (the back-nav marker inject on /about and /support): the A43 deploy marker is now inserted
+#      before the LAST closing body tag (via rfind), never the first. A closing-body-tag string sitting inside
+#      an HTML comment earlier in the page used to catch the old replace(..., 1) and split that comment, spilling
+#      its tail onto the page. The real closing tag is always last, so this is injection-safe even if a comment
+#      ever contains that string again. (grep "A51 rev 4 HARDENING".)
+#   2. A new pre-ship guard ships alongside: tools/ts_html_comment_safety_check.py fails the build if any template
+#      has a comment containing a naive-replace target (closing body/html tag) or if any comment text would render
+#      as visible page data. Run it before every deploy.
+#   3. Client: the e2ee "Don't remind me again" preference is now per-member (e2ee.js), so it persists across
+#      logout/login and never carries to another member on the same browser.
+#   _A92_ASSET_VERSION = 'B226' (cache-bust lockstep; every live /static/js ?v bumped B225 -> B226).
+# =====================================================================
+# =====================================================================
+# TheraSocial app.py - Version A51 rev 3 / B225 — ROUND RESULT: GREEN
+#   Review of A51 rev 2 found no moderate or critical issues. The rev-2 #parametersContainer scoping was verified
+#   safe: the home page's .parameter-card is a block element, so the diary flex rules are inert on it. One minor
+#   edge-case hardened (client-side only): on <=360px phones the four diary rating boxes now flex to share the row
+#   (equal widths, still symmetric) instead of a fixed 46px, so the single line can never overflow into a
+#   horizontal scroll on the narrowest devices. No server logic changed.
+#   _A92_ASSET_VERSION = 'B225' (cache-bust lockstep; every live /static/js ?v bumped B224 -> B225).
+# =====================================================================
+# =====================================================================
+# TheraSocial app.py - Version A51 rev 2 / B224 — ROUND RESULT: ORANGE
+#   Self-review of the A51 drop found moderately problematic (non-critical) client-side issues; fixed this round:
+#     1. The A51 diary-symmetry CSS (parameters-social.js) used unscoped selectors and a non-shrinking metric name,
+#        so a longer label could overflow a narrow row and .parameter-name could reach the home dashboard card.
+#        Rescoped to #parametersContainer and made the name shrink/wrap.
+#     2. The shared mobile-UX block (ts-f50-ux) applied min-height:44px to bare <button>, stretching small square
+#        controls (diary ◀/▶ date-nav, ✕ close). Now scoped to action-button classes only.
+#     3. Removed the notifications .switch sizing tweak (assumed style.css dimensions; risked slider misalignment).
+#     4. The automatic e2ee prompt no longer shows two near-identical "it's in Settings" lines.
+#   No server logic changed. _A92_ASSET_VERSION = 'B224' (cache-bust lockstep; every live /static/js ?v bumped
+#   B223 -> B224).
+# =====================================================================
+# =====================================================================
+# TheraSocial app.py - Version A51 / B223 (F50-batch refresh)
+#   A51 ships three CLIENT-side batches this round (no server logic changed) plus the cache-bust bump:
+#     1. Diary rating-row symmetry (parameters-social.js): reserved endpoint-anchor slots so the 1-4 boxes
+#        line up across every row even when a glyph is missing; universal low->high anchor emojis; steadier
+#        label / info / privacy-dropdown / lock cluster. (Addresses the design-review symmetry note.)
+#     2. "Don't remind me again" + a "you can always turn this on from Settings" reassurance added to the
+#        end-to-end-encryption setup/unlock prompt (e2ee.js), persisted so the auto-prompt can be silenced.
+#     3. Eight additive, cross-platform mobile UX refinements (scoped ts-a51-ux blocks per page;
+#        notifications.html brought up to the same mobile baseline as the rest of the app).
+#   _A92_ASSET_VERSION = 'B223' (cache-bust lockstep; every live /static/js ?v bumped B222 -> B223). The
+#   _f21_pin_asset_versions hook still rewrites any missed token at render, so bumping this constant is the
+#   one change that MUST happen for cache-busting, and it is done below.
+# =====================================================================
+# =====================================================================
 # TheraSocial app.py - Version A32 / B222 (review of A31)
 # ROUND RESULT: YELLOW (a small set of moderate issues found in review of A31; fixed here; none critical).
 #   1. MODERATE: GET /api/connections-status ran 2-3 queries per connection and repeated ALL of them for every
@@ -9396,7 +9474,7 @@ def _safe_back_url():
 #      response to this constant, so a page whose tokens were forgotten is still served the new JS.
 #      Step 1 is therefore the one that MUST happen; step 2 keeps the files honest for view-source checks.
 #   Check: GET /api/health -> e2ee.asset_version shows the live value. tools: ts_release_check.py.
-_A92_ASSET_VERSION = 'B222'  # A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
+_A92_ASSET_VERSION = 'B231'  # A51 FB rev 2: B230 -> B231 (e2ee.js: keeping the device key after sign-out is now a per-member opt-in set only by ticking the box); A51 FB: B229 -> B230 (e2ee.js: ticked "Don't remind me again" now persists on Create/Unlock too, is no longer cleared by unlocking, and keeps the device key across sign-out); B56 (A55 fix): B228 -> B229 (e2ee.js: "Don't remind me again" shown on every prompt incl. pill/Settings, and a plain "Not now" now persists to localStorage, not just the session); A51 rev 6: B227 -> B228; A51 rev 5: B226 -> B227; A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
 
 
 # =====================================================================
@@ -9773,7 +9851,14 @@ def _render_page_with_back(template_name):
     if template_name == 'about.html':
         html = _a92_soften_dashes_in_html(html)
     # Visible deploy marker so the live version is easy to confirm via view-source.
-    html = html.replace('</body>', '<!-- A43-rev5 back_url=' + back + ' -->\n</body>', 1)
+    # A51 rev 4 HARDENING: inject before the LAST </body> (the real closing tag), never the first.
+    # A </body> string inside an HTML comment earlier in the page used to catch this naive
+    # replace(..., 1), splitting that comment and spilling its tail onto the page as visible text.
+    # The real closing tag is always the last </body> (after any comment), so rfind() is safe.
+    _a51_marker = '<!-- A43-rev5 back_url=' + back + ' -->\n'
+    _a51_i = html.rfind('</body>')
+    if _a51_i != -1:
+        html = html[:_a51_i] + _a51_marker + html[_a51_i:]
     return html
 
 

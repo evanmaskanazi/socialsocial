@@ -1,3 +1,24 @@
+// Version B228 (A51 rev 6): no content change; ?v bumped B227->B228 in lockstep.
+// Version B227 (A51 rev 5): no content change; ?v bumped B226->B227 in lockstep.
+// Version B226 (A51 rev 4): no content change; ?v bumped B225->B226 in lockstep.
+// Version B225 (A51 rev 3 — ROUND RESULT: GREEN): review of A51 rev 2 found no moderate/critical issues. The
+//   #parametersContainer scoping was verified safe (the home dashboard's .parameter-card is a block element, so the
+//   flex rules are inert on it). One minor edge-case hardened: on <=360px phones the four rating boxes now flex to
+//   share the row (equal widths, still symmetric) instead of a fixed 46px, so the single line can never overflow
+//   into a horizontal scroll on the narrowest devices. ?v bumped B224->B225 in lockstep.
+// Version B224 (A51 rev 2 — ROUND RESULT: ORANGE): self-review of A51 found moderate (non-critical) defects in the
+//   A51 diary CSS; fixed here. (1) The symmetry rules are now scoped to #parametersContainer so they cannot touch
+//   the home dashboard's own .parameter-name/.parameter-value card. (2) .parameter-name is now flex: 0 1 auto;
+//   min-width: 0 (was 0 0 auto), so a longer label (Hebrew/Russian) can shrink and wrap instead of overflowing the
+//   row on a narrow phone. endEmojis unchanged from A51. ?v bumped B223->B224 in lockstep.
+// Version B223 (A51): Diary rating-row symmetry (design-review fix), additive + presentation-only.
+//   (1) endEmojis: swapped the two anchors that fail to render on many phones (energy 🪫, belonging 🫂) and the
+//       abstract sleep anchor (✨) for universally-supported faces, so every row reads low→high; mood/physical/
+//       anxiety unchanged. (2) New CSS at the end of the parameterStyles block (grep "A51: Diary rating-row
+//       symmetry"): reserves equal fixed-width slots for both endpoint anchors so boxes 1-4 line up across every
+//       row even when a glyph is missing; keeps the four boxes on one line; steadies the label/info/privacy/lock
+//       cluster; and gives questions scroll-margin so the guided check-in isn't hidden by the sticky header.
+//   No markup or diary logic changed. ?v bumped B222->B223 in lockstep.
 // Version B222 (A32): no content change; ?v bumped B221->B222 in lockstep.
 // Version B221 (A31): no content change; ?v bumped B220->B221 in lockstep.
 // Version B220 (Rnd 6): no content change; ?v bumped B219->B220 in lockstep.
@@ -779,7 +800,7 @@ const PARAMETER_CATEGORIES = [
         descriptionKey: 'parameters.energy_desc',
         min: 1,
         max: 4,
-        endEmojis: ['🪫', '⚡']  // EM1: low=depleted, high=energized
+        endEmojis: ['😫', '⚡']  // A51: was 🪫 (low-battery glyph, missing on many devices → looked like "no left anchor"); 😫 renders everywhere; low=drained, high=energized
     },
     {
         id: 'sleep_quality',
@@ -788,7 +809,7 @@ const PARAMETER_CATEGORIES = [
         descriptionKey: 'parameters.sleep_quality_desc',
         min: 1,
         max: 4,
-        endEmojis: ['😣', '✨']  // EM1: low=poor sleep, high=great sleep
+        endEmojis: ['😣', '😌']  // A51: ✨ (abstract) → 😌 for a clear low→high face pair; low=restless, high=rested
     },
     {
         id: 'physical_activity',
@@ -816,7 +837,7 @@ const PARAMETER_CATEGORIES = [
         descriptionKey: 'parameters.social_belonging_desc',
         min: 1,
         max: 4,
-        endEmojis: ['😞', '🫂']  // C15: low=disconnected, high=strongly connected
+        endEmojis: ['😞', '🤗']  // A51: was 🫂 (people-hugging glyph, missing on many devices → looked like "no right anchor"); 🤗 renders everywhere; low=disconnected, high=connected
     }
 ];
 
@@ -2557,6 +2578,39 @@ function addParameterStyles() {
             right: auto;
             left: 10px;
         }
+
+        /* ===================== A51 rev 2: Diary rating-row symmetry (additive, presentation-only) ================
+           The 1-4 boxes drifted from row to row because an endpoint anchor emoji that does not render on a device
+           left a zero-width slot, and the label/info/privacy/lock cluster aligned unevenly. REV 2 fixes two defects
+           found in self-review: (a) every rule is now scoped to #parametersContainer (the diary) so it cannot reach
+           the home dashboard's own .parameter-name card; (b) the name may shrink and wrap (flex: 0 1 auto; min-width
+           0) so a longer label — Hebrew/Russian — can never overflow its row. No markup or logic changed. */
+        /* 1. Equal reserved width for BOTH endpoint anchors -> boxes 1-4 share one band and line up down the column
+              even when a glyph is missing. The #id scope also guarantees these win over the base rules. */
+        #parametersContainer .rating-endpoint-emoji { min-width: 34px; justify-content: center; text-align: center; }
+        /* 2. Keep the four boxes on one line (they fit from 320px up) so the grid never breaks. */
+        #parametersContainer .rating-buttons { flex-wrap: nowrap; }
+        @media (max-width: 768px) { #parametersContainer .rating-buttons { flex-wrap: nowrap; } }
+        /* 3. Steady the header cluster: name + info on line 1, description on its own line, privacy pinned to the
+              trailing edge. The name may shrink/wrap so it never overflows a narrow row. */
+        #parametersContainer .parameter-info { flex: 1 1 auto; flex-flow: row wrap; align-items: center; column-gap: 6px; min-width: 0; }
+        #parametersContainer .parameter-name { flex: 0 1 auto; min-width: 0; }
+        #parametersContainer .tooltip-icon { flex: 0 0 auto; }
+        #parametersContainer .parameter-description { flex: 1 1 100%; margin-top: 2px; }
+        #parametersContainer .privacy-selector { margin-inline-start: auto; flex: 0 0 auto; }
+        /* 4. Small-screen fit: tighten the anchor slot / gap so the single line still fits down to 320px. */
+        @media (max-width: 480px) { #parametersContainer .rating-endpoint-emoji { min-width: 26px; } #parametersContainer .rating-buttons { gap: 4px; } }
+        @media (max-width: 360px) {
+            /* On the narrowest phones, let the four boxes flex to share the row rather than keep a fixed width —
+               they stay equal (so still symmetric) and can never overflow into a horizontal scroll (A51 rev 3). */
+            #parametersContainer .rating-endpoint-emoji { min-width: 18px; }
+            #parametersContainer .rating-buttons { gap: 3px; }
+            #parametersContainer .rating-button { width: auto; flex: 1 1 0; min-width: 0; max-width: 52px; }
+        }
+        /* 5. The guided check-in scrollIntoView()s the next question on phones; keep the whole item clear of the
+              sticky header (the page already sets 84px on fields). */
+        @media (max-width: 768px) { #parametersContainer .parameter-item { scroll-margin-top: 104px; } }
+        /* ===================== END A51 rev 2 diary symmetry ===================== */
 
 
 
