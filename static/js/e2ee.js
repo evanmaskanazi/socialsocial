@@ -1,3 +1,9 @@
+// Version B228 (A51 rev 6): FIX (real root cause) — "Don't remind me again" never persisted because rev-4/5 keyed
+//   the flag by a member id obtained from getMe() (/api/user/profile), and on this deployment that endpoint
+//   returns 401, so S.uid was null at dismiss time and setNever(uid,...) silently no-op'd (if (!uid) return) —
+//   localStorage.getItem('ts_e2ee_never_prompt_<id>') was null. The flag is now DEVICE-GLOBAL with no uid
+//   dependency: setNever(true) always writes 'ts_e2ee_never_prompt', getNever() reads it, and the ensureReady gate
+//   checks it fresh. Survives logout/login; trade-off is per-browser rather than per-account. ?v B227->B228.
 // Version B227 (A51 rev 5): FIX — the rev-4 per-member "don't remind me again" did not actually stop the prompt.
 //   Root cause: readFlow/sendFlow compute allowPrompt from S.declined BEFORE ensureReady runs getMe(), so on the
 //   first read after login S.declined was still its stale init value and the prompt fired before the per-member
@@ -261,14 +267,14 @@
     }
 
     // ------------------------------------------------------------------ state
-    // A51: a persistent "never prompt me again" flag (localStorage; survives sessions and devices), separate
-    // from the per-tab "declined" flag. getDeclined() treats either one as "do not auto-prompt".
-    // A51 rev 4: the "never prompt" flag is now per-USER (keyed by member id), so it persists across
-    // logout/login for that member and never carries over to a different member on the same browser.
-    function neverKey(uid) { return 'ts_e2ee_never_prompt_' + uid; }
-    function getNever(uid) { try { return !!uid && localStorage.getItem(neverKey(uid)) === '1'; } catch (_) { return false; } }
-    function setNever(uid, v) { try { if (!uid) return; if (v) localStorage.setItem(neverKey(uid), '1'); else localStorage.removeItem(neverKey(uid)); } catch (_) {} }
-    function getDeclined(uid) { try { if (sessionStorage.getItem('ts_e2ee_declined') === '1') return true; } catch (_) {} return getNever(uid); }
+    // A51 rev 6: the "never prompt me again" flag is a DEVICE-GLOBAL localStorage key with NO dependency on a
+    // member id. The rev-4/5 per-member keying required a uid from getMe() (/api/user/profile), which on this
+    // deployment returns 401, so setNever(uid,...) silently no-op'd and the flag was never written. This version
+    // always writes/reads the same key, so it cannot fail for that reason. It survives logout/login; the trade-off
+    // is that it is per-browser, not per-account (a different member on the same browser inherits it).
+    function getNever() { try { return localStorage.getItem('ts_e2ee_never_prompt') === '1'; } catch (_) { return false; } }
+    function setNever(v) { try { if (v) localStorage.setItem('ts_e2ee_never_prompt', '1'); else localStorage.removeItem('ts_e2ee_never_prompt'); } catch (_) {} }
+    function getDeclined() { try { if (sessionStorage.getItem('ts_e2ee_declined') === '1') return true; } catch (_) {} return getNever(); }
     function setDeclined(v) {
         S.declined = !!v;
         try { if (v) sessionStorage.setItem('ts_e2ee_declined', '1'); else sessionStorage.removeItem('ts_e2ee_declined'); } catch (_) {}
@@ -290,7 +296,7 @@
         return getJSON('/api/user/profile').then(function (u) {
             var id = (u && u.id) ? u.id : null;
             if (id && S.uid && id !== S.uid) resetMemory();
-            if (id) { S.uid = id; S.uidT = Date.now(); S.declined = getDeclined(id); }   // A51 rev 4: re-apply this member's saved "never prompt" on (re)login
+            if (id) { S.uid = id; S.uidT = Date.now(); }
             return S.uid;
         });
     }
@@ -330,7 +336,7 @@
         }).catch(function () {});
     }
     function saveLocal(uid) {
-        setNever(uid, false);   // A51 rev 4: member turned on / unlocked e2ee, so clear THEIR "never prompt"
+        setNever(false);   // A51 rev 6: turned on / unlocked e2ee on this browser, so clear "never prompt"
         return idbOp('readwrite', function (st) { return st.put({ uid: uid, priv: S.priv, fp: S.fp }, 'dev'); }).catch(function () {});
     }
     function clearLocal() {
@@ -432,7 +438,7 @@
             ov.appendChild(card);
             var neverChk = null;   // A51: the "Don't remind me again" checkbox, present only when the auto-prompt offers it
             function close(v) {
-                if (v === false) { S.dismissedAt = Date.now(); if (neverChk && neverChk.checked) { setNever(S.uid, true); setDeclined(true); } }
+                if (v === false) { S.dismissedAt = Date.now(); if (neverChk && neverChk.checked) { setNever(true); setDeclined(true); } }
                 document.removeEventListener('keydown', onKey, true); if (ov.parentNode) ov.parentNode.removeChild(ov); resolve(v);
             }
             function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); close(false); } }
@@ -565,7 +571,7 @@
             // A51 rev 5: the authoritative "don't remind me again" gate. It MUST live here, after getMe() has
             // resolved the member id, because the callers compute allowPrompt from the stale S.declined BEFORE
             // this runs. Reads the per-member flag fresh from storage; manage() (managing=true) still prompts.
-            if (!managing && getNever(uid)) return false;
+            if (!managing && getNever()) return false;
             if (!sk.has_key && sk !== S.server) return false;
             if (needAsk && !needAsk(sk)) return false;
             var done = await dialog({
