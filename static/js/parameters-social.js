@@ -1,3 +1,4 @@
+// Version B226 (A51 rev 4): no content change; ?v bumped B225->B226 in lockstep.
 // Version B225 (A51 rev 3 — ROUND RESULT: GREEN): review of A51 rev 2 found no moderate/critical issues. The
 //   #parametersContainer scoping was verified safe (the home dashboard's .parameter-card is a block element, so the
 //   flex rules are inert on it). One minor edge-case hardened: on <=360px phones the four rating boxes now flex to

@@ -1,3 +1,10 @@
+// Version B226 (A51 rev 4): the "Don't remind me again" preference is now PER-USER (keyed by member id) and is
+//   re-applied on (re)login, so it persists across logout/login for that member and never carries over to a
+//   different member on the same browser. Previously it was device-global and the in-memory flag was reset on
+//   login, so the prompt reappeared after logging out and back in. Changes: neverKey(uid)/getNever(uid)/
+//   setNever(uid,v); getDeclined(uid); getMe() sets S.declined = getDeclined(id) once the member id is known;
+//   saveLocal and the dialog's "never" checkbox pass the uid. No crypto/server/message-flow change.
+//   ?v bumped B225->B226 in lockstep.
 // Version B225 (A51 rev 3 — ROUND RESULT: GREEN): no content change; ?v bumped B224->B225 in lockstep.
 // Version B224 (A51 rev 2 — ROUND RESULT: ORANGE): minor polish from the A51 self-review — the automatic e2ee
 //   prompt no longer shows two near-identical "it's in Settings" lines. When the "Don't remind me again" checkbox
@@ -249,9 +256,12 @@
     // ------------------------------------------------------------------ state
     // A51: a persistent "never prompt me again" flag (localStorage; survives sessions and devices), separate
     // from the per-tab "declined" flag. getDeclined() treats either one as "do not auto-prompt".
-    function getNever() { try { return localStorage.getItem('ts_e2ee_never_prompt') === '1'; } catch (_) { return false; } }
-    function setNever(v) { try { if (v) localStorage.setItem('ts_e2ee_never_prompt', '1'); else localStorage.removeItem('ts_e2ee_never_prompt'); } catch (_) {} }
-    function getDeclined() { try { if (sessionStorage.getItem('ts_e2ee_declined') === '1') return true; } catch (_) {} return getNever(); }
+    // A51 rev 4: the "never prompt" flag is now per-USER (keyed by member id), so it persists across
+    // logout/login for that member and never carries over to a different member on the same browser.
+    function neverKey(uid) { return 'ts_e2ee_never_prompt_' + uid; }
+    function getNever(uid) { try { return !!uid && localStorage.getItem(neverKey(uid)) === '1'; } catch (_) { return false; } }
+    function setNever(uid, v) { try { if (!uid) return; if (v) localStorage.setItem(neverKey(uid), '1'); else localStorage.removeItem(neverKey(uid)); } catch (_) {} }
+    function getDeclined(uid) { try { if (sessionStorage.getItem('ts_e2ee_declined') === '1') return true; } catch (_) {} return getNever(uid); }
     function setDeclined(v) {
         S.declined = !!v;
         try { if (v) sessionStorage.setItem('ts_e2ee_declined', '1'); else sessionStorage.removeItem('ts_e2ee_declined'); } catch (_) {}
@@ -273,7 +283,7 @@
         return getJSON('/api/user/profile').then(function (u) {
             var id = (u && u.id) ? u.id : null;
             if (id && S.uid && id !== S.uid) resetMemory();
-            if (id) { S.uid = id; S.uidT = Date.now(); }
+            if (id) { S.uid = id; S.uidT = Date.now(); S.declined = getDeclined(id); }   // A51 rev 4: re-apply this member's saved "never prompt" on (re)login
             return S.uid;
         });
     }
@@ -313,7 +323,7 @@
         }).catch(function () {});
     }
     function saveLocal(uid) {
-        setNever(false);   // A51: the member just turned on / unlocked e2ee on this device, so clear "never prompt"
+        setNever(uid, false);   // A51 rev 4: member turned on / unlocked e2ee, so clear THEIR "never prompt"
         return idbOp('readwrite', function (st) { return st.put({ uid: uid, priv: S.priv, fp: S.fp }, 'dev'); }).catch(function () {});
     }
     function clearLocal() {
@@ -415,7 +425,7 @@
             ov.appendChild(card);
             var neverChk = null;   // A51: the "Don't remind me again" checkbox, present only when the auto-prompt offers it
             function close(v) {
-                if (v === false) { S.dismissedAt = Date.now(); if (neverChk && neverChk.checked) { setNever(true); setDeclined(true); } }
+                if (v === false) { S.dismissedAt = Date.now(); if (neverChk && neverChk.checked) { setNever(S.uid, true); setDeclined(true); } }
                 document.removeEventListener('keydown', onKey, true); if (ov.parentNode) ov.parentNode.removeChild(ov); resolve(v);
             }
             function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); close(false); } }

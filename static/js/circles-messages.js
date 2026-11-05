@@ -1,3 +1,4 @@
+// Version B226 (A51 rev 4): no content change; ?v bumped B225->B226 in lockstep.
 // Version B225 (A51 rev 3 — ROUND RESULT: GREEN): no content change; ?v bumped B224->B225 in lockstep.
 // Version B224 (A51 rev 2 — ROUND RESULT: ORANGE): no content change; ?v bumped B223->B224 in lockstep.
 // Version B223 (A51): no content change; ?v bumped B222->B223 in lockstep (F50-batch refresh).
