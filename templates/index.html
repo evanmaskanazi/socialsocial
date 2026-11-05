@@ -1,4 +1,18 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B225 (A51 rev 3) -->
+<!-- B225 (A51 rev 3) — ROUND RESULT: GREEN ✓ (review of A51 rev 2 found no moderate/critical issues; only a minor edge-case hardened). -->
+<!-- B225 (A51 rev 3): cache-bust only; the #parametersContainer scoping was verified harmless here (home .parameter-card is block, so the diary flex rules are inert on it). app.py _A92_ASSET_VERSION = 'B225'. -->
+<!-- TheraSocial Home Version B224 (A51 rev 2) -->
+<!-- B224 (A51 rev 2) — ROUND RESULT: ORANGE (self-review of A51 found moderately problematic, non-critical issues; fixed here). -->
+<!-- B224 (A51 rev 2): cache-bust lockstep only on this page. The rev-2 fixes are in parameters-social.js (diary CSS
+     rescoped + overflow-safe) and e2ee.js (one Settings pointer, not two); the home diary view inherits the diary
+     fix automatically through parameters-social.js.
+     CACHE-BUST: every live JS ?v bumped B223->B224 in lockstep; app.py _A92_ASSET_VERSION = 'B224'. -->
+<!-- TheraSocial Home Version B223 (A51 / F50 batch) -->
+<!-- B223 (A51): cache-bust lockstep only on this page. The A51 batch's functional changes are in
+     parameters-social.js (diary rating-row symmetry) and e2ee.js ("Don't remind me again"); the home page's
+     diary view inherits the symmetry fix automatically because it renders through parameters-social.js.
+     CACHE-BUST: every live JS ?v bumped B222->B223 in lockstep; app.py _A92_ASSET_VERSION = 'B223'. -->
 <!-- TheraSocial Index Version B222 (A32) -->
 <!-- B222 (A32): ROUND RESULT: YELLOW (a small set of moderate issues found in review of A31; fixed here; none critical).
      MODERATE: a Home reload asked for during a scroll-page load (e.g. after changing language) was dropped, so the list
@@ -936,10 +950,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B222"></script>
+   <script src="/static/js/utilities.js?v=B225"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B222"></script>
-    <script src="/static/js/follow-requests.js?v=B222"></script>
+    <script src="/static/js/triggers.js?v=B225"></script>
+    <script src="/static/js/follow-requests.js?v=B225"></script>
 
 
     <style>
@@ -8393,8 +8407,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B222"></script>
-    <script src="/static/js/e2ee.js?v=B222"></script>
+    <script src="/static/js/i18n.js?v=B225"></script>
+    <script src="/static/js/e2ee.js?v=B225"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8874,9 +8888,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B222"></script>
-   <script src="/static/js/circles-messages.js?v=B222"></script>
-<script src="/static/js/feed-updates.js?v=B222"></script>
+<script src="/static/js/parameters-social.js?v=B225"></script>
+   <script src="/static/js/circles-messages.js?v=B225"></script>
+<script src="/static/js/feed-updates.js?v=B225"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
