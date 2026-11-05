@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B230 (A51 FB) -->
+<!-- B230 (A51 FB): cache-bust lockstep. Client fix only (e2ee.js): a ticked "Don't remind me again" now persists
+     when the member clicks Create/Unlock (not only "Not now"), unlocking no longer erases it, and sign-out keeps
+     the device key for a member who chose it, so the prompt no longer returns after logout/login.
+     CACHE-BUST: every live JS ?v bumped to B230 in lockstep (index.html was still at B228); _A92_ASSET_VERSION = 'B230'. -->
 <!-- TheraSocial Version B228 (A51 rev 6) -->
 <!-- B228 (A51 rev 6): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" flag is now
      device-global so it reliably persists across logout/login (the per-member key depended on an id endpoint that
@@ -963,10 +968,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B228"></script>
+   <script src="/static/js/utilities.js?v=B230"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B228"></script>
-    <script src="/static/js/follow-requests.js?v=B228"></script>
+    <script src="/static/js/triggers.js?v=B230"></script>
+    <script src="/static/js/follow-requests.js?v=B230"></script>
 
 
     <style>
@@ -8420,8 +8425,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B228"></script>
-    <script src="/static/js/e2ee.js?v=B228"></script>
+    <script src="/static/js/i18n.js?v=B230"></script>
+    <script src="/static/js/e2ee.js?v=B230"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8901,9 +8906,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B228"></script>
-   <script src="/static/js/circles-messages.js?v=B228"></script>
-<script src="/static/js/feed-updates.js?v=B228"></script>
+<script src="/static/js/parameters-social.js?v=B230"></script>
+   <script src="/static/js/circles-messages.js?v=B230"></script>
+<script src="/static/js/feed-updates.js?v=B230"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
