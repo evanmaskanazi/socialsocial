@@ -1,6 +1,42 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version A51 rev 3 / B225 — ROUND RESULT: GREEN
+#   Review of A51 rev 2 found no moderate or critical issues. The rev-2 #parametersContainer scoping was verified
+#   safe: the home page's .parameter-card is a block element, so the diary flex rules are inert on it. One minor
+#   edge-case hardened (client-side only): on <=360px phones the four diary rating boxes now flex to share the row
+#   (equal widths, still symmetric) instead of a fixed 46px, so the single line can never overflow into a
+#   horizontal scroll on the narrowest devices. No server logic changed.
+#   _A92_ASSET_VERSION = 'B225' (cache-bust lockstep; every live /static/js ?v bumped B224 -> B225).
+# =====================================================================
+# =====================================================================
+# TheraSocial app.py - Version A51 rev 2 / B224 — ROUND RESULT: ORANGE
+#   Self-review of the A51 drop found moderately problematic (non-critical) client-side issues; fixed this round:
+#     1. The A51 diary-symmetry CSS (parameters-social.js) used unscoped selectors and a non-shrinking metric name,
+#        so a longer label could overflow a narrow row and .parameter-name could reach the home dashboard card.
+#        Rescoped to #parametersContainer and made the name shrink/wrap.
+#     2. The shared mobile-UX block (ts-f50-ux) applied min-height:44px to bare <button>, stretching small square
+#        controls (diary ◀/▶ date-nav, ✕ close). Now scoped to action-button classes only.
+#     3. Removed the notifications .switch sizing tweak (assumed style.css dimensions; risked slider misalignment).
+#     4. The automatic e2ee prompt no longer shows two near-identical "it's in Settings" lines.
+#   No server logic changed. _A92_ASSET_VERSION = 'B224' (cache-bust lockstep; every live /static/js ?v bumped
+#   B223 -> B224).
+# =====================================================================
+# =====================================================================
+# TheraSocial app.py - Version A51 / B223 (F50-batch refresh)
+#   A51 ships three CLIENT-side batches this round (no server logic changed) plus the cache-bust bump:
+#     1. Diary rating-row symmetry (parameters-social.js): reserved endpoint-anchor slots so the 1-4 boxes
+#        line up across every row even when a glyph is missing; universal low->high anchor emojis; steadier
+#        label / info / privacy-dropdown / lock cluster. (Addresses the design-review symmetry note.)
+#     2. "Don't remind me again" + a "you can always turn this on from Settings" reassurance added to the
+#        end-to-end-encryption setup/unlock prompt (e2ee.js), persisted so the auto-prompt can be silenced.
+#     3. Eight additive, cross-platform mobile UX refinements (scoped ts-a51-ux blocks per page;
+#        notifications.html brought up to the same mobile baseline as the rest of the app).
+#   _A92_ASSET_VERSION = 'B223' (cache-bust lockstep; every live /static/js ?v bumped B222 -> B223). The
+#   _f21_pin_asset_versions hook still rewrites any missed token at render, so bumping this constant is the
+#   one change that MUST happen for cache-busting, and it is done below.
+# =====================================================================
+# =====================================================================
 # TheraSocial app.py - Version A32 / B222 (review of A31)
 # ROUND RESULT: YELLOW (a small set of moderate issues found in review of A31; fixed here; none critical).
 #   1. MODERATE: GET /api/connections-status ran 2-3 queries per connection and repeated ALL of them for every
@@ -9396,7 +9432,7 @@ def _safe_back_url():
 #      response to this constant, so a page whose tokens were forgotten is still served the new JS.
 #      Step 1 is therefore the one that MUST happen; step 2 keeps the files honest for view-source checks.
 #   Check: GET /api/health -> e2ee.asset_version shows the live value. tools: ts_release_check.py.
-_A92_ASSET_VERSION = 'B222'  # A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
+_A92_ASSET_VERSION = 'B225'  # A51 rev 3 (GREEN): B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
 
 
 # =====================================================================
