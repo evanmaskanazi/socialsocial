@@ -1,3 +1,13 @@
+// Version B230 (A51 FB): FIX (verified root cause) — "Don't remind me again" came back after every logout/login.
+//   Reproduced in real Chrome against a mock backend with real WebCrypto: ticking the box and then clicking
+//   Create / Unlock (instead of "Not now") never wrote ts_e2ee_never_prompt, because dialog close() read the box
+//   ONLY when v === false; and saveLocal() (run on every Create/Unlock) actively REMOVED the flag. Sign-out then
+//   deleted this device's key, so the next login showed the unlock prompt again — every time.
+//   Three changes: (1) close() honours the ticked box on Create/Unlock as well as on "Not now"/Esc;
+//   (2) saveLocal() no longer clears the flag (unlocking is not a revocation of the member's choice);
+//   (3) sign-out keeps this device's key only when the member chose "Don't remind me again" (logoutLocal), so
+//   signing back in needs no passphrase. The key stays bound to the member id (loadLocal checks rec.uid), so a
+//   different member on the same browser cannot use it; "Lock on this device" still removes it. ?v B229->B230.
 // Version B228 (A51 rev 6): FIX (real root cause) — "Don't remind me again" never persisted because rev-4/5 keyed
 //   the flag by a member id obtained from getMe() (/api/user/profile), and on this deployment that endpoint
 //   returns 401, so S.uid was null at dismiss time and setNever(uid,...) silently no-op'd (if (!uid) return) —
@@ -336,12 +346,21 @@
         }).catch(function () {});
     }
     function saveLocal(uid) {
-        setNever(false);   // A51 rev 6: turned on / unlocked e2ee on this browser, so clear "never prompt"
+        // FB: no longer clears "never prompt" here. Unlocking is not a revocation of the member's explicit
+        // "Don't remind me again" choice; clearing it here (rev 6) re-armed the prompt for the next login.
         return idbOp('readwrite', function (st) { return st.put({ uid: uid, priv: S.priv, fp: S.fp }, 'dev'); }).catch(function () {});
     }
     function clearLocal() {
         resetMemory();
         return idbOp('readwrite', function (st) { return st.delete('dev'); }).catch(function () {});
+    }
+    // FB: on sign-out. A member who chose "Don't remind me again" keeps this device's key, so signing back in
+    // does not demand the passphrase again (that demand WAS the reminder). The stored key is tied to the member
+    // id (loadLocal checks rec.uid), so a different member signing in on this browser can never use it, and
+    // "Lock on this device" still removes it on demand. Without the choice, sign-out removes it exactly as before.
+    function logoutLocal() {
+        if (getNever()) { resetMemory(); return Promise.resolve(); }
+        return clearLocal();
     }
 
     // ------------------------------------------------------------------ key creation / unlock
@@ -438,7 +457,11 @@
             ov.appendChild(card);
             var neverChk = null;   // A51: the "Don't remind me again" checkbox, present only when the auto-prompt offers it
             function close(v) {
-                if (v === false) { S.dismissedAt = Date.now(); if (neverChk && neverChk.checked) { setNever(true); setDeclined(true); } }
+                // FB: the ticked box is honoured however the dialog closes. Before, it was read ONLY on "Not now"/Esc
+                // (v === false); ticking it and then clicking Create/Unlock (v === true) silently dropped it, so the
+                // flag was never written and the prompt came back after every logout/login.
+                if (neverChk && neverChk.checked && v !== null) setNever(true);
+                if (v === false) { S.dismissedAt = Date.now(); if (neverChk && neverChk.checked) setDeclined(true); }
                 document.removeEventListener('keydown', onKey, true); if (ov.parentNode) ov.parentNode.removeChild(ov); resolve(v);
             }
             function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); close(false); } }
@@ -964,7 +987,7 @@
             if (p === '/api/user/export-data' && method === 'GET') return readFlow(input, init, 'export', u);
             if (method === 'POST' && p.indexOf('/api/auth/') === 0 && p !== '/api/auth/logout') S.uidT = 0;   // F12: sign-in may change who is signed in
             if (p === '/api/auth/logout' && method === 'POST') {
-                return Promise.race([clearLocal(), new Promise(function (r) { setTimeout(r, 500); })]).then(function () { return prevFetch(input, init); });
+                return Promise.race([logoutLocal(), new Promise(function (r) { setTimeout(r, 500); })]).then(function () { return prevFetch(input, init); });
             }
             if (method === 'POST' && p.indexOf('/api/auth/') === 0) return prevFetch(input, init).then(function (r) { S.uidT = 0; return r; });   // F12: and again once the sign-in has completed
         } catch (_) { /* fall through to the untouched request */ }
