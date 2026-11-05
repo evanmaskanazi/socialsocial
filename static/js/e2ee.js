@@ -1,3 +1,7 @@
+// Version B231 (A51 FB rev 2): (3) is now a separate PER-MEMBER opt-in (ts_e2ee_keep_device_<id>), written only
+//   when that member ticks the box. Keying it to the device-global never flag kept the key for members who never
+//   opted in (a plain "Not now" also sets that flag since B56, and it is shared by everyone on the browser).
+//   "Lock on this device" clears the opt-in. ?v B230->B231.
 // Version B230 (A51 FB): FIX (verified root cause) — "Don't remind me again" came back after every logout/login.
 //   Reproduced in real Chrome against a mock backend with real WebCrypto: ticking the box and then clicking
 //   Create / Unlock (instead of "Not now") never wrote ts_e2ee_never_prompt, because dialog close() read the box
@@ -358,8 +362,15 @@
     // does not demand the passphrase again (that demand WAS the reminder). The stored key is tied to the member
     // id (loadLocal checks rec.uid), so a different member signing in on this browser can never use it, and
     // "Lock on this device" still removes it on demand. Without the choice, sign-out removes it exactly as before.
+    // FB rev 2: keeping the key is a separate, PER-MEMBER opt-in, written ONLY when that member ticks the box.
+    // The device-global never flag cannot be used for this: it is also set by a plain "Not now" (B56) and is
+    // shared by every member on the browser (rev 6), which kept keys for members who never opted in.
+    // The member id is always known here: ensureReady returns before any dialog when getMe() has no id.
+    function keepKeyName(uid) { return 'ts_e2ee_keep_device_' + uid; }
+    function getKeep(uid) { try { return !!uid && localStorage.getItem(keepKeyName(uid)) === '1'; } catch (_) { return false; } }
+    function setKeep(uid, v) { try { if (!uid) return; if (v) localStorage.setItem(keepKeyName(uid), '1'); else localStorage.removeItem(keepKeyName(uid)); } catch (_) {} }
     function logoutLocal() {
-        if (getNever()) { resetMemory(); return Promise.resolve(); }
+        if (getKeep(S.uid)) { resetMemory(); return Promise.resolve(); }
         return clearLocal();
     }
 
@@ -460,7 +471,7 @@
                 // FB: the ticked box is honoured however the dialog closes. Before, it was read ONLY on "Not now"/Esc
                 // (v === false); ticking it and then clicking Create/Unlock (v === true) silently dropped it, so the
                 // flag was never written and the prompt came back after every logout/login.
-                if (neverChk && neverChk.checked && v !== null) setNever(true);
+                if (neverChk && neverChk.checked && v !== null) { setNever(true); setKeep(S.uid, true); }
                 if (v === false) { S.dismissedAt = Date.now(); if (neverChk && neverChk.checked) setDeclined(true); }
                 document.removeEventListener('keydown', onKey, true); if (ov.parentNode) ov.parentNode.removeChild(ov); resolve(v);
             }
@@ -717,7 +728,8 @@
         // Remove this device's key (memory + IndexedDB); keep who is signed in, so the controls stay visible.
         S.priv = null; S.fp = null; pubCache = {}; pairCache = {};
         idbOp('readwrite', function (st) { return st.delete('dev'); }).catch(function () {});
-        setDeclined(true);            // do not ask again in this tab until the member chooses to unlock
+        setKeep(S.uid, false);        // FB rev 2: an explicit lock also ends "keep this device unlocked" for this member
+        setDeclined(true);           // do not ask again in this tab until the member chooses to unlock
     }
     var managing = false;
     async function manage() {
