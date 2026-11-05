@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B228 (A51 rev 6) -->
+<!-- B228 (A51 rev 6): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" flag is now
+     device-global so it reliably persists across logout/login (the per-member key depended on an id endpoint that
+     returns 401 here). CACHE-BUST: every live JS ?v bumped B227 to B228 in lockstep; _A92_ASSET_VERSION = 'B228'. -->
+<!-- TheraSocial Version B227 (A51 rev 5) -->
+<!-- B227 (A51 rev 5): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" preference now
+     suppresses the prompt across logout/login (the earlier gate ran too late). CACHE-BUST: every live JS ?v
+     bumped B226 to B227 in lockstep; app.py _A92_ASSET_VERSION = 'B227'. -->
 <!-- TheraSocial Version B226 (A51 rev 4) -->
 <!-- B226 (A51 rev 4): cache-bust lockstep. This round hardens app.py so its back-nav marker can never split a
      comment again, adds a pre-ship comment-safety check (tools/ts_html_comment_safety_check.py), and makes the
