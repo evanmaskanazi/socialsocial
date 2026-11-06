@@ -1,3 +1,5 @@
+// Version B233 (C7 = C6 rev 2): no content change; ?v bumped B232->B233 in lockstep.
+// Version B232 (C6): no content change; ?v bumped B231->B232 in lockstep.
 // Version B228 (A51 rev 6): no content change; ?v bumped B227->B228 in lockstep.
 // Version B227 (A51 rev 5): no content change; ?v bumped B226->B227 in lockstep.
 // Version B226 (A51 rev 4): no content change; ?v bumped B225->B226 in lockstep.
