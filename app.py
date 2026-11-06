@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version C7 (C6 rev 2) / B233
+# C7: no server logic changed. ROUND RESULT: YELLOW (small set of moderate layout issues found in review of C6, none
+#   critical; fixed in index.html and parameters.html). _A92_ASSET_VERSION = 'B233' (every live /static/js ?v B232->B233).
+# TheraSocial app.py - Version C6 / B232
+# C6: no server logic changed. _A92_ASSET_VERSION = 'B232' (every live /static/js ?v B231->B232). index.html and
+#   circles.html changed (layout fit fixes, see their headers); parameters/profile/about/support/circles had been left at
+#   ?v=B228 in the files themselves (the _f21_pin_asset_versions after_request hook kept the served ?v correct); all six
+#   templates now carry B232 in the file as well.
 # TheraSocial app.py - Version A51 FB rev 2 / B231
 #   Cache-bust lockstep only (no server logic changed). Client fix in static/js/e2ee.js: keeping this device's
 #   e2ee key after sign-out is now a separate per-member opt-in, written only when that member ticks
@@ -9474,7 +9482,7 @@ def _safe_back_url():
 #      response to this constant, so a page whose tokens were forgotten is still served the new JS.
 #      Step 1 is therefore the one that MUST happen; step 2 keeps the files honest for view-source checks.
 #   Check: GET /api/health -> e2ee.asset_version shows the live value. tools: ts_release_check.py.
-_A92_ASSET_VERSION = 'B231'  # A51 FB rev 2: B230 -> B231 (e2ee.js: keeping the device key after sign-out is now a per-member opt-in set only by ticking the box); A51 FB: B229 -> B230 (e2ee.js: ticked "Don't remind me again" now persists on Create/Unlock too, is no longer cleared by unlocking, and keeps the device key across sign-out); B56 (A55 fix): B228 -> B229 (e2ee.js: "Don't remind me again" shown on every prompt incl. pill/Settings, and a plain "Not now" now persists to localStorage, not just the session); A51 rev 6: B227 -> B228; A51 rev 5: B226 -> B227; A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
+_A92_ASSET_VERSION = 'B233'  # C7 (C6 rev 2): B232 -> B233 (index.html: narrow-phone layout fixes in style#ts-c6-fit; parameters.html: style#ts-c7-diary-fit); C6: B231 -> B232 (index.html: Home layout fit fixes + two one-line JS edits; circles.html fit fix; every page's ?v brought into lockstep); A51 FB rev 2: B230 -> B231 (e2ee.js: keeping the device key after sign-out is now a per-member opt-in set only by ticking the box); A51 FB: B229 -> B230 (e2ee.js: ticked "Don't remind me again" now persists on Create/Unlock too, is no longer cleared by unlocking, and keeps the device key across sign-out); B56 (A55 fix): B228 -> B229 (e2ee.js: "Don't remind me again" shown on every prompt incl. pill/Settings, and a plain "Not now" now persists to localStorage, not just the session); A51 rev 6: B227 -> B228; A51 rev 5: B226 -> B227; A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
 
 
 # =====================================================================
