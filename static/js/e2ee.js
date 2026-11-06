@@ -1,3 +1,5 @@
+// Version B233 (C7 = C6 rev 2): no content change; ?v bumped B232->B233 in lockstep.
+// Version B232 (C6): no content change; ?v bumped B231->B232 in lockstep.
 // Version B231 (A51 FB rev 2): (3) is now a separate PER-MEMBER opt-in (ts_e2ee_keep_device_<id>), written only
 //   when that member ticks the box. Keying it to the device-global never flag kept the key for members who never
 //   opted in (a plain "Not now" also sets that flag since B56, and it is shared by everyone on the browser).

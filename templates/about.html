@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B233 (C7 = C6 rev 2) -->
+<!-- B233 (C6 rev 2): cache-bust lockstep only on this page. Every live JS ?v bumped B232 to B233; app.py _A92_ASSET_VERSION = 'B233'. -->
+<!-- TheraSocial Version B232 (C6) -->
+<!-- B232 (C6): cache-bust lockstep only, no markup change on this page. Every live JS ?v bumped to B232 (this file had been left at B228 while the app was at B231; app.py pins ?v at serve time, which masked it). app.py _A92_ASSET_VERSION = 'B232'. -->
 <!-- TheraSocial Version B228 (A51 rev 6) -->
 <!-- B228 (A51 rev 6): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" flag is now
      device-global so it reliably persists across logout/login (the per-member key depended on an id endpoint that
@@ -505,7 +509,7 @@
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B228"></script>
+    <script src="/static/js/i18n.js?v=B233"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read

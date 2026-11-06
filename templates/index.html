@@ -1,4 +1,17 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B233 (C7 = C6 rev 2) -->
+<!-- B233 (C6 rev 2) - ROUND RESULT: YELLOW (review of C6 found a small set of moderate issues, none critical; fixed here).
+     This page (all inside style#ts-c6-fit): R1 Home Nod button icon-only on the narrowest phones (status text had ~65px);
+     R2 Following/Followers cards wrap on phones (buttons ran off-screen, off the left edge in Hebrew/Arabic);
+     R5 header buttons size to their own label, multi-word labels may wrap, icon gives way on the narrowest phones (Russian
+     labels were clipped). Hardening: status pairs inline-block (not nowrap); list height svh (not dvh).
+     parameters.html: R3 Diary top bar fits in every language; R4 parameter descriptions no longer hidden under the privacy
+     dropdown on phones. CACHE-BUST: every live JS ?v bumped B232 to B233 in lockstep; app.py _A92_ASSET_VERSION = 'B233'. -->
+<!-- TheraSocial Version B232 (C6) -->
+<!-- B232 (C6): additive fit-and-finish block style#ts-c6-fit before the closing body tag (fixes the Home connection-row overlap
+     on phones and 14 related layout issues), plus two one-line JS edits: Home status pairs wrapped in span.ts-c6-p, and
+     data-i18n on the Home "no alerts" text so it follows a language change. CACHE-BUST: every live JS ?v bumped B231 to
+     B232 in lockstep; app.py _A92_ASSET_VERSION = 'B232'. -->
 <!-- TheraSocial Version B231 (A51 FB rev 2) -->
 <!-- B231 (A51 FB rev 2): cache-bust lockstep. Client fix only (e2ee.js): keeping the device key after sign-out
      is now a per-member opt-in set only by ticking "Don't remind me again", so members who never ticked it
@@ -973,10 +986,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B231"></script>
+   <script src="/static/js/utilities.js?v=B233"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B231"></script>
-    <script src="/static/js/follow-requests.js?v=B231"></script>
+    <script src="/static/js/triggers.js?v=B233"></script>
+    <script src="/static/js/follow-requests.js?v=B233"></script>
 
 
     <style>
@@ -8430,8 +8443,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B231"></script>
-    <script src="/static/js/e2ee.js?v=B231"></script>
+    <script src="/static/js/i18n.js?v=B233"></script>
+    <script src="/static/js/e2ee.js?v=B233"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8911,9 +8924,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B231"></script>
-   <script src="/static/js/circles-messages.js?v=B231"></script>
-<script src="/static/js/feed-updates.js?v=B231"></script>
+<script src="/static/js/parameters-social.js?v=B233"></script>
+   <script src="/static/js/circles-messages.js?v=B233"></script>
+<script src="/static/js/feed-updates.js?v=B233"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -22942,7 +22955,7 @@ async function loadHomeAlerts() {
         const alerts = data.alerts || [];
         if (alerts.length === 0) {
             const tt = (key, fallback) => (window.i18n && window.i18n.translate) ? (window.i18n.translate(key) || fallback) : fallback;
-            homeAlertsList.innerHTML = `<p style="color: var(--gray); text-align: center; padding: 16px;">${tt('home.no_alerts', 'No alerts right now.')}</p>`;
+            homeAlertsList.innerHTML = `<p style="color: var(--gray); text-align: center; padding: 16px;" data-i18n="home.no_alerts">${tt('home.no_alerts', 'No alerts right now.')}</p>`;
             return;
         }
 
@@ -25675,9 +25688,10 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
             if (item.update && item.update.params && item.update.params.length) {
                 st = el('div', 'ts31-st');
                 st.appendChild(el('span', 'ts31-when', whenText(item.update.date)));
-                st.appendChild(document.createTextNode(item.update.params.map(function (p) {
-                    return paramLabel(p.parameter_name) + ': ' + (EMO[p.value] || p.value);
-                }).join(' · ')));
+                item.update.params.forEach(function (p, i) {   // C6 (M2): each "Label: emoji" pair kept together
+                    if (i) st.appendChild(document.createTextNode(' · '));
+                    st.appendChild(el('span', 'ts-c6-p', paramLabel(p.parameter_name) + ': ' + (EMO[p.value] || p.value)));
+                });
             } else {
                 st = el('div', 'ts31-st ts31-none', T('none'));
             }
@@ -25917,6 +25931,115 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
     })();
     </script>
     <!-- ===================== END A31 ===================== -->
+
+    <!-- ===================== C6 (B232): fit and finish, additive, presentation-only except two one-line JS edits =====
+         The reported overlap of the Home connection rows (root cause + fix in M1 below) and 14 more fixes of the same
+         kind found by rendering every view at 320-1920px. Remove this style block to revert the CSS. -->
+    <style id="ts-c6-fit">
+        /* ---- M1 (the reported overlap, "עדיין חריגה גרפית מהתיבה"). ROOT CAUSE: the rows sit in a
+           height-capped flex column (max-height + overflow-y: auto). Flex items shrink by default, and the
+           A26 rule "min-height: 60px" replaced the automatic "never smaller than my content" minimum, so once
+           the list held more than fits, every row was squeezed toward 60px and its 2-3 lines of status text
+           spilled over the next row. It only shows with many connections AND many shared parameters, which is
+           why short test lists never showed it. Rows in a scroll list must never shrink: the list scrolls. */
+        #connectionStatusList > *, #friendsUpdatesList > *, #homeAlertsList > *, #todayRecommendationsList > *,
+        #myConnectionsList > *, #connectionRecommendationsList > * { flex-shrink: 0; }
+        #connectionStatusList > .ts31-row { min-height: auto; }
+        .ts31-st { line-height: 1.5; }
+        /* ---- M2: keep each "Sleep: 🙂" pair on one line (the JS wraps each pair in .ts-c6-p); pairs wrap, halves don't. */
+        /* rev 2: inline-block, not nowrap: a pair still moves to the next line as one unit, but a pair wider than a very
+           narrow column (long Russian labels at 320px) now wraps inside itself instead of spilling out of the row. */
+        .ts31-st .ts-c6-p { display: inline-block; max-width: 100%; }
+        /* ---- M3: one long name (or any long unbreakable text) made the whole Home column wider than the phone,
+           pushing the Nod buttons off-screen. A grid column must be allowed to be narrower than its content. */
+        .dashboard-grid > * { min-width: 0; }
+        /* ---- M10: list height follows the visible screen. rev 2: svh (screen height with the browser bars shown) instead of
+           dvh: dvh changes while the bars slide in and out, which resized the list in the middle of a scroll. */
+        #connectionStatusList { max-height: min(440px, 62vh) !important; }
+        @supports (height: 1svh) { #connectionStatusList { max-height: min(440px, 62svh) !important; } }
+        @media (max-width: 768px) {
+            /* ---- M4: five items at 20% each PLUS 2px side margins came to more than 100%, so "Menu" was cut off
+               at the right edge on every phone. Share the width instead of fixing it. */
+            .mobile-nav .mobile-nav-menu > .mobile-nav-item { flex: 1 1 0 !important; width: auto !important; max-width: none !important; margin: 0 1px; }
+            /* ---- M5: labels were forced to 7px below 400px wide, i.e. on nearly every phone. Scales with the screen. */
+            .mobile-nav .mobile-nav-menu .mobile-nav-label { font-size: clamp(9px, 2.6vw, 12px) !important; }
+            /* ---- M6: the scroll-to-top button sat 78px up (room for a bottom bar that has since moved to the top),
+               floating over buttons such as "Clear all". Corner + safe area; hidden while a bottom sheet is open. */
+            #ts-a8-totop { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+            /* ---- M9: on the narrowest screens (Fold cover ~344px, 320px) Logout ran past the right edge. Gaps and side
+               padding now scale with the screen width instead of being fixed, so the row stays on one line. */
+            .nav-menu { gap: clamp(3px, 1.5vw, 6px) !important; min-width: 0; }
+            .nav-menu > #navSupportBtn, .nav-menu > #tutorialBtn, .nav-menu > #logoutBtn { min-width: 0; padding-inline: clamp(6px, 2.4vw, 14px) !important; }
+            /* rev 2 (R5): size each button to its own label (they were forced equal, so the longest word got the least room)
+               and let a multi-word label (Arabic "البرنامج التعليمي") take two lines rather than be cut. */
+            .nav-menu > #navSupportBtn, .nav-menu > #tutorialBtn, .nav-menu > #logoutBtn { width: auto !important; flex: 0 1 auto !important; }
+            .nav-menu > #navSupportBtn > span, .nav-menu > #tutorialBtn > span, .nav-menu > #logoutBtn > span { white-space: normal; line-height: 1.1; text-align: center; }
+        }
+        /* rev 2 (R5): once the buttons could shrink, one-word labels that cannot wrap (Russian "Поддержка", "Руководство")
+           were clipped on the narrowest phones. There the small decorative icon gives way so the whole word shows:
+           Russian up to 400px, every language at 340px and below; the label size also scales with the screen there. */
+        @media (max-width: 400px) {
+            html[lang="ru"] .nav-menu > #navSupportBtn svg, html[lang="ru"] .nav-menu > #tutorialBtn svg, html[lang="ru"] .nav-menu > #logoutBtn svg { display: none; }
+            html[lang="ru"] .nav-menu > #navSupportBtn, html[lang="ru"] .nav-menu > #tutorialBtn, html[lang="ru"] .nav-menu > #logoutBtn { font-size: clamp(11px, 3.4vw, 14px) !important; }
+        }
+        @media (max-width: 340px) {
+            .nav-menu > #navSupportBtn svg, .nav-menu > #tutorialBtn svg, .nav-menu > #logoutBtn svg { display: none; }
+            .nav-menu > #navSupportBtn, .nav-menu > #tutorialBtn, .nav-menu > #logoutBtn { font-size: clamp(11px, 3.4vw, 14px) !important; }
+            /* ---- M2/M10: on narrow phones the Nod button gives the status text a bit more room. */
+            .ts31-nod { padding-inline: clamp(8px, 2.5vw, 12px); }
+        }
+        body:has(#cookieConsentBanner[style*="block"]) #ts-a8-totop { display: none !important; }
+        /* ---- rev 2 (R1): on the narrowest phones (up to 380px: iPhone SE, Fold cover screens, 360px Androids) avatar + Nod
+           left the status text about 65px, so the "Yesterday" chip spilled out. Nod shows its icon only there (the button's
+           aria-label and title still say "Send a nod to ..."); Russian's longer label needs it up to 430px. */
+        @media (max-width: 380px) {
+            .ts31-nod { font-size: 0 !important; padding-inline: 10px; }
+            .ts31-nod::before { content: '\1F44B'; font-size: 1.05rem; }
+            .ts31-nod.ts31-done::before { content: '\1F44B\00A0\2713'; }
+        }
+        @media (min-width: 381px) and (max-width: 430px) {
+            html[lang="ru"] .ts31-nod { font-size: 0 !important; padding-inline: 10px; }
+            html[lang="ru"] .ts31-nod::before { content: '\1F44B'; font-size: 1.05rem; }
+            html[lang="ru"] .ts31-nod.ts31-done::before { content: '\1F44B\00A0\2713'; }
+        }
+        /* ---- rev 2 (R2): Following and Followers cards were one rigid row, so the Disconnect / Connect / Connect with Note /
+           Block buttons ran past the screen edge on phones (in Hebrew and Arabic entirely off the left edge, so they could not
+           be tapped). C5 hid this by widening the whole page; C6's M3 stopped that and exposed it. Same treatment the
+           Connections view already gets (T40): the card wraps, names wrap, buttons wrap their label. */
+        @media (max-width: 768px) {
+            #followingView .user-card, #followersView .user-card { flex-wrap: wrap !important; row-gap: 8px; }
+            #followingView .user-card > *, #followersView .user-card > * { min-width: 0; }
+            #followingView .user-card .user-info, #followersView .user-card > div:first-child { flex: 1 1 0; }
+            #followingView .user-name, #followersView .user-name { overflow-wrap: anywhere; }
+            #followingView .follow-actions-container, #followersView .user-card > div:last-child {
+                flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-end; margin-inline-start: auto; max-width: 100%; }
+            #followingView .follow-actions-container button, #followersView .user-card > div:last-child button { white-space: normal !important; max-width: 100%; }
+        }
+        /* ---- M8 (in-app Circles view; circles.html gets the same fix): the circle cards demanded at least 300px,
+           wider than the column on 320-344px screens. They now take min(300px, available width). */
+        .circles-container { grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
+        /* ---- D1: 769-1100px (iPad portrait, Fold open, small laptop windows): the header row (language, Support,
+           Dream Cards, Tutorial, Logout) was wider than the screen and Logout fell off the right edge. */
+        @media (min-width: 769px) and (max-width: 1100px) {
+            .nav-content { flex-wrap: wrap; row-gap: 8px; }
+            .nav-menu { flex-wrap: wrap; gap: clamp(8px, 1.6vw, 30px) !important; justify-content: flex-end; min-width: 0; }
+        }
+        /* ---- D2: 769-1279px: the horizontal menu (Home ... Settings) scrolled sideways with no hint, so Connections,
+           Invite and Settings were simply out of sight. It wraps onto a second line instead. */
+        @media (min-width: 769px) and (max-width: 1279px) {
+            .sidebar-menu { flex-wrap: wrap !important; justify-content: center; row-gap: 4px; }
+        }
+        /* ---- D3: "Start your streak!" was squeezed into three lines next to Update Diary. */
+        #streakBadge { white-space: nowrap; }
+        #summaryStatusCard > div:first-child > div:last-child { flex-wrap: wrap; justify-content: flex-end; }
+        /* ---- D4: status-card labels mixed "mood"/"energy" with "Anxiety"/"Belonging" (some stored lower-case). */
+        .param-mini > div:first-child::first-letter { text-transform: uppercase; }
+        /* ---- D5: on large desktop screens the list may use more of the height instead of a fixed 440px. */
+        @media (min-width: 1025px) and (min-height: 900px) {
+            #connectionStatusList { max-height: min(600px, 58vh) !important; }
+        }
+    </style>
+    <!-- ===================== END C6 ===================== -->
 
 </body>
 

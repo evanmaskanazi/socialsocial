@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B233 (C7 = C6 rev 2) -->
+<!-- B233 (C6 rev 2): additive style#ts-c7-diary-fit (Diary top bar fits phones in every language; parameter descriptions no longer hidden under the privacy dropdown on phones). Every live JS ?v bumped B232 to B233; app.py _A92_ASSET_VERSION = 'B233'. -->
+<!-- TheraSocial Version B232 (C6) -->
+<!-- B232 (C6): cache-bust lockstep only, no markup change on this page. Every live JS ?v bumped to B232 (this file had been left at B228 while the app was at B231; app.py pins ?v at serve time, which masked it). app.py _A92_ASSET_VERSION = 'B232'. -->
 <!-- TheraSocial Version B228 (A51 rev 6) -->
 <!-- B228 (A51 rev 6): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" flag is now
      device-global so it reliably persists across logout/login (the per-member key depended on an id endpoint that
@@ -1107,10 +1111,10 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B228"></script>
-    <script src="/static/js/e2ee.js?v=B228"></script>
-    <script src="/static/js/parameters-social.js?v=B228"></script>
-    <script src="/static/js/feed-updates.js?v=B228"></script>
+    <script src="/static/js/i18n.js?v=B233"></script>
+    <script src="/static/js/e2ee.js?v=B233"></script>
+    <script src="/static/js/parameters-social.js?v=B233"></script>
+    <script src="/static/js/feed-updates.js?v=B233"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -2518,5 +2522,34 @@ Storage.prototype.setItem = function(key, value) {
       @media (max-width: 768px) { .btn, .btn-primary, .btn-secondary, .back-link, .cta-button, .submit-btn, .language-selector { min-height: 44px; } }
     </style>
     <!-- ===================== END F50 UX ===================== -->
+
+    <!-- ===================== C7 (B233, C6 rev 2): Diary header and parameter cards fit phones in every language. Additive; remove to revert. ===== -->
+    <style id="ts-c7-diary-fit">
+      /* R3: in Russian, Hebrew and Arabic the Diary page's top bar (brand, language, Tutorial, Logout) was wider than
+         phones up to 390px, so Logout was cut off (in Arabic partly off the left edge). Spacing now scales with the
+         screen, the brand may shorten, and on narrow phones a button label may take two short lines. */
+      @media (max-width: 768px) {
+        .diary-mobile-header { gap: clamp(4px, 1.5vw, 8px); }
+        .diary-mobile-header-brand { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .diary-mobile-header-actions { min-width: 0; flex: 0 1 auto; gap: clamp(3px, 1.2vw, 6px); }
+        .diary-header-btn { padding-inline: clamp(6px, 2.2vw, 12px); min-width: 0; }
+      }
+      /* R4: each parameter card's privacy dropdown kept a fixed ~190px while the name/description column was allowed to
+         shrink to nothing, so on phones the description ("Overall mood level", "Physical and mental energy levels") was
+         squeezed to ~45px, one word per line, and partly hidden UNDER the dropdown, in every language. The column now keeps
+         a sensible minimum; when both no longer fit on one line the dropdown moves to its own line, at the trailing edge. */
+      @media (max-width: 768px) {
+        html body #parametersContainer .parameter-header { flex-wrap: wrap; row-gap: 10px; }
+        html body #parametersContainer .parameter-info { flex: 1 1 0; min-width: min(9rem, 100%); }
+        html body #parametersContainer .parameter-description { overflow-wrap: anywhere; }
+        html body #parametersContainer .privacy-selector { margin-inline-start: auto; max-width: 100%; }
+        html body #parametersContainer .privacy-select { max-width: 100%; }
+      }
+      @media (max-width: 430px) {
+        .diary-header-btn { white-space: normal; line-height: 1.15; text-align: center; }
+        .diary-header-btn svg { flex-shrink: 0; }
+      }
+    </style>
+    <!-- ===================== END C7 ===================== -->
 </body>
 </html>
