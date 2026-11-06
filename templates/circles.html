@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B233 (C7 = C6 rev 2) -->
+<!-- B233 (C6 rev 2): cache-bust lockstep only on this page. Every live JS ?v bumped B232 to B233; app.py _A92_ASSET_VERSION = 'B233'. -->
+<!-- TheraSocial Version B232 (C6) -->
+<!-- B232 (C6): additive style#ts-c6-circles-fit (search box and circle cards no longer wider than narrow phones). CACHE-BUST: every live JS ?v bumped to B232 in lockstep (this page had been left at B228; the server pin in app.py masked it); app.py _A92_ASSET_VERSION = 'B232'. -->
 <!-- TheraSocial Version B228 (A51 rev 6) -->
 <!-- B228 (A51 rev 6): cache-bust lockstep. Client fix only — the e2ee "Don't remind me again" flag is now
      device-global so it reliably persists across logout/login (the per-member key depended on an id endpoint that
@@ -295,10 +299,10 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B228"></script>
-    <script src="/static/js/e2ee.js?v=B228"></script>
-    <script src="/static/js/circles-messages.js?v=B228"></script>
-    <script src="/static/js/feed-updates.js?v=B228"></script>
+    <script src="/static/js/i18n.js?v=B233"></script>
+    <script src="/static/js/e2ee.js?v=B233"></script>
+    <script src="/static/js/circles-messages.js?v=B233"></script>
+    <script src="/static/js/feed-updates.js?v=B233"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
@@ -1539,5 +1543,17 @@ try {
       @media (max-width: 768px) { .btn, .btn-primary, .btn-secondary, .back-link, .cta-button, .submit-btn, .language-selector { min-height: 44px; } }
     </style>
     <!-- ===================== END F50 UX ===================== -->
+
+    <!-- ===================== C6 (B232): fit on narrow phones, additive, presentation-only. Remove to revert. ===== -->
+    <style id="ts-c6-circles-fit">
+      /* M8: the search box was width 100% PLUS its padding and border (no border-box), 34px wider than its column,
+         and each circle card demanded at least 350px, so on phones under ~380px wide (Galaxy S-series 360px, Fold cover
+         screens, iPhone SE) the page scrolled sideways. Both now fit whatever width there is. */
+      html body .search-input { box-sizing: border-box; max-width: 100%; }
+      html body .circles-grid { grid-template-columns: repeat(auto-fit, minmax(min(350px, 100%), 1fr)); gap: clamp(16px, 4vw, 30px); }
+      html body .circle-card, html body .circle-header { min-width: 0; }
+      html body .user-search { max-width: min(600px, 100%); }
+    </style>
+    <!-- ===================== END C6 ===================== -->
 </body>
 </html>
