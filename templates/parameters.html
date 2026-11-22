@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B237 (CC15 = CC14 rev 1) -->
+<!-- B237 (CC14 rev 1): cache-bust lockstep only on this page. Every live JS ?v bumped B236 to B237; app.py _A92_ASSET_VERSION = 'B237'. -->
+<!-- TheraSocial Version B236 (CC14) -->
+<!-- B236 (CC14): cache-bust lockstep only on this page. Every live JS ?v bumped B235 to B236; app.py _A92_ASSET_VERSION = 'B236'. -->
+<!-- TheraSocial Version B235 (CC13 = C12 rev 1) -->
+<!-- B235 (C12 rev 1): cache-bust lockstep only on this page. Every live JS ?v bumped B234 to B235; app.py _A92_ASSET_VERSION = 'B235'. -->
+<!-- TheraSocial Version B234 (C12) -->
+<!-- B234 (C12): additive script#ts-c12-theme (status / address bar colour follows the in-app Dark Mode switch).
+     No diary logic changed. CACHE-BUST: every live JS ?v bumped B233 to B234; app.py _A92_ASSET_VERSION = 'B234'. -->
 <!-- TheraSocial Version B233 (C7 = C6 rev 2) -->
 <!-- B233 (C6 rev 2): additive style#ts-c7-diary-fit (Diary top bar fits phones in every language; parameter descriptions no longer hidden under the privacy dropdown on phones). Every live JS ?v bumped B232 to B233; app.py _A92_ASSET_VERSION = 'B233'. -->
 <!-- TheraSocial Version B232 (C6) -->
@@ -1111,10 +1120,10 @@ Storage.prototype.setItem = function(key, value) {
     </script>
 
     <!-- Load scripts -->
-    <script src="/static/js/i18n.js?v=B233"></script>
-    <script src="/static/js/e2ee.js?v=B233"></script>
-    <script src="/static/js/parameters-social.js?v=B233"></script>
-    <script src="/static/js/feed-updates.js?v=B233"></script>
+    <script src="/static/js/i18n.js?v=B237"></script>
+    <script src="/static/js/e2ee.js?v=B237"></script>
+    <script src="/static/js/parameters-social.js?v=B237"></script>
+    <script src="/static/js/feed-updates.js?v=B237"></script>
 
     <script>
         console.log('Parameters page loading...');
@@ -2551,5 +2560,25 @@ Storage.prototype.setItem = function(key, value) {
       }
     </style>
     <!-- ===================== END C7 ===================== -->
+    <!-- ===================== C12 (B234) M4: status / address bar colour follows the in-app Dark Mode switch. Additive; remove to revert. ===== -->
+    <script id="ts-c12-theme">
+    (function () {
+        if (window.__tsC12Theme) return; window.__tsC12Theme = true;
+        function run() {
+            var metas = document.querySelectorAll('meta[name="theme-color"]');
+            if (!metas.length || !('MutationObserver' in window)) return;
+            for (var i = 0; i < metas.length; i++) metas[i].dataset.tsC12 = metas[i].getAttribute('content') || '';
+            var apply = function () {
+                var dark = document.body.classList.contains('dark-mode') || document.documentElement.classList.contains('dark-mode');
+                for (var j = 0; j < metas.length; j++) metas[j].setAttribute('content', dark ? '#1F2937' : metas[j].dataset.tsC12);
+            };
+            new MutationObserver(apply).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+            new MutationObserver(apply).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+            apply();
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true }); else run();
+    })();
+    </script>
+    <!-- ===================== END C12 ===================== -->
 </body>
 </html>

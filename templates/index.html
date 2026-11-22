@@ -1,4 +1,34 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B237 (CC15 = CC14 rev 1) -->
+<!-- B237 (CC14 rev 1) - ROUND RESULT: YELLOW (review of CC14 found a small set of moderate issues, none critical; fixed here).
+     This page (inside the C12 / CC14 blocks): (1) the "This week, you could try:" card is found even when the AI adds an
+     emoji or bold marks to the label, puts it on its own line, or runs it straight after a paragraph; (2) the
+     Personalized Insights title leaves room for the AI badge (long Russian / Arabic titles no longer sit under it);
+     (3) CC14 carried the hidden "Save changes" button fix (invisible + untappable while hidden). app.py: privacy
+     notice updated, care line guaranteed, AI insights cleaned, shorter AI budget for insights.
+     CACHE-BUST: every live JS ?v bumped B236 to B237 in lockstep; app.py _A92_ASSET_VERSION = 'B237'. -->
+<!-- TheraSocial Version B236 (CC14) -->
+<!-- B236 (CC14): Personalized Insights + Week at a Glance, round 2 (from DiaryFix.png). Additive block
+     style#ts-cc14-insights + script#ts-cc14-insights-script at the end of the page, plus two guarded one-line hooks
+     (updateInsights, loadAIWeeklySummary), a "calm" label in the highlights bar (en/he/ar/ru) and Share keeping
+     paragraph breaks. Insights show one finding per row and are replaced by the AI-written version from
+     /api/ai/insights when it arrives; the weekly summary shows paragraphs and a highlighted next-step card.
+     CACHE-BUST: every live JS ?v bumped B235 to B236 in lockstep; app.py _A92_ASSET_VERSION = 'B236'. -->
+<!-- TheraSocial Version B235 (CC13 = C12 rev 1) -->
+<!-- B235 (C12 rev 1) - ROUND RESULT: YELLOW (review of C12 found a small set of moderate issues, none critical; fixed here).
+     This page (all inside the C12 block at the end): (1) the floating "Save changes" button is hidden while a field has
+     focus, so it never floats over or behind the phone keyboard; (2) the line-break style no longer shows blank lines
+     around the "Loading..." placeholders; (3) Share appears only for a real weekly summary (not the "no check-ins yet"
+     note); (4) Hebrew/Arabic Permission Groups card no longer gets a darker 1px edge. app.py: AI timeouts now fit the
+     worker limit + circuit breaker. CACHE-BUST: every live JS ?v bumped B234 to B235; app.py _A92_ASSET_VERSION = 'B235'. -->
+<!-- TheraSocial Version B234 (C12) -->
+<!-- B234 (C12): additive. (1) Profile: the viewer's own points card no longer appears on another member's profile
+     (#profileView.ts-c12-other, 3 one-line edits in viewUserProfile / loadUserProfileView / loadProfile) + light polish.
+     (2) Progress: Personalized Insights and Week at a Glance keep line breaks; Refresh skips the server cache and is
+     shown after a failed load. (3) Six mobile items (share reflection, floating Save on phones, character counter,
+     status-bar colour follows Dark Mode, auto-retry when back online, screen-reader announcements). All in
+     style#ts-c12-profile + script#ts-c12-ux-script at the end of the page. Insight logic is server-side (app.py C12).
+     CACHE-BUST: every live JS ?v bumped B233 to B234 in lockstep; app.py _A92_ASSET_VERSION = 'B234'. -->
 <!-- TheraSocial Version B233 (C7 = C6 rev 2) -->
 <!-- B233 (C6 rev 2) - ROUND RESULT: YELLOW (review of C6 found a small set of moderate issues, none critical; fixed here).
      This page (all inside style#ts-c6-fit): R1 Home Nod button icon-only on the narrowest phones (status text had ~65px);
@@ -986,10 +1016,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B233"></script>
+   <script src="/static/js/utilities.js?v=B237"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B233"></script>
-    <script src="/static/js/follow-requests.js?v=B233"></script>
+    <script src="/static/js/triggers.js?v=B237"></script>
+    <script src="/static/js/follow-requests.js?v=B237"></script>
 
 
     <style>
@@ -6367,7 +6397,7 @@
                           <p id="aiWeeklySummaryContent" style="color: var(--dark); line-height: 1.7; font-size: 0.95rem;">
                               <span data-i18n="ai.loading_summary" style="color: var(--gray);">Generating your personalized summary...</span>
                           </p>
-                          <button id="aiRefreshBtn" onclick="loadAIWeeklySummary()" style="background: none; border: 1px solid var(--primary); color: var(--primary); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; margin-top: 10px; display: none;" data-i18n="ai.refresh">Refresh</button>
+                          <button id="aiRefreshBtn" onclick="loadAIWeeklySummary(true)" style="background: none; border: 1px solid var(--primary); color: var(--primary); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; margin-top: 10px; display: none;" data-i18n="ai.refresh">Refresh</button>
                       </div>
 
                       <!-- Daily Check-in Summary -->
@@ -8443,8 +8473,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B233"></script>
-    <script src="/static/js/e2ee.js?v=B233"></script>
+    <script src="/static/js/i18n.js?v=B237"></script>
+    <script src="/static/js/e2ee.js?v=B237"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8924,9 +8954,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B233"></script>
-   <script src="/static/js/circles-messages.js?v=B233"></script>
-<script src="/static/js/feed-updates.js?v=B233"></script>
+<script src="/static/js/parameters-social.js?v=B237"></script>
+   <script src="/static/js/circles-messages.js?v=B237"></script>
+<script src="/static/js/feed-updates.js?v=B237"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -13075,6 +13105,7 @@ window.addEventListener('languageChanged', () => {
 
        async function loadProfile() {
             viewingUserId = null; // Reset when viewing own profile
+            try { document.getElementById('profileView').classList.remove('ts-c12-other'); } catch (_) {}  // C12 (#2): own profile again: show own points card
             console.log('[DEBUG] loadProfile called - loading current user profile');
             
             // PJ708: Remove action buttons from viewing another user
@@ -16435,6 +16466,7 @@ async function viewUserProfile(userId, allowPreview = false) {
         if (profileAvatar) profileAvatar.textContent = '';
         if (profileUsername) profileUsername.textContent = '...';
         if (profileHeader) profileHeader.textContent = '';
+        try { document.getElementById('profileView').classList.add('ts-c12-other'); } catch (_) {}  // C12 (#2): hide the viewer's own points before the view shows
         // Also clear form fields that might have stale own-profile data
         const clearFields = ['profileBio', 'profileInterests', 'profileOccupation', 'profileGoals', 'profileFavoriteHobbies', 'profileBirthYear'];
         clearFields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -16811,6 +16843,9 @@ function a91BioOrNoInfo(bio) {
 async function loadUserProfileView(userId) {
     // Set the viewing user ID so feed knows we're viewing another user
     viewingUserId = userId;
+    // C12 (#2): #profilePointsCard shows the VIEWER's own total ("Your Points"); it must never appear on
+    // someone else's profile. The class hides it via style#ts-c12-profile; loadProfile() removes the class.
+    try { document.getElementById('profileView').classList.toggle('ts-c12-other', String(userId) !== String(currentUserId)); } catch (_) {}
     
     // PJ501: Check if this is a preview request (for recommended users)
     const isPreview = window.isProfilePreview === true;
@@ -19652,6 +19687,7 @@ function updateInsights(data) {
     } else {
         insightsEl.textContent = startTrackingTexts[lang] || startTrackingTexts['en'];
     }
+    if (typeof window.tsC14Insights === 'function') window.tsC14Insights(insightsEl, data);  // CC14: rows + AI version
 }
 
 function updateCheckinSummary(data) {
@@ -19676,7 +19712,7 @@ function updateCheckinSummary(data) {
 // K2: AI WELLNESS FEATURES — Frontend
 // =====================
 
-async function loadAIWeeklySummary() {
+async function loadAIWeeklySummary(forceRefresh) {  // C12: forceRefresh (Refresh button) skips the server cache
     const contentEl = document.getElementById('aiWeeklySummaryContent');
     const badgeEl = document.getElementById('aiBadge');
     const refreshBtn = document.getElementById('aiRefreshBtn');
@@ -19724,7 +19760,7 @@ async function loadAIWeeklySummary() {
     };
 
     try {
-        const response = await fetch('/api/ai/weekly-summary?lang=' + lang, { credentials: 'include' });
+        const response = await fetch('/api/ai/weekly-summary?lang=' + lang + (forceRefresh === true ? '&refresh=1' : ''), { credentials: 'include' });  // C12
         if (!response.ok) throw new Error('API error');
         const data = await response.json();
 
@@ -19732,6 +19768,7 @@ async function loadAIWeeklySummary() {
         contentEl.style.opacity = '0';
         contentEl.style.transition = 'opacity 0.5s ease';
         contentEl.textContent = data.summary;
+        if (typeof window.tsC14FormatSummary === 'function') window.tsC14FormatSummary(contentEl, data.summary);  // CC14
         contentEl.style.color = 'var(--dark)';
         setTimeout(function() { contentEl.style.opacity = '1'; }, 50);
 
@@ -19777,10 +19814,10 @@ async function loadAIWeeklySummary() {
 
             // G15: Parameter name translations (shared between strength and attention)
             var paramNames = {
-                'en': { 'mood': 'Mood', 'energy': 'Energy', 'sleep': 'Sleep', 'activity': 'Activity', 'belonging': 'Belonging' },
-                'he': { 'mood': 'מצב רוח', 'energy': 'אנרגיה', 'sleep': 'שינה', 'activity': 'פעילות', 'belonging': 'שייכות' },
-                'ar': { 'mood': 'المزاج', 'energy': 'الطاقة', 'sleep': 'النوم', 'activity': 'النشاط', 'belonging': 'الانتماء' },
-                'ru': { 'mood': 'Настроение', 'energy': 'Энергия', 'sleep': 'Сон', 'activity': 'Активность', 'belonging': 'Принадлежность' }
+                'en': { 'mood': 'Mood', 'energy': 'Energy', 'sleep': 'Sleep', 'activity': 'Activity', 'belonging': 'Belonging', 'calm': 'Calm' },  // CC14: + calm
+                'he': { 'mood': 'מצב רוח', 'energy': 'אנרגיה', 'sleep': 'שינה', 'activity': 'פעילות', 'belonging': 'שייכות', 'calm': 'רוגע' },
+                'ar': { 'mood': 'المزاج', 'energy': 'الطاقة', 'sleep': 'النوم', 'activity': 'النشاط', 'belonging': 'الانتماء', 'calm': 'الهدوء' },
+                'ru': { 'mood': 'Настроение', 'energy': 'Энергия', 'sleep': 'Сон', 'activity': 'Активность', 'belonging': 'Принадлежность', 'calm': 'Спокойствие' }
             };
             var names = paramNames[lang] || paramNames['en'];
 
@@ -19827,6 +19864,7 @@ async function loadAIWeeklySummary() {
         contentEl.textContent = errorTexts[lang] || errorTexts['en'];
         contentEl.style.color = 'var(--gray)';
         contentEl.style.opacity = '1';
+        if (refreshBtn) refreshBtn.style.display = 'inline-block';  // C12: let the member retry (it stayed hidden after an error)
     }
 }
 
@@ -26040,6 +26078,337 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
         }
     </style>
     <!-- ===================== END C6 ===================== -->
+
+    <!-- ===================== C12 (B234): profile fix + polish, insights layout, six mobile items. Additive; remove both blocks to revert. =====
+         PROFILE (#2): #profilePointsCard is the viewer's OWN total ("Your Points"). On someone else's profile it showed
+           the viewer's points (the card was never hidden there). #profileView gets class ts-c12-other while another
+           member's profile is shown (set in viewUserProfile / loadUserProfileView, removed in loadProfile) and the
+           card is hidden by CSS. Polish is presentation-only: avatar ring, clearer read-only fields (iOS/Android no
+           longer grey them out), brand slate instead of the stock purple on the points card and Permission Groups.
+         INSIGHTS (#1): Personalized Insights / Week at a Glance now arrive as short lines; they keep their line breaks.
+         MOBILE (#4), all feature-detected, texts in en/he/ar/ru inside this block:
+           M1 Share the weekly reflection with someone you trust (phone share sheet; copies the text where there is none).
+           M2 Phones: a floating "Save changes" button appears while your own profile has unsaved edits and the page's
+              own Save button is off screen (it presses that same button; nothing new is sent).
+           M3 Live character counter (e.g. 120 / 500) on the profile text fields while typing; amber near the limit.
+           M4 The phone's status / address bar colour follows the in-app Dark Mode switch (also on Diary and Circles).
+           M5 Week at a Glance retries by itself when the connection comes back after a failed load.
+           M6 VoiceOver / TalkBack announce new insights and the weekly reflection when they arrive. -->
+    <style id="ts-c12-profile">
+        #profileView.ts-c12-other #profilePointsCard { display: none !important; }
+        #profileView .profile-avatar {
+            box-shadow: 0 0 0 4px var(--white, #fff), 0 0 0 6px rgba(107, 139, 164, 0.22), 0 10px 26px rgba(61, 72, 82, 0.16);
+        }
+        .dark-mode #profileView .profile-avatar { box-shadow: 0 0 0 4px var(--light, #1F2937), 0 0 0 6px rgba(169, 193, 214, 0.28); }
+        #profileView #profileUsername { font-weight: 700; letter-spacing: 0.005em; }
+        #profileView #profilePointsCard {
+            background: linear-gradient(135deg, #4F6E86 0%, #6B8BA4 58%, #8C86AC 100%) !important;
+            box-shadow: 0 10px 28px rgba(61, 72, 82, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+        }
+        #profilePointsValue { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+        #profileView .form-label { font-weight: 600; letter-spacing: 0.01em; }
+        /* Read-only fields on another member's profile: full-contrast text (iOS/Android dim disabled text and the
+           shared disabled style lowers opacity), no resize grip, quiet surface. */
+        #profileView.ts-c12-other input:disabled, #profileView.ts-c12-other textarea:disabled {
+            opacity: 1 !important; color: var(--dark, #2D3748) !important; -webkit-text-fill-color: var(--dark, #2D3748) !important;
+            background: #F6F7F9 !important; border-color: rgba(107, 139, 164, 0.10) !important; cursor: default !important; resize: none;
+        }
+        .dark-mode #profileView.ts-c12-other input:disabled, .dark-mode #profileView.ts-c12-other textarea:disabled {
+            background: rgba(255, 255, 255, 0.04) !important; border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        #profileView.ts-c12-other .ts-c12-count { display: none; }
+        /* Permission Groups (another member's profile): brand slate instead of the stock purple. */
+        #i7PermissionGroups { border-left-color: #5A7A93 !important; }
+        [dir="rtl"] #i7PermissionGroups { border-left: 1px solid rgba(107, 139, 164, 0.1) !important; border-right: 4px solid #5A7A93 !important; }  /* CC13: no darker 1px left edge */
+        #i7PermissionGroups button[style*="#7D3C98"] {
+            background: linear-gradient(135deg, #5A7A93 0%, #6B8BA4 100%) !important;
+            box-shadow: 0 2px 8px rgba(61, 72, 82, 0.18) !important; min-height: 40px;
+        }
+        #profileTriggerBtn, #profileCheckinHistoryBtn { min-height: 40px; box-shadow: 0 2px 8px rgba(61, 72, 82, 0.12); }
+        /* INSIGHTS (#1): one finding per line. */
+        #insightsContent, #aiWeeklySummaryContent { white-space: pre-line; overflow-wrap: break-word; }
+        #insightsContent { line-height: 1.75; }
+        /* M1 share, M2 save bar, M3 counter */
+        .ts-c12-share {
+            background: none; border: 1px solid var(--primary, #6B8BA4); color: var(--primary, #6B8BA4); padding: 6px 14px;
+            border-radius: 8px; font-size: 0.8rem; cursor: pointer; margin-top: 10px; margin-inline-start: 8px;
+        }
+        #ts-c12-savebar {
+            position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 9990;
+            transform: translate(-50%, 140%); transition: transform 0.28s ease; border: 0; border-radius: 999px;
+            padding: 12px 22px; min-height: 48px; font-size: 15px; font-weight: 700; color: #fff; cursor: pointer;
+            background: linear-gradient(135deg, #4F6E86 0%, #6B8BA4 100%); box-shadow: 0 10px 28px rgba(31, 41, 55, 0.28);
+            max-width: calc(100vw - 32px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        #ts-c12-savebar.show { transform: translate(-50%, 0); }
+        /* CC14: off-screen alone was not enough (it could peek on tall pages / iOS toolbar changes): also invisible and
+           untappable while hidden; visibility switches after the slide-out finishes. */
+        #ts-c12-savebar { visibility: hidden; pointer-events: none; transition: transform 0.28s ease, visibility 0s linear 0.28s; }
+        #ts-c12-savebar.show { visibility: visible; pointer-events: auto; transition: transform 0.28s ease, visibility 0s; }
+        @media (min-width: 769px) { #ts-c12-savebar { display: none !important; } }
+        .ts-c12-count { display: block; margin-top: 4px; font-size: 12px; color: #7A8798; text-align: end;
+                        font-variant-numeric: tabular-nums; visibility: hidden; }
+        .ts-c12-count.show { visibility: visible; }
+        .ts-c12-count.near { color: #B7791F; font-weight: 600; }
+    </style>
+    <script id="ts-c12-ux-script">
+    (function () {
+        'use strict';
+        if (window.__tsC12Ux) return; window.__tsC12Ux = true;
+        var TXT = {
+            share:  { en: 'Share', he: 'שיתוף', ar: 'مشاركة', ru: 'Поделиться' },
+            shareT: { en: 'My week on TheraSocial', he: 'השבוע שלי ב־TheraSocial', ar: 'أسبوعي على TheraSocial', ru: 'Моя неделя в TheraSocial' },
+            copied: { en: 'Copied. You can paste it into a message.', he: 'הועתק. אפשר להדביק בהודעה.', ar: 'تم النسخ. يمكنكم لصقه في رسالة.', ru: 'Скопировано. Можно вставить в сообщение.' },
+            save:   { en: 'Save changes', he: 'שמירת השינויים', ar: 'حفظ التغييرات', ru: 'Сохранить изменения' }
+        };
+        function lang() { try { return localStorage.getItem('selectedLanguage') || 'en'; } catch (_) { return 'en'; } }
+        function tr(k) { var m = TXT[k]; return m[lang()] || m.en; }
+        function $(id) { return document.getElementById(id); }
+        function onReady(fn) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true }); else fn(); }
+        var mqPhone = window.matchMedia ? window.matchMedia('(max-width: 768px)') : { matches: false };
+
+        onReady(function () {
+            // ---- M6: announce new insights / weekly reflection to screen readers
+            ['insightsContent', 'aiWeeklySummaryContent'].forEach(function (id) {
+                var el = $(id); if (!el) return;
+                if (!el.hasAttribute('aria-live')) { el.setAttribute('aria-live', 'polite'); el.setAttribute('role', 'status'); }
+                // CC13: white-space: pre-line (below) made the markup's indentation around the "Loading..." placeholder
+                // show as blank lines; drop whitespace-only text nodes from the initial markup.
+                Array.prototype.slice.call(el.childNodes).forEach(function (n) {
+                    if (n.nodeType === 3 && !/\S/.test(n.nodeValue)) el.removeChild(n);
+                });
+            });
+
+            // ---- M1: share the weekly reflection (only once a real summary is on screen: the Refresh button shows then)
+            var content = $('aiWeeklySummaryContent'), refresh = $('aiRefreshBtn');
+            if (content && refresh) {
+                var btn = document.createElement('button');
+                btn.type = 'button'; btn.className = 'ts-c12-share'; btn.style.display = 'none';
+                refresh.parentNode.insertBefore(btn, refresh.nextSibling);
+                var lastErr = false;
+                var sync = function () {
+                    btn.textContent = '↗ ' + tr('share');
+                    var txt = (content.textContent || '').trim();
+                    var days = $('aiDaysCount');   // CC13: shown only for a real summary, not the "no check-ins yet" note
+                    var ready = refresh.style.display !== 'none' && txt.length > 40 && content.style.color !== 'var(--gray)' &&
+                                !!days && days.style.display !== 'none';
+                    btn.style.display = ready ? 'inline-block' : 'none';
+                    lastErr = refresh.style.display !== 'none' && content.style.color === 'var(--gray)';
+                };
+                btn.addEventListener('click', function () {
+                    var text = (content.dataset.tsRaw || content.textContent || '').trim(); if (!text) return;  // CC14: keep paragraph breaks
+                    if (navigator.share) { navigator.share({ title: tr('shareT'), text: text }).catch(function () {}); return; }
+                    var done = function () { if (typeof showNotification === 'function') showNotification(tr('copied'), 'success'); };
+                    try { navigator.clipboard.writeText(text).then(done, function () {}); } catch (_) {}
+                });
+                if ('MutationObserver' in window) {
+                    new MutationObserver(sync).observe(content, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+                    new MutationObserver(sync).observe(refresh, { attributes: true, attributeFilter: ['style'] });
+                }
+                window.addEventListener('languageChanged', sync);
+                // ---- M5: after a failed load, try again once the connection is back (only if Progress is open)
+                window.addEventListener('online', function () {
+                    var view = $('progressView');
+                    if (lastErr && view && !view.classList.contains('hidden') && typeof loadAIWeeklySummary === 'function') {
+                        lastErr = false; setTimeout(function () { loadAIWeeklySummary(); }, 1200);
+                    }
+                });
+                sync();
+            }
+
+            // ---- M2 + M3: own-profile helpers
+            var pv = $('profileView'), saveBtn = $('updateProfileBtn');
+            var FIELDS = ['profileBio', 'profileInterests', 'profileOccupation', 'profileGoals', 'profileFavoriteHobbies'];
+            var dirty = false, saveVisible = true, typing = false;
+            var bar = document.createElement('button');
+            bar.id = 'ts-c12-savebar'; bar.type = 'button';
+            document.body.appendChild(bar);
+            var isOwn = function () { return pv && !pv.classList.contains('hidden') && !pv.classList.contains('ts-c12-other'); };
+            var syncBar = function () {
+                bar.textContent = tr('save');
+                bar.classList.toggle('show', !!(dirty && mqPhone.matches && isOwn() && !saveVisible && !typing));
+            };
+            // CC13: hidden while a field has focus, so it never floats over / behind the phone keyboard; it appears
+            // as soon as the keyboard closes.
+            document.addEventListener('focusin', function (e) {
+                var t = e.target; typing = !!(t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)); syncBar();
+            });
+            document.addEventListener('focusout', function () { setTimeout(function () {
+                var a = document.activeElement; typing = !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); syncBar();
+            }, 60); });
+            bar.addEventListener('click', function () { if (saveBtn) saveBtn.click(); });
+            if (saveBtn) saveBtn.addEventListener('click', function () { dirty = false; syncBar(); });
+            if (saveBtn && 'IntersectionObserver' in window) {
+                new IntersectionObserver(function (es) { saveVisible = es[0].isIntersecting; syncBar(); }).observe(saveBtn);
+            } else { saveVisible = false; }
+            if (pv && 'MutationObserver' in window) {
+                // view hidden/shown or switched between own/other profile: start clean
+                new MutationObserver(function () { if (!isOwn()) dirty = false; syncBar(); }).observe(pv, { attributes: true, attributeFilter: ['class'] });
+            }
+            var counted = function (el) {
+                var max = parseInt(el.getAttribute('maxlength'), 10);
+                if (!max || el.dataset.tsC12c) return; el.dataset.tsC12c = '1';
+                var c = document.createElement('small'); c.className = 'ts-c12-count'; c.setAttribute('aria-hidden', 'true');
+                el.parentNode.insertBefore(c, el.nextSibling);
+                var upd = function () {
+                    var n = (el.value || '').length;
+                    c.textContent = n + ' / ' + max;
+                    c.classList.toggle('near', n >= max * 0.9);
+                    c.classList.toggle('show', !el.disabled && (document.activeElement === el || n >= max * 0.8));
+                };
+                el.addEventListener('input', upd); el.addEventListener('focus', upd); el.addEventListener('blur', upd);
+                upd();
+            };
+            FIELDS.forEach(function (id) {
+                var el = $(id); if (!el) return;
+                counted(el);
+                el.addEventListener('input', function () { if (isOwn() && !el.disabled) { dirty = true; syncBar(); } });
+            });
+            if (mqPhone.addEventListener) mqPhone.addEventListener('change', syncBar);
+            window.addEventListener('languageChanged', syncBar);
+            syncBar();
+        });
+
+        // ---- M4: status / address bar colour follows the in-app Dark Mode switch (body.dark-mode)
+        onReady(function () {
+            var metas = document.querySelectorAll('meta[name="theme-color"]');
+            if (!metas.length || !('MutationObserver' in window)) return;
+            for (var i = 0; i < metas.length; i++) metas[i].dataset.tsC12 = metas[i].getAttribute('content') || '';
+            var apply = function () {
+                var dark = document.body.classList.contains('dark-mode') || document.documentElement.classList.contains('dark-mode');
+                for (var j = 0; j < metas.length; j++) metas[j].setAttribute('content', dark ? '#1F2937' : metas[j].dataset.tsC12);
+            };
+            new MutationObserver(apply).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+            new MutationObserver(apply).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+            apply();
+        });
+    })();
+    </script>
+    <!-- ===================== END C12 ===================== -->
+
+    <!-- ===================== CC14 (B236): Personalized Insights + Week at a Glance, round 2. Additive; remove this block to revert
+         (the two one-line hooks in updateInsights / loadAIWeeklySummary are guarded and then do nothing).
+         1 Personalized Insights: each finding on its own row with its icon; then the page asks GET /api/ai/insights for the
+           AI-written version of the same computed findings and swaps it in when it arrives (small "AI" badge). If the AI
+           is unavailable the computed text simply stays. A late reply for a range the member has since changed is ignored.
+         2 Week at a Glance: paragraphs instead of one block, and the closing "This week, you could try:" step shown as a
+           highlighted card (labels recognised in en/he/ar/ru, exactly as app.py's _C12_TXT try_label). Share keeps the
+           original text with its paragraph breaks (dataset.tsRaw). All text is set with textContent. -->
+    <style id="ts-cc14-insights">
+        #personalizedInsights { position: relative; }
+        #personalizedInsights h4 { padding-inline-end: 44px; }  /* CC15: room for the AI badge (long Russian/Arabic titles) */
+        .ts-c14-ai { position: absolute; top: 22px; inset-inline-end: 22px; background: linear-gradient(135deg, #5A7A93, #6B8BA4);
+                     color: #fff; font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; letter-spacing: 0.02em; }
+        .ts-c14-row { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; white-space: normal;
+                      border-bottom: 1px solid rgba(107, 139, 164, 0.12); }
+        .ts-c14-row:last-child { border-bottom: 0; }
+        .ts-c14-ic { flex: 0 0 1.6em; text-align: center; line-height: 1.6; }
+        .ts-c14-tx { flex: 1; min-width: 0; line-height: 1.6; }
+        .ts-c14-p { margin: 0 0 10px; white-space: normal; }
+        .ts-c14-try { margin-top: 12px; padding: 10px 14px; border-radius: 10px; white-space: normal;
+                      background: rgba(157, 184, 160, 0.16); border-inline-start: 3px solid #9DB8A0; }
+        .ts-c14-try-label { display: block; font-weight: 700; color: var(--primary, #5A7A93); margin-bottom: 2px; }
+        .dark-mode .ts-c14-row { border-bottom-color: rgba(255, 255, 255, 0.08); }
+        .dark-mode .ts-c14-try { background: rgba(157, 184, 160, 0.10); }
+        .dark-mode .ts-c14-try-label { color: #A9C1D6; }
+    </style>
+    <script id="ts-cc14-insights-script">
+    (function () {
+        'use strict';
+        if (window.__tsCC14) return; window.__tsCC14 = true;
+        var TRY = ['This week, you could try:', 'השבוע אפשר לנסות:', 'هذا الأسبوع يمكنكم تجربة:', 'На этой неделе можно попробовать:'];
+        var HAS_LETTER = /[\p{L}\p{N}]/u;
+        function lang() { try { return localStorage.getItem('selectedLanguage') || 'en'; } catch (_) { return 'en'; } }
+        function lines(t) { return String(t || '').split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean); }
+        function markerLine(line) { var m = line.match(/^(\S+)\s+([\s\S]+)$/); return (m && !HAS_LETTER.test(m[1])) ? m : null; }
+
+        // Render one finding per row (icon + text). Single-sentence texts (e.g. "Start tracking...") stay as they are.
+        function rows(el, text) {
+            var ls = lines(text);
+            if (ls.length < 2) return false;
+            el.textContent = '';
+            ls.forEach(function (line) {
+                var row = document.createElement('div'); row.className = 'ts-c14-row';
+                var m = markerLine(line);
+                if (m) {
+                    var ic = document.createElement('span'); ic.className = 'ts-c14-ic'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = m[1];
+                    var tx = document.createElement('span'); tx.className = 'ts-c14-tx'; tx.textContent = m[2];
+                    row.appendChild(ic); row.appendChild(tx);
+                } else { row.textContent = line; }
+                el.appendChild(row);
+            });
+            return true;
+        }
+        function badge(show) {
+            var box = document.getElementById('personalizedInsights'); if (!box) return;
+            var b = box.querySelector('.ts-c14-ai');
+            if (show && !b) { b = document.createElement('span'); b.className = 'ts-c14-ai'; b.textContent = 'AI'; box.appendChild(b); }
+            if (b) b.style.display = show ? '' : 'none';
+        }
+
+        var seq = 0;
+        window.tsC14Insights = function (el, data) {
+            try { rows(el, el.textContent); } catch (_) {}
+            badge(false);
+            var my = ++seq;
+            if (!data || !data.insights || (data.totalCheckins || 0) < 3) return;
+            var sel = document.getElementById('progressTimeRange');
+            var days = sel ? String(sel.value) : '30', L = lang();
+            fetch('/api/ai/insights?days=' + encodeURIComponent(days) + '&lang=' + encodeURIComponent(L), { credentials: 'include' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                    if (my !== seq || !d || !d.ai_generated || !d.insights) return;   // newer request or no AI text
+                    if ((sel && String(sel.value) !== days) || lang() !== L) return;  // range or language changed meanwhile
+                    el.textContent = d.insights;
+                    rows(el, d.insights);
+                    badge(true);
+                })
+                .catch(function () {});
+        };
+
+        // CC15: the closing step is found even when the model adds an emoji / ** around the label, puts the label on its
+        // own line, or runs it straight after the previous paragraph without a blank line.
+        function tryInfo(line) {
+            var x = String(line || '').replace(/\*\*|__/g, '').replace(/^[^\p{L}]+/u, '');
+            for (var i = 0; i < TRY.length; i++) if (x.indexOf(TRY[i]) === 0) return { label: TRY[i], rest: x.slice(TRY[i].length).trim() };
+            return null;
+        }
+        window.tsC14FormatSummary = function (el, text) {
+            var t = String(text || '').trim();
+            try {
+                el.dataset.tsRaw = t;
+                if (!t) return;
+                var all = t.split('\n'), cut = -1, info = null, seen = 0;
+                for (var i = all.length - 1; i >= 0 && seen < 2; i--) {   // the label sits in one of the last two lines
+                    if (!all[i].trim()) continue;
+                    seen++;
+                    var f = tryInfo(all[i]);
+                    if (f) { cut = i; info = f; break; }
+                }
+                var body = cut >= 0 ? all.slice(0, cut).join('\n').trim() : t;
+                var tryText = cut >= 0 ? (info.rest + ' ' + all.slice(cut + 1).join(' ')).trim() : '';
+                var parts = body.split(/\n\s*\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+                if (parts.length < 2) {
+                    var ls = lines(body);
+                    if (!info && ls.length >= 2 && ls.every(markerLine)) { rows(el, t); return; }   // computed fallback text
+                    parts = ls;
+                }
+                if (parts.length < 2 && !info) return;
+                el.textContent = '';
+                parts.forEach(function (p) {
+                    var d = document.createElement('div'); d.className = 'ts-c14-p'; d.textContent = p; el.appendChild(d);
+                });
+                if (info) {
+                    var card = document.createElement('div'); card.className = 'ts-c14-try';
+                    var lb = document.createElement('span'); lb.className = 'ts-c14-try-label'; lb.textContent = '🌱 ' + info.label;
+                    var tx = document.createElement('span'); tx.textContent = tryText;
+                    card.appendChild(lb); card.appendChild(tx); el.appendChild(card);
+                }
+            } catch (_) { el.textContent = t; }
+        };
+    })();
+    </script>
+    <!-- ===================== END CC14 ===================== -->
 
 </body>
 
