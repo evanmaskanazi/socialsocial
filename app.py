@@ -1,6 +1,54 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version CC15 (CC14 rev 1) / B237
+# CC15 - ROUND RESULT: YELLOW (review of CC14 found a small set of moderate issues, none critical; fixed here).
+#   MODERATE (compliance): /api/privacy/data-processing did not list the new AI Personalized Insights, still said the
+#     AI provider gets diary data only for the weekly summary and reflection prompts, and did not reflect what C12
+#     sends (belonging, 3-week averages) or the 6-hour in-memory summary cache. Updated + new 'AI Personalized
+#     Insights' entry.
+#   MODERATE (safety): the AI insights could drop the computed 💙 "talk to someone" line. _c15_clean_ai_insights()
+#     puts it back if missing.
+#   MODERATE (rendering): markdown bullets / numbering / bold in the AI insights showed as a fake icon or stray **.
+#     Cleaned server-side.
+#   MODERATE (capacity): AI insights and the weekly summary run at the same time on every Progress visit; the
+#     insights call now has a shorter budget (12 s + 8 s) so the two do not hold workers for 26 s each.
+#   Client-side fixes in index.html (see its CC15 header). _A92_ASSET_VERSION = 'B237'.
+# =====================================================================
+# TheraSocial app.py - Version CC14 / B236
+# CC14: Personalized Insights + Week at a Glance, round 2, made from DiaryFix.png (it was not attached in C12).
+#   Additive, all marked "CC14" (grep CC14). (1) New computed findings: what the best days had in common, weekly
+#   rhythm (_c14_extra_facts), 4 languages in _C14_TXT. (2) NEW GET /api/ai/insights: AI-written Personalized
+#   Insights from computed facts only (no notes), higher-level model + breaker + fallback + per-member cache;
+#   kill switch _CC14_AI_INSIGHTS. (3) Week at a Glance prompt v3: second person only, no claims about feelings or
+#   values not in the notes, max two named days, no stock phrases or vague advice, grounded best/harder-day facts.
+#   (4) Calm counts in the highlights bar. _A92_ASSET_VERSION = 'B236'.
+# =====================================================================
+# TheraSocial app.py - Version CC13 (C12 rev 1) / B235
+# CC13 - ROUND RESULT: YELLOW (review of C12 found a small set of moderate issues, none critical; fixed here).
+#   MODERATE: the weekly-summary model chain could wait 20 s + 15 s = 35 s, past gunicorn's default 30 s worker
+#     timeout (a slow AI day could end in a 502). Now 16 s + 10 s.
+#   MODERATE: no memory of a failing higher-level model, so every request paid for it first. Per-worker circuit
+#     breaker: 3 failures in a row -> Haiku only for 15 min (_C12_AI_BREAKER).
+#   MINOR: if setup failed after the new prompt was swapped in, max_tokens dropped back to 400 (could clip the reply).
+#   Client-side fixes are in index.html (see its CC13 header). _A92_ASSET_VERSION = 'B235'.
+# =====================================================================
+# TheraSocial app.py - Version C12 / B234
+# C12: additive; every change is marked "C12" in place (grep C12).
+#   1. Personalized Insights (/api/parameters/progress): new pattern-based text from _c12_progress_insights()
+#      (strength, rising/dipping area, a personal "on days when X was higher, Y was too" link, one small if-then
+#      step with a choice of two, a gentle talk-to-someone line when the period was consistently very low).
+#      en/he/ar/ru in _C12_TXT. Falls back to generate_progress_insights() under 3 check-ins or on any error.
+#   2. Your Week at a Glance (/api/ai/weekly-summary): evidence-informed prompt (_c12_weekly_prompts), previous-week
+#      comparison + 4-week personal patterns, higher-level model _C12_AI_INSIGHT_MODEL (env AI_INSIGHT_MODEL, default
+#      claude-sonnet-5-5) with automatic fallback to the Haiku model, per-member cache (data fingerprint, 6 h;
+#      ?refresh=1 bypasses). _call_anthropic_api gained optional model/timeout (defaults unchanged).
+#      Kill switches: _C12_INSIGHTS_V2, _C12_WEEKLY_V2.
+#   3. Triggers: "Below X" fired on exactly X (and Above/Equals fired on low values) in the save-time trigger paths,
+#      which ignored the member's condition/value and used a fixed "<= 2". _c12_trigger_condition_func() makes them
+#      strict, matching the scheduler paths. Alerts already stored by the old rule are not deleted.
+#   4. _A92_ASSET_VERSION = 'B234' (every live /static/js ?v B233->B234 in every template).
+# =====================================================================
 # TheraSocial app.py - Version C7 (C6 rev 2) / B233
 # C7: no server logic changed. ROUND RESULT: YELLOW (small set of moderate layout issues found in review of C6, none
 #   critical; fixed in index.html and parameters.html). _A92_ASSET_VERSION = 'B233' (every live /static/js ?v B232->B233).
@@ -9482,7 +9530,7 @@ def _safe_back_url():
 #      response to this constant, so a page whose tokens were forgotten is still served the new JS.
 #      Step 1 is therefore the one that MUST happen; step 2 keeps the files honest for view-source checks.
 #   Check: GET /api/health -> e2ee.asset_version shows the live value. tools: ts_release_check.py.
-_A92_ASSET_VERSION = 'B233'  # C7 (C6 rev 2): B232 -> B233 (index.html: narrow-phone layout fixes in style#ts-c6-fit; parameters.html: style#ts-c7-diary-fit); C6: B231 -> B232 (index.html: Home layout fit fixes + two one-line JS edits; circles.html fit fix; every page's ?v brought into lockstep); A51 FB rev 2: B230 -> B231 (e2ee.js: keeping the device key after sign-out is now a per-member opt-in set only by ticking the box); A51 FB: B229 -> B230 (e2ee.js: ticked "Don't remind me again" now persists on Create/Unlock too, is no longer cleared by unlocking, and keeps the device key across sign-out); B56 (A55 fix): B228 -> B229 (e2ee.js: "Don't remind me again" shown on every prompt incl. pill/Settings, and a plain "Not now" now persists to localStorage, not just the session); A51 rev 6: B227 -> B228; A51 rev 5: B226 -> B227; A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
+_A92_ASSET_VERSION = 'B237'  # CC15 (CC14 rev 1): B236 -> B237 (index.html CC14 block fixes; every page's ?v in lockstep); CC14: B235 -> B236 (index.html: insights/summary rendering + AI insights loader; every page's ?v in lockstep); CC13 (C12 rev 1): B234 -> B235 (index.html C12 block fixes; every page's ?v in lockstep); C12: B233 -> B234 (index.html: profile points fix + C12 block; parameters/circles: ts-c12-theme; every page's ?v in lockstep); C7 (C6 rev 2): B232 -> B233 (index.html: narrow-phone layout fixes in style#ts-c6-fit; parameters.html: style#ts-c7-diary-fit); C6: B231 -> B232 (index.html: Home layout fit fixes + two one-line JS edits; circles.html fit fix; every page's ?v brought into lockstep); A51 FB rev 2: B230 -> B231 (e2ee.js: keeping the device key after sign-out is now a per-member opt-in set only by ticking the box); A51 FB: B229 -> B230 (e2ee.js: ticked "Don't remind me again" now persists on Create/Unlock too, is no longer cleared by unlocking, and keeps the device key across sign-out); B56 (A55 fix): B228 -> B229 (e2ee.js: "Don't remind me again" shown on every prompt incl. pill/Settings, and a plain "Not now" now persists to localStorage, not just the session); A51 rev 6: B227 -> B228; A51 rev 5: B226 -> B227; A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
 
 
 # =====================================================================
@@ -11908,17 +11956,31 @@ def get_data_processing_info():
                 'sensitive_data': True,
                 'sensitive_data_note': 'Diary entries can reveal health information. They are recorded only when you choose to. '
                                        'Other members see them only through the circles you choose or a professional you '
-                                       'approve. The AI provider receives them only to write the AI weekly summary and reflection prompts '
-                                       'you open.'
+                                       'approve. The AI provider receives them only to write the AI weekly summary, the AI '
+                                       'Personalized Insights and reflection prompts you open.'  # CC15: insights added (CC14)
             },
             {
                 # F6 (B205): previously undisclosed recipient.
                 'name': 'AI Weekly Summary',
                 'purpose': 'To write your personal weekly well-being summary when you view it',
                 'legal_basis': 'Consent',
-                'data_categories': ['the last 7 days of diary scores (mood, energy, sleep quality, physical activity, anxiety)', 'diary notes'],
-                'retention': 'Not stored by TheraSocial beyond the summary shown to you',
+                # CC15: categories and retention brought in line with C12 (previous-week and 4-week averages and
+                # patterns are sent; the finished summary is kept in server memory for up to 6 hours).
+                'data_categories': ['the last 7 days of diary scores (mood, energy, sleep quality, physical activity, anxiety, social belonging)',
+                                    'diary notes',
+                                    'averages and patterns computed from your previous 3 weeks of scores'],
+                'retention': 'Not stored by TheraSocial beyond the summary shown to you (the summary text is kept in server memory for up to 6 hours so it is not regenerated each visit)',
                 'recipients': ['AI provider (Anthropic), which generates the summary text'],
+                'cross_border': True
+            },
+            {
+                # CC15: CC14 added AI wording for Personalized Insights (/api/ai/insights).
+                'name': 'AI Personalized Insights',
+                'purpose': 'To word the Personalized Insights on your Progress page when you view them',
+                'legal_basis': 'Consent',
+                'data_categories': ['averages, trends and patterns computed from your diary scores for the period you select (no diary notes)'],
+                'retention': 'Not stored by TheraSocial beyond the insights shown to you (kept in server memory for up to 6 hours)',
+                'recipients': ['AI provider (Anthropic), which generates the insight text'],
                 'cross_border': True
             },
             {
@@ -17473,6 +17535,35 @@ def _f18_cap_days_since(days_since, trigger, today):
     return days_since
 
 
+def _c12_trigger_condition_func(trigger, to_number, legacy_func):
+    """C12 (#3): honour the member's own trigger setting (Below / Above / Equals X) with STRICT comparisons.
+    Bug fixed: the save-time trigger paths (process_parameter_triggers_async and process_parameter_triggers)
+    ignored trigger_condition/trigger_value on the rows the app creates (parameter_name + condition + value)
+    and always used a fixed "value <= 2" test (anxiety ">= 3"). So "Below 2" also fired on exactly 2, and
+    "Above" / "Equals" triggers fired on low values. The scheduler paths (check_parameter_triggers,
+    run_background_trigger_check_for_watcher) were already strict; this makes the save-time paths match them.
+    Rows without a usable condition/value (old boolean-style rows) keep their legacy test unchanged."""
+    try:
+        cond = (getattr(trigger, 'trigger_condition', None) or '').strip().lower()
+        raw = getattr(trigger, 'trigger_value', None)
+        if cond not in ('less_than', 'greater_than', 'equals') or raw is None or raw == '':
+            return legacy_func
+        thr = float(raw)
+    except (TypeError, ValueError):
+        return legacy_func
+
+    def _check(x):
+        n = to_number(x)
+        if n is None:
+            return False
+        if cond == 'less_than':
+            return n < thr          # strictly below: equal to the threshold does NOT fire
+        if cond == 'greater_than':
+            return n > thr          # strictly above
+        return n == thr
+    return _check
+
+
 def build_triggered_params_from_alerts(watcher_id, watched_user_id, watched_username):
     """
     A8: Build the consolidated-email parameter list from the watcher's CURRENT
@@ -17689,7 +17780,8 @@ def process_parameter_triggers_async(user_id, param_snapshot):
                     'anxiety': ('anxiety', 'anxiety', 'anxiety_privacy', lambda x: to_number(x) is not None and to_number(x) >= 3)
                 }
                 if trigger.parameter_name in param_mapping:
-                    param_checks.append(param_mapping[trigger.parameter_name])
+                    _c12_pc = param_mapping[trigger.parameter_name]  # C12 (#3): strict Below/Above/Equals from the member's own setting
+                    param_checks.append(_c12_pc[:3] + (_c12_trigger_condition_func(trigger, to_number, _c12_pc[3]),))
             
             logger.info(f"[TRIGGER PROCESS ASYNC] Checking {len(param_checks)} parameters for watcher {watcher_id}")
             
@@ -18066,7 +18158,8 @@ def process_parameter_triggers(user_id, params):
                     'anxiety': ('anxiety', 'anxiety', 'anxiety_privacy', lambda x: to_number(x) is not None and to_number(x) >= 3)
                 }
                 if trigger.parameter_name in param_mapping:
-                    param_checks.append(param_mapping[trigger.parameter_name])
+                    _c12_pc = param_mapping[trigger.parameter_name]  # C12 (#3): strict Below/Above/Equals from the member's own setting
+                    param_checks.append(_c12_pc[:3] + (_c12_trigger_condition_func(trigger, to_number, _c12_pc[3]),))
             
             logger.info(f"[TRIGGER PROCESS] Watcher {watcher_id} checking {len(param_checks)} parameters")
             
@@ -20078,7 +20171,16 @@ def get_progress():
         
         # Generate insights including anxiety with user's language
         insights = generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, len(params), avg_anxiety, user_language, avg_belonging)
-        
+        try:  # C12 (#1): richer, pattern-based Personalized Insights (falls back to the text above)
+            _c12_ins = _c12_progress_insights(
+                _c12_series(mood_data, energy_data, sleep_data, activity_data, anxiety_data, belonging_data),
+                len(params), user_language,
+                [p.date.weekday() if hasattr(p.date, 'weekday') else None for p in params])  # CC14: weekly rhythm
+            if _c12_ins:
+                insights = _c12_ins
+        except Exception as _c12_e:
+            logger.warning(f"[C12] insights fallback: {_c12_e}")
+
         return jsonify({
             'dates': dates,
             'mood': mood_data,
@@ -20413,8 +20515,608 @@ def generate_progress_insights(avg_mood, avg_energy, avg_sleep, avg_activity, to
     
     if not insights:
         insights.append(t['making_progress'])
-    
+
     return " ".join(insights)
+
+
+# =====================================================================
+# C12 (#1): RICHER "PERSONALIZED INSIGHTS" + UPGRADED "YOUR WEEK AT A GLANCE". Additive block; to revert,
+# set _C12_INSIGHTS_V2 = False (Personalized Insights go back to generate_progress_insights) and
+# _C12_WEEKLY_V2 = False (the weekly summary goes back to the K2/G13 prompt and the Haiku model).
+# Evidence base used for the wording and structure (kept short on purpose; sources in the C12 notes):
+#   * self-monitoring + person-specific feedback (feedback on the member's OWN patterns, not generic tips);
+#   * strengths first (positive-psychology / "feedback on positive affect and activities");
+#   * implementation intentions: one small if-then plan (Gollwitzer & Sheeran 2006, d = 0.65; d = 0.99 in
+#     mental-health samples, Toli et al. 2016), offered with a choice of two (choice beats wording for
+#     perceived autonomy, Smit et al. 2019, JMIR);
+#   * tiny behavioral-activation steps (digital BA meta-analyses), small doses of movement (half the
+#     recommended activity ~18% lower depression risk, Pearce et al. 2022, JAMA Psychiatry), a steady wake
+#     time (sleep regularity and next-day mood), slow breathing with long exhales (Balban et al. 2023);
+#   * connection: a short check-in to someone is appreciated more than people expect (Liu et al. 2023, JPSP);
+#   * self-compassionate, tentative, non-clinical language; a gentle "talk to someone" line when the
+#     period has been consistently very low. Nothing here diagnoses or replaces care.
+# Scales: diary values are 1-4. Anxiety is stored 1-4 (4 = most anxious); here it is turned into "calm"
+# (5 - anxiety) so that for every metric higher = better.
+# =====================================================================
+_C12_INSIGHTS_V2 = True
+_C12_WEEKLY_V2 = True
+# Higher-level model for the weekly summary. Override with the AI_INSIGHT_MODEL env var on Render.
+# If the call fails for any reason (unknown model, timeout, overload) it falls back to the K2 Haiku model.
+_C12_AI_INSIGHT_MODEL = os.environ.get('AI_INSIGHT_MODEL', 'claude-sonnet-5-5')
+_C12_AI_FALLBACK_MODEL = 'claude-haiku-4-5-20251001'
+_C12_METRICS = ('mood', 'energy', 'sleep', 'activity', 'calm', 'belonging')
+
+_C12_TXT = {
+    'en': {
+        'opener_many': '✓ {n} check-ins in this period. Regular check-ins are what make these patterns visible.',
+        'opener_few': '✓ {n} check-ins so far. A few more days will make your patterns clearer.',
+        'strength': '💪 Your strongest area lately: {m}.',
+        'rising': '📈 Moving up: your {m} ratings have been rising in recent days.',
+        'dip': "🌧️ Your {m} ratings have dipped a little lately. That happens, and noticing it is a good first step.",
+        'link': '🔗 A pattern in your own check-ins: on days when your {x} rating was higher, your {y} rating tended to be higher too.',
+        'focus': '🌱 One small idea: {s}',
+        'steady': '🌱 Things look steady. Whatever helped on your better days is worth repeating this week.',
+        'care': '💙 If things have felt heavy for a while, talking with someone you trust or a professional can really help.',
+        'm': {'mood': 'Mood', 'energy': 'Energy', 'sleep': 'Sleep', 'activity': 'Physical activity',
+              'calm': 'Calm', 'belonging': 'Belonging'},
+        'step': {
+            'mood': 'If a day starts to feel flat, you could plan one small thing you enjoy, even for 10 minutes, or write down one good moment before bed.',
+            'energy': 'When energy dips during the day, you could take a 10-minute walk outside, or step away for a short stretch and a glass of water.',
+            'sleep': 'You could try keeping the same wake-up time every day this week, even after a short night, or put screens away 30 minutes before bed.',
+            'activity': 'After a meal, you could take a 10-minute walk; small amounts of movement count. Or pick a short stretch you like and do it at the same time each day.',
+            'calm': 'When tension builds, you could try a few minutes of slow breathing with long, unhurried exhales, or a short walk to reset.',
+            'belonging': 'You could send a short check-in to one person in your circles today; people usually appreciate being reached out to more than we expect. Or plan a brief call with someone you miss.',
+        },
+        'try_label': 'This week, you could try:',
+    },
+    'he': {
+        'opener_many': '✓ {n} צ׳ק־אינים בתקופה הזו. רישום קבוע הוא מה שמאפשר לראות את הדפוסים האלה.',
+        'opener_few': '✓ {n} צ׳ק־אינים עד עכשיו. עוד כמה ימים של רישום יבהירו את הדפוסים שלכם.',
+        'strength': '💪 התחום החזק שלכם לאחרונה: {m}.',
+        'rising': '📈 מגמת עלייה בדירוג של {m} בימים האחרונים.',
+        'dip': '🌧️ ירידה קלה בדירוג של {m} לאחרונה. זה קורה, ועצם השמת הלב לכך הוא צעד ראשון טוב.',
+        'link': '🔗 דפוס שעולה מהרישומים שלכם: בימים שבהם הדירוג של {x} היה גבוה יותר, גם הדירוג של {y} נטה להיות גבוה יותר.',
+        'focus': '🌱 רעיון קטן אחד: {s}',
+        'steady': '🌱 התמונה יציבה. מה שעזר לכם בימים הטובים שווה לחזור עליו גם השבוע.',
+        'care': '💙 אם כבר זמן מה הדברים מרגישים כבדים, שיחה עם מישהו שאתם סומכים עליו או עם איש מקצוע יכולה לעזור מאוד.',
+        'm': {'mood': 'מצב הרוח', 'energy': 'האנרגיה', 'sleep': 'השינה', 'activity': 'הפעילות הגופנית',
+              'calm': 'תחושת הרוגע', 'belonging': 'תחושת השייכות'},
+        'step': {
+            'mood': 'אם יום מתחיל להרגיש שטוח, אפשר לתכנן דבר קטן אחד שאתם נהנים ממנו, אפילו ל־10 דקות, או לכתוב לפני השינה רגע טוב אחד מהיום.',
+            'energy': 'כשהאנרגיה יורדת במהלך היום, אפשר לצאת להליכה של 10 דקות, או לקחת הפסקה קצרה למתיחות ולכוס מים.',
+            'sleep': 'אפשר לנסות לקום באותה שעה בכל יום השבוע, גם אחרי לילה קצר, או להניח את המסכים בצד חצי שעה לפני השינה.',
+            'activity': 'אחרי ארוחה אפשר לצאת להליכה של 10 דקות; גם מעט תנועה נחשבת. או לבחור מתיחה קצרה שאתם אוהבים ולעשות אותה כל יום באותה שעה.',
+            'calm': 'כשהמתח עולה, אפשר לנסות כמה דקות של נשימה איטית עם נשיפות ארוכות ורגועות, או הליכה קצרה כדי להתאפס.',
+            'belonging': 'אפשר לשלוח היום הודעה קצרה לאדם אחד מהמעגלים שלכם; אנשים בדרך כלל מעריכים פנייה כזו יותר ממה שנדמה לנו. או לקבוע שיחה קצרה עם מישהו שחסר לכם.',
+        },
+        'try_label': 'השבוע אפשר לנסות:',
+    },
+    'ar': {
+        'opener_many': '✓ {n} تسجيلات في هذه الفترة. التسجيل المنتظم هو ما يجعل هذه الأنماط واضحة.',
+        'opener_few': '✓ {n} تسجيلات حتى الآن. بضعة أيام أخرى ستجعل أنماطكم أوضح.',
+        'strength': '💪 أقوى جانب لديكم مؤخرًا: {m}.',
+        'rising': '📈 تحسّن ملحوظ في تقييم {m} خلال الأيام الأخيرة.',
+        'dip': '🌧️ انخفاض بسيط في تقييم {m} مؤخرًا. هذا يحدث، وملاحظته خطوة أولى جيدة.',
+        'link': '🔗 نمط من تسجيلاتكم: في الأيام التي كان فيها تقييم {x} أعلى، كان تقييم {y} يميل إلى الارتفاع أيضًا.',
+        'focus': '🌱 فكرة صغيرة واحدة: {s}',
+        'steady': '🌱 الصورة مستقرة. ما ساعدكم في أيامكم الأفضل يستحق التكرار هذا الأسبوع.',
+        'care': '💙 إذا كانت الأمور تبدو ثقيلة منذ فترة، فإن الحديث مع شخص تثقون به أو مع مختص يمكن أن يساعد كثيرًا.',
+        'm': {'mood': 'المزاج', 'energy': 'الطاقة', 'sleep': 'النوم', 'activity': 'النشاط البدني',
+              'calm': 'الشعور بالهدوء', 'belonging': 'الشعور بالانتماء'},
+        'step': {
+            'mood': 'إذا بدأ يومٌ يبدو باهتًا، يمكنكم التخطيط لشيء صغير تستمتعون به ولو لعشر دقائق، أو كتابة لحظة جميلة واحدة من يومكم قبل النوم.',
+            'energy': 'عندما تنخفض الطاقة خلال اليوم، يمكنكم المشي عشر دقائق في الخارج، أو أخذ استراحة قصيرة للتمدد وشرب كوب ماء.',
+            'sleep': 'يمكنكم تجربة الاستيقاظ في الوقت نفسه كل يوم هذا الأسبوع، حتى بعد ليلة قصيرة، أو إبعاد الشاشات قبل النوم بنصف ساعة.',
+            'activity': 'بعد الوجبة يمكنكم المشي عشر دقائق؛ فحتى القليل من الحركة له قيمة. أو اختاروا تمرين تمدد قصيرًا تحبونه وكرروه كل يوم في الوقت نفسه.',
+            'calm': 'عندما يتصاعد التوتر، يمكنكم تجربة بضع دقائق من التنفس البطيء مع زفير طويل وهادئ، أو المشي قليلًا لاستعادة التوازن.',
+            'belonging': 'يمكنكم إرسال رسالة قصيرة اليوم لشخص واحد من دوائركم؛ فالناس عادةً يقدّرون هذا التواصل أكثر مما نتوقع. أو رتّبوا مكالمة قصيرة مع شخص تفتقدونه.',
+        },
+        'try_label': 'هذا الأسبوع يمكنكم تجربة:',
+    },
+    'ru': {
+        'opener_many': '✓ Отметок за этот период: {n}. Именно регулярные отметки делают такие закономерности заметными.',
+        'opener_few': '✓ Отметок пока: {n}. Ещё несколько дней, и ваши закономерности станут яснее.',
+        'strength': '💪 Ваша сильная сторона в последнее время: «{m}».',
+        'rising': '📈 В последние дни заметен рост по показателю «{m}».',
+        'dip': '🌧️ Показатель «{m}» в последнее время немного снизился. Так бывает, и само то, что вы это замечаете, уже хороший первый шаг.',
+        'link': '🔗 Закономерность в ваших отметках: в дни, когда оценка «{x}» была выше, оценка «{y}» тоже, как правило, была выше.',
+        'focus': '🌱 Одна небольшая идея: {s}',
+        'steady': '🌱 Всё выглядит стабильно. То, что помогало вам в лучшие дни, стоит повторить и на этой неделе.',
+        'care': '💙 Если уже какое-то время на душе тяжело, разговор с близким человеком или специалистом может по-настоящему помочь.',
+        'm': {'mood': 'Настроение', 'energy': 'Энергия', 'sleep': 'Сон', 'activity': 'Физическая активность',
+              'calm': 'Спокойствие', 'belonging': 'Принадлежность'},
+        'step': {
+            'mood': 'Если день начинает казаться серым, можно запланировать одно маленькое приятное дело, хотя бы на 10 минут, или перед сном записать один хороший момент дня.',
+            'energy': 'Когда днём падает энергия, можно выйти на 10-минутную прогулку или сделать короткий перерыв: потянуться и выпить стакан воды.',
+            'sleep': 'Можно попробовать на этой неделе вставать в одно и то же время каждый день, даже после короткой ночи, или откладывать экраны за 30 минут до сна.',
+            'activity': 'После еды можно пройтись 10 минут: даже немного движения имеет значение. Или выберите короткую разминку, которая вам нравится, и делайте её каждый день в одно и то же время.',
+            'calm': 'Когда нарастает напряжение, можно несколько минут подышать медленно, с долгим спокойным выдохом, или ненадолго пройтись, чтобы прийти в себя.',
+            'belonging': 'Можно сегодня написать короткое сообщение одному человеку из ваших кругов: обычно люди ценят такой знак внимания больше, чем нам кажется. Или договориться о коротком звонке с тем, по кому вы скучаете.',
+        },
+        'try_label': 'На этой неделе можно попробовать:',
+    },
+}
+
+
+def _c12_val(v):
+    """1-4 integer or None (strings like '3' accepted)."""
+    try:
+        if v is None or v == '':
+            return None
+        n = int(float(v))
+        return n if 1 <= n <= 4 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _c12_series(mood, energy, sleep, activity, anxiety, belonging):
+    """Day-aligned lists -> {metric: [1-4 or None, ...]} with anxiety turned into calm (higher = better)."""
+    calm = []
+    for a in (anxiety or []):
+        av = _c12_val(a)
+        calm.append(None if av is None else 5 - av)
+    return {
+        'mood': [_c12_val(v) for v in (mood or [])],
+        'energy': [_c12_val(v) for v in (energy or [])],
+        'sleep': [_c12_val(v) for v in (sleep or [])],
+        'activity': [_c12_val(v) for v in (activity or [])],
+        'calm': calm,
+        'belonging': [_c12_val(v) for v in (belonging or [])],
+    }
+
+
+def _c12_series_from_params(params):
+    """SavedParameters rows (date order) -> _c12_series()."""
+    g = lambda attr: [getattr(p, attr, None) for p in params]
+    return _c12_series(g('mood'), g('energy'), g('sleep_quality'), g('physical_activity'),
+                       g('anxiety'), g('social_belonging'))
+
+
+def _c12_mean(vals):
+    v = [x for x in vals if x is not None]
+    return (sum(v) / len(v)) if v else None
+
+
+def _c12_analyze(series):
+    """Pattern facts used by both features. Returns a dict (no text):
+       avgs {metric: mean}, trends {metric: later-half minus earlier-half mean} (needs >= 6 values),
+       links [(x, y, diff, n_hi, n_lo)] same-day "on higher-x days, y was higher by diff" (>= 2 days each side)."""
+    avgs = {m: _c12_mean(series.get(m, [])) for m in _C12_METRICS}
+    trends = {}
+    for m in _C12_METRICS:
+        vals = [x for x in series.get(m, []) if x is not None]
+        if len(vals) >= 6:
+            h = len(vals) // 2
+            trends[m] = _c12_mean(vals[h:]) - _c12_mean(vals[:h])
+    links = []
+    for x, y in (('sleep', 'mood'), ('activity', 'mood'), ('belonging', 'mood'), ('sleep', 'energy'),
+                 ('activity', 'energy'), ('calm', 'mood'), ('belonging', 'calm')):
+        xs, ys = series.get(x, []), series.get(y, [])
+        hi = [yv for xv, yv in zip(xs, ys) if xv is not None and yv is not None and xv >= 3]
+        lo = [yv for xv, yv in zip(xs, ys) if xv is not None and yv is not None and xv <= 2]
+        if len(hi) >= 2 and len(lo) >= 2:
+            d = _c12_mean(hi) - _c12_mean(lo)
+            if d >= 0.5:
+                links.append((x, y, round(d, 2), len(hi), len(lo)))
+    links.sort(key=lambda t: t[2], reverse=True)
+    return {'avgs': avgs, 'trends': trends, 'links': links}
+
+
+def _c12_progress_insights(series, total_entries, language='en', weekdays=None):  # CC14: weekdays (optional)
+    """C12 (#1): Personalized Insights text (one finding per line; the page shows line breaks).
+    Returns None when there is too little data (< 3 check-ins), so the caller keeps the old text."""
+    if not _C12_INSIGHTS_V2 or not total_entries or total_entries < 3:
+        return None
+    t = _C12_TXT.get(language, _C12_TXT['en'])
+    M = t['m']
+    Mi = {k: v.lower() for k, v in M.items()} if t is _C12_TXT['en'] else M   # mid-sentence form (English only)
+    a = _c12_analyze(series)
+    avgs = {k: v for k, v in a['avgs'].items() if v is not None}
+    if not avgs:
+        return None
+    lines = [(t['opener_many'] if total_entries >= 7 else t['opener_few']).replace('{n}', str(total_entries))]
+
+    top = max(avgs, key=avgs.get)
+    if avgs[top] >= 3.0:
+        lines.append(t['strength'].replace('{m}', M[top]))
+    ups = [(m, d) for m, d in a['trends'].items() if d >= 0.4]
+    if ups:
+        m_up = max(ups, key=lambda x: x[1])[0]
+        if m_up != top or len(ups) == 1:
+            lines.append(t['rising'].replace('{m}', Mi[m_up]))
+    if a['links']:
+        x, y = a['links'][0][0], a['links'][0][1]
+        lines.append(t['link'].replace('{x}', Mi[x]).replace('{y}', Mi[y]))
+    try:  # CC14: what the best days had in common + weekly rhythm
+        lines += _c14_extra_lines(series, weekdays, language, Mi)
+    except Exception:
+        pass
+    downs = [(m, d) for m, d in a['trends'].items() if d <= -0.4]
+    m_down = min(downs, key=lambda x: x[1])[0] if downs else None
+    if m_down:
+        lines.append(t['dip'].replace('{m}', Mi[m_down]))
+
+    # One small, optional step for the area that would help most: a recent dip first, else the lowest area.
+    low = min(avgs, key=avgs.get)
+    focus = m_down or (low if avgs[low] <= 2.75 else None)
+    lines.append(t['focus'].replace('{s}', t['step'][focus]) if focus else t['steady'])
+
+    n_mood = len([v for v in series.get('mood', []) if v is not None])
+    n_calm = len([v for v in series.get('calm', []) if v is not None])
+    if (avgs.get('mood') is not None and n_mood >= 5 and avgs['mood'] <= 1.6) or \
+       (avgs.get('calm') is not None and n_calm >= 5 and avgs['calm'] <= 1.6):
+        lines.append(t['care'])
+    return "\n".join(lines)
+
+
+def _c12_pattern_lines_en(series, label):
+    """English facts for the AI prompt (the model writes the reply in the member's language)."""
+    a = _c12_analyze(series)
+    out = []
+    for x, y, d, nh, nl in a['links'][:3]:
+        out.append(f"{label}: on days with higher {x} ratings, {y} averaged {d:+.1f} points higher "
+                   f"({nh} higher-{x} days vs {nl} lower-{x} days).")
+    for m, d in sorted(a['trends'].items(), key=lambda kv: -abs(kv[1])):
+        if abs(d) >= 0.4:
+            out.append(f"{label}: {m} {'rose' if d > 0 else 'fell'} by about {abs(d):.1f} points "
+                       f"from the earlier to the later part of the period.")
+    return out
+
+
+def _c12_weekly_prompts(language, context_summary, days_data, week_series, prev_series, month_series,
+                        calmness_label):
+    """C12 (#1): evidence-informed system + user prompt for "Your Week at a Glance"."""
+    t = _C12_TXT.get(language, _C12_TXT['en'])
+    try_label = t['try_label']
+    system_prompt = (
+        "You are the reflective companion inside TheraSocial, a well-being platform built around a short daily "
+        "check-in and small trusted circles of people who look out for each other. You write the member's "
+        "\"Your Week at a Glance\": a warm, specific, personal reflection on their last 7 days of check-ins."
+        "\n\nData: every rating is 1-4 (1 = lowest, 4 = highest) for mood, energy, sleep quality, physical "
+        f"activity and belonging (sense of connection). {calmness_label} is reported as 'calmness' "
+        "(1-4, 4 = most calm). Treat the numbers as rough self-ratings, not measurements."
+        "\n\nHow to write it (these follow what research on feedback, behaviour change and well-being supports):"
+        "\n1. Personal, not generic. Ground every sentence in THIS member's data: name a specific day, a change, "
+        "or a pattern. Never give advice that could be written without looking at their week."
+        "\n2. Strengths first. Open with something that genuinely went well and, when visible, what they did "
+        "that may have helped (for example a day with more movement or more connection)."
+        "\n3. Reflect, don't judge. Acknowledge a harder day plainly and kindly, with self-compassion. No blame, "
+        "no toxic positivity, no 'should' or 'must'."
+        "\n4. Patterns are tentative. Use language like 'it looks like', 'on days when..., you tended to...'. "
+        "Never claim causes, never diagnose, never use clinical labels or speculate about conditions."
+        "\n5. One small next step, with a choice. Close with a single if-then plan the member could try this "
+        "week ('When/If [a moment in their week], [a small action]'), plus one alternative, both doable in "
+        "under 10 minutes and tied to the area that would help them most. Draw on these well-supported "
+        "options when they fit the data: keeping a steady wake-up time (sleep); a 10-minute walk or any "
+        "movement, since small amounts count (energy, activity, mood); a few minutes of slow breathing with "
+        "long exhales (calmness); scheduling one small enjoyable or meaningful activity (low mood); noticing "
+        "or writing down one good moment (savouring); a short check-in message to someone in their circles "
+        "(belonging), because people usually appreciate being reached out to more than we expect."
+        "\n6. Connection matters. If belonging is low or falling, or the notes mention feeling alone, gently "
+        "suggest reaching out to one person they trust. If belonging is strong, name that connection as a "
+        "resource that seems to help them."
+        "\n7. Notes. If notes are present, reflect in your own words what seemed to matter to the person. Do not "
+        "quote them at length and do not add interpretations they did not make."
+        # CC14: voice rules, each one a failure seen in the live summary (DiaryFix.png).
+        "\n8. Voice. Write to the member in the second person. Never write about yourself: no 'I', 'me', "
+        "'what strikes me', 'tells me', 'I notice'. Do not state what the member feels, values or believes (for "
+        "example 'your connections matter deeply to you') unless their own notes say so; describe what the ratings "
+        "show instead. Name at most two specific days. No stock phrases or superlatives (for example 'genuinely', "
+        "'absolute peak', 'everything clicking', 'real ups and downs', 'journey'), and no vague advice such as "
+        "'consider being more intentional': the next step must be concrete."
+        "\n\nSafety: if the notes suggest the member may be in crisis or thinking about harming themselves, "
+        "set the format aside: reply briefly and warmly, say they deserve support right now, and encourage them "
+        "to reach out today to someone they trust and to local emergency services or a crisis line. Give no "
+        "analysis in that case. If ratings have been at the very bottom on most days, add one gentle sentence "
+        "that talking with someone they trust or a professional can help."
+        "\n\nFormat: plain text only (no markdown, no bullet symbols, no headings, no emoji)."
+        "\n- Paragraph 1 (2-3 sentences): what the week looked like, opening with a genuine strength and naming "
+        "a specific day."
+        "\n- Paragraph 2 (1-3 sentences): one personal pattern from their data and, when a comparison with the "
+        "previous week is given, how this week compares; acknowledge any harder day kindly."
+        f"\n- Last line: begin exactly with \"{try_label}\" and give the if-then step and its alternative in one "
+        "or two sentences."
+        "\nSeparate the parts with one blank line. 90 to 150 words in total. Do not list numbers or scores; "
+        "describe what you notice in natural words. If fewer than 4 days were tracked, still reflect on what "
+        "is there and gently note that a few more check-ins will make patterns clearer."
+        f"\n\n{_get_ai_language_instruction(language)}"
+        "\nIMPORTANT: Write naturally and fluently in the requested language with culturally appropriate, "
+        "gender-neutral phrasing where the language allows. Compose directly in that language; do not translate "
+        "from English."
+    )
+    extra = []
+    wk, pv = _c12_analyze(week_series)['avgs'], _c12_analyze(prev_series)['avgs'] if prev_series else {}
+    comp = []
+    for m in _C12_METRICS:
+        if wk.get(m) is not None and pv.get(m) is not None:
+            d = wk[m] - pv[m]
+            if abs(d) >= 0.3:
+                comp.append(f"{m} {'higher' if d > 0 else 'lower'} than the previous week by about {abs(d):.1f}")
+    if comp:
+        extra.append("Compared with the previous 7 days: " + "; ".join(comp) + ".")
+    elif pv:
+        extra.append("Compared with the previous 7 days: broadly similar.")
+    extra += _c12_pattern_lines_en(week_series, "This week")
+    try:  # CC14: computed best-day vs harder-day contrast, so the pattern sentence is grounded
+        for m, b, h in _c14_extra_facts(week_series)['best_profile']:
+            extra.append(f"This week: on the best days {m} averaged {b}, on the harder days {h}.")
+    except Exception:
+        pass
+    if month_series:
+        extra += _c12_pattern_lines_en(month_series, "Past 4 weeks")[:2]
+    user_prompt = (
+        f"Summary context:\n{context_summary}\n"
+        + ("\n".join(extra) + "\n" if extra else "")
+        + f"\nDaily entries (this week):\n{json.dumps(days_data, indent=2, ensure_ascii=False)}\n\n"
+        "Please write the member's personal Week at a Glance now."
+    )
+    return system_prompt, user_prompt
+
+
+# CC13: per-worker circuit breaker. After 3 failures in a row of the higher-level model (unknown model id,
+# outage, repeated timeouts) it is skipped for 15 minutes, so members are not each made to wait for a doomed call.
+_C12_AI_BREAKER = {'fails': 0, 'until': 0.0}
+
+
+def _c12_call_insight_model(system_prompt, user_prompt, max_tokens, language, t_main=16, t_fallback=10):  # CC15: per-caller timeouts
+    """Try the higher-level model first; on any failure fall back to the K2 Haiku model.
+    CC13: timeouts 16 s + 10 s (C12 had 20 + 15 = 35 s, past gunicorn's default 30 s worker timeout), plus the
+    breaker above. With the breaker open, Haiku alone gets 25 s."""
+    now = time.time()
+    use_upgraded = (_C12_AI_INSIGHT_MODEL != _C12_AI_FALLBACK_MODEL) and now >= _C12_AI_BREAKER['until']
+    if use_upgraded:
+        txt = _call_anthropic_api(system_prompt, user_prompt, max_tokens=max_tokens, language=language,
+                                  model=_C12_AI_INSIGHT_MODEL, timeout=t_main)
+        if txt:
+            _C12_AI_BREAKER['fails'] = 0
+            return txt
+        _C12_AI_BREAKER['fails'] += 1
+        if _C12_AI_BREAKER['fails'] >= 3:
+            _C12_AI_BREAKER['fails'] = 0
+            _C12_AI_BREAKER['until'] = now + 15 * 60
+            logger.warning(f"[AI] CC13: {_C12_AI_INSIGHT_MODEL} failed 3 times in a row; using {_C12_AI_FALLBACK_MODEL} for 15 min")
+        else:
+            logger.warning(f"[AI] C12: {_C12_AI_INSIGHT_MODEL} gave no text; falling back to {_C12_AI_FALLBACK_MODEL}")
+    return _call_anthropic_api(system_prompt, user_prompt, max_tokens=max_tokens, language=language,
+                               model=_C12_AI_FALLBACK_MODEL, timeout=t_fallback if use_upgraded else (t_main + t_fallback - 1))
+
+
+# Small per-worker cache so re-opening Progress does not pay for a new summary when nothing changed.
+# Key = member + language + a fingerprint of the data sent; any new or edited check-in changes the key.
+# "Refresh" (?refresh=1) always bypasses it. Never shared between members.
+_C12_WS_CACHE = {}
+_C12_WS_TTL = 6 * 3600
+_C12_WS_MAX = 2000
+
+
+def _c12_ws_cache_get(key):
+    try:
+        hit = _C12_WS_CACHE.get(key)
+        if hit and (time.time() - hit[0]) < _C12_WS_TTL:
+            return hit[1]
+    except Exception:
+        pass
+    return None
+
+
+def _c12_ws_cache_put(key, payload):
+    try:
+        if len(_C12_WS_CACHE) >= _C12_WS_MAX:
+            for k in sorted(_C12_WS_CACHE, key=lambda k: _C12_WS_CACHE[k][0])[:_C12_WS_MAX // 4]:
+                _C12_WS_CACHE.pop(k, None)
+        _C12_WS_CACHE[key] = (time.time(), payload)
+    except Exception:
+        pass
+# ===================== END C12 (#1) helpers =====================
+
+
+# =====================================================================
+# CC14: Personalized Insights + Week at a Glance, round 2 (made after seeing DiaryFix.png). Additive.
+#   * Two new evidence-backed findings, computed (never guessed): "what your best days had in common" (best third
+#     vs hardest third of days, per metric) and a weekly rhythm (a weekday that is reliably stronger, >= 14 days).
+#     Personal-informatics research: people gain most from comparisons and patterns in their OWN data, while most
+#     tools stop at simple feedback; comparisons should reflect positively on the person.
+#   * Personalized Insights gets an AI layer: GET /api/ai/insights?days=N&lang=xx. The deterministic text appears at
+#     once (from /api/parameters/progress); the page then asks for the AI version and swaps it in when ready. The
+#     model only rewrites COMPUTED facts (no notes are sent, no new claims), with the same higher-level model,
+#     breaker, fallback and per-member cache as the weekly summary. Fallback = the deterministic text.
+#   * Week at a Glance prompt v3: second person only (no "I" / "what strikes me" / "tells me"), no statements about
+#     what the member feels or values unless their notes say so, at most two named days, no stock phrases, plus
+#     computed best-day vs harder-day facts so its pattern sentence is grounded. (DiaryFix.png showed all of these.)
+#   * Calm is now part of the highlights bar (Strongest / Room to grow); the page has its label in 4 languages.
+#   Kill switch: _CC14_AI_INSIGHTS = False -> the page keeps the deterministic insights only.
+# =====================================================================
+_CC14_AI_INSIGHTS = True
+
+_C14_TXT = {
+    'en': {'best1': '⭐ What your best days had in common: a higher {a} rating.',
+           'best2': '⭐ What your best days had in common: higher {a} and {b} ratings.',
+           'rhythm': '📅 A weekly rhythm: {d} tends to be one of your stronger days.',
+           'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']},
+    'he': {'best1': '⭐ מה היה משותף לימים הטובים ביותר שלכם: דירוג גבוה יותר של {a}.',
+           'best2': '⭐ מה היה משותף לימים הטובים ביותר שלכם: דירוג גבוה יותר של {a} ושל {b}.',
+           'rhythm': '📅 קצב שבועי: {d} נוטה להיות אחד הימים החזקים שלכם.',
+           'days': ['יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'שבת', 'יום ראשון']},
+    'ar': {'best1': '⭐ ما جمع بين أفضل أيامكم: ارتفاع تقييم {a}.',
+           'best2': '⭐ ما جمع بين أفضل أيامكم: ارتفاع تقييم {a} و{b}.',
+           'rhythm': '📅 إيقاع أسبوعي: يميل {d} إلى أن يكون من أقوى أيامكم.',
+           'days': ['يوم الاثنين', 'يوم الثلاثاء', 'يوم الأربعاء', 'يوم الخميس', 'يوم الجمعة', 'يوم السبت', 'يوم الأحد']},
+    'ru': {'best1': '⭐ Что объединяло ваши лучшие дни: более высокая оценка «{a}».',
+           'best2': '⭐ Что объединяло ваши лучшие дни: более высокие оценки «{a}» и «{b}».',
+           'rhythm': '📅 Недельный ритм: {d} обычно оказывается одним из ваших лучших дней.',
+           'days': ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье']},
+}
+
+
+def _c14_day_scores(series):
+    """Per-day overall score (mean of the available metrics, all 'higher = better'); None if < 2 metrics."""
+    n = max((len(v) for v in series.values()), default=0)
+    out = []
+    for i in range(n):
+        vals = [series[m][i] for m in _C12_METRICS if i < len(series.get(m, [])) and series[m][i] is not None]
+        out.append(sum(vals) / len(vals) if len(vals) >= 2 else None)
+    return out
+
+
+def _c14_extra_facts(series, weekdays=None):
+    """best_profile: [(metric, best_mean, hard_mean)] where the best third of days beat the hardest third by >= 0.75
+    (needs >= 5 scored days). best_weekday: weekday index that beats the overall mean by >= 0.4 (needs >= 14 scored
+    days and >= 2 entries that weekday)."""
+    scores = _c14_day_scores(series)
+    idx = [i for i, s in enumerate(scores) if s is not None]
+    res = {'best_profile': [], 'best_weekday': None}
+    if len(idx) >= 5:
+        k = max(2, len(idx) // 3)
+        ranked = sorted(idx, key=lambda i: scores[i])
+        hard, best = ranked[:k], ranked[-k:]
+        prof = []
+        for m in _C12_METRICS:
+            col = series.get(m, [])
+            b = [col[i] for i in best if i < len(col) and col[i] is not None]
+            h = [col[i] for i in hard if i < len(col) and col[i] is not None]
+            if len(b) >= 2 and len(h) >= 2 and (_c12_mean(b) - _c12_mean(h)) >= 0.75:
+                prof.append((m, round(_c12_mean(b), 1), round(_c12_mean(h), 1)))
+        prof.sort(key=lambda t: t[1] - t[2], reverse=True)
+        res['best_profile'] = prof[:2]
+    if weekdays and len(idx) >= 14:
+        overall = _c12_mean([scores[i] for i in idx])
+        byday = {}
+        for i in idx:
+            wd = weekdays[i] if i < len(weekdays) else None
+            if wd is not None:
+                byday.setdefault(wd, []).append(scores[i])
+        cands = [(wd, _c12_mean(v)) for wd, v in byday.items() if len(v) >= 2]
+        if cands:
+            wd, avg = max(cands, key=lambda t: t[1])
+            if avg - overall >= 0.4:
+                res['best_weekday'] = wd
+    return res
+
+
+def _c14_extra_lines(series, weekdays, language, Mi):
+    """Localized lines for _c12_progress_insights (best-day profile, weekly rhythm)."""
+    t = _C14_TXT.get(language, _C14_TXT['en'])
+    ex = _c14_extra_facts(series, weekdays)
+    lines = []
+    prof = ex['best_profile']
+    if len(prof) >= 2:
+        lines.append(t['best2'].replace('{a}', Mi[prof[0][0]]).replace('{b}', Mi[prof[1][0]]))
+    elif len(prof) == 1:
+        lines.append(t['best1'].replace('{a}', Mi[prof[0][0]]))
+    if ex['best_weekday'] is not None:
+        lines.append(t['rhythm'].replace('{d}', t['days'][ex['best_weekday']]))
+    return lines
+
+
+def _c14_fact_lines_en(series, weekdays, n_entries, days):
+    """Computed facts (English) for the AI Personalized Insights prompt."""
+    a = _c12_analyze(series)
+    out = [f"Check-ins: {n_entries} in the last {days} days."]
+    av = ", ".join(f"{m} {v:.1f}" for m, v in a['avgs'].items() if v is not None)
+    if av:
+        out.append(f"Average ratings (1-4, higher = better; calm = 5 - anxiety): {av}.")
+    out += _c12_pattern_lines_en(series, "Period")
+    ex = _c14_extra_facts(series, weekdays)
+    for m, b, h in ex['best_profile']:
+        out.append(f"Best days vs hardest days: {m} averaged {b} on the best days vs {h} on the hardest days.")
+    if ex['best_weekday'] is not None:
+        out.append(f"Weekly rhythm: {_C14_TXT['en']['days'][ex['best_weekday']]} is reliably one of the stronger days.")
+    return out
+
+
+def _c14_insights_prompts(language, days, facts, draft):
+    """Prompt for the AI Personalized Insights: rewrite computed facts, never add new ones."""
+    system_prompt = (
+        "You write the 'Personalized Insights' panel of TheraSocial, a well-being platform built around a short "
+        "daily check-in and small trusted circles. You receive FACTS computed from the member's own 1-4 ratings for "
+        f"the last {days} days and a DRAFT made from those facts. Rewrite the draft so it reads as warm, specific and "
+        "personal, while staying strictly true to the facts."
+        "\n\nRules:"
+        "\n- Use only what the facts state. Do not add numbers, causes, diagnoses, feelings or values the facts do not "
+        "contain. Patterns are tentative ('tends to', 'on days when')."
+        "\n- One finding per line, 4 to 7 lines, in this order when present: consistency, strongest area, what is "
+        "rising, a personal pattern, what the best days had in common, a weekly rhythm, a gentle note on a dip, one "
+        "small optional next step (an if-then plan with one alternative, under 10 minutes, linked to the area that "
+        "would help most), and the care line."
+        "\n- Begin each line with the same emoji the draft uses for that kind of finding (✓ 💪 📈 🔗 ⭐ 📅 🌧️ 🌱 💙). "
+        "If the draft has a 💙 care line, keep its meaning exactly."
+        "\n- Second person only; never write about yourself. Plain words, no stock phrases, no superlatives, no "
+        "exclamation marks, no markdown. About 70 to 120 words in total."
+        "\n- Strengths first, kind about dips, never blaming. Use 'could' and 'might', never 'should' or 'must'."
+        f"\n\n{_get_ai_language_instruction(language)}"
+        "\nIMPORTANT: compose directly in that language with natural, gender-neutral phrasing where the language "
+        "allows; do not translate from English."
+    )
+    user_prompt = ("Facts:\n- " + "\n- ".join(facts) + "\n\nDraft:\n" + (draft or "") +
+                   "\n\nWrite the improved Personalized Insights now (lines only).")
+    return system_prompt, user_prompt
+
+
+def _c15_clean_ai_insights(txt, draft):
+    """CC15: make the AI insights safe to render as rows. Strips markdown / bullets / numbering that would otherwise
+    show up as a fake icon, drops headings and blank lines, keeps at most 9 lines, and guarantees the computed 💙 care
+    line survives (the model is told to keep it; this makes sure). Returns None if nothing usable is left."""
+    if not txt:
+        return None
+    out = []
+    for raw in str(txt).splitlines():
+        s = raw.strip().replace('**', '').replace('__', '')
+        s = re.sub(r'^(?:[-*•·]+|\d+[.)])\s+', '', s)          # "- x", "* x", "• x", "1. x", "2) x"
+        s = re.sub(r'^#+\s*', '', s)                            # markdown headings
+        if not s or s.endswith(':') and len(s) < 40:            # empty lines, "Insights:"-style headers
+            continue
+        out.append(s)
+    out = out[:9]
+    if len(out) < 2:
+        return None
+    care = next((l for l in (draft or '').splitlines() if l.startswith('💙')), None)
+    if care and not any(l.startswith('💙') for l in out):
+        out.append(care)
+    return "\n".join(out)
+
+
+@app.route('/api/ai/insights')
+@login_required
+def ai_progress_insights():
+    """CC14: AI-written Personalized Insights for the selected range, grounded in computed facts only.
+    Always answers 200; 'insights' is None when there is too little data (the page then keeps its own text)."""
+    try:
+        user_id = session['user_id']
+        lang = request.args.get('lang', 'en')
+        if lang not in ('en', 'he', 'ar', 'ru'):
+            lang = 'en'
+        days = request.args.get('days', 30, type=int) or 30
+        days = max(7, min(365, days))
+        end_date = datetime.now().date()
+        params = db.session.execute(select(SavedParameters).filter(
+            SavedParameters.user_id == user_id,
+            SavedParameters.date >= end_date - timedelta(days=days),
+            SavedParameters.date <= end_date
+        ).order_by(SavedParameters.date)).scalars().all()
+        if len(params) < 3 or not (_CC14_AI_INSIGHTS and _C12_INSIGHTS_V2):
+            return jsonify({'insights': None, 'ai_generated': False})
+        series = _c12_series_from_params(params)
+        weekdays = [p.date.weekday() if hasattr(p.date, 'weekday') else None for p in params]
+        draft = _c12_progress_insights(series, len(params), lang, weekdays)
+        facts = _c14_fact_lines_en(series, weekdays, len(params), days)
+        system_prompt, user_prompt = _c14_insights_prompts(lang, days, facts, draft)
+        key = ('ins', user_id, lang, days, _C12_AI_INSIGHT_MODEL,
+               hashlib.sha256(user_prompt.encode('utf-8')).hexdigest())
+        if request.args.get('refresh') != '1':
+            hit = _c12_ws_cache_get(key)
+            if hit:
+                return jsonify(hit)
+        # CC15: this call runs at the same time as the weekly summary, so it gets a shorter budget (12 s + 8 s).
+        txt = _c15_clean_ai_insights(_c12_call_insight_model(system_prompt, user_prompt, 600, lang, 12, 8), draft)
+        if txt:
+            payload = {'insights': txt, 'ai_generated': True}
+            _c12_ws_cache_put(key, payload)
+            return jsonify(payload)
+        return jsonify({'insights': draft, 'ai_generated': False})
+    except Exception as e:
+        logger.warning(f"[CC14] AI insights unavailable: {e}")
+        return jsonify({'insights': None, 'ai_generated': False})
+# ===================== END CC14 =====================
 
 
 # =====================
@@ -20469,7 +21171,7 @@ def _a92_humanize_ai_text(text, language=None):
     return t
 
 
-def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500, language=None):
+def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500, language=None, model=None, timeout=None):  # C12: optional model/timeout (defaults unchanged)
     """K4: Helper to call Anthropic API. Returns text response or None on failure.
     Enhanced with detailed logging for diagnosing preview deployment issues."""
     if not ANTHROPIC_API_KEY:
@@ -20486,12 +21188,12 @@ def _call_anthropic_api(system_prompt, user_prompt, max_tokens=500, language=Non
                 'anthropic-version': '2023-06-01'
             },
             json={
-                'model': 'claude-haiku-4-5-20251001',
+                'model': model or 'claude-haiku-4-5-20251001',  # C12: weekly summary passes a higher-level model
                 'max_tokens': max_tokens,
                 'system': (system_prompt or '') + (_A92_AI_STYLE_NOTE_RU if language == 'ru' else _A92_AI_STYLE_NOTE),  # A92 house voice
                 'messages': [{'role': 'user', 'content': user_prompt}]
             },
-            timeout=30
+            timeout=timeout or 30  # C12
         )
         logger.info(f"[AI] Anthropic API responded: status={resp.status_code}, bytes={len(resp.content)}")
         if resp.status_code == 200:
@@ -20621,6 +21323,12 @@ def ai_weekly_summary():
 
         # Find which parameter is strongest and weakest
         param_avgs = {'mood': avg_mood, 'energy': avg_energy, 'sleep': avg_sleep, 'activity': avg_activity, 'belonging': avg_belonging}
+        try:  # CC14: calm (5 - anxiety, higher = better) now counts for Strongest / Room to grow
+            _cc14_anx = _avg('anxiety')
+            if _cc14_anx is not None:
+                param_avgs['calm'] = round(5 - _cc14_anx, 1)
+        except Exception:
+            pass
         valid_avgs = {k: v for k, v in param_avgs.items() if v is not None}
         top_param = max(valid_avgs, key=valid_avgs.get) if valid_avgs else None
         low_param = min(valid_avgs, key=valid_avgs.get) if valid_avgs else None
@@ -20683,15 +21391,53 @@ def ai_weekly_summary():
             "Please provide a brief, personalized weekly summary."
         )
 
-        ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=400, language=user_language)
+        # C12 (#1): evidence-informed prompt + previous-week comparison + 4-week personal patterns, a
+        # higher-level model with automatic fallback, and a per-member cache keyed by the data sent.
+        # The K2/G13 prompt above stays as the fallback (and is used when _C12_WEEKLY_V2 is False).
+        _c12_max_tokens, _c12_week_series, _c12_cache_key = 400, None, None
+        if _C12_WEEKLY_V2:
+            try:
+                _c12_week_series = _c12_series_from_params(params)
+                _c12_prev = db.session.execute(select(SavedParameters).filter(
+                    SavedParameters.user_id == user_id,
+                    SavedParameters.date >= seven_days_ago - timedelta(days=7),
+                    SavedParameters.date < seven_days_ago
+                ).order_by(SavedParameters.date)).scalars().all()
+                _c12_month = db.session.execute(select(SavedParameters).filter(
+                    SavedParameters.user_id == user_id,
+                    SavedParameters.date >= seven_days_ago - timedelta(days=21)
+                ).order_by(SavedParameters.date)).scalars().all()
+                system_prompt, user_prompt = _c12_weekly_prompts(
+                    user_language, context_summary, days_data, _c12_week_series,
+                    _c12_series_from_params(_c12_prev) if _c12_prev else None,
+                    _c12_series_from_params(_c12_month) if len(_c12_month) >= 8 else None,
+                    calmness_label)
+                _c12_max_tokens = 700
+                _c12_cache_key = (user_id, user_language, _C12_AI_INSIGHT_MODEL,
+                                  hashlib.sha256(user_prompt.encode('utf-8')).hexdigest())
+                if request.args.get('refresh') != '1':
+                    _c12_cached = _c12_ws_cache_get(_c12_cache_key)
+                    if _c12_cached:
+                        return jsonify(_c12_cached)
+            except Exception as _c12_e:
+                logger.warning(f"[C12] weekly prompt fallback to K2: {_c12_e}")
+                _c12_cache_key = None  # CC13: keep 700 tokens if the new (longer) prompt was already swapped in
+
+        if _C12_WEEKLY_V2:
+            ai_text = _c12_call_insight_model(system_prompt, user_prompt, _c12_max_tokens, user_language)
+        else:
+            ai_text = _call_anthropic_api(system_prompt, user_prompt, max_tokens=400, language=user_language)
 
         if ai_text:
-            return jsonify({
+            _c12_payload = {
                 'summary': ai_text,
                 'ai_generated': True,
                 'days_count': len(params),
                 'highlights': highlights
-            })
+            }
+            if _c12_cache_key:
+                _c12_ws_cache_put(_c12_cache_key, _c12_payload)
+            return jsonify(_c12_payload)
         else:
             # Fallback to template insights
             def safe_avg(vals):
@@ -20713,6 +21459,11 @@ def ai_weekly_summary():
                 safe_avg(moods), safe_avg(energies), safe_avg(sleeps), safe_avg(activities),
                 len(params), safe_avg(anxieties), user_language, safe_avg(belongings)
             )
+            try:  # C12 (#1): the no-AI fallback uses the richer pattern-based insights too
+                fallback = _c12_progress_insights(_c12_week_series or _c12_series_from_params(params),
+                                                  len(params), user_language) or fallback
+            except Exception:
+                pass
             return jsonify({'summary': fallback, 'ai_generated': False, 'days_count': len(params), 'highlights': highlights})
 
     except Exception as e:
