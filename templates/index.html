@@ -1,4 +1,38 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B240 (DD4 = DD3 rev 1) -->
+<!-- B240 (DD3 rev 1) - ROUND RESULT: GREEN ✓ (review of DD3 found only minor issues; no major or moderate defects).
+     All edits inside the DD2 block (script#ts-dd2-index-script). Reviewed this round, no change needed: no shared JS file
+     calls pushState/replaceState; the reloads after sign-in / consent count as a first login (Back stays Home); "/" is the
+     only route that serves this page.
+     MINOR: (1) the scroll position saved for Back was always 0 (showView scrolls to the top before the entry is recorded);
+     it is now taken at the tap. (2) the space kept clear above a focused field was a fixed 76px, less than the top bar +
+     tab bar (~154px) while the top bar shows; now measured. (3) phone Back closes an open Nod dialog first instead of
+     changing the screen behind it.
+     CACHE-BUST: every live JS ?v bumped B239 to B240; app.py _A92_ASSET_VERSION = 'B240'. -->
+<!-- TheraSocial Version B239 (DD3 = DD2 rev 1) -->
+<!-- B239 (DD2 rev 1) - ROUND RESULT: RED (review of DD2 found a major defect in the Back navigation; fixed here).
+     All edits inside the DD2 block (style#ts-dd2-index / script#ts-dd2-index-script).
+     (1) MAJOR: the desktop sidebar items Home, Progress, Messages, Connections and Settings switch screens with their own
+         code (not showView), so DD2 never recorded them and Back did not work between them on desktop. Screen changes are
+         now picked up by a MutationObserver on the views, however they happen.
+     (2) MODERATE: links that load a fresh copy of the page (/?view=profile&user_id=... from Connections) left Back stuck on
+         that screen; a "/" referrer now counts as an app page, so Back returns to the screen before.
+     (3) MODERATE: on phones a touch that ended a scroll could set up the first history entries without a real tap, which
+         Chrome then skips (Back would leave the app). Set up only while navigator.userActivation.isActive.
+     (4) MODERATE: a page reloaded on the floor entry stepped forward even when the member had not just pressed Back on the
+         first screen; it now checks where the member left from (sessionStorage ts_dd2_left).
+     (5) MINOR: Messages minimum height 240px (was 300px) for short landscape screens.
+     CACHE-BUST: every live JS ?v bumped B238 to B239; app.py _A92_ASSET_VERSION = 'B239'. -->
+<!-- TheraSocial Version B238 (DD2) -->
+<!-- B238 (DD2): additive block style#ts-dd2-index + script#ts-dd2-index-script at the end of the page (no existing function
+     body edited; showView is wrapped, like F21 did). (1) Browser / phone Back returns to the previous screen, also after
+     /about, /support, /parameters, /collection; Back on the first screen after sign-in stays there instead of opening the
+     Google sign-in page; Back closes the phone Menu or an open phone chat first. F21's parked back navigation stays off.
+     (2) New-messages count in the Home Notifications header and in the phone Menu's Notifications row, shown like the
+     Messages tab count (tap opens Messages). (3) Messages fits phone screens (measured height instead of a fixed 130px
+     guess; compact title; search hidden in a chat; 16px input so iPhone does not zoom; unread count no longer covers the
+     time). (4) Phones: even side margins, top bar slides away on scroll down and returns on scroll up, inner lists hand
+     the scroll back to the page, home-bar room. CACHE-BUST: every live JS ?v bumped B237 to B238; app.py _A92_ASSET_VERSION = 'B238'. -->
 <!-- TheraSocial Version B237 (CC15 = CC14 rev 1) -->
 <!-- B237 (CC14 rev 1) - ROUND RESULT: YELLOW (review of CC14 found a small set of moderate issues, none critical; fixed here).
      This page (inside the C12 / CC14 blocks): (1) the "This week, you could try:" card is found even when the AI adds an
@@ -1016,10 +1050,10 @@
          so the public pages can be discovered and listed. Google only ever sees the logged-out
          view of "/", so the private app and personal data are never exposed. -->
     <meta name="robots" content="index, follow">
-   <script src="/static/js/utilities.js?v=B237"></script>
+   <script src="/static/js/utilities.js?v=B240"></script>
     <!-- External onboarding.js REMOVED - InlineOnboarding (defined in this file) handles all onboarding with proper i18n support -->
-    <script src="/static/js/triggers.js?v=B237"></script>
-    <script src="/static/js/follow-requests.js?v=B237"></script>
+    <script src="/static/js/triggers.js?v=B240"></script>
+    <script src="/static/js/follow-requests.js?v=B240"></script>
 
 
     <style>
@@ -8473,8 +8507,8 @@
     })();
     </script>
 
-    <script src="/static/js/i18n.js?v=B237"></script>
-    <script src="/static/js/e2ee.js?v=B237"></script>
+    <script src="/static/js/i18n.js?v=B240"></script>
+    <script src="/static/js/e2ee.js?v=B240"></script>
     <!-- Fix10C: Extend i18n translations with new settings/notification keys -->
     <script>
     (function() {
@@ -8954,9 +8988,9 @@
         var currentRecipient = null;
     }
 </script>
-<script src="/static/js/parameters-social.js?v=B237"></script>
-   <script src="/static/js/circles-messages.js?v=B237"></script>
-<script src="/static/js/feed-updates.js?v=B237"></script>
+<script src="/static/js/parameters-social.js?v=B240"></script>
+   <script src="/static/js/circles-messages.js?v=B240"></script>
+<script src="/static/js/feed-updates.js?v=B240"></script>
 <script>
     // API Configuration
     const API_URL = window.location.origin + '/api';
@@ -26409,6 +26443,461 @@ console.log('✅ V2 features loaded: Connections, Settings, Home enhancements, Q
     })();
     </script>
     <!-- ===================== END CC14 ===================== -->
+
+    <!-- ===================== DD2 (B238): Back button, message count, Messages fit, margins + scrolling. Additive; remove this block to revert.
+         MAINTAINER NOTE: wrapper-style only; no existing function body is edited. Works beside the parked F21 block (F21 stays off).
+         1 BACK BUTTON. Each screen a member opens by a tap gets its own browser history entry (state object only; the URL never
+           changes), so the browser / phone Back button returns to the previous screen, also after visiting /about, /support,
+           /parameters or /collection (the screen is read back from the entry). A "floor" entry sits under the first screen:
+           Back there keeps the member where they are instead of leaving for the Google sign-in page. Back also closes the
+           phone Menu and an open phone chat first. Entries are only added after a tap (browsers ignore entries added
+           without one). Programmatic screen changes (redirects) replace the current entry. On logout the entries are
+           rewound so Back from the sign-in screen leaves normally. Kill switch: localStorage 'ts_dd2_nav_off' = '1'.
+         2 NEW MESSAGES COUNT in the Notifications card header (Home) and in the phone Menu's Notifications row, shown like the
+           Messages tab count. Mirrors #messagesNavBadge (filled by updateMessagesBadge), so no new request. Tap opens Messages.
+         3 MESSAGES ON PHONES: the screen is sized to the real space under the headers (it used a fixed 130px guess, so the
+           message box sat below the screen), compact title, search hidden while a chat is open, 16px input (no iPhone zoom),
+           home-bar safe area, unread count no longer covers the time, latest message kept in view when the keyboard opens.
+         4 MARGINS + SCROLLING ON PHONES: slimmer, even side margins; the top bar slides away while scrolling down and comes
+           back on scrolling up (the tab bar stays); inner lists hand the scroll back to the page at their ends; room for the
+           home bar at the bottom; focused fields are not hidden under the tab bar. -->
+    <style id="ts-dd2-index">
+        /* 2 messages count pill */
+        .ts-dd2-msgpill { display: none; align-items: center; gap: 6px; border: 0; cursor: pointer; font: inherit;
+                          background: rgba(107, 139, 164, 0.12); color: #3D4852; border-radius: 999px; padding: 4px 6px 4px 10px;
+                          font-size: 0.82rem; font-weight: 600; line-height: 1; white-space: nowrap; flex: 0 0 auto;
+                          -webkit-tap-highlight-color: transparent; transition: background 0.2s ease; }
+        .ts-dd2-msgpill.ts-dd2-on { display: inline-flex; }
+        .ts-dd2-msgpill:hover { background: rgba(107, 139, 164, 0.2); }
+        .ts-dd2-msgpill .ts-dd2-n { background: var(--danger, #C17C74); color: #fff; font-size: 11px; font-weight: 700; min-width: 18px;
+                          height: 18px; line-height: 18px; text-align: center; border-radius: 9px; padding: 0 5px; }
+        #homeAlertsSection > div:first-child > .ts-dd2-msgpill { margin-inline-start: 10px; margin-inline-end: auto; }
+        #homeAlertsSection > div:first-child { flex-wrap: wrap; row-gap: 8px; }
+        @media (max-width: 480px) {   /* phones: icon + count beside the title, so "Clear all" stays on the same line */
+            #homeAlertsSection .ts-dd2-msgpill .ts-dd2-lb { display: none; }
+            #homeAlertsSection > div:first-child > .ts-dd2-msgpill { margin-inline-start: 0; padding: 3px 5px 3px 7px; gap: 4px; }
+        }
+        .mobile-more-menu-item > .ts-dd2-msgpill { margin-inline-end: 10px; padding: 5px 7px 5px 10px; min-height: 30px; }
+        @media (max-width: 374px) { .mobile-more-menu-item > .ts-dd2-msgpill .ts-dd2-lb { display: none; } }   /* narrowest phones: icon + count */
+        .dark-mode .ts-dd2-msgpill { background: rgba(169, 193, 214, 0.16); color: #E5E7EB; }
+
+        @media (max-width: 768px) {
+            /* 3 Messages fits the screen (height set from the measured space by the script below) */
+            html.ts-dd2-msgfit #messagesView { height: var(--ts-dd2-msg-h, auto) !important; max-height: var(--ts-dd2-msg-h, none) !important; }
+            #messagesView > h2 { font-size: 1.15em !important; margin: 0 0 8px !important; padding-bottom: 8px !important; }
+            #messagesView > .user-search { margin-bottom: 8px !important; }
+            #messagesView.ts-dd2-chat > .user-search { display: none !important; }
+            #messagesView .conversations-list, #messagesView .messages-list { overscroll-behavior: contain; }
+            #messagesView .message-input-area { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important; }
+            #messagesView .message-input { font-size: 16px !important; min-height: 44px; border-radius: 22px; padding: 10px 14px !important; }
+            #messagesView .message-input-area .btn, #messagesView .message-input-area button { min-height: 44px; border-radius: 22px; }
+            #messagesView .mobile-chat-back-btn { min-width: 44px; min-height: 40px; }
+
+            /* 4 the top bar slides away while scrolling down (class set by the script); the tab bar then sits at the top */
+            .navbar { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+            html.ts-dd2-navup .navbar { transform: translateY(-100%); box-shadow: none; }
+            html.ts-dd2-navup .mobile-nav { top: 0 !important; }
+            /* inner lists pass the scroll on to the page when they reach their end (no "stuck" finger) */
+            #connectionStatusList, #homeAlertsList, #alertsView .alerts-list, #mobileAlertsList, #mobileNotificationsList { overscroll-behavior-y: auto !important; }
+            /* breathing room above the home bar, and focused fields never tucked under the tab bar */
+            #dashboard { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+            html { scroll-padding-top: 76px; }
+        }
+        @media (max-width: 480px) {
+            /* 4 slimmer, even side margins on phones (the tab bar breakout uses the same variable, so it stays aligned) */
+            :root { --content-padding: 8px; }
+            .main-content { padding: 14px 12px !important; }
+            /* Circles: the circle cards sit inside another card, so the two paddings added up to ~66px per side */
+            #circlesView .circles-container { padding-left: 10px !important; padding-right: 10px !important; }
+            #circlesView .circle-card { padding: 16px 14px !important; }
+        }
+        /* 3 the unread count sits on the preview line, so it never covers the time (all widths) */
+        #messagesView .conversation-item .unread-badge { top: auto; bottom: 12px; }
+        #messagesView .conversation-preview { padding-inline-end: 34px; }
+        @media (prefers-reduced-motion: reduce) { .navbar { transition: none; } }
+    </style>
+    <script id="ts-dd2-index-script">
+    (function () {
+        'use strict';
+        if (window.__tsDD2) return; window.__tsDD2 = true;
+
+        function $(id) { return document.getElementById(id); }
+        function loggedIn() { var d = $('dashboard'); return !!d && d.style.display !== 'none'; }
+        function phone() { return window.innerWidth <= 768; }
+        function lang() {
+            try { var l = window.i18n && window.i18n.getCurrentLanguage && window.i18n.getCurrentLanguage(); if (l) return l; } catch (_) {}
+            try { return localStorage.getItem('selectedLanguage') || 'en'; } catch (_) { return 'en'; }
+        }
+        var TXT = {
+            one:  { en: '1 new message', he: 'הודעה חדשה אחת', ar: 'رسالة جديدة واحدة', ru: '1 новое сообщение' },
+            many: { en: '{n} new messages', he: '{n} הודעות חדשות', ar: '{n} رسائل جديدة', ru: 'Новых сообщений: {n}' },
+            msgs: { en: 'Messages', he: 'הודעות', ar: 'الرسائل', ru: 'Сообщения' }
+        };
+        function T(k, n) { var m = TXT[k]; var s = (m && (m[lang()] || m.en)) || k; return n === undefined ? s : s.replace('{n}', n); }
+
+        // ============================================================ 1. back navigation
+        var NAV_OFF = false;
+        try { NAV_OFF = localStorage.getItem('ts_dd2_nav_off') === '1'; } catch (_) {}
+        var KEY = 'tsDD2';
+        var restoring = false, armed = false, swallow = 0, intentAt = 0, intentUsed = true, sawAuth = false;
+        var bootState = null;
+        try { bootState = history.state; } catch (_) {}
+        if (/[?&](oauth_success|magic_token|reset_token|delete_token)=/.test(location.search)) sawAuth = true;
+        var navType = '';
+        try { navType = (performance.getEntriesByType('navigation')[0] || {}).type || ''; } catch (_) {}
+
+        function ours(s) { return !!(s && typeof s === 'object' && s[KEY] === 1); }
+        function cur() { var s = null; try { s = history.state; } catch (_) {} return ours(s) ? s : null; }
+        function shownView() {
+            var v = document.querySelector('#dashboard .view:not(.hidden)');
+            return (v && /View$/.test(v.id || '')) ? v.id.slice(0, -4) : null;
+        }
+        function uidNow() {
+            try { if (typeof viewingUserId !== 'undefined' && viewingUserId !== null && viewingUserId !== currentUserId) return viewingUserId; } catch (_) {}
+            return null;
+        }
+        function entry(k, v, u, n, extra) {
+            var s = {}; s[KEY] = 1; s.k = k; s.v = v || 'home'; s.u = (u === undefined) ? null : u; s.n = n || 0;
+            if (extra) for (var x in extra) s[x] = extra[x];
+            return s;
+        }
+        function put(s, push) {
+            try { if (push) history.pushState(s, '', location.href); else history.replaceState(s, '', location.href); } catch (_) {}
+        }
+        // Stay where we are: step forward again to the entry the member just left. Its popstate then finds the same
+        // screen already on show (nothing to do), or, if the browser skipped an entry, shows that entry's screen.
+        var absorbing = false, absorbT = 0;   // DD3: true only until the forward step lands (its popstate)
+        function absorb() {
+            absorbing = true; clearTimeout(absorbT);
+            absorbT = setTimeout(function () { absorbing = false; }, 700);   // safety net if no popstate comes
+            try { history.forward(); } catch (_) { absorbing = false; }
+        }
+
+        // A tap or Enter key marks the next screen change as the member's own (gets a history entry).
+        var yAtTap = 0;   // DD4: where the member was when they tapped (showView scrolls to the top before we record)
+        document.addEventListener('click', function () { intentAt = Date.now(); intentUsed = false; yAtTap = window.pageYOffset || 0; }, true);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { intentAt = Date.now(); intentUsed = false; }
+        }, true);
+
+        // Arm: the current entry becomes the floor and the screen on show gets the first real entry.
+        // Done at the first tap after sign-in (or right away when the page already had a tap, e.g. the sign-in button).
+        function referrerIsApp() {
+            var r = document.referrer || '';
+            if (r.indexOf(location.origin + '/') !== 0) return false;
+            // DD3: "/" itself too (links such as /?view=profile&user_id=... load a fresh copy of this page)
+            return /^\/(?:(?:about|support|parameters|circles|profile|collection|privacy|invite)(?:[\/?#]|$)|(?:[?#]|$))/.test(r.slice(location.origin.length));
+        }
+        // DD3: only while the browser counts a real tap (a touch that ended a scroll is not one; an entry added then is skipped)
+        function tapNow() { try { return !navigator.userActivation || navigator.userActivation.isActive; } catch (_) { return true; } }
+        function arm() {
+            if (armed || NAV_OFF || !loggedIn() || !tapNow()) return;
+            armed = true;
+            var c0 = cur();
+            if (c0 && c0.k === 'v') return;   // already on one of our entries (page reloaded on it)
+            var pass = !sawAuth && navType !== 'reload' && referrerIsApp();
+            if (!(c0 && c0.k === 'f')) put(entry('f', 'home', null, 0, { pass: pass }), false);
+            put(entry('v', shownView() || 'home', uidNow(), 1), true);
+        }
+        // Only events that count as a tap for the browser (an entry added without one is skipped by Back).
+        ['mousedown', 'keydown', 'pointerup', 'click'].forEach(function (ev) {
+            document.addEventListener(ev, function () { arm(); }, { capture: true, passive: true });
+        });
+
+        function record() {
+            if (NAV_OFF || restoring || !armed || !loggedIn()) return;
+            var v = shownView();
+            if (!v || v === 'tracking' || v === 'parameters') return;   // these leave for /parameters
+            var u = uidNow(), c = cur();
+            if (c && c.k === 'v' && c.v === v && c.u === u) return;
+            var mine = !intentUsed && Date.now() - intentAt < 15000;
+            if (c && c.k === 'v' && mine) {
+                intentUsed = true;
+                c.y = yAtTap; put(c, false);                           // remember where the member was on the old screen
+                put(entry('v', v, u, c.n + 1), true);
+            } else {
+                put(entry('v', v, u, c ? Math.max(1, c.n) : 1), !c || c.k !== 'v');
+            }
+        }
+        function restore(s) {
+            restoring = true;
+            try {
+                if (s.u !== null && s.u !== undefined) {
+                    try { viewingUserId = s.u; window.viewingUserId = s.u; } catch (_) {}
+                    window.showView(s.v, false);
+                } else {
+                    window.showView(s.v);
+                }
+                try { if (typeof updateMessagesNavVisibility === 'function') updateMessagesNavVisibility(); } catch (_) {}
+                try { if (typeof updateTriggersNavVisibility === 'function') updateTriggersNavVisibility(); } catch (_) {}
+            } catch (_) {} finally { restoring = false; }
+            if (s.y > 0) setTimeout(function () { try { window.scrollTo(0, s.y); } catch (_) {} }, 350);
+        }
+        function chatOpen() {
+            var mc = document.querySelector('#messagesView .messages-container');
+            return phone() && shownView() === 'messages' && !!mc && mc.classList.contains('mobile-chat-active');
+        }
+        function menuOpen() { var m = $('mobileMoreMenu'); return !!m && !m.classList.contains('hidden'); }
+
+        window.addEventListener('popstate', function (e) {
+            if (NAV_OFF) return;
+            if (swallow && Date.now() - swallow < 1500) { swallow = 0; return; }
+            swallow = 0;
+            intentUsed = true;
+            absorbing = false;
+            var s = ours(e.state) ? e.state : null;
+            if (!s || !loggedIn()) return;
+            // Back first closes the phone Menu or an open phone chat, and stays on the screen.
+            if (menuOpen()) { try { closeMobileMoreMenu(); } catch (_) {} absorb(); return; }
+            // DD4: Back first closes an open Nod dialog (its own Cancel, which waits while a nod is being sent)
+            var nodCancel = document.querySelector('.ts31-ov .ts31-cancel');
+            if (nodCancel) { try { nodCancel.click(); } catch (_) {} intentUsed = true; absorb(); return; }
+            if (chatOpen()) {
+                var mc = document.querySelector('#messagesView .messages-container');
+                if (mc) mc.classList.remove('mobile-chat-active');
+                absorb(); return;
+            }
+            if (s.k === 'f') {
+                if (s.pass) { try { history.back(); } catch (_) {} return; }   // arrived from another app page: go back to it
+                absorb(); return;                                             // first screen: stay here, never leave the app
+            }
+            var u = (s.u === undefined) ? null : s.u;
+            if (s.v === shownView() && u === uidNow()) return;
+            restore(s);
+        });
+
+        // The page was (re)loaded on one of our entries: e.g. Back from /support, /about, /parameters, /collection.
+        function bootRestore() {
+            var s = ours(bootState) ? bootState : null;
+            if (!s) return;
+            if (s.k === 'f') {
+                // DD3: only when the member just pressed Back on the first screen (left from entry 1 or above)
+                var left = null;
+                try { left = JSON.parse(sessionStorage.getItem('ts_dd2_left') || 'null'); } catch (_) {}
+                var fromAbove = !!left && left.n >= 1 && Date.now() - left.t < 30 * 60 * 1000;
+                if (navType === 'back_forward' && fromAbove) { if (s.pass) { try { history.back(); } catch (_) {} } else absorb(); }
+                return;
+            }
+            armed = true;
+            if (s.v && (s.v !== shownView() || s.u !== null)) restore(s);
+        }
+
+        // Logout in this page: rewind to the floor, so Back from the sign-in screen leaves normally.
+        function onLoggedOut() {
+            var c = cur();
+            if (c && c.n > 0) { swallow = Date.now(); try { history.go(-c.n); } catch (_) { swallow = 0; } }
+            armed = false;
+        }
+
+        function wrapShowView() {
+            var orig = window.showView;
+            if (typeof orig !== 'function' || orig.__tsDD2) return;
+            var depth = 0;
+            var wrapped = function () {
+                var r;
+                depth++;
+                try { r = orig.apply(this, arguments); } finally { depth--; }
+                if (depth === 0) {
+                    try { record(); } catch (_) {}
+                    try { fitMessages(); } catch (_) {}
+                    try { navUp(false); } catch (_) {}
+                }
+                return r;
+            };
+            wrapped.__tsDD2 = true;
+            wrapped.__tsF21 = orig.__tsF21;   // keep F21's "already wrapped" marker if it was there
+            window.showView = wrapped;
+        }
+
+        // ============================================================ 2. new messages count
+        function makePill(id) {
+            var b = document.createElement('button');
+            b.type = 'button'; b.id = id; b.className = 'ts-dd2-msgpill';
+            var ic = document.createElement('span'); ic.setAttribute('aria-hidden', 'true'); ic.textContent = '💬';
+            var lb = document.createElement('span'); lb.className = 'ts-dd2-lb';
+            var n = document.createElement('span'); n.className = 'ts-dd2-n';
+            b.appendChild(ic); b.appendChild(lb); b.appendChild(n);
+            b.addEventListener('click', function (e) {
+                e.preventDefault(); e.stopPropagation();
+                if (menuOpen() && typeof showViewFromMore === 'function') showViewFromMore('messages');
+                else if (typeof window.showView === 'function') window.showView('messages');
+            });
+            return b;
+        }
+        function placePills() {
+            var head = document.querySelector('#homeAlertsSection > div:first-child');
+            if (head && !$('tsDD2MsgHome')) {
+                var h3 = head.querySelector('h3');
+                var p = makePill('tsDD2MsgHome');
+                if (h3 && h3.nextSibling) head.insertBefore(p, h3.nextSibling); else head.appendChild(p);
+            }
+            var mb = $('mobileMoreAlertsBadge');
+            if (mb && mb.parentNode && !$('tsDD2MsgMenu')) {
+                var q = makePill('tsDD2MsgMenu');
+                mb.parentNode.insertBefore(q, mb);
+            }
+        }
+        function unread() {
+            var b = $('messagesNavBadge');
+            if (!b || b.style.display === 'none') return { n: 0, t: '' };
+            var t = (b.textContent || '').trim();
+            return { n: parseInt(t, 10) || 0, t: t };
+        }
+        function syncPills() {
+            var u = unread(), show = u.n > 0 && loggedIn();
+            ['tsDD2MsgHome', 'tsDD2MsgMenu'].forEach(function (id) {
+                var p = $(id); if (!p) return;
+                p.classList.toggle('ts-dd2-on', show);
+                p.querySelector('.ts-dd2-n').textContent = u.t;
+                p.querySelector('.ts-dd2-lb').textContent = T('msgs');
+                var label = u.n === 1 ? T('one') : T('many', u.t);
+                p.setAttribute('aria-label', label); p.title = label;
+            });
+        }
+
+        // ============================================================ 3. Messages fit on phones
+        var fitRaf = 0;
+        function fitMessages() {
+            if (fitRaf) return;
+            fitRaf = requestAnimationFrame(function () { fitRaf = 0; doFit(); });
+        }
+        function doFit() {
+            var v = $('messagesView'), root = document.documentElement;
+            var mc = v && v.querySelector('.messages-container');
+            if (v) v.classList.toggle('ts-dd2-chat', !!mc && phone() && mc.classList.contains('mobile-chat-active'));
+            var on = !!v && phone() && loggedIn() && shownView() === 'messages';
+            if (!on) { root.classList.remove('ts-dd2-msgfit'); return; }
+            var top = v.getBoundingClientRect().top + (window.pageYOffset || 0);
+            var h = Math.round(window.innerHeight - top - 24);
+            root.style.setProperty('--ts-dd2-msg-h', Math.max(240, h) + 'px');
+            root.classList.add('ts-dd2-msgfit');
+            // second pass: take off whatever still makes the page taller than the screen (padding below the view etc.)
+            var over = root.scrollHeight - window.innerHeight;
+            if (over > 0 || over < -4) root.style.setProperty('--ts-dd2-msg-h', Math.max(240, h - over) + 'px');
+        }
+        function watchMessages() {
+            var mc = document.querySelector('#messagesView .messages-container');
+            if (mc && window.MutationObserver) new MutationObserver(fitMessages).observe(mc, { attributes: true, attributeFilter: ['class'] });
+            var inp = $('messageInput');
+            if (inp) inp.addEventListener('focus', function () {
+                if (!phone()) return;
+                setTimeout(function () { var l = $('messagesList'); if (l) l.scrollTop = l.scrollHeight; }, 350);
+            });
+            if (window.ResizeObserver) {
+                try {
+                    var ro = new ResizeObserver(fitMessages);
+                    ['.navbar', '.mobile-nav', '#messagesView > h2'].forEach(function (s) { var el = document.querySelector(s); if (el) ro.observe(el); });
+                } catch (_) {}
+            }
+            window.addEventListener('resize', fitMessages);
+            window.addEventListener('orientationchange', function () { setTimeout(fitMessages, 300); });
+            if (window.visualViewport) window.visualViewport.addEventListener('resize', fitMessages);
+            window.addEventListener('languageChanged', function () { setTimeout(fitMessages, 100); syncPills(); });
+        }
+
+        // ============================================================ 4. top bar slides away while scrolling down
+        var up = false, lastY = 0, acc = 0, syncT = 0;
+        function navUp(on) {
+            if (on === up) return;
+            up = on;
+            document.documentElement.classList.toggle('ts-dd2-navup', on);
+            setTimeout(syncScrollPad, 320);
+            if (!on) {
+                var nav = document.querySelector('.navbar'), mn = document.querySelector('.mobile-nav');
+                // put the tab bar straight back under the top bar (the existing TOP-NAV script only updates while scrolling)
+                if (nav && mn && (window.pageYOffset || 0) > 0) mn.style.top = nav.offsetHeight + 'px';
+                clearTimeout(syncT);
+                syncT = setTimeout(function () {
+                    if (up || !nav || !mn) return;
+                    var b = nav.getBoundingClientRect().bottom;
+                    if (b >= 0 && b < window.innerHeight) mn.style.top = b + 'px';
+                }, 300);
+            }
+        }
+        // DD4: keep focused fields / anchors clear of the bars actually stuck at the top (76px was too little while the
+        // top bar shows: top bar + tab bar are ~154px).
+        var padRaf = 0;
+        function syncScrollPad() {
+            if (padRaf) return;
+            padRaf = requestAnimationFrame(function () {
+                padRaf = 0;
+                var mn = document.querySelector('.mobile-nav'), root = document.documentElement;
+                if (!phone() || !loggedIn() || !mn) { root.style.scrollPaddingTop = ''; return; }
+                var b = up ? mn.offsetHeight : (mn.getBoundingClientRect().bottom || 0);
+                root.style.scrollPaddingTop = Math.max(76, Math.min(220, Math.round(b) + 8)) + 'px';
+            });
+        }
+        function onScroll() {
+            var y = Math.max(0, window.pageYOffset || 0), dy = y - lastY; lastY = y;
+            var nav = document.querySelector('.navbar');
+            var ok = phone() && loggedIn() && !menuOpen() && shownView() !== 'messages' && document.body.style.overflow !== 'hidden';
+            if (!ok || !nav || y <= nav.offsetHeight + 20) { acc = 0; navUp(false); return; }
+            if ((dy > 0) !== (acc > 0)) acc = 0;
+            acc += dy;
+            if (acc > 24) navUp(true); else if (acc < -24) navUp(false);
+            syncScrollPad();
+        }
+        var scrollRaf = 0;
+        window.addEventListener('scroll', function () {
+            if (scrollRaf) return;
+            scrollRaf = requestAnimationFrame(function () { scrollRaf = 0; onScroll(); });
+        }, { passive: true });
+
+        // ============================================================ start-up
+        var was = false, restored = false;
+        function tick() {
+            var now = loggedIn();
+            if (!now) {
+                var a = $('authContainer');
+                if (a && a.style.display && a.style.display !== 'none') sawAuth = true;
+            }
+            if (now && !was) {
+                wrapShowView();
+                placePills(); syncPills();
+                try { if (typeof window.updateMessagesBadge === 'function') window.updateMessagesBadge(); } catch (_) {}
+                if (!restored) { restored = true; setTimeout(function () { if (!NAV_OFF) { try { bootRestore(); } catch (_) {} } }, 400); }
+                // the sign-in tap already counts as a tap: arm straight away
+                try { if (!armed && navigator.userActivation && navigator.userActivation.hasBeenActive) setTimeout(arm, 450); } catch (_) {}
+            }
+            if (!now && was) { try { if (!NAV_OFF) onLoggedOut(); } catch (_) {} syncPills(); navUp(false); }
+            was = now;
+            fitMessages();
+        }
+        function init() {
+            wrapShowView();
+            placePills();
+            var b = $('messagesNavBadge');
+            if (b && window.MutationObserver) new MutationObserver(syncPills).observe(b, { attributes: true, attributeFilter: ['style'], childList: true, characterData: true, subtree: true });
+            watchMessages();
+            var d = $('dashboard');
+            if (d && window.MutationObserver) new MutationObserver(tick).observe(d, { attributes: true, attributeFilter: ['style'] });
+            // DD3: the desktop sidebar (Home, Progress, Messages, Connections, Settings) and some links switch screens
+            // without showView, so screen changes are also picked up here, however they happen.
+            if (window.MutationObserver) {
+                var seen = shownView();
+                var vo = new MutationObserver(function () {
+                    var now = shownView();
+                    if (now === seen) return;   // only a real change of screen (not a class this block toggles itself)
+                    seen = now;
+                    if (restoring || absorbing) return;
+                    try { record(); } catch (_) {}
+                    fitMessages();
+                });
+                document.querySelectorAll('#dashboard .view').forEach(function (v) {
+                    vo.observe(v, { attributes: true, attributeFilter: ['class', 'style'] });
+                });
+            }
+            window.addEventListener('pagehide', function () {
+                try { var c = cur(); sessionStorage.setItem('ts_dd2_left', JSON.stringify({ n: c ? c.n : -1, t: Date.now() })); } catch (_) {}
+            });
+            tick();
+            setInterval(tick, 1000);   // cheap safety net (login state, late markup)
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+        window.addEventListener('load', wrapShowView);   // in case a later script replaced showView
+    })();
+    </script>
+    <!-- ===================== END DD2 ===================== -->
 
 </body>
 

@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B240 (DD4 = DD3 rev 1) -->
+<!-- B240 (DD3 rev 1): cache-bust lockstep only on this page (ROUND RESULT: GREEN; see index.html). Every live JS ?v bumped B239 to B240; app.py _A92_ASSET_VERSION = 'B240'. -->
+<!-- TheraSocial Version B239 (DD3 = DD2 rev 1) -->
+<!-- B239 (DD2 rev 1): cache-bust lockstep only on this page (ROUND RESULT: RED; see index.html). Every live JS ?v bumped B238 to B239; app.py _A92_ASSET_VERSION = 'B239'. -->
+<!-- TheraSocial Version B238 (DD2) -->
+<!-- B238 (DD2): "Back to Last Page" steps back in the tab's history (history.back) when its destination is simply the
+     page the member came from, instead of loading it afresh, so the app reopens on the screen they left. ?ret= paths
+     are unchanged. CACHE-BUST: every live JS ?v bumped B237 to B238; app.py _A92_ASSET_VERSION = 'B238'. -->
 <!-- TheraSocial Version B237 (CC15 = CC14 rev 1) -->
 <!-- B237 (CC14 rev 1): cache-bust lockstep only on this page. Every live JS ?v bumped B236 to B237; app.py _A92_ASSET_VERSION = 'B237'. -->
 <!-- TheraSocial Version B236 (CC14) -->
@@ -780,7 +788,7 @@
     <!-- A92 audit (pre-existing): removed a hard-coded Cloudflare email-decode script that had been
          saved into the template from a live page; Cloudflare injects its own copy when it needs one,
          and off Cloudflare the path 404s. The mailto links here are plain and need no decoding. -->
-    <script src="/static/js/i18n.js?v=B237"></script>
+    <script src="/static/js/i18n.js?v=B240"></script>
     <script>
         // A43 (rev6): BULLETPROOF back button. Every earlier revision ultimately trusted the
         // anchor's href (rev4 set href once at load and then did `if (validRet) return;` on
@@ -820,7 +828,10 @@
                                   ' | history.length=' + window.history.length); } catch (_) {}
                 if (dest) {
                     e.preventDefault();
-                    window.location.assign(dest);          // ACTIVE navigation — ignores href
+                    // DD2: when the destination is simply the page we came from, step back in the tab's history so the
+                    // app reopens on the exact screen the member left (a fresh load of "/" always showed Home).
+                    if (dest === (document.referrer || '') && window.history.length > 1) window.history.back();
+                    else window.location.assign(dest);     // ACTIVE navigation — ignores href
                 } else if (window.history.length > 1) {
                     e.preventDefault();
                     window.history.back();

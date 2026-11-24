@@ -1,3 +1,6 @@
+// Version B240 (DD4 = DD3 rev 1): no content change; ?v bumped B239->B240 in lockstep.
+// Version B239 (DD3 = DD2 rev 1): no content change; ?v bumped B238->B239 in lockstep.
+// Version B238 (DD2): no content change; ?v bumped B237->B238 in lockstep.
 // Version B237 (CC15 = CC14 rev 1): no content change; ?v bumped B236->B237 in lockstep.
 // Version B236 (CC14): no content change; ?v bumped B235->B236 in lockstep.
 // Version B235 (CC13 = C12 rev 1): no content change; ?v bumped B234->B235 in lockstep.

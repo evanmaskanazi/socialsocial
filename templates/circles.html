@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B240 (DD4 = DD3 rev 1) -->
+<!-- B240 (DD3 rev 1): cache-bust lockstep only on this page (ROUND RESULT: GREEN; see index.html). Every live JS ?v bumped B239 to B240; app.py _A92_ASSET_VERSION = 'B240'. -->
+<!-- TheraSocial Version B239 (DD3 = DD2 rev 1) -->
+<!-- B239 (DD2 rev 1): cache-bust lockstep only on this page (ROUND RESULT: RED; see index.html). Every live JS ?v bumped B238 to B239; app.py _A92_ASSET_VERSION = 'B239'. -->
+<!-- TheraSocial Version B238 (DD2) -->
+<!-- B238 (DD2): additive style#ts-dd2-circles before the closing body tag: slimmer, even side margins on phones (page +
+     container + card padding added up to ~65px per side), notch / home-bar safe areas, member lists hand the scroll back
+     to the page at their ends. No circles logic changed. CACHE-BUST: every live JS ?v bumped B237 to B238; app.py
+     _A92_ASSET_VERSION = 'B238'. -->
 <!-- TheraSocial Version B237 (CC15 = CC14 rev 1) -->
 <!-- B237 (CC14 rev 1): cache-bust lockstep only on this page. Every live JS ?v bumped B236 to B237; app.py _A92_ASSET_VERSION = 'B237'. -->
 <!-- TheraSocial Version B236 (CC14) -->
@@ -308,10 +317,10 @@
     <div id="loadingMessage" style="text-align: center; padding: 20px; font-size: 18px; color: white;" data-i18n="circles.loading">Loading circles...</div>
     <div id="circlesContainer" style="opacity: 0; transition: opacity 0.2s;"></div>
 
-    <script src="/static/js/i18n.js?v=B237"></script>
-    <script src="/static/js/e2ee.js?v=B237"></script>
-    <script src="/static/js/circles-messages.js?v=B237"></script>
-    <script src="/static/js/feed-updates.js?v=B237"></script>
+    <script src="/static/js/i18n.js?v=B240"></script>
+    <script src="/static/js/e2ee.js?v=B240"></script>
+    <script src="/static/js/circles-messages.js?v=B240"></script>
+    <script src="/static/js/feed-updates.js?v=B240"></script>
 
     <!-- MVP-FIX: Notification polyfill for circles.html -->
     <script>
@@ -1584,5 +1593,22 @@ try {
     })();
     </script>
     <!-- ===================== END C12 ===================== -->
+    <!-- ===================== DD2 (B238): phone margins + scrolling, additive, presentation-only. Remove to revert. =====
+         On phones the page padding (20px), the circles container (20px) and each circle card (25px) added up to about 65px
+         of empty space on each side, leaving ~260px for names on a 390px phone. Slimmer, even margins that respect the
+         notch / rounded corners, room above the home bar, and member lists that hand the scroll back to the page at their
+         ends (no "stuck" finger). -->
+    <style id="ts-dd2-circles">
+      @media (max-width: 600px) {
+        body { padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px));
+               padding-top: 12px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+        html body .circles-container { padding: 16px 12px; }
+        html body .circle-card { padding: 18px 16px; }
+      }
+      @media (pointer: coarse) {
+        .circle-members, #circleRecommendationsList, .follow-requests-list { overscroll-behavior-y: auto; }
+      }
+    </style>
+    <!-- ===================== END DD2 ===================== -->
 </body>
 </html>

@@ -1,6 +1,23 @@
 #!/usr/bin/env python
 
 # =====================================================================
+# TheraSocial app.py - Version DD4 (DD3 rev 1) / B240
+# DD4 - ROUND RESULT: GREEN ✓ (review of DD3 found only minor client-side issues; fixed in index.html, see its DD4
+#   header). No server logic changed. _A92_ASSET_VERSION = 'B240' (cache-bust lockstep; every live /static/js ?v
+#   B239->B240 in every template).
+# =====================================================================
+# TheraSocial app.py - Version DD3 (DD2 rev 1) / B239
+# DD3 - ROUND RESULT: RED (review of DD2 found a major client-side defect: desktop sidebar tabs were not recorded for Back
+#   navigation; fixed in index.html, see its DD3 header). No server logic changed. _A92_ASSET_VERSION = 'B239'
+#   (cache-bust lockstep; every live /static/js ?v B238->B239 in every template).
+# =====================================================================
+# TheraSocial app.py - Version DD2 / B238
+# DD2: no server logic changed. _A92_ASSET_VERSION = 'B238' (cache-bust lockstep; every live /static/js ?v B237->B238 in
+#   every template). Client-side changes: index.html (style#ts-dd2-index + script#ts-dd2-index-script: browser/phone Back
+#   returns to the previous screen and never leaves for the sign-in page, new-messages count in Notifications, Messages
+#   fits phone screens, phone margins and scrolling), about.html / support.html ("Back to Last Page" uses history.back
+#   when it returns to the page the member came from), circles.html (phone margins).
+# =====================================================================
 # TheraSocial app.py - Version CC15 (CC14 rev 1) / B237
 # CC15 - ROUND RESULT: YELLOW (review of CC14 found a small set of moderate issues, none critical; fixed here).
 #   MODERATE (compliance): /api/privacy/data-processing did not list the new AI Personalized Insights, still said the
@@ -9530,7 +9547,7 @@ def _safe_back_url():
 #      response to this constant, so a page whose tokens were forgotten is still served the new JS.
 #      Step 1 is therefore the one that MUST happen; step 2 keeps the files honest for view-source checks.
 #   Check: GET /api/health -> e2ee.asset_version shows the live value. tools: ts_release_check.py.
-_A92_ASSET_VERSION = 'B237'  # CC15 (CC14 rev 1): B236 -> B237 (index.html CC14 block fixes; every page's ?v in lockstep); CC14: B235 -> B236 (index.html: insights/summary rendering + AI insights loader; every page's ?v in lockstep); CC13 (C12 rev 1): B234 -> B235 (index.html C12 block fixes; every page's ?v in lockstep); C12: B233 -> B234 (index.html: profile points fix + C12 block; parameters/circles: ts-c12-theme; every page's ?v in lockstep); C7 (C6 rev 2): B232 -> B233 (index.html: narrow-phone layout fixes in style#ts-c6-fit; parameters.html: style#ts-c7-diary-fit); C6: B231 -> B232 (index.html: Home layout fit fixes + two one-line JS edits; circles.html fit fix; every page's ?v brought into lockstep); A51 FB rev 2: B230 -> B231 (e2ee.js: keeping the device key after sign-out is now a per-member opt-in set only by ticking the box); A51 FB: B229 -> B230 (e2ee.js: ticked "Don't remind me again" now persists on Create/Unlock too, is no longer cleared by unlocking, and keeps the device key across sign-out); B56 (A55 fix): B228 -> B229 (e2ee.js: "Don't remind me again" shown on every prompt incl. pill/Settings, and a plain "Not now" now persists to localStorage, not just the session); A51 rev 6: B227 -> B228; A51 rev 5: B226 -> B227; A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
+_A92_ASSET_VERSION = 'B240'  # DD4 (DD3 rev 1): B239 -> B240 (index.html: minor DD2-block fixes; every page's ?v in lockstep); DD3 (DD2 rev 1): B238 -> B239 (index.html: DD2 block fixes, desktop sidebar Back; every page's ?v in lockstep); DD2: B237 -> B238 (index.html: DD2 block for Back navigation, new-messages count, Messages phone fit, phone margins/scrolling; about/support: Back to Last Page uses history.back; circles.html: phone margins; every page's ?v in lockstep); CC15 (CC14 rev 1): B236 -> B237 (index.html CC14 block fixes; every page's ?v in lockstep); CC14: B235 -> B236 (index.html: insights/summary rendering + AI insights loader; every page's ?v in lockstep); CC13 (C12 rev 1): B234 -> B235 (index.html C12 block fixes; every page's ?v in lockstep); C12: B233 -> B234 (index.html: profile points fix + C12 block; parameters/circles: ts-c12-theme; every page's ?v in lockstep); C7 (C6 rev 2): B232 -> B233 (index.html: narrow-phone layout fixes in style#ts-c6-fit; parameters.html: style#ts-c7-diary-fit); C6: B231 -> B232 (index.html: Home layout fit fixes + two one-line JS edits; circles.html fit fix; every page's ?v brought into lockstep); A51 FB rev 2: B230 -> B231 (e2ee.js: keeping the device key after sign-out is now a per-member opt-in set only by ticking the box); A51 FB: B229 -> B230 (e2ee.js: ticked "Don't remind me again" now persists on Create/Unlock too, is no longer cleared by unlocking, and keeps the device key across sign-out); B56 (A55 fix): B228 -> B229 (e2ee.js: "Don't remind me again" shown on every prompt incl. pill/Settings, and a plain "Not now" now persists to localStorage, not just the session); A51 rev 6: B227 -> B228; A51 rev 5: B226 -> B227; A51 rev 4: B225 -> B226; A51 rev 3: B224 -> B225; A51 rev 2: B223 -> B224; A51: B222 -> B223; A32: B221 -> B222; A31: B220 -> B221; Rnd 6: B219 -> B220; F21 rev 5: B218 -> B219; F21 rev 4: B217 -> B218; F21 rev 3: B216 -> B217; F21 rev 2: B215 -> B216; F21: B214 -> B215 (F18 rev 2: B214; F18: B213; F17: B212, F16: B211, F15: B210)
 
 
 # =====================================================================
