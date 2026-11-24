@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!-- TheraSocial Version B240 (DD4 = DD3 rev 1) -->
+<!-- B240 (DD3 rev 1): cache-bust lockstep only on this page (ROUND RESULT: GREEN; see index.html). Every live JS ?v bumped B239 to B240; app.py _A92_ASSET_VERSION = 'B240'. -->
+<!-- TheraSocial Version B239 (DD3 = DD2 rev 1) -->
+<!-- B239 (DD2 rev 1): cache-bust lockstep only on this page (ROUND RESULT: RED; see index.html). Every live JS ?v bumped B238 to B239; app.py _A92_ASSET_VERSION = 'B239'. -->
+<!-- TheraSocial Version B238 (DD2) -->
+<!-- B238 (DD2): "Back to Last Page" without a ?ret= path now steps back in the tab's history (history.back) when there is
+     one, instead of loading the referrer afresh, so the app reopens on the screen the member came from. One line changed.
+     CACHE-BUST: every live JS ?v bumped B237 to B238; app.py _A92_ASSET_VERSION = 'B238'. -->
 <!-- TheraSocial Version B237 (CC15 = CC14 rev 1) -->
 <!-- B237 (CC14 rev 1): cache-bust lockstep only on this page. Every live JS ?v bumped B236 to B237; app.py _A92_ASSET_VERSION = 'B237'. -->
 <!-- TheraSocial Version B236 (CC14) -->
@@ -517,7 +525,7 @@
         </div>
     </div>
 
-    <script src="/static/js/i18n.js?v=B237"></script>
+    <script src="/static/js/i18n.js?v=B240"></script>
     <script>
         // A43 (rev4, FINAL): "Back to Last Page" is driven by an explicit ?ret= path, matching
         // the support page. The invite page links here as /about?ret=/invite/<username>; we read
@@ -541,7 +549,9 @@
                 var ref = document.referrer || '';
                 if (ref && ref.indexOf(window.location.origin) === 0 && ref !== window.location.href) {
                     e.preventDefault();
-                    window.location.href = ref;
+                    // DD2: step back in the tab's history when there is one, so the app returns to the exact screen
+                    // the member came from (a fresh load of the referrer always showed Home).
+                    if (window.history.length > 1) window.history.back(); else window.location.href = ref;
                 } else if (window.history.length > 1) {
                     e.preventDefault();
                     window.history.back();
